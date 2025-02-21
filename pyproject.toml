@@ -42,7 +42,6 @@ black = "^24.4.2"
 add-trailing-comma = "^3.1.0"
 validate-pyproject = "^0.18"
 mypy = "^1.14.1"
-poetry-dynamic-versioning = "^1.7.1"
 behave = "^1.2.6"
 
 [tool.pytest.ini_options]
@@ -189,9 +188,3 @@ skips = ["B101", "B403", "B301"]
 
 [tool.config]
 pyproject_root_var = "pyproject"
-
-[tool.poetry-dynamic-versioning]
-enable = true
-vcs = "git"
-style = "semver"
-pattern = "^(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(?P<rest>.*)?$"
