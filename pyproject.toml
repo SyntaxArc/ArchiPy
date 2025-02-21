@@ -7,7 +7,7 @@ authors = [
 ]
 readme = "README.md"
 version = "0.1.1"
-requires-python = ">=3.13,<4.0"
+requires-python = ">=3.13,<4"
 dependencies = [
     "pydantic>=2.10.6",
     "pydantic-settings>=2.7.1",
