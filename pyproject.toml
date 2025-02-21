@@ -7,7 +7,7 @@ authors = [
 ]
 readme = "README.md"
 version = "0.1.1"
-requires-python = ">=3.12,<4.0"
+requires-python = "^3.13"
 dependencies = [
     "pydantic>=2.10.6",
     "pydantic-settings>=2.7.1",
@@ -75,7 +75,7 @@ Homepage = "https://github.com/SyntaxArc/ArchiPy"
 [tool.black]
 color = true
 line-length = 120
-target-version = ["py312"]
+target-version = ["py313"]
 skip-string-normalization = true
 extend-exclude = '''
 /(
@@ -129,7 +129,7 @@ lint.ignore = [
 ]
 src = ["archipy", "tests", "features"]
 line-length = 120
-target-version = "py312"
+target-version = "py313"
 
 [tool.ruff.lint.per-file-ignores]
 # ignore F811 Redefinition of function in steps implementations
@@ -167,7 +167,7 @@ disallow_untyped_defs = true
 follow_imports = "silent"
 no_implicit_reexport = true
 pretty = true
-python_version = "3.12"
+python_version = "3.13"
 show_error_codes = true
 show_error_context = true
 strict_optional = true
