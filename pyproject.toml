@@ -6,7 +6,7 @@ authors = [
     { name = "Hossein Nejati", email = "hosseinnejati14@gmail.com" }
 ]
 readme = "README.md"
-version = "0.1.1"
+version = "0.1.0" # This vesrion set on publish flow!
 requires-python = ">=3.13,<4"
 dependencies = [
     "pydantic>=2.10.6",
