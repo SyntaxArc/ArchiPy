@@ -271,7 +271,8 @@ warn_unused_ignores = true
 # Enable Pydantic plugin for better type checking
 plugins = [
     "pydantic.mypy", # Pydantic plugin for better type checking
-    "sqlalchemy.ext.mypy.plugin", # SQLAlchemy plugin for ORM type checking
+#    "sqlalchemy.ext.mypy.plugin", # SQLAlchemy plugin for ORM type checking
+#    "fastapi.mypy", # FastAPI plugin for route and dependency type checking
 ]
 
 [[tool.mypy.overrides]]
