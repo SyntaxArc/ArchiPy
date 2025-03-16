@@ -118,7 +118,7 @@ class UpdatableMixin:
     __abstract__ = True
     updated_at = Column(
         DateTime(),
-        default=BaseUtils.get_datetime_now,
+        server_default="DEFAULT",
         nullable=False,
         onupdate=BaseUtils.get_datetime_now,
     )
