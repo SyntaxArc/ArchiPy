@@ -1289,6 +1289,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#keycloak_utils" class="md-nav__link">
+    <span class="md-ellipsis">
+      keycloak_utils
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1535,6 +1544,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#keycloak_utils" class="md-nav__link">
+    <span class="md-ellipsis">
+      keycloak_utils
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1645,11 +1663,11 @@
 <p>Standardized exception handling:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.error_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">ErrorUtils</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseError</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.types.exception_message_types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExceptionMessageType</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.types.error_message_types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ErrorMessageType</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># Create exception detail</span>
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">detail</span> <span class="o">=</span> <span class="n">ErrorUtils</span><span class="o">.</span><span class="n">create_exception_detail</span><span class="p">(</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">ExceptionMessageType</span><span class="o">.</span><span class="n">INVALID_PHONE</span><span class="p">,</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">ErrorMessageType</span><span class="o">.</span><span class="n">INVALID_PHONE</span><span class="p">,</span>
 </span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">lang</span><span class="o">=</span><span class="s2">&quot;en&quot;</span>
 </span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="p">)</span>
 </span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
@@ -1734,12 +1752,60 @@
 </span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="n">is_valid_url</span> <span class="o">=</span> <span class="n">ValidatorUtils</span><span class="o">.</span><span class="n">is_valid_url</span><span class="p">(</span><span class="s2">&quot;https://example.com&quot;</span><span class="p">)</span>
 </span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Valid URL: </span><span class="si">{</span><span class="n">is_valid_url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
+<h2 id="keycloak_utils">keycloak_utils<a class="headerlink" href="#keycloak_utils" title="Permanent link">&para;</a></h2>
+<p>Authentication and authorization utilities with Keycloak integration:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">uvicorn</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">uuid</span><span class="w"> </span><span class="kn">import</span> <span class="n">UUID</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.keycloak_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">KeycloakUtils</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.types.language_type</span><span class="w"> </span><span class="kn">import</span> <span class="n">LanguageType</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Depends</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>    <span class="c1"># Initialize your app configuration</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>    <span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="p">()</span>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>    <span class="n">BaseConfig</span><span class="o">.</span><span class="n">set_global</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>    <span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>    <span class="c1"># Resource-based authorization for users with role and admin access</span>
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>    <span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/users/</span><span class="si">{user_uuid}</span><span class="s2">/info&quot;</span><span class="p">)</span>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_user_info</span><span class="p">(</span><span class="n">user_uuid</span><span class="p">:</span> <span class="n">UUID</span><span class="p">,</span> <span class="n">user</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">KeycloakUtils</span><span class="o">.</span><span class="n">fastapi_auth</span><span class="p">(</span>
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>        <span class="n">resource_type_param</span><span class="o">=</span><span class="s2">&quot;user_uuid&quot;</span><span class="p">,</span>
+</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>        <span class="n">resource_type</span><span class="o">=</span><span class="s2">&quot;users&quot;</span><span class="p">,</span>
+</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>        <span class="n">required_roles</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;user&quot;</span><span class="p">},</span>
+</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>        <span class="n">admin_roles</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;superusers&quot;</span><span class="p">,</span> <span class="s2">&quot;administrators&quot;</span><span class="p">},</span>
+</span><span id="__span-10-22"><a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>        <span class="n">lang</span><span class="o">=</span><span class="n">LanguageType</span><span class="o">.</span><span class="n">EN</span><span class="p">,</span>
+</span><span id="__span-10-23"><a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>    <span class="p">))):</span>
+</span><span id="__span-10-24"><a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a>        <span class="k">return</span> <span class="p">{</span>
+</span><span id="__span-10-25"><a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>            <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;User info for </span><span class="si">{</span><span class="n">user_uuid</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+</span><span id="__span-10-26"><a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a>            <span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">user</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;preferred_username&quot;</span><span class="p">)</span>
+</span><span id="__span-10-27"><a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a>        <span class="p">}</span>
+</span><span id="__span-10-28"><a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>
+</span><span id="__span-10-29"><a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a>    <span class="c1"># Async version for employees with multiple acceptable roles</span>
+</span><span id="__span-10-30"><a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a>    <span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/employees/</span><span class="si">{employee_uuid}</span><span class="s2">/info&quot;</span><span class="p">)</span>
+</span><span id="__span-10-31"><a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_employee_info</span><span class="p">(</span><span class="n">employee_uuid</span><span class="p">:</span> <span class="n">UUID</span><span class="p">,</span> <span class="n">employee</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">KeycloakUtils</span><span class="o">.</span><span class="n">async_fastapi_auth</span><span class="p">(</span>
+</span><span id="__span-10-32"><a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a>        <span class="n">resource_type_param</span><span class="o">=</span><span class="s2">&quot;employee_uuid&quot;</span><span class="p">,</span>
+</span><span id="__span-10-33"><a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a>        <span class="n">resource_type</span><span class="o">=</span><span class="s2">&quot;employees&quot;</span><span class="p">,</span>
+</span><span id="__span-10-34"><a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a>        <span class="n">required_roles</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;employee&quot;</span><span class="p">,</span> <span class="s2">&quot;manager&quot;</span><span class="p">,</span> <span class="s2">&quot;user&quot;</span><span class="p">},</span>
+</span><span id="__span-10-35"><a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a>        <span class="n">all_roles_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># User can have any of these roles</span>
+</span><span id="__span-10-36"><a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a>        <span class="n">admin_roles</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hr_admins&quot;</span><span class="p">,</span> <span class="s2">&quot;system_admins&quot;</span><span class="p">},</span>
+</span><span id="__span-10-37"><a id="__codelineno-10-37" name="__codelineno-10-37" href="#__codelineno-10-37"></a>        <span class="n">lang</span><span class="o">=</span><span class="n">LanguageType</span><span class="o">.</span><span class="n">FA</span><span class="p">,</span>
+</span><span id="__span-10-38"><a id="__codelineno-10-38" name="__codelineno-10-38" href="#__codelineno-10-38"></a>    <span class="p">))):</span>
+</span><span id="__span-10-39"><a id="__codelineno-10-39" name="__codelineno-10-39" href="#__codelineno-10-39"></a>        <span class="k">return</span> <span class="p">{</span>
+</span><span id="__span-10-40"><a id="__codelineno-10-40" name="__codelineno-10-40" href="#__codelineno-10-40"></a>            <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Employee info for </span><span class="si">{</span><span class="n">employee_uuid</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+</span><span id="__span-10-41"><a id="__codelineno-10-41" name="__codelineno-10-41" href="#__codelineno-10-41"></a>            <span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">employee</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;preferred_username&quot;</span><span class="p">)</span>
+</span><span id="__span-10-42"><a id="__codelineno-10-42" name="__codelineno-10-42" href="#__codelineno-10-42"></a>        <span class="p">}</span>
+</span><span id="__span-10-43"><a id="__codelineno-10-43" name="__codelineno-10-43" href="#__codelineno-10-43"></a>
+</span><span id="__span-10-44"><a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a>    <span class="n">uvicorn</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">8000</span><span class="p">)</span>
+</span></code></pre></div>
 <h1 id="additional-resources">Additional Resources<a class="headerlink" href="#additional-resources" title="Permanent link">&para;</a></h1>
 <p>For more examples and detailed documentation:</p>
 <ul>
 <li><a href="../../../api_reference/helpers/">Helpers Overview</a></li>
 <li><a href="../../../api_reference/utils/">Utils API Reference</a></li>
 <li><a href="../../config_management/">Configuration Examples</a></li>
+<li><a href="../../adapters/keycloak/">Keycloak Adapter</a></li>
 </ul>
 <blockquote>
 <p><strong>Note</strong>: This page contains examples of using ArchiPy's utility functions. For API details, see the <a href="../../../api_reference/utils/">Utils API Reference</a>.</p>
