@@ -2,122 +2,122 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/architecture/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/changelog/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/contributing-docs/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/contributing/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/development/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/features/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/installation/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/license/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/usage/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/configs/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/helpers/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/models/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/utils/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/bdd_testing/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/config_management/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/email/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/kafka/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/keycloak/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/minio/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/orm/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/redis/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/helpers/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/helpers/decorators/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/helpers/interceptors/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/helpers/metaclasses/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/helpers/utils/</loc>
-         <lastmod>2025-04-16</lastmod>
+         <lastmod>2025-04-20</lastmod>
     </url>
 </urlset>
