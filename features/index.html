@@ -15,10 +15,10 @@
         <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/features/">
       
       
-        <link rel="prev" href="../usage/">
+        <link rel="prev" href="../installation/">
       
       
-        <link rel="next" href="../architecture/">
+        <link rel="next" href="../usage/">
       
       
       <link rel="icon" href="../assets/logo.jpg">
@@ -260,6 +260,27 @@
   
   
   
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Features
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
   
     <li class="md-tabs__item">
       <a href="../usage/" class="md-tabs__link">
@@ -279,17 +300,97 @@
   
   
   
-    
   
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="./" class="md-tabs__link">
+    <li class="md-tabs__item">
+      <a href="../development/" class="md-tabs__link">
         
   
   
     
   
-  Features
+  Development
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api_reference/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../examples/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
 
       </a>
     </li>
@@ -328,107 +429,6 @@
     
   
   Contributing to Docs
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../api_reference/" class="md-tabs__link">
-          
-  
-  
-    
-  
-  API Reference
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../examples/config_management/" class="md-tabs__link">
-          
-  
-  
-    
-  
-  Examples
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../development/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Development
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../contributing/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Contributing
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../changelog/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Changelog
 
       </a>
     </li>
@@ -552,28 +552,6 @@
       
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../usage/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Usage
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
     
   
   
@@ -627,6 +605,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#database-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Database Integration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#configuration-management" class="md-nav__link">
     <span class="md-ellipsis">
       Configuration Management
@@ -663,9 +650,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#bdd-testing" class="md-nav__link">
+  <a href="#testing-quality" class="md-nav__link">
     <span class="md-ellipsis">
-      BDD Testing
+      Testing &amp; Quality
     </span>
   </a>
   
@@ -681,9 +668,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#modular-design" class="md-nav__link">
+  <a href="#performance-scalability" class="md-nav__link">
     <span class="md-ellipsis">
-      Modular Design
+      Performance &amp; Scalability
     </span>
   </a>
   
@@ -704,12 +691,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
+      <a href="../usage/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Architecture
+    Usage
     
   </span>
   
@@ -726,12 +713,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../contributing-docs/" class="md-nav__link">
+      <a href="../development/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Contributing to Docs
+    Development
     
   </span>
   
@@ -779,7 +766,7 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
         
           
           <div class="md-nav__link md-nav__container">
@@ -796,14 +783,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             API Reference
           </label>
@@ -943,6 +930,10 @@
     
       
         
+          
+        
+      
+        
       
         
       
@@ -965,11 +956,12 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
         
           
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
-            
+          <div class="md-nav__link md-nav__container">
+            <a href="../examples/" class="md-nav__link ">
+              
   
   
   <span class="md-ellipsis">
@@ -978,37 +970,22 @@
   </span>
   
 
-            <span class="md-nav__icon md-icon"></span>
-          </label>
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Examples
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../examples/config_management/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Config Management
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
               
             
               
@@ -1022,6 +999,12 @@
       
         
           
+        
+      
+        
+      
+        
+      
         
       
         
@@ -1049,7 +1032,7 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_2" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_2" >
         
           
           <div class="md-nav__link md-nav__container">
@@ -1066,19 +1049,111 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_8_2" id="__nav_8_2_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_7_2" id="__nav_7_2_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8_2">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_2">
             <span class="md-nav__icon md-icon"></span>
             Adapters
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/adapters/postgres/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    PostgreSQL
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/adapters/sqlite/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    SQLite
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/adapters/starrocks.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    StarRocks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/adapters/redis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Redis
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -1157,35 +1232,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/adapters/orm/" class="md-nav__link">
+      <a href="../examples/adapters/kafka/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    ORM
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../examples/adapters/redis/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Redis
+    Kafka
     
   </span>
   
@@ -1240,7 +1292,7 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_3" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_3" >
         
           
           <div class="md-nav__link md-nav__container">
@@ -1257,14 +1309,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_8_3" id="__nav_8_3_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_7_3" id="__nav_7_3_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_3">
             <span class="md-nav__icon md-icon"></span>
             Helpers
           </label>
@@ -1379,12 +1431,35 @@
   
   
     <li class="md-nav__item">
+      <a href="../examples/config_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../examples/bdd_testing/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    BDD Testing
+    Testing
     
   </span>
   
@@ -1409,12 +1484,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../development/" class="md-nav__link">
+      <a href="../changelog/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Development
+    Changelog
     
   </span>
   
@@ -1453,12 +1528,34 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/" class="md-nav__link">
+      <a href="../architecture/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Changelog
+    Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing-docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing to Docs
     
   </span>
   
@@ -1517,6 +1614,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#database-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Database Integration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#configuration-management" class="md-nav__link">
     <span class="md-ellipsis">
       Configuration Management
@@ -1553,9 +1659,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#bdd-testing" class="md-nav__link">
+  <a href="#testing-quality" class="md-nav__link">
     <span class="md-ellipsis">
-      BDD Testing
+      Testing &amp; Quality
     </span>
   </a>
   
@@ -1571,9 +1677,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#modular-design" class="md-nav__link">
+  <a href="#performance-scalability" class="md-nav__link">
     <span class="md-ellipsis">
-      Modular Design
+      Performance &amp; Scalability
     </span>
   </a>
   
@@ -1605,47 +1711,84 @@
 
 <h1 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h1>
 <p>ArchiPy provides a robust framework for structured Python development, focusing on standardization, testability, and productivity.</p>
+<h2 id="database-integration">Database Integration<a class="headerlink" href="#database-integration" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Multi-Database Support</strong>: Dedicated adapters for PostgreSQL, SQLite, and StarRocks</li>
+<li><strong>SQLAlchemy Integration</strong>: Standardized ORM implementation with:</li>
+<li>Base SQLAlchemy components for common functionality</li>
+<li>Database-specific session management</li>
+<li>Enhanced transaction handling with atomic decorators</li>
+<li>Connection pooling and lifecycle management</li>
+</ul>
 <h2 id="configuration-management">Configuration Management<a class="headerlink" href="#configuration-management" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Standardized Configs</strong>: Use <code>base_config</code> and <code>config_template</code> for consistent setup.</li>
-<li><strong>Injection</strong>: Seamlessly inject configurations into components.</li>
+<li><strong>Standardized Configs</strong>: Use <code>base_config</code> and <code>config_template</code> for consistent setup</li>
+<li><strong>Injection</strong>: Seamlessly inject configurations into components</li>
+<li><strong>Environment Management</strong>: Flexible environment variable handling with validation</li>
+<li><strong>Type Safety</strong>: Configuration validation with Pydantic models</li>
 </ul>
 <h2 id="adapters-mocks">Adapters &amp; Mocks<a class="headerlink" href="#adapters-mocks" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Common Adapters</strong>: Pre-built for Redis, SQLAlchemy, email, and Kafka.</li>
-<li><strong>Mocks</strong>: Testable mocks (e.g., <code>redis_mocks</code>, <code>sqlalchemy_mocks</code>) for isolated testing.</li>
-<li><strong>Async Support</strong>: Synchronous and asynchronous implementations.</li>
+<li><strong>Database Adapters</strong>: Dedicated implementations for PostgreSQL, SQLite, and StarRocks</li>
+<li><strong>Service Adapters</strong>: Pre-built for Redis, Email, Keycloak, MinIO, and Kafka</li>
+<li><strong>Mocks</strong>: Testable mocks for isolated testing</li>
+<li><strong>Async Support</strong>: Synchronous and asynchronous implementations</li>
+<li><strong>Ports &amp; Adapters Pattern</strong>: Clean architecture with dependency inversion</li>
 </ul>
 <h2 id="data-standardization">Data Standardization<a class="headerlink" href="#data-standardization" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Base Entities</strong>: Standardized SQLAlchemy entities (<code>base_entities.py</code>).</li>
-<li><strong>DTOs</strong>: Pydantic-based DTOs (e.g., <code>pagination_dto</code>, <code>error_dto</code>).</li>
-<li><strong>Type Safety</strong>: Enforced via <code>pydantic</code> and <code>mypy</code>.</li>
+<li><strong>Base Entities</strong>: Standardized SQLAlchemy entities with timestamp handling</li>
+<li><strong>DTOs</strong>: Pydantic-based DTOs for data transfer:</li>
+<li>Pagination and sorting</li>
+<li>Error handling</li>
+<li>Search and range operations</li>
+<li>Email and attachment handling</li>
+<li><strong>Type Safety</strong>: Enforced via Pydantic and modern Python type hints</li>
 </ul>
 <h2 id="helper-utilities">Helper Utilities<a class="headerlink" href="#helper-utilities" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Utilities</strong>: Tools like <code>datetime_utils</code>, <code>jwt_utils</code>, <code>password_utils</code>, and <code>totp_utils</code>.</li>
-<li><strong>Decorators</strong>: <code>retry</code>, <code>singleton</code>, <code>sqlalchemy_atomic</code>, etc.</li>
-<li><strong>Interceptors</strong>: Rate limiting (FastAPI), tracing (gRPC).</li>
-<li><strong>Enhanced Security</strong>: Cryptographically secure implementations with <code>secrets</code> module.</li>
-<li><strong>Type Safety</strong>: Consistent type checking and casting for robust interfaces.</li>
+<li><strong>Decorators</strong>:</li>
+<li>Retry mechanism for resilient operations</li>
+<li>Singleton pattern implementation</li>
+<li>SQLAlchemy atomic transactions</li>
+<li>TTL caching for performance optimization</li>
+<li><strong>Interceptors</strong>:</li>
+<li>FastAPI rate limiting</li>
+<li>gRPC tracing and monitoring</li>
+<li><strong>Security</strong>:</li>
+<li>Keycloak integration for authentication</li>
+<li>TOTP implementation</li>
+<li>Password utilities with secure hashing</li>
+<li>JWT handling</li>
+<li><strong>Type Safety</strong>: Consistent type checking and casting</li>
 </ul>
-<h2 id="bdd-testing">BDD Testing<a class="headerlink" href="#bdd-testing" title="Permanent link">&para;</a></h2>
+<h2 id="testing-quality">Testing &amp; Quality<a class="headerlink" href="#testing-quality" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Behave Integration</strong>: Pre-configured for sync/async scenarios.</li>
-<li><strong>Feature Files</strong>: Examples like <code>app_utils.feature</code>, <code>totp_utils.feature</code>.</li>
-<li><strong>Step Definitions</strong>: Comprehensive steps for testing (e.g., <code>jwt_utils_steps.py</code>).</li>
+<li><strong>BDD Testing</strong>:</li>
+<li>Behave integration for sync/async scenarios</li>
+<li>Comprehensive feature files</li>
+<li>Step definitions for common operations</li>
+<li><strong>Code Quality</strong>:</li>
+<li>Automated linting with ruff</li>
+<li>Type checking with mypy</li>
+<li>Code formatting with black</li>
+<li>Pre-commit hooks for quality assurance</li>
 </ul>
 <h2 id="best-practices-tooling">Best Practices &amp; Tooling<a class="headerlink" href="#best-practices-tooling" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Poetry</strong>: Dependency management for reproducible builds.</li>
-<li><strong>Pre-commit</strong>: Automated checks with <code>ruff</code>, <code>black</code>, and <code>mypy</code>.</li>
-<li><strong>Structure</strong>: Clean architecture with <code>pyproject.toml</code> for modern Python development.</li>
+<li><strong>Poetry</strong>: Modern dependency management</li>
+<li><strong>Pre-commit</strong>: Automated code quality checks</li>
+<li><strong>Clean Architecture</strong>: Hexagonal design pattern</li>
+<li><strong>Modular Design</strong>: Optional dependencies for flexibility</li>
+<li><strong>Comprehensive Documentation</strong>: API reference and usage examples</li>
 </ul>
-<h2 id="modular-design">Modular Design<a class="headerlink" href="#modular-design" title="Permanent link">&para;</a></h2>
+<h2 id="performance-scalability">Performance &amp; Scalability<a class="headerlink" href="#performance-scalability" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Optional Dependencies</strong>: Install only what you need (e.g., <code>archipy[redis]</code>).</li>
-<li><strong>Extensible</strong>: Add custom adapters and helpers easily.</li>
+<li><strong>Connection Pooling</strong>: Optimized database connections</li>
+<li><strong>Caching</strong>: Redis integration for performance</li>
+<li><strong>Async Support</strong>: Non-blocking operations</li>
+<li><strong>Resource Management</strong>: Proper cleanup and lifecycle handling</li>
+<li><strong>Error Recovery</strong>: Robust error handling and retry mechanisms</li>
 </ul>
 
 
