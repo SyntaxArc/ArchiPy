@@ -1945,41 +1945,48 @@
 
 <h1 id="archipy-architecture">ArchiPy Architecture<a class="headerlink" href="#archipy-architecture" title="Permanent link">&para;</a></h1>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>ArchiPy is organized into four main modules, each serving a specific purpose in creating structured, maintainable Python applications:</p>
+<p>ArchiPy is organized into four main modules, each serving a specific purpose in creating structured, maintainable Python
+applications:</p>
 <ol>
 <li><strong>Adapters</strong>: External service integrations</li>
 <li><strong>Configs</strong>: Configuration management</li>
 <li><strong>Helpers</strong>: Utility functions and support classes</li>
 <li><strong>Models</strong>: Core data structures</li>
 </ol>
-<p>This architecture follows clean architecture principles, separating concerns and ensuring that dependencies point inward toward the domain core.</p>
+<p>This architecture follows clean architecture principles, separating concerns and ensuring that dependencies point inward
+toward the domain core.</p>
 <h2 id="modules">Modules<a class="headerlink" href="#modules" title="Permanent link">&para;</a></h2>
 <h3 id="adapters">Adapters<a class="headerlink" href="#adapters" title="Permanent link">&para;</a></h3>
-<p>The <code>adapters</code> module provides implementations for external service integrations, following the Ports and Adapters pattern (Hexagonal Architecture). This module includes:</p>
+<p>The <code>adapters</code> module provides implementations for external service integrations, following the Ports and Adapters
+pattern (Hexagonal Architecture). This module includes:</p>
 <ul>
-<li><strong>Base Adapters</strong>: Core implementations and interfaces</li>
+<li>
+<p><strong>Base Adapters</strong>: Core implementations and interfaces</p>
+<ul>
 <li>SQLAlchemy base components</li>
 <li>Common adapter patterns</li>
-<li>
-<p>Base session management</p>
+<li>Base session management</li>
+</ul>
 </li>
 <li>
 <p><strong>Database Adapters</strong>: Database-specific implementations</p>
-</li>
+<ul>
 <li>PostgreSQL</li>
 <li>SQLite</li>
 <li>StarRocks</li>
-<li>
-<p>Each with their own SQLAlchemy integration</p>
+<li>Each with their own SQLAlchemy integration</li>
+</ul>
 </li>
 <li>
 <p><strong>Service Adapters</strong>: External service integrations</p>
-</li>
+<ul>
 <li>Email service adapters</li>
 <li>External API clients</li>
 <li>File storage adapters (MinIO)</li>
 <li>Message brokers (Kafka)</li>
 <li>Caching systems (Redis)</li>
+</ul>
+</li>
 </ul>
 <p>Each adapter includes both concrete implementations and corresponding mocks for testing.</p>
 <h3 id="configs">Configs<a class="headerlink" href="#configs" title="Permanent link">&para;</a></h3>
@@ -1991,7 +1998,8 @@
 <li>Support for various configuration sources (environment variables, files, etc.)</li>
 </ul>
 <h3 id="helpers">Helpers<a class="headerlink" href="#helpers" title="Permanent link">&para;</a></h3>
-<p>The <code>helpers</code> module contains utility functions and classes to simplify common development tasks. It includes several subgroups:</p>
+<p>The <code>helpers</code> module contains utility functions and classes to simplify common development tasks. It includes several
+subgroups:</p>
 <ul>
 <li><strong>Utils</strong>: General utility functions for dates, strings, errors, files, etc.</li>
 <li><strong>Decorators</strong>: Function and class decorators for aspects like logging, timing, and deprecation</li>
@@ -2014,9 +2022,12 @@
 <li>The Configs module manages application configuration</li>
 <li>The Adapters module interfaces with external systems</li>
 </ol>
-<p>This modular organization promotes separation of concerns, making ArchiPy applications easier to test, maintain, and extend over time.</p>
+<p>This modular organization promotes separation of concerns, making ArchiPy applications easier to test, maintain, and
+extend over time.</p>
 <h2 id="design-philosophy">Design Philosophy<a class="headerlink" href="#design-philosophy" title="Permanent link">&para;</a></h2>
-<p>ArchiPy is designed to standardize and simplify Python application development by providing a flexible set of building blocks that work across different architectural approaches. Rather than enforcing a single architectural pattern, ArchiPy offers components that can be applied to:</p>
+<p>ArchiPy is designed to standardize and simplify Python application development by providing a flexible set of building
+blocks that work across different architectural approaches. Rather than enforcing a single architectural pattern,
+ArchiPy offers components that can be applied to:</p>
 <ul>
 <li>Layered Architecture</li>
 <li>Hexagonal Architecture (Ports &amp; Adapters)</li>
@@ -2025,7 +2036,8 @@
 <li>Service-Oriented Architecture</li>
 <li>And more...</li>
 </ul>
-<p>These building blocks help maintain consistency, testability, and maintainability regardless of the specific architectural style chosen for your project.</p>
+<p>These building blocks help maintain consistency, testability, and maintainability regardless of the specific
+architectural style chosen for your project.</p>
 <h2 id="core-building-blocks">Core Building Blocks<a class="headerlink" href="#core-building-blocks" title="Permanent link">&para;</a></h2>
 <h3 id="configuration-management">Configuration Management<a class="headerlink" href="#configuration-management" title="Permanent link">&para;</a></h3>
 <p>ArchiPy provides a standardized way to manage configuration across your application:</p>
@@ -2238,7 +2250,9 @@
 </span><span id="__span-8-59"><a id="__codelineno-8-59" name="__codelineno-8-59" href="#__codelineno-8-59"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">(</span><span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">())</span>
 </span><span id="__span-8-60"><a id="__codelineno-8-60" name="__codelineno-8-60" href="#__codelineno-8-60"></a><span class="n">app</span><span class="o">.</span><span class="n">include_router</span><span class="p">(</span><span class="n">users_router</span><span class="p">)</span>
 </span></code></pre></div>
-<p>By providing standardized building blocks rather than enforcing a specific architecture, ArchiPy helps teams maintain consistent development practices while allowing flexibility to choose the architectural pattern that best fits their needs.</p>
+<p>By providing standardized building blocks rather than enforcing a specific architecture, ArchiPy helps teams maintain
+consistent development practices while allowing flexibility to choose the architectural pattern that best fits their
+needs.</p>
 
 
 

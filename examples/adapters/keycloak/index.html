@@ -1665,7 +1665,8 @@
 
 
 <h1 id="keycloak-adapter-usage-guide">Keycloak Adapter Usage Guide<a class="headerlink" href="#keycloak-adapter-usage-guide" title="Permanent link">&para;</a></h1>
-<p>The Keycloak adapter provides an interface for interacting with Keycloak's API to manage authentication and authorization. ArchiPy offers both synchronous and asynchronous implementations.</p>
+<p>The Keycloak adapter provides an interface for interacting with Keycloak's API to manage authentication and
+authorization. ArchiPy offers both synchronous and asynchronous implementations.</p>
 <p>For full API reference, see the <a href="../../../api_reference/adapters/#keycloak">Keycloak Adapters API Documentation</a>.</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>First, configure your Keycloak settings in your application config:</p>
@@ -1890,7 +1891,8 @@
 </span><span id="__span-2-40"><a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </span></code></pre></div>
 <h2 id="caching">Caching<a class="headerlink" href="#caching" title="Permanent link">&para;</a></h2>
-<p>Both adapters use TTL (Time-To-Live) caching for appropriate operations to improve performance. Cache durations are configured for each method based on how frequently the data typically changes:</p>
+<p>Both adapters use TTL (Time-To-Live) caching for appropriate operations to improve performance. Cache durations are
+configured for each method based on how frequently the data typically changes:</p>
 <ul>
 <li>Public keys and certificate information: 1 hour</li>
 <li>User information from tokens: 30 seconds</li>

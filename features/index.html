@@ -1710,15 +1710,18 @@
 
 
 <h1 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h1>
-<p>ArchiPy provides a robust framework for structured Python development, focusing on standardization, testability, and productivity.</p>
+<p>ArchiPy provides a robust framework for structured Python development, focusing on standardization, testability, and
+productivity.</p>
 <h2 id="database-integration">Database Integration<a class="headerlink" href="#database-integration" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Multi-Database Support</strong>: Dedicated adapters for PostgreSQL, SQLite, and StarRocks</li>
-<li><strong>SQLAlchemy Integration</strong>: Standardized ORM implementation with:</li>
+<li><strong>SQLAlchemy Integration</strong>: Standardized ORM implementation with:<ul>
 <li>Base SQLAlchemy components for common functionality</li>
 <li>Database-specific session management</li>
 <li>Enhanced transaction handling with atomic decorators</li>
 <li>Connection pooling and lifecycle management</li>
+</ul>
+</li>
 </ul>
 <h2 id="configuration-management">Configuration Management<a class="headerlink" href="#configuration-management" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1738,41 +1741,53 @@
 <h2 id="data-standardization">Data Standardization<a class="headerlink" href="#data-standardization" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Base Entities</strong>: Standardized SQLAlchemy entities with timestamp handling</li>
-<li><strong>DTOs</strong>: Pydantic-based DTOs for data transfer:</li>
+<li><strong>DTOs</strong>: Pydantic-based DTOs for data transfer:<ul>
 <li>Pagination and sorting</li>
 <li>Error handling</li>
 <li>Search and range operations</li>
 <li>Email and attachment handling</li>
+</ul>
+</li>
 <li><strong>Type Safety</strong>: Enforced via Pydantic and modern Python type hints</li>
 </ul>
 <h2 id="helper-utilities">Helper Utilities<a class="headerlink" href="#helper-utilities" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Decorators</strong>:</li>
+<li><strong>Decorators</strong>:<ul>
 <li>Retry mechanism for resilient operations</li>
 <li>Singleton pattern implementation</li>
 <li>SQLAlchemy atomic transactions</li>
 <li>TTL caching for performance optimization</li>
-<li><strong>Interceptors</strong>:</li>
+</ul>
+</li>
+<li><strong>Interceptors</strong>:<ul>
 <li>FastAPI rate limiting</li>
 <li>gRPC tracing and monitoring</li>
-<li><strong>Security</strong>:</li>
+</ul>
+</li>
+<li><strong>Security</strong>:<ul>
 <li>Keycloak integration for authentication</li>
 <li>TOTP implementation</li>
 <li>Password utilities with secure hashing</li>
 <li>JWT handling</li>
+</ul>
+</li>
 <li><strong>Type Safety</strong>: Consistent type checking and casting</li>
 </ul>
 <h2 id="testing-quality">Testing &amp; Quality<a class="headerlink" href="#testing-quality" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>BDD Testing</strong>:</li>
+<li><strong>BDD Testing</strong>:<ul>
 <li>Behave integration for sync/async scenarios</li>
 <li>Comprehensive feature files</li>
 <li>Step definitions for common operations</li>
-<li><strong>Code Quality</strong>:</li>
+</ul>
+</li>
+<li><strong>Code Quality</strong>:<ul>
 <li>Automated linting with ruff</li>
 <li>Type checking with mypy</li>
 <li>Code formatting with black</li>
 <li>Pre-commit hooks for quality assurance</li>
+</ul>
+</li>
 </ul>
 <h2 id="best-practices-tooling">Best Practices &amp; Tooling<a class="headerlink" href="#best-practices-tooling" title="Permanent link">&para;</a></h2>
 <ul>

@@ -2134,7 +2134,8 @@
 
 <h1 id="configs">Configs<a class="headerlink" href="#configs" title="Permanent link">&para;</a></h1>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>The configs module provides tools for standardized configuration management and injection, supporting consistent setup across services like databases, Redis, and email.</p>
+<p>The configs module provides tools for standardized configuration management and injection, supporting consistent setup
+across services like databases, Redis, and email.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <p>This module is included in the base ArchiPy installation:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Add ArchiPy to your project</span>
@@ -2198,339 +2199,419 @@
 <h2 id="key-classes">Key Classes<a class="headerlink" href="#key-classes" title="Permanent link">&para;</a></h2>
 <h3 id="baseconfig">BaseConfig<a class="headerlink" href="#baseconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.base_config.BaseConfig</code></p>
-<p>Configures:
-- Environment variable support
-- Type validation
-- Global configuration access
-- Nested configuration support</p>
+<p>Configures:</p>
+<ul>
+<li>Environment variable support</li>
+<li>Type validation</li>
+<li>Global configuration access</li>
+<li>Nested configuration support</li>
+</ul>
 <p><em>Includes all members, undocumented members, and shows inheritance.</em></p>
 <h3 id="sqlalchemyconfig">SQLAlchemyConfig<a class="headerlink" href="#sqlalchemyconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.SQLAlchemyConfig</code></p>
-<p>Configures:
-- Database connection settings
-- Pool configuration
-- Migration settings
-- Debug options</p>
-<p>Attributes:
-- <code>DATABASE</code>: Database name
-- <code>DRIVER_NAME</code>: Database driver name
-- <code>ECHO</code>: Whether to log SQL statements
-- <code>ECHO_POOL</code>: Whether to log connection pool events
-- <code>ENABLE_FROM_LINTING</code>: Whether to enable SQL linting
-- <code>HIDE_PARAMETERS</code>: Whether to hide SQL parameters in logs
-- <code>HOST</code>: Database host
-- <code>ISOLATION_LEVEL</code>: Transaction isolation level
-- <code>PASSWORD</code>: Database password
-- <code>POOL_MAX_OVERFLOW</code>: Maximum number of connections in pool overflow
-- <code>POOL_PRE_PING</code>: Whether to ping connections before use
-- <code>POOL_RECYCLE_SECONDS</code>: Seconds between connection recycling
-- <code>POOL_RESET_ON_RETURN</code>: Action when returning connections to pool
-- <code>POOL_SIZE</code>: Number of connections to keep open
-- <code>POOL_TIMEOUT</code>: Seconds to wait for a connection
-- <code>POOL_USE_LIFO</code>: Whether to use LIFO for connection pool
-- <code>PORT</code>: Database port
-- <code>QUERY_CACHE_SIZE</code>: Size of the query cache
-- <code>USERNAME</code>: Database username</p>
+<p>Configures:</p>
+<ul>
+<li>Database connection settings</li>
+<li>Pool configuration</li>
+<li>Migration settings</li>
+<li>Debug options</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>DATABASE</code>: Database name</li>
+<li><code>DRIVER_NAME</code>: Database driver name</li>
+<li><code>ECHO</code>: Whether to log SQL statements</li>
+<li><code>ECHO_POOL</code>: Whether to log connection pool events</li>
+<li><code>ENABLE_FROM_LINTING</code>: Whether to enable SQL linting</li>
+<li><code>HIDE_PARAMETERS</code>: Whether to hide SQL parameters in logs</li>
+<li><code>HOST</code>: Database host</li>
+<li><code>ISOLATION_LEVEL</code>: Transaction isolation level</li>
+<li><code>PASSWORD</code>: Database password</li>
+<li><code>POOL_MAX_OVERFLOW</code>: Maximum number of connections in pool overflow</li>
+<li><code>POOL_PRE_PING</code>: Whether to ping connections before use</li>
+<li><code>POOL_RECYCLE_SECONDS</code>: Seconds between connection recycling</li>
+<li><code>POOL_RESET_ON_RETURN</code>: Action when returning connections to pool</li>
+<li><code>POOL_SIZE</code>: Number of connections to keep open</li>
+<li><code>POOL_TIMEOUT</code>: Seconds to wait for a connection</li>
+<li><code>POOL_USE_LIFO</code>: Whether to use LIFO for connection pool</li>
+<li><code>PORT</code>: Database port</li>
+<li><code>QUERY_CACHE_SIZE</code>: Size of the query cache</li>
+<li><code>USERNAME</code>: Database username</li>
+</ul>
 <h3 id="sqlitesqlalchemyconfig">SqliteSQLAlchemyConfig<a class="headerlink" href="#sqlitesqlalchemyconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.SqliteSQLAlchemyConfig</code></p>
-<p>Configures:
-- SQLite-specific database settings
-- In-memory database options
-- SQLite isolation levels</p>
-<p>Attributes:
-- <code>DRIVER_NAME</code>: SQLite driver name
-- <code>DATABASE</code>: SQLite database path
-- <code>ISOLATION_LEVEL</code>: SQLite isolation level
-- <code>PORT</code>: Not used for SQLite</p>
+<p>Configures:</p>
+<ul>
+<li>SQLite-specific database settings</li>
+<li>In-memory database options</li>
+<li>SQLite isolation levels</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>DRIVER_NAME</code>: SQLite driver name</li>
+<li><code>DATABASE</code>: SQLite database path</li>
+<li><code>ISOLATION_LEVEL</code>: SQLite isolation level</li>
+<li><code>PORT</code>: Not used for SQLite</li>
+</ul>
 <h3 id="postgressqlalchemyconfig">PostgresSQLAlchemyConfig<a class="headerlink" href="#postgressqlalchemyconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.PostgresSQLAlchemyConfig</code></p>
-<p>Configures:
-- PostgreSQL-specific database settings
-- Connection URL building
-- DSN configuration</p>
-<p>Attributes:
-- <code>POSTGRES_DSN</code>: PostgreSQL connection URL</p>
+<p>Configures:</p>
+<ul>
+<li>PostgreSQL-specific database settings</li>
+<li>Connection URL building</li>
+<li>DSN configuration</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>POSTGRES_DSN</code>: PostgreSQL connection URL</li>
+</ul>
 <h3 id="starrockssqlalchemyconfig">StarrocksSQLAlchemyConfig<a class="headerlink" href="#starrockssqlalchemyconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.StarrocksSQLAlchemyConfig</code></p>
-<p>Configures:
-- Starrocks-specific database settings
-- Catalog configuration</p>
-<p>Attributes:
-- <code>CATALOG</code>: Starrocks catalog name</p>
+<p>Configures:</p>
+<ul>
+<li>Starrocks-specific database settings</li>
+<li>Catalog configuration</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>CATALOG</code>: Starrocks catalog name</li>
+</ul>
 <h3 id="redisconfig">RedisConfig<a class="headerlink" href="#redisconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.RedisConfig</code></p>
-<p>Configures:
-- Connection settings
-- Pool configuration
-- SSL options
-- Sentinel support</p>
-<p>Attributes:
-- <code>MASTER_HOST</code>: Redis master host
-- <code>SLAVE_HOST</code>: Redis slave host
-- <code>PORT</code>: Redis server port
-- <code>DATABASE</code>: Redis database number
-- <code>PASSWORD</code>: Redis password
-- <code>DECODE_RESPONSES</code>: Whether to decode responses
-- <code>VERSION</code>: Redis protocol version
-- <code>HEALTH_CHECK_INTERVAL</code>: Health check interval in seconds</p>
+<p>Configures:</p>
+<ul>
+<li>Connection settings</li>
+<li>Pool configuration</li>
+<li>SSL options</li>
+<li>Sentinel support</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>MASTER_HOST</code>: Redis master host</li>
+<li><code>SLAVE_HOST</code>: Redis slave host</li>
+<li><code>PORT</code>: Redis server port</li>
+<li><code>DATABASE</code>: Redis database number</li>
+<li><code>PASSWORD</code>: Redis password</li>
+<li><code>DECODE_RESPONSES</code>: Whether to decode responses</li>
+<li><code>VERSION</code>: Redis protocol version</li>
+<li><code>HEALTH_CHECK_INTERVAL</code>: Health check interval in seconds</li>
+</ul>
 <h3 id="emailconfig">EmailConfig<a class="headerlink" href="#emailconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.EmailConfig</code></p>
-<p>Configures:
-- SMTP settings
-- Authentication
-- TLS options
-- Default headers</p>
-<p>Attributes:
-- <code>SMTP_SERVER</code>: SMTP server host
-- <code>SMTP_PORT</code>: SMTP server port
-- <code>USERNAME</code>: SMTP username
-- <code>PASSWORD</code>: SMTP password
-- <code>POOL_SIZE</code>: Connection pool size
-- <code>CONNECTION_TIMEOUT</code>: Connection timeout in seconds
-- <code>MAX_RETRIES</code>: Maximum retry attempts
-- <code>ATTACHMENT_MAX_SIZE</code>: Maximum attachment size in bytes</p>
+<p>Configures:</p>
+<ul>
+<li>SMTP settings</li>
+<li>Authentication</li>
+<li>TLS options</li>
+<li>Default headers</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>SMTP_SERVER</code>: SMTP server host</li>
+<li><code>SMTP_PORT</code>: SMTP server port</li>
+<li><code>USERNAME</code>: SMTP username</li>
+<li><code>PASSWORD</code>: SMTP password</li>
+<li><code>POOL_SIZE</code>: Connection pool size</li>
+<li><code>CONNECTION_TIMEOUT</code>: Connection timeout in seconds</li>
+<li><code>MAX_RETRIES</code>: Maximum retry attempts</li>
+<li><code>ATTACHMENT_MAX_SIZE</code>: Maximum attachment size in bytes</li>
+</ul>
 <h3 id="fastapiconfig">FastAPIConfig<a class="headerlink" href="#fastapiconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.FastAPIConfig</code></p>
-<p>Configures:
-- API versioning
-- CORS configuration
-- Rate limiting
-- Documentation</p>
-<p>Attributes:
-- <code>PROJECT_NAME</code>: Name of the FastAPI project
-- <code>API_PREFIX</code>: URL prefix for API endpoints
-- <code>ACCESS_LOG</code>: Whether to enable access logging
-- <code>BACKLOG</code>: Maximum number of queued connections
-- <code>DATE_HEADER</code>: Whether to include date header in responses
-- <code>FORWARDED_ALLOW_IPS</code>: List of allowed forwarded IPs
-- <code>LIMIT_CONCURRENCY</code>: Maximum concurrent requests
-- <code>LIMIT_MAX_REQUESTS</code>: Maximum number of requests
-- <code>CORS_MIDDLEWARE_ALLOW_CREDENTIALS</code>: Whether to allow credentials in CORS
-- <code>CORS_MIDDLEWARE_ALLOW_HEADERS</code>: Allowed CORS headers
-- <code>CORS_MIDDLEWARE_ALLOW_METHODS</code>: Allowed CORS methods
-- <code>CORS_MIDDLEWARE_ALLOW_ORIGINS</code>: Allowed CORS origins
-- <code>PROXY_HEADERS</code>: Whether to trust proxy headers
-- <code>RELOAD</code>: Whether to enable auto-reload
-- <code>SERVER_HEADER</code>: Whether to include server header
-- <code>SERVE_HOST</code>: Host to serve the application on
-- <code>SERVE_PORT</code>: Port to serve the application on
-- <code>TIMEOUT_GRACEFUL_SHUTDOWN</code>: Graceful shutdown timeout
-- <code>TIMEOUT_KEEP_ALIVE</code>: Keep-alive timeout
-- <code>WORKERS_COUNT</code>: Number of worker processes
-- <code>WS_MAX_SIZE</code>: Maximum WebSocket message size
-- <code>WS_PER_MESSAGE_DEFLATE</code>: Whether to enable WebSocket compression
-- <code>WS_PING_INTERVAL</code>: WebSocket ping interval
-- <code>WS_PING_TIMEOUT</code>: WebSocket ping timeout
-- <code>OPENAPI_URL</code>: URL for OpenAPI schema
-- <code>DOCS_URL</code>: URL for API documentation
-- <code>RE_DOCS_URL</code>: URL for ReDoc documentation
-- <code>SWAGGER_UI_PARAMS</code>: Swagger UI parameters</p>
+<p>Configures:</p>
+<ul>
+<li>API versioning</li>
+<li>CORS configuration</li>
+<li>Rate limiting</li>
+<li>Documentation</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>PROJECT_NAME</code>: Name of the FastAPI project</li>
+<li><code>API_PREFIX</code>: URL prefix for API endpoints</li>
+<li><code>ACCESS_LOG</code>: Whether to enable access logging</li>
+<li><code>BACKLOG</code>: Maximum number of queued connections</li>
+<li><code>DATE_HEADER</code>: Whether to include date header in responses</li>
+<li><code>FORWARDED_ALLOW_IPS</code>: List of allowed forwarded IPs</li>
+<li><code>LIMIT_CONCURRENCY</code>: Maximum concurrent requests</li>
+<li><code>LIMIT_MAX_REQUESTS</code>: Maximum number of requests</li>
+<li><code>CORS_MIDDLEWARE_ALLOW_CREDENTIALS</code>: Whether to allow credentials in CORS</li>
+<li><code>CORS_MIDDLEWARE_ALLOW_HEADERS</code>: Allowed CORS headers</li>
+<li><code>CORS_MIDDLEWARE_ALLOW_METHODS</code>: Allowed CORS methods</li>
+<li><code>CORS_MIDDLEWARE_ALLOW_ORIGINS</code>: Allowed CORS origins</li>
+<li><code>PROXY_HEADERS</code>: Whether to trust proxy headers</li>
+<li><code>RELOAD</code>: Whether to enable auto-reload</li>
+<li><code>SERVER_HEADER</code>: Whether to include server header</li>
+<li><code>SERVE_HOST</code>: Host to serve the application on</li>
+<li><code>SERVE_PORT</code>: Port to serve the application on</li>
+<li><code>TIMEOUT_GRACEFUL_SHUTDOWN</code>: Graceful shutdown timeout</li>
+<li><code>TIMEOUT_KEEP_ALIVE</code>: Keep-alive timeout</li>
+<li><code>WORKERS_COUNT</code>: Number of worker processes</li>
+<li><code>WS_MAX_SIZE</code>: Maximum WebSocket message size</li>
+<li><code>WS_PER_MESSAGE_DEFLATE</code>: Whether to enable WebSocket compression</li>
+<li><code>WS_PING_INTERVAL</code>: WebSocket ping interval</li>
+<li><code>WS_PING_TIMEOUT</code>: WebSocket ping timeout</li>
+<li><code>OPENAPI_URL</code>: URL for OpenAPI schema</li>
+<li><code>DOCS_URL</code>: URL for API documentation</li>
+<li><code>RE_DOCS_URL</code>: URL for ReDoc documentation</li>
+<li><code>SWAGGER_UI_PARAMS</code>: Swagger UI parameters</li>
+</ul>
 <h3 id="grpcconfig">GrpcConfig<a class="headerlink" href="#grpcconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.GrpcConfig</code></p>
-<p>Configures:
-- Server settings
-- Client configuration
-- Interceptors
-- SSL/TLS options</p>
-<p>Attributes:
-- <code>SERVE_PORT</code>: Port to serve gRPC on
-- <code>SERVE_HOST</code>: Host to serve gRPC on
-- <code>THREAD_WORKER_COUNT</code>: Number of worker threads
-- <code>THREAD_PER_CPU_CORE</code>: Threads per CPU core
-- <code>SERVER_OPTIONS_CONFIG_LIST</code>: Server configuration options
-- <code>STUB_OPTIONS_CONFIG_LIST</code>: Client stub configuration options</p>
+<p>Configures:</p>
+<ul>
+<li>Server settings</li>
+<li>Client configuration</li>
+<li>Interceptors</li>
+<li>SSL/TLS options</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>SERVE_PORT</code>: Port to serve gRPC on</li>
+<li><code>SERVE_HOST</code>: Host to serve gRPC on</li>
+<li><code>THREAD_WORKER_COUNT</code>: Number of worker threads</li>
+<li><code>THREAD_PER_CPU_CORE</code>: Threads per CPU core</li>
+<li><code>SERVER_OPTIONS_CONFIG_LIST</code>: Server configuration options</li>
+<li><code>STUB_OPTIONS_CONFIG_LIST</code>: Client stub configuration options</li>
+</ul>
 <h3 id="sentryconfig">SentryConfig<a class="headerlink" href="#sentryconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.SentryConfig</code></p>
-<p>Configures:
-- DSN configuration
-- Environment settings
-- Sample rates
-- Performance monitoring</p>
-<p>Attributes:
-- <code>IS_ENABLED</code>: Whether Sentry is enabled
-- <code>DSN</code>: Sentry DSN for error reporting
-- <code>DEBUG</code>: Whether to enable debug mode
-- <code>RELEASE</code>: Application release version
-- <code>SAMPLE_RATE</code>: Error sampling rate (0.0 to 1.0)
-- <code>TRACES_SAMPLE_RATE</code>: Performance monitoring sampling rate (0.0 to 1.0)</p>
+<p>Configures:</p>
+<ul>
+<li>DSN configuration</li>
+<li>Environment settings</li>
+<li>Sample rates</li>
+<li>Performance monitoring</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>IS_ENABLED</code>: Whether Sentry is enabled</li>
+<li><code>DSN</code>: Sentry DSN for error reporting</li>
+<li><code>DEBUG</code>: Whether to enable debug mode</li>
+<li><code>RELEASE</code>: Application release version</li>
+<li><code>SAMPLE_RATE</code>: Error sampling rate (0.0 to 1.0)</li>
+<li><code>TRACES_SAMPLE_RATE</code>: Performance monitoring sampling rate (0.0 to 1.0)</li>
+</ul>
 <h3 id="elasticsearchconfig">ElasticSearchConfig<a class="headerlink" href="#elasticsearchconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.ElasticSearchConfig</code></p>
-<p>Configures:
-- Cluster configuration
-- Authentication
-- Index settings
-- Retry policies</p>
-<p>Attributes:
-- <code>SEARCH_HOSTS</code>: List of Elasticsearch server hosts
-- <code>SEARCH_HTTP_USER_NAME</code>: Username for HTTP authentication
-- <code>SEARCH_HTTP_PASSWORD</code>: Password for HTTP authentication
-- <code>SEARCH_HTTPS_VERIFY_CERTS</code>: Whether to verify SSL certificates
-- <code>SEARCH_KWARG</code>: Additional keyword arguments for Elasticsearch client
-- <code>SEARCH_BATCH_INTERVAL_THRESHOLD_IN_SECONDS</code>: Time threshold for batch operations
-- <code>SEARCH_BATCH_DOC_COUNT_THRESHOLD</code>: Document count threshold for batch operations</p>
+<p>Configures:</p>
+<ul>
+<li>Cluster configuration</li>
+<li>Authentication</li>
+<li>Index settings</li>
+<li>Retry policies</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>SEARCH_HOSTS</code>: List of Elasticsearch server hosts</li>
+<li><code>SEARCH_HTTP_USER_NAME</code>: Username for HTTP authentication</li>
+<li><code>SEARCH_HTTP_PASSWORD</code>: Password for HTTP authentication</li>
+<li><code>SEARCH_HTTPS_VERIFY_CERTS</code>: Whether to verify SSL certificates</li>
+<li><code>SEARCH_KWARG</code>: Additional keyword arguments for Elasticsearch client</li>
+<li><code>SEARCH_BATCH_INTERVAL_THRESHOLD_IN_SECONDS</code>: Time threshold for batch operations</li>
+<li><code>SEARCH_BATCH_DOC_COUNT_THRESHOLD</code>: Document count threshold for batch operations</li>
+</ul>
 <h3 id="elasticsearchapmconfig">ElasticSearchAPMConfig<a class="headerlink" href="#elasticsearchapmconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.ElasticSearchAPMConfig</code></p>
-<p>Configures:
-- APM server settings
-- Service name
-- Transaction sampling
-- Instrumentation</p>
-<p>Attributes:
-- <code>API_REQUEST_SIZE</code>: Maximum size of API requests
-- <code>API_REQUEST_TIME</code>: Maximum time for API requests
-- <code>AUTO_LOG_STACKS</code>: Whether to automatically log stack traces
-- <code>CAPTURE_BODY</code>: Level of request body capture
-- <code>CAPTURE_HEADERS</code>: Whether to capture HTTP headers
-- <code>COLLECT_LOCAL_VARIABLES</code>: Level of local variable collection
-- <code>IS_ENABLED</code>: Whether APM is enabled
-- <code>ENVIRONMENT</code>: APM environment name
-- <code>LOG_FILE</code>: Path to APM log file
-- <code>LOG_FILE_SIZE</code>: Maximum size of APM log file
-- <code>RECORDING</code>: Whether to record transactions
-- <code>SECRET_TOKEN</code>: APM secret token
-- <code>SERVER_TIMEOUT</code>: Server timeout duration
-- <code>SERVER_URL</code>: APM server URL
-- <code>SERVICE_NAME</code>: Name of the service being monitored
-- <code>SERVICE_VERSION</code>: Version of the service
-- <code>TRANSACTION_SAMPLE_RATE</code>: Rate at which to sample transactions
-- <code>API_KEY</code>: API key for authentication</p>
+<p>Configures:</p>
+<ul>
+<li>APM server settings</li>
+<li>Service name</li>
+<li>Transaction sampling</li>
+<li>Instrumentation</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>API_REQUEST_SIZE</code>: Maximum size of API requests</li>
+<li><code>API_REQUEST_TIME</code>: Maximum time for API requests</li>
+<li><code>AUTO_LOG_STACKS</code>: Whether to automatically log stack traces</li>
+<li><code>CAPTURE_BODY</code>: Level of request body capture</li>
+<li><code>CAPTURE_HEADERS</code>: Whether to capture HTTP headers</li>
+<li><code>COLLECT_LOCAL_VARIABLES</code>: Level of local variable collection</li>
+<li><code>IS_ENABLED</code>: Whether APM is enabled</li>
+<li><code>ENVIRONMENT</code>: APM environment name</li>
+<li><code>LOG_FILE</code>: Path to APM log file</li>
+<li><code>LOG_FILE_SIZE</code>: Maximum size of APM log file</li>
+<li><code>RECORDING</code>: Whether to record transactions</li>
+<li><code>SECRET_TOKEN</code>: APM secret token</li>
+<li><code>SERVER_TIMEOUT</code>: Server timeout duration</li>
+<li><code>SERVER_URL</code>: APM server URL</li>
+<li><code>SERVICE_NAME</code>: Name of the service being monitored</li>
+<li><code>SERVICE_VERSION</code>: Version of the service</li>
+<li><code>TRANSACTION_SAMPLE_RATE</code>: Rate at which to sample transactions</li>
+<li><code>API_KEY</code>: API key for authentication</li>
+</ul>
 <h3 id="kafkaconfig">KafkaConfig<a class="headerlink" href="#kafkaconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.KafkaConfig</code></p>
-<p>Configures:
-- Broker configuration
-- Consumer groups
-- Producer settings
-- Security options</p>
-<p>Attributes:
-- <code>ACKNOWLEDGE_COUNT</code>: Number of acknowledgments required
-- <code>AUTO_OFFSET_RESET</code>: Action to take when there is no initial offset
-- <code>BROKERS_LIST</code>: List of Kafka broker addresses
-- <code>CERT_PEM</code>: Path to SSL certificate
-- <code>ENABLE_AUTO_COMMIT</code>: Whether to enable auto-commit
-- <code>MAX_BUFFER_MS</code>: Maximum time to buffer messages
-- <code>MAX_BUFFER_SIZE</code>: Maximum number of messages to buffer
-- <code>PASSWORD</code>: Password for authentication
-- <code>SASL_MECHANISMS</code>: SASL mechanism for authentication
-- <code>SECURITY_PROTOCOL</code>: Security protocol to use
-- <code>SESSION_TIMEOUT_MS</code>: Session timeout in milliseconds
-- <code>REQUEST_ACK_TIMEOUT_MS</code>: Request acknowledgment timeout
-- <code>DELIVERY_MESSAGE_TIMEOUT_MS</code>: Message delivery timeout
-- <code>USER_NAME</code>: Username for authentication
-- <code>LIST_TOPICS_TIMEOUT</code>: Timeout for listing topics</p>
+<p>Configures:</p>
+<ul>
+<li>Broker configuration</li>
+<li>Consumer groups</li>
+<li>Producer settings</li>
+<li>Security options</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>ACKNOWLEDGE_COUNT</code>: Number of acknowledgments required</li>
+<li><code>AUTO_OFFSET_RESET</code>: Action to take when there is no initial offset</li>
+<li><code>BROKERS_LIST</code>: List of Kafka broker addresses</li>
+<li><code>CERT_PEM</code>: Path to SSL certificate</li>
+<li><code>ENABLE_AUTO_COMMIT</code>: Whether to enable auto-commit</li>
+<li><code>MAX_BUFFER_MS</code>: Maximum time to buffer messages</li>
+<li><code>MAX_BUFFER_SIZE</code>: Maximum number of messages to buffer</li>
+<li><code>PASSWORD</code>: Password for authentication</li>
+<li><code>SASL_MECHANISMS</code>: SASL mechanism for authentication</li>
+<li><code>SECURITY_PROTOCOL</code>: Security protocol to use</li>
+<li><code>SESSION_TIMEOUT_MS</code>: Session timeout in milliseconds</li>
+<li><code>REQUEST_ACK_TIMEOUT_MS</code>: Request acknowledgment timeout</li>
+<li><code>DELIVERY_MESSAGE_TIMEOUT_MS</code>: Message delivery timeout</li>
+<li><code>USER_NAME</code>: Username for authentication</li>
+<li><code>LIST_TOPICS_TIMEOUT</code>: Timeout for listing topics</li>
+</ul>
 <h3 id="keycloakconfig">KeycloakConfig<a class="headerlink" href="#keycloakconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.KeycloakConfig</code></p>
-<p>Configures:
-- Server connection
-- Authentication settings
-- SSL verification
-- Timeout configuration</p>
-<p>Attributes:
-- <code>SERVER_URL</code>: URL of the Keycloak server
-- <code>CLIENT_ID</code>: Client ID for authentication
-- <code>REALM_NAME</code>: Name of the Keycloak realm
-- <code>CLIENT_SECRET_KEY</code>: Client secret key
-- <code>VERIFY_SSL</code>: Whether to verify SSL certificates
-- <code>TIMEOUT</code>: Request timeout in seconds</p>
+<p>Configures:</p>
+<ul>
+<li>Server connection</li>
+<li>Authentication settings</li>
+<li>SSL verification</li>
+<li>Timeout configuration</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>SERVER_URL</code>: URL of the Keycloak server</li>
+<li><code>CLIENT_ID</code>: Client ID for authentication</li>
+<li><code>REALM_NAME</code>: Name of the Keycloak realm</li>
+<li><code>CLIENT_SECRET_KEY</code>: Client secret key</li>
+<li><code>VERIFY_SSL</code>: Whether to verify SSL certificates</li>
+<li><code>TIMEOUT</code>: Request timeout in seconds</li>
+</ul>
 <h3 id="minioconfig">MinioConfig<a class="headerlink" href="#minioconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.MinioConfig</code></p>
-<p>Configures:
-- Server connection
-- Authentication
-- Security settings
-- Region configuration</p>
-<p>Attributes:
-- <code>ENDPOINT</code>: MinIO server endpoint
-- <code>ACCESS_KEY</code>: Access key for authentication
-- <code>SECRET_KEY</code>: Secret key for authentication
-- <code>SECURE</code>: Whether to use secure (HTTPS) connection
-- <code>SESSION_TOKEN</code>: Session token for temporary credentials
-- <code>REGION</code>: AWS region for S3 compatibility</p>
+<p>Configures:</p>
+<ul>
+<li>Server connection</li>
+<li>Authentication</li>
+<li>Security settings</li>
+<li>Region configuration</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>ENDPOINT</code>: MinIO server endpoint</li>
+<li><code>ACCESS_KEY</code>: Access key for authentication</li>
+<li><code>SECRET_KEY</code>: Secret key for authentication</li>
+<li><code>SECURE</code>: Whether to use secure (HTTPS) connection</li>
+<li><code>SESSION_TOKEN</code>: Session token for temporary credentials</li>
+<li><code>REGION</code>: AWS region for S3 compatibility</li>
+</ul>
 <h3 id="prometheusconfig">PrometheusConfig<a class="headerlink" href="#prometheusconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.PrometheusConfig</code></p>
-<p>Configures:
-- Metrics collection
-- Server settings
-- Endpoint configuration</p>
-<p>Attributes:
-- <code>IS_ENABLED</code>: Whether Prometheus metrics are enabled
-- <code>SERVER_PORT</code>: Port for the Prometheus metrics endpoint</p>
+<p>Configures:</p>
+<ul>
+<li>Metrics collection</li>
+<li>Server settings</li>
+<li>Endpoint configuration</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>IS_ENABLED</code>: Whether Prometheus metrics are enabled</li>
+<li><code>SERVER_PORT</code>: Port for the Prometheus metrics endpoint</li>
+</ul>
 <h3 id="kavenegarconfig">KavenegarConfig<a class="headerlink" href="#kavenegarconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.KavenegarConfig</code></p>
-<p>Configures:
-- API connection
-- Authentication
-- Default sender settings</p>
-<p>Attributes:
-- <code>SERVER_URL</code>: Kavenegar API server URL
-- <code>API_KEY</code>: Kavenegar API key
-- <code>PHONE_NUMBER</code>: Default sender phone number</p>
+<p>Configures:</p>
+<ul>
+<li>API connection</li>
+<li>Authentication</li>
+<li>Default sender settings</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>SERVER_URL</code>: Kavenegar API server URL</li>
+<li><code>API_KEY</code>: Kavenegar API key</li>
+<li><code>PHONE_NUMBER</code>: Default sender phone number</li>
+</ul>
 <h3 id="authconfig">AuthConfig<a class="headerlink" href="#authconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.AuthConfig</code></p>
-<p>Configures:
-- JWT settings
-- TOTP configuration
-- Rate limiting
-- Password policies
-- Token security</p>
-<p>Attributes:
-- <code>SECRET_KEY</code>: JWT signing key
-- <code>ACCESS_TOKEN_EXPIRES_IN</code>: Access token expiration in seconds
-- <code>REFRESH_TOKEN_EXPIRES_IN</code>: Refresh token expiration in seconds
-- <code>HASH_ALGORITHM</code>: JWT signing algorithm
-- <code>JWT_ISSUER</code>: JWT issuer claim
-- <code>JWT_AUDIENCE</code>: JWT audience claim
-- <code>TOKEN_VERSION</code>: JWT token version
-- <code>TOTP_SECRET_KEY</code>: TOTP master key
-- <code>TOTP_HASH_ALGORITHM</code>: TOTP hash algorithm
-- <code>TOTP_LENGTH</code>: TOTP code length
-- <code>TOTP_EXPIRES_IN</code>: TOTP expiration in seconds
-- <code>TOTP_TIME_STEP</code>: TOTP time step in seconds
-- <code>TOTP_VERIFICATION_WINDOW</code>: TOTP verification window size
-- <code>TOTP_MAX_ATTEMPTS</code>: Maximum TOTP verification attempts
-- <code>TOTP_LOCKOUT_TIME</code>: TOTP lockout duration in seconds
-- <code>LOGIN_RATE_LIMIT</code>: Login attempts per minute
-- <code>TOTP_RATE_LIMIT</code>: TOTP requests per minute
-- <code>PASSWORD_RESET_RATE_LIMIT</code>: Password reset requests per hour
-- <code>HASH_ITERATIONS</code>: Password hash iterations
-- <code>MIN_LENGTH</code>: Minimum password length
-- <code>REQUIRE_DIGIT</code>: Whether password requires digits
-- <code>REQUIRE_LOWERCASE</code>: Whether password requires lowercase
-- <code>REQUIRE_SPECIAL</code>: Whether password requires special chars
-- <code>REQUIRE_UPPERCASE</code>: Whether password requires uppercase
-- <code>SALT_LENGTH</code>: Password salt length
-- <code>SPECIAL_CHARACTERS</code>: Allowed special characters
-- <code>PASSWORD_HISTORY_SIZE</code>: Number of previous passwords to remember
-- <code>ENABLE_JTI_CLAIM</code>: Whether to enable JWT ID claim
-- <code>ENABLE_TOKEN_ROTATION</code>: Whether to enable refresh token rotation
-- <code>REFRESH_TOKEN_REUSE_INTERVAL</code>: Refresh token reuse grace period</p>
+<p>Configures:</p>
+<ul>
+<li>JWT settings</li>
+<li>TOTP configuration</li>
+<li>Rate limiting</li>
+<li>Password policies</li>
+<li>Token security</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>SECRET_KEY</code>: JWT signing key</li>
+<li><code>ACCESS_TOKEN_EXPIRES_IN</code>: Access token expiration in seconds</li>
+<li><code>REFRESH_TOKEN_EXPIRES_IN</code>: Refresh token expiration in seconds</li>
+<li><code>HASH_ALGORITHM</code>: JWT signing algorithm</li>
+<li><code>JWT_ISSUER</code>: JWT issuer claim</li>
+<li><code>JWT_AUDIENCE</code>: JWT audience claim</li>
+<li><code>TOKEN_VERSION</code>: JWT token version</li>
+<li><code>TOTP_SECRET_KEY</code>: TOTP master key</li>
+<li><code>TOTP_HASH_ALGORITHM</code>: TOTP hash algorithm</li>
+<li><code>TOTP_LENGTH</code>: TOTP code length</li>
+<li><code>TOTP_EXPIRES_IN</code>: TOTP expiration in seconds</li>
+<li><code>TOTP_TIME_STEP</code>: TOTP time step in seconds</li>
+<li><code>TOTP_VERIFICATION_WINDOW</code>: TOTP verification window size</li>
+<li><code>TOTP_MAX_ATTEMPTS</code>: Maximum TOTP verification attempts</li>
+<li><code>TOTP_LOCKOUT_TIME</code>: TOTP lockout duration in seconds</li>
+<li><code>LOGIN_RATE_LIMIT</code>: Login attempts per minute</li>
+<li><code>TOTP_RATE_LIMIT</code>: TOTP requests per minute</li>
+<li><code>PASSWORD_RESET_RATE_LIMIT</code>: Password reset requests per hour</li>
+<li><code>HASH_ITERATIONS</code>: Password hash iterations</li>
+<li><code>MIN_LENGTH</code>: Minimum password length</li>
+<li><code>REQUIRE_DIGIT</code>: Whether password requires digits</li>
+<li><code>REQUIRE_LOWERCASE</code>: Whether password requires lowercase</li>
+<li><code>REQUIRE_SPECIAL</code>: Whether password requires special chars</li>
+<li><code>REQUIRE_UPPERCASE</code>: Whether password requires uppercase</li>
+<li><code>SALT_LENGTH</code>: Password salt length</li>
+<li><code>SPECIAL_CHARACTERS</code>: Allowed special characters</li>
+<li><code>PASSWORD_HISTORY_SIZE</code>: Number of previous passwords to remember</li>
+<li><code>ENABLE_JTI_CLAIM</code>: Whether to enable JWT ID claim</li>
+<li><code>ENABLE_TOKEN_ROTATION</code>: Whether to enable refresh token rotation</li>
+<li><code>REFRESH_TOKEN_REUSE_INTERVAL</code>: Refresh token reuse grace period</li>
+</ul>
 <h3 id="fileconfig">FileConfig<a class="headerlink" href="#fileconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.FileConfig</code></p>
-<p>Configures:
-- File link security
-- Expiration policies
-- File type restrictions</p>
-<p>Attributes:
-- <code>SECRET_KEY</code>: Secret key for generating secure file links
-- <code>DEFAULT_EXPIRY_MINUTES</code>: Default link expiration time in minutes
-- <code>ALLOWED_EXTENSIONS</code>: List of allowed file extensions</p>
+<p>Configures:</p>
+<ul>
+<li>File link security</li>
+<li>Expiration policies</li>
+<li>File type restrictions</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>SECRET_KEY</code>: Secret key for generating secure file links</li>
+<li><code>DEFAULT_EXPIRY_MINUTES</code>: Default link expiration time in minutes</li>
+<li><code>ALLOWED_EXTENSIONS</code>: List of allowed file extensions</li>
+</ul>
 <h3 id="datetimeconfig">DatetimeConfig<a class="headerlink" href="#datetimeconfig" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.config_template.DatetimeConfig</code></p>
-<p>Configures:
-- API connections
-- Time service settings
-- Caching behavior</p>
-<p>Attributes:
-- <code>TIME_IR_API_KEY</code>: API key for time.ir service
-- <code>TIME_IR_API_ENDPOINT</code>: Endpoint for time.ir service
-- <code>REQUEST_TIMEOUT</code>: Request timeout in seconds
-- <code>MAX_RETRIES</code>: Maximum retry attempts
-- <code>CACHE_TTL</code>: Cache time-to-live in seconds</p>
+<p>Configures:</p>
+<ul>
+<li>API connections</li>
+<li>Time service settings</li>
+<li>Caching behavior</li>
+</ul>
+<p>Attributes:</p>
+<ul>
+<li><code>TIME_IR_API_KEY</code>: API key for time.ir service</li>
+<li><code>TIME_IR_API_ENDPOINT</code>: Endpoint for time.ir service</li>
+<li><code>REQUEST_TIMEOUT</code>: Request timeout in seconds</li>
+<li><code>MAX_RETRIES</code>: Maximum retry attempts</li>
+<li><code>CACHE_TTL</code>: Cache time-to-live in seconds</li>
+</ul>
 <h3 id="environmenttype">EnvironmentType<a class="headerlink" href="#environmenttype" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.environment_type.EnvironmentType</code></p>
-<p>Configures:
-- Environment types (DEV, STAGING, PROD)
-- Environment-specific behaviors
-- Configuration validation rules</p>
+<p>Configures:</p>
+<ul>
+<li>Environment types (DEV, STAGING, PROD)</li>
+<li>Environment-specific behaviors</li>
+<li>Configuration validation rules</li>
+</ul>
 <p><em>Includes all members, undocumented members, and shows inheritance.</em></p>
 
 
