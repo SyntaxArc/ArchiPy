@@ -375,7 +375,8 @@ class KeycloakAdapter(KeycloakPort):
         """
         # This is a write operation, no caching needed
         try:
-            self.admin_adapter.update_user(user_id, user_data)
+            keycloak_user_date = self.get_user_by_id(user_id)
+            self.admin_adapter.update_user(user_id, keycloak_user_date)
 
             # Clear user-related caches
             self.clear_all_caches()
@@ -1329,7 +1330,9 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort):
         """
         # This is a write operation, no caching needed
         try:
-            await self.admin_adapter.a_update_user(user_id, user_data)
+            keycloak_user_date = await self.get_user_by_id(user_id)
+
+            await self.admin_adapter.a_update_user(user_id, keycloak_user_date)
 
             # Clear user-related caches
             self.clear_all_caches()
