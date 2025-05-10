@@ -770,3 +770,43 @@ class DatetimeConfig(BaseModel):
     REQUEST_TIMEOUT: int = 5
     MAX_RETRIES: int = 3
     CACHE_TTL: int = 86400  # TTL for cache in seconds (24 hours)
+
+
+class ElasticsearchConfig(BaseModel):
+    """Configuration settings for Elasticsearch integration.
+
+    Controls Elasticsearch server connection parameters, authentication, and client behavior settings.
+    This configuration supports both basic authentication and API key authentication methods.
+
+    Attributes:
+        HOSTS (list[str]): List of Elasticsearch host URLs (e.g., ['http://localhost:9200']).
+        API_KEY (str | None): API key for authentication. If provided, takes precedence over username/password.
+        USERNAME (str | None): Username for basic authentication.
+        PASSWORD (str | None): Password for basic authentication.
+        CLIENT_CERT (str | None): Path to client certificate file for SSL/TLS authentication.
+        CLIENT_KEY (str | None): Path to client private key file for SSL/TLS authentication.
+        CA_CERTS (str | None): Path to CA certificates file for SSL/TLS verification.
+        REQUEST_TIMEOUT (float | None): Timeout in seconds for requests. Defaults to 10.0.
+        MAX_RETRIES (int): Maximum number of retries for failed requests. Defaults to 0 (no retries).
+        RETRY_ON_STATUS (tuple[int, ...]): HTTP status codes that should trigger a retry.
+            Defaults to (429, 502, 503, 504) for rate limiting and server errors.
+        RETRY_ON_TIMEOUT (bool): Whether to retry on timeout. Defaults to False.
+        HTTP_COMPRESS (bool): Whether to enable HTTP compression. Defaults to False.
+        CONNECTIONS_PER_NODE (int): Maximum number of connections per node. Defaults to 10.
+        VERIFY_CERTS (bool): Whether to verify SSL certificates. Defaults to True.
+    """
+
+    HOSTS: list[str] = []
+    API_KEY: str | None = None
+    USERNAME: str | None = None
+    PASSWORD: str | None = None
+    CLIENT_CERT: str | None = None
+    CLIENT_KEY: str | None = None
+    CA_CERTS: str | None = None
+    REQUEST_TIMEOUT: float | None = 10.0
+    MAX_RETRIES: int = 0
+    RETRY_ON_STATUS: tuple[int, ...] = (429, 502, 503, 504)
+    RETRY_ON_TIMEOUT: bool = False
+    HTTP_COMPRESS: bool = False
+    CONNECTIONS_PER_NODE: int = 10
+    VERIFY_CERTS: bool = True

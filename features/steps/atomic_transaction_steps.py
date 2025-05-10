@@ -27,7 +27,10 @@ from sqlalchemy import select
 
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
 from archipy.configs.config_template import SqliteSQLAlchemyConfig
-from archipy.helpers.decorators.sqlalchemy_atomic import async_sqlite_sqlalchemy_atomic_decorator, sqlite_sqlalchemy_atomic_decorator
+from archipy.helpers.decorators.sqlalchemy_atomic import (
+    async_sqlite_sqlalchemy_atomic_decorator,
+    sqlite_sqlalchemy_atomic_decorator,
+)
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
 from archipy.models.errors import InternalError
 
@@ -220,6 +223,7 @@ def step_when_entity_creation_fails_in_atomic(context):
     logger.info(f"Attempting to create entity with UUID {test_uuid} (will fail)")
 
     try:
+
         @sqlite_sqlalchemy_atomic_decorator
         def create_entity_with_failure():
             """Create an entity but raise an exception to trigger rollback."""
@@ -346,6 +350,7 @@ def step_when_nested_atomic_executed(context):
 
             # Try a failing inner transaction
             try:
+
                 @sqlite_sqlalchemy_atomic_decorator
                 def failing_inner_atomic():
                     """Inner failing atomic transaction."""
@@ -743,6 +748,7 @@ def step_when_error_triggered_in_atomic(context):
     # Test normal exception handling
     logger.info("Testing normal exception handling")
     try:
+
         @sqlite_sqlalchemy_atomic_decorator
         def normal_exception():
             entity = TestEntityFactory.create_test_entity()
@@ -758,6 +764,7 @@ def step_when_error_triggered_in_atomic(context):
     # Test deadlock handling (simulated for SQLite)
     logger.info("Testing deadlock exception handling")
     try:
+
         @sqlite_sqlalchemy_atomic_decorator
         def deadlock_exception():
             entity = TestEntityFactory.create_test_entity()
@@ -1006,6 +1013,7 @@ async def step_when_async_entity_creation_fails(context):
     logger.info(f"Creating async entity with UUID {test_uuid} (will fail)")
 
     try:
+
         @async_sqlite_sqlalchemy_atomic_decorator
         async def create_entity_with_failure():
             """Create an entity but raise an exception to trigger rollback."""

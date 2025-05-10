@@ -61,23 +61,23 @@ def get_file_changes(start_tag: str | None, end_tag: str) -> dict[str, list]:
     file_changes = run_cmd(f"git diff --name-status {range_spec}")
 
     # Parse file changes
-    changes = {'added': [], 'modified': [], 'deleted': [], 'renamed': []}
+    changes = {"added": [], "modified": [], "deleted": [], "renamed": []}
 
-    for line in file_changes.split('\n'):
+    for line in file_changes.split("\n"):
         if not line.strip():
             continue
 
-        parts = line.split('\t')
+        parts = line.split("\t")
         status = parts[0]
 
-        if status.startswith('A'):
-            changes['added'].append(parts[-1])
-        elif status.startswith('M'):
-            changes['modified'].append(parts[-1])
-        elif status.startswith('D'):
-            changes['deleted'].append(parts[-1])
-        elif status.startswith('R'):
-            changes['renamed'].append((parts[1], parts[2]))  # From, To
+        if status.startswith("A"):
+            changes["added"].append(parts[-1])
+        elif status.startswith("M"):
+            changes["modified"].append(parts[-1])
+        elif status.startswith("D"):
+            changes["deleted"].append(parts[-1])
+        elif status.startswith("R"):
+            changes["renamed"].append((parts[1], parts[2]))  # From, To
 
     return changes
 
@@ -87,42 +87,42 @@ def group_files_by_component(files: list[str]) -> dict[str, list[str]]:
     components = defaultdict(list)
 
     for file in files:
-        if 'adapters/' in file:
-            component = 'adapters'
-            subcomponent = file.split('adapters/')[1].split('/')[0] if '/adapters/' in file else 'core'
+        if "adapters/" in file:
+            component = "adapters"
+            subcomponent = file.split("adapters/")[1].split("/")[0] if "/adapters/" in file else "core"
             components[f"{component}/{subcomponent}"].append(file)
-        elif 'helpers/' in file:
-            component = 'helpers'
-            if 'decorators/' in file:
-                components['helpers/decorators'].append(file)
-            elif 'utils/' in file:
-                components['helpers/utils'].append(file)
-            elif 'interceptors/' in file:
-                components['helpers/interceptors'].append(file)
-            elif 'metaclasses/' in file:
-                components['helpers/metaclasses'].append(file)
+        elif "helpers/" in file:
+            component = "helpers"
+            if "decorators/" in file:
+                components["helpers/decorators"].append(file)
+            elif "utils/" in file:
+                components["helpers/utils"].append(file)
+            elif "interceptors/" in file:
+                components["helpers/interceptors"].append(file)
+            elif "metaclasses/" in file:
+                components["helpers/metaclasses"].append(file)
             else:
-                components['helpers/core'].append(file)
-        elif 'models/' in file:
-            component = 'models'
-            if 'entities/' in file:
-                components['models/entities'].append(file)
-            elif 'dtos/' in file:
-                components['models/dtos'].append(file)
-            elif 'errors/' in file:
-                components['models/errors'].append(file)
-            elif 'types/' in file:
-                components['models/types'].append(file)
+                components["helpers/core"].append(file)
+        elif "models/" in file:
+            component = "models"
+            if "entities/" in file:
+                components["models/entities"].append(file)
+            elif "dtos/" in file:
+                components["models/dtos"].append(file)
+            elif "errors/" in file:
+                components["models/errors"].append(file)
+            elif "types/" in file:
+                components["models/types"].append(file)
             else:
-                components['models/core'].append(file)
-        elif 'configs/' in file:
-            components['configs'].append(file)
-        elif file.startswith('docs/'):
-            components['documentation'].append(file)
-        elif file.startswith('tests/') or file.startswith('features/'):
-            components['tests'].append(file)
+                components["models/core"].append(file)
+        elif "configs/" in file:
+            components["configs"].append(file)
+        elif file.startswith("docs/"):
+            components["documentation"].append(file)
+        elif file.startswith("tests/") or file.startswith("features/"):
+            components["tests"].append(file)
         else:
-            components['other'].append(file)
+            components["other"].append(file)
 
     return components
 
@@ -145,9 +145,9 @@ def analyze_tag_changes(start_tag: str | None, end_tag: str) -> dict:
     file_changes = get_file_changes(start_tag, end_tag)
 
     # Group files by component
-    added_by_component = group_files_by_component(file_changes['added'])
-    modified_by_component = group_files_by_component(file_changes['modified'])
-    deleted_by_component = group_files_by_component(file_changes['deleted'])
+    added_by_component = group_files_by_component(file_changes["added"])
+    modified_by_component = group_files_by_component(file_changes["modified"])
+    deleted_by_component = group_files_by_component(file_changes["deleted"])
 
     # Categorize commits
     categorized_commits = defaultdict(list)
@@ -156,7 +156,9 @@ def analyze_tag_changes(start_tag: str | None, end_tag: str) -> dict:
         # Clean up the commit message
         message = commit
         # Remove common prefixes
-        message = re.sub(r"^(fix|feat|chore|docs|style|refactor|perf|test|build|ci|revert)(\([^)]+\))?:", "", message).strip()
+        message = re.sub(
+            r"^(fix|feat|chore|docs|style|refactor|perf|test|build|ci|revert)(\([^)]+\))?:", "", message
+        ).strip()
         # Capitalize first letter
         if message:
             message = message[0].upper() + message[1:]
@@ -164,11 +166,11 @@ def analyze_tag_changes(start_tag: str | None, end_tag: str) -> dict:
             categorized_commits[category].append(message)
 
     return {
-        'commits': categorized_commits,
-        'file_changes': file_changes,
-        'added_by_component': added_by_component,
-        'modified_by_component': modified_by_component,
-        'deleted_by_component': deleted_by_component,
+        "commits": categorized_commits,
+        "file_changes": file_changes,
+        "added_by_component": added_by_component,
+        "modified_by_component": modified_by_component,
+        "deleted_by_component": deleted_by_component,
     }
 
 
@@ -192,10 +194,10 @@ def add_unreleased_to_changelog() -> None:
     print(f"Generating changelog from {latest_tag} to HEAD (current commit)...")
 
     # The new version should be incremented from the latest tag
-    version_parts = latest_tag.split('.')
+    version_parts = latest_tag.split(".")
     # Increment the last part (patch version)
     version_parts[-1] = str(int(version_parts[-1]) + 1)
-    new_version = '.'.join(version_parts)
+    new_version = ".".join(version_parts)
 
     today = datetime.now().strftime("%Y-%m-%d")
 
@@ -206,7 +208,7 @@ def add_unreleased_to_changelog() -> None:
     analysis_results = analyze_tag_changes(prev_tag, "HEAD")
 
     # If there are no commits since the last tag, exit
-    if not any(analysis_results['commits'].values()):
+    if not any(analysis_results["commits"].values()):
         print("No changes detected since the last tag.")
         sys.exit(0)
 
@@ -225,15 +227,15 @@ def add_unreleased_to_changelog() -> None:
 
     # Add sections only if they have content
     for title, key, description in categories:
-        if key in analysis_results['commits'] and analysis_results['commits'][key]:
+        if key in analysis_results["commits"] and analysis_results["commits"][key]:
             new_entry += f"### {title}\n\n"
 
             # Group by component if possible
             by_component = defaultdict(list)
-            for message in analysis_results['commits'][key]:
+            for message in analysis_results["commits"][key]:
                 # Try to identify component from message
                 component = "General"
-                for comp in ['adapter', 'model', 'config', 'util', 'decorator', 'test']:
+                for comp in ["adapter", "model", "config", "util", "decorator", "test"]:
                     if comp in message.lower():
                         component = comp.capitalize() + "s"
                         break

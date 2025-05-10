@@ -20,7 +20,10 @@ def get_kafka_admin_adapter(context):
 def get_kafka_producer_adapter(context, topic_name):
     """Get or initialize the Kafka producer adapter."""
     scenario_context = get_current_scenario_context(context)
-    if not hasattr(scenario_context, f"producer_{topic_name}") or getattr(scenario_context, f"producer_{topic_name}") is None:
+    if (
+        not hasattr(scenario_context, f"producer_{topic_name}")
+        or getattr(scenario_context, f"producer_{topic_name}") is None
+    ):
         test_config = scenario_context.get("test_config")
         context.logger.info(f"Initializing Kafka producer for topic: {topic_name}")
         producer = KafkaProducerAdapter(topic_name, kafka_configs=test_config.KAFKA)
