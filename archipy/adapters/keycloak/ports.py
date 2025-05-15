@@ -219,6 +219,21 @@ class KeycloakPort:
         """Delete a user from Keycloak by their ID."""
         raise NotImplementedError
 
+    @abstractmethod
+    def create_client_role(self, client_id: str, role_name: str, description: str | None = None) -> dict[str, Any]:
+        """Create a new client role."""
+        raise NotImplementedError
+
+    def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs) -> dict[str, Any]:
+        """Create a new Keycloak realm."""
+        raise NotImplementedError
+
+    def create_client(
+        self, client_id: str, realm: str | None = None, skip_exists: bool = True, **kwargs
+    ) -> dict[str, Any] | None:
+        """Create a new client in the specified realm."""
+        raise NotImplementedError
+
 
 class AsyncKeycloakPort:
     """Asynchronous interface for Keycloak operations providing a standardized access pattern.
@@ -422,4 +437,23 @@ class AsyncKeycloakPort:
     @abstractmethod
     async def delete_user(self, user_id: str) -> None:
         """Delete a user from Keycloak by their ID."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def create_client_role(
+        self, client_id: str, role_name: str, description: str | None = None
+    ) -> dict[str, Any]:
+        """Create a new client role."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs) -> dict[str, Any] | None:
+        """Create a new Keycloak realm."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def create_client(
+        self, client_id: str, realm: str | None = None, skip_exists: bool = True, **kwargs
+    ) -> dict[str, Any] | None:
+        """Create a new client in the specified realm."""
         raise NotImplementedError

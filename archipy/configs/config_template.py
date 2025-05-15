@@ -344,6 +344,9 @@ class KeycloakConfig(BaseModel):
         CLIENT_SECRET_KEY (str | None): Client secret key.
         VERIFY_SSL (bool): Whether to verify SSL certificates.
         TIMEOUT (int): Request timeout in seconds.
+        ADMIN_USERNAME (str | None): Admin username for testing/setup purposes.
+        ADMIN_PASSWORD (str | None): Admin password for testing/setup purposes.
+        ADMIN_REALM_NAME (str): The realm name for admin authentication.
     """
 
     SERVER_URL: str | None = None
@@ -352,6 +355,9 @@ class KeycloakConfig(BaseModel):
     CLIENT_SECRET_KEY: str | None = None
     VERIFY_SSL: bool = True
     TIMEOUT: int = 10
+    ADMIN_USERNAME: str | None = None
+    ADMIN_PASSWORD: str | None = None
+    ADMIN_REALM_NAME: str = "master"
 
 
 class MinioConfig(BaseModel):

@@ -90,3 +90,33 @@ Feature: Keycloak Authentication Testing
     And I have a valid token for "asyncuser" with password "async123" using async adapter
     When I validate the token using async adapter
     Then the async token validation should succeed
+
+  Scenario: Create a realm using sync adapter
+    Given a configured sync Keycloak adapter
+    When I create a realm named "new-test-realm" with display name "New Test Realm" using sync adapter
+    Then the sync realm creation should succeed
+    And the realm "new-test-realm" should exist
+    And the realm should have display name "New Test Realm"
+
+  Scenario: Create a client using sync adapter
+    Given a configured sync Keycloak adapter
+    And a Keycloak realm "new-test-realm" exists
+    When I create a client named "new-test-client" in realm "new-test-realm" using sync adapter
+    Then the sync client creation should succeed
+    And the client "new-test-client" should exist in realm "new-test-realm"
+    
+  @async
+  Scenario: Create a realm asynchronously
+    Given a configured async Keycloak adapter
+    When I create a realm named "new-async-realm" with display name "New Async Realm" using async adapter
+    Then the async realm creation should succeed
+    And the realm "new-async-realm" should exist
+    And the realm should have display name "New Async Realm"
+
+  @async
+  Scenario: Create a client asynchronously
+    Given a configured async Keycloak adapter
+    And a Keycloak realm "new-async-realm" exists
+    When I create a client named "new-async-client" in realm "new-async-realm" using async adapter
+    Then the async client creation should succeed
+    And the client "new-async-client" should exist in realm "new-async-realm"

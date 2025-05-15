@@ -4,7 +4,12 @@ from typing import Any, override
 
 from async_lru import alru_cache
 from keycloak import KeycloakAdmin, KeycloakOpenID
-from keycloak.exceptions import KeycloakAuthenticationError, KeycloakConnectionError, KeycloakError, KeycloakGetError
+from keycloak.exceptions import (
+    KeycloakAuthenticationError,
+    KeycloakConnectionError,
+    KeycloakError,
+    KeycloakGetError,
+)
 
 from archipy.adapters.keycloak.ports import (
     AsyncKeycloakPort,
@@ -17,6 +22,7 @@ from archipy.adapters.keycloak.ports import (
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import KeycloakConfig
 from archipy.helpers.decorators.cache import ttl_cache_decorator
+from archipy.helpers.utils.string_utils import StringUtils
 from archipy.models.errors import (
     ConnectionTimeoutError,
     InternalError,
@@ -56,7 +62,8 @@ class KeycloakAdapter(KeycloakPort):
         self._admin_token_expiry = 0
 
         # Initialize admin client with service account if client_secret is provided
-        if self.configs.CLIENT_SECRET_KEY:
+        # or with admin credentials if provided
+        if self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD):
             self._initialize_admin_client()
 
     def clear_all_caches(self) -> None:
@@ -88,26 +95,50 @@ class KeycloakAdapter(KeycloakPort):
     def _initialize_admin_client(self) -> None:
         """Initialize or refresh the admin client."""
         try:
-            # Get token using client credentials
-            token = self._openid_adapter.token(grant_type="client_credentials")
+            # Check if admin credentials are available
+            if self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD:
+                # Create admin client using admin credentials
+                self._admin_adapter = KeycloakAdmin(
+                    server_url=self.configs.SERVER_URL,
+                    username=self.configs.ADMIN_USERNAME,
+                    password=self.configs.ADMIN_PASSWORD,
+                    realm_name=self.configs.REALM_NAME,
+                    user_realm_name=self.configs.ADMIN_REALM_NAME,
+                    verify=self.configs.VERIFY_SSL,
+                    timeout=self.configs.TIMEOUT,
+                )
+                # Since we're using direct credentials, set a long expiry time
+                self._admin_token_expiry = time.time() + 3600  # 1 hour
+                logger.debug("Admin client initialized with admin credentials")
 
-            # Set token expiry time (current time + expires_in - buffer)
-            # Using a 30-second buffer to ensure we refresh before expiration
-            self._admin_token_expiry = time.time() + token.get("expires_in", 60) - 30
+            elif self.configs.CLIENT_SECRET_KEY:
+                # Get token using client credentials
+                token = self._openid_adapter.token(grant_type="client_credentials")
 
-            # Create admin client with the token
-            self._admin_adapter = KeycloakAdmin(
-                server_url=self.configs.SERVER_URL,
-                realm_name=self.configs.REALM_NAME,
-                token=token,
-                verify=self.configs.VERIFY_SSL,
-                timeout=self.configs.TIMEOUT,
-            )
-            logger.debug("Admin client initialized successfully")
+                # Set token expiry time (current time + expires_in - buffer)
+                # Using a 30-second buffer to ensure we refresh before expiration
+                self._admin_token_expiry = time.time() + token.get("expires_in", 60) - 30
+
+                self._admin_adapter = KeycloakAdmin(
+                    server_url=self.configs.SERVER_URL,
+                    realm_name=self.configs.REALM_NAME,
+                    token=token,
+                    verify=self.configs.VERIFY_SSL,
+                    timeout=self.configs.TIMEOUT,
+                )
+                logger.debug("Admin client initialized with client credentials")
+
+            else:
+                raise UnauthenticatedError(
+                    additional_data={"detail": "Neither admin credentials nor client secret provided"}
+                )
+
         except KeycloakAuthenticationError as e:
             self._admin_adapter = None
             self._admin_token_expiry = 0
-            raise UnauthenticatedError("Failed to authenticate with Keycloak service account") from e
+            raise UnauthenticatedError(
+                additional_data={"detail": "Failed to authenticate with Keycloak service account"}
+            ) from e
         except KeycloakConnectionError as e:
             self._admin_adapter = None
             self._admin_token_expiry = 0
@@ -128,8 +159,8 @@ class KeycloakAdapter(KeycloakPort):
             UnauthenticatedError: If admin client is not available due to authentication issues
             UnavailableError: If Keycloak service is unavailable
         """
-        if not self.configs.CLIENT_SECRET_KEY:
-            raise UnauthenticatedError("Service account credentials not configured")
+        if not (self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD)):
+            raise UnauthenticatedError(additional_data={"data": "Neither admin credentials nor client secret provided"})
 
         # Check if token is about to expire and refresh if needed
         if self._admin_adapter is None or time.time() >= self._admin_token_expiry:
@@ -530,6 +561,42 @@ class KeycloakAdapter(KeycloakPort):
                 self.get_realm_roles.clear_cache()
 
             return self.admin_adapter.get_realm_role(role_name)
+        except KeycloakError as e:
+            raise InternalError() from e
+
+    @override
+    def create_client_role(self, client_id: str, role_name: str, description: str | None = None) -> dict[str, Any]:
+        """Create a new client role.
+
+        Args:
+            client_id: Client ID or client name
+            role_name: Role name
+            description: Optional role description
+
+        Returns:
+            Created role details
+
+        Raises:
+            ValueError: If role creation fails
+        """
+        # This is a write operation, no caching needed
+        try:
+            client_id = self.admin_adapter.get_client_id(client_id)
+
+            # Prepare role data
+            role_data = {"name": role_name}
+            if description:
+                role_data["description"] = description
+
+            # Create client role
+            self.admin_adapter.create_client_role(client_id, role_data)
+
+            # Clear related caches if they exist
+            if hasattr(self.get_client_roles_for_user, "clear_cache"):
+                self.get_client_roles_for_user.clear_cache()
+
+            # Return created role
+            return self.admin_adapter.get_client_role(client_id, role_name)
         except KeycloakError as e:
             raise InternalError() from e
 
@@ -1006,6 +1073,99 @@ class KeycloakAdapter(KeycloakPort):
         else:
             return False
 
+    @override
+    def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs) -> dict[str, Any]:
+        """Create a Keycloak realm with minimum required fields and optional additional config.
+
+        :param realm_name: The realm identifier (required)
+        :param skip_exists: Skip creation if realm already exists
+        :param kwargs: Additional optional configurations for the realm
+        :return: Dictionary with realm information and status
+        """
+        payload = {
+            "realm": realm_name,
+            "enabled": kwargs.get("enabled", True),
+            "displayName": kwargs.get("display_name", realm_name),
+        }
+
+        # Add any additional parameters from kwargs
+        for key, value in kwargs.items():
+            # Skip display_name as it's already handled
+            if key == "display_name":
+                continue
+
+            # Convert Python snake_case to Keycloak camelCase
+            camel_key = StringUtils.snake_to_camel_case(key)
+            payload[camel_key] = value
+
+        try:
+            self.admin_adapter.create_realm(payload=payload, skip_exists=skip_exists)
+        except KeycloakError as e:
+            logger.debug(f"Failed to create realm: {e!s}")
+            raise InternalError() from e
+        else:
+            return {"realm": realm_name, "status": "created", "config": payload}
+
+    @override
+    def create_client(
+        self, client_id: str, realm: str | None = None, skip_exists: bool = True, **kwargs
+    ) -> dict[str, Any] | None:
+        """Create a Keycloak client with minimum required fields and optional additional config.
+
+        :param client_id: The client identifier (required)
+        :param realm: Target realm name (uses the current realm in KeycloakAdmin if not specified)
+        :param skip_exists: Skip creation if client already exists
+        :param kwargs: Additional optional configurations for the client
+        :return: Dictionary with client information
+        """
+        original_realm = self.admin_adapter.connection.realm_name
+
+        try:
+            # Set the target realm if provided
+            if realm and realm != original_realm:
+                self.admin_adapter.connection.realm_name = realm
+
+            public_client = kwargs.get("public_client", False)
+
+            # Prepare the minimal client payload
+            payload = {
+                "clientId": client_id,
+                "enabled": kwargs.get("enabled", True),
+                "protocol": kwargs.get("protocol", "openid-connect"),
+                "name": kwargs.get("name", client_id),
+                "publicClient": public_client,
+            }
+
+            # Enable service accounts for confidential clients by default
+            if not public_client:
+                payload["serviceAccountsEnabled"] = kwargs.get("service_account_enabled", True)
+                payload["clientAuthenticatorType"] = "client-secret"
+
+            for key, value in kwargs.items():
+                if key in ["enabled", "protocol", "name", "public_client", "service_account_enabled"]:
+                    continue
+
+                # Convert snake_case to camelCase
+                camel_key = StringUtils.snake_to_camel_case(key)
+                payload[camel_key] = value
+
+            try:
+                internal_client_id = self.admin_adapter.create_client(payload, skip_exists=skip_exists)
+            except KeycloakError as e:
+                logger.debug(f"Failed to create client: {e!s}")
+                raise InternalError() from e
+
+            return {
+                "client_id": client_id,
+                "internal_client_id": internal_client_id,
+                "realm": self.admin_adapter.connection.realm_name,
+            }
+
+        finally:
+            # Always restore the original realm
+            if realm and realm != original_realm:
+                self.admin_adapter.connection.realm_name = original_realm
+
 
 class AsyncKeycloakAdapter(AsyncKeycloakPort):
     """Concrete implementation of the KeycloakPort interface using python-keycloak library.
@@ -1032,7 +1192,8 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort):
         self._admin_token_expiry = 0
 
         # Initialize admin client with service account if client_secret is provided
-        if self.configs.CLIENT_SECRET_KEY:
+        # or with admin credentials if provided
+        if self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD):
             self._initialize_admin_client()
 
     def clear_all_caches(self) -> None:
@@ -1064,26 +1225,49 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort):
     def _initialize_admin_client(self) -> None:
         """Initialize or refresh the admin client."""
         try:
-            # Get token using client credentials
-            token = self.openid_adapter.token(grant_type="client_credentials")
+            # Check if admin credentials are available
+            if self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD:
+                # Create admin client using admin credentials
+                self._admin_adapter = KeycloakAdmin(
+                    server_url=self.configs.SERVER_URL,
+                    username=self.configs.ADMIN_USERNAME,
+                    password=self.configs.ADMIN_PASSWORD,
+                    realm_name=self.configs.REALM_NAME,
+                    user_realm_name=self.configs.ADMIN_REALM_NAME,
+                    verify=self.configs.VERIFY_SSL,
+                    timeout=self.configs.TIMEOUT,
+                )
+                # Since we're using direct credentials, set a long expiry time
+                self._admin_token_expiry = time.time() + 3600  # 1 hour
+                logger.debug("Admin client initialized with admin credentials")
+            elif self.configs.CLIENT_SECRET_KEY:
+                # Get token using client credentials
+                token = self.openid_adapter.token(grant_type="client_credentials")
 
-            # Set token expiry time (current time + expires_in - buffer)
-            # Using a 30-second buffer to ensure we refresh before expiration
-            self._admin_token_expiry = time.time() + token.get("expires_in", 60) - 30
+                # Set token expiry time (current time + expires_in - buffer)
+                # Using a 30-second buffer to ensure we refresh before expiration
+                self._admin_token_expiry = time.time() + token.get("expires_in", 60) - 30
 
-            # Create admin client with the token
-            self._admin_adapter = KeycloakAdmin(
-                server_url=self.configs.SERVER_URL,
-                realm_name=self.configs.REALM_NAME,
-                token=token,
-                verify=self.configs.VERIFY_SSL,
-                timeout=self.configs.TIMEOUT,
-            )
-            logger.debug("Admin client initialized successfully")
+                # Create admin client with the token
+                self._admin_adapter = KeycloakAdmin(
+                    server_url=self.configs.SERVER_URL,
+                    realm_name=self.configs.REALM_NAME,
+                    token=token,
+                    verify=self.configs.VERIFY_SSL,
+                    timeout=self.configs.TIMEOUT,
+                )
+                logger.debug("Admin client initialized with client credentials")
+            else:
+                raise UnauthenticatedError(
+                    additional_data={"detail": "Neither admin credentials nor client secret provided"}
+                )
+
         except KeycloakAuthenticationError as e:
             self._admin_adapter = None
             self._admin_token_expiry = 0
-            raise UnauthenticatedError("Failed to authenticate with Keycloak service account") from e
+            raise UnauthenticatedError(
+                additional_data={"detail": "Failed to authenticate with Keycloak service account"}
+            ) from e
         except KeycloakConnectionError as e:
             self._admin_adapter = None
             self._admin_token_expiry = 0
@@ -1104,8 +1288,10 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort):
             UnauthenticatedError: If admin client is not available due to authentication issues
             UnavailableError: If Keycloak service is unavailable
         """
-        if not self.configs.CLIENT_SECRET_KEY:
-            raise UnauthenticatedError("Service account credentials not configured")
+        if not (self.configs.CLIENT_SECRET_KEY or (self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD)):
+            raise UnauthenticatedError(
+                additional_data={"detail": "Neither admin credentials nor client secret provided"}
+            )
 
         # Check if token is about to expire and refresh if needed
         if self._admin_adapter is None or time.time() >= self._admin_token_expiry:
@@ -1457,7 +1643,7 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort):
         Args:
             user_id: User's ID
             client_id: Client ID
-            role_name: Role name to assign
+            role_name: Role name to	new-test-realm assign
 
         Raises:
             ValueError: If role assignment fails
@@ -1509,6 +1695,44 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort):
             raise InternalError() from e
         else:
             return created_role
+
+    @override
+    async def create_client_role(
+        self, client_id: str, role_name: str, description: str | None = None
+    ) -> dict[str, Any]:
+        """Create a new client role.
+
+        Args:
+            client_id: Client ID or client name
+            role_name: Role name
+            description: Optional role description
+
+        Returns:
+            Created role details
+
+        Raises:
+            ValueError: If role creation fails
+        """
+        # This is a write operation, no caching needed
+        try:
+            client_id = await self.admin_adapter.a_get_client_id(client_id)
+
+            # Prepare role data
+            role_data = {"name": role_name}
+            if description:
+                role_data["description"] = description
+
+            # Create client role
+            await self.admin_adapter.a_create_client_role(client_id, role_data)
+
+            # Clear related caches if they exist
+            if hasattr(self.get_client_roles_for_user, "clear_cache"):
+                self.get_client_roles_for_user.clear_cache()
+
+            # Return created role
+            return await self.admin_adapter.a_get_client_role(client_id, role_name)
+        except KeycloakError as e:
+            raise InternalError() from e
 
     @override
     async def delete_realm_role(self, role_name: str) -> None:
@@ -1985,3 +2209,108 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort):
             return False
         else:
             return False
+
+    @override
+    async def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs) -> dict[str, Any] | None:
+        """Create a Keycloak realm with minimum required fields and optional additional config.
+
+        Args:
+            realm_name: The realm identifier (required)
+            skip_exists: Skip creation if realm already exists
+            kwargs: Additional optional configurations for the realm
+
+        Returns:
+            Dictionary with realm information and status
+
+        Raises:
+            InternalError: If realm creation fails
+        """
+        payload = {
+            "realm": realm_name,
+            "enabled": kwargs.get("enabled", True),
+            "displayName": kwargs.get("display_name", realm_name),
+        }
+
+        # Add any additional parameters from kwargs
+        for key, value in kwargs.items():
+            # Skip display_name as it's already handled
+            if key == "display_name":
+                continue
+
+            # Convert Python snake_case to Keycloak camelCase
+            camel_key = StringUtils.snake_to_camel_case(key)
+            payload[camel_key] = value
+
+        try:
+            await self.admin_adapter.a_create_realm(payload=payload, skip_exists=skip_exists)
+        except KeycloakError as e:
+            logger.debug(f"Failed to create realm: {e!s}")
+            raise InternalError() from e
+        else:
+            return {"realm": realm_name, "status": "created", "config": payload}
+
+    @override
+    async def create_client(
+        self, client_id: str, realm: str | None = None, skip_exists: bool = True, **kwargs
+    ) -> dict[str, Any] | None:
+        """Create a Keycloak client with minimum required fields and optional additional config.
+
+        Args:
+            client_id: The client identifier (required)
+            realm: Target realm name (uses the current realm in KeycloakAdmin if not specified)
+            skip_exists: Skip creation if client already exists
+            kwargs: Additional optional configurations for the client
+
+        Returns:
+            Dictionary with client information
+
+        Raises:
+            InternalError: If client creation fails
+        """
+        original_realm = self.admin_adapter.connection.realm_name
+
+        try:
+            # Set the target realm if provided
+            if realm and realm != original_realm:
+                self.admin_adapter.connection.realm_name = realm
+
+            public_client = kwargs.get("public_client", False)
+
+            # Prepare the minimal client payload
+            payload = {
+                "clientId": client_id,
+                "enabled": kwargs.get("enabled", True),
+                "protocol": kwargs.get("protocol", "openid-connect"),
+                "name": kwargs.get("name", client_id),
+                "publicClient": public_client,
+            }
+
+            # Enable service accounts for confidential clients by default
+            if not public_client:
+                payload["serviceAccountsEnabled"] = kwargs.get("service_account_enabled", True)
+                payload["clientAuthenticatorType"] = "client-secret"
+
+            for key, value in kwargs.items():
+                if key in ["enabled", "protocol", "name", "public_client", "service_account_enabled"]:
+                    continue
+
+                # Convert snake_case to camelCase
+                camel_key = StringUtils.snake_to_camel_case(key)
+                payload[camel_key] = value
+
+            try:
+                internal_client_id = await self.admin_adapter.a_create_client(payload, skip_exists=skip_exists)
+            except KeycloakError as e:
+                logger.debug(f"Failed to create client: {e!s}")
+                raise InternalError() from e
+
+            return {
+                "client_id": client_id,
+                "internal_client_id": internal_client_id,
+                "realm": self.admin_adapter.connection.realm_name,
+            }
+
+        finally:
+            # Always restore the original realm
+            if realm and realm != original_realm:
+                self.admin_adapter.connection.realm_name = original_realm
