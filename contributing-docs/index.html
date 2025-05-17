@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#archipy-documentation" class="md-skip">
+        <a href="#archipy-documentation-guidelines" class="md-skip">
           Skip to content
         </a>
       
@@ -1495,27 +1495,60 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#converting-from-sphinx-to-mkdocs" class="md-nav__link">
+  <a href="#writing-documentation" class="md-nav__link">
     <span class="md-ellipsis">
-      Converting from Sphinx to MkDocs
+      Writing Documentation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Writing Documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#format-and-style" class="md-nav__link">
+    <span class="md-ellipsis">
+      Format and Style
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code Examples
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#admonitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Admonitions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#building-and-previewing-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Building and Previewing Documentation
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#writing-documentation-guidelines" class="md-nav__link">
+  <a href="#documentation-improvement-guidelines" class="md-nav__link">
     <span class="md-ellipsis">
-      Writing Documentation Guidelines
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#improving-documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Improving Documentation
+      Documentation Improvement Guidelines
     </span>
   </a>
   
@@ -1587,27 +1620,60 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#converting-from-sphinx-to-mkdocs" class="md-nav__link">
+  <a href="#writing-documentation" class="md-nav__link">
     <span class="md-ellipsis">
-      Converting from Sphinx to MkDocs
+      Writing Documentation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Writing Documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#format-and-style" class="md-nav__link">
+    <span class="md-ellipsis">
+      Format and Style
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code Examples
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#admonitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Admonitions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#building-and-previewing-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Building and Previewing Documentation
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#writing-documentation-guidelines" class="md-nav__link">
+  <a href="#documentation-improvement-guidelines" class="md-nav__link">
     <span class="md-ellipsis">
-      Writing Documentation Guidelines
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#improving-documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Improving Documentation
+      Documentation Improvement Guidelines
     </span>
   </a>
   
@@ -1637,8 +1703,8 @@
   
 
 
-<h1 id="archipy-documentation">ArchiPy Documentation<a class="headerlink" href="#archipy-documentation" title="Permanent link">&para;</a></h1>
-<p>This directory contains the MkDocs-based documentation for ArchiPy.</p>
+<h1 id="archipy-documentation-guidelines">ArchiPy Documentation Guidelines<a class="headerlink" href="#archipy-documentation-guidelines" title="Permanent link">&para;</a></h1>
+<p>This document outlines the standards and practices for ArchiPy documentation.</p>
 <h2 id="documentation-structure">Documentation Structure<a class="headerlink" href="#documentation-structure" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>mkdocs.yml</code> - Main configuration file for MkDocs</li>
@@ -1650,54 +1716,56 @@
 </ul>
 </li>
 </ul>
-<h2 id="converting-from-sphinx-to-mkdocs">Converting from Sphinx to MkDocs<a class="headerlink" href="#converting-from-sphinx-to-mkdocs" title="Permanent link">&para;</a></h2>
-<p>The documentation is being migrated from Sphinx (RST) to MkDocs (Markdown). To help with this process:</p>
-<ol>
-<li>
-<p>Run the conversion script:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>scripts/convert_docs.py
-</span></code></pre></div>
-   This script uses <code>pandoc</code> to convert RST files to Markdown.</p>
-</li>
-<li>
-<p>Manually review and improve the converted files.</p>
-</li>
-<li>
-<p>Preview the documentation:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>docs-serve
-</span></code></pre></div></p>
-</li>
-<li>
-<p>Build the documentation:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>make<span class="w"> </span>docs-build
-</span></code></pre></div></p>
-</li>
-<li>
-<p>Deploy to GitHub Pages:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>make<span class="w"> </span>docs-deploy
-</span></code></pre></div></p>
-</li>
-</ol>
-<h2 id="writing-documentation-guidelines">Writing Documentation Guidelines<a class="headerlink" href="#writing-documentation-guidelines" title="Permanent link">&para;</a></h2>
+<h2 id="writing-documentation">Writing Documentation<a class="headerlink" href="#writing-documentation" title="Permanent link">&para;</a></h2>
+<h3 id="format-and-style">Format and Style<a class="headerlink" href="#format-and-style" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Use Markdown syntax for all documentation files</li>
 <li>Follow the Google Python style for code examples</li>
-<li>Include type hints in code samples</li>
+<li>Include type hints in code samples (using Python 3.13 syntax)</li>
+<li>Include proper exception handling with <code>raise ... from e</code> pattern</li>
 <li>Group related documentation in directories</li>
 <li>Link between documentation pages using relative links</li>
-<li>Add admonitions (notes, warnings, tips) using the Material for MkDocs syntax:
-  <div class="language-markdown highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>!!! note
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    This is a note.
-</span></code></pre></div></li>
 </ul>
-<h2 id="improving-documentation">Improving Documentation<a class="headerlink" href="#improving-documentation" title="Permanent link">&para;</a></h2>
-<p>When improving the documentation:</p>
+<h3 id="code-examples">Code Examples<a class="headerlink" href="#code-examples" title="Permanent link">&para;</a></h3>
+<p>When including code examples:</p>
 <ol>
-<li>Focus on clarity and conciseness</li>
+<li>Include proper type hints using Python 3.13 syntax (<code>x: list[str]</code> not <code>List[str]</code>)</li>
+<li>Demonstrate proper error handling with exception chaining</li>
+<li>Include docstrings with Args, Returns, and Raises sections</li>
+<li>Show realistic use cases that align with ArchiPy's patterns</li>
+<li>Keep examples concise but complete enough to understand usage</li>
+</ol>
+<h3 id="admonitions">Admonitions<a class="headerlink" href="#admonitions" title="Permanent link">&para;</a></h3>
+<p>Use Material for MkDocs admonitions to highlight important information:</p>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>!!! note
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    This is a note.
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>!!! warning
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    This is a warning.
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>!!! tip
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    This is a tip.
+</span></code></pre></div>
+<h2 id="building-and-previewing-documentation">Building and Previewing Documentation<a class="headerlink" href="#building-and-previewing-documentation" title="Permanent link">&para;</a></h2>
+<p>Preview the documentation locally:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>docs-serve
+</span></code></pre></div></p>
+<p>Build the documentation:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>make<span class="w"> </span>docs-build
+</span></code></pre></div></p>
+<p>Deploy to GitHub Pages:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>make<span class="w"> </span>docs-deploy
+</span></code></pre></div></p>
+<h2 id="documentation-improvement-guidelines">Documentation Improvement Guidelines<a class="headerlink" href="#documentation-improvement-guidelines" title="Permanent link">&para;</a></h2>
+<p>When improving documentation:</p>
+<ol>
+<li>Ensure clarity and conciseness</li>
 <li>Include practical, runnable examples</li>
 <li>Explain "why" not just "how"</li>
-<li>Keep navigation logical and intuitive</li>
+<li>Maintain logical navigation</li>
 <li>Use diagrams for complex concepts</li>
+<li>Validate that examples match the current API</li>
+<li>Test code examples to ensure they work correctly</li>
 </ol>
 
 
