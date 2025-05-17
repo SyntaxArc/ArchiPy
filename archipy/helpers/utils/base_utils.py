@@ -83,7 +83,7 @@ class BaseUtils(ErrorUtils, DatetimeUtils, PasswordUtils, JWTUtils, TOTPUtils, F
             raise InvalidLandlineNumberError(landline_number)
 
     @classmethod
-    def validate_iranian_national_code_pattern(cls, national_code: str) -> str:
+    def validate_iranian_national_code_pattern(cls, national_code: str) -> None:
         """Validates an Iranian National ID number using the official algorithm.
         To see how the algorithm works, see http://www.aliarash.com/article/codemeli/codemeli.htm
 
@@ -96,9 +96,6 @@ class BaseUtils(ErrorUtils, DatetimeUtils, PasswordUtils, JWTUtils, TOTPUtils, F
 
         Args:
             national_code (str): A string containing the national ID to validate.
-
-        Returns:
-            str: The validated national ID string.
 
         Raises:
             InvalidNationalCodeError: If the ID is invalid due to length or checksum.
@@ -148,4 +145,3 @@ class BaseUtils(ErrorUtils, DatetimeUtils, PasswordUtils, JWTUtils, TOTPUtils, F
         calculated_checksum, actual_checksum = _get_checksums(national_code)
         if calculated_checksum != actual_checksum:
             raise InvalidNationalCodeError(national_code)
-        return national_code
