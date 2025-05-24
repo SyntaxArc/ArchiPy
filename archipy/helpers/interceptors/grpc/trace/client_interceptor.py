@@ -38,7 +38,7 @@ class GrpcClientTraceInterceptor(BaseGrpcClientInterceptor):
             - If no trace parent header is available, the interceptor does nothing and passes the call through.
         """
         # Skip tracing if Elastic APM is disabled
-        if not BaseConfig.global_config().ELASTIC_APM.ENABLED:
+        if not BaseConfig.global_config().ELASTIC_APM.IS_ENABLED:
             return method(request_or_iterator, call_details)
 
         # Skip tracing if no trace parent header is available
@@ -82,7 +82,7 @@ class AsyncGrpcClientTraceInterceptor(BaseAsyncGrpcClientInterceptor):
             - If no trace parent header is available, the interceptor does nothing and passes the call through.
         """
         # Skip tracing if Elastic APM is disabled
-        if not BaseConfig.global_config().ELASTIC_APM.ENABLED:
+        if not BaseConfig.global_config().ELASTIC_APM.IS_ENABLED:
             return await method(request_or_iterator, call_details)
 
         # Skip tracing if no trace parent header is available
