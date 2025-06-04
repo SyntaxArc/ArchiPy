@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#license" class="md-skip">
+        <a href="#solving-database-isolation-level-issues-in-multi-pod-environments-a-practical-approach-with-archipy" class="md-skip">
           Skip to content
         </a>
       
@@ -1465,6 +1465,19 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    License
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -1476,6 +1489,331 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#related-articles" class="md-nav__link">
+    <span class="md-ellipsis">
+      Related Articles
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-problem-lazy-loading-returns-stale-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      The Problem: Lazy Loading Returns Stale Data
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Problem: Lazy Loading Returns Stale Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      The Scenario
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#root-cause-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      Root Cause Analysis
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Context
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-solution-atomic-decorator-with-session-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      The Solution: Atomic Decorator with Session Cleanup
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Solution: Atomic Decorator with Session Cleanup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#design-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Design Requirements
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implementation Overview
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-implementation-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Implementation Features
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Implementation Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-automatic-session-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Automatic Session Management
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-critical-session-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Critical Session Cleanup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-database-specific-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Database-Specific Error Handling
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-support-for-nested-transactions" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Support for Nested Transactions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-asynchronous-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Asynchronous Support
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-synchronous-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Synchronous Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asynchronous-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Asynchronous Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-database-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multi-Database Support
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-and-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing and Validation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#results-and-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      Results and Impact
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Results and Impact">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#before-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Before Implementation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#after-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      After Implementation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices-and-recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices and Recommendations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices and Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-always-use-atomic-decorators-for-unit-of-work-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Always Use Atomic Decorators for Unit of Work Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-configure-appropriate-isolation-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Configure Appropriate Isolation Levels
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-handle-serialization-failures-gracefully" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Handle Serialization Failures Gracefully
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-monitor-session-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Monitor Session Lifecycle
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-test-across-multiple-pods" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Test Across Multiple Pods
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conclusion
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1501,6 +1839,320 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#related-articles" class="md-nav__link">
+    <span class="md-ellipsis">
+      Related Articles
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-problem-lazy-loading-returns-stale-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      The Problem: Lazy Loading Returns Stale Data
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Problem: Lazy Loading Returns Stale Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      The Scenario
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#root-cause-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      Root Cause Analysis
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Context
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-solution-atomic-decorator-with-session-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      The Solution: Atomic Decorator with Session Cleanup
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Solution: Atomic Decorator with Session Cleanup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#design-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Design Requirements
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implementation Overview
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-implementation-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Implementation Features
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Implementation Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-automatic-session-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Automatic Session Management
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-critical-session-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Critical Session Cleanup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-database-specific-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Database-Specific Error Handling
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-support-for-nested-transactions" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Support for Nested Transactions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-asynchronous-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Asynchronous Support
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-synchronous-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Synchronous Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asynchronous-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Asynchronous Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-database-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multi-Database Support
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-and-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing and Validation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#results-and-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      Results and Impact
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Results and Impact">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#before-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Before Implementation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#after-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      After Implementation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices-and-recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices and Recommendations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices and Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-always-use-atomic-decorators-for-unit-of-work-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Always Use Atomic Decorators for Unit of Work Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-configure-appropriate-isolation-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Configure Appropriate Isolation Levels
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-handle-serialization-failures-gracefully" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Handle Serialization Failures Gracefully
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-monitor-session-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Monitor Session Lifecycle
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-test-across-multiple-pods" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Test Across Multiple Pods
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conclusion
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1523,9 +2175,390 @@
   
 
 
-<h1 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h1>
-<p>ArchiPy is licensed under the terms of the license file included in the repository.</p>
-<p>For more details, see the <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/LICENSE">LICENSE</a> file.</p>
+<h1 id="solving-database-isolation-level-issues-in-multi-pod-environments-a-practical-approach-with-archipy">Solving Database Isolation Level Issues in Multi-Pod Environments: A Practical Approach with Archipy<a class="headerlink" href="#solving-database-isolation-level-issues-in-multi-pod-environments-a-practical-approach-with-archipy" title="Permanent link">&para;</a></h1>
+<h2 id="related-articles">Related Articles<a class="headerlink" href="#related-articles" title="Permanent link">&para;</a></h2>
+<p>Before diving into this article, I recommend reading my previous posts that provide essential context:</p>
+<ul>
+<li><a href="https://medium.com/@hosseinnejati/understanding-database-isolation-levels-from-my-perspective-27f261eeb976">Understanding Database Isolation Levels from My Perspective</a></li>
+<li><a href="https://medium.com/@hosseinnejati/why-lazy-loading-in-databases-feels-useful-but-scary-to-me-60353d98580b">Why Lazy Loading in Databases Feels Useful but Scary to Me</a></li>
+<li><a href="https://medium.com/@hosseinnejati/understanding-the-unit-of-work-pattern-with-archipy-4d9ac6fef7a4">Understanding the Unit of Work Pattern with Archipy</a></li>
+</ul>
+<hr />
+<h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h2>
+<p>Database isolation levels are fundamental to maintaining data consistency in concurrent environments, but they can introduce unexpected challenges when working with lazy loading in distributed systems. In this article, I will share a real-world problem I encountered when using SQLAlchemy with SERIALIZABLE and REPEATABLE READ isolation levels in a multi-pod Kubernetes environment, and demonstrate how I solved it with a custom atomic decorator in my Archipy framework.</p>
+<h2 id="the-problem-lazy-loading-returns-stale-data">The Problem: Lazy Loading Returns Stale Data<a class="headerlink" href="#the-problem-lazy-loading-returns-stale-data" title="Permanent link">&para;</a></h2>
+<h3 id="the-scenario">The Scenario<a class="headerlink" href="#the-scenario" title="Permanent link">&para;</a></h3>
+<p>In my microservices architecture running on Kubernetes, I had multiple pods accessing the same PostgreSQL database. I was using SQLAlchemy with higher isolation levels (SERIALIZABLE or REPEATABLE READ) to ensure data consistency. However, I discovered a critical issue: lazy loading was returning stale data when one pod updated records while another pod was reading them.</p>
+<h3 id="root-cause-analysis">Root Cause Analysis<a class="headerlink" href="#root-cause-analysis" title="Permanent link">&para;</a></h3>
+<p>The problem stems from how SQLAlchemy's session management interacts with database isolation levels:</p>
+<ol>
+<li><strong>Session Persistence</strong>: SQLAlchemy sessions can persist across multiple operations</li>
+<li><strong>Isolation Level Behavior</strong>: Higher isolation levels (REPEATABLE READ, SERIALIZABLE) maintain a consistent snapshot of data throughout a transaction</li>
+<li><strong>Lazy Loading Timing</strong>: When lazy loading occurs, it uses the same session that might have been created before other pods made updates</li>
+<li><strong>Cross-Pod Updates</strong>: Updates from other pods become invisible to existing sessions due to isolation level constraints</li>
+</ol>
+<h3 id="configuration-context">Configuration Context<a class="headerlink" href="#configuration-context" title="Permanent link">&para;</a></h3>
+<p>In my Archipy framework, I configure isolation levels through the SQLAlchemyConfig:</p>
+<div class="language-text highlight"><pre><span></span><code>class SQLAlchemyConfig(BaseModel):
+    &quot;&quot;&quot;Configuration settings for SQLAlchemy ORM.
+
+    Controls database connection parameters, pooling behavior, and query execution settings.
+    &quot;&quot;&quot;
+
+    ISOLATION_LEVEL: str | None = Field(
+        default=&quot;REPEATABLE READ&quot;,
+        description=&quot;Transaction isolation level&quot;
+    )
+    # ... other configuration fields
+</code></pre></div>
+<p>This configuration is used when creating the SQLAlchemy engine:</p>
+<div class="language-text highlight"><pre><span></span><code>def _create_engine(self, configs: SQLAlchemyConfig) -&gt; Engine:
+    &quot;&quot;&quot;Create a SQLAlchemy engine with common configuration.&quot;&quot;&quot;
+    try:
+        url = self._create_url(configs)
+        return create_engine(
+            url,
+            isolation_level=configs.ISOLATION_LEVEL,
+            echo=configs.ECHO,
+            echo_pool=configs.ECHO_POOL,
+            # ... other engine parameters
+        )
+    except SQLAlchemyError as e:
+        # Error handling logic
+        pass
+</code></pre></div>
+<h2 id="the-solution-atomic-decorator-with-session-cleanup">The Solution: Atomic Decorator with Session Cleanup<a class="headerlink" href="#the-solution-atomic-decorator-with-session-cleanup" title="Permanent link">&para;</a></h2>
+<h3 id="design-requirements">Design Requirements<a class="headerlink" href="#design-requirements" title="Permanent link">&para;</a></h3>
+<p>I needed a solution that would:</p>
+<ol>
+<li>Ensure transactional integrity for unit of work operations</li>
+<li>Clean up sessions properly to prevent stale data issues</li>
+<li>Handle both synchronous and asynchronous operations</li>
+<li>Support multiple database types (PostgreSQL, SQLite, StarRocks)</li>
+<li>Provide proper error handling with database-specific exceptions</li>
+</ol>
+<h3 id="implementation-overview">Implementation Overview<a class="headerlink" href="#implementation-overview" title="Permanent link">&para;</a></h3>
+<p>I created a comprehensive atomic decorator system in <code>archipy/helpers/decorators/sqlalchemy_atomic.py</code>:</p>
+<div class="language-text highlight"><pre><span></span><code>def sqlalchemy_atomic_decorator(
+    db_type: str,
+    is_async: bool = False,
+    function: Callable[..., Any] | None = None,
+) -&gt; Callable[..., Any] | partial[Callable[..., Any]]:
+    &quot;&quot;&quot;Factory for creating SQLAlchemy atomic transaction decorators.
+
+    This decorator ensures that a function runs within a database transaction for the specified
+    database type. If the function succeeds, the transaction is committed; otherwise, it is rolled back.
+    Supports both synchronous and asynchronous functions.
+
+    Args:
+        db_type (str): The database type (&quot;postgres&quot;, &quot;sqlite&quot;, or &quot;starrocks&quot;).
+        is_async (bool): Whether the function is asynchronous. Defaults to False.
+        function (Callable | None): The function to wrap. If None, returns a partial function.
+
+    Returns:
+        Callable | partial: The wrapped function or a partial function for later use.
+    &quot;&quot;&quot;
+</code></pre></div>
+<h3 id="key-implementation-features">Key Implementation Features<a class="headerlink" href="#key-implementation-features" title="Permanent link">&para;</a></h3>
+<h4 id="1-automatic-session-management">1. Automatic Session Management<a class="headerlink" href="#1-automatic-session-management" title="Permanent link">&para;</a></h4>
+<p>The decorator handles the complete session lifecycle:</p>
+<div class="language-text highlight"><pre><span></span><code>def sync_wrapper(*args: Any, **kwargs: Any) -&gt; R:
+    &quot;&quot;&quot;Synchronous wrapper for managing database transactions.&quot;&quot;&quot;
+    registry = get_registry()
+    session_manager: SessionManagerPort = registry.get_sync_manager()
+    session = session_manager.get_session()
+    is_nested = session.info.get(atomic_flag, False)
+    if not is_nested:
+        session.info[atomic_flag] = True
+
+    try:
+        if session.in_transaction():
+            result = func(*args, **kwargs)
+            if not is_nested:
+                session.commit()
+            return result
+        with session.begin():
+            return func(*args, **kwargs)
+    except Exception as exception:
+        session.rollback()
+        _handle_db_exception(exception, db_type, func.__name__)
+    finally:
+        if not session.in_transaction():
+            session.close()
+            session_manager.remove_session()
+
+    return sync_wrapper
+</code></pre></div>
+<h4 id="2-critical-session-cleanup">2. Critical Session Cleanup<a class="headerlink" href="#2-critical-session-cleanup" title="Permanent link">&para;</a></h4>
+<p>The solution to the stale data problem lies in the finally block:</p>
+<div class="language-text highlight"><pre><span></span><code>finally:
+    if not session.in_transaction():
+        session.close()
+        session_manager.remove_session()
+</code></pre></div>
+<p>This ensures:
+- Sessions are properly closed after each atomic operation
+- The session registry is cleaned up
+- Subsequent operations get fresh sessions with current data</p>
+<h4 id="3-database-specific-error-handling">3. Database-Specific Error Handling<a class="headerlink" href="#3-database-specific-error-handling" title="Permanent link">&para;</a></h4>
+<p>The decorator includes sophisticated error handling for different database scenarios:</p>
+<div class="language-text highlight"><pre><span></span><code>def _handle_db_exception(exception: Exception, db_type: str, func_name: str) -&gt; None:
+    &quot;&quot;&quot;Handle database exceptions and raise appropriate errors.&quot;&quot;&quot;
+    logging.debug(f&quot;Exception in {db_type} atomic block (func: {func_name}): {exception}&quot;)
+
+    if isinstance(exception, OperationalError):
+        if hasattr(exception, &quot;orig&quot;) and exception.orig:
+            sqlstate = getattr(exception.orig, &quot;pgcode&quot;, None)
+            if sqlstate == &quot;40001&quot;:  # Serialization failure
+                raise DatabaseSerializationError(database=db_type) from exception
+            if sqlstate == &quot;40P01&quot;:  # Deadlock detected
+                raise DatabaseDeadlockError(database=db_type) from exception
+
+        # SQLite-specific errors
+        if &quot;database is locked&quot; in str(exception):
+            raise DatabaseDeadlockError(database=db_type) from exception
+
+        # Generic operational errors
+        raise DatabaseConnectionError(database=db_type) from exception
+</code></pre></div>
+<h4 id="4-support-for-nested-transactions">4. Support for Nested Transactions<a class="headerlink" href="#4-support-for-nested-transactions" title="Permanent link">&para;</a></h4>
+<p>The decorator intelligently handles nested atomic blocks:</p>
+<div class="language-text highlight"><pre><span></span><code>is_nested = session.info.get(atomic_flag, False)
+if not is_nested:
+    session.info[atomic_flag] = True
+</code></pre></div>
+<h4 id="5-asynchronous-support">5. Asynchronous Support<a class="headerlink" href="#5-asynchronous-support" title="Permanent link">&para;</a></h4>
+<p>The decorator also provides full async support:</p>
+<div class="language-text highlight"><pre><span></span><code>async def async_wrapper(*args: Any, **kwargs: Any) -&gt; R:
+    &quot;&quot;&quot;Async wrapper for managing database transactions.&quot;&quot;&quot;
+    registry = get_registry()
+    session_manager: AsyncSessionManagerPort = registry.get_async_manager()
+    session = session_manager.get_session()
+    is_nested = session.info.get(atomic_flag, False)
+    if not is_nested:
+        session.info[atomic_flag] = True
+
+    try:
+        if session.in_transaction():
+            result = await func(*args, **kwargs)
+            if not is_nested:
+                await session.commit()
+            return result
+        async with session.begin():
+            return await func(*args, **kwargs)
+    except Exception as exception:
+        await session.rollback()
+        _handle_db_exception(exception, db_type, func.__name__)
+    finally:
+        if not session.in_transaction():
+            await session.close()
+            await session_manager.remove_session()
+
+return async_wrapper
+</code></pre></div>
+<h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h2>
+<h3 id="basic-synchronous-usage">Basic Synchronous Usage<a class="headerlink" href="#basic-synchronous-usage" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code>from archipy.helpers.decorators.sqlalchemy_atomic import postgres_sqlalchemy_atomic_decorator
+
+@postgres_sqlalchemy_atomic_decorator
+def update_user_profile(user_id: UUID, profile_data: dict) -&gt; User:
+    &quot;&quot;&quot;Update user profile in an atomic transaction.&quot;&quot;&quot;
+    # Database operations here
+    # Session will be automatically cleaned up
+    adapter = get_user_adapter()
+    user = adapter.get_by_uuid(User, user_id)
+    user.update_profile(profile_data)
+    return adapter.update(user)
+</code></pre></div>
+<h3 id="asynchronous-operations">Asynchronous Operations<a class="headerlink" href="#asynchronous-operations" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code>from archipy.helpers.decorators.sqlalchemy_atomic import async_postgres_sqlalchemy_atomic_decorator
+
+@async_postgres_sqlalchemy_atomic_decorator
+async def process_payment(payment_id: UUID) -&gt; PaymentResult:
+    &quot;&quot;&quot;Process payment asynchronously in an atomic transaction.&quot;&quot;&quot;
+    adapter = get_payment_adapter()
+    payment = await adapter.get_by_uuid(Payment, payment_id)
+    result = await payment_service.process(payment)
+    await adapter.update(payment)
+    return result
+</code></pre></div>
+<h3 id="multi-database-support">Multi-Database Support<a class="headerlink" href="#multi-database-support" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code># For SQLite
+from archipy.helpers.decorators.sqlalchemy_atomic import sqlite_sqlalchemy_atomic_decorator
+
+@sqlite_sqlalchemy_atomic_decorator
+def sqlite_operation():
+    # SQLite-specific operations
+    pass
+
+# For StarRocks
+from archipy.helpers.decorators.sqlalchemy_atomic import starrocks_sqlalchemy_atomic_decorator
+
+@starrocks_sqlalchemy_atomic_decorator
+def starrocks_operation():
+    # StarRocks-specific operations
+    pass
+</code></pre></div>
+<h2 id="testing-and-validation">Testing and Validation<a class="headerlink" href="#testing-and-validation" title="Permanent link">&para;</a></h2>
+<p>I implemented comprehensive BDD tests using Behave to ensure the decorator works correctly across different scenarios:</p>
+<div class="language-text highlight"><pre><span></span><code>@when(&quot;operations are performed across multiple atomic blocks&quot;)
+def step_when_operations_across_multiple_atomics(context):
+    &quot;&quot;&quot;Test session consistency across multiple atomic blocks.&quot;&quot;&quot;
+    logger = getattr(context, &quot;logger&quot;, logging.getLogger(&quot;behave.steps&quot;))
+    scenario_context = get_current_scenario_context(context)
+
+    # Generate UUIDs for entities
+    entity_uuids = [uuid.uuid4() for _ in range(3)]
+
+    @sqlite_sqlalchemy_atomic_decorator
+    def create_initial_entities():
+        logger.info(&quot;Creating initial entities in first atomic block&quot;)
+        entities = []
+        for i, uuid_val in enumerate(entity_uuids):
+            entity = TestEntityFactory.create_test_entity(
+                test_uuid=uuid_val,
+                description=f&quot;Initial Entity {i + 1}&quot;
+            )
+            adapter = get_adapter(context)
+            adapter.create(entity)
+            entities.append(entity)
+        return entities
+
+    @sqlite_sqlalchemy_atomic_decorator
+    def update_entities():
+        logger.info(&quot;Updating entities in second atomic block&quot;)
+        adapter = get_adapter(context)
+        session = adapter.get_session()
+
+        for i, uuid_val in enumerate(entity_uuids):
+            db_entity = session.get(TestEntity, uuid_val)
+            db_entity.description = f&quot;Updated Entity {i + 1}&quot;
+            db_entity.updated_at = datetime.now()
+        return True
+
+    @sqlite_sqlalchemy_atomic_decorator
+    def query_entities():
+        logger.info(&quot;Querying entities in third atomic block&quot;)
+        adapter = get_adapter(context)
+        session = adapter.get_session()
+
+        results = []
+        for i, uuid_val in enumerate(entity_uuids):
+            db_entity = session.get(TestEntity, uuid_val)
+            results.append({
+                &quot;uuid&quot;: uuid_val,
+                &quot;description&quot;: db_entity.description,
+                &quot;updated_at&quot;: db_entity.updated_at
+            })
+        scenario_context.store(&quot;query_results&quot;, results)
+        return results
+
+    # Execute operations
+    create_initial_entities()
+    update_entities()
+    query_entities()
+</code></pre></div>
+<h2 id="results-and-impact">Results and Impact<a class="headerlink" href="#results-and-impact" title="Permanent link">&para;</a></h2>
+<h3 id="before-implementation">Before Implementation<a class="headerlink" href="#before-implementation" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Stale Data Issues</strong>: Lazy loading returned outdated information across pods</li>
+<li><strong>Inconsistent Application State</strong>: Different pods operated on different data snapshots</li>
+<li><strong>Difficult Debugging</strong>: Issues were intermittent and environment-dependent</li>
+<li><strong>Unreliable Isolation Levels</strong>: Higher isolation levels caused more problems than they solved</li>
+</ul>
+<h3 id="after-implementation">After Implementation<a class="headerlink" href="#after-implementation" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Consistent Fresh Data</strong>: Each atomic operation receives a clean session with current data</li>
+<li><strong>Predictable Cross-Pod Behavior</strong>: All pods see the same current state of the database</li>
+<li><strong>Reliable Isolation Levels</strong>: Isolation levels work as intended without side effects</li>
+<li><strong>Improved Error Handling</strong>: Clear, specific exceptions for different failure scenarios</li>
+<li><strong>Better Debugging</strong>: Comprehensive logging and predictable behavior patterns</li>
+</ul>
+<h2 id="best-practices-and-recommendations">Best Practices and Recommendations<a class="headerlink" href="#best-practices-and-recommendations" title="Permanent link">&para;</a></h2>
+<h3 id="1-always-use-atomic-decorators-for-unit-of-work-operations">1. Always Use Atomic Decorators for Unit of Work Operations<a class="headerlink" href="#1-always-use-atomic-decorators-for-unit-of-work-operations" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code>@postgres_sqlalchemy_atomic_decorator
+def complete_order_process(order_id: UUID) -&gt; Order:
+    &quot;&quot;&quot;Complete entire order process as one unit of work.&quot;&quot;&quot;
+    # All related operations within one atomic block
+    # Automatic session cleanup prevents stale data issues
+    order_adapter = get_order_adapter()
+    payment_adapter = get_payment_adapter()
+    inventory_adapter = get_inventory_adapter()
+
+    order = order_adapter.get_by_uuid(Order, order_id)
+    payment = payment_adapter.process_payment(order.payment_info)
+    inventory_adapter.reserve_items(order.items)
+
+    order.mark_as_completed()
+    return order_adapter.update(order)
+</code></pre></div>
+<h3 id="2-configure-appropriate-isolation-levels">2. Configure Appropriate Isolation Levels<a class="headerlink" href="#2-configure-appropriate-isolation-levels" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code># In your configuration
+POSTGRES_SQLALCHEMY = PostgresSQLAlchemyConfig(
+    ISOLATION_LEVEL=&quot;REPEATABLE READ&quot;,  # Choose based on your consistency requirements
+    POOL_SIZE=20,
+    POOL_MAX_OVERFLOW=1,
+    POOL_PRE_PING=True,
+    # ... other settings
+)
+</code></pre></div>
+<h3 id="3-handle-serialization-failures-gracefully">3. Handle Serialization Failures Gracefully<a class="headerlink" href="#3-handle-serialization-failures-gracefully" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code>from archipy.models.errors import DatabaseSerializationError
+
+def robust_operation_with_retry(data: dict, max_retries: int = 3) -&gt; Result:
+    &quot;&quot;&quot;Perform operation with automatic retry on serialization failures.&quot;&quot;&quot;
+    for attempt in range(max_retries):
+        try:
+            return perform_atomic_operation(data)
+        except DatabaseSerializationError as e:
+            if attempt == max_retries - 1:
+                raise
+            logger.warning(f&quot;Serialization failure on attempt {attempt + 1}, retrying...&quot;)
+            time.sleep(0.1 * (2 ** attempt))  # Exponential backoff
+</code></pre></div>
+<h3 id="4-monitor-session-lifecycle">4. Monitor Session Lifecycle<a class="headerlink" href="#4-monitor-session-lifecycle" title="Permanent link">&para;</a></h3>
+<p>The decorator provides comprehensive logging for debugging and monitoring:</p>
+<div class="language-text highlight"><pre><span></span><code># Enable debug logging to monitor session behavior
+logging.getLogger(&quot;archipy.helpers.decorators.sqlalchemy_atomic&quot;).setLevel(logging.DEBUG)
+</code></pre></div>
+<h3 id="5-test-across-multiple-pods">5. Test Across Multiple Pods<a class="headerlink" href="#5-test-across-multiple-pods" title="Permanent link">&para;</a></h3>
+<p>Always test your atomic operations in a multi-pod environment to ensure session cleanup works correctly:</p>
+<div class="language-text highlight"><pre><span></span><code># Example test scenario
+def test_cross_pod_consistency():
+    &quot;&quot;&quot;Test that updates from one pod are visible to other pods.&quot;&quot;&quot;
+
+    # Pod 1: Create and update entity
+    @postgres_sqlalchemy_atomic_decorator
+    def pod1_operation():
+        entity = create_test_entity()
+        entity.status = &quot;updated_by_pod1&quot;
+        return update_entity(entity)
+
+    # Pod 2: Read entity (should see pod1&#39;s update)
+    @postgres_sqlalchemy_atomic_decorator
+    def pod2_operation():
+        entity = get_entity_by_id(entity_id)
+        assert entity.status == &quot;updated_by_pod1&quot;
+        return entity
+
+    entity = pod1_operation()
+    retrieved_entity = pod2_operation()
+    assert retrieved_entity.status == entity.status
+</code></pre></div>
+<h2 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">&para;</a></h2>
+<p>Database isolation levels are powerful tools for maintaining data consistency, but they require careful session management in distributed environments. The atomic decorator pattern I implemented in Archipy effectively solves the lazy loading stale data problem by ensuring proper session cleanup after each unit of work.</p>
+<p>This solution provides several key benefits:</p>
+<ul>
+<li><strong>Automatic transaction management</strong> with proper commit/rollback handling</li>
+<li><strong>Comprehensive session cleanup</strong> that prevents stale data issues</li>
+<li><strong>Support for multiple databases</strong> and both synchronous and asynchronous operations</li>
+<li><strong>Sophisticated error handling</strong> with database-specific exception types</li>
+<li><strong>Nested transaction support</strong> for complex business operations</li>
+<li><strong>Extensive testing coverage</strong> with BDD scenarios</li>
+</ul>
+<p>By implementing this pattern, development teams can confidently use higher isolation levels in multi-pod environments without encountering lazy loading stale data issues. The decorator abstracts away the complexity of session management while providing the reliability and consistency required for production systems.</p>
+<p>The complete implementation is available in the Archipy framework, and I encourage other developers to adapt this pattern to their own projects when dealing with similar isolation level challenges in distributed environments.</p>
+<p>This approach has proven effective in production environments and continues to provide reliable database operations across multiple Kubernetes pods while maintaining the data consistency guarantees that higher isolation levels are designed to provide.</p>
 
 
 
