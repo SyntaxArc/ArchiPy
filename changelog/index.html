@@ -1420,13 +1420,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#v326-2025-01-06" class="md-nav__link">
+  <a href="#v327-2025-01-06" class="md-nav__link">
     <span class="md-ellipsis">
-      [v3.2.6] - 2025-01-06
+      [v3.2.7] - 2025-01-06
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[v3.2.6] - 2025-01-06">
+    <nav class="md-nav" aria-label="[v3.2.7] - 2025-01-06">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1452,6 +1452,24 @@
   <a href="#documentation" class="md-nav__link">
     <span class="md-ellipsis">
       Documentation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-query-flexibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      Database Query Flexibility
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-enhancement" class="md-nav__link">
+    <span class="md-ellipsis">
+      API Enhancement
     </span>
   </a>
   
@@ -3660,13 +3678,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#v326-2025-01-06" class="md-nav__link">
+  <a href="#v327-2025-01-06" class="md-nav__link">
     <span class="md-ellipsis">
-      [v3.2.6] - 2025-01-06
+      [v3.2.7] - 2025-01-06
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[v3.2.6] - 2025-01-06">
+    <nav class="md-nav" aria-label="[v3.2.7] - 2025-01-06">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -3692,6 +3710,24 @@
   <a href="#documentation" class="md-nav__link">
     <span class="md-ellipsis">
       Documentation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-query-flexibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      Database Query Flexibility
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-enhancement" class="md-nav__link">
+    <span class="md-ellipsis">
+      API Enhancement
     </span>
   </a>
   
@@ -5803,7 +5839,7 @@
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
 <p>All notable changes to ArchiPy are documented in this changelog, organized by version.</p>
-<h2 id="v326-2025-01-06">[v3.2.6] - 2025-01-06<a class="headerlink" href="#v326-2025-01-06" title="Permanent link">&para;</a></h2>
+<h2 id="v327-2025-01-06">[v3.2.7] - 2025-01-06<a class="headerlink" href="#v327-2025-01-06" title="Permanent link">&para;</a></h2>
 <h3 id="improvements">Improvements<a class="headerlink" href="#improvements" title="Permanent link">&para;</a></h3>
 <h4 id="database-performance">Database Performance<a class="headerlink" href="#database-performance" title="Permanent link">&para;</a></h4>
 <ul>
@@ -5812,6 +5848,14 @@
 <h4 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h4>
 <ul>
 <li><strong>Enhanced license documentation</strong> - Significantly expanded license documentation with comprehensive details and improved formatting</li>
+</ul>
+<h4 id="database-query-flexibility">Database Query Flexibility<a class="headerlink" href="#database-query-flexibility" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Enhanced query result handling</strong> - Added <code>has_multiple_entities</code> parameter to search query methods in both synchronous and asynchronous SQLAlchemy adapters and ports. This new parameter provides flexible control over query result processing, allowing developers to choose between <code>fetchall()</code> for multiple entities or <code>scalars().all()</code> for single entity queries, optimizing performance based on query requirements.</li>
+</ul>
+<h4 id="api-enhancement">API Enhancement<a class="headerlink" href="#api-enhancement" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Improved method signatures</strong> - Updated <code>execute_search_query</code> method signatures in both <code>BaseSQLAlchemyAdapter</code>, <code>AsyncBaseSQLAlchemyAdapter</code>, <code>SQLAlchemyPort</code>, and <code>AsyncSQLAlchemyPort</code> to include the new optional parameter with comprehensive documentation.</li>
 </ul>
 <h2 id="v325-2025-01-06">[v3.2.5] - 2025-01-06<a class="headerlink" href="#v325-2025-01-06" title="Permanent link">&para;</a></h2>
 <h3 id="improvements_1">Improvements<a class="headerlink" href="#improvements_1" title="Permanent link">&para;</a></h3>
