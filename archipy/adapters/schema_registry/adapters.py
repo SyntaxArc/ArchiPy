@@ -58,7 +58,12 @@ class SchemaRegistryClientAdapter(SchemaRegistryClientPort, SchemaRegistryExcept
     offers consistent exception handling.
     """
 
-    def __init__(self, schema_registry_config: SchemaRegistryConfig | None = None) -> None:
+    def __init__(
+            self,
+            schema_registry_config: SchemaRegistryConfig | None = None,
+            protobuf_serializer_config: ProtobufSerializerConfig | None = None,
+            protobuf_deserializer_config: ProtobufDeserializerConfig | None = None,
+    ) -> None:
         """
         Initializes the Schema Registry Client adapter.
 
@@ -71,6 +76,8 @@ class SchemaRegistryClientAdapter(SchemaRegistryClientPort, SchemaRegistryExcept
             InternalError: If there is an error initializing the client.
         """
         configs: SchemaRegistryConfig = schema_registry_config or BaseConfig.global_config().SCHEMA_REGISTRY
+        self._protobuf_serializer_config: ProtobufSerializerConfig = protobuf_serializer_config or BaseConfig.global_config().PROTOBUF_SERIALIZER
+        self._protobuf_deserializer_config: ProtobufDeserializerConfig = protobuf_deserializer_config or BaseConfig.global_config().PROTOBUF_DESERIALIZER
         self._adapter: SchemaRegistryClient = self._get_adapter(configs)
 
     @classmethod
@@ -151,12 +158,11 @@ class SchemaRegistryClientAdapter(SchemaRegistryClientPort, SchemaRegistryExcept
         except Exception as e:
             self._handle_schema_registry_exception(e, "register_schema")
 
-    def get_serializer(self, configs: ProtobufSerializerConfig, message_type: Message) -> ProtobufSerializer:
+    def get_serializer(self, message_type: Message) -> ProtobufSerializer:
         """
         Instantiates and returns a ProtobufSerializer using the provided configuration.
 
         Args:
-            configs (ProtobufSerializerConfig): Serializer configuration.
             message_type (Message): The protobuf message type to serialize.
 
         Returns:
@@ -167,15 +173,15 @@ class SchemaRegistryClientAdapter(SchemaRegistryClientPort, SchemaRegistryExcept
         """
         try:
             config = {
-                "auto.register.schemas": configs.AUTO_REGISTER_SCHEMAS,
-                "normalize.schemas": configs.NORMALIZE_SCHEMAS,
-                "use.schema.id": configs.USE_SCHEMA_ID,
-                "use.latest.version": configs.USE_LATEST_VERSION,
-                "use.latest.with.metadata": configs.USE_LATEST_WITH_METADATA,
-                "skip.known.types": configs.SKIP_KNOWN_TYPES,
-                "subject.name.strategy": configs.SUBJECT_NAME_STRATEGY,
-                "reference.subject.name.strategy": configs.REFERENCE_SUBJECT_NAME_STRATEGY,
-                "use.deprecated.format": configs.USE_DEPRECATED_FORMAT,
+                "auto.register.schemas": self._protobuf_serializer_config.AUTO_REGISTER_SCHEMAS,
+                "normalize.schemas": self._protobuf_serializer_config.NORMALIZE_SCHEMAS,
+                "use.schema.id": self._protobuf_serializer_config.USE_SCHEMA_ID,
+                "use.latest.version": self._protobuf_serializer_config.USE_LATEST_VERSION,
+                "use.latest.with.metadata": self._protobuf_serializer_config.USE_LATEST_WITH_METADATA,
+                "skip.known.types": self._protobuf_serializer_config.SKIP_KNOWN_TYPES,
+                "subject.name.strategy": self._protobuf_serializer_config.SUBJECT_NAME_STRATEGY,
+                "reference.subject.name.strategy": self._protobuf_serializer_config.REFERENCE_SUBJECT_NAME_STRATEGY,
+                "use.deprecated.format": self._protobuf_serializer_config.USE_DEPRECATED_FORMAT,
             }
             protobuf_serializer = ProtobufSerializer(
                 msg_type=message_type,
@@ -187,12 +193,11 @@ class SchemaRegistryClientAdapter(SchemaRegistryClientPort, SchemaRegistryExcept
         else:
             return protobuf_serializer
 
-    def get_deserializer(self, configs: ProtobufDeserializerConfig, message_type: Message) -> Any:
+    def get_deserializer(self, message_type: Message) -> Any:
         """
         Instantiates and returns a ProtobufDeserializer using the provided configuration.
 
         Args:
-            configs (ProtobufDeserializerConfig): Deserializer configuration.
             message_type (Message): The protobuf message type to deserialize.
 
         Returns:
@@ -203,10 +208,10 @@ class SchemaRegistryClientAdapter(SchemaRegistryClientPort, SchemaRegistryExcept
         """
         try:
             config = {
-                "use.latest.version": configs.USE_LATEST_VERSION,
-                "use.latest.with.metadata": configs.USE_LATEST_WITH_METADATA,
-                "subject.name.strategy": configs.SUBJECT_NAME_STRATEGY,
-                "use.deprecated.format": configs.USE_DEPRECATED_FORMAT,
+                "use.latest.version": self._protobuf_deserializer_config.USE_LATEST_VERSION,
+                "use.latest.with.metadata": self._protobuf_deserializer_config.USE_LATEST_WITH_METADATA,
+                "subject.name.strategy": self._protobuf_deserializer_config.SUBJECT_NAME_STRATEGY,
+                "use.deprecated.format": self._protobuf_deserializer_config.USE_DEPRECATED_FORMAT,
             }
             protobuf_deserializer = ProtobufDeserializer(
                 message_type=message_type,
