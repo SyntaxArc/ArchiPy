@@ -14,6 +14,7 @@ from archipy.models.errors import (
     InvalidArgumentError,
     ServiceUnavailableError,
 )
+from archipy.models.types.registry_schema_types import SchemaTypes
 
 logger = logging.getLogger(__name__)
 
@@ -133,14 +134,14 @@ class SchemaRegistryClientAdapter(SchemaRegistryClientPort, SchemaRegistryExcept
         except Exception as e:
             self._handle_schema_registry_exception(e, "get_schema")
 
-    def register_schema(self, subject: str, schema_str: str, schema_type: str = "PROTOBUF") -> int:
+    def register_schema(self, subject: str, schema_str: str, schema_type: SchemaTypes = SchemaTypes.PROTOBUF) -> int:
         """
         Registers a schema under a given subject and returns the schema ID.
 
         Args:
             subject (str): The subject under which to register the schema.
             schema_str (str): The schema string (definition).
-            schema_type (str, optional): The type of schema ("PROTOBUF", "AVRO", etc). Defaults to "PROTOBUF".
+            schema_type (SchemaTypes, optional): The type of schema ("SchemaTypes.PROTOBUF", "SchemaTypes.AVRO", etc). Defaults to SchemaTypes.PROTOBUF.
 
         Returns:
             int: The ID assigned to the registered schema.
@@ -152,7 +153,7 @@ class SchemaRegistryClientAdapter(SchemaRegistryClientPort, SchemaRegistryExcept
             InternalError: On other errors.
         """
         try:
-            schema = Schema(schema_str, schema_type)
+            schema = Schema(schema_str, schema_type.value)
             schema_id = self._adapter.register_schema(subject, schema)
             return schema_id
         except Exception as e:
@@ -195,7 +196,7 @@ class SchemaRegistryClientAdapter(SchemaRegistryClientPort, SchemaRegistryExcept
         else:
             return protobuf_serializer
 
-    def get_deserializer(self, message_type: Message) -> Any:
+    def get_deserializer(self, message_type: Message) -> ProtobufDeserializer:
         """
         Instantiates and returns a ProtobufDeserializer using the provided configuration.
 
