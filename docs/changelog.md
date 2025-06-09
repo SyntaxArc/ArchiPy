@@ -2,6 +2,28 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+
+## [v3.3.0] - 2025-01-06
+
+### New Features
+
+#### Elasticsearch Integration
+- **New Elasticsearch adapter** - Added comprehensive Elasticsearch integration with full search and indexing capabilities, enabling powerful full-text search and analytics functionality for your applications
+- **Enhanced search capabilities** - Integrated advanced search features with Elasticsearch 9.0.2 support for improved performance and modern search functionality
+
+### Improvements
+
+#### Configuration & Testing
+- **Improved Elasticsearch configuration** - Enhanced configuration management with better validation and streamlined setup process
+- **Comprehensive test coverage** - Added extensive test suite for Elasticsearch functionality to ensure reliability and stability
+
+### Bug Fixes
+- **Configuration validation** - Removed unnecessary authentication validation in Elasticsearch configuration for improved flexibility
+- **Adapter initialization** - Fixed Elasticsearch adapter initialization issues for smoother integration
+
+### Collaboration
+- **Community contributions** - Merged contributions from @alireza-shirmohammadi improving Elasticsearch functionality and resolving upstream conflicts
+
 ## [v3.2.7] - 2025-01-06
 
 ### Improvements
