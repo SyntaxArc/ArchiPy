@@ -28,7 +28,7 @@ from archipy.configs.config_template import (
     SentryConfig,
     SQLAlchemyConfig,
     SQLiteSQLAlchemyConfig,
-    StarRocksSQLAlchemyConfig,
+    StarRocksSQLAlchemyConfig, SchemaRegistryConfig, ProtobufSerializerConfig, ProtobufDeserializerConfig,
 )
 from archipy.configs.environment_type import EnvironmentType
 
@@ -171,6 +171,9 @@ class BaseConfig(BaseSettings, Generic[R]):
     STARROCKS_SQLALCHEMY: StarRocksSQLAlchemyConfig = StarRocksSQLAlchemyConfig()
     POSTGRES_SQLALCHEMY: PostgresSQLAlchemyConfig = PostgresSQLAlchemyConfig()
     SQLITE_SQLALCHEMY: SQLiteSQLAlchemyConfig = SQLiteSQLAlchemyConfig()
+    SCHEMA_REGISTRY: SchemaRegistryConfig = SchemaRegistryConfig()
+    PROTOBUF_SERIALIZER: ProtobufSerializerConfig = ProtobufSerializerConfig()
+    PROTOBUF_DESERIALIZER: ProtobufDeserializerConfig = ProtobufDeserializerConfig()
 
     def customize(self) -> None:
         """Customize configuration after loading.

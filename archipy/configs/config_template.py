@@ -6,7 +6,7 @@ and more.
 """
 
 import logging
-from typing import Any, Literal, Self
+from typing import Any, Literal, Self, Callable, Dict
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, PostgresDsn, SecretStr, model_validator
@@ -671,3 +671,114 @@ class ParsianShaparakConfig(BaseModel):
         default=None,
         description="Optional HTTP/HTTPS proxy configuration dictionary",
     )
+
+
+class SchemaRegistryConfig(BaseModel):
+    """Configuration settings for Confluent Schema Registry integration.
+
+    Controls connection and authentication to the Schema Registry, supporting SSL and Basic Auth.
+    """
+
+    URL: str = Field(default="http://localhost:8081", description="URL of the Schema Registry server")
+    BASIC_AUTH_USER_INFO: str | None = Field(
+        default=None,
+        description="Credentials for basic authentication (format: 'username:password')"
+    )
+    SSL_CA_FILE: str | None = Field(default=None, description="Path to CA certificate for SSL connections")
+    SSL_CERT_FILE: str | None = Field(default=None, description="Path to client certificate for SSL connections")
+    SSL_KEY_FILE: str | None = Field(default=None, description="Path to client key for SSL connections")
+
+    @model_validator(mode="after")
+    def validate_ssl(self) -> "SchemaRegistryConfig":
+        if self.URL.startswith("https"):
+            if not self.SSL_CA_FILE:
+                logging.warning("HTTPS used but SSL_CA_FILE is not provided; this may cause connection errors.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_auth(self) -> "SchemaRegistryConfig":
+        if "SASL" in self.URL.upper() and not self.BASIC_AUTH_USER_INFO:
+            raise ValueError("SASL/Basic Auth is required for secure Schema Registry, but BASIC_AUTH_USER_INFO is not set.")
+        return self
+
+
+class ProtobufSerializerConfig(BaseModel):
+    """Configuration settings for Confluent ProtobufSerializer.
+
+    Controls Protobuf serialization options, schema registry interaction,
+    compatibility features, and subject naming strategies.
+    """
+
+    AUTO_REGISTER_SCHEMAS: bool = Field(
+        default=True,
+        description="Automatically register the schema if it is not yet associated with the subject. Default is True."
+    )
+    NORMALIZE_SCHEMAS: bool = Field(
+        default=False,
+        description="Whether to normalize schemas before registration. Default is False."
+    )
+    USE_SCHEMA_ID: int | None = Field(
+        default=None,
+        description="If set, uses this schema ID for serialization instead of registering/fetching. Default is None."
+    )
+    USE_LATEST_VERSION: bool = Field(
+        default=False,
+        description="If True, always use the latest schema version for the subject. Cannot be True if AUTO_REGISTER_SCHEMAS is True."
+    )
+    USE_LATEST_WITH_METADATA: Dict[str, Any] | None = Field(
+        default=None,
+        description="If set, use latest schema version with given metadata. Default is None."
+    )
+    SKIP_KNOWN_TYPES: bool = Field(
+        default=True,
+        description="Skip known types when resolving dependencies. Default is True."
+    )
+    SUBJECT_NAME_STRATEGY: Callable[[Any, str], str] | None = Field(
+        default=None,
+        description="Callable for subject name strategy. Defaults to Confluent's topic_subject_name_strategy."
+    )
+    REFERENCE_SUBJECT_NAME_STRATEGY: Callable[[Any, str], str] | None = Field(
+        default=None,
+        description="Callable for reference subject name strategy. Defaults to reference_subject_name_strategy."
+    )
+    USE_DEPRECATED_FORMAT: bool = Field(
+        default=False,
+        description="If True, use deprecated wire format for compatibility with old consumers. Must be explicitly set."
+    )
+
+    @model_validator(mode="after")
+    def validate_deprecated_format(self) -> "ProtobufSerializerConfig":
+        if self.USE_DEPRECATED_FORMAT is None:
+            raise ValueError("'USE_DEPRECATED_FORMAT' must be explicitly set.")
+        return self
+
+
+class ProtobufDeserializerConfig(BaseModel):
+    """Configuration settings for Confluent ProtobufDeserializer.
+
+    Controls Protobuf deserialization options, compatibility features,
+    and subject naming strategies.
+    """
+
+    USE_LATEST_VERSION: bool = Field(
+        default=False,
+        description="If True, always use the latest schema version for the subject during deserialization. Default is False."
+    )
+    USE_LATEST_WITH_METADATA: Dict[str, Any] | None = Field(
+        default=None,
+        description="If set, use the latest schema version with the given metadata. Default is None."
+    )
+    SUBJECT_NAME_STRATEGY: Callable[[Any, str], str] | None = Field(
+        default=None,
+        description="Callable for subject name strategy. Defaults to Confluent's topic_subject_name_strategy."
+    )
+    USE_DEPRECATED_FORMAT: bool = Field(
+        default=False,
+        description="If True, use deprecated wire format for compatibility with old producers. Must be explicitly set."
+    )
+
+    @model_validator(mode="after")
+    def validate_deprecated_format(self) -> "ProtobufDeserializerConfig":
+        if self.USE_DEPRECATED_FORMAT is None:
+            raise ValueError("'USE_DEPRECATED_FORMAT' must be explicitly set.")
+        return self
