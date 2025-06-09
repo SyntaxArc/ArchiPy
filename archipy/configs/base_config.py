@@ -28,7 +28,10 @@ from archipy.configs.config_template import (
     SentryConfig,
     SQLAlchemyConfig,
     SQLiteSQLAlchemyConfig,
-    StarRocksSQLAlchemyConfig, SchemaRegistryConfig, ProtobufSerializerConfig, ProtobufDeserializerConfig,
+    StarRocksSQLAlchemyConfig,
+    SchemaRegistryConfig,
+    ProtobufSerializerConfig,
+    ProtobufDeserializerConfig,
 )
 from archipy.configs.environment_type import EnvironmentType
 

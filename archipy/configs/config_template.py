@@ -695,12 +695,6 @@ class SchemaRegistryConfig(BaseModel):
                 logging.warning("HTTPS used but SSL_CA_FILE is not provided; this may cause connection errors.")
         return self
 
-    @model_validator(mode="after")
-    def validate_auth(self) -> "SchemaRegistryConfig":
-        if "SASL" in self.URL.upper() and not self.BASIC_AUTH_USER_INFO:
-            raise ValueError("SASL/Basic Auth is required for secure Schema Registry, but BASIC_AUTH_USER_INFO is not set.")
-        return self
-
 
 class ProtobufSerializerConfig(BaseModel):
     """Configuration settings for Confluent ProtobufSerializer.
@@ -716,10 +710,6 @@ class ProtobufSerializerConfig(BaseModel):
     NORMALIZE_SCHEMAS: bool = Field(
         default=False,
         description="Whether to normalize schemas before registration. Default is False."
-    )
-    USE_SCHEMA_ID: int | None = Field(
-        default=None,
-        description="If set, uses this schema ID for serialization instead of registering/fetching. Default is None."
     )
     USE_LATEST_VERSION: bool = Field(
         default=False,
