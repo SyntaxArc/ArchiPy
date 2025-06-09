@@ -163,6 +163,7 @@ class SchemaRegistryClientAdapter(SchemaRegistryClientPort, SchemaRegistryExcept
         Instantiates and returns a ProtobufSerializer using the provided configuration.
 
         Args:
+            configs (ProtobufSerializerConfig): Serializer configuration.
             message_type (Message): The protobuf message type to serialize.
             schema_id (int): If set, uses this schema ID for serialization instead of registering/fetching. Default is None
 
