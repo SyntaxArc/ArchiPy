@@ -38,6 +38,7 @@ sentry = ["sentry-sdk (>=2.24.1)"]
 sqlalchemy = ["sqlalchemy (>=2.0.39)"]
 starrocks = ["starrocks (>=1.2.2,<2.0.0)", "pymysql (>=1.1.1,<2.0.0)"]
 starrocks-async = ["starrocks (>=1.2.2,<2.0.0)", "aiomysql (>=0.2.0,<0.3.0)"]
+schema-registry = ["confluent-kafka (>=2.9.0,<3.0.0)"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
