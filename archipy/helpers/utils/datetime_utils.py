@@ -280,12 +280,12 @@ class DatetimeUtils:
 
     @classmethod
     def get_datetime_now(cls) -> datetime:
-        """Gets the current local datetime with timezone information.
+        """Gets the current local datetime.
 
         Returns:
-            datetime: The current local datetime with UTC timezone.
+            datetime: The current local datetime.
         """
-        return datetime.now(UTC)
+        return datetime.now()
 
     @classmethod
     def get_datetime_utc_now(cls) -> datetime:
