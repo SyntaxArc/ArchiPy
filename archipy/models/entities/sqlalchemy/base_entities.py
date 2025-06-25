@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import ClassVar
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, text
+from sqlalchemy import UUID, Boolean, Column, DateTime, ForeignKey, text
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import DeclarativeBase, Mapped, Synonym
 
 from archipy.helpers.utils.base_utils import BaseUtils
@@ -146,8 +147,14 @@ class ArchivableMixin:
 
     __abstract__ = True
     is_archived = Column(Boolean, default=False, nullable=False)
-    # Using Column without Mapped is acceptable since Column works with BaseEntity.__table__
-    origin_uuid = Column(ForeignKey("self.pk_uuid"), nullable=True)  # type: ignore[var-annotated]
+
+    @declared_attr
+    def origin_uuid(cls) -> Mapped[UUID | None]:
+        """Reference to the original (non-archived) entity.
+
+        Used in self-referencing foreign key to track the source of an archived record.
+        """
+        return Column(UUID(as_uuid=True), ForeignKey(f"{cls.__tablename__}.id"), nullable=True)
 
 
 # Mixins dependent on EntityAttributeChecker
