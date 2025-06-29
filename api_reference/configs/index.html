@@ -22,7 +22,7 @@
       
       
       <link rel="icon" href="../../assets/logo.jpg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.12">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
     
     
       
@@ -30,7 +30,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.2afb09e1.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.342714a4.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
@@ -947,7 +947,7 @@
           <li class="md-nav__item">
   <a href="#elasticsearchconfig" class="md-nav__link">
     <span class="md-ellipsis">
-      ElasticSearchConfig
+      ElasticsearchConfig
     </span>
   </a>
   
@@ -956,7 +956,7 @@
           <li class="md-nav__item">
   <a href="#elasticsearchapmconfig" class="md-nav__link">
     <span class="md-ellipsis">
-      ElasticSearchAPMConfig
+      ElasticsearchAPMConfig
     </span>
   </a>
   
@@ -2007,7 +2007,7 @@
           <li class="md-nav__item">
   <a href="#elasticsearchconfig" class="md-nav__link">
     <span class="md-ellipsis">
-      ElasticSearchConfig
+      ElasticsearchConfig
     </span>
   </a>
   
@@ -2016,7 +2016,7 @@
           <li class="md-nav__item">
   <a href="#elasticsearchapmconfig" class="md-nav__link">
     <span class="md-ellipsis">
-      ElasticSearchAPMConfig
+      ElasticsearchAPMConfig
     </span>
   </a>
   
@@ -2392,8 +2392,8 @@ across services like databases, Redis, and email.</p>
 <li><code>SAMPLE_RATE</code>: Error sampling rate (0.0 to 1.0)</li>
 <li><code>TRACES_SAMPLE_RATE</code>: Performance monitoring sampling rate (0.0 to 1.0)</li>
 </ul>
-<h3 id="elasticsearchconfig">ElasticSearchConfig<a class="headerlink" href="#elasticsearchconfig" title="Permanent link">&para;</a></h3>
-<p>Class: <code>archipy.configs.config_template.ElasticSearchConfig</code></p>
+<h3 id="elasticsearchconfig">ElasticsearchConfig<a class="headerlink" href="#elasticsearchconfig" title="Permanent link">&para;</a></h3>
+<p>Class: <code>archipy.configs.config_template.ElasticsearchConfig</code></p>
 <p>Configures:</p>
 <ul>
 <li>Cluster configuration</li>
@@ -2411,8 +2411,8 @@ across services like databases, Redis, and email.</p>
 <li><code>SEARCH_BATCH_INTERVAL_THRESHOLD_IN_SECONDS</code>: Time threshold for batch operations</li>
 <li><code>SEARCH_BATCH_DOC_COUNT_THRESHOLD</code>: Document count threshold for batch operations</li>
 </ul>
-<h3 id="elasticsearchapmconfig">ElasticSearchAPMConfig<a class="headerlink" href="#elasticsearchapmconfig" title="Permanent link">&para;</a></h3>
-<p>Class: <code>archipy.configs.config_template.ElasticSearchAPMConfig</code></p>
+<h3 id="elasticsearchapmconfig">ElasticsearchAPMConfig<a class="headerlink" href="#elasticsearchapmconfig" title="Permanent link">&para;</a></h3>
+<p>Class: <code>archipy.configs.config_template.ElasticsearchAPMConfig</code></p>
 <p>Configures:</p>
 <ul>
 <li>APM server settings</li>
@@ -2603,6 +2603,7 @@ across services like databases, Redis, and email.</p>
 <li><code>REQUEST_TIMEOUT</code>: Request timeout in seconds</li>
 <li><code>MAX_RETRIES</code>: Maximum retry attempts</li>
 <li><code>CACHE_TTL</code>: Cache time-to-live in seconds</li>
+<li><code>HISTORICAL_CACHE_TTL</code>: Cache time-to-live for historical dates in seconds</li>
 </ul>
 <h3 id="environmenttype">EnvironmentType<a class="headerlink" href="#environmenttype" title="Permanent link">&para;</a></h3>
 <p>Class: <code>archipy.configs.environment_type.EnvironmentType</code></p>
@@ -2682,10 +2683,10 @@ across services like databases, Redis, and email.</p>
     
     
       
-      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "content.code.copy", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "content.code.copy", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.c8b220af.min.js"></script>
+      <script src="../../assets/javascripts/bundle.13a4f30d.min.js"></script>
       
     
   </body>
