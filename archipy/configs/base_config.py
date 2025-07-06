@@ -29,6 +29,7 @@ from archipy.configs.config_template import (
     SQLAlchemyConfig,
     SQLiteSQLAlchemyConfig,
     StarRocksSQLAlchemyConfig,
+    VespaConfig,
 )
 from archipy.configs.environment_type import EnvironmentType
 
@@ -171,6 +172,7 @@ class BaseConfig(BaseSettings, Generic[R]):
     STARROCKS_SQLALCHEMY: StarRocksSQLAlchemyConfig = StarRocksSQLAlchemyConfig()
     POSTGRES_SQLALCHEMY: PostgresSQLAlchemyConfig = PostgresSQLAlchemyConfig()
     SQLITE_SQLALCHEMY: SQLiteSQLAlchemyConfig = SQLiteSQLAlchemyConfig()
+    VESPA: VespaConfig = VespaConfig()
 
     def customize(self) -> None:
         """Customize configuration after loading.

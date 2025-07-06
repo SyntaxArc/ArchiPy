@@ -690,3 +690,30 @@ class ParsianShaparakConfig(BaseModel):
         default=None,
         description="Optional HTTP/HTTPS proxy configuration dictionary",
     )
+
+
+class VespaConfig(BaseModel):
+    """Configuration settings for Vespa AI integration.
+
+    Controls connection parameters and behavior settings for the Vespa AI
+    search and content platform.
+    """
+
+    HOST: str = Field(default="localhost", description="Vespa server host")
+    PORT: int = Field(default=8080, description="Vespa server port")
+    TENANT_NAME: str | None = Field(default=None, description="Vespa tenant name")
+    APPLICATION_NAME: str | None = Field(default=None, description="Vespa application name")
+    TIMEOUT: int = Field(default=10, description="Request timeout in seconds")
+    RETRIES: int = Field(default=3, description="Number of retries for failed requests")
+    USE_TLS: bool = Field(default=False, description="Whether to use TLS/SSL for connections")
+    CERT_PATH: str | None = Field(default=None, description="Path to client certificate file")
+    KEY_PATH: str | None = Field(default=None, description="Path to client key file")
+    CA_PATH: str | None = Field(default=None, description="Path to CA certificate file")
+    AUTH_TOKEN: str | None = Field(default=None, description="Authentication token for Vespa API")
+    TRACE_LEVEL: int = Field(default=0, description="Trace level for debugging (0-9)")
+    NAMESPACE: str = Field(default="default", description="Default namespace for documents")
+    SCHEMA_VALIDATION: bool = Field(default=True, description="Whether to validate schemas")
+    HTTP_VERSION: Literal["HTTP/2", "HTTP/1.1"] = Field(
+        default="HTTP/2",
+        description="HTTP version to use for connections",
+    )

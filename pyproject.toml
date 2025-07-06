@@ -40,6 +40,7 @@ starrocks = ["starrocks (>=1.2.2,<2.0.0)", "pymysql (>=1.1.1,<2.0.0)"]
 starrocks-async = ["starrocks (>=1.2.2,<2.0.0)", "aiomysql (>=0.2.0,<0.3.0)"]
 elasticsearch = ["elasticsearch (>=9.0.2,<10.0.0)"]
 elasticsearch-async = ["elasticsearch[async] (>=9.0.2,<10.0.0)"]
+vespa = ["pyvespa (>=0.8.0,<1.0.0)"]
 
 
 [tool.poetry.group.dev.dependencies]
@@ -177,6 +178,7 @@ lint.ignore = [
     "TCH002", # Type-checking import issues
     "TRY003", #Avoid specifying long messages outside the exception class
     "TRY301", # Abstract raise into a function
+    "TRY401", # Redundant exception object included in logging.exception call
 ]
 
 # Define source directories
@@ -323,9 +325,10 @@ module = [
     "requests.*", # Apply overrides to requests
     "scripts.*", # Apply overrides to script files
     "sentry_sdk.*", # Apply overrides to sentry-sdk
+    "archipy.adapters.vespa.*", # Apply overrides to Vespa adapter
 ]
 ignore_missing_imports = true
-disable_error_code = ["no-any-return", "misc", "return-value", "arg-type", "type-var", "unused-ignore", "no-untyped-call"]
+disable_error_code = ["no-any-return", "misc", "return-value", "arg-type", "type-var", "unused-ignore", "no-untyped-call", "assignment", "unreachable", "call-overload", "attr-defined", "redundant-cast"]
 
 [tool.config]
 pyproject_root_var = "pyproject"
