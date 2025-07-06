@@ -39,6 +39,19 @@ from archipy.models.errors.database_errors import (
     DatabaseTimeoutError,
     DatabaseTransactionError,
 )
+from archipy.models.errors.keycloak_errors import (
+    ClientAlreadyExistsError,
+    InsufficientPermissionsError,
+    InvalidCredentialsError,
+    KeycloakConnectionTimeoutError,
+    KeycloakServiceUnavailableError,
+    PasswordPolicyError,
+    RealmAlreadyExistsError,
+    ResourceNotFoundError,
+    RoleAlreadyExistsError,
+    UserAlreadyExistsError,
+    ValidationError,
+)
 from archipy.models.errors.network_errors import (
     BadGatewayError,
     ConnectionTimeoutError,
@@ -83,20 +96,6 @@ from archipy.models.errors.validation_errors import (
     InvalidTimestampError,
     InvalidUrlError,
     OutOfRangeError,
-)
-
-from archipy.models.errors.keycloak_errors import (
-RealmAlreadyExistsError,
-UserAlreadyExistsError,
-ClientAlreadyExistsError,
-RoleAlreadyExistsError,
-InvalidCredentialsError,
-ResourceNotFoundError,
-InsufficientPermissionsError,
-ValidationError,
-PasswordPolicyError,
-KeycloakConnectionTimeoutError,
-KeycloakServiceUnavailableError,
 )
 
 __all__ = [

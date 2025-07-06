@@ -24,7 +24,7 @@ def run_cmd(cmd: str) -> str:
 def get_tags() -> List[str]:
     """Get all git tags sorted semantically by version."""
     tags = run_cmd("git tag -l").splitlines()
-    return sorted(tags, key=lambda x: [int(n) for n in x.lstrip('v').split(".") if n.isdigit()])
+    return sorted(tags, key=lambda x: [int(n) for n in x.lstrip("v").split(".") if n.isdigit()])
 
 
 def categorize_commit(message: str) -> str:
@@ -122,7 +122,11 @@ def group_files_by_component(files: List[str]) -> Dict[str, List[str]]:
 def format_commit_message(message: str) -> str:
     """Clean and format a commit message for the changelog."""
     # Remove Conventional Commits prefix (e.g., feat(ui):)
-    message = re.sub(r"^(feat|fix|docs|style|refactor|test|chore|ci|build|perf|security|deprecate|remove)(\([^)]+\))?:", "", message).strip()
+    message = re.sub(
+        r"^(feat|fix|docs|style|refactor|test|chore|ci|build|perf|security|deprecate|remove)(\([^)]+\))?:",
+        "",
+        message,
+    ).strip()
     # Capitalize first letter
     return message[0].upper() + message[1:] if message else message
 
@@ -204,7 +208,7 @@ def update_changelog() -> None:
     print(f"Generating changelog from {latest_tag} to HEAD...")
 
     # Increment patch version
-    version_parts = latest_tag.lstrip('v').split(".")
+    version_parts = latest_tag.lstrip("v").split(".")
     version_parts[-1] = str(int(version_parts[-1]) + 1)
     new_version = f"v{'.'.join(version_parts)}"
 

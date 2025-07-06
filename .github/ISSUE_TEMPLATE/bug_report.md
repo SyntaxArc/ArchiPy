@@ -13,7 +13,7 @@ A clear and concise description of the bug.
 ## Reproduction Steps
 Steps to reproduce the behavior:
 1. Install '...'
-2. Configure '...' 
+2. Configure '...'
 3. Run code '...'
 4. See error
 

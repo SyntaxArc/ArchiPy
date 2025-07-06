@@ -336,7 +336,8 @@ def step_when_nested_atomic_executed(context):
             # Create the outer entity
             adapter = get_adapter(context)
             outer_entity = TestEntityFactory.create_test_entity(
-                test_uuid=outer_uuid, description="Outer entity from nested transaction",
+                test_uuid=outer_uuid,
+                description="Outer entity from nested transaction",
             )
             adapter.create(outer_entity)
 
@@ -350,7 +351,8 @@ def step_when_nested_atomic_executed(context):
                     # Create the inner entity (should succeed)
                     adapter = get_adapter(context)
                     inner_entity = TestEntityFactory.create_test_entity(
-                        test_uuid=inner_uuid, description="Inner entity from nested transaction",
+                        test_uuid=inner_uuid,
+                        description="Inner entity from nested transaction",
                     )
                     adapter.create(inner_entity)
                     return inner_entity

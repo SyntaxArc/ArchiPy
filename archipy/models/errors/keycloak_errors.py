@@ -3,8 +3,8 @@ from typing import ClassVar
 
 from keycloak.exceptions import KeycloakError
 
-from archipy.models.errors import InternalError
 from archipy.models.errors.base_error import BaseError
+from archipy.models.errors.system_errors import InternalError
 from archipy.models.types.keycloak_error_message_types import KeycloakErrorMessageType
 
 
@@ -130,7 +130,8 @@ def handle_keycloak_error(keycloak_error: KeycloakError, **additional_data) -> B
     # Realm errors
     if "realm" in error_lower and "already exists" in error_lower:
         return RealmAlreadyExistsError(
-            error=KeycloakErrorMessageType.REALM_ALREADY_EXISTS.value, additional_data=context,
+            error=KeycloakErrorMessageType.REALM_ALREADY_EXISTS.value,
+            additional_data=context,
         )
 
     # User errors
@@ -140,7 +141,8 @@ def handle_keycloak_error(keycloak_error: KeycloakError, **additional_data) -> B
     # Client errors
     if "client" in error_lower and "already exists" in error_lower:
         return ClientAlreadyExistsError(
-            error=KeycloakErrorMessageType.CLIENT_ALREADY_EXISTS.value, additional_data=context,
+            error=KeycloakErrorMessageType.CLIENT_ALREADY_EXISTS.value,
+            additional_data=context,
         )
 
     # Authentication errors
@@ -148,7 +150,8 @@ def handle_keycloak_error(keycloak_error: KeycloakError, **additional_data) -> B
         phrase in error_lower for phrase in ["invalid user credentials", "invalid credentials", "authentication failed"]
     ):
         return InvalidCredentialsError(
-            error=KeycloakErrorMessageType.INVALID_CREDENTIALS.value, additional_data=context,
+            error=KeycloakErrorMessageType.INVALID_CREDENTIALS.value,
+            additional_data=context,
         )
 
     # Not found errors
@@ -158,7 +161,8 @@ def handle_keycloak_error(keycloak_error: KeycloakError, **additional_data) -> B
     # Permission errors
     if any(phrase in error_lower for phrase in ["forbidden", "access denied", "insufficient permissions"]):
         return InsufficientPermissionsError(
-            error=KeycloakErrorMessageType.INSUFFICIENT_PERMISSIONS.value, additional_data=context,
+            error=KeycloakErrorMessageType.INSUFFICIENT_PERMISSIONS.value,
+            additional_data=context,
         )
 
     # Validation errors (400 status codes that don't match above)

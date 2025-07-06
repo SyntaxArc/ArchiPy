@@ -288,8 +288,9 @@ def step_then_cached_with_historical_ttl(context: Context) -> None:
     expected_expiry_range_start = current_time + timedelta(seconds=test_config.DATETIME.HISTORICAL_CACHE_TTL - 5)
     expected_expiry_range_end = current_time + timedelta(seconds=test_config.DATETIME.HISTORICAL_CACHE_TTL + 5)
 
-    assert expected_expiry_range_start <= expiry_time <= expected_expiry_range_end, \
-        f"Cache expiry time should be around {test_config.DATETIME.HISTORICAL_CACHE_TTL} seconds from now"
+    assert (
+        expected_expiry_range_start <= expiry_time <= expected_expiry_range_end
+    ), f"Cache expiry time should be around {test_config.DATETIME.HISTORICAL_CACHE_TTL} seconds from now"
 
 
 @then("the result should be cached with standard TTL")
@@ -310,5 +311,6 @@ def step_then_cached_with_standard_ttl(context: Context) -> None:
     expected_expiry_range_start = current_time + timedelta(seconds=test_config.DATETIME.CACHE_TTL - 5)
     expected_expiry_range_end = current_time + timedelta(seconds=test_config.DATETIME.CACHE_TTL + 5)
 
-    assert expected_expiry_range_start <= expiry_time <= expected_expiry_range_end, \
-        f"Cache expiry time should be around {test_config.DATETIME.CACHE_TTL} seconds from now"
+    assert (
+        expected_expiry_range_start <= expiry_time <= expected_expiry_range_end
+    ), f"Cache expiry time should be around {test_config.DATETIME.CACHE_TTL} seconds from now"

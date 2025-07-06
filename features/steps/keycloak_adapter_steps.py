@@ -46,7 +46,9 @@ def step_create_realm(context: Context, realm_name: str, display_name: str, adap
 
             async def create_realm_async(context: Context) -> None:
                 realm_result = await adapter.create_realm(
-                    realm_name=realm_name, display_name=display_name, skip_exists=True
+                    realm_name=realm_name,
+                    display_name=display_name,
+                    skip_exists=True,
                 )
                 scenario_context.store("latest_realm_result", realm_result)
                 scenario_context.store(f"realm_{realm_name}", realm_result)
@@ -64,13 +66,16 @@ def step_create_realm(context: Context, realm_name: str, display_name: str, adap
 
 # Client management steps
 @given(
-    'I create a client named "{client_name}" in realm "{realm_name}" with service accounts enabled using {adapter_type} adapter'
+    'I create a client named "{client_name}" in realm "{realm_name}" with service accounts enabled using {adapter_type} adapter',
 )
 @when(
-    'I create a client named "{client_name}" in realm "{realm_name}" with service accounts enabled using {adapter_type} adapter'
+    'I create a client named "{client_name}" in realm "{realm_name}" with service accounts enabled using {adapter_type} adapter',
 )
 def step_create_client_with_service_accounts(
-    context: Context, client_name: str, realm_name: str, adapter_type: str
+    context: Context,
+    client_name: str,
+    realm_name: str,
+    adapter_type: str,
 ) -> None:
     """Create a client with service accounts enabled in the specified realm."""
     adapter = get_keycloak_adapter(context)
@@ -239,13 +244,16 @@ async def update_adapter_config(
 
 # Alternative approach: Create a new adapter instance with updated config
 @given(
-    'I create a client named "{client_name}" in realm "{realm_name}" with service accounts and update adapter using {adapter_type} adapter'
+    'I create a client named "{client_name}" in realm "{realm_name}" with service accounts and update adapter using {adapter_type} adapter',
 )
 @when(
-    'I create a client named "{client_name}" in realm "{realm_name}" with service accounts and update adapter using {adapter_type} adapter'
+    'I create a client named "{client_name}" in realm "{realm_name}" with service accounts and update adapter using {adapter_type} adapter',
 )
 def step_create_client_and_update_adapter(
-    context: Context, client_name: str, realm_name: str, adapter_type: str
+    context: Context,
+    client_name: str,
+    realm_name: str,
+    adapter_type: str,
 ) -> None:
     """Create a client with service accounts enabled and create a new adapter instance for it."""
     adapter = get_keycloak_adapter(context)
@@ -399,10 +407,10 @@ def step_create_user_basic(context: Context, username: str, password: str, adapt
 
 
 @given(
-    'I create a user including username "{username}" email "{email}" and password "{password}" using {adapter_type} adapter'
+    'I create a user including username "{username}" email "{email}" and password "{password}" using {adapter_type} adapter',
 )
 @when(
-    'I create a user including username "{username}" email "{email}" and password "{password}" using {adapter_type} adapter'
+    'I create a user including username "{username}" email "{email}" and password "{password}" using {adapter_type} adapter',
 )
 def step_create_user_with_email(context: Context, username: str, email: str, password: str, adapter_type: str) -> None:
     """Create a user with the specified username, email, and password."""
@@ -429,7 +437,8 @@ def step_create_user_with_email(context: Context, username: str, email: str, pas
                 user_id = await adapter.create_user(user_data)
                 scenario_context.store(f"user_id_{username}", user_id)
                 scenario_context.store(
-                    "latest_user_creation", {"username": username, "email": email, "user_id": user_id}
+                    "latest_user_creation",
+                    {"username": username, "email": email, "user_id": user_id},
                 )
 
             safe_run_async(create_user_async)(context)
@@ -674,10 +683,14 @@ def step_create_realm_role(context: Context, role_name: str, description: str, a
 
 
 @when(
-    'I create a client role named "{role_name}" for client "{client_id}" with description "{description}" using {adapter_type} adapter'
+    'I create a client role named "{role_name}" for client "{client_id}" with description "{description}" using {adapter_type} adapter',
 )
 def step_create_client_role(
-    context: Context, role_name: str, client_id: str, description: str, adapter_type: str
+    context: Context,
+    role_name: str,
+    client_id: str,
+    description: str,
+    adapter_type: str,
 ) -> None:
     """Create a client role."""
     adapter = get_keycloak_adapter(context)
@@ -745,14 +758,16 @@ def step_assign_client_role(context: Context, role_name: str, client_id: str, us
             async def assign_role_async(context: Context) -> None:
                 await adapter.assign_client_role(user_id, client_id, role_name)
                 scenario_context.store(
-                    "latest_client_role_assignment", {"user": username, "role": role_name, "client": client_id}
+                    "latest_client_role_assignment",
+                    {"user": username, "role": role_name, "client": client_id},
                 )
 
             safe_run_async(assign_role_async)(context)
         else:
             adapter.assign_client_role(user_id, client_id, role_name)
             scenario_context.store(
-                "latest_client_role_assignment", {"user": username, "role": role_name, "client": client_id}
+                "latest_client_role_assignment",
+                {"user": username, "role": role_name, "client": client_id},
             )
         context.logger.info(f"Assigned client role {role_name} of client {client_id} to user {username}")
     except Exception as e:
@@ -808,7 +823,7 @@ def step_search_users(context: Context, query: str, adapter_type: str) -> None:
 
 
 @when(
-    'I update user "{username}" with first name "{first_name}" and last name "{last_name}" using {adapter_type} adapter'
+    'I update user "{username}" with first name "{first_name}" and last name "{last_name}" using {adapter_type} adapter',
 )
 def step_update_user(context: Context, username: str, first_name: str, last_name: str, adapter_type: str) -> None:
     """Update user details."""
@@ -1106,7 +1121,7 @@ def step_user_creation_succeeds(context: Context, adapter_type: str) -> None:
     """Verify that the user creation succeeded."""
     scenario_context = get_current_scenario_context(context)
     assert not scenario_context.get(
-        "user_creation_error"
+        "user_creation_error",
     ), f"User creation failed: {scenario_context.get('user_creation_error')}"
     assert scenario_context.get("latest_user_creation"), "No user creation result found"
     context.logger.info("User creation succeeded")
@@ -1221,7 +1236,7 @@ def step_realm_role_creation_succeeds(context: Context, adapter_type: str) -> No
     """Verify that the realm role creation succeeded."""
     scenario_context = get_current_scenario_context(context)
     assert not scenario_context.get(
-        "realm_role_error"
+        "realm_role_error",
     ), f"Realm role creation failed: {scenario_context.get('realm_role_error')}"
     assert scenario_context.get("latest_realm_role"), "No realm role creation result found"
     context.logger.info("Realm role creation succeeded")
@@ -1232,7 +1247,7 @@ def step_client_role_creation_succeeds(context: Context, adapter_type: str) -> N
     """Verify that the client role creation succeeded."""
     scenario_context = get_current_scenario_context(context)
     assert not scenario_context.get(
-        "client_role_error"
+        "client_role_error",
     ), f"Client role creation failed: {scenario_context.get('client_role_error')}"
     assert scenario_context.get("latest_client_role"), "No client role creation result found"
     context.logger.info("Client role creation succeeded")
@@ -1243,7 +1258,7 @@ def step_realm_role_assignment_succeeds(context: Context, adapter_type: str) -> 
     """Verify that the realm role assignment succeeded."""
     scenario_context = get_current_scenario_context(context)
     assert not scenario_context.get(
-        "role_assignment_error"
+        "role_assignment_error",
     ), f"Role assignment failed: {scenario_context.get('role_assignment_error')}"
     assert scenario_context.get("latest_role_assignment"), "No role assignment result found"
     context.logger.info("Realm role assignment succeeded")
@@ -1254,7 +1269,7 @@ def step_client_role_assignment_succeeds(context: Context, adapter_type: str) ->
     """Verify that the client role assignment succeeded."""
     scenario_context = get_current_scenario_context(context)
     assert not scenario_context.get(
-        "client_role_assignment_error"
+        "client_role_assignment_error",
     ), f"Client role assignment failed: {scenario_context.get('client_role_assignment_error')}"
     assert scenario_context.get("latest_client_role_assignment"), "No client role assignment result found"
     context.logger.info("Client role assignment succeeded")
@@ -1359,7 +1374,7 @@ def step_user_update_succeeds(context: Context, adapter_type: str) -> None:
     """Verify that the user update succeeded."""
     scenario_context = get_current_scenario_context(context)
     assert not scenario_context.get(
-        "user_update_error"
+        "user_update_error",
     ), f"User update failed: {scenario_context.get('user_update_error')}"
     assert scenario_context.get("latest_user_update"), "No user update result found"
     context.logger.info("User update succeeded")
@@ -1394,7 +1409,7 @@ def step_password_reset_succeeds(context: Context, adapter_type: str) -> None:
     """Verify that the password reset succeeded."""
     scenario_context = get_current_scenario_context(context)
     assert not scenario_context.get(
-        "password_reset_error"
+        "password_reset_error",
     ), f"Password reset failed: {scenario_context.get('password_reset_error')}"
     assert scenario_context.get("latest_password_reset"), "No password reset result found"
     context.logger.info("Password reset succeeded")
@@ -1413,7 +1428,7 @@ def step_user_deletion_succeeds(context: Context, adapter_type: str) -> None:
     """Verify that the user deletion succeeded."""
     scenario_context = get_current_scenario_context(context)
     assert not scenario_context.get(
-        "user_deletion_error"
+        "user_deletion_error",
     ), f"User deletion failed: {scenario_context.get('user_deletion_error')}"
     assert scenario_context.get("latest_user_deletion"), "No user deletion result found"
     context.logger.info("User deletion succeeded")
@@ -1508,7 +1523,7 @@ def step_role_removal_succeeds(context: Context, adapter_type: str) -> None:
     """Verify that the role removal succeeded."""
     scenario_context = get_current_scenario_context(context)
     assert not scenario_context.get(
-        "role_removal_error"
+        "role_removal_error",
     ), f"Role removal failed: {scenario_context.get('role_removal_error')}"
     assert scenario_context.get("latest_role_removal"), "No role removal result found"
     context.logger.info("Role removal succeeded")
@@ -1544,7 +1559,7 @@ def step_scenario_created_resources(context: Context) -> None:
     assert user_count > 0, "No users were created"
 
     context.logger.info(
-        f"Verified scenario created {realm_count} realm(s), {client_count} client(s), and {user_count} user(s)"
+        f"Verified scenario created {realm_count} realm(s), {client_count} client(s), and {user_count} user(s)",
     )
 
 

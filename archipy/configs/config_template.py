@@ -661,7 +661,8 @@ class DatetimeConfig(BaseModel):
     MAX_RETRIES: int = Field(default=3, description="Maximum retry attempts")
     CACHE_TTL: int = Field(default=86400, description="Cache time-to-live in seconds (24 hours)")
     HISTORICAL_CACHE_TTL: int = Field(
-        default=604800, description="Cache time-to-live for historical dates in seconds (7 days)",
+        default=604800,
+        description="Cache time-to-live for historical dates in seconds (7 days)",
     )
 
 
