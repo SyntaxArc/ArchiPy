@@ -1,6 +1,7 @@
 from typing import Any, ClassVar, Self
 
 from archipy.models.dtos.base_dtos import BaseDTO
+from archipy.models.errors import InvalidEntityTypeError
 
 try:
     from google.protobuf.json_format import MessageToDict, ParseDict
@@ -31,6 +32,13 @@ class BaseProtobufDTO(BaseDTO):
         """Converts a Protobuf message into a Pydantic DTO instance."""
         if cls._proto_class is None:
             raise NotImplementedError(f"{cls.__name__} is not mapped to a proto class.")
+
+        if not isinstance(request, cls._proto_class):
+            raise InvalidEntityTypeError(
+                message=f"{cls.__name__}.from_proto expected a different type of request.",
+                expected_type=cls._proto_class.__name__,
+                actual_type=type(request).__name__,
+            )
 
         input_data = MessageToDict(
             message=request,
