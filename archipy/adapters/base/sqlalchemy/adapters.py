@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, override
+from typing import Any, override, TypeVar
 from uuid import UUID
 
 from sqlalchemy import Delete, Executable, Result, ScalarResult, Update, func, select
@@ -29,6 +29,9 @@ from archipy.models.errors import (
 )
 from archipy.models.types.base_types import FilterOperationType
 from archipy.models.types.sort_order_type import SortOrderType
+
+# Generic type variable for BaseEntity subclasses
+T = TypeVar('T', bound=BaseEntity)
 
 
 class SQLAlchemyExceptionHandlerMixin:
@@ -284,14 +287,14 @@ class BaseSQLAlchemyAdapter(
         return self.session_manager.get_session()
 
     @override
-    def create(self, entity: BaseEntity) -> BaseEntity | None:
+    def create(self, entity: T) -> T | None:
         """Create a new entity in the database.
 
         Args:
             entity: The entity to create.
 
         Returns:
-            The created entity with updated attributes.
+            The created entity with updated attributes, preserving the original type.
 
         Raises:
             InvalidEntityTypeError: If the entity type is not a valid SQLAlchemy model.
@@ -318,14 +321,14 @@ class BaseSQLAlchemyAdapter(
             return entity
 
     @override
-    def bulk_create(self, entities: list[BaseEntity]) -> list[BaseEntity] | None:
+    def bulk_create(self, entities: list[T]) -> list[T] | None:
         """Creates multiple entities in a single database operation.
 
         Args:
             entities: List of entities to create.
 
         Returns:
-            List of created entities with updated attributes.
+            List of created entities with updated attributes, preserving original types.
 
         Raises:
             InvalidEntityTypeError: If any entity is not a valid SQLAlchemy model.
@@ -352,7 +355,7 @@ class BaseSQLAlchemyAdapter(
             return entities
 
     @override
-    def get_by_uuid(self, entity_type: type, entity_uuid: UUID) -> BaseEntity | None:
+    def get_by_uuid(self, entity_type: type[T], entity_uuid: UUID) -> T | None:
         """Retrieve an entity by its UUID.
 
         Args:
@@ -593,14 +596,14 @@ class AsyncBaseSQLAlchemyAdapter(
         return self.session_manager.get_session()
 
     @override
-    async def create(self, entity: BaseEntity) -> BaseEntity | None:
+    async def create(self, entity: T) -> T | None:
         """Create a new entity in the database.
 
         Args:
             entity: The entity to create.
 
         Returns:
-            The created entity with updated attributes.
+            The created entity with updated attributes, preserving the original type.
 
         Raises:
             InvalidEntityTypeError: If the entity type is not a valid SQLAlchemy model.
@@ -627,14 +630,14 @@ class AsyncBaseSQLAlchemyAdapter(
             return entity
 
     @override
-    async def bulk_create(self, entities: list[BaseEntity]) -> list[BaseEntity] | None:
+    async def bulk_create(self, entities: list[T]) -> list[T] | None:
         """Creates multiple entities in a single database operation.
 
         Args:
             entities: List of entities to create.
 
         Returns:
-            List of created entities with updated attributes.
+            List of created entities with updated attributes, preserving original types.
 
         Raises:
             InvalidEntityTypeError: If any entity is not a valid SQLAlchemy model.
@@ -661,7 +664,7 @@ class AsyncBaseSQLAlchemyAdapter(
             return entities
 
     @override
-    async def get_by_uuid(self, entity_type: type, entity_uuid: UUID) -> Any | None:
+    async def get_by_uuid(self, entity_type: type[T], entity_uuid: UUID) -> T | None:
         """Retrieve an entity by its UUID.
 
         Args:
