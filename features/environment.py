@@ -65,16 +65,6 @@ def before_scenario(context: Context, scenario: Scenario):
     except Exception as e:
         logger.exception(f"Error setting test config: {e}")
 
-    # Set up async test environment if needed
-    if "async" in scenario.name.lower() or any("async" in tag.lower() for tag in scenario.tags):
-        logger.info("Setting up async test environment")
-        try:
-            # Create a new event loop for this scenario
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            scenario_context.store("_async_test_loop", loop)
-        except Exception as e:
-            logger.exception(f"Error setting up async environment: {e}")
 
 
 def after_scenario(context: Context, scenario: Scenario):

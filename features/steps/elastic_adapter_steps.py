@@ -1,8 +1,9 @@
 # features/steps/elasticsearch_steps.py
 from behave import given, when, then
-from features.test_helpers import get_current_scenario_context, safe_run_async
+from features.test_helpers import get_current_scenario_context
 from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter, AsyncElasticsearchAdapter
 import logging
+import ast
 
 logger = logging.getLogger(__name__)
 
@@ -24,16 +25,13 @@ def get_es_adapter(context):
 
 
 @given("an Elasticsearch cluster is running")
-def step_cluster_running(context):
+async def step_cluster_running(context):
     adapter = get_es_adapter(context)
     scenario_context = get_current_scenario_context(context)
 
     if "async" in context.scenario.tags:
 
-        async def ping_async():
-            return await adapter.ping()
-
-        result = safe_run_async(ping_async)()
+        result = await adapter.ping()
     else:
         result = adapter.ping()
 
@@ -42,20 +40,18 @@ def step_cluster_running(context):
 
 
 @given('index "{index_name}" exists')
-def step_index_exists(context, index_name):
+async def step_index_exists(context, index_name):
     adapter = get_es_adapter(context)
     scenario_context = get_current_scenario_context(context)
 
     if "async" in context.scenario.tags:
 
-        async def check_index_async():
-            try:
-                await adapter.get(index=index_name, doc_id="dummy")
-                return True
-            except Exception:
-                return False
+        try:
+            await adapter.get(index=index_name, doc_id="dummy")
+            exists = True
+        except Exception:
+            exists = False
 
-        exists = safe_run_async(check_index_async)()
     else:
         try:
             adapter.get(index=index_name, doc_id="dummy")
@@ -66,10 +62,7 @@ def step_index_exists(context, index_name):
     if not exists:
         if "async" in context.scenario.tags:
 
-            async def create_index_async():
-                return await adapter.create_index(index=index_name)
-
-            safe_run_async(create_index_async)()
+            await adapter.create_index(index=index_name)
         else:
             adapter.create_index(index=index_name)
 
@@ -85,16 +78,14 @@ def step_doc_type_configured(context, doc_type, index_name):
 
 
 @given("a valid Elasticsearch client connection")
-def step_valid_es_client(context):
+async def step_valid_es_client(context):
     adapter = get_es_adapter(context)
     scenario_context = get_current_scenario_context(context)
 
     if "async" in context.scenario.tags:
 
-        async def ping_async():
-            return await adapter.ping()
+        result = await adapter.ping()
 
-        result = safe_run_async(ping_async)()
     else:
         result = adapter.ping()
 
@@ -103,20 +94,15 @@ def step_valid_es_client(context):
 
 
 @given('a document exists in "{index_name}" with id "{doc_id}" and content {content}')
-def step_document_exists(context, index_name, doc_id, content):
+async def step_document_exists(context, index_name, doc_id, content):
     adapter = get_es_adapter(context)
     scenario_context = get_current_scenario_context(context)
-
-    import ast
 
     doc_content = ast.literal_eval(content)
 
     if "async" in context.scenario.tags:
 
-        async def create_doc_async():
-            await adapter.index(index=index_name, document=doc_content, doc_id=doc_id)
-
-        safe_run_async(create_doc_async)()
+        await adapter.index(index=index_name, document=doc_content, doc_id=doc_id)
     else:
         adapter.index(index=index_name, document=doc_content, doc_id=doc_id)
 
@@ -126,7 +112,7 @@ def step_document_exists(context, index_name, doc_id, content):
 
 
 @when('I index a document with id "{doc_id}" and content {content} into "{index_name}"')
-def step_index_document(context, doc_id, content, index_name):
+async def step_index_document(context, doc_id, content, index_name):
     adapter = get_es_adapter(context)
     scenario_context = get_current_scenario_context(context)
 
@@ -137,10 +123,8 @@ def step_index_document(context, doc_id, content, index_name):
     try:
         if "async" in context.scenario.tags:
 
-            async def index_async():
-                return await adapter.index(index=index_name, document=doc_content, doc_id=doc_id)
+            result =await adapter.index(index=index_name, document=doc_content, doc_id=doc_id)
 
-            result = safe_run_async(index_async)()
         else:
             result = adapter.index(index=index_name, document=doc_content, doc_id=doc_id)
 
@@ -152,7 +136,7 @@ def step_index_document(context, doc_id, content, index_name):
 
 
 @when('I search for "{query}" in "{index_name}"')
-def step_search_documents(context, query, index_name):
+async def step_search_documents(context, query, index_name):
     adapter = get_es_adapter(context)
     scenario_context = get_current_scenario_context(context)
 
@@ -161,10 +145,8 @@ def step_search_documents(context, query, index_name):
     try:
         if "async" in context.scenario.tags:
 
-            async def search_async():
-                return await adapter.search(index=index_name, query=search_query)
+            result = await adapter.search(index=index_name, query=search_query)
 
-            result = safe_run_async(search_async)()
         else:
             result = adapter.search(index=index_name, query=search_query)
 
@@ -176,21 +158,17 @@ def step_search_documents(context, query, index_name):
 
 
 @when('I update document "{doc_id}" in "{index_name}" with content {content}')
-def step_update_document(context, doc_id, content, index_name):
+async def step_update_document(context, doc_id, content, index_name):
     adapter = get_es_adapter(context)
     scenario_context = get_current_scenario_context(context)
-
-    import ast
 
     doc_content = ast.literal_eval(content)
 
     try:
         if "async" in context.scenario.tags:
 
-            async def update_async():
-                return await adapter.update(index=index_name, doc_id=doc_id, doc=doc_content)
+            result = await adapter.update(index=index_name, doc_id=doc_id, doc=doc_content)
 
-            result = safe_run_async(update_async)()
         else:
             result = adapter.update(index=index_name, doc_id=doc_id, doc=doc_content)
 
@@ -202,17 +180,15 @@ def step_update_document(context, doc_id, content, index_name):
 
 
 @when('I delete document "{doc_id}" from "{index_name}"')
-def step_delete_document(context, doc_id, index_name):
+async def step_delete_document(context, doc_id, index_name):
     adapter = get_es_adapter(context)
     scenario_context = get_current_scenario_context(context)
 
     try:
         if "async" in context.scenario.tags:
 
-            async def delete_async():
-                return await adapter.delete(index=index_name, doc_id=doc_id)
+            result =await adapter.delete(index=index_name, doc_id=doc_id)
 
-            result = safe_run_async(delete_async)()
         else:
             result = adapter.delete(index=index_name, doc_id=doc_id)
 
@@ -224,7 +200,7 @@ def step_delete_document(context, doc_id, index_name):
 
 
 @when('I create index "{index_name}" with {shards} shard and {replicas} replica')
-def step_create_index(context, index_name, shards, replicas):
+async def step_create_index(context, index_name, shards, replicas):
     adapter = get_es_adapter(context)
     scenario_context = get_current_scenario_context(context)
 
@@ -233,10 +209,8 @@ def step_create_index(context, index_name, shards, replicas):
     try:
         if "async" in context.scenario.tags:
 
-            async def create_index_async():
-                return await adapter.create_index(index=index_name, body=index_body)
+            result = await adapter.create_index(index=index_name, body=index_body)
 
-            result = safe_run_async(create_index_async)()
         else:
             result = adapter.create_index(index=index_name, body=index_body)
 
@@ -250,17 +224,15 @@ def step_create_index(context, index_name, shards, replicas):
 
 
 @when('I delete index "{index_name}"')
-def step_delete_index(context, index_name):
+async def step_delete_index(context, index_name):
     adapter = get_es_adapter(context)
     scenario_context = get_current_scenario_context(context)
 
     try:
         if "async" in context.scenario.tags:
 
-            async def delete_index_async():
-                return await adapter.delete_index(index=index_name)
+            result = await adapter.delete_index(index=index_name)
 
-            result = safe_run_async(delete_index_async)()
         else:
             result = adapter.delete_index(index=index_name)
 
@@ -272,7 +244,7 @@ def step_delete_index(context, index_name):
 
 
 @when("I perform a bulk operation with:")
-def step_bulk_operation(context):
+async def step_bulk_operation(context):
     adapter = get_es_adapter(context)
     scenario_context = get_current_scenario_context(context)
 
@@ -295,10 +267,8 @@ def step_bulk_operation(context):
     try:
         if "async" in context.scenario.tags:
 
-            async def bulk_async():
-                return await adapter.bulk(actions=bulk_actions)
+            result =await adapter.bulk(actions=bulk_actions)
 
-            result = safe_run_async(bulk_async)()
         else:
             result = adapter.bulk(actions=bulk_actions)
 
@@ -318,16 +288,14 @@ def step_indexing_succeeds(context):
 
 
 @then('the document should be retrievable by id "{doc_id}" from "{index_name}"')
-def step_document_retrievable(context, doc_id, index_name):
+async def step_document_retrievable(context, doc_id, index_name):
     adapter = get_es_adapter(context)
 
     try:
         if "async" in context.scenario.tags:
 
-            async def get_doc_async():
-                return await adapter.get(index=index_name, doc_id=doc_id)
+            doc = await adapter.get(index=index_name, doc_id=doc_id)
 
-            doc = safe_run_async(get_doc_async)()
         else:
             doc = adapter.get(index=index_name, doc_id=doc_id)
 
@@ -365,17 +333,15 @@ def step_update_succeeds(context):
 
 
 @then("the document should reflect the updated content when retrieved")
-def step_document_updated(context):
+async def step_document_updated(context):
     scenario_context = get_current_scenario_context(context)
     update_result = scenario_context.last_update_result
     adapter = get_es_adapter(context)
 
     if "async" in context.scenario.tags:
 
-        async def get_doc_async():
-            return await adapter.get(index=update_result["_index"], doc_id=update_result["_id"])
+        doc = await adapter.get(index=update_result["_index"], doc_id=update_result["_id"])
 
-        doc = safe_run_async(get_doc_async)()
     else:
         doc = adapter.get(index=update_result["_index"], doc_id=update_result["_id"])
 
@@ -392,7 +358,7 @@ def step_delete_succeeds(context):
 
 
 @then("the document should not exist when searched for")
-def step_document_not_exist(context):
+async def step_document_not_exist(context):
     scenario_context = get_current_scenario_context(context)
     delete_result = scenario_context.last_delete_result
     adapter = get_es_adapter(context)
@@ -400,10 +366,8 @@ def step_document_not_exist(context):
     try:
         if "async" in context.scenario.tags:
 
-            async def exists_async():
-                return await adapter.exists(index=delete_result["_index"], doc_id=delete_result["_id"])
+            exists = await adapter.exists(index=delete_result["_index"], doc_id=delete_result["_id"])
 
-            exists = safe_run_async(exists_async)()
         else:
             exists = adapter.exists(index=delete_result["_index"], doc_id=delete_result["_id"])
 
@@ -423,19 +387,16 @@ def step_index_creation_succeeds(context):
 
 
 @then('index "{index_name}" should exist in the cluster')
-def step_index_exists_in_cluster(context, index_name):
+async def step_index_exists_in_cluster(context, index_name):
     adapter = get_es_adapter(context)
 
     if "async" in context.scenario.tags:
 
-        async def exists_async():
-            try:
-                await adapter.get(index=index_name, doc_id="dummy")
-                return True
-            except Exception:
-                return False
-
-        exists = safe_run_async(exists_async)()
+        try:
+            await adapter.get(index=index_name, doc_id="dummy")
+            exists = True
+        except Exception:
+            exists = False
     else:
         try:
             adapter.get(index=index_name, doc_id="dummy")
@@ -456,19 +417,16 @@ def step_index_deletion_succeeds(context):
 
 
 @then('index "{index_name}" should not exist in the cluster')
-def step_index_not_exist_in_cluster(context, index_name):
+async def step_index_not_exist_in_cluster(context, index_name):
     adapter = get_es_adapter(context)
 
     if "async" in context.scenario.tags:
 
-        async def exists_async():
-            try:
-                await adapter.get(index=index_name, doc_id="dummy")
-                return True
-            except Exception:
-                return False
-
-        exists = safe_run_async(exists_async)()
+        try:
+            await adapter.get(index=index_name, doc_id="dummy")
+            exists = True
+        except Exception:
+            exists = False
     else:
         try:
             adapter.get(index=index_name, doc_id="dummy")
@@ -489,7 +447,7 @@ def step_bulk_succeeds(context):
 
 
 @then("all operations should be reflected in the index")
-def step_bulk_operations_reflected(context):
+async def step_bulk_operations_reflected(context):
     scenario_context = get_current_scenario_context(context)
     result = scenario_context.last_bulk_result
     adapter = get_es_adapter(context)
@@ -501,30 +459,24 @@ def step_bulk_operations_reflected(context):
         if action_type in ["index", "create"]:
             if "async" in context.scenario.tags:
 
-                async def get_doc_async():
-                    return await adapter.get(index=action_result["_index"], doc_id=action_result["_id"])
+                doc = await adapter.get(index=action_result["_index"], doc_id=action_result["_id"])
 
-                doc = safe_run_async(get_doc_async)()
             else:
                 doc = adapter.get(index=action_result["_index"], doc_id=action_result["_id"])
             assert doc["found"], f"Document {action_result['_id']} not found after bulk operation"
         elif action_type == "update":
             if "async" in context.scenario.tags:
 
-                async def get_doc_async():
-                    return await adapter.get(index=action_result["_index"], doc_id=action_result["_id"])
+                doc = await adapter.get(index=action_result["_index"], doc_id=action_result["_id"])
 
-                doc = safe_run_async(get_doc_async)()
             else:
                 doc = adapter.get(index=action_result["_index"], doc_id=action_result["_id"])
             assert doc["found"], f"Document {action_result['_id']} not found after bulk update"
         elif action_type == "delete":
             if "async" in context.scenario.tags:
 
-                async def exists_async():
-                    return await adapter.exists(index=action_result["_index"], doc_id=action_result["_id"])
+                exists = await adapter.exists(index=action_result["_index"], doc_id=action_result["_id"])
 
-                exists = safe_run_async(exists_async)()
             else:
                 exists = adapter.exists(index=action_result["_index"], doc_id=action_result["_id"])
             assert not exists, f"Document {action_result['_id']} still exists after bulk delete"
@@ -532,7 +484,7 @@ def step_bulk_operations_reflected(context):
     context.logger.info("All bulk operations reflected in index")
 
 
-def after_scenario(context, scenario):
+async def after_scenario(context, scenario):
     """Clean up after each scenario."""
     scenario_context = get_current_scenario_context(context)
     adapter = get_es_adapter(context)
@@ -543,10 +495,8 @@ def after_scenario(context, scenario):
             try:
                 if "async" in context.scenario.tags:
 
-                    async def delete_async():
-                        await adapter.delete(index=index_name, doc_id=doc_id)
+                    await adapter.delete(index=index_name, doc_id=doc_id)
 
-                    safe_run_async(delete_async)()
                 else:
                     adapter.delete(index=index_name, doc_id=doc_id)
                 context.logger.info(f"Deleted test document {doc_id} from {index_name}")
@@ -559,10 +509,8 @@ def after_scenario(context, scenario):
             try:
                 if "async" in context.scenario.tags:
 
-                    async def delete_index_async():
-                        await adapter.delete_index(index=index_name)
+                    await adapter.delete_index(index=index_name)
 
-                    safe_run_async(delete_index_async)()
                 else:
                     adapter.delete_index(index=index_name)
                 context.logger.info(f"Deleted test index {index_name}")

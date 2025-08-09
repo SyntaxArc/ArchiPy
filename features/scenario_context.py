@@ -43,30 +43,14 @@ class ScenarioContext:
         # Clean up async adapter
         if self.async_adapter:
             try:
-                if hasattr(self.async_adapter, "session_manager") and hasattr(
-                    self.async_adapter.session_manager,
-                    "engine",
-                ):
-                    # For async, we need to get a loop and run the coroutine
-                    loop = asyncio.get_event_loop()
-                    if not loop.is_closed():
-                        try:
-                            # Run the session removal coroutine
-                            loop.run_until_complete(self.async_adapter.session_manager.remove_session())
-
-                            # Run the engine disposal coroutine
-                            loop.run_until_complete(self.async_adapter.session_manager.engine.dispose())
-                        except Exception as e:
-                            print(f"Error in async cleanup: {e}")
-                    else:
-                        # If the loop is closed, create a new one temporarily
-                        temp_loop = asyncio.new_event_loop()
-                        try:
-                            asyncio.set_event_loop(temp_loop)
-                            temp_loop.run_until_complete(self.async_adapter.session_manager.remove_session())
-                            temp_loop.run_until_complete(self.async_adapter.session_manager.engine.dispose())
-                        finally:
-                            temp_loop.close()
+                # Try to run async cleanup if we're in an async context
+                try:
+                    loop = asyncio.get_running_loop()
+                    # If we have a running loop, create a task
+                    asyncio.create_task(self.async_cleanup())
+                except RuntimeError:
+                    # No running loop, run in new loop
+                    asyncio.run(self.async_cleanup())
             except Exception as e:
                 print(f"Error in async cleanup: {e}")
 
@@ -80,3 +64,16 @@ class ScenarioContext:
                 os.remove(self.db_file)
             except Exception as e:
                 print(f"Error removing database file: {e}")
+
+    async def async_cleanup(self):
+        """Clean up async resources associated with this scenario."""
+        if self.async_adapter:
+            try:
+                if hasattr(self.async_adapter, "session_manager") and hasattr(
+                        self.async_adapter.session_manager, "engine"
+                ):
+                    # Clean up async sessions and engine
+                    await self.async_adapter.session_manager.remove_session()
+                    await self.async_adapter.session_manager.engine.dispose()
+            except Exception as e:
+                print(f"Error in async cleanup: {e}")

@@ -3,7 +3,7 @@
 This module contains step definitions for both synchronous and asynchronous
 atomic transaction scenarios.
 """
-
+import asyncio
 import logging
 import os
 import tempfile
@@ -16,12 +16,10 @@ from archipy.adapters.sqlite.sqlalchemy.adapters import SQLiteSQLAlchemyAdapter,
 from features.test_entity import RelatedTestEntity, TestAdminEntity, TestEntity, TestManagerEntity
 from features.test_entity_factory import TestEntityFactory
 from features.test_helpers import (
-    SafeAsyncContextManager,
     async_schema_setup,
     get_adapter,
     get_async_adapter,
     get_current_scenario_context,
-    safe_run_async,
 )
 from sqlalchemy import select
 
@@ -127,8 +125,7 @@ def step_given_database_initialized(context):
 
             # Create schema with async adapter
             logger.info("Creating database schema with async adapter")
-            with SafeAsyncContextManager(context) as ctx:
-                ctx.run(async_schema_setup(async_adapter))
+            asyncio.run(async_schema_setup(async_adapter))
 
             logger.info("Async adapter and schema setup completed")
         except Exception as e:
@@ -965,7 +962,6 @@ def step_then_session_maintains_consistency(context):
 
 
 @when("a new entity is created in an async atomic transaction")
-@safe_run_async
 async def step_when_entity_created_in_async_atomic(context):
     """Create a new entity within an async atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -993,7 +989,6 @@ async def step_when_entity_created_in_async_atomic(context):
 
 
 @then("the async entity should be retrievable")
-@safe_run_async
 async def step_then_async_entity_should_be_retrievable(context):
     """Verify the entity exists after async atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -1016,7 +1011,6 @@ async def step_then_async_entity_should_be_retrievable(context):
 
 
 @when("a new async entity creation fails within an atomic transaction")
-@safe_run_async
 async def step_when_async_entity_creation_fails(context):
     """Attempt to create an async entity with a failure that causes rollback."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -1053,7 +1047,6 @@ async def step_when_async_entity_creation_fails(context):
 
 
 @then("no async entity should exist in the database")
-@safe_run_async
 async def step_then_no_async_entity_should_exist(context):
     """Verify the entity doesn't exist after failed async atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -1075,7 +1068,6 @@ async def step_then_no_async_entity_should_exist(context):
 
 
 @then("the async database session should remain usable")
-@safe_run_async
 async def step_then_async_session_should_remain_usable(context):
     """Verify the async session is still usable after a failed transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -1107,7 +1099,6 @@ async def step_then_async_session_should_remain_usable(context):
 
 
 @when("multiple entities are created in an async atomic transaction")
-@safe_run_async
 async def step_when_multiple_async_entities_created(context):
     """Create multiple entities in a single async atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -1141,7 +1132,6 @@ async def step_when_multiple_async_entities_created(context):
 
 
 @then("all async entities should be retrievable")
-@safe_run_async
 async def step_then_all_async_entities_retrievable(context):
     """Verify all entities exist after async atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -1177,7 +1167,6 @@ async def step_then_all_async_entities_retrievable(context):
 
 
 @when("complex async operations are performed in a transaction")
-@safe_run_async
 async def step_when_complex_async_operations(context):
     """Demonstrate more complex async operations with proper session management."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -1227,7 +1216,6 @@ async def step_when_complex_async_operations(context):
 
 
 @then("all related entities should be accessible")
-@safe_run_async
 async def step_then_related_entities_accessible(context):
     """Verify that related entities can be accessed through relationships."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))

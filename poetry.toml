@@ -1,5 +1,5 @@
 [virtualenvs]
 create = true
-in-project = true
+in-project = false
 options.no-pip = true
 options.no-setuptools = true

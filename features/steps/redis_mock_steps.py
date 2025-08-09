@@ -7,7 +7,7 @@ Redis mock scenarios as defined in the Redis Mock Testing feature.
 import logging
 
 from behave import given, then, when
-from features.test_helpers import get_current_scenario_context, safe_run_async
+from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.redis.mocks import AsyncRedisMock, RedisMock
 from archipy.configs.config_template import RedisConfig
@@ -347,7 +347,6 @@ def step_then_sync_set_contains_members(context, set_name, expected_members):
 
 # Asynchronous Redis Mock Steps
 @when('I store the key "{key}" with value "{value}" in async Redis mock')
-@safe_run_async
 async def step_when_store_key_in_async_redis_mock(context, key, value):
     """Store a key-value pair in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -360,7 +359,6 @@ async def step_when_store_key_in_async_redis_mock(context, key, value):
 
 
 @then("the async store operation should succeed")
-@safe_run_async
 async def step_then_async_store_operation_succeeds(context):
     """Verify the async store operation succeeded."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -381,7 +379,6 @@ async def step_then_async_store_operation_succeeds(context):
 
 
 @when('I retrieve the value for key "{key}" from async Redis mock')
-@safe_run_async
 async def step_when_retrieve_key_from_async_redis_mock(context, key):
     """Retrieve a value from the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -394,7 +391,6 @@ async def step_when_retrieve_key_from_async_redis_mock(context, key):
 
 
 @then('the async retrieved value should be "{expected_value}"')
-@safe_run_async
 async def step_then_async_retrieved_value_is(context, expected_value):
     """Verify the async retrieved value matches the expected value."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -411,7 +407,6 @@ async def step_then_async_retrieved_value_is(context, expected_value):
 
 
 @when('I remove the key "{key}" from async Redis mock')
-@safe_run_async
 async def step_when_remove_key_from_async_redis_mock(context, key):
     """Remove a key from the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -424,7 +419,6 @@ async def step_when_remove_key_from_async_redis_mock(context, key):
 
 
 @then("the async remove operation should delete one key")
-@safe_run_async
 async def step_then_async_remove_operation_deletes_one(context):
     """Verify the async remove operation deleted one key."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -441,7 +435,6 @@ async def step_then_async_remove_operation_deletes_one(context):
 
 
 @when('I check if "{key}" exists in async Redis mock')
-@safe_run_async
 async def step_when_check_key_exists_in_async_redis_mock(context, key):
     """Check if a key exists in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -454,7 +447,6 @@ async def step_when_check_key_exists_in_async_redis_mock(context, key):
 
 
 @then("the async key should not exist")
-@safe_run_async
 async def step_then_async_key_does_not_exist(context):
     """Verify the async key does not exist."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -471,7 +463,6 @@ async def step_then_async_key_does_not_exist(context):
 
 
 @when('I add "{values}" to the list "{list_name}" in async Redis mock')
-@safe_run_async
 async def step_when_add_to_list_in_async_redis_mock(context, values, list_name):
     """Add values to a list in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -485,7 +476,6 @@ async def step_when_add_to_list_in_async_redis_mock(context, values, list_name):
 
 
 @then('the async list "{list_name}" should have {count:d} items')
-@safe_run_async
 async def step_then_async_list_has_count_items(context, list_name, count):
     """Verify the async list has the expected number of items."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -499,7 +489,6 @@ async def step_then_async_list_has_count_items(context, list_name, count):
 
 
 @when('I fetch all items from the list "{list_name}" in async Redis mock')
-@safe_run_async
 async def step_when_fetch_list_items_in_async_redis_mock(context, list_name):
     """Fetch all items from a list in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -512,7 +501,6 @@ async def step_when_fetch_list_items_in_async_redis_mock(context, list_name):
 
 
 @then('the async list "{list_name}" should contain "{expected_values}"')
-@safe_run_async
 async def step_then_async_list_contains_values(context, list_name, expected_values):
     """Verify the async list contains the expected values."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -525,7 +513,6 @@ async def step_then_async_list_contains_values(context, list_name, expected_valu
 
 
 @when('I assign "{field}" to "{value}" in the hash "{hash_name}" in async Redis mock')
-@safe_run_async
 async def step_when_assign_hash_field_in_async_redis_mock(context, field, hash_name, value):
     """Assign a field-value pair to a hash in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -538,7 +525,6 @@ async def step_when_assign_hash_field_in_async_redis_mock(context, field, hash_n
 
 
 @then("the async hash assignment should succeed")
-@safe_run_async
 async def step_then_async_hash_assignment_succeeds(context):
     """Verify the async hash assignment succeeded."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -562,7 +548,6 @@ async def step_then_async_hash_assignment_succeeds(context):
 
 
 @when('I retrieve the "{field}" field from the hash "{hash_name}" in async Redis mock')
-@safe_run_async
 async def step_when_retrieve_hash_field_in_async_redis_mock(context, field, hash_name):
     """Retrieve a field from a hash in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -575,7 +560,6 @@ async def step_when_retrieve_hash_field_in_async_redis_mock(context, field, hash
 
 
 @then('the async retrieved field value should be "{expected_value}"')
-@safe_run_async
 async def step_then_async_hash_field_value_is(context, expected_value):
     """Verify the async retrieved hash field value matches the expected value."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -593,7 +577,6 @@ async def step_then_async_hash_field_value_is(context, expected_value):
 
 
 @when('I add "{members}" to the set "{set_name}" in async Redis mock')
-@safe_run_async
 async def step_when_add_to_set_in_async_redis_mock(context, members, set_name):
     """Add members to a set in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -607,7 +590,6 @@ async def step_when_add_to_set_in_async_redis_mock(context, members, set_name):
 
 
 @then('the async set "{set_name}" should have {count:d} members')
-@safe_run_async
 async def step_then_async_set_has_count_members(context, set_name, count):
     """Verify the async set has the expected number of members."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -621,7 +603,6 @@ async def step_then_async_set_has_count_members(context, set_name, count):
 
 
 @when('I fetch all members from the set "{set_name}" in async Redis mock')
-@safe_run_async
 async def step_when_fetch_set_members_in_async_redis_mock(context, set_name):
     """Fetch all members from a set in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -634,7 +615,6 @@ async def step_when_fetch_set_members_in_async_redis_mock(context, set_name):
 
 
 @then('the async set "{set_name}" should contain "{expected_members}"')
-@safe_run_async
 async def step_then_async_set_contains_members(context, set_name, expected_members):
     """Verify the async set contains the expected members."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
