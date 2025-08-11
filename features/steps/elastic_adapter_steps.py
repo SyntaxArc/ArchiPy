@@ -1,7 +1,11 @@
 # features/steps/elasticsearch_steps.py
 from behave import given, when, then
+
 from features.test_helpers import get_current_scenario_context
 from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter, AsyncElasticsearchAdapter
+from archipy.configs.config_template import ElasticsearchConfig
+
+from pydantic import SecretStr
 import logging
 import ast
 
@@ -13,14 +17,30 @@ def get_es_adapter(context):
     scenario_context = get_current_scenario_context(context)
     is_async = "async" in context.scenario.tags
 
+    # Get the elasticsearch container from the test containers
+    test_containers = scenario_context.get("test_containers")
+    elasticsearch_container = test_containers.get_container("elasticsearch")
+
+    # Create ElasticsearchConfig from container information
+    elasticsearch_config = ElasticsearchConfig(
+        HOSTS=[f"http://{elasticsearch_container.host}:{elasticsearch_container.port}"],
+        HTTP_USER_NAME=elasticsearch_container.username,
+        HTTP_PASSWORD=SecretStr(elasticsearch_container.password) if elasticsearch_container.password else None,
+        VERIFY_CERTS=False,
+        REQUEST_TIMEOUT=30.0,
+        MAX_RETRIES=3,
+        SNIFF_ON_START=False,
+        SNIFF_BEFORE_REQUESTS=False,
+        SNIFF_ON_NODE_FAILURE=False,
+    )
+
     if is_async:
         if not hasattr(scenario_context, "async_adapter") or scenario_context.async_adapter is None:
-            test_config = scenario_context.get("test_config")
-            scenario_context.async_adapter = AsyncElasticsearchAdapter(test_config.ELASTIC)
+            scenario_context.async_adapter = AsyncElasticsearchAdapter(elasticsearch_config)
         return scenario_context.async_adapter
+
     if not hasattr(scenario_context, "adapter") or scenario_context.adapter is None:
-        test_config = scenario_context.get("test_config")
-        scenario_context.adapter = ElasticsearchAdapter(test_config.ELASTIC)
+        scenario_context.adapter = ElasticsearchAdapter(elasticsearch_config)
     return scenario_context.adapter
 
 

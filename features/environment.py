@@ -17,6 +17,7 @@ from pydantic_settings import SettingsConfigDict
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
 from archipy.configs.base_config import BaseConfig
 
+from features.test_containers import ContainerManager
 
 class TestConfig(BaseConfig):
     model_config = SettingsConfigDict(
@@ -43,6 +44,10 @@ def before_all(context: Context):
     # Create the scenario context pool manager
     context.scenario_context_pool = ScenarioContextPoolManager()
 
+    # Initialize and start all test containers
+    context.test_containers = ContainerManager
+    context.test_containers.start_all()
+
 
 def before_scenario(context: Context, scenario: Scenario):
     """Setup performed before each scenario runs."""
@@ -62,6 +67,7 @@ def before_scenario(context: Context, scenario: Scenario):
     # Assign test config to scenario context
     try:
         scenario_context.store("test_config", config)
+        scenario_context.store("test_containers", context.test_containers)
     except Exception as e:
         logger.exception(f"Error setting test config: {e}")
 
@@ -85,6 +91,10 @@ def after_scenario(context: Context, scenario: Scenario):
 
 def after_all(context: Context):
     """Cleanup performed after all tests run."""
+    # Stop all test containers
+    if hasattr(context, "test_containers"):
+        context.test_containers.stop_all()
+
     # Clean up any remaining resources
     if hasattr(context, "scenario_context_pool"):
         context.scenario_context_pool.cleanup_all()
