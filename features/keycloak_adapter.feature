@@ -52,7 +52,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Validate token with sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "testuser" and password "pass123" using sync adapter
     And I have a valid token for "testuser" with password "pass123" using sync adapter
     When I validate the token using sync adapter
@@ -61,7 +61,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Get user by username using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "testuser" and password "pass123" using sync adapter
     When I get user by username "testuser" using sync adapter
     Then the sync user retrieval should succeed
@@ -70,7 +70,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Get user by email using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user including username "testuser" email "test@example.com" and password "pass123" using sync adapter
     When I get user by email "test@example.com" using sync adapter
     Then the sync user retrieval should succeed
@@ -79,7 +79,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Create and assign realm role using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "testuser" and password "pass123" using sync adapter
     When I create a realm role named "test-role" with description "Test Role" using sync adapter
     And I assign realm role "test-role" to user "testuser" using sync adapter
@@ -90,7 +90,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Create and assign client role using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "testuser" and password "pass123" using sync adapter
     When I create a client role named "client-role" for client "test-client" with description "Client Role" using sync adapter
     And I assign client role "client-role" of client "test-client" to user "testuser" using sync adapter
@@ -101,7 +101,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Search users using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "searchuser1" and password "pass123" using sync adapter
     And I create a user with username "searchuser2" and password "pass123" using sync adapter
     When I search for users with query "searchuser" using sync adapter
@@ -111,7 +111,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Update user using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "testuser" and password "pass123" using sync adapter
     When I update user "testuser" with first name "John" and last name "Doe" using sync adapter
     Then the sync user update should succeed
@@ -120,7 +120,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Reset user password using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "testuser" and password "pass123" using sync adapter
     When I reset password for user "testuser" to "newpass456" using sync adapter
     Then the sync password reset should succeed
@@ -129,7 +129,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Clear user sessions using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "testuser" and password "pass123" using sync adapter
     And I have a valid token for "testuser" with password "pass123" using sync adapter
     When I clear sessions for user "testuser" using sync adapter
@@ -138,7 +138,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Logout user using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "testuser" and password "pass123" using sync adapter
     And I have a valid token for "testuser" with password "pass123" using sync adapter
     When I logout the user using sync adapter
@@ -147,7 +147,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Get client credentials token using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     When I request client credentials token using sync adapter
     Then the sync client credentials token request should succeed
     And the sync token response should contain "access_token"
@@ -155,7 +155,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Introspect token using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "testuser" and password "pass123" using sync adapter
     And I have a valid token for "testuser" with password "pass123" using sync adapter
     When I introspect the token using sync adapter
@@ -165,7 +165,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Get token info using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "testuser" and password "pass123" using sync adapter
     And I have a valid token for "testuser" with password "pass123" using sync adapter
     When I get token info using sync adapter
@@ -175,7 +175,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Check user role permissions using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "testuser" and password "pass123" using sync adapter
     And I create a realm role named "test-role" with description "Test Role" using sync adapter
     And I assign realm role "test-role" to user "testuser" using sync adapter
@@ -187,7 +187,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Remove realm role from user using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "testuser" and password "pass123" using sync adapter
     And I create a realm role named "test-role" with description "Test Role" using sync adapter
     And I assign realm role "test-role" to user "testuser" using sync adapter
@@ -198,7 +198,7 @@ Feature: Keycloak Authentication Testing
   Scenario: Delete user using sync adapter
     Given a configured sync Keycloak adapter
     And I create a realm named "test-realm" with display name "Test Realm" using sync adapter
-    And I create a client named "test-client" in realm "test-realm" with service accounts enabled using sync adapter
+    And I create a client named "test-client" in realm "test-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "testuser" and password "pass123" using sync adapter
     When I delete user "testuser" using sync adapter
     Then the sync user deletion should succeed
