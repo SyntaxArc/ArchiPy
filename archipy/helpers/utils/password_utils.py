@@ -161,7 +161,7 @@ class PasswordUtils:
         configs = auth_config or BaseConfig.global_config().AUTH
 
         # First validate against password policy
-        cls.validate_password(new_password, configs, lang)
+        cls.validate_password(new_password, configs)
 
         # Check password history
         if any(
