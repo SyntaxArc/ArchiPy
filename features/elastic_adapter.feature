@@ -6,17 +6,18 @@ Feature: Elasticsearch Operations Testing
 
   Background:
     Given an Elasticsearch cluster is running
-    And index "test-index" exists
     And document type "test-doc" is configured for index "test-index"
 
   Scenario: Index a new document synchronously
     Given a valid Elasticsearch client connection
+    And index "test-index" exists
     When I index a document with id "1" and content '{"title": "Test Document", "content": "This is a test"}' into "test-index"
     Then the indexing operation should succeed
     And the document should be retrievable by id "1" from "test-index"
 
   Scenario: Search for documents synchronously
     Given a valid Elasticsearch client connection
+    And index "test-index" exists
     And a document exists in "test-index" with id "1" and content '{"title": "Test Document", "content": "This is a test"}'
     When I search for "Test Document" in "test-index"
     Then the search should return at least 1 hit
@@ -24,13 +25,15 @@ Feature: Elasticsearch Operations Testing
 
   Scenario: Update a document synchronously
     Given a valid Elasticsearch client connection
+    And index "test-index" exists
     And a document exists in "test-index" with id "1" and content '{"title": "Test Document", "content": "This is a test"}'
-    When I update document "1" in "test-index" with content '{"title": "Updated Document", "content": "This is an update"}'
+    When I update document "1" in "test-index" with content '{"doc": {"title": "Updated Document", "content": "This is an update"}}'
     Then the update operation should succeed
     And the document should reflect the updated content when retrieved
 
   Scenario: Delete a document synchronously
     Given a valid Elasticsearch client connection
+    And index "test-index" exists
     And a document exists in "test-index" with id "1" and content '{"title": "Test Document", "content": "This is a test"}'
     When I delete document "1" from "test-index"
     Then the delete operation should succeed
@@ -51,6 +54,8 @@ Feature: Elasticsearch Operations Testing
 
   Scenario: Perform bulk operations synchronously
     Given a valid Elasticsearch client connection
+    And index "test-index" exists
+    And a document exists in "test-index" with id "1" and content '{"title": "Test Document", "content": "This is a test"}'
     When I perform a bulk operation with:
       | action  | id | index       | document                                  |
       | index   | 2  | test-index  | {"title": "Doc 2", "content": "Second"}  |
@@ -63,6 +68,7 @@ Feature: Elasticsearch Operations Testing
   @async
   Scenario: Index a new document asynchronously
     Given a valid Elasticsearch client connection
+    And index "test-index" exists
     When I index a document with id "10" and content '{"title": "Async Doc", "content": "Async test"}' into "test-index"
     Then the indexing operation should succeed
     And the document should be retrievable by id "10" from "test-index"
@@ -70,6 +76,7 @@ Feature: Elasticsearch Operations Testing
   @async
   Scenario: Search for documents asynchronously
     Given a valid Elasticsearch client connection
+    And index "test-index" exists
     And a document exists in "test-index" with id "10" and content '{"title": "Async Doc", "content": "Async test"}'
     When I search for "Async Doc" in "test-index"
     Then the search should return at least 1 hit
@@ -78,14 +85,16 @@ Feature: Elasticsearch Operations Testing
   @async
   Scenario: Update a document asynchronously
     Given a valid Elasticsearch client connection
+    And index "test-index" exists
     And a document exists in "test-index" with id "10" and content '{"title": "Async Doc", "content": "Async test"}'
-    When I update document "10" in "test-index" with content '{"title": "Updated Async", "content": "Updated async"}'
+    When I update document "10" in "test-index" with content '{"doc": {"title": "Updated Async", "content": "Updated async"}}'
     Then the update operation should succeed
     And the document should reflect the updated content when retrieved
 
   @async
   Scenario: Delete a document asynchronously
     Given a valid Elasticsearch client connection
+    And index "test-index" exists
     And a document exists in "test-index" with id "10" and content '{"title": "Async Doc", "content": "Async test"}'
     When I delete document "10" from "test-index"
     Then the delete operation should succeed
@@ -109,6 +118,8 @@ Feature: Elasticsearch Operations Testing
   @async
   Scenario: Perform bulk operations asynchronously
     Given a valid Elasticsearch client connection
+    And index "test-index" exists
+    And a document exists in "test-index" with id "10" and content '{"title": "Async Doc", "content": "Async test"}'
     When I perform a bulk operation with:
       | action  | id | index            | document                                  |
       | index   | 20 | test-index       | {"title": "Async 2", "content": "Second"} |
