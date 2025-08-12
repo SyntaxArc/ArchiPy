@@ -5,7 +5,7 @@ particularly focusing on setup/teardown of resources like databases
 and handling async operations.
 """
 
-import asyncio
+import os
 import logging
 import uuid
 
@@ -19,10 +19,29 @@ from archipy.configs.base_config import BaseConfig
 
 from features.test_containers import ContainerManager
 
+from testcontainers.core.config import testcontainers_config
+
 class TestConfig(BaseConfig):
     model_config = SettingsConfigDict(
         env_file=".env.test",
     )
+
+    # Test container images
+    REDIS__IMAGE: str = "redis:7-alpine"
+    POSTGRES__IMAGE: str = "postgres:17"
+    ELASTIC__IMAGE: str = "elasticsearch:9.1.0"
+    KAFKA__IMAGE: str = "confluentinc/cp-kafka:7.4.0"
+    MINIO__IMAGE: str = "minio/minio:latest"
+    KEYCLOAK__IMAGE: str = "quay.io/keycloak/keycloak:23.0"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        # Configure testcontainers to use custom ryuk image
+        ryuk_image = os.getenv("TESTCONTAINERS_RYUK_CONTAINER_IMAGE")
+        if ryuk_image:
+            testcontainers_config.ryuk_image = ryuk_image
+
 
 
 # Initialize global config

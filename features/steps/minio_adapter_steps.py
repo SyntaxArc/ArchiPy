@@ -17,7 +17,6 @@ def get_minio_adapter(context):
         # Get the MinIO test container configuration
         test_containers = scenario_context.get("test_containers")
         minio_container = test_containers.get_container("minio")
-
         # Create a MinioConfig
         minio_config = MinioConfig(
             ENDPOINT=f"{minio_container.host}:{minio_container.port}",

@@ -11,7 +11,8 @@ from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 
 from archipy.helpers.metaclasses.singleton import Singleton
-from features.test_containers_config import test_config
+from archipy.configs.base_config import BaseConfig
+from archipy.configs.config_template import RedisConfig, MinioConfig, KafkaConfig, ElasticsearchConfig, PostgresSQLAlchemyConfig, KeycloakConfig
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +33,14 @@ class ContainerManager:
         return decorator
 
     @classmethod
-    def get_container(cls, name: str):
+    def get_container(cls, name: str, **kwargs):
         """Get a container instance by name."""
         if name not in cls._containers:
             raise KeyError(f"Container '{name}' not found. Available: {list(cls._containers.keys())}")
 
         container_class = cls._containers[name]
 
-        return container_class()
+        return container_class(**kwargs)
 
     @classmethod
     def start_all(cls):
@@ -84,35 +85,41 @@ class ContainerManager:
 
 @ContainerManager.register("redis")
 class RedisTestContainer(metaclass=Singleton, thread_safe=True):
-    def __init__(self) -> None:
+    def __init__(self, config: RedisConfig | None = None, image: str | None = None) -> None:
         self.name = "redis"
-        self.image = test_config.REDIS_IMAGE
-        self._container: RedisContainer | None = None
+        self.config = config or BaseConfig.global_config().REDIS
+        self.image = image or BaseConfig.global_config().REDIS__IMAGE
         self._is_running: bool = False
 
         # Container properties
         self.host: str | None = None
-        self.port: int | None = None
-        self.database: int = test_config.REDIS_DATABASE
-        self.password: str | None = test_config.REDIS_PASSWORD
+        self.port: int = self.config.PORT
+        self.database: int = self.config.DATABASE
+        self.password: str | None = self.config.PASSWORD
+
+        # Set up the container
+        self._container = RedisContainer(self.image)
+        if self.config.PASSWORD:
+            self._container.with_env("REDIS_PASSWORD", self.config.PASSWORD)
+
+        self._container.with_exposed_ports(self.config.PORT)
 
     def start(self) -> RedisContainer:
+        """Start the Redis container."""
         if self._is_running:
             return self._container
 
-        self._container = RedisContainer(self.image)
         self._container.start()
         self._is_running = True
 
-        # Set container properties
         self.host = self._container.get_container_host_ip()
-        self.port = self._container.get_exposed_port(test_config.REDIS_PORT)
 
         logger.info("Redis container started on %s:%s", self.host, self.port)
 
         return self._container
 
     def stop(self) -> None:
+        """Stop the Redis container."""
         if not self._is_running:
             return
 
@@ -126,47 +133,56 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
         self.host = None
         self.port = None
 
+
         logger.info("Redis container stopped")
 
 
 @ContainerManager.register("postgres")
 class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
-    def __init__(self) -> None:
+    def __init__(self, config: PostgresSQLAlchemyConfig | None = None, image: str | None = None) -> None:
         self.name = "postgres"
-        self.image = test_config.POSTGRES_IMAGE
-        self._container: PostgresContainer | None = None
+        self.config = config or BaseConfig.global_config().POSTGRES_SQLALCHEMY
+        self.image = image or BaseConfig.global_config().POSTGRES__IMAGE
         self._is_running: bool = False
 
         # Container properties
         self.host: str | None = None
         self.port: int | None = None
-        self.database: str = test_config.POSTGRES_DATABASE
-        self.username: str = test_config.POSTGRES_USERNAME
-        self.password: str = test_config.POSTGRES_PASSWORD
+        self.database: str | None = self.config.DATABASE
+        self.username: str | None = self.config.USERNAME
+        self.password: str | None = self.config.PASSWORD
 
-    def start(self) -> PostgresContainer:
-        if self._is_running:
-            return self._container
+        # Use config values or fallback to defaults for test containers
+        dbname = self.database or "test_db"
+        username = self.username or "test_user"
+        password = self.password or "test_password"
 
+        # Set up the container
         self._container = PostgresContainer(
             image=self.image,
-            dbname=test_config.POSTGRES_DATABASE,
-            username=test_config.POSTGRES_USERNAME,
-            password=test_config.POSTGRES_PASSWORD,
+            dbname=dbname,
+            username=username,
+            password=password,
         )
+
+    def start(self) -> PostgresContainer:
+        """Start the PostgreSQL container."""
+        if self._is_running:
+            return self._container
 
         self._container.start()
         self._is_running = True
 
         # Set container properties
         self.host = self._container.get_container_host_ip()
-        self.port = self._container.get_exposed_port(test_config.POSTGRES_PORT)
+        self.port = self._container.get_exposed_port(self.config.PORT or 5432)
 
         logger.info("PostgreSQL container started on %s:%s", self.host, self.port)
 
         return self._container
 
     def stop(self) -> None:
+        """Stop the PostgreSQL container."""
         if not self._is_running:
             return
 
@@ -185,41 +201,47 @@ class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
 
 @ContainerManager.register("keycloak")
 class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
-    def __init__(self) -> None:
+    def __init__(self, config: KeycloakConfig | None = None, image: str | None = None) -> None:
         self.name = "keycloak"
-        self.image = test_config.KEYCLOAK_IMAGE
-        self._container: KeycloakContainer | None = None
+        self.config = config or BaseConfig.global_config().KEYCLOAK
+        self.image = image or BaseConfig.global_config().KEYCLOAK__IMAGE
         self._is_running: bool = False
 
         # Container properties
-        self.host: str | None = None
-        self.port: int | None = None
-        self.admin_username: str = test_config.KEYCLOAK_ADMIN_USERNAME
-        self.admin_password: str = test_config.KEYCLOAK_ADMIN_PASSWORD
-        self.realm: str = test_config.KEYCLOAK_REALM
+        self.port: int = self.config.PORT
+        self.admin_username: str | None = self.config.ADMIN_USERNAME
+        self.admin_password: str | None = self.config.ADMIN_PASSWORD
+        self.realm: str = self.config.REALM_NAME
 
-    def start(self) -> KeycloakContainer:
-        if self._is_running:
-            return self._container
+        # Use config values or fallback to defaults for test containers
+        username = self.admin_username or "admin"
+        password = self.admin_password or "admin"
 
+        # Set up the container
         self._container = KeycloakContainer(
             image=self.image,
-            username=test_config.KEYCLOAK_ADMIN_USERNAME,
-            password=test_config.KEYCLOAK_ADMIN_PASSWORD,
+            username=username,
+            password=password,
         )
+        self._container.with_exposed_ports(self.port)
+
+    def start(self) -> KeycloakContainer:
+        """Start the Keycloak container."""
+        if self._is_running:
+            return self._container
 
         self._container.start()
         self._is_running = True
 
         # Set container properties
         self.host = self._container.get_container_host_ip()
-        self.port = self._container.get_exposed_port(test_config.KEYCLOAK_PORT)
 
         logger.info("Keycloak container started on %s:%s", self.host, self.port)
 
         return self._container
 
     def stop(self) -> None:
+        """Stop the Keycloak container."""
         if not self._is_running:
             return
 
@@ -238,33 +260,31 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
 
 @ContainerManager.register("elasticsearch")
 class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
-    def __init__(self) -> None:
+    def __init__(self, config: ElasticsearchConfig | None = None, image: str | None = None) -> None:
         self.name = "elasticsearch"
-        self.image = test_config.ELASTICSEARCH_IMAGE
-        self._container: DockerContainer | None = None
+        self.config = config or BaseConfig.global_config().ELASTIC
+        self.image = image or BaseConfig.global_config().ELASTIC__IMAGE
         self._is_running: bool = False
 
         # Container properties
-        self.host: str | None = None
-        self.port: int | None = None
-        self.username: str = test_config.ELASTICSEARCH_USERNAME
-        self.password: str = test_config.ELASTICSEARCH_PASSWORD
-        self.cluster_name: str = test_config.ELASTICSEARCH_CLUSTER_NAME
+        self.port: int = self.config.PORT
+        self.username: str | None = self.config.HTTP_USER_NAME
+        self.password: str | None = self.config.HTTP_PASSWORD.get_secret_value() if self.config.HTTP_PASSWORD else None
+        self.cluster_name: str = "test-cluster"
 
-    def start(self) -> DockerContainer:
-        if self._is_running:
-            return self._container
-
+        # Set up the container
         self._container = DockerContainer(self.image)
-
-        # Set environment variables
         self._container.with_env("discovery.type", "single-node")
         self._container.with_env("xpack.security.enabled", "true")
-        self._container.with_env("ELASTIC_PASSWORD", self.password)
+        if self.password:
+            self._container.with_env("ELASTIC_PASSWORD", self.password)
         self._container.with_env("cluster.name", self.cluster_name)
+        self._container.with_exposed_ports(self.port)
 
-        # Expose ports
-        self._container.with_exposed_ports(test_config.ELASTICSEARCH_PORT)
+    def start(self) -> DockerContainer:
+        """Start the Elasticsearch container."""
+        if self._is_running:
+            return self._container
 
         # Start the container
         self._container.start()
@@ -273,16 +293,12 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         wait_for_logs(self._container, "started", timeout=60)
 
         self._is_running = True
-
-        # Set container properties
         self.host = self._container.get_container_host_ip()
-        self.port = self._container.get_exposed_port(test_config.ELASTICSEARCH_PORT)
-
-        logger.info("Elasticsearch container started on %s:%s", self.host, self.port)
 
         return self._container
 
     def stop(self) -> None:
+        """Stop the Elasticsearch container."""
         if not self._is_running:
             return
 
@@ -301,29 +317,31 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
 
 @ContainerManager.register("kafka")
 class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
-    def __init__(self) -> None:
+    def __init__(self, config: KafkaConfig | None = None, image: str | None = None) -> None:
         self.name = "kafka"
-        self.image = test_config.KAFKA_IMAGE
-        self._container: KafkaContainer | None = None
+        self.config = config or BaseConfig.global_config().KAFKA
+        self.image = image or BaseConfig.global_config().KAFKA__IMAGE
         self._is_running: bool = False
 
-        # Container properties
+        # Container Properties
         self.host: str | None = None
-        self.port: int | None = None
+        self.port: int = self.config.PORT
         self.bootstrap_servers: str | None = None
 
+        # Set up the container
+        self._container = KafkaContainer(image=self.image)
+        self._container.with_exposed_ports(self.port)
+
     def start(self) -> KafkaContainer:
+        """Start the Kafka container."""
         if self._is_running:
             return self._container
 
-        # Kafka container handles Zookeeper internally
-        self._container = KafkaContainer(image=self.image)
         self._container.start()
         self._is_running = True
 
-        # Set container properties
+        # Set container properties from running container
         self.host = self._container.get_container_host_ip()
-        self.port = self._container.get_exposed_port(test_config.KAFKA_PORT)
         self.bootstrap_servers = self._container.get_bootstrap_server()
 
         logger.info("Kafka container started on %s:%s", self.host, self.port)
@@ -332,6 +350,7 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
         return self._container
 
     def stop(self) -> None:
+        """Stop the Kafka container."""
         if not self._is_running:
             return
 
@@ -351,37 +370,41 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
 
 @ContainerManager.register("minio")
 class MinioTestContainer(metaclass=Singleton, thread_safe=True):
-    def __init__(self) -> None:
+    def __init__(self, config: MinioConfig | None = None, image: str | None = None) -> None:
         self.name = "minio"
-        self.image = test_config.MINIO_IMAGE
+        self.config = config or BaseConfig.global_config().MINIO
+        self.image = image or BaseConfig.global_config().MINIO__IMAGE
         self._container: MinioContainer | None = None
         self._is_running: bool = False
 
         # Container properties
         self.host: str | None = None
-        self.port: int | None = None
-        self.access_key: str = test_config.MINIO_ACCESS_KEY
-        self.secret_key: str = test_config.MINIO_SECRET_KEY
+        self.port: int | None = self.config.PORT
+        self.access_key = self.config.ACCESS_KEY or "minioadmin"
+        self.secret_key = self.config.SECRET_KEY or "minioadmin"
+
+        # Set up the container
+        self._container = MinioContainer(
+            image=self.image,
+            port=self.config.PORT or 9000,
+            access_key=self.access_key,
+            secret_key=self.secret_key,
+        )
 
     def start(self) -> MinioContainer:
+        """Start the MinIO container."""
         if self._is_running:
             return self._container
 
         try:
-            self._container = MinioContainer(
-                image=self.image,
-                port=self.port or test_config.MINIO_PORT,
-                access_key=self.access_key,
-                secret_key=self.secret_key,
-            )
             self._container.start()
+            self._is_running = True
 
             # Update container properties
             self.host = self._container.get_container_host_ip()
-            self.port = self._container.get_exposed_port(test_config.MINIO_PORT)
-            self._is_running = True
+            self.port = self._container.get_exposed_port(self.port)
 
-            logger.info(f"MinIO container started on {self.host}:{self.port}")
+            logger.info("MinIO container started on %s:%s", self.host, self.port)
             return self._container
 
         except Exception as e:
@@ -389,15 +412,18 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
             raise
 
     def stop(self) -> None:
-        if not self._is_running or not self._container:
+        """Stop the MinIO container."""
+        if not self._is_running:
             return
 
-        try:
+        if self._container:
             self._container.stop()
-            self._is_running = False
-            self.host = None
-            self.port = None
-            logger.info("MinIO container stopped")
-        except Exception as e:
-            logger.error(f"Failed to stop MinIO container: {e}")
-            raise
+
+        self._container = None
+        self._is_running = False
+
+        # Reset container properties
+        self.host = None
+        self.port = None
+
+        logger.info("MinIO container stopped")
