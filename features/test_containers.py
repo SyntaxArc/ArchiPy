@@ -1,6 +1,7 @@
 """Container manager for test containers"""
 
 import logging
+from urllib.parse import urlparse
 
 from testcontainers.redis import RedisContainer
 from testcontainers.postgres import PostgresContainer
@@ -208,10 +209,14 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
         self._is_running: bool = False
 
         # Container properties
-        self.port: int = self.config.PORT
+        self.port: int | None = None
         self.admin_username: str | None = self.config.ADMIN_USERNAME
         self.admin_password: str | None = self.config.ADMIN_PASSWORD
         self.realm: str = self.config.REALM_NAME
+
+        # Parse Port From Server URL
+        parsed_url = urlparse(self.config.SERVER_URL)
+        self.port = parsed_url.port or 8080
 
         # Use config values or fallback to defaults for test containers
         username = self.admin_username or "admin"
@@ -267,10 +272,14 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         self._is_running: bool = False
 
         # Container properties
-        self.port: int = self.config.PORT
+        self.port: int | None = None
         self.username: str | None = self.config.HTTP_USER_NAME
         self.password: str | None = self.config.HTTP_PASSWORD.get_secret_value() if self.config.HTTP_PASSWORD else None
         self.cluster_name: str = "test-cluster"
+
+        # Parse Port From Server URL
+        parsed_url = urlparse(self.config.HOSTS[0])
+        self.port = parsed_url.port or 9200
 
         # Set up the container
         self._container = DockerContainer(self.image)
@@ -279,7 +288,7 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         if self.password:
             self._container.with_env("ELASTIC_PASSWORD", self.password)
         self._container.with_env("cluster.name", self.cluster_name)
-        self._container.with_exposed_ports(self.port)
+        self._container.with_bind_ports(self.port, 9200)
 
     def start(self) -> DockerContainer:
         """Start the Elasticsearch container."""
@@ -325,12 +334,16 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
 
         # Container Properties
         self.host: str | None = None
-        self.port: int = self.config.PORT
+        self.port: int | None = None
         self.bootstrap_servers: str | None = None
+
+        # Parse Port From Server URL
+        _, port = self.config.BROKERS_LIST[0].split(":")
+        self.port = int(port) if port else 9092
 
         # Set up the container
         self._container = KafkaContainer(image=self.image)
-        self._container.with_exposed_ports(self.port)
+        self._container.with_bind_ports(self.port, 9092)
 
     def start(self) -> KafkaContainer:
         """Start the Kafka container."""
@@ -379,17 +392,21 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
 
         # Container properties
         self.host: str | None = None
-        self.port: int | None = self.config.PORT
+        self.port: int | None = None
         self.access_key = self.config.ACCESS_KEY or "minioadmin"
         self.secret_key = self.config.SECRET_KEY or "minioadmin"
+
+        # Parse Port From Server URL
+        parsed_url = urlparse(self.config.ENDPOINT)
+        self.port = parsed_url.port or 9000
 
         # Set up the container
         self._container = MinioContainer(
             image=self.image,
-            port=self.config.PORT or 9000,
             access_key=self.access_key,
             secret_key=self.secret_key,
         )
+        self._container.with_bind_ports(self.port, 9000)
 
     def start(self) -> MinioContainer:
         """Start the MinIO container."""
@@ -402,7 +419,6 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
 
             # Update container properties
             self.host = self._container.get_container_host_ip()
-            self.port = self._container.get_exposed_port(self.port)
 
             logger.info("MinIO container started on %s:%s", self.host, self.port)
             return self._container

@@ -45,8 +45,7 @@ class ElasticsearchConfig(BaseModel):
         MAX_DEAD_NODE_BACKOFF (float): Maximum timeout duration for a dead node in seconds.
     """
 
-    HOSTS: list[str] = Field(default=["https://localhost:9200"], description="List of Elasticsearch server hosts")
-    PORT: int = 9200
+    HOSTS: list[str] = Field(default=["http://localhost:9200"], description="List of Elasticsearch server hosts")
     HTTP_USER_NAME: str | None = None
     HTTP_PASSWORD: SecretStr | None = None
     API_KEY: str | None = None
@@ -243,7 +242,6 @@ class KafkaConfig(BaseModel):
     """
 
     BROKERS_LIST: list[str] = Field(default=["localhost:9092"], description="List of Kafka broker addresses")
-    PORT: int = Field(default=9092, description="Port for Kafka connections")
     SECURITY_PROTOCOL: str = Field(default="PLAINTEXT", description="Security protocol for Kafka connections")
     SASL_MECHANISM: str | None = Field(default=None, description="SASL mechanism for authentication")
     USERNAME: str | None = Field(default=None, description="Username for SASL authentication")
@@ -342,8 +340,7 @@ class KeycloakConfig(BaseModel):
     identity and access management service.
     """
 
-    SERVER_URL: str | None = None
-    PORT: int = 8080
+    SERVER_URL: str = Field(default="http://localhost:8080", description="Keycloak server URL")
     CLIENT_ID: str | None = None
     REALM_NAME: str = "master"
     CLIENT_SECRET_KEY: str | None = None
@@ -362,8 +359,7 @@ class MinioConfig(BaseModel):
     object storage service.
     """
 
-    ENDPOINT: str | None = Field(default=None, description="MinIO server endpoint")
-    PORT: int | None = Field(default=9000, description="MinIO server port")
+    ENDPOINT: str | None = Field(default="http://localhost:9000", description="MinIO server endpoint")
     ACCESS_KEY: str | None = Field(default=None, description="Access key for authentication")
     SECRET_KEY: str | None = Field(default=None, description="Secret key for authentication")
     SECURE: bool = Field(default=False, description="Whether to use secure (HTTPS) connection")

@@ -1,30 +1,18 @@
 # features/steps/kafka_steps.py
 from behave import given, then, when
-from confluent_kafka import TopicPartition
 from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.kafka.adapters import KafkaAdminAdapter, KafkaConsumerAdapter, KafkaProducerAdapter
-from archipy.configs.config_template import KafkaConfig
 from archipy.models.errors import UnavailableError
 
 def get_kafka_admin_adapter(context):
     """Get or initialize the Kafka admin adapter."""
     scenario_context = get_current_scenario_context(context)
     if not hasattr(scenario_context, "admin_adapter") or scenario_context.admin_adapter is None:
-        # Get the kafka container
-        test_containers = scenario_context.get("test_containers")
-        kafka_container = test_containers.get_container("kafka")
-
-        # Create Kafka Config
-        kafka_config = KafkaConfig(
-            BROKERS_LIST=[kafka_container.bootstrap_servers],
-            SECURITY_PROTOCOL="PLAINTEXT",  # Test container uses plaintext
-            REQUEST_TIMEOUT_MS=30000,  # Increase timeout for container startup
-            LIST_TOPICS_TIMEOUT_MS=10000,  # Increase topic listing timeout
-        )
-
+        test_config = scenario_context.get("test_config")
+        test_config.KAFKA.BROKERS_LIST = [scenario_context.get("test_containers").get_container("kafka").bootstrap_servers]
         context.logger.info("Initializing Kafka admin adapter")
-        scenario_context.admin_adapter = KafkaAdminAdapter(kafka_config)
+        scenario_context.admin_adapter = KafkaAdminAdapter(test_config.KAFKA)
     return scenario_context.admin_adapter
 
 
@@ -35,20 +23,10 @@ def get_kafka_producer_adapter(context, topic_name):
         not hasattr(scenario_context, f"producer_{topic_name}")
         or getattr(scenario_context, f"producer_{topic_name}") is None
     ):
-        # Get the kafka container
-        test_containers = scenario_context.get("test_containers")
-        kafka_container = test_containers.get_container("kafka")
-
-        # Create KafkaConfig
-        kafka_config = KafkaConfig(
-            BROKERS_LIST=[kafka_container.bootstrap_servers],
-            SECURITY_PROTOCOL="PLAINTEXT",  # Test container uses plaintext
-            REQUEST_TIMEOUT_MS=30000,  # Increase timeout for container startup
-            DELIVERY_TIMEOUT_MS=120000,  # Increase delivery timeout
-        )
-
+        test_config = scenario_context.get("test_config")
+        test_config.KAFKA.BROKERS_LIST = [scenario_context.get("test_containers").get_container("kafka").bootstrap_servers]
         context.logger.info(f"Initializing Kafka producer for topic: {topic_name}")
-        producer = KafkaProducerAdapter(topic_name, kafka_configs=kafka_config)
+        producer = KafkaProducerAdapter(topic_name, kafka_configs=test_config.KAFKA)
         setattr(scenario_context, f"producer_{topic_name}", producer)
     return getattr(scenario_context, f"producer_{topic_name}")
 
@@ -58,21 +36,10 @@ def get_kafka_consumer_adapter(context, topic_name, group_id):
     scenario_context = get_current_scenario_context(context)
     consumer_key = f"consumer_{topic_name}_{group_id}"
     if not hasattr(scenario_context, consumer_key) or getattr(scenario_context, consumer_key) is None:
-        # Get the kafka container
-        test_containers = scenario_context.get("test_containers")
-        kafka_container = test_containers.get_container("kafka")
-
-        # Create KafkaConfig
-        kafka_config = KafkaConfig(
-            BROKERS_LIST=[kafka_container.bootstrap_servers],
-            SECURITY_PROTOCOL="PLAINTEXT",  # Test container uses plaintext
-            REQUEST_TIMEOUT_MS=30000,  # Increase timeout for container startup
-            SESSION_TIMEOUT_MS=15000,  # Increase session timeout
-            HEARTBEAT_INTERVAL_MS=5000,  # Increase heartbeat interval
-        )
-
+        test_config = scenario_context.get("test_config")
+        test_config.KAFKA.BROKERS_LIST = [scenario_context.get("test_containers").get_container("kafka").bootstrap_servers]
         context.logger.info(f"Initializing Kafka consumer for topic: {topic_name}, group: {group_id}")
-        consumer = KafkaConsumerAdapter(group_id=group_id, topic_list=[topic_name], kafka_configs=kafka_config)
+        consumer = KafkaConsumerAdapter(group_id=group_id, topic_list=[topic_name], kafka_configs=test_config.KAFKA)
         setattr(scenario_context, consumer_key, consumer)
     return getattr(scenario_context, consumer_key)
 

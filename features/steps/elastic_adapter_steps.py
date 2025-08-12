@@ -11,45 +11,24 @@ from behave.runner import Context
 
 from features.test_helpers import get_current_scenario_context
 from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter, AsyncElasticsearchAdapter
-from archipy.configs.config_template import ElasticsearchConfig
-
-from pydantic import SecretStr
 
 logger = logging.getLogger(__name__)
 
 
-def get_es_adapter(context: Context) -> AsyncElasticsearchAdapter | ElasticsearchAdapter:
+def get_es_adapter(context):
     """Get or initialize the appropriate Elasticsearch adapter based on scenario tags."""
     scenario_context = get_current_scenario_context(context)
     is_async = "async" in context.scenario.tags
 
-    # Get the elasticsearch container from the stored container
-    elasticsearch_container = scenario_context.get("elasticsearch_container")
-    if not elasticsearch_container:
-        raise ValueError("Elasticsearch container not available in scenario context. Make sure 'an Elasticsearch cluster is running' step is executed first.")
-
-    # Create ElasticsearchConfig from container information
-    elasticsearch_config = ElasticsearchConfig(
-        HOSTS=[f"http://{elasticsearch_container.host}:{elasticsearch_container.port}"],
-        HTTP_USER_NAME=elasticsearch_container.username,
-        HTTP_PASSWORD=SecretStr(elasticsearch_container.password) if elasticsearch_container.password else None,
-        VERIFY_CERTS=False,
-        REQUEST_TIMEOUT=30.0,
-        MAX_RETRIES=3,
-        SNIFF_ON_START=False,
-        SNIFF_BEFORE_REQUESTS=False,
-        SNIFF_ON_NODE_FAILURE=False,
-    )
-
     if is_async:
         if not hasattr(scenario_context, "async_adapter") or scenario_context.async_adapter is None:
-            scenario_context.async_adapter = AsyncElasticsearchAdapter(elasticsearch_config)
+            test_config = scenario_context.get("test_config")
+            scenario_context.async_adapter = AsyncElasticsearchAdapter(test_config.ELASTIC)
         return scenario_context.async_adapter
-
     if not hasattr(scenario_context, "adapter") or scenario_context.adapter is None:
-        scenario_context.adapter = ElasticsearchAdapter(elasticsearch_config)
+        test_config = scenario_context.get("test_config")
+        scenario_context.adapter = ElasticsearchAdapter(test_config.ELASTIC)
     return scenario_context.adapter
-
 
 def _is_async_scenario(context: Context) -> bool:
     """Check if the current scenario is async."""

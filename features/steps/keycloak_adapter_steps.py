@@ -6,7 +6,6 @@ from features.scenario_context import ScenarioContext
 from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
-from archipy.configs.config_template import KeycloakConfig
 
 
 def get_keycloak_adapter(context: Context) -> AsyncKeycloakAdapter | KeycloakAdapter:
@@ -14,32 +13,15 @@ def get_keycloak_adapter(context: Context) -> AsyncKeycloakAdapter | KeycloakAda
     scenario_context = get_current_scenario_context(context)
     is_async = "async" in context.scenario.tags
 
-    # Get the keycloak container
-    test_containers = scenario_context.get("test_containers")
-    keycloak_container = test_containers.get_container("keycloak")
-
-    # Create KeycloakConfig
-    keycloak_config = KeycloakConfig(
-        SERVER_URL=f"http://{keycloak_container.host}:{keycloak_container.port}",
-        CLIENT_ID="admin-cli",  # Default admin client
-        REALM_NAME=keycloak_container.realm,
-        ADMIN_USERNAME=keycloak_container.admin_username,
-        ADMIN_PASSWORD=keycloak_container.admin_password,
-        ADMIN_REALM_NAME=keycloak_container.realm,
-        IS_ADMIN_MODE_ENABLED=True,
-        VERIFY_SSL=False,  # Disable SSL verification for test container
-        TIMEOUT=30,  # Increase timeout for container startup
-    )
-
     if is_async:
         if not hasattr(scenario_context, "async_adapter") or scenario_context.async_adapter is None:
-            scenario_context.async_adapter = AsyncKeycloakAdapter(keycloak_config)
+            test_config = scenario_context.get("test_config")
+            scenario_context.async_adapter = AsyncKeycloakAdapter(test_config.KEYCLOAK)
         return scenario_context.async_adapter
-
     if not hasattr(scenario_context, "adapter") or scenario_context.adapter is None:
-        scenario_context.adapter = KeycloakAdapter(keycloak_config)
+        test_config = scenario_context.get("test_config")
+        scenario_context.adapter = KeycloakAdapter(test_config.KEYCLOAK)
     return scenario_context.adapter
-
 
 # Configuration steps
 @given("a configured {adapter_type} Keycloak adapter")
