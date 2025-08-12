@@ -103,7 +103,7 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
         if self.config.PASSWORD:
             self._container.with_env("REDIS_PASSWORD", self.config.PASSWORD)
 
-        self._container.with_exposed_ports(self.config.PORT)
+        self._container.with_bind_ports(self.config.PORT, 6379)
 
     def start(self) -> RedisContainer:
         """Start the Redis container."""
@@ -148,7 +148,7 @@ class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
 
         # Container properties
         self.host: str | None = None
-        self.port: int | None = None
+        self.port: int | None = self.config.PORT
         self.database: str | None = self.config.DATABASE
         self.username: str | None = self.config.USERNAME
         self.password: str | None = self.config.PASSWORD
@@ -165,6 +165,7 @@ class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
             username=username,
             password=password,
         )
+        self._container.with_bind_ports(self.port, 5432)
 
     def start(self) -> PostgresContainer:
         """Start the PostgreSQL container."""
@@ -176,7 +177,6 @@ class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
 
         # Set container properties
         self.host = self._container.get_container_host_ip()
-        self.port = self._container.get_exposed_port(self.config.PORT or 5432)
 
         logger.info("PostgreSQL container started on %s:%s", self.host, self.port)
 
@@ -228,7 +228,7 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
             username=username,
             password=password,
         )
-        self._container.with_exposed_ports(self.port)
+        self._container.with_bind_ports(self.port, 8080)
 
     def start(self) -> KeycloakContainer:
         """Start the Keycloak container."""
