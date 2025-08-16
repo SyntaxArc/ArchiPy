@@ -45,7 +45,7 @@ class ScenarioContext:
             try:
                 # Try to run async cleanup if we're in an async context
                 try:
-                    loop = asyncio.get_running_loop()
+                    asyncio.get_running_loop()
                     # If we have a running loop, create a task
                     asyncio.create_task(self.async_cleanup())
                 except RuntimeError:

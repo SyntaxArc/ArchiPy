@@ -4,12 +4,6 @@ It focuses on solving the problem of SQLAlchemy async scoped sessions
 using current_task() for scoping, which can cause issues in behave tests.
 """
 
-import asyncio
-import functools
-import logging
-
-from behave.runner import Context
-
 from archipy.models.entities import BaseEntity
 
 
