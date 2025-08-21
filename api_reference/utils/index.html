@@ -3938,7 +3938,7 @@ utility functions for timezone-aware datetime objects, date ranges, and string f
 </span><span id="__span-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205"></a>        <span class="k">return</span> <span class="n">dt</span>
 </span><span id="__span-0-206"><a id="__codelineno-0-206" name="__codelineno-0-206"></a>
 </span><span id="__span-0-207"><a id="__codelineno-0-207" name="__codelineno-0-207"></a>    <span class="nd">@classmethod</span>
-</span><span id="__span-0-208"><a id="__codelineno-0-208" name="__codelineno-0-208"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">daterange</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">start_date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">end_date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">date</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+</span><span id="__span-0-208"><a id="__codelineno-0-208" name="__codelineno-0-208"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">daterange</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">start_date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">end_date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">date</span><span class="p">]:</span>
 </span><span id="__span-0-209"><a id="__codelineno-0-209" name="__codelineno-0-209"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Generates a range of dates from start_date to end_date, exclusive of end_date.</span>
 </span><span id="__span-0-210"><a id="__codelineno-0-210" name="__codelineno-0-210"></a>
 </span><span id="__span-0-211"><a id="__codelineno-0-211" name="__codelineno-0-211"></a><span class="sd">        Args:</span>
@@ -4514,7 +4514,7 @@ utility functions for timezone-aware datetime objects, date ranges, and string f
       <tbody>
           <tr class="doc-section-item">
 <td><code>date</code></td>            <td>
-                  <code><span title="datetime.date">date</span></code>
+                  <code><span title="collections.abc.Generator">Generator</span>[<span title="datetime.date">date</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4541,7 +4541,7 @@ utility functions for timezone-aware datetime objects, date ranges, and string f
 <span class="normal"><a href="#__codelineno-0-217">217</a></span>
 <span class="normal"><a href="#__codelineno-0-218">218</a></span>
 <span class="normal"><a href="#__codelineno-0-219">219</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-207"><a id="__codelineno-0-207" name="__codelineno-0-207"></a><span class="nd">@classmethod</span>
-</span><span id="__span-0-208"><a id="__codelineno-0-208" name="__codelineno-0-208"></a><span class="k">def</span><span class="w"> </span><span class="nf">daterange</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">start_date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">end_date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">date</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+</span><span id="__span-0-208"><a id="__codelineno-0-208" name="__codelineno-0-208"></a><span class="k">def</span><span class="w"> </span><span class="nf">daterange</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">start_date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">end_date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">date</span><span class="p">]:</span>
 </span><span id="__span-0-209"><a id="__codelineno-0-209" name="__codelineno-0-209"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Generates a range of dates from start_date to end_date, exclusive of end_date.</span>
 </span><span id="__span-0-210"><a id="__codelineno-0-210" name="__codelineno-0-210"></a>
 </span><span id="__span-0-211"><a id="__codelineno-0-211" name="__codelineno-0-211"></a><span class="sd">    Args:</span>
@@ -5993,7 +5993,7 @@ show_source: true</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="InvalidArgumentError (archipy.models.errors.InvalidArgumentError)" href="../models/#archipy.models.errors.InvalidArgumentError">InvalidArgumentError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.errors.InvalidArgumentError" href="../models/#archipy.models.errors.InvalidArgumentError">InvalidArgumentError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -6003,7 +6003,7 @@ show_source: true</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="OutOfRangeError (archipy.models.errors.OutOfRangeError)" href="../models/#archipy.models.errors.OutOfRangeError">OutOfRangeError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.errors.OutOfRangeError" href="../models/#archipy.models.errors.OutOfRangeError">OutOfRangeError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -6189,7 +6189,7 @@ show_source: true</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="InvalidArgumentError (archipy.models.errors.InvalidArgumentError)" href="../models/#archipy.models.errors.InvalidArgumentError">InvalidArgumentError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.errors.InvalidArgumentError" href="../models/#archipy.models.errors.InvalidArgumentError">InvalidArgumentError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7688,7 +7688,7 @@ If not provided, uses the global config.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="TokenExpiredError (archipy.models.errors.TokenExpiredError)" href="../models/#archipy.models.errors.TokenExpiredError">TokenExpiredError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.errors.TokenExpiredError" href="../models/#archipy.models.errors.TokenExpiredError">TokenExpiredError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7698,7 +7698,7 @@ If not provided, uses the global config.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="InvalidTokenError (archipy.models.errors.InvalidTokenError)" href="../models/#archipy.models.errors.InvalidTokenError">InvalidTokenError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.errors.InvalidTokenError" href="../models/#archipy.models.errors.InvalidTokenError">InvalidTokenError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -9272,7 +9272,7 @@ show_source: true</p>
                 <code>lang</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="LanguageType (archipy.models.types.language_type.LanguageType)" href="../models/#archipy.models.types.language_type.LanguageType">LanguageType</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.types.language_type.LanguageType" href="../models/#archipy.models.types.language_type.LanguageType">LanguageType</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -9298,7 +9298,7 @@ show_source: true</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="InvalidPasswordError (archipy.models.errors.InvalidPasswordError)" href="../models/#archipy.models.errors.InvalidPasswordError">InvalidPasswordError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.errors.InvalidPasswordError" href="../models/#archipy.models.errors.InvalidPasswordError">InvalidPasswordError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -9628,7 +9628,7 @@ show_source: true</p>
                 <code>lang</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="LanguageType (archipy.models.types.language_type.LanguageType)" href="../models/#archipy.models.types.language_type.LanguageType">LanguageType</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.types.language_type.LanguageType" href="../models/#archipy.models.types.language_type.LanguageType">LanguageType</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -9654,7 +9654,7 @@ show_source: true</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="InvalidPasswordError (archipy.models.errors.InvalidPasswordError)" href="../models/#archipy.models.errors.InvalidPasswordError">InvalidPasswordError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.errors.InvalidPasswordError" href="../models/#archipy.models.errors.InvalidPasswordError">InvalidPasswordError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -10612,7 +10612,7 @@ emails, and phone numbers.</p>
 </span><span id="__span-0-338"><a id="__codelineno-0-338" name="__codelineno-0-338"></a><span class="sd">        Returns:</span>
 </span><span id="__span-0-339"><a id="__codelineno-0-339" name="__codelineno-0-339"></a><span class="sd">            bool: `True` if the string is `None` or empty, `False` otherwise.</span>
 </span><span id="__span-0-340"><a id="__codelineno-0-340" name="__codelineno-0-340"></a><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="__span-0-341"><a id="__codelineno-0-341" name="__codelineno-0-341"></a>        <span class="k">return</span> <span class="n">text</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+</span><span id="__span-0-341"><a id="__codelineno-0-341" name="__codelineno-0-341"></a>        <span class="k">return</span> <span class="n">text</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
 </span><span id="__span-0-342"><a id="__codelineno-0-342" name="__codelineno-0-342"></a>
 </span><span id="__span-0-343"><a id="__codelineno-0-343" name="__codelineno-0-343"></a>    <span class="nd">@classmethod</span>
 </span><span id="__span-0-344"><a id="__codelineno-0-344" name="__codelineno-0-344"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">normalize_persian_text</span><span class="p">(</span>
@@ -12788,7 +12788,7 @@ emails, and phone numbers.</p>
 </span><span id="__span-0-338"><a id="__codelineno-0-338" name="__codelineno-0-338"></a><span class="sd">    Returns:</span>
 </span><span id="__span-0-339"><a id="__codelineno-0-339" name="__codelineno-0-339"></a><span class="sd">        bool: `True` if the string is `None` or empty, `False` otherwise.</span>
 </span><span id="__span-0-340"><a id="__codelineno-0-340" name="__codelineno-0-340"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-0-341"><a id="__codelineno-0-341" name="__codelineno-0-341"></a>    <span class="k">return</span> <span class="n">text</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+</span><span id="__span-0-341"><a id="__codelineno-0-341" name="__codelineno-0-341"></a>    <span class="k">return</span> <span class="n">text</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -14115,7 +14115,7 @@ secure secret keys for TOTP initialization.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="InvalidArgumentError (archipy.models.errors.InvalidArgumentError)" href="../models/#archipy.models.errors.InvalidArgumentError">InvalidArgumentError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.errors.InvalidArgumentError" href="../models/#archipy.models.errors.InvalidArgumentError">InvalidArgumentError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -14359,7 +14359,7 @@ secure secret keys for TOTP initialization.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="InvalidArgumentError (archipy.models.errors.InvalidArgumentError)" href="../models/#archipy.models.errors.InvalidArgumentError">InvalidArgumentError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.errors.InvalidArgumentError" href="../models/#archipy.models.errors.InvalidArgumentError">InvalidArgumentError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -14369,7 +14369,7 @@ secure secret keys for TOTP initialization.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="InvalidTokenError (archipy.models.errors.InvalidTokenError)" href="../models/#archipy.models.errors.InvalidTokenError">InvalidTokenError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.errors.InvalidTokenError" href="../models/#archipy.models.errors.InvalidTokenError">InvalidTokenError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -14589,7 +14589,7 @@ secure secret keys for TOTP initialization.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="InvalidArgumentError (archipy.models.errors.InvalidArgumentError)" href="../models/#archipy.models.errors.InvalidArgumentError">InvalidArgumentError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.errors.InvalidArgumentError" href="../models/#archipy.models.errors.InvalidArgumentError">InvalidArgumentError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -14599,7 +14599,7 @@ secure secret keys for TOTP initialization.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="InternalError (archipy.models.errors.InternalError)" href="../models/#archipy.models.errors.InternalError">InternalError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.errors.InternalError" href="../models/#archipy.models.errors.InternalError">InternalError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -16201,7 +16201,7 @@ show_source: true</p>
                 <code>lang</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="LanguageType (archipy.models.types.language_type.LanguageType)" href="../models/#archipy.models.types.language_type.LanguageType">LanguageType</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.types.language_type.LanguageType" href="../models/#archipy.models.types.language_type.LanguageType">LanguageType</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -16565,7 +16565,7 @@ show_source: true</p>
                 <code>lang</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="LanguageType (archipy.models.types.language_type.LanguageType)" href="../models/#archipy.models.types.language_type.LanguageType">LanguageType</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.types.language_type.LanguageType" href="../models/#archipy.models.types.language_type.LanguageType">LanguageType</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -16920,7 +16920,7 @@ show_source: true</p>
                 <code>lang</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="LanguageType (archipy.models.types.language_type.LanguageType)" href="../models/#archipy.models.types.language_type.LanguageType">LanguageType</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.types.language_type.LanguageType" href="../models/#archipy.models.types.language_type.LanguageType">LanguageType</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -17358,7 +17358,7 @@ show_source: true</p>
                 <code>lang</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="LanguageType (archipy.models.types.language_type.LanguageType)" href="../models/#archipy.models.types.language_type.LanguageType">LanguageType</a></code>
+                  <code><a class="autorefs autorefs-internal" title="archipy.models.types.language_type.LanguageType" href="../models/#archipy.models.types.language_type.LanguageType">LanguageType</a></code>
             </td>
             <td>
               <div class="doc-md-description">
