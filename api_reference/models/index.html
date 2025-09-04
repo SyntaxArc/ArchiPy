@@ -22,7 +22,7 @@
       
       
       <link rel="icon" href="../../assets/logo.jpg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.18">
     
     
       
@@ -5545,7 +5545,9 @@ architecture principles.</p>
 
 
 
+
   <div class="doc doc-children">
+
 
 
 
@@ -5578,6 +5580,7 @@ architecture principles.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/dtos/range_dtos.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-13">13</a></span>
@@ -5597,6 +5600,7 @@ architecture principles.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -5667,6 +5671,7 @@ Provides validation to ensure range integrity.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/dtos/range_dtos.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-24">24</a></span>
@@ -5720,6 +5725,7 @@ Provides validation to ensure range integrity.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -5854,6 +5860,7 @@ Provides validation to ensure range integrity.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/dtos/range_dtos.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-49">49</a></span>
@@ -5913,6 +5920,7 @@ Provides validation to ensure range integrity.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -6096,6 +6104,7 @@ Provides validation to ensure range integrity.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/dtos/range_dtos.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-77">77</a></span>
@@ -6113,6 +6122,7 @@ Provides validation to ensure range integrity.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -6154,6 +6164,7 @@ Provides validation to ensure range integrity.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/dtos/range_dtos.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-84">84</a></span>
@@ -6171,6 +6182,7 @@ Provides validation to ensure range integrity.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -6212,6 +6224,7 @@ Provides validation to ensure range integrity.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/dtos/range_dtos.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-91">91</a></span>
@@ -6229,6 +6242,7 @@ Provides validation to ensure range integrity.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -6265,6 +6279,7 @@ Provides validation to ensure range integrity.</p>
         <p>Data Transfer Object for datetime range queries with interval.</p>
 <p>Rejects requests if the number of intervals exceeds MAX_ITEMS or if interval-specific
 range size or 'to' age constraints are violated.</p>
+
 
 
 
@@ -6449,6 +6464,7 @@ range size or 'to' age constraints are violated.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -6650,7 +6666,9 @@ show_source: true</p>
 
 
 
+
   <div class="doc doc-children">
+
 
 
 
@@ -6678,6 +6696,41 @@ show_source: true</p>
         <p>Data Transfer Object for search inputs with pagination and sorting.</p>
 <p>This DTO encapsulates search parameters for database queries and API responses,
 providing a standard way to handle pagination and sorting.</p>
+
+
+<p>
+      <span class="doc-section-title">
+        Class Type Parameters:
+      </span>
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Bound or Constraints</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>T</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The type for sort column (usually an Enum with column names).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
 
 
@@ -6716,6 +6769,7 @@ providing a standard way to handle pagination and sorting.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -6769,7 +6823,9 @@ show_source: true</p>
 
 
 
+
   <div class="doc doc-children">
+
 
 
 
@@ -6812,7 +6868,7 @@ providing a standard way to specify how results should be ordered.</p>
           <tr class="doc-section-item">
             <td><code><span title="archipy.models.dtos.sort_dto.SortDTO.column">column</span></code></td>
             <td>
-                  <code><span title="archipy.models.dtos.sort_dto.SortDTO[T]">SortDTO[T]</span> | <span title="str">str</span></code>
+                  <code><span title="archipy.models.dtos.sort_dto.SortDTO[T]">T</span> | <span title="str">str</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -6865,6 +6921,7 @@ providing a standard way to specify how results should be ordered.</p>
 </span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a sort configuration with enum</span>
 </span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">sort</span> <span class="o">=</span> <span class="n">SortDTO</span><span class="p">[</span><span class="n">UserColumns</span><span class="p">](</span><span class="n">column</span><span class="o">=</span><span class="n">UserColumns</span><span class="o">.</span><span class="n">NAME</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">SortOrderType</span><span class="o">.</span><span class="n">ASCENDING</span><span class="p">)</span>
 </span></code></pre></div>
+
 
 
 
@@ -6999,6 +7056,7 @@ providing a standard way to specify how results should be ordered.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -7186,7 +7244,9 @@ show_source: true</p>
 
 
 
+
   <div class="doc doc-children">
+
 
 
 
@@ -7240,6 +7300,7 @@ validation for the primary key column.</p>
           </tr>
       </tbody>
     </table>
+
 
 
 
@@ -7356,6 +7417,7 @@ validation for the primary key column.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -7524,6 +7586,7 @@ attribute names. At least one attribute from each inner list must be present.</p
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-65">65</a></span>
@@ -7585,6 +7648,7 @@ attribute names. At least one attribute from each inner list must be present.</p
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -7757,6 +7821,7 @@ soft-deleted, allowing for logical deletion without physically removing records.
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-95"> 95</a></span>
@@ -7788,6 +7853,7 @@ soft-deleted, allowing for logical deletion without physically removing records.
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -7853,6 +7919,7 @@ automatically maintaining a timestamp of the most recent modification.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-109">109</a></span>
@@ -7896,6 +7963,7 @@ automatically maintaining a timestamp of the most recent modification.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -7971,6 +8039,7 @@ archived, and an <code>origin_uuid</code> column to reference the original entit
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-129">129</a></span>
@@ -8008,6 +8077,7 @@ archived, and an <code>origin_uuid</code> column to reference the original entit
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -8076,6 +8146,7 @@ providing tracking of which administrator created the entity.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-147">147</a></span>
@@ -8125,6 +8196,7 @@ providing tracking of which administrator created the entity.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -8261,6 +8333,7 @@ providing tracking of which manager created the entity.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-170">170</a></span>
@@ -8310,6 +8383,7 @@ providing tracking of which manager created the entity.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -8446,6 +8520,7 @@ providing tracking of which administrator last updated the entity.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-193">193</a></span>
@@ -8495,6 +8570,7 @@ providing tracking of which administrator last updated the entity.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -8631,6 +8707,7 @@ providing tracking of which manager last updated the entity.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-216">216</a></span>
@@ -8680,6 +8757,7 @@ providing tracking of which manager last updated the entity.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -8826,6 +8904,7 @@ applications to track when records were last modified.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-240">240</a></span>
@@ -8857,6 +8936,7 @@ applications to track when records were last modified.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -8935,6 +9015,7 @@ applications to mark records as deleted without physically removing them.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-254">254</a></span>
@@ -8966,6 +9047,7 @@ applications to mark records as deleted without physically removing them.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -9045,6 +9127,7 @@ the entity, supporting audit and accountability requirements.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-268">268</a></span>
@@ -9076,6 +9159,7 @@ the entity, supporting audit and accountability requirements.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -9155,6 +9239,7 @@ the entity, supporting audit and accountability requirements.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-282">282</a></span>
@@ -9186,6 +9271,7 @@ the entity, supporting audit and accountability requirements.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -9274,6 +9360,7 @@ a complete history of when records were created, updated, and deleted.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-297">297</a></span>
@@ -9307,6 +9394,7 @@ a complete history of when records were created, updated, and deleted.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -9405,6 +9493,7 @@ applications to mark records as archived and track the original entity.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-312">312</a></span>
@@ -9440,6 +9529,7 @@ applications to mark records as archived and track the original entity.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -9538,6 +9628,7 @@ providing a comprehensive audit trail of administrative modifications.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-329">329</a></span>
@@ -9573,6 +9664,7 @@ providing a comprehensive audit trail of administrative modifications.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -9671,6 +9763,7 @@ providing a comprehensive audit trail of management modifications.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-345">345</a></span>
@@ -9706,6 +9799,7 @@ providing a comprehensive audit trail of management modifications.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -9814,6 +9908,7 @@ a complete history of when records were created, updated, archived, and deleted.
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-361">361</a></span>
@@ -9851,6 +9946,7 @@ a complete history of when records were created, updated, archived, and deleted.
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -9959,6 +10055,7 @@ providing a complete audit trail throughout the entity's lifecycle.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-379">379</a></span>
@@ -9996,6 +10093,7 @@ providing a complete audit trail throughout the entity's lifecycle.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -10104,6 +10202,7 @@ providing a complete audit trail throughout the entity's lifecycle.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-396">396</a></span>
@@ -10141,6 +10240,7 @@ providing a complete audit trail throughout the entity's lifecycle.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -10249,6 +10349,7 @@ the entity, supporting audit and accountability requirements.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-413">413</a></span>
@@ -10286,6 +10387,7 @@ the entity, supporting audit and accountability requirements.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -10394,6 +10496,7 @@ the entity, supporting audit and accountability requirements.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-430">430</a></span>
@@ -10431,6 +10534,7 @@ the entity, supporting audit and accountability requirements.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -10550,6 +10654,7 @@ different user roles interact with the same data.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-448">448</a></span>
@@ -10605,6 +10710,7 @@ different user roles interact with the same data.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -10724,6 +10830,7 @@ different user roles interact with the same data.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-474">474</a></span>
@@ -10773,6 +10880,7 @@ different user roles interact with the same data.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -10891,6 +10999,7 @@ providing a complete audit trail throughout the entity's lifecycle.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-497">497</a></span>
@@ -10930,6 +11039,7 @@ providing a complete audit trail throughout the entity's lifecycle.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -11048,6 +11158,7 @@ providing a complete audit trail throughout the entity's lifecycle.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-515">515</a></span>
@@ -11087,6 +11198,7 @@ providing a complete audit trail throughout the entity's lifecycle.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -11216,6 +11328,7 @@ It provides complete accountability for all operations throughout the entity's l
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-534">534</a></span>
@@ -11275,6 +11388,7 @@ It provides complete accountability for all operations throughout the entity's l
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -11404,6 +11518,7 @@ It provides complete accountability for all operations throughout the entity's l
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/entities/sqlalchemy/base_entities.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-563">563</a></span>
@@ -11455,6 +11570,7 @@ It provides complete accountability for all operations throughout the entity's l
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -11641,7 +11757,9 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   <div class="doc doc-children">
+
 
 
 
@@ -11667,6 +11785,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when an account is disabled.</p>
+
 
 
 
@@ -11730,6 +11849,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -11753,6 +11873,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when an account is locked.</p>
+
 
 
 
@@ -11816,6 +11937,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -11839,6 +11961,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for invalid credentials.</p>
+
 
 
 
@@ -11892,6 +12015,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -11915,6 +12039,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a token is invalid.</p>
+
 
 
 
@@ -11960,6 +12085,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -11983,6 +12109,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a verification code is invalid.</p>
+
 
 
 
@@ -12046,6 +12173,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -12069,6 +12197,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when permission is denied.</p>
+
 
 
 
@@ -12114,6 +12243,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -12137,6 +12267,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a session has expired.</p>
+
 
 
 
@@ -12190,6 +12321,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -12213,6 +12345,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a token has expired.</p>
+
 
 
 
@@ -12258,6 +12391,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -12281,6 +12415,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a user is unauthenticated.</p>
+
 
 
 
@@ -12315,6 +12450,7 @@ error scenarios in the application, organized by category.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -12389,6 +12525,7 @@ error scenarios in the application, organized by category.</p>
           </tr>
       </tbody>
     </table>
+
 
 
 
@@ -13291,6 +13428,7 @@ error scenarios in the application, organized by category.</p>
     </div>
 
 </div>
+
 
 
 
@@ -14366,6 +14504,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/business_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-46">46</a></span>
@@ -14416,6 +14555,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -14439,6 +14579,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a precondition for an operation is not met.</p>
+
 
 
 
@@ -14496,6 +14637,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -14519,6 +14661,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when an operation fails due to insufficient account balance.</p>
+
 
 
 
@@ -14564,6 +14707,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -14587,6 +14731,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when there are insufficient funds for an operation.</p>
+
 
 
 
@@ -14632,6 +14777,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -14655,6 +14801,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when an operation is not allowed in the current context.</p>
+
 
 
 
@@ -14718,6 +14865,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -14741,6 +14889,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when an operation is attempted in an invalid state.</p>
+
 
 
 
@@ -14804,6 +14953,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -14827,6 +14977,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when the system is in maintenance mode.</p>
+
 
 
 
@@ -14880,6 +15031,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -14903,6 +15055,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for cache access errors.</p>
+
 
 
 
@@ -14960,6 +15113,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -14983,6 +15137,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when requested data is not found in cache.</p>
+
 
 
 
@@ -15036,6 +15191,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -15059,6 +15215,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for database configuration errors.</p>
+
 
 
 
@@ -15106,6 +15263,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -15129,6 +15287,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for database connection errors.</p>
+
 
 
 
@@ -15176,6 +15335,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -15199,6 +15359,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for database constraint violations.</p>
+
 
 
 
@@ -15258,6 +15419,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -15281,6 +15443,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for database deadlock errors.</p>
+
 
 
 
@@ -15328,6 +15491,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -15351,6 +15515,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Base class for all database-related errors.</p>
+
 
 
 
@@ -15408,6 +15573,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -15431,6 +15597,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for database integrity violations.</p>
+
 
 
 
@@ -15478,6 +15645,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -15501,6 +15669,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for database query errors.</p>
+
 
 
 
@@ -15560,6 +15729,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -15583,6 +15753,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for database serialization errors.</p>
+
 
 
 
@@ -15630,6 +15801,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -15653,6 +15825,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for database timeout errors.</p>
+
 
 
 
@@ -15712,6 +15885,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -15735,6 +15909,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for database transaction errors.</p>
+
 
 
 
@@ -15794,6 +15969,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -15824,6 +16000,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/keycloak_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-29">29</a></span>
@@ -15841,6 +16018,7 @@ error scenarios in the application, organized by category.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -15882,6 +16060,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/keycloak_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-57">57</a></span>
@@ -15899,6 +16078,7 @@ error scenarios in the application, organized by category.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -15940,6 +16120,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/keycloak_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-43">43</a></span>
@@ -15957,6 +16138,7 @@ error scenarios in the application, organized by category.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -15998,6 +16180,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/keycloak_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-78">78</a></span>
@@ -16015,6 +16198,7 @@ error scenarios in the application, organized by category.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -16056,6 +16240,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/keycloak_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-85">85</a></span>
@@ -16073,6 +16258,7 @@ error scenarios in the application, organized by category.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -16114,6 +16300,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/keycloak_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-71">71</a></span>
@@ -16131,6 +16318,7 @@ error scenarios in the application, organized by category.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -16172,6 +16360,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/keycloak_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-15">15</a></span>
@@ -16189,6 +16378,7 @@ error scenarios in the application, organized by category.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -16230,6 +16420,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/keycloak_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-50">50</a></span>
@@ -16247,6 +16438,7 @@ error scenarios in the application, organized by category.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -16288,6 +16480,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/keycloak_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-36">36</a></span>
@@ -16305,6 +16498,7 @@ error scenarios in the application, organized by category.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -16346,6 +16540,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/keycloak_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-22">22</a></span>
@@ -16363,6 +16558,7 @@ error scenarios in the application, organized by category.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -16404,6 +16600,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/keycloak_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-64">64</a></span>
@@ -16421,6 +16618,7 @@ error scenarios in the application, organized by category.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -16455,6 +16653,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a gateway returns an invalid response.</p>
+
 
 
 
@@ -16512,6 +16711,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -16535,6 +16735,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a connection times out.</p>
+
 
 
 
@@ -16598,6 +16799,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -16621,6 +16823,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a gateway times out.</p>
+
 
 
 
@@ -16684,6 +16887,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -16707,6 +16911,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for network-related errors.</p>
+
 
 
 
@@ -16764,6 +16969,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -16787,6 +16993,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a rate limit is exceeded.</p>
+
 
 
 
@@ -16850,6 +17057,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -16873,6 +17081,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a service is unavailable.</p>
+
 
 
 
@@ -16936,6 +17145,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -16959,6 +17169,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a resource already exists.</p>
+
 
 
 
@@ -17012,6 +17223,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -17035,6 +17247,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when there is a resource conflict.</p>
+
 
 
 
@@ -17098,6 +17311,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -17121,6 +17335,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when data is lost.</p>
+
 
 
 
@@ -17166,6 +17381,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -17189,6 +17405,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a file is too large.</p>
+
 
 
 
@@ -17258,6 +17475,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -17281,6 +17499,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for invalid entity types.</p>
+
 
 
 
@@ -17350,6 +17569,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -17373,6 +17593,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for invalid file types.</p>
+
 
 
 
@@ -17442,6 +17663,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -17465,6 +17687,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a resource is not found.</p>
+
 
 
 
@@ -17518,6 +17741,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -17541,6 +17765,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a quota is exceeded.</p>
+
 
 
 
@@ -17610,6 +17835,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -17633,6 +17859,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a resource is busy.</p>
+
 
 
 
@@ -17696,6 +17923,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -17719,6 +17947,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a resource is exhausted.</p>
+
 
 
 
@@ -17772,6 +18001,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -17795,6 +18025,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised when a resource is locked.</p>
+
 
 
 
@@ -17858,6 +18089,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -17881,6 +18113,7 @@ error scenarios in the application, organized by category.</p>
 
 
         <p>Exception raised for storage-related errors.</p>
+
 
 
 
@@ -17934,6 +18167,7 @@ error scenarios in the application, organized by category.</p>
 
 
 
+
   </div>
 
     </div>
@@ -17959,6 +18193,7 @@ error scenarios in the application, organized by category.</p>
         <p>Represents an aborted operation error.</p>
 <p>This error is used when an operation is aborted, typically due to
 a concurrency issue or user cancellation.</p>
+
 
 
 
@@ -18030,6 +18265,7 @@ a concurrency issue or user cancellation.</p>
 
 
 
+
   </div>
 
     </div>
@@ -18055,6 +18291,7 @@ a concurrency issue or user cancellation.</p>
         <p>Represents a configuration error.</p>
 <p>This error is used when there is a problem with the application's
 configuration that prevents it from operating correctly.</p>
+
 
 
 
@@ -18126,6 +18363,7 @@ configuration that prevents it from operating correctly.</p>
 
 
 
+
   </div>
 
     </div>
@@ -18151,6 +18389,7 @@ configuration that prevents it from operating correctly.</p>
         <p>Raised when an operation exceeds its deadline/timeout.</p>
 <p>This error is typically used in decorators or functions that have
 time limits or deadlines for completion.</p>
+
 
 
 
@@ -18247,6 +18486,7 @@ time limits or deadlines for completion.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -18452,6 +18692,7 @@ typically in database transactions or resource locking scenarios.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/system_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-125">125</a></span>
@@ -18516,6 +18757,7 @@ typically in database transactions or resource locking scenarios.</p>
 
 
 
+
   </div>
 
     </div>
@@ -18541,6 +18783,7 @@ typically in database transactions or resource locking scenarios.</p>
         <p>Raised when deprecated functionality is used.</p>
 <p>This error is used to signal that a feature, method, or API
 is deprecated and should no longer be used.</p>
+
 
 
 
@@ -18645,6 +18888,7 @@ is deprecated and should no longer be used.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -18874,6 +19118,7 @@ that prevents the server from fulfilling the request.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/errors/system_errors.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-9"> 9</a></span>
@@ -18932,6 +19177,7 @@ that prevents the server from fulfilling the request.</p>
 
 
 
+
   </div>
 
     </div>
@@ -18957,6 +19203,7 @@ that prevents the server from fulfilling the request.</p>
         <p>Represents a resource unavailability error.</p>
 <p>This error is used when a required resource is temporarily unavailable
 but may become available again in the future.</p>
+
 
 
 
@@ -19022,6 +19269,7 @@ but may become available again in the future.</p>
 
 
 
+
   </div>
 
     </div>
@@ -19047,6 +19295,7 @@ but may become available again in the future.</p>
         <p>Represents an unknown error.</p>
 <p>This is a catch-all error type for unexpected conditions that
 don't fit into other error categories.</p>
+
 
 
 
@@ -19112,6 +19361,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -19135,6 +19385,7 @@ don't fit into other error categories.</p>
 
 
         <p>Exception raised for invalid arguments.</p>
+
 
 
 
@@ -19188,6 +19439,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -19211,6 +19463,7 @@ don't fit into other error categories.</p>
 
 
         <p>Exception raised for invalid date formats.</p>
+
 
 
 
@@ -19274,6 +19527,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -19297,6 +19551,7 @@ don't fit into other error categories.</p>
 
 
         <p>Exception raised for invalid email formats.</p>
+
 
 
 
@@ -19350,6 +19605,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -19373,6 +19629,7 @@ don't fit into other error categories.</p>
 
 
         <p>Exception raised for invalid data formats.</p>
+
 
 
 
@@ -19436,6 +19693,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -19459,6 +19717,7 @@ don't fit into other error categories.</p>
 
 
         <p>Exception raised for invalid IP address formats.</p>
+
 
 
 
@@ -19512,6 +19771,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -19535,6 +19795,7 @@ don't fit into other error categories.</p>
 
 
         <p>Exception raised for invalid JSON formats.</p>
+
 
 
 
@@ -19592,6 +19853,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -19615,6 +19877,7 @@ don't fit into other error categories.</p>
 
 
         <p>Exception raised for invalid landline numbers.</p>
+
 
 
 
@@ -19668,6 +19931,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -19691,6 +19955,7 @@ don't fit into other error categories.</p>
 
 
         <p>Exception raised for invalid national codes.</p>
+
 
 
 
@@ -19744,6 +20009,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -19767,6 +20033,7 @@ don't fit into other error categories.</p>
 
 
         <p>Exception raised when a password does not meet the security requirements.</p>
+
 
 
 
@@ -19820,6 +20087,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -19843,6 +20111,7 @@ don't fit into other error categories.</p>
 
 
         <p>Exception raised for invalid phone numbers.</p>
+
 
 
 
@@ -19896,6 +20165,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -19919,6 +20189,7 @@ don't fit into other error categories.</p>
 
 
         <p>Exception raised when a timestamp format is invalid.</p>
+
 
 
 
@@ -19982,6 +20253,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -20005,6 +20277,7 @@ don't fit into other error categories.</p>
 
 
         <p>Exception raised for invalid URL formats.</p>
+
 
 
 
@@ -20058,6 +20331,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -20081,6 +20355,7 @@ don't fit into other error categories.</p>
 
 
         <p>Exception raised when a value is out of range.</p>
+
 
 
 
@@ -20134,6 +20409,7 @@ don't fit into other error categories.</p>
 
 
 
+
   </div>
 
     </div>
@@ -20170,7 +20446,9 @@ show_source: true</p>
 
 
 
+
   <div class="doc doc-children">
+
 
 
 
@@ -20197,6 +20475,7 @@ show_source: true</p>
 
         <p>Base class for creating enumerated types with custom values.</p>
 <p>This class extends the <code>Enum</code> class to allow custom values for enum members.</p>
+
 
 
 
@@ -20251,6 +20530,7 @@ show_source: true</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -20607,6 +20887,7 @@ such as equality checks, comparisons, and string matching.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/types/base_types.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-26">26</a></span>
@@ -20703,6 +20984,7 @@ such as equality checks, comparisons, and string matching.</p>
 
 
 
+
   </div>
 
     </div>
@@ -20738,7 +21020,9 @@ show_source: true</p>
 
 
 
+
   <div class="doc doc-children">
+
 
 
 
@@ -20831,6 +21115,7 @@ such as files, base64-encoded data, URLs, or binary data.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/types/email_types.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-4"> 4</a></span>
@@ -20872,6 +21157,7 @@ such as files, base64-encoded data, URLs, or binary data.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -20951,6 +21237,7 @@ such as being treated as a downloadable attachment or displayed inline.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/types/email_types.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-23">23</a></span>
@@ -20984,6 +21271,7 @@ such as being treated as a downloadable attachment or displayed inline.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -21030,7 +21318,9 @@ show_source: true</p>
 
 
 
+
   <div class="doc doc-children">
+
 
 
 
@@ -21312,6 +21602,7 @@ English and Farsi messages, and corresponding HTTP and gRPC status codes.</p>
           </tr>
       </tbody>
     </table>
+
 
 
 
@@ -22833,6 +23124,7 @@ English and Farsi messages, and corresponding HTTP and gRPC status codes.</p>
 
 
 
+
   </div>
 
     </div>
@@ -22868,7 +23160,9 @@ show_source: true</p>
 
 
 
+
   <div class="doc doc-children">
+
 
 
 
@@ -22939,6 +23233,7 @@ error messages. Each language is represented by its ISO 639-1 code.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/types/language_type.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-4"> 4</a></span>
@@ -22972,6 +23267,7 @@ error messages. Each language is represented by its ISO 639-1 code.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -23018,7 +23314,9 @@ show_source: true</p>
 
 
 
+
   <div class="doc doc-children">
+
 
 
 
@@ -23089,6 +23387,7 @@ such as ascending or descending.</p>
 
 
 
+
               <details class="quote">
                 <summary>Source code in <code>archipy/models/types/sort_order_type.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-4"> 4</a></span>
@@ -23122,6 +23421,7 @@ such as ascending or descending.</p>
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -23234,7 +23534,8 @@ show_source: true</p>
   
 </div>
       
-        <div class="md-social">
+        
+<div class="md-social">
   
     
     
