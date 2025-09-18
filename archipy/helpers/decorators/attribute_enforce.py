@@ -21,7 +21,7 @@ def enforce_attributes[T](attrs: tuple[tuple[tuple[str, ...], ...], ...]) -> Cal
         manager_attrs = ("created_by", "created_by_uuid")
         admin_attrs = ("created_by_admin", "created_by_admin_uuid")
 
-        @ensure_attrs()
+        @ensure_attrs((admin_attrs, manager_attrs))
         class CustomType:
             created_by: UUID
             created_by_admin_uuid: UUID
