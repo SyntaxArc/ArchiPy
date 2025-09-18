@@ -31,11 +31,12 @@ def enforce_attributes[T](attrs: tuple[tuple[tuple[str, ...], ...], ...]) -> Cal
     def validator(kls: type[T]) -> type[T]:
         if "__annotations__" in (existing_attrs := set(vars(kls).keys())):
             existing_attrs.update(vars(kls)["__annotations__"])
-        for category in attrs:
-            for group in category:
-                if len(existing_attrs.intersection(group)) == 0:
-                    error_message = f"none of {group} is present on {kls.__name__}"
-                    raise AttributeError(error_message)
+        if not getattr(kls, "__abstract__", False):
+            for category in attrs:
+                for group in category:
+                    if len(existing_attrs.intersection(group)) == 0:
+                        error_message = f"none of {group} is present on {kls.__name__}"
+                        raise AttributeError(error_message)
         return kls
 
     return validator
