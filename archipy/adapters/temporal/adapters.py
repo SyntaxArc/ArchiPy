@@ -10,7 +10,14 @@ from datetime import timedelta
 from typing import Any, TypeVar, override
 from uuid import uuid4
 
-from temporalio.client import Client, TLSConfig, WorkflowHandle
+from temporalio.client import (
+    Client,
+    Schedule,
+    ScheduleActionStartWorkflow,
+    ScheduleSpec,
+    TLSConfig,
+    WorkflowHandle,
+)
 from temporalio.common import RetryPolicy
 
 from archipy.configs.base_config import BaseConfig
@@ -395,3 +402,26 @@ class TemporalAdapter(TemporalPort):
         if self._client:
             # Temporal client doesn't have a close method, just clear the reference
             self._client = None
+
+    @override
+    async def create_schedule(self, schedule_id: str, workflow_class: Any, spec: ScheduleSpec, task_queue: str) -> None:
+        """Create a schedule for a workflow."""
+        client = await self.get_client()
+
+        sched = Schedule(
+            action=ScheduleActionStartWorkflow(
+                workflow_class,
+                id=schedule_id,
+                task_queue=task_queue,
+            ),
+            spec=spec,
+        )
+
+        await client.create_schedule(schedule_id, sched)
+
+    @override
+    async def stop_schedule(self, schedule_id: str) -> None:
+        """Stop a schedule."""
+        client = await self.get_client()
+        handle = client.get_schedule_handle(schedule_id)
+        await handle.delete()

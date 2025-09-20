@@ -7,7 +7,10 @@ the ArchiPy architecture.
 
 from abc import abstractmethod
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
+
+if TYPE_CHECKING:
+    from temporalio.client import ScheduleSpec
 
 T = TypeVar("T")
 
@@ -245,6 +248,22 @@ class TemporalPort:
         Raises:
             NotImplementedError: If not implemented by the subclass.
         """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def create_schedule(
+        self,
+        schedule_id: str,
+        workflow_class: Any,
+        spec: "ScheduleSpec",
+        task_queue: str,
+    ) -> None:
+        """Create a new schedule."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def stop_schedule(self, schedule_id: str) -> None:
+        """Stop a schedule."""
         raise NotImplementedError
 
 
