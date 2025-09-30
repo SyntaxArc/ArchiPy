@@ -1,0 +1,34 @@
+# Fast build configuration for local development
+# Use this for quick iterations: mkdocs serve -f docs/mkdocs-fast.yml
+
+INHERIT: ./mkdocs.yml
+
+plugins:
+  - search
+  - autorefs
+  - mkdocstrings:
+      enabled: true
+      default_handler: python
+      handlers:
+        python:
+          paths: [archipy]
+          options:
+            # Maximum performance for local dev
+            show_source: false
+            show_root_toc_entry: false
+            show_object_full_path: false
+            heading_level: 3
+            members_order: alphabetical
+            docstring_style: google
+            show_submodules: false
+            show_bases: false
+            show_signature_annotations: false
+            separate_signature: false
+            filters:
+              - "!^_"
+              - "!^__"
+            summary: true
+            show_if_no_docstring: false
+            inherited_members: false
+            members: false  # Don't auto-document members
+            docstring_section_style: list  # Faster than table

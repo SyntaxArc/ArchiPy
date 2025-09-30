@@ -1,0 +1,164 @@
+site_name: ArchiPy
+site_url: https://syntaxarc.github.io/ArchiPy/
+site_description: Architecture + Python – Structured Development Simplified
+site_author:  Hossein Nejati, Mehdi Einali
+repo_url: https://github.com/SyntaxArc/ArchiPy
+repo_name: SyntaxArc/ArchiPy
+edit_uri: edit/master/docs/
+
+# Directory configuration
+docs_dir: .
+site_dir: ../site
+
+# Copyright
+copyright: Copyright &copy; 2025 Hossein Nejati, Mehdi Einali
+
+# Theme configuration
+theme:
+  name: material
+  language: en
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch  # Prefetch pages for faster navigation
+    - navigation.instant.progress  # Show loading progress
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - toc.follow
+    - content.code.copy
+    - content.tabs.link
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+  logo: assets/logo.jpg
+  favicon: assets/logo.jpg
+
+# Customization
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/SyntaxArc/ArchiPy
+  version:
+    provider: mike
+
+# Extensions
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+# Plugins
+plugins:
+  - search
+  - autorefs
+  - mkdocstrings:
+      enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
+      default_handler: python
+      handlers:
+        python:
+          paths: [archipy]
+          options:
+            # Performance optimizations
+            show_source: false  # Changed: Don't show source code by default (huge performance gain)
+            show_root_toc_entry: true
+            show_object_full_path: false  # Changed: Shorter paths = faster rendering
+            heading_level: 2
+            members_order: source
+            docstring_style: google
+            # Additional performance settings
+            show_submodules: false  # Changed: Don't auto-expand submodules
+            show_bases: false  # Changed: Don't show base classes
+            show_signature_annotations: true
+            separate_signature: true
+            # Filtering to reduce content
+            filters:
+              - "!^_"  # Exclude private members
+              - "!^__pycache__"
+            # Summary mode for better performance
+            summary: true  # Show brief summaries instead of full docs
+            show_if_no_docstring: false  # Skip undocumented items
+            # Inheritance settings
+            inherited_members: false  # Don't show inherited members (big performance gain)
+
+# Navigation
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Features: features.md
+  - Usage: usage.md
+  - Development: development.md
+  - API Reference:
+    - Overview: api_reference/index.md
+    - Adapters: api_reference/adapters.md
+    - Configs: api_reference/configs.md
+    - Helpers: api_reference/helpers.md
+    - Models: api_reference/models.md
+    - Utils: api_reference/utils.md
+  - Examples:
+    - Overview: examples/index.md
+    - Adapters:
+      - Overview: examples/adapters/index.md
+      - PostgreSQL: examples/adapters/postgres.md
+      - SQLite: examples/adapters/sqlite.md
+      - StarRocks: examples/adapters/starrocks.md
+      - Redis: examples/adapters/redis.md
+      - Email: examples/adapters/email.md
+      - Keycloak: examples/adapters/keycloak.md
+      - MinIO: examples/adapters/minio.md
+      - Kafka: examples/adapters/kafka.md
+      - Temporal: examples/adapters/temporal.md
+      - Payment Gateways: examples/adapters/parsian_payment.md
+    - Helpers:
+      - Overview: examples/helpers/index.md
+      - Decorators: examples/helpers/decorators.md
+      - Interceptors: examples/helpers/interceptors.md
+      - Metaclasses: examples/helpers/metaclasses.md
+      - Utils: examples/helpers/utils.md
+    - Configuration: examples/config_management.md
+    - Testing: examples/bdd_testing.md
+    - Error Handling: examples/error_handling.md
+    - Models:
+      - Protobuf DTOs: examples/models/protobuf_dtos.md
+  - Changelog: changelog.md
+  - Contributing: contributing.md
+  - Architecture: architecture.md
+  - Contributing to Docs: contributing-docs.md
+  - License: license.md

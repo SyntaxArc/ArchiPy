@@ -1,0 +1,32 @@
+# Full documentation build with all features
+# Use this for production builds: mkdocs build -f docs/mkdocs-full.yml
+
+INHERIT: ./mkdocs.yml
+
+plugins:
+  - search
+  - autorefs
+  - mkdocstrings:
+      enabled: true
+      default_handler: python
+      handlers:
+        python:
+          paths: [archipy]
+          options:
+            # Full documentation features
+            show_source: true  # Show source code in production
+            show_root_toc_entry: true
+            show_object_full_path: true
+            heading_level: 2
+            members_order: source
+            docstring_style: google
+            show_submodules: true
+            show_bases: true
+            show_signature_annotations: true
+            separate_signature: true
+            filters:
+              - "!^_"
+            summary: false  # Full documentation
+            show_if_no_docstring: true
+            inherited_members: true  # Show inherited members in production
+            docstring_section_style: table
