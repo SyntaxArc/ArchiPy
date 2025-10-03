@@ -165,7 +165,7 @@ class SQLAlchemySortMixin:
     """
 
     @staticmethod
-    def _apply_sorting(entity: type[BaseEntity], query: Select, sort_info: SortDTO | None) -> Select:
+    def _apply_sorting(entity: type[T], query: Select, sort_info: SortDTO | None) -> Select:
         """Apply sorting to a SQLAlchemy query.
 
         Args:
@@ -238,12 +238,12 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
     @override
     def execute_search_query(
         self,
-        entity: type[BaseEntity],
+        entity: type[T],
         query: Select,
         pagination: PaginationDTO | None = None,
         sort_info: SortDTO | None = None,
         has_multiple_entities: bool = False,
-    ) -> tuple[list[BaseEntity], int]:
+    ) -> tuple[list[T], int]:
         """Execute a search query with pagination and sorting.
 
         Args:
@@ -398,7 +398,7 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             return result
 
     @override
-    def delete(self, entity: BaseEntity) -> None:
+    def delete(self, entity: T) -> None:
         """Delete an entity from the database.
 
         Args:
@@ -427,7 +427,7 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             self._handle_db_exception(e, self.session_manager._get_database_name())
 
     @override
-    def bulk_delete(self, entities: list[BaseEntity]) -> None:
+    def bulk_delete(self, entities: list[T]) -> None:
         """Delete multiple entities from the database.
 
         Args:
@@ -549,12 +549,12 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
     @override
     async def execute_search_query(
         self,
-        entity: type[BaseEntity],
+        entity: type[T],
         query: Select,
         pagination: PaginationDTO | None,
         sort_info: SortDTO | None = None,
         has_multiple_entities: bool = False,
-    ) -> tuple[list[BaseEntity], int]:
+    ) -> tuple[list[T], int]:
         """Execute a search query with pagination and sorting.
 
         Args:
@@ -739,7 +739,7 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             self._handle_db_exception(e, self.session_manager._get_database_name())
 
     @override
-    async def bulk_delete(self, entities: list[BaseEntity]) -> None:
+    async def bulk_delete(self, entities: list[T]) -> None:
         """Delete multiple entities from the database.
 
         Args:
