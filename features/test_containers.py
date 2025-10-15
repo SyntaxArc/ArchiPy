@@ -11,9 +11,11 @@ from testcontainers.minio import MinioContainer
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 
+from archipy.adapters.postgres.sqlalchemy.adapters import PostgresSQLAlchemyAdapter
 from archipy.helpers.metaclasses.singleton import Singleton
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import RedisConfig, MinioConfig, KafkaConfig, ElasticsearchConfig, PostgresSQLAlchemyConfig, KeycloakConfig
+from archipy.models.entities import BaseEntity
 
 logger = logging.getLogger(__name__)
 
@@ -140,47 +142,40 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
 
 @ContainerManager.register("postgres")
 class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
-    def __init__(self, config: PostgresSQLAlchemyConfig | None = None, image: str | None = None) -> None:
-        self.name = "postgres"
-        self.config = config or BaseConfig.global_config().POSTGRES_SQLALCHEMY
-        self.image = image or BaseConfig.global_config().POSTGRES__IMAGE
+    def __init__(self) -> None:
+        self.postgres_config = BaseConfig.global_config().POSTGRES_SQLALCHEMY
+        self.image = BaseConfig.global_config().POSTGRES_IMAGE
         self._is_running: bool = False
-
-        # Container properties
-        self.host: str | None = None
-        self.port: int | None = self.config.PORT
-        self.database: str | None = self.config.DATABASE
-        self.username: str | None = self.config.USERNAME
-        self.password: str | None = self.config.PASSWORD
-
-        # Use config values or fallback to defaults for test containers
-        dbname = self.database or "test_db"
-        username = self.username or "test_user"
-        password = self.password or "test_password"
 
         # Set up the container
         self._container = PostgresContainer(
             image=self.image,
-            dbname=dbname,
-            username=username,
-            password=password,
+            dbname=self.postgres_config.DATABASE,
+            username=self.postgres_config.USERNAME,
+            password=self.postgres_config.PASSWORD,
         )
-        self._container.with_bind_ports(self.port, 5432)
+        # set static port
+        # default port of container is 5432 if you want to create it on other port you can replace 5432 with your port
+        self._container.with_bind_ports(5432, self.postgres_config.PORT)
 
     def start(self) -> PostgresContainer:
         """Start the PostgreSQL container."""
         if self._is_running:
             return self._container
+        try:
+            self._container.start()
+            self._is_running = True
 
-        self._container.start()
-        self._is_running = True
+            adapter = PostgresSQLAlchemyAdapter(orm_config=self.postgres_config)
+            BaseEntity.metadata.create_all(adapter.session_manager.engine)
 
-        # Set container properties
-        self.host = self._container.get_container_host_ip()
+            logger.info("PostgreSQL container started on %s:%s", self.postgres_config.HOST, self.postgres_config.PORT)
 
-        logger.info("PostgreSQL container started on %s:%s", self.host, self.port)
-
-        return self._container
+            return self._container
+        except Exception as e:
+            logger.error(f"Failed to start PostgreSQL container: {e}")
+            self._container.stop()
+            raise
 
     def stop(self) -> None:
         """Stop the PostgreSQL container."""
@@ -189,13 +184,6 @@ class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
 
         if self._container:
             self._container.stop()
-
-        self._container = None
-        self._is_running = False
-
-        # Reset container properties
-        self.host = None
-        self.port = None
 
         logger.info("PostgreSQL container stopped")
 

@@ -152,7 +152,7 @@ class AsyncGrpcServerExceptionInterceptor(BaseAsyncGrpcServerInterceptor):
         """
         try:
             # Execute the gRPC method
-            result = await method(request, context)
+            result = method(request, context)
 
         except ValidationError as validation_error:
             BaseUtils.capture_exception(validation_error)
