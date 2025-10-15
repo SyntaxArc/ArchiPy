@@ -1577,6 +1577,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#3139-2025-10-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      [3.13.9] - 2025-10-15
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[3.13.9] - 2025-10-15">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#improved" class="md-nav__link">
+    <span class="md-ellipsis">
+      Improved
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Improved">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#elastic-apm-client-initialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Elastic APM Client Initialization
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#3138-2025-10-15" class="md-nav__link">
     <span class="md-ellipsis">
       [3.13.8] - 2025-10-15
@@ -6100,6 +6139,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#3139-2025-10-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      [3.13.9] - 2025-10-15
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[3.13.9] - 2025-10-15">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#improved" class="md-nav__link">
+    <span class="md-ellipsis">
+      Improved
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Improved">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#elastic-apm-client-initialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Elastic APM Client Initialization
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#3138-2025-10-15" class="md-nav__link">
     <span class="md-ellipsis">
       [3.13.8] - 2025-10-15
@@ -10526,6 +10604,18 @@
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
 <p>All notable changes to ArchiPy are documented in this changelog, organized by version.</p>
+<h2 id="3139-2025-10-15">[3.13.9] - 2025-10-15<a class="headerlink" href="#3139-2025-10-15" title="Permanent link">&para;</a></h2>
+<h3 id="improved">Improved<a class="headerlink" href="#improved" title="Permanent link">&para;</a></h3>
+<h4 id="elastic-apm-client-initialization">Elastic APM Client Initialization<a class="headerlink" href="#elastic-apm-client-initialization" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Enhanced Client Reuse</strong> - Improved Elastic APM client initialization to prevent duplicate client creation<ul>
+<li>Updated tracing decorators to use <code>elasticapm.get_client()</code> before creating new clients</li>
+<li>Applied same pattern to gRPC server interceptors (both sync and async)</li>
+<li>Prevents potential memory leaks and improves performance by reusing existing clients</li>
+<li>Maintains backward compatibility while optimizing resource usage</li>
+</ul>
+</li>
+</ul>
 <h2 id="3138-2025-10-15">[3.13.8] - 2025-10-15<a class="headerlink" href="#3138-2025-10-15" title="Permanent link">&para;</a></h2>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <h4 id="redis-configuration-refinements">Redis Configuration Refinements<a class="headerlink" href="#redis-configuration-refinements" title="Permanent link">&para;</a></h4>
