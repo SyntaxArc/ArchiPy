@@ -10,7 +10,6 @@ from typing import Any, cast
 from pydantic import ValidationError
 
 from archipy.configs.base_config import BaseConfig
-from archipy.helpers.interceptors.grpc.base.server_interceptor import BaseGrpcServerInterceptor
 from archipy.helpers.utils.base_utils import BaseUtils
 from archipy.models.errors import (
     BaseError,
@@ -25,7 +24,6 @@ try:
     GRPC_APP = True
 except ImportError:
     GRPC_APP = False
-
 
 try:
     from fastapi import FastAPI, Request, Response
@@ -258,22 +256,6 @@ class AsyncGrpcAPIUtils:
         except Exception:
             logging.exception("Failed to initialize Metric Interceptor")
 
-    @staticmethod
-    def setup_exception_interceptor(interceptors: list) -> None:
-        """Configures exception interceptor for gRPC server.
-
-        Args:
-            interceptors (List): List of gRPC interceptors to add the exception interceptor to.
-        """
-        try:
-            from archipy.helpers.interceptors.grpc.exception.server_interceptor import (
-                AsyncGrpcServerExceptionInterceptor,
-            )
-
-            interceptors.append(AsyncGrpcServerExceptionInterceptor())
-        except Exception:
-            logging.exception("Failed to initialize Exception Interceptor")
-
 
 class AppUtils:
     """Utility class for creating and configuring FastAPI applications."""
@@ -329,14 +311,14 @@ class AppUtils:
     @classmethod
     def create_async_grpc_app(cls, config: BaseConfig) -> server:
         """Create and configure an async gRPC application."""
-        interceptors: list[BaseGrpcServerInterceptor] = []
+        from archipy.helpers.interceptors.grpc.exception import AsyncGrpcServerExceptionInterceptor
 
-        AsyncGrpcAPIUtils.setup_exception_interceptor(interceptors)
-        AsyncGrpcAPIUtils.setup_trace_interceptor(config, interceptors)
-        AsyncGrpcAPIUtils.setup_metric_interceptor(config, interceptors)
+        async_interceptors = [AsyncGrpcServerExceptionInterceptor]
+        AsyncGrpcAPIUtils.setup_trace_interceptor(config, async_interceptors)
+        AsyncGrpcAPIUtils.setup_metric_interceptor(config, async_interceptors)
 
         app = server(
             futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),
-            interceptors=interceptors,
+            interceptors=async_interceptors,
         )
         return app
