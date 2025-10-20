@@ -309,11 +309,12 @@ class AppUtils:
         return app
 
     @classmethod
-    def create_async_grpc_app(cls, config: BaseConfig) -> server:
+    def create_async_grpc_app(cls, config: BaseConfig, interceptors: set[Any]) -> server:
         """Create and configure an async gRPC application."""
         from archipy.helpers.interceptors.grpc.exception import AsyncGrpcServerExceptionInterceptor
 
         async_interceptors = [AsyncGrpcServerExceptionInterceptor()]
+        async_interceptors.extend(interceptors)
         AsyncGrpcAPIUtils.setup_trace_interceptor(config, async_interceptors)
         AsyncGrpcAPIUtils.setup_metric_interceptor(config, async_interceptors)
 
@@ -321,4 +322,5 @@ class AppUtils:
             futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),
             interceptors=async_interceptors,
         )
+
         return app
