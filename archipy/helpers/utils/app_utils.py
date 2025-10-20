@@ -313,7 +313,7 @@ class AppUtils:
         """Create and configure an async gRPC application."""
         from archipy.helpers.interceptors.grpc.exception import AsyncGrpcServerExceptionInterceptor
 
-        async_interceptors = [AsyncGrpcServerExceptionInterceptor]
+        async_interceptors = [AsyncGrpcServerExceptionInterceptor()]
         AsyncGrpcAPIUtils.setup_trace_interceptor(config, async_interceptors)
         AsyncGrpcAPIUtils.setup_metric_interceptor(config, async_interceptors)
 
