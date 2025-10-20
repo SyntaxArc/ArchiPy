@@ -193,6 +193,7 @@ class GrpcConfig(BaseModel):
     SERVE_PORT: int = Field(default=8100, description="Port to serve gRPC on")
     SERVE_HOST: str = Field(default="[::]", description="Host to serve gRPC on")  # IPv6 equivalent of 0.0.0.0
     THREAD_WORKER_COUNT: int | None = Field(default=None, description="Number of worker threads")
+    MAX_CONCURRENT_RPCS: int | None = Field(default=None, description="Maximum number of concurrent requests")
     THREAD_PER_CPU_CORE: int = Field(
         default=40,
         description="Threads per CPU core",

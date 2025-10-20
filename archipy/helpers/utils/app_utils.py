@@ -7,6 +7,7 @@ from contextlib import AbstractAsyncContextManager
 from http import HTTPStatus
 from typing import Any, cast
 
+import grpc
 from pydantic import ValidationError
 
 from archipy.configs.base_config import BaseConfig
@@ -309,7 +310,12 @@ class AppUtils:
         return app
 
     @classmethod
-    def create_async_grpc_app(cls, config: BaseConfig, interceptors: set[Any]) -> server:
+    def create_async_grpc_app(
+        cls,
+        config: BaseConfig,
+        interceptors: set[Any],
+        compression: grpc.Compression | None = None,
+    ) -> server:
         """Create and configure an async gRPC application."""
         from archipy.helpers.interceptors.grpc.exception import AsyncGrpcServerExceptionInterceptor
 
@@ -321,6 +327,9 @@ class AppUtils:
         app = server(
             futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),
             interceptors=async_interceptors,
+            compression=compression,
+            options=config.GRPC.SERVER_OPTIONS_CONFIG_LIST,
+            maximum_concurrent_rpcs=config.GRPC.MAX_CONCURRENT_RPCS,
         )
 
         return app
