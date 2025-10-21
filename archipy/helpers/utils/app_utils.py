@@ -258,6 +258,50 @@ class AsyncGrpcAPIUtils:
             logging.exception("Failed to initialize Metric Interceptor")
 
 
+class GrpcAPIUtils:
+    """grpc api utilities."""
+
+    @staticmethod
+    def setup_trace_interceptor(config: BaseConfig, interceptors: list) -> None:
+        """Configures trace interceptor for gRPC server if tracing is enabled.
+
+        Args:
+            config (BaseConfig): The configuration object containing tracing settings.
+            interceptors (List): List of gRPC interceptors to add the trace interceptor to.
+        """
+        if not config.ELASTIC_APM.IS_ENABLED and not config.SENTRY.IS_ENABLED:
+            return
+
+        try:
+            from archipy.helpers.interceptors.grpc.trace.server_interceptor import GrpcServerTraceInterceptor
+
+            interceptors.append(GrpcServerTraceInterceptor())
+        except Exception:
+            logging.exception("Failed to initialize Trace Interceptor")
+
+    @staticmethod
+    def setup_metric_interceptor(config: BaseConfig, interceptors: list) -> None:
+        """Configures metric interceptor for gRPC server if Prometheus is enabled.
+
+        Args:
+            config (BaseConfig): The configuration object containing Prometheus settings.
+            interceptors (List): List of gRPC interceptors to add the metric interceptor to.
+        """
+        if not config.PROMETHEUS.IS_ENABLED:
+            return
+
+        try:
+            from prometheus_client import start_http_server
+
+            from archipy.helpers.interceptors.grpc.metric.server_interceptor import GrpcServerMetricInterceptor
+
+            start_http_server(config.PROMETHEUS.SERVER_PORT)
+            interceptors.append(GrpcServerMetricInterceptor())
+
+        except Exception:
+            logging.exception("Failed to initialize Metric Interceptor")
+
+
 class AppUtils:
     """Utility class for creating and configuring FastAPI applications."""
 
@@ -313,21 +357,47 @@ class AppUtils:
     def create_async_grpc_app(
         cls,
         config: BaseConfig,
-        interceptors: set[Any] | None = None,
+        customized_interceptors: set[Any] | None = None,
         compression: grpc.Compression | None = None,
     ) -> server:
         """Create and configure an async gRPC application."""
         from archipy.helpers.interceptors.grpc.exception import AsyncGrpcServerExceptionInterceptor
 
         async_interceptors = [AsyncGrpcServerExceptionInterceptor()]
-        if interceptors:
-            async_interceptors.extend(interceptors)
+        if customized_interceptors:
+            async_interceptors.extend(customized_interceptors)
         AsyncGrpcAPIUtils.setup_trace_interceptor(config, async_interceptors)
         AsyncGrpcAPIUtils.setup_metric_interceptor(config, async_interceptors)
 
         app = server(
             futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),
             interceptors=async_interceptors,
+            compression=compression,
+            options=config.GRPC.SERVER_OPTIONS_CONFIG_LIST,
+            maximum_concurrent_rpcs=config.GRPC.MAX_CONCURRENT_RPCS,
+        )
+
+        return app
+
+    @classmethod
+    def create_grpc_app(
+        cls,
+        config: BaseConfig,
+        customized_interceptors: set[Any] | None = None,
+        compression: grpc.Compression | None = None,
+    ) -> grpc.Server:
+        """Create and configure an async gRPC application."""
+        from archipy.helpers.interceptors.grpc.exception import GrpcServerExceptionInterceptor
+
+        interceptors = [GrpcServerExceptionInterceptor()]
+        if customized_interceptors:
+            interceptors.extend(customized_interceptors)
+        GrpcAPIUtils.setup_trace_interceptor(config, interceptors)
+        GrpcAPIUtils.setup_metric_interceptor(config, interceptors)
+
+        app = grpc.server(
+            futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),
+            interceptors=interceptors,  # type: ignore
             compression=compression,
             options=config.GRPC.SERVER_OPTIONS_CONFIG_LIST,
             maximum_concurrent_rpcs=config.GRPC.MAX_CONCURRENT_RPCS,
