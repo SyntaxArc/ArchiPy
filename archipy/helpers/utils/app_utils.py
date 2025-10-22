@@ -364,8 +364,7 @@ class AppUtils:
         from archipy.helpers.interceptors.grpc.exception import AsyncGrpcServerExceptionInterceptor
 
         async_interceptors = [AsyncGrpcServerExceptionInterceptor()]
-        if customized_interceptors:
-            async_interceptors.extend(customized_interceptors)
+
         AsyncGrpcAPIUtils.setup_trace_interceptor(config, async_interceptors)
         AsyncGrpcAPIUtils.setup_metric_interceptor(config, async_interceptors)
 
@@ -376,7 +375,8 @@ class AppUtils:
             options=config.GRPC.SERVER_OPTIONS_CONFIG_LIST,
             maximum_concurrent_rpcs=config.GRPC.MAX_CONCURRENT_RPCS,
         )
-
+        if customized_interceptors:
+            async_interceptors.extend(customized_interceptors)
         return app
 
     @classmethod
@@ -390,10 +390,11 @@ class AppUtils:
         from archipy.helpers.interceptors.grpc.exception import GrpcServerExceptionInterceptor
 
         interceptors = [GrpcServerExceptionInterceptor()]
-        if customized_interceptors:
-            interceptors.extend(customized_interceptors)
+
         GrpcAPIUtils.setup_trace_interceptor(config, interceptors)
         GrpcAPIUtils.setup_metric_interceptor(config, interceptors)
+        if customized_interceptors:
+            interceptors.extend(customized_interceptors)
 
         app = grpc.server(
             futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),
