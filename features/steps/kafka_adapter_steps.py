@@ -160,6 +160,18 @@ def step_produce_message(context, message, topic_name):
         raise e
 
 
+@when('I produce one message "{message}" with key "{key}" to topic "{topic_name}"')
+def step_produce_message_with_key(context, message, key, topic_name):
+    adapter = get_kafka_producer_adapter(context, topic_name)
+    try:
+        adapter.produce(message, key=key)
+        adapter.flush(timeout=1)
+        context.logger.info(f"Produced message '{message}' to '{topic_name}' with key '{key}'")
+    except Exception as e:
+        context.logger.exception(f"Failed to produce message with key: {str(e)}")
+        raise e
+
+
 @when("I validate the producer health")
 def step_validate_health(context):
     scenario_context = get_current_scenario_context(context)

@@ -140,11 +140,13 @@ class KafkaProducerPort:
     """
 
     @abstractmethod
-    def produce(self, message: str | bytes) -> None:
+    def produce(self, message: str | bytes, *args, **kwargs) -> None:
         """Produces a message to the configured topic.
 
         Args:
             message (str | bytes): The message to produce.
+            *args: Additional positional arguments passed to the underlying producer.
+            **kwargs: Additional keyword arguments passed to the underlying producer.
 
         Raises:
             NotImplementedError: If the method is not implemented by the concrete class.
