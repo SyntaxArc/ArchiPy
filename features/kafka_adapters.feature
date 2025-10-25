@@ -24,6 +24,12 @@ Feature: Kafka Adapter Operations Testing
     When I validate the producer health
     Then the producer health check should pass
 
+  Scenario: Produce message with additional parameters
+    Given a Kafka producer for topic "test-topic"
+    And a Kafka consumer subscribed to topic "test-topic" with group "test-group"
+    When I produce one message "Hello Kafka with key" with key "test-key" to topic "test-topic"
+    Then the consumer should receive message "Hello Kafka with key" from topic "test-topic"
+
   Scenario: Delete a topic
     Given a topic named "test-topic-deletable" exists
     When I delete the topic "test-topic-deletable"
