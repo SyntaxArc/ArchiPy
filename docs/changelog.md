@@ -2,6 +2,36 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [3.13.10] - 2025-10-20
+
+### Changed
+
+#### Dependency Updates
+
+- **Comprehensive Dependency Synchronization** - Updated multiple core dependencies to latest versions for improved security and performance
+    - Updated aiohttp from 3.13.0 to 3.13.1 for enhanced async HTTP client capabilities and bug fixes
+    - Updated cryptography from 46.0.2 to 46.0.3 for improved cryptographic security and performance
+    - Updated elastic-transport from 9.1.0 to 9.2.0 for enhanced Elasticsearch connectivity and reliability
+    - Updated mkdocs-material from 9.6.21 to 9.6.22 for improved documentation rendering and Material theme features
+    - Updated protobuf from 6.32.1 to 6.33.0 for enhanced Protocol Buffers support and performance
+    - Updated pydantic from 2.12.2 to 2.12.3 for improved data validation and type safety
+    - Updated pytokens from 0.1.10 to 0.2.0 for enhanced token processing capabilities
+    - Updated ruff from 0.14.0 to 0.14.1 for improved linting capabilities and bug fixes
+    - Updated wrapt from 1.17.3 to 2.0.0 for enhanced function wrapping capabilities
+
+
+## [3.13.9] - 2025-10-15
+
+### Improved
+
+#### Elastic APM Client Initialization
+
+- **Enhanced Client Reuse** - Improved Elastic APM client initialization to prevent duplicate client creation
+    - Updated tracing decorators to use `elasticapm.get_client()` before creating new clients
+    - Applied same pattern to gRPC server interceptors (both sync and async)
+    - Prevents potential memory leaks and improves performance by reusing existing clients
+    - Maintains backward compatibility while optimizing resource usage
+
 ## [3.13.8] - 2025-10-15
 
 ### Changed

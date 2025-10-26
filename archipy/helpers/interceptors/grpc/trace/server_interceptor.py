@@ -85,12 +85,12 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
                     logging.exception("Failed to create Sentry transaction for gRPC server call")
 
             # Handle Elastic APM if enabled
-            elastic_client = None
             if config.ELASTIC_APM.IS_ENABLED:
                 try:
                     # Get the Elastic APM client
-                    elastic_client = elasticapm.Client(config.ELASTIC_APM.model_dump())
-
+                    elastic_client = elasticapm.get_client()
+                    if not elastic_client:
+                        elastic_client = elasticapm.Client(config.ELASTIC_APM.model_dump())
                     # Check if a trace parent header is present in the metadata
                     if parent := elasticapm.trace_parent_from_headers(metadata_dict):
                         # Start a transaction linked to the distributed trace
@@ -203,11 +203,12 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
                     logging.exception("Failed to create Sentry transaction for async gRPC server call")
 
             # Handle Elastic APM if enabled
-            elastic_client = None
             if config.ELASTIC_APM.IS_ENABLED:
                 try:
                     # Get the Elastic APM client
-                    elastic_client = elasticapm.Client(config.ELASTIC_APM.model_dump())
+                    elastic_client = elasticapm.get_client()
+                    if not elastic_client:
+                        elastic_client = elasticapm.Client(config.ELASTIC_APM.model_dump())
 
                     # Check if a trace parent header is present in the metadata
                     if parent := elasticapm.trace_parent_from_headers(metadata_dict):

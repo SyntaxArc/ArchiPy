@@ -9,7 +9,7 @@ readme = "README.md"
 version = "0.1.0" # This vesrion set on publish flow!
 requires-python = ">=3.13,<4"
 dependencies = [
-    "pydantic>=2.12.2",
+    "pydantic>=2.12.3",
     "pydantic-settings>=2.11.0",
     "requests>=2.32.5",
     "jdatetime>=5.2.0",
@@ -20,25 +20,25 @@ license = { file = "LICENSE" }
 # Core optional dependencies
 aiosqlite = ["aiosqlite>=0.21.0"]
 behave = ["behave>=1.3.3"]
-cache = ["cachetools>=5.5.2", "async-lru>=2.0.5"]
+cache = ["cachetools>=6.2.1", "async-lru>=2.0.5"]
 dependency-injection = ["dependency-injector>=4.48.2"]
 elastic-apm = ["elastic-apm>=6.24.0"]
 elasticsearch = ["elasticsearch>=9.1.1"]
 elasticsearch-async = ["elasticsearch[async]>=9.1.1"]
 fakeredis = ["fakeredis>=2.32.0"]
 fastapi = ["fastapi[all]>=0.119.0"]
-grpc = ["grpcio>=1.75.1", "grpcio-health-checking>=1.75.1", "protobuf>=6.32.1"]
+grpc = ["grpcio>=1.75.1", "grpcio-health-checking>=1.75.1", "protobuf>=6.33.0"]
 jwt = ["pyjwt>=2.10.1"]
 kafka = ["confluent-kafka>=2.12.0"]
 kavenegar = ["kavenegar>=1.1.2"]
-keycloak = ["python-keycloak>=5.8.1", "cachetools>=5.5.2", "async-lru>=2.0.5"]
-minio = ["minio>=7.2.18", "cachetools>=5.5.2", "async-lru>=2.0.5"]
+keycloak = ["python-keycloak>=5.8.1", "cachetools>=6.2.1", "async-lru>=2.0.5"]
+minio = ["minio>=7.2.18", "cachetools>=6.2.1", "async-lru>=2.0.5"]
 parsian-ipg = ["zeep>=4.3.2", "requests[socks]>=2.32.5"]
-postgres = ["psycopg[binary,pool]>=3.2.10"]
+postgres = ["psycopg[binary,pool]>=3.2.11"]
 prometheus = ["prometheus-client>=0.23.1"]
 redis = ["redis[hiredis]>=6.4.0"]
 scheduler = ["apscheduler>=3.11.0"]
-sentry = ["sentry-sdk>=2.40.0"]
+sentry = ["sentry-sdk>=2.42.0"]
 sqlalchemy = ["sqlalchemy>=2.0.44"]
 starrocks = ["starrocks>=1.2.3", "pymysql>=1.1.2"]
 starrocks-async = ["starrocks>=1.2.3", "aiomysql>=0.2.0"]

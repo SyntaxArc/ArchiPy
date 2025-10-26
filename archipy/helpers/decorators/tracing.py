@@ -78,13 +78,14 @@ def capture_transaction[F: Callable[..., Any]](
                     logging.exception("Failed to initialize Sentry or start transaction")
 
             # Initialize and track with Elastic APM if enabled
-            elastic_client = None
             if config.ELASTIC_APM.IS_ENABLED:
                 try:
                     import elasticapm
 
                     # Initialize Elastic APM client with config
-                    elastic_client = elasticapm.Client(config.ELASTIC_APM.model_dump())
+                    elastic_client = elasticapm.get_client()
+                    if not elastic_client:
+                        elastic_client = elasticapm.Client(config.ELASTIC_APM.model_dump())
                     elastic_client.begin_transaction(transaction_type="function")
                 except ImportError:
                     logging.debug("elasticapm is not installed, skipping Elastic APM transaction capture.")
