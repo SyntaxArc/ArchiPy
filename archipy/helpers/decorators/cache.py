@@ -2,8 +2,6 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any, Protocol, TypeVar, cast
 
-from cachetools import TTLCache
-
 T = TypeVar("T")
 R = TypeVar("R")
 P_co = TypeVar("P_co", bound=Callable[..., Any], covariant=True)
@@ -34,6 +32,8 @@ def ttl_cache_decorator(
     Returns:
         Decorated function with TTL caching
     """
+    from cachetools import TTLCache
+
     cache: TTLCache = TTLCache(maxsize=maxsize, ttl=ttl_seconds)
 
     def decorator(func: Callable[..., Any]) -> ClearableFunction[Callable[..., Any]]:

@@ -22,7 +22,7 @@ from archipy.adapters.keycloak.ports import (
 )
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import KeycloakConfig
-from archipy.helpers.decorators.cache import ttl_cache_decorator
+from archipy.helpers.decorators import ttl_cache_decorator
 from archipy.helpers.utils.string_utils import StringUtils
 from archipy.models.errors import (
     ClientAlreadyExistsError,

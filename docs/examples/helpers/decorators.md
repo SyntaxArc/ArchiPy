@@ -164,7 +164,7 @@ The TTL cache decorator caches function results with automatic expiration.
 import logging
 import time
 
-from archipy.helpers.decorators.cache import ttl_cache_decorator
+from archipy.helpers.decorators import ttl_cache_decorator
 
 # Configure logging
 logger = logging.getLogger(__name__)

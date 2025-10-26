@@ -9,7 +9,7 @@ from minio.error import S3Error
 from archipy.adapters.minio.ports import MinioBucketType, MinioObjectType, MinioPolicyType, MinioPort
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import MinioConfig
-from archipy.helpers.decorators.cache import ttl_cache_decorator
+from archipy.helpers.decorators import ttl_cache_decorator
 from archipy.models.errors import (
     AlreadyExistsError,
     ConfigurationError,
