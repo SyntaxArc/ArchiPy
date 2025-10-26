@@ -507,13 +507,12 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             )
 
     @override
-    def produce(self, message: str | bytes, *args, **kwargs) -> None:
+    def produce(self, message: str | bytes, key: str | None = None) -> None:
         """Produces a message to the configured topic.
 
         Args:
             message (str | bytes): The message to produce.
-            *args: Additional positional arguments passed to the underlying producer.
-            **kwargs: Additional keyword arguments passed to the underlying producer.
+            key (str | None, optional): The key for the message. Defaults to None.
 
         Raises:
             NetworkError: If there is a network error producing the message.
@@ -523,11 +522,10 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
         try:
             processed_message = self._pre_process_message(message)
             self._adapter.produce(
-                *args,
                 topic=self._topic_name,
                 value=processed_message,
                 callback=self._delivery_callback,
-                **kwargs,
+                key=key,
             )
         except Exception as e:
             self._handle_producer_exception(e, "produce")
