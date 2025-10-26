@@ -226,9 +226,9 @@ def step_topic_list_includes(context, topic_name):
         raise AssertionError(f"Topic '{topic_name}' not in topic list after retries")
 
 
-@then('the consumer should receive message "{expected_message}" from topic "{topic_name}"')
-def step_consumer_receive(context, expected_message, topic_name):
-    adapter = get_kafka_consumer_adapter(context, topic_name, "test-group")
+@then('the consumer should receive message "{expected_message}" from topic "{topic_name}" with group "{group_id}"')
+def step_consumer_receive(context, expected_message, topic_name, group_id):
+    adapter = get_kafka_consumer_adapter(context, topic_name, group_id)
     try:
         messages = adapter.batch_consume(messages_number=1, timeout=2)
         assert len(messages) > 0, "No messages received"

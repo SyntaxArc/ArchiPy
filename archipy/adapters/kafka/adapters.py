@@ -521,11 +521,12 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
         """
         try:
             processed_message = self._pre_process_message(message)
+            processed_key = self._pre_process_message(key)
             self._adapter.produce(
                 topic=self._topic_name,
                 value=processed_message,
                 callback=self._delivery_callback,
-                key=key,
+                key=processed_key,
             )
         except Exception as e:
             self._handle_producer_exception(e, "produce")

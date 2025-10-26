@@ -2,23 +2,84 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [3.14.0] - 2025-10-26
+
+### Added
+
+#### gRPC Application Creation Utilities
+
+- **gRPC App Creation** - Added comprehensive gRPC application creation utilities for both sync and async servers
+    - Added `AppUtils.create_async_grpc_app()` method for async gRPC server creation with interceptor support
+    - Added `AppUtils.create_grpc_app()` method for synchronous gRPC server creation
+    - Implemented automatic setup of exception, tracing, and metric interceptors
+    - Added `GrpcAPIUtils` class with setup methods for trace and metric interceptors for sync gRPC servers
+    - Added `AsyncGrpcAPIUtils` class with setup methods for trace and metric interceptors for async gRPC servers
+    - Integrated Prometheus metric collection with configurable HTTP server port
+    - Enhanced optional import handling for gRPC dependencies with proper graceful degradation
+    - Configured ThreadPoolExecutor with configurable worker count and server options
+    - Support for custom interceptors and compression settings
+
+#### Prometheus Metrics Support
+
+- **Metric Collection** - Added Prometheus metrics integration for gRPC servers
+    - Automatic metric interceptor setup when Prometheus is enabled in configuration
+    - Configurable HTTP server for metrics endpoint exposure
+    - Integrated metric collection for both sync and async gRPC servers
+    - Enhanced observability with automatic Prometheus client initialization
+
+### Changed
+
+#### Kafka Producer Enhancements
+
+- **Key Parameter Support** - Enhanced Kafka producer with proper key encoding support
+    - Added optional `key` parameter to `KafkaProducerPort.produce()` method signature
+    - Implemented proper UTF-8 encoding for message keys using `_pre_process_message()` helper
+    - Ensures consistent handling of both string and bytes keys in message production
+    - Improved key/value consistency in Kafka message production workflow
+
+#### Cache Decorator Optimization
+
+- **Lazy Import Optimization** - Optimized TTL cache decorator import strategy
+    - Moved `cachetools.TTLCache` import inside the decorator function to prevent global import issues
+    - Improved module initialization performance by avoiding heavy dependencies at import time
+    - Maintained backward compatibility while improving startup time
+    - Enhanced import cleanliness and reduced initialization overhead
+
+### Fixed
+
+#### Kafka Producer Key Processing
+
+- **Key Encoding Fix** - Fixed issue where message keys were not being properly processed
+    - Applied `_pre_process_message()` to key parameter in `produce()` method for proper encoding
+    - Corrected key handling to match message value processing behavior
+    - Resolved potential encoding errors when using string keys in Kafka message production
+    - Enhanced BDD test coverage with proper key verification scenarios
+
+#### Import Cleanup
+
+- **Module Organization** - Improved import structure across multiple modules
+    - Fixed unnecessary imports in Keycloak and MinIO adapters
+    - Enhanced import cleanup in decorators module
+    - Improved code organization and reduced import overhead
+
 ## [3.13.10] - 2025-10-20
 
 ### Changed
 
 #### Dependency Updates
 
-- **Comprehensive Dependency Synchronization** - Updated multiple core dependencies to latest versions for improved security and performance
+- **Comprehensive Dependency Synchronization** - Updated multiple core dependencies to latest versions for improved
+  security and performance
     - Updated aiohttp from 3.13.0 to 3.13.1 for enhanced async HTTP client capabilities and bug fixes
     - Updated cryptography from 46.0.2 to 46.0.3 for improved cryptographic security and performance
     - Updated elastic-transport from 9.1.0 to 9.2.0 for enhanced Elasticsearch connectivity and reliability
+    - Updated mkdocs-material from 9.6.21 to 9.6.22 for improved documentation rendering and Material theme features
     - Updated mkdocs-material from 9.6.21 to 9.6.22 for improved documentation rendering and Material theme features
     - Updated protobuf from 6.32.1 to 6.33.0 for enhanced Protocol Buffers support and performance
     - Updated pydantic from 2.12.2 to 2.12.3 for improved data validation and type safety
     - Updated pytokens from 0.1.10 to 0.2.0 for enhanced token processing capabilities
     - Updated ruff from 0.14.0 to 0.14.1 for improved linting capabilities and bug fixes
     - Updated wrapt from 1.17.3 to 2.0.0 for enhanced function wrapping capabilities
-
 
 ## [3.13.9] - 2025-10-15
 
