@@ -2,6 +2,47 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v3.14.1] - 2025-10-30
+
+### Fixed
+
+#### FastAPI Configuration Naming
+
+- **ReDoc Configuration Field Name Correction** - Fixed typo in FastAPI configuration field name
+    - Corrected `RE_DOCS_URL` to `RE_DOC_URL` in `FastAPIConfig` class to match FastAPI's actual parameter name
+    - Updated `AppUtils.create_fastapi_app()` to use correct `redoc_url` parameter instead of `redocs_url`
+    - Ensures proper ReDoc documentation endpoint configuration in FastAPI applications
+    - Resolves potential configuration errors when setting up ReDoc documentation
+
+### Security
+
+#### OpenAPI Schema Exposure
+
+- **OpenAPI Endpoint Disabled by Default** - Enhanced security by disabling OpenAPI schema endpoint by default
+    - Changed `OPENAPI_URL` default value from `/openapi.json` to `None` in `FastAPIConfig` class
+    - Prevents automatic exposure of API schema documentation in production environments
+    - Applications must explicitly enable OpenAPI schema by setting `OPENAPI_URL` configuration value
+    - Improves security posture by requiring opt-in for API documentation endpoints
+    - Aligns with security best practices for production deployments
+
+### Changed
+
+#### Dependency Updates
+
+- **Comprehensive Dependency Synchronization** - Updated multiple core dependencies to latest versions for improved
+  security, performance, and bug fixes
+    - Updated aiohttp from 3.13.1 to 3.13.2 for enhanced async HTTP client capabilities and bug fixes
+    - Updated alembic from 1.17.0 to 1.17.1 for improved database migration tool capabilities
+    - Updated elasticsearch from 9.1.1 to 9.2.0 for enhanced Elasticsearch connectivity and reliability
+    - Updated fastapi from 0.120.0 to 0.120.2 for improved API framework stability and bug fixes
+    - Updated python-dotenv from 1.1.1 to 1.2.1 for enhanced environment variable loading capabilities
+    - Updated redis from 7.0.0 to 7.0.1 for improved Redis client reliability and performance
+    - Updated rignore from 0.7.1 to 0.7.2 for enhanced ignore file handling
+    - Updated sentry-sdk from 2.42.1 to 2.43.0 for improved error tracking and monitoring capabilities
+    - Updated starlette from 0.48.0 to 0.49.1 for enhanced ASGI framework features and bug fixes
+    - Updated temporalio from 1.18.1 to 1.18.2 for improved workflow orchestration capabilities
+    - Updated virtualenv from 20.35.3 to 20.35.4 for enhanced virtual environment management
+
 ## [3.14.0] - 2025-10-26
 
 ### Added
