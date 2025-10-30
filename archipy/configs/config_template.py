@@ -174,7 +174,7 @@ class FastAPIConfig(BaseModel):
     WS_PER_MESSAGE_DEFLATE: bool = Field(default=True, description="Whether to enable WebSocket compression")
     WS_PING_INTERVAL: float = Field(default=20.0, description="WebSocket ping interval")
     WS_PING_TIMEOUT: float = Field(default=20.0, description="WebSocket ping timeout")
-    OPENAPI_URL: str | None = Field(default="/openapi.json", description="URL for OpenAPI schema")
+    OPENAPI_URL: str | None = Field(default=None, description="URL for OpenAPI schema")
     DOCS_URL: str | None = Field(default=None, description="URL for API documentation")
     RE_DOC_URL: str | None = Field(default=None, description="URL for ReDoc documentation")
     SWAGGER_UI_PARAMS: dict[str, str] | None = Field(
