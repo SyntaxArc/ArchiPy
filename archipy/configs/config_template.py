@@ -176,7 +176,7 @@ class FastAPIConfig(BaseModel):
     WS_PING_TIMEOUT: float = Field(default=20.0, description="WebSocket ping timeout")
     OPENAPI_URL: str | None = Field(default="/openapi.json", description="URL for OpenAPI schema")
     DOCS_URL: str | None = Field(default=None, description="URL for API documentation")
-    RE_DOCS_URL: str | None = Field(default=None, description="URL for ReDoc documentation")
+    RE_DOC_URL: str | None = Field(default=None, description="URL for ReDoc documentation")
     SWAGGER_UI_PARAMS: dict[str, str] | None = Field(
         default={"docExpansion": "none"},
         description="Swagger UI parameters",
