@@ -8,13 +8,14 @@ from behave import given, then, when
 from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.minio.adapters import MinioAdapter
+from archipy.configs.base_config import BaseConfig
 
 
 def get_minio_adapter(context):
     """Get or initialize the MinIO adapter."""
     scenario_context = get_current_scenario_context(context)
     if not hasattr(scenario_context, "adapter") or scenario_context.adapter is None:
-        test_config = scenario_context.get("test_config")
+        test_config = BaseConfig.global_config()
         context.logger.info(f"Initializing MinIO adapter with endpoint: {test_config.MINIO.ENDPOINT}")
         scenario_context.adapter = MinioAdapter(test_config.MINIO)
     return scenario_context.adapter

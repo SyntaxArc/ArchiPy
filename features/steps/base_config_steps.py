@@ -12,20 +12,19 @@ def step_given_custom_base_config(context):
     scenario_context = get_current_scenario_context(context)
     config = TestConfig()
     BaseConfig.set_global(config)
-    scenario_context.store("test_config", BaseConfig.global_config())
 
 
 @when("the global configuration is set")
 def step_when_set_global_config(context):
     scenario_context = get_current_scenario_context(context)
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
     BaseConfig.set_global(test_config)
 
 
 @then("retrieving global configuration should return the same instance")
 def step_then_check_global_config(context):
     scenario_context = get_current_scenario_context(context)
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
     assert BaseConfig.global_config() is test_config
 
 
@@ -78,14 +77,12 @@ def step_when_initialize_base_config(context):
     scenario_context = get_current_scenario_context(context)
     config = TestConfig()
     BaseConfig.set_global(config)
-    test_config = BaseConfig.global_config()
-    scenario_context.store("test_config", test_config)
 
 
 @then('the ENVIRONMENT should be "{expected_value}"')
 def step_then_check_environment_variable(context, expected_value):
     scenario_context = get_current_scenario_context(context)
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
     assert (
         test_config.ENVIRONMENT.name == expected_value
     ), f"Expected '{expected_value}', but got '{test_config.ENVIRONMENT.name}'"

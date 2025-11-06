@@ -1,5 +1,6 @@
 from behave import given, then, when
 
+from archipy.configs.base_config import BaseConfig
 from archipy.helpers.utils.password_utils import PasswordUtils
 from archipy.models.errors import InvalidPasswordError
 from features.test_helpers import get_current_scenario_context
@@ -15,7 +16,7 @@ def step_given_password(context, password):
 def step_given_password_hashed(context):
     scenario_context = get_current_scenario_context(context)
     password = scenario_context.get("password")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     hashed_password = PasswordUtils.hash_password(password, test_config.AUTH)
     scenario_context.store("hashed_password", hashed_password)
@@ -25,7 +26,7 @@ def step_given_password_hashed(context):
 def step_when_password_hashed(context):
     scenario_context = get_current_scenario_context(context)
     password = scenario_context.get("password")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     hashed_password = PasswordUtils.hash_password(password, test_config.AUTH)
     scenario_context.store("hashed_password", hashed_password)
@@ -45,7 +46,7 @@ def step_when_password_verified(context):
     scenario_context = get_current_scenario_context(context)
     password = scenario_context.get("password")
     hashed_password = scenario_context.get("hashed_password")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     is_verified = PasswordUtils.verify_password(
         password,
@@ -59,7 +60,7 @@ def step_when_password_verified(context):
 def step_when_wrong_password_verified(context, wrong_password):
     scenario_context = get_current_scenario_context(context)
     hashed_password = scenario_context.get("hashed_password")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     is_verified = PasswordUtils.verify_password(
         wrong_password,
@@ -73,7 +74,7 @@ def step_when_wrong_password_verified(context, wrong_password):
 def step_when_password_validated(context):
     scenario_context = get_current_scenario_context(context)
     password = scenario_context.get("password")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     try:
         PasswordUtils.validate_password(password, test_config.AUTH)
@@ -104,7 +105,7 @@ def step_then_validation_fails_with_message(context):
 @when("a secure password is generated")
 def step_when_secure_password_generated(context):
     scenario_context = get_current_scenario_context(context)
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     generated_password = PasswordUtils.generate_password(test_config.AUTH)
     scenario_context.store("generated_password", generated_password)
@@ -114,7 +115,7 @@ def step_when_secure_password_generated(context):
 def step_then_secure_password_meets_requirements(context):
     scenario_context = get_current_scenario_context(context)
     generated_password = scenario_context.get("generated_password")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     assert len(generated_password) >= test_config.AUTH.MIN_LENGTH
     assert any(char.isdigit() for char in generated_password)
@@ -126,7 +127,7 @@ def step_then_secure_password_meets_requirements(context):
 @given('a password history containing "{old_password}"')
 def step_given_password_history(context, old_password):
     scenario_context = get_current_scenario_context(context)
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     password_history = [PasswordUtils.hash_password(old_password, test_config.AUTH)]
     scenario_context.store("password_history", password_history)
@@ -136,7 +137,7 @@ def step_given_password_history(context, old_password):
 def step_when_reuse_old_password(context, new_password):
     scenario_context = get_current_scenario_context(context)
     password_history = scenario_context.get("password_history")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     try:
         PasswordUtils.validate_password_history(new_password, password_history, test_config.AUTH)

@@ -4,6 +4,7 @@ from unittest.mock import patch
 from behave import given, then, when
 from behave.runner import Context
 
+from archipy.configs.base_config import BaseConfig
 from archipy.helpers.utils.datetime_utils import DatetimeUtils
 from features.test_helpers import get_current_scenario_context
 
@@ -276,7 +277,7 @@ def step_then_cached_with_historical_ttl(context: Context) -> None:
 
     scenario_context = get_current_scenario_context(context)
     cache_entry = scenario_context.get("cache_entry")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     assert cache_entry is not None, "Cache entry should exist"
     assert test_config is not None, "Test config should be available"
@@ -298,7 +299,7 @@ def step_then_cached_with_standard_ttl(context: Context) -> None:
 
     scenario_context = get_current_scenario_context(context)
     cache_entry = scenario_context.get("cache_entry")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     assert cache_entry is not None, "Cache entry should exist"
     assert test_config is not None, "Test config should be available"

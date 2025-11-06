@@ -6,6 +6,7 @@ from features.scenario_context import ScenarioContext
 from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
+from archipy.configs.base_config import BaseConfig
 
 
 def get_keycloak_adapter(context: Context) -> AsyncKeycloakAdapter | KeycloakAdapter:
@@ -15,11 +16,11 @@ def get_keycloak_adapter(context: Context) -> AsyncKeycloakAdapter | KeycloakAda
 
     if is_async:
         if not hasattr(scenario_context, "async_adapter") or scenario_context.async_adapter is None:
-            test_config = scenario_context.get("test_config")
+            test_config = BaseConfig.global_config()
             scenario_context.async_adapter = AsyncKeycloakAdapter(test_config.KEYCLOAK)
         return scenario_context.async_adapter
     if not hasattr(scenario_context, "adapter") or scenario_context.adapter is None:
-        test_config = scenario_context.get("test_config")
+        test_config = BaseConfig.global_config()
         scenario_context.adapter = KeycloakAdapter(test_config.KEYCLOAK)
     return scenario_context.adapter
 

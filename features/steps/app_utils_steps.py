@@ -4,6 +4,7 @@ from fastapi.routing import APIRoute
 from pydantic import BaseModel, ValidationError
 from starlette.testclient import TestClient
 
+from archipy.configs.base_config import BaseConfig
 from archipy.helpers.utils.app_utils import AppUtils, FastAPIExceptionHandler, FastAPIUtils
 from archipy.models.errors import BaseError
 from features.test_helpers import get_current_scenario_context
@@ -12,7 +13,7 @@ from features.test_helpers import get_current_scenario_context
 @given("a FastAPI app")
 def step_given_fastapi_app(context):
     scenario_context = get_current_scenario_context(context)
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
     app = AppUtils.create_fastapi_app(test_config)
     scenario_context.store("app", app)
 
@@ -20,7 +21,7 @@ def step_given_fastapi_app(context):
 @when("a FastAPI app is created")
 def step_when_fastapi_app_created(context):
     scenario_context = get_current_scenario_context(context)
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
     app = AppUtils.create_fastapi_app(test_config)
     scenario_context.store("app", app)
 
@@ -65,7 +66,7 @@ def step_then_check_unique_id(context, expected_id):
 @given("a FastAPI app with CORS configuration")
 def step_given_fastapi_app_with_cors(context):
     scenario_context = get_current_scenario_context(context)
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
     app = FastAPI()
     FastAPIUtils.setup_cors(app, test_config)
     scenario_context.store("app", app)
@@ -83,7 +84,7 @@ def step_when_cors_is_setup(context):
 def step_then_check_cors_origin(context, expected_origin):
     scenario_context = get_current_scenario_context(context)
     middleware_stack = scenario_context.get("middleware_stack")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
     assert "CORSMiddleware" in middleware_stack
     assert expected_origin in test_config.FASTAPI.CORS_MIDDLEWARE_ALLOW_ORIGINS
 

@@ -11,6 +11,7 @@ from behave.runner import Context
 
 from features.test_helpers import get_current_scenario_context
 from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter, AsyncElasticsearchAdapter
+from archipy.configs.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +23,11 @@ def get_es_adapter(context):
 
     if is_async:
         if not hasattr(scenario_context, "async_adapter") or scenario_context.async_adapter is None:
-            test_config = scenario_context.get("test_config")
+            test_config = BaseConfig.global_config()
             scenario_context.async_adapter = AsyncElasticsearchAdapter(test_config.ELASTIC)
         return scenario_context.async_adapter
     if not hasattr(scenario_context, "adapter") or scenario_context.adapter is None:
-        test_config = scenario_context.get("test_config")
+        test_config = BaseConfig.global_config()
         scenario_context.adapter = ElasticsearchAdapter(test_config.ELASTIC)
     return scenario_context.adapter
 

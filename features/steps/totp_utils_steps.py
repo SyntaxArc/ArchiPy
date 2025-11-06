@@ -1,5 +1,6 @@
 from behave import given, then, when
 
+from archipy.configs.base_config import BaseConfig
 from archipy.helpers.utils.totp_utils import TOTPUtils
 from features.test_helpers import get_current_scenario_context
 
@@ -14,7 +15,7 @@ def step_given_valid_secret(context, secret):
 def step_given_totp_generated(context):
     scenario_context = get_current_scenario_context(context)
     secret = scenario_context.get("secret")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     totp_code, expires = TOTPUtils.generate_totp(secret, test_config.AUTH)
 
@@ -32,7 +33,7 @@ def step_given_invalid_totp_code(context, totp_code):
 def step_when_totp_generated(context):
     scenario_context = get_current_scenario_context(context)
     secret = scenario_context.get("secret")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     totp_code, expires = TOTPUtils.generate_totp(secret, test_config.AUTH)
 
@@ -45,7 +46,7 @@ def step_when_totp_verified(context):
     scenario_context = get_current_scenario_context(context)
     secret = scenario_context.get("secret")
     totp_code = scenario_context.get("totp_code")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     is_verified = TOTPUtils.verify_totp(secret, totp_code, test_config.AUTH)
 
@@ -57,7 +58,7 @@ def step_when_invalid_totp_verified(context):
     scenario_context = get_current_scenario_context(context)
     secret = scenario_context.get("secret")
     invalid_totp_code = scenario_context.get("invalid_totp_code")
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     is_verified = TOTPUtils.verify_totp(secret, invalid_totp_code, test_config.AUTH)
 
@@ -67,7 +68,7 @@ def step_when_invalid_totp_verified(context):
 @when("a secret key is generated")
 def step_when_secret_key_generated(context):
     scenario_context = get_current_scenario_context(context)
-    test_config = scenario_context.get("test_config")
+    test_config = BaseConfig.global_config()
 
     secret_key = TOTPUtils.generate_secret_key_for_totp(test_config.AUTH)
 

@@ -33,14 +33,14 @@ class TestConfig(BaseConfig):
     KAFKA__IMAGE: str
     MINIO__IMAGE: str
     KEYCLOAK__IMAGE: str
+    TESTCONTAINERS_RYUK_CONTAINER_IMAGE: str | None = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         # Configure testcontainers to use custom ryuk image
-        ryuk_image = os.getenv("TESTCONTAINERS_RYUK_CONTAINER_IMAGE")
-        if ryuk_image:
-            testcontainers_config.ryuk_image = ryuk_image
+        if self.TESTCONTAINERS_RYUK_CONTAINER_IMAGE:
+            testcontainers_config.ryuk_image = self.TESTCONTAINERS_RYUK_CONTAINER_IMAGE
 
 
 
@@ -83,12 +83,11 @@ def before_scenario(context: Context, scenario: Scenario):
 
     logger.info(f"Starting scenario: {scenario.name} (ID: {scenario.id})")
 
-    # Assign test config to scenario context
+    # Assign test containers to scenario context
     try:
-        scenario_context.store("test_config", config)
         scenario_context.store("test_containers", context.test_containers)
     except Exception as e:
-        logger.exception(f"Error setting test config: {e}")
+        logger.exception(f"Error setting test containers: {e}")
 
 
 

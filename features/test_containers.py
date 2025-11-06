@@ -22,6 +22,7 @@ class ContainerManager:
     """Registry for managing all test containers."""
 
     _containers = {}
+    _container_instances = {}
     _started = False
 
     @classmethod
@@ -39,9 +40,15 @@ class ContainerManager:
         if name not in cls._containers:
             raise KeyError(f"Container '{name}' not found. Available: {list(cls._containers.keys())}")
 
-        container_class = cls._containers[name]
+        # Return stored instance if available (Singleton pattern ensures same instance)
+        if name in cls._container_instances:
+            return cls._container_instances[name]
 
-        return container_class(**kwargs)
+        # Create new instance if not stored yet
+        container_class = cls._containers[name]
+        instance = container_class(**kwargs)
+        cls._container_instances[name] = instance
+        return instance
 
     @classmethod
     def start_all(cls):
@@ -52,6 +59,7 @@ class ContainerManager:
         for name, container_class in cls._containers.items():
             logger.info(f"Starting {name} container...")
             container = container_class()
+            cls._container_instances[name] = container
             container.start()
 
         cls._started = True
@@ -63,11 +71,11 @@ class ContainerManager:
         if not cls._started:
             return
 
-        for name, container_class in cls._containers.items():
+        for name, instance in cls._container_instances.items():
             logger.info(f"Stopping {name} container...")
-            container = container_class()
-            container.stop()
+            instance.stop()
 
+        cls._container_instances.clear()
         cls._started = False
         logger.info("All test containers stopped")
 
@@ -76,6 +84,7 @@ class ContainerManager:
         """Reset the registry state."""
         cls.stop_all()
         cls._containers.clear()
+        cls._container_instances.clear()
         cls._started = False
 
     @classmethod
@@ -94,7 +103,7 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
 
         # Container properties
         self.host: str | None = None
-        self.port: int = self.config.PORT
+        self.port: int | None = None
         self.database: int = self.config.DATABASE
         self.password: str | None = self.config.PASSWORD
 
@@ -102,8 +111,6 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
         self._container = RedisContainer(self.image)
         if self.config.PASSWORD:
             self._container.with_env("REDIS_PASSWORD", self.config.PASSWORD)
-
-        self._container.with_bind_ports(self.config.PORT, 6379)
 
     def start(self) -> RedisContainer:
         """Start the Redis container."""
@@ -113,7 +120,14 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
         self._container.start()
         self._is_running = True
 
+        # Get dynamic host and port
         self.host = self._container.get_container_host_ip()
+        self.port = int(self._container.get_exposed_port(6379))
+
+        # Update global config with actual container endpoint
+        global_config = BaseConfig.global_config()
+        global_config.REDIS.MASTER_HOST = f"{self.host}:{self.port}"
+        global_config.REDIS.PORT = self.port
 
         logger.info("Redis container started on %s:%s", self.host, self.port)
 
@@ -148,7 +162,7 @@ class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
 
         # Container properties
         self.host: str | None = None
-        self.port: int | None = self.config.PORT
+        self.port: int | None = None
         self.database: str | None = self.config.DATABASE
         self.username: str | None = self.config.USERNAME
         self.password: str | None = self.config.PASSWORD
@@ -165,7 +179,6 @@ class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
             username=username,
             password=password,
         )
-        self._container.with_bind_ports(self.port, 5432)
 
     def start(self) -> PostgresContainer:
         """Start the PostgreSQL container."""
@@ -175,8 +188,14 @@ class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
         self._container.start()
         self._is_running = True
 
-        # Set container properties
+        # Get dynamic host and port
         self.host = self._container.get_container_host_ip()
+        self.port = int(self._container.get_exposed_port(5432))
+
+        # Update global config with actual container endpoint
+        global_config = BaseConfig.global_config()
+        global_config.POSTGRES_SQLALCHEMY.HOST = self.host
+        global_config.POSTGRES_SQLALCHEMY.PORT = self.port
 
         logger.info("PostgreSQL container started on %s:%s", self.host, self.port)
 
@@ -209,14 +228,11 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
         self._is_running: bool = False
 
         # Container properties
+        self.host: str | None = None
         self.port: int | None = None
         self.admin_username: str | None = self.config.ADMIN_USERNAME
         self.admin_password: str | None = self.config.ADMIN_PASSWORD
         self.realm: str = self.config.REALM_NAME
-
-        # Parse Port From Server URL
-        parsed_url = urlparse(self.config.SERVER_URL)
-        self.port = parsed_url.port or 8080
 
         # Use config values or fallback to defaults for test containers
         username = self.admin_username or "admin"
@@ -228,7 +244,6 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
             username=username,
             password=password,
         )
-        self._container.with_bind_ports(self.port, 8080)
 
     def start(self) -> KeycloakContainer:
         """Start the Keycloak container."""
@@ -238,8 +253,13 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
         self._container.start()
         self._is_running = True
 
-        # Set container properties
+        # Get dynamic host and port
         self.host = self._container.get_container_host_ip()
+        self.port = int(self._container.get_exposed_port(8080))
+
+        # Update global config with actual container endpoint
+        global_config = BaseConfig.global_config()
+        global_config.KEYCLOAK.SERVER_URL = f"http://{self.host}:{self.port}"
 
         logger.info("Keycloak container started on %s:%s", self.host, self.port)
 
@@ -272,14 +292,11 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         self._is_running: bool = False
 
         # Container properties
+        self.host: str | None = None
         self.port: int | None = None
         self.username: str | None = self.config.HTTP_USER_NAME
         self.password: str | None = self.config.HTTP_PASSWORD.get_secret_value() if self.config.HTTP_PASSWORD else None
         self.cluster_name: str = "test-cluster"
-
-        # Parse Port From Server URL
-        parsed_url = urlparse(self.config.HOSTS[0])
-        self.port = parsed_url.port or 9200
 
         # Set up the container
         self._container = DockerContainer(self.image)
@@ -288,7 +305,7 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         if self.password:
             self._container.with_env("ELASTIC_PASSWORD", self.password)
         self._container.with_env("cluster.name", self.cluster_name)
-        self._container.with_bind_ports(self.port, 9200)
+        self._container.with_exposed_ports(9200)
 
     def start(self) -> DockerContainer:
         """Start the Elasticsearch container."""
@@ -302,7 +319,16 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         wait_for_logs(self._container, "started", timeout=60)
 
         self._is_running = True
+
+        # Get dynamic host and port
         self.host = self._container.get_container_host_ip()
+        self.port = int(self._container.get_exposed_port(9200))
+
+        # Update global config with actual container endpoint
+        global_config = BaseConfig.global_config()
+        global_config.ELASTIC.HOSTS = [f"http://{self.host}:{self.port}"]
+
+        logger.info("Elasticsearch container started on %s:%s", self.host, self.port)
 
         return self._container
 
@@ -337,13 +363,8 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
         self.port: int | None = None
         self.bootstrap_servers: str | None = None
 
-        # Parse Port From Server URL
-        _, port = self.config.BROKERS_LIST[0].split(":")
-        self.port = int(port) if port else 9092
-
         # Set up the container
         self._container = KafkaContainer(image=self.image)
-        self._container.with_bind_ports(self.port, 9092)
 
     def start(self) -> KafkaContainer:
         """Start the Kafka container."""
@@ -353,10 +374,16 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
         self._container.start()
         self._is_running = True
 
-        # Set container properties from running container
+        # Get dynamic host, port, and bootstrap servers from running container
         self.host = self._container.get_container_host_ip()
         self.bootstrap_servers = self._container.get_bootstrap_server()
-        self.config.BROKERS_LIST = [self.bootstrap_servers]
+        # Extract port from bootstrap_servers (format: "host:port")
+        _, port_str = self.bootstrap_servers.split(":")
+        self.port = int(port_str)
+
+        # Update global config with actual container endpoint
+        global_config = BaseConfig.global_config()
+        global_config.KAFKA.BROKERS_LIST = [self.bootstrap_servers]
 
         logger.info("Kafka container started on %s:%s", self.host, self.port)
         logger.info("Bootstrap servers: %s", self.bootstrap_servers)
@@ -397,17 +424,12 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
         self.access_key = self.config.ACCESS_KEY or "minioadmin"
         self.secret_key = self.config.SECRET_KEY or "minioadmin"
 
-        # Parse Port From Server URL
-        host, port = self.config.ENDPOINT.split(":")
-        self.port = int(port) if port else 9000
-
         # Set up the container
         self._container = MinioContainer(
             image=self.image,
             access_key=self.access_key,
             secret_key=self.secret_key,
         )
-        self._container.with_bind_ports(self.port, 9000)
 
     def start(self) -> MinioContainer:
         """Start the MinIO container."""
@@ -418,8 +440,13 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
             self._container.start()
             self._is_running = True
 
-            # Update container properties
+            # Get dynamic host and port
             self.host = self._container.get_container_host_ip()
+            self.port = int(self._container.get_exposed_port(9000))
+
+            # Update global config with actual container endpoint
+            global_config = BaseConfig.global_config()
+            global_config.MINIO.ENDPOINT = f"{self.host}:{self.port}"
 
             logger.info("MinIO container started on %s:%s", self.host, self.port)
             return self._container
