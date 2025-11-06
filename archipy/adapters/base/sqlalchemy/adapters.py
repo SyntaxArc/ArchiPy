@@ -97,7 +97,7 @@ class SQLAlchemyFilterMixin:
         Returns:
             The updated query with the filter applied.
         """
-        if value is not None or operation in [FilterOperationType.IS_NULL, FilterOperationType.IS_NOT_NULL]:
+        if (value is not None and bool(value)) or operation in [FilterOperationType.IS_NULL, FilterOperationType.IS_NOT_NULL]:
             match operation:
                 case FilterOperationType.EQUAL:
                     return query.where(field == value)
