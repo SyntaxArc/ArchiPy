@@ -1,4 +1,5 @@
 # features/elasticsearch.feature
+@needs-elasticsearch
 Feature: Elasticsearch Operations Testing
   As a developer
   I want to test Elasticsearch operations using the adapter pattern

@@ -1,4 +1,5 @@
 # features/minio_operations.feature
+@needs-minio
 Feature: MinIO Operations Testing
   As a developer
   I want to test MinIO storage operations

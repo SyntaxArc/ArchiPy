@@ -9,7 +9,7 @@ import os
 import logging
 import uuid
 
-from behave.model import Scenario
+from behave.model import Scenario, Feature
 from behave.runner import Context
 from features.scenario_context_pool_manager import ScenarioContextPoolManager
 from pydantic_settings import SettingsConfigDict
@@ -63,9 +63,45 @@ def before_all(context: Context):
     # Create the scenario context pool manager
     context.scenario_context_pool = ScenarioContextPoolManager()
 
-    # Initialize and start all test containers
+    # Initialize container manager
     context.test_containers = ContainerManager
-    context.test_containers.start_all()
+
+    # Collect feature-level tags from all features being executed
+    all_tags: set[str] = set()
+    if hasattr(context, "features") and context.features:
+        for feature in context.features:
+            # Get feature-level tags - convert Tag objects to strings
+            if hasattr(feature, "tags") and feature.tags:
+                feature_tags = [str(tag) for tag in feature.tags]
+                all_tags.update(feature_tags)
+                context.logger.debug(f"Feature '{feature.name}' has tags: {feature_tags}")
+
+    # Extract required containers from tags
+    required_containers = ContainerManager.extract_containers_from_tags(list(all_tags))
+
+    if required_containers:
+        context.logger.info(f"Detected required containers from tags: {sorted(required_containers)}")
+        ContainerManager.start_containers(list(required_containers))
+    else:
+        context.logger.info("No container tags detected, no containers will be started")
+
+
+def before_feature(context: Context, feature: Feature):
+    """Setup performed before each feature runs.
+
+    This is a fallback to ensure containers are started if they weren't started in before_all().
+    """
+    # Extract feature-level tags - convert Tag objects to strings
+    if hasattr(feature, "tags") and feature.tags:
+        feature_tags = [str(tag) for tag in feature.tags]
+
+        if feature_tags:
+            # Extract required containers from tags
+            required_containers = ContainerManager.extract_containers_from_tags(feature_tags)
+
+            if required_containers:
+                # Start containers if not already started (start_containers handles this)
+                ContainerManager.start_containers(list(required_containers))
 
 
 def before_scenario(context: Context, scenario: Scenario):

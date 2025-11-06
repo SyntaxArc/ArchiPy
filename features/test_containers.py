@@ -17,6 +17,16 @@ from archipy.configs.config_template import RedisConfig, MinioConfig, KafkaConfi
 
 logger = logging.getLogger(__name__)
 
+# Mapping of feature tags to container names
+TAG_CONTAINER_MAP: dict[str, str] = {
+    "needs-postgres": "postgres",
+    "needs-kafka": "kafka",
+    "needs-elasticsearch": "elasticsearch",
+    "needs-minio": "minio",
+    "needs-keycloak": "keycloak",
+    "needs-redis": "redis",
+}
+
 
 class ContainerManager:
     """Registry for managing all test containers."""
@@ -24,6 +34,7 @@ class ContainerManager:
     _containers = {}
     _container_instances = {}
     _started = False
+    _started_containers: set[str] = set()
 
     @classmethod
     def register(cls, name: str):
@@ -36,18 +47,29 @@ class ContainerManager:
 
     @classmethod
     def get_container(cls, name: str, **kwargs):
-        """Get a container instance by name."""
+        """Get a container instance by name.
+
+        If the container is not started, it will be started lazily.
+        """
         if name not in cls._containers:
             raise KeyError(f"Container '{name}' not found. Available: {list(cls._containers.keys())}")
 
         # Return stored instance if available (Singleton pattern ensures same instance)
         if name in cls._container_instances:
-            return cls._container_instances[name]
+            instance = cls._container_instances[name]
+            # Start container if not already running (lazy startup)
+            if name not in cls._started_containers:
+                instance.start()
+                cls._started_containers.add(name)
+            return instance
 
         # Create new instance if not stored yet
         container_class = cls._containers[name]
         instance = container_class(**kwargs)
         cls._container_instances[name] = instance
+        # Start container lazily
+        instance.start()
+        cls._started_containers.add(name)
         return instance
 
     @classmethod
@@ -61,21 +83,72 @@ class ContainerManager:
             container = container_class()
             cls._container_instances[name] = container
             container.start()
+            cls._started_containers.add(name)
 
         cls._started = True
         logger.info("All test containers started")
 
     @classmethod
+    def start_containers(cls, container_names: list[str]):
+        """Start specific containers by name.
+
+        Args:
+            container_names: List of container names to start
+        """
+        for name in container_names:
+            if name not in cls._containers:
+                logger.warning(f"Container '{name}' not found. Available: {list(cls._containers.keys())}")
+                continue
+
+            if name in cls._started_containers:
+                logger.debug(f"Container '{name}' already started, skipping")
+                continue
+
+            logger.info(f"Starting {name} container...")
+            # get_container will start the container and add it to _started_containers
+            cls.get_container(name)
+
+        logger.info(f"Started containers: {sorted(cls._started_containers)}")
+
+    @classmethod
+    def extract_containers_from_tags(cls, tags: list[str]) -> set[str]:
+        """Extract container names from feature/scenario tags.
+
+        Args:
+            tags: List of tag strings (e.g., ["needs-postgres", "needs-kafka"])
+
+        Returns:
+            Set of container names that should be started
+        """
+        containers: set[str] = set()
+        for tag in tags:
+            # Remove @ prefix if present
+            tag_name = tag.lstrip("@")
+            if tag_name in TAG_CONTAINER_MAP:
+                container_name = TAG_CONTAINER_MAP[tag_name]
+                containers.add(container_name)
+                logger.debug(f"Tag '{tag}' maps to container '{container_name}'")
+            else:
+                # Only log warning for tags that look like container tags but aren't mapped
+                if tag_name.startswith("needs-"):
+                    logger.warning(f"Unknown container tag '{tag}'. Available tags: {list(TAG_CONTAINER_MAP.keys())}")
+
+        return containers
+
+    @classmethod
     def stop_all(cls):
-        """Stop all registered containers."""
-        if not cls._started:
+        """Stop all started containers."""
+        if not cls._started_containers:
             return
 
-        for name, instance in cls._container_instances.items():
-            logger.info(f"Stopping {name} container...")
-            instance.stop()
+        for name in list(cls._started_containers):
+            if name in cls._container_instances:
+                logger.info(f"Stopping {name} container...")
+                instance = cls._container_instances[name]
+                instance.stop()
 
         cls._container_instances.clear()
+        cls._started_containers.clear()
         cls._started = False
         logger.info("All test containers stopped")
 
@@ -85,6 +158,7 @@ class ContainerManager:
         cls.stop_all()
         cls._containers.clear()
         cls._container_instances.clear()
+        cls._started_containers.clear()
         cls._started = False
 
     @classmethod

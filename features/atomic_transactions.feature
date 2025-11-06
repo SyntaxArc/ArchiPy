@@ -1,3 +1,4 @@
+@needs-postgres
 Feature: SQLAlchemy Atomic Transactions
 
   Background:

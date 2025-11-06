@@ -1,4 +1,5 @@
 # features/keycloak_auth.feature
+@needs-keycloak
 Feature: Keycloak Authentication Testing
   As a developer
   I want to test Keycloak authentication operations

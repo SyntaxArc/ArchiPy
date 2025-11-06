@@ -1,4 +1,5 @@
 # features/kafka_operations.feature
+@needs-kafka
 Feature: Kafka Adapter Operations Testing
   As a developer
   I want to test Kafka adapter operations
