@@ -2,6 +2,66 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v3.14.2] - 2025-11-06
+
+### Added
+
+#### Testing Infrastructure
+
+- **Tag-Based Selective Container Startup** - Implemented intelligent container startup based on feature tags for behave
+  tests
+    - Added `TAG_CONTAINER_MAP` mapping feature tags to container names (e.g., `@needs-postgres`, `@needs-kafka`,
+      `@needs-elasticsearch`)
+    - Implemented `extract_containers_from_tags()` method in `ContainerManager` to automatically detect required
+      containers from feature/scenario tags
+    - Enhanced `before_all()` and `before_feature()` hooks in `environment.py` to start only required containers based
+      on tags
+    - Added container tags to feature files (`atomic_transactions.feature`, `elastic_adapter.feature`,
+      `kafka_adapters.feature`, `keycloak_adapter.feature`, `minio_adapter.feature`)
+    - Optimizes test execution by starting only necessary containers, reducing resource usage and test startup time
+    - Improves test isolation and parallel test execution capabilities
+
+### Changed
+
+#### Testing Infrastructure
+
+- **Dynamic Port Allocation for Testcontainers** - Refactored test container initialization to use dynamic ports instead
+  of fixed ports
+    - Updated all test container classes (`RedisTestContainer`, `PostgresTestContainer`, `KeycloakTestContainer`,
+      `ElasticsearchTestContainer`, `KafkaTestContainer`, `MinioTestContainer`) to use dynamic port allocation
+    - Containers now automatically assign available ports using `get_exposed_port()` method from testcontainers
+    - Enhanced container startup to update global configuration with actual dynamic host and port values
+    - Eliminates port conflicts when running multiple test suites in parallel or on shared CI/CD infrastructure
+    - Improved test reliability and compatibility across different environments
+
+- **Simplified Configuration Access** - Streamlined configuration access patterns in test step definitions
+    - Refactored step definitions to use `BaseConfig.global_config()` directly instead of complex configuration access
+      patterns
+    - Updated step definitions across multiple modules (`app_utils_steps.py`, `base_config_steps.py`,
+      `datetime_utils_steps.py`, `elastic_adapter_steps.py`, `jwt_utils_steps.py`, `keycloak_adapter_steps.py`,
+      `minio_adapter_steps.py`, `password_utils_steps.py`, `totp_utils_steps.py`)
+    - Simplified `.env.test` configuration file structure
+    - Enhanced code maintainability and reduced configuration complexity in test infrastructure
+    - Improved developer experience with clearer configuration access patterns
+
+#### Dependency Updates
+
+- **Comprehensive Dependency Synchronization** - Updated multiple core dependencies to latest versions for improved
+  security, performance, and bug fixes
+    - Updated pydantic from 2.12.3 to 2.12.4 for enhanced data validation and performance improvements
+    - Updated fakeredis from 2.32.0 to 2.32.1 for improved Redis mocking capabilities and bug fixes
+    - Updated grpcio from 1.75.1 to 1.76.0 for enhanced gRPC framework capabilities and performance improvements
+    - Updated grpcio-health-checking from 1.75.1 to 1.76.0 for improved health checking functionality
+    - Updated confluent-kafka from 2.12.0 to 2.12.1 for enhanced Kafka messaging capabilities and bug fixes
+    - Updated apscheduler from 3.11.0 to 3.11.1 for improved task scheduling capabilities and bug fixes
+    - Updated aiomysql from 0.2.0 to 0.3.2 for enhanced async MySQL connectivity and performance improvements
+    - Updated add-trailing-comma from 3.2.0 to 4.0.0 for improved code formatting capabilities
+    - Updated ruff from 0.14.0 to 0.14.3 for enhanced linting capabilities and bug fixes
+    - Updated types-cachetools from 6.2.0.20250827 to 6.2.0.20251022 for improved type stubs
+    - Updated types-protobuf from 6.32.1.20250918 to 6.32.1.20251105 for enhanced Protocol Buffers type support
+    - Updated types-regex from 2025.9.18.20250921 to 2025.11.3.20251106 for improved regex type hints
+    - Updated mkdocs-material from 9.6.21 to 9.6.23 for enhanced documentation rendering and Material theme features
+
 ## [v3.14.1] - 2025-10-30
 
 ### Fixed
