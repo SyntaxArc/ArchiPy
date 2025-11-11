@@ -589,7 +589,6 @@ class RedisConfig(BaseModel):
 
     # Connection pooling
     MAX_CONNECTIONS: int = Field(default=50, description="Maximum connections per node")
-    RETRY_ON_TIMEOUT: bool = Field(default=True, description="Retry operations on timeout")
     SOCKET_CONNECT_TIMEOUT: float = Field(default=5.0, description="Socket connection timeout")
     SOCKET_TIMEOUT: float = Field(default=5.0, description="Socket operation timeout")
 
