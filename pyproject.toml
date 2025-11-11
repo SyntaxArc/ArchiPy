@@ -10,7 +10,7 @@ version = "0.1.0" # This vesrion set on publish flow!
 requires-python = ">=3.13,<4"
 dependencies = [
     "pydantic>=2.12.4",
-    "pydantic-settings>=2.11.0",
+    "pydantic-settings>=2.12.0",
     "requests>=2.32.5",
     "jdatetime>=5.2.0",
 ]
@@ -26,15 +26,15 @@ elastic-apm = ["elastic-apm>=6.24.0"]
 elasticsearch = ["elasticsearch>=9.2.0"]
 elasticsearch-async = ["elasticsearch[async]>=9.2.0"]
 fakeredis = ["fakeredis>=2.32.1"]
-fastapi = ["fastapi[all]>=0.120.2"]
+fastapi = ["fastapi[all]>=0.121.1"]
 grpc = ["grpcio>=1.76.0", "grpcio-health-checking>=1.76.0", "protobuf>=6.33.0"]
 jwt = ["pyjwt>=2.10.1"]
-kafka = ["confluent-kafka>=2.12.1"]
+kafka = ["confluent-kafka>=2.12.2"]
 kavenegar = ["kavenegar>=1.1.2"]
 keycloak = ["python-keycloak>=5.8.1", "cachetools>=6.2.1", "async-lru>=2.0.5"]
 minio = ["minio>=7.2.18", "cachetools>=6.2.1", "async-lru>=2.0.5"]
 parsian-ipg = ["zeep>=4.3.2", "requests[socks]>=2.32.5"]
-postgres = ["psycopg[binary,pool]>=3.2.11"]
+postgres = ["psycopg[binary,pool]>=3.2.12"]
 prometheus = ["prometheus-client>=0.23.1"]
 redis = ["redis[hiredis]>=7.0.1"]
 scheduler = ["apscheduler>=3.11.1"]
@@ -65,12 +65,12 @@ build-backend = "hatchling.build"
 dev = [
     "add-trailing-comma>=4.0.0",
     "bandit>=1.8.6",
-    "black>=25.9.0",
+    "black>=25.11.0",
     "codespell>=2.4.1",
     "mypy>=1.18.2",
     "pre-commit-hooks>=6.0.0",
-    "pre-commit>=4.3.0",
-    "ruff>=0.14.3",
+    "pre-commit>=4.4.0",
+    "ruff>=0.14.4",
     "types-cachetools>=6.2.0.20251022",
     "types-grpcio>=1.0.0.20251009",
     "types-protobuf>=6.32.1.20251105",

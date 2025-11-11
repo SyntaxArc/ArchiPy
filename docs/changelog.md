@@ -2,6 +2,33 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v3.14.3] - 2025-11-11
+
+### Fixed
+
+#### Redis Configuration
+
+- **Removed Invalid Retry on Timeout Configuration** - Fixed Redis adapter configuration by removing unsupported parameter
+    - Removed `RETRY_ON_TIMEOUT` field from `RedisConfig` class as it does not exist in Redis cluster configuration
+    - Removed `retry_on_timeout` parameter from both synchronous and asynchronous Redis adapter initialization
+    - Resolves configuration errors when using Redis cluster mode with invalid parameters
+    - Ensures compatibility with redis-py library's actual parameter set
+    - Prevents potential runtime errors from passing unsupported configuration options
+
+### Changed
+
+#### Dependency Updates
+
+- **Comprehensive Dependency Synchronization** - Updated multiple core dependencies to latest versions for improved
+  security, performance, and bug fixes
+    - Updated fastapi from 0.120.2 to 0.121.1 for enhanced API framework capabilities and bug fixes
+    - Updated confluent-kafka from 2.12.1 to 2.12.2 for improved Kafka messaging reliability and performance
+    - Updated psycopg from 3.2.11 to 3.2.12 for enhanced PostgreSQL driver stability and bug fixes
+    - Updated pydantic-settings from 2.11.0 to 2.12.0 for improved settings management and validation
+    - Updated black from 25.9.0 to 25.11.0 for enhanced code formatting capabilities
+    - Updated pre-commit from 4.3.0 to 4.4.0 for improved git hook management
+    - Updated ruff from 0.14.3 to 0.14.4 for enhanced linting capabilities and bug fixes
+
 ## [v3.14.2] - 2025-11-06
 
 ### Added
