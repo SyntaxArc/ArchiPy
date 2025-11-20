@@ -2,6 +2,35 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v3.14.4] - 2025-11-20
+
+### Changed
+
+#### Dependency Updates
+
+- **Comprehensive Dependency Synchronization** - Updated multiple core dependencies to latest versions for improved
+  security, performance, and bug fixes
+    - Updated fastapi from 0.121.1 to 0.121.3 for enhanced API framework capabilities and bug fixes
+    - Updated cachetools from 6.2.1 to 6.2.2 for improved caching utilities and bug fixes
+    - Updated protobuf from 6.33.0 to 6.33.1 for enhanced protocol buffer support and bug fixes
+    - Updated redis from 7.0.1 to 7.1.0 for improved Redis client capabilities and performance
+    - Updated sentry-sdk from 2.43.0 to 2.45.0 for enhanced error tracking and monitoring
+    - Updated temporalio from 1.18.2 to 1.19.0 for improved workflow orchestration capabilities
+    - Updated testcontainers from 4.13.2 to 4.13.3 for enhanced testing infrastructure
+    - Updated bandit from 1.8.6 to 1.9.1 for improved security scanning capabilities
+    - Updated ruff from 0.14.4 to 0.14.5 for enhanced linting capabilities and bug fixes
+    - Updated mkdocs-material from 9.6.23 to 9.7.0 for improved documentation rendering
+    - Updated pymdown-extensions from 10.16.1 to 10.17.1 for enhanced markdown extensions
+
+#### Test Infrastructure
+
+- **Test Container Image Updates** - Updated test container images to latest versions for improved testing
+  reliability and compatibility
+    - Updated Redis test container image from 8.2.3-alpine to 8.4.0-alpine
+    - Updated PostgreSQL test container image from 18.0-alpine to 18.1-alpine
+    - Updated Keycloak test container image from 26.4.2 to 26.4.5
+    - Updated Elasticsearch test container image from 9.2.0 to 9.2.1
+
 ## [v3.14.3] - 2025-11-11
 
 ### Fixed
