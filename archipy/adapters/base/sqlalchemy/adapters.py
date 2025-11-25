@@ -83,7 +83,7 @@ class SQLAlchemyFilterMixin:
     def _apply_filter(
         query: Select | Update | Delete,
         field: InstrumentedAttribute,
-        value: str | int | float | bool | list | None,
+        value: str | int | float | bool | list | UUID | None,
         operation: FilterOperationType,
     ) -> Select | Update | Delete:
         """Apply a filter to a SQLAlchemy query based on the specified operation.
@@ -222,7 +222,9 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
         """
         configs = BaseConfig.global_config().SQLALCHEMY if orm_config is None else orm_config
         # Cast to ConfigT since subclasses will ensure the proper type
-        self.session_manager: BaseSQLAlchemySessionManager[ConfigT] = self._create_session_manager(configs)  # type: ignore[arg-type]
+        self.session_manager: BaseSQLAlchemySessionManager[ConfigT] = self._create_session_manager(
+            configs,
+        )  # type: ignore[arg-type]
 
     def _create_session_manager(self, configs: ConfigT) -> BaseSQLAlchemySessionManager[ConfigT]:
         """Create a session manager for the specific database.
@@ -533,7 +535,9 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
         """
         configs = BaseConfig.global_config().SQLALCHEMY if orm_config is None else orm_config
         # Cast to ConfigT since subclasses will ensure the proper type
-        self.session_manager: AsyncBaseSQLAlchemySessionManager[ConfigT] = self._create_async_session_manager(configs)  # type: ignore[arg-type]
+        self.session_manager: AsyncBaseSQLAlchemySessionManager[ConfigT] = self._create_async_session_manager(
+            configs,
+        )  # type: ignore[arg-type]
 
     def _create_async_session_manager(self, configs: ConfigT) -> AsyncBaseSQLAlchemySessionManager[ConfigT]:
         """Create an async session manager for the specific database.
