@@ -1,0 +1,457 @@
+"""Port interfaces for ScyllaDB adapter.
+
+This module defines the abstract interfaces for ScyllaDB operations, providing
+a standardized contract for implementations to follow. It includes both
+synchronous and asynchronous port definitions.
+"""
+
+from abc import ABC, abstractmethod
+from typing import Any
+
+
+class ScyllaDBPort(ABC):
+    """Interface for synchronous ScyllaDB operations.
+
+    This interface defines the contract for ScyllaDB adapters, ensuring consistent
+    implementation of database operations across different adapters. It covers
+    connection management, CQL execution, and CRUD operations.
+    """
+
+    @abstractmethod
+    def connect(self) -> Any:
+        """Establish connection to ScyllaDB cluster and return session.
+
+        Returns:
+            Any: The session object for executing queries.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def disconnect(self) -> None:
+        """Close connection to ScyllaDB cluster.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def execute(self, query: str, params: dict[str, Any] | None = None) -> Any:
+        """Execute a CQL query.
+
+        Args:
+            query (str): The CQL query to execute.
+            params (dict[str, Any] | None): Query parameters for parameterized queries.
+
+        Returns:
+            Any: The query result set.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def prepare(self, query: str) -> Any:
+        """Prepare a CQL statement for repeated execution.
+
+        Args:
+            query (str): The CQL query to prepare.
+
+        Returns:
+            Any: The prepared statement object.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def execute_prepared(self, statement: Any, params: dict[str, Any] | None = None) -> Any:
+        """Execute a prepared statement.
+
+        Args:
+            statement (Any): The prepared statement object.
+            params (dict[str, Any] | None): Parameters to bind to the statement.
+
+        Returns:
+            Any: The query result set.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_keyspace(self, keyspace: str, replication_factor: int = 1) -> None:
+        """Create a keyspace with simple replication strategy.
+
+        Args:
+            keyspace (str): The name of the keyspace to create.
+            replication_factor (int): The replication factor. Defaults to 1.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def drop_keyspace(self, keyspace: str) -> None:
+        """Drop a keyspace.
+
+        Args:
+            keyspace (str): The name of the keyspace to drop.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def use_keyspace(self, keyspace: str) -> None:
+        """Switch to a different keyspace context.
+
+        Args:
+            keyspace (str): The name of the keyspace to use.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_table(self, table_schema: str) -> None:
+        """Create a table using raw CQL DDL.
+
+        Args:
+            table_schema (str): The complete CREATE TABLE CQL statement.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def drop_table(self, table: str) -> None:
+        """Drop a table.
+
+        Args:
+            table (str): The name of the table to drop.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def insert(self, table: str, data: dict[str, Any]) -> None:
+        """Insert data into a table.
+
+        Args:
+            table (str): The name of the table.
+            data (dict[str, Any]): Key-value pairs representing column names and values.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def select(
+        self,
+        table: str,
+        columns: list[str] | None = None,
+        conditions: dict[str, Any] | None = None,
+    ) -> list[Any]:
+        """Select data from a table.
+
+        Args:
+            table (str): The name of the table.
+            columns (list[str] | None): List of columns to select. If None, selects all (*).
+            conditions (dict[str, Any] | None): WHERE clause conditions as key-value pairs.
+
+        Returns:
+            list[Any]: List of result rows.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def update(self, table: str, data: dict[str, Any], conditions: dict[str, Any]) -> None:
+        """Update data in a table.
+
+        Args:
+            table (str): The name of the table.
+            data (dict[str, Any]): Key-value pairs for SET clause.
+            conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete(self, table: str, conditions: dict[str, Any]) -> None:
+        """Delete data from a table.
+
+        Args:
+            table (str): The name of the table.
+            conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def batch_execute(self, statements: list[str]) -> None:
+        """Execute multiple CQL statements in a batch.
+
+        Args:
+            statements (list[str]): List of CQL statements to execute in batch.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_session(self) -> Any:
+        """Get the current session object.
+
+        Returns:
+            Any: The active session object.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+
+class AsyncScyllaDBPort(ABC):
+    """Interface for asynchronous ScyllaDB operations.
+
+    This interface defines the contract for async ScyllaDB adapters, ensuring consistent
+    implementation of database operations. All methods are async variants of the
+    synchronous port.
+    """
+
+    @abstractmethod
+    async def connect(self) -> Any:
+        """Establish connection to ScyllaDB cluster asynchronously.
+
+        Returns:
+            Any: The session object for executing queries.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def disconnect(self) -> None:
+        """Close connection to ScyllaDB cluster asynchronously.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def execute(self, query: str, params: dict[str, Any] | None = None) -> Any:
+        """Execute a CQL query asynchronously.
+
+        Args:
+            query (str): The CQL query to execute.
+            params (dict[str, Any] | None): Query parameters for parameterized queries.
+
+        Returns:
+            Any: The query result set.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def prepare(self, query: str) -> Any:
+        """Prepare a CQL statement asynchronously.
+
+        Args:
+            query (str): The CQL query to prepare.
+
+        Returns:
+            Any: The prepared statement object.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def execute_prepared(self, statement: Any, params: dict[str, Any] | None = None) -> Any:
+        """Execute a prepared statement asynchronously.
+
+        Args:
+            statement (Any): The prepared statement object.
+            params (dict[str, Any] | None): Parameters to bind to the statement.
+
+        Returns:
+            Any: The query result set.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def create_keyspace(self, keyspace: str, replication_factor: int = 1) -> None:
+        """Create a keyspace asynchronously.
+
+        Args:
+            keyspace (str): The name of the keyspace to create.
+            replication_factor (int): The replication factor. Defaults to 1.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def drop_keyspace(self, keyspace: str) -> None:
+        """Drop a keyspace asynchronously.
+
+        Args:
+            keyspace (str): The name of the keyspace to drop.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def use_keyspace(self, keyspace: str) -> None:
+        """Switch to a different keyspace context asynchronously.
+
+        Args:
+            keyspace (str): The name of the keyspace to use.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def create_table(self, table_schema: str) -> None:
+        """Create a table asynchronously.
+
+        Args:
+            table_schema (str): The complete CREATE TABLE CQL statement.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def drop_table(self, table: str) -> None:
+        """Drop a table asynchronously.
+
+        Args:
+            table (str): The name of the table to drop.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def insert(self, table: str, data: dict[str, Any]) -> None:
+        """Insert data into a table asynchronously.
+
+        Args:
+            table (str): The name of the table.
+            data (dict[str, Any]): Key-value pairs representing column names and values.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def select(
+        self,
+        table: str,
+        columns: list[str] | None = None,
+        conditions: dict[str, Any] | None = None,
+    ) -> list[Any]:
+        """Select data from a table asynchronously.
+
+        Args:
+            table (str): The name of the table.
+            columns (list[str] | None): List of columns to select. If None, selects all (*).
+            conditions (dict[str, Any] | None): WHERE clause conditions as key-value pairs.
+
+        Returns:
+            list[Any]: List of result rows.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update(self, table: str, data: dict[str, Any], conditions: dict[str, Any]) -> None:
+        """Update data in a table asynchronously.
+
+        Args:
+            table (str): The name of the table.
+            data (dict[str, Any]): Key-value pairs for SET clause.
+            conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete(self, table: str, conditions: dict[str, Any]) -> None:
+        """Delete data from a table asynchronously.
+
+        Args:
+            table (str): The name of the table.
+            conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def batch_execute(self, statements: list[str]) -> None:
+        """Execute multiple CQL statements in a batch asynchronously.
+
+        Args:
+            statements (list[str]): List of CQL statements to execute in batch.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_session(self) -> Any:
+        """Get the current session object asynchronously.
+
+        Returns:
+            Any: The active session object.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError

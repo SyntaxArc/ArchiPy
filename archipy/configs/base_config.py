@@ -1,4 +1,4 @@
-from typing import Self, TypeVar
+from typing import Self, TypeVar, cast
 
 from pydantic_settings import (
     BaseSettings,
@@ -25,6 +25,7 @@ from archipy.configs.config_template import (
     PostgresSQLAlchemyConfig,
     PrometheusConfig,
     RedisConfig,
+    ScyllaDBConfig,
     SentryConfig,
     SQLAlchemyConfig,
     SQLiteSQLAlchemyConfig,
@@ -43,7 +44,7 @@ Priority :
             4. os level environment variable
             5. class field value
 """
-R = TypeVar("R")  # Runtime Config
+R = TypeVar("R", bound="BaseConfig")  # Runtime Config
 
 
 class BaseConfig[R](BaseSettings):
@@ -79,6 +80,7 @@ class BaseConfig[R](BaseSettings):
         POSTGRES_SQLALCHEMY (PostgresSQLAlchemyConfig): PostgreSQL SQLAlchemy configuration
         PROMETHEUS (PrometheusConfig): Prometheus metrics configuration
         REDIS (RedisConfig): Redis cache configuration
+        SCYLLADB (ScyllaDBConfig): ScyllaDB/Cassandra database configuration
         SENTRY (SentryConfig): Sentry error tracking configuration
         SQLALCHEMY (SQLAlchemyConfig): Database ORM configuration
         SQLITE_SQLALCHEMY (SqliteSQLAlchemyConfig): SQLite SQLAlchemy configuration
@@ -169,6 +171,7 @@ class BaseConfig[R](BaseSettings):
     PARSIAN_SHAPARAK: ParsianShaparakConfig = ParsianShaparakConfig()
     PROMETHEUS: PrometheusConfig = PrometheusConfig()
     REDIS: RedisConfig = RedisConfig()
+    SCYLLADB: ScyllaDBConfig = ScyllaDBConfig()
     SENTRY: SentryConfig = SentryConfig()
     SQLALCHEMY: SQLAlchemyConfig = SQLAlchemyConfig()
     STARROCKS_SQLALCHEMY: StarRocksSQLAlchemyConfig = StarRocksSQLAlchemyConfig()
@@ -203,7 +206,7 @@ class BaseConfig[R](BaseSettings):
         config_not_set_error = "You should set global configs with BaseConfig.set_global(MyConfig())"
         if cls.__global_config is None:
             raise AssertionError(config_not_set_error)
-        return cls.__global_config  # type: ignore[no-any-return]
+        return cls.__global_config
 
     @classmethod
     def set_global(cls, config: R) -> None:
@@ -221,4 +224,4 @@ class BaseConfig[R](BaseSettings):
         """
         if hasattr(config, "customize") and callable(config.customize):
             config.customize()
-        cls.__global_config = config
+        cls.__global_config = cast(Self, config)

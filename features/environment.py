@@ -5,21 +5,19 @@ particularly focusing on setup/teardown of resources like databases
 and handling async operations.
 """
 
-import os
 import logging
 import uuid
 
-from behave.model import Scenario, Feature
+from behave.model import Feature, Scenario
 from behave.runner import Context
 from features.scenario_context_pool_manager import ScenarioContextPoolManager
+from features.test_containers import ContainerManager
 from pydantic_settings import SettingsConfigDict
+from testcontainers.core.config import testcontainers_config
 
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
 from archipy.configs.base_config import BaseConfig
 
-from features.test_containers import ContainerManager
-
-from testcontainers.core.config import testcontainers_config
 
 class TestConfig(BaseConfig):
     model_config = SettingsConfigDict(
@@ -33,6 +31,7 @@ class TestConfig(BaseConfig):
     KAFKA__IMAGE: str
     MINIO__IMAGE: str
     KEYCLOAK__IMAGE: str
+    SCYLLADB__IMAGE: str
     TESTCONTAINERS_RYUK_CONTAINER_IMAGE: str | None = None
 
     def __init__(self, **kwargs):
@@ -41,7 +40,6 @@ class TestConfig(BaseConfig):
         # Configure testcontainers to use custom ryuk image
         if self.TESTCONTAINERS_RYUK_CONTAINER_IMAGE:
             testcontainers_config.ryuk_image = self.TESTCONTAINERS_RYUK_CONTAINER_IMAGE
-
 
 
 # Initialize global config
@@ -124,7 +122,6 @@ def before_scenario(context: Context, scenario: Scenario):
         scenario_context.store("test_containers", context.test_containers)
     except Exception as e:
         logger.exception(f"Error setting test containers: {e}")
-
 
 
 def after_scenario(context: Context, scenario: Scenario):

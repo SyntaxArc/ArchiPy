@@ -1,19 +1,26 @@
 """Container manager for test containers"""
 
 import logging
-from urllib.parse import urlparse
 
-from testcontainers.redis import RedisContainer
-from testcontainers.postgres import PostgresContainer
-from testcontainers.keycloak import KeycloakContainer
-from testcontainers.kafka import KafkaContainer
-from testcontainers.minio import MinioContainer
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
+from testcontainers.kafka import KafkaContainer
+from testcontainers.keycloak import KeycloakContainer
+from testcontainers.minio import MinioContainer
+from testcontainers.postgres import PostgresContainer
+from testcontainers.redis import RedisContainer
 
-from archipy.helpers.metaclasses.singleton import Singleton
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import RedisConfig, MinioConfig, KafkaConfig, ElasticsearchConfig, PostgresSQLAlchemyConfig, KeycloakConfig
+from archipy.configs.config_template import (
+    ElasticsearchConfig,
+    KafkaConfig,
+    KeycloakConfig,
+    MinioConfig,
+    PostgresSQLAlchemyConfig,
+    RedisConfig,
+    ScyllaDBConfig,
+)
+from archipy.helpers.metaclasses.singleton import Singleton
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +32,7 @@ TAG_CONTAINER_MAP: dict[str, str] = {
     "needs-minio": "minio",
     "needs-keycloak": "keycloak",
     "needs-redis": "redis",
+    "needs-scylladb": "scylladb",
 }
 
 
@@ -39,6 +47,7 @@ class ContainerManager:
     @classmethod
     def register(cls, name: str):
         """Decorator to register containers."""
+
         def decorator(container_class):
             cls._containers[name] = container_class
             return container_class
@@ -221,7 +230,6 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
         # Reset container properties
         self.host = None
         self.port = None
-
 
         logger.info("Redis container stopped")
 
@@ -545,3 +553,92 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
         self.port = None
 
         logger.info("MinIO container stopped")
+
+
+@ContainerManager.register("scylladb")
+class ScyllaDBTestContainer(metaclass=Singleton, thread_safe=True):
+    """Test container for ScyllaDB."""
+
+    def __init__(self, config: ScyllaDBConfig | None = None, image: str | None = None) -> None:
+        """Initialize ScyllaDB test container.
+
+        Args:
+            config (ScyllaDBConfig | None): Configuration for ScyllaDB. Defaults to None.
+            image (str | None): Docker image to use. Defaults to None (uses SCYLLADB__IMAGE from config).
+        """
+        self.name = "scylladb"
+        # Get config from global or create default
+        if config is not None:
+            self.config = config
+        else:
+            try:
+                self.config = BaseConfig.global_config().SCYLLADB
+            except AttributeError:
+                # SCYLLADB not configured in global config, use defaults
+                self.config = ScyllaDBConfig()
+        self.image = image or BaseConfig.global_config().SCYLLADB__IMAGE
+        self._is_running: bool = False
+
+        # Container properties
+        self.host: str | None = None
+        self.port: int | None = None
+
+        # Set up the container
+        self._container = DockerContainer(self.image)
+        self._container.with_exposed_ports(9042)  # CQL native transport port
+
+        # Add environment variables for single-node configuration
+        self._container.with_env("SCYLLA_ARGS", "--smp 1 --memory 750M")
+
+    def start(self) -> DockerContainer:
+        """Start the ScyllaDB container.
+
+        Returns:
+            DockerContainer: The running container instance.
+        """
+        if self._is_running:
+            return self._container
+
+        # Start the container
+        self._container.start()
+
+        # Wait for ScyllaDB to be ready
+        # ScyllaDB logs "Starting listening for CQL clients" when ready
+        wait_for_logs(self._container, "Starting listening for CQL clients", timeout=120)
+
+        self._is_running = True
+
+        # Get dynamic host and port
+        self.host = self._container.get_container_host_ip()
+        self.port = int(self._container.get_exposed_port(9042))
+
+        # Update global config with actual container endpoint
+        global_config = BaseConfig.global_config()
+        if global_config.SCYLLADB is None:
+            from archipy.configs.config_template import ScyllaDBConfig
+
+            global_config.SCYLLADB = ScyllaDBConfig()
+
+        global_config.SCYLLADB.CONTACT_POINTS = [self.host]
+        global_config.SCYLLADB.PORT = self.port
+
+        logger.info("ScyllaDB container started on %s:%s", self.host, self.port)
+
+        return self._container
+
+    def stop(self) -> None:
+        """Stop the ScyllaDB container."""
+        if not self._is_running:
+            return
+
+        if self._container:
+            self._container.stop()
+
+        self._container = None
+        self._is_running = False
+
+        # Reset container properties
+        self.host = None
+        self.port = None
+
+        logger.info("ScyllaDB container stopped")

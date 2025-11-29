@@ -2,6 +2,63 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v3.15.0] - 2025-11-29
+
+### Added
+
+#### Database Adapters
+
+- **ScyllaDB/Cassandra Adapter** - Implemented comprehensive adapter for ScyllaDB and Apache Cassandra databases
+  following the Ports & Adapters pattern
+    - Added `ScyllaDBPort` and `AsyncScyllaDBPort` interfaces defining contracts for database operations
+    - Implemented `ScyllaDBAdapter` for synchronous operations with connection pooling and session management
+    - Implemented `AsyncScyllaDBAdapter` for asynchronous operations with async/await support
+    - Supports CQL query execution, prepared statements, batch operations, and CRUD operations
+    - Provides keyspace and table management (create, drop, use keyspace)
+    - Includes connection management with automatic reconnection and session lifecycle handling
+    - Supports configurable consistency levels (ONE, QUORUM, ALL, LOCAL_QUORUM, etc.)
+    - Implements shard awareness for optimal performance (can be disabled for Docker/Testcontainer environments)
+    - Includes LZ4 compression support for network traffic optimization
+
+#### Configuration
+
+- **ScyllaDB Configuration** - Added `ScyllaDBConfig` class for managing ScyllaDB connection settings
+    - Configurable contact points (cluster node addresses)
+    - Port configuration for CQL native transport (default: 9042)
+    - Authentication support (username/password)
+    - Protocol version selection (3-5)
+    - Connection and request timeout settings
+    - Consistency level configuration
+    - Compression enable/disable option
+    - Shard awareness control for containerized environments
+    - Integrated into `BaseConfig` as `SCYLLADB` attribute
+    - Added to configuration template with validation rules
+
+#### Testing Infrastructure
+
+- **ScyllaDB Test Container** - Added `ScyllaDBTestContainer` class for integration testing
+    - Single-node ScyllaDB container configuration optimized for testing
+    - Dynamic port allocation to prevent conflicts
+    - Automatic configuration injection into global config
+    - Resource-efficient setup (1 CPU, 750MB memory)
+    - Integrated with `ContainerManager` for tag-based container startup
+    - Added `@needs-scylladb` tag support for selective test execution
+
+- **BDD Test Suite** - Comprehensive Behave test suite for ScyllaDB adapter
+    - Feature file covering keyspace operations, table management, CRUD operations
+    - Test scenarios for insert, select, update, delete operations
+    - Batch execution and prepared statement testing
+    - WHERE clause condition testing
+    - Error handling and edge case validation
+    - Step definitions implementing all adapter operations
+
+#### Dependencies
+
+- **New Optional Dependency Group** - Added `scylladb` optional dependency group
+    - Added `scylla-driver>=3.29.0` for ScyllaDB/Cassandra driver support
+    - Added `lz4>=4.3.0` for compression support in network communication
+    - Enables ScyllaDB adapter functionality when installed via `uv sync --extra scylladb`
+
 ## [v3.14.4] - 2025-11-20
 
 ### Changed

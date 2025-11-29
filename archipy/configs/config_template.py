@@ -878,3 +878,105 @@ class TemporalConfig(BaseModel):
             raise InvalidArgumentError()
 
         return self
+
+
+class ScyllaDBConfig(BaseModel):
+    """Configuration settings for ScyllaDB/Cassandra connections and operations.
+
+    Contains settings related to ScyllaDB cluster connectivity, authentication,
+    compression, consistency levels, and connection management.
+
+    Attributes:
+        CONTACT_POINTS (list[str]): List of ScyllaDB node addresses.
+        PORT (int): CQL native transport port number.
+        KEYSPACE (str | None): Default keyspace name.
+        USERNAME (str | None): Username for authentication.
+        PASSWORD (SecretStr | None): Password for authentication.
+        PROTOCOL_VERSION (int): Protocol version to use.
+        COMPRESSION (bool): Enable LZ4 compression.
+        CONNECT_TIMEOUT (int): Connection timeout in seconds.
+        REQUEST_TIMEOUT (int): Request timeout in seconds.
+        CONSISTENCY_LEVEL (Literal): Default consistency level.
+        DISABLE_SHARD_AWARENESS (bool): Disable shard awareness (default: False).
+    """
+
+    CONTACT_POINTS: list[str] = Field(
+        default=["127.0.0.1"],
+        description="List of ScyllaDB node addresses for initial connection",
+    )
+    PORT: int = Field(
+        default=9042,
+        ge=1,
+        le=65535,
+        description="CQL native transport port number",
+    )
+    KEYSPACE: str | None = Field(
+        default=None,
+        description="Default keyspace name to use",
+    )
+    USERNAME: str | None = Field(
+        default=None,
+        description="Username for authentication",
+    )
+    PASSWORD: SecretStr | None = Field(
+        default=None,
+        description="Password for authentication",
+    )
+    PROTOCOL_VERSION: int = Field(
+        default=4,
+        ge=3,
+        le=5,
+        description="CQL protocol version (3-5)",
+    )
+    COMPRESSION: bool = Field(
+        default=True,
+        description="Enable LZ4 compression for network traffic",
+    )
+    CONNECT_TIMEOUT: int = Field(
+        default=10,
+        ge=1,
+        description="Connection timeout in seconds",
+    )
+    REQUEST_TIMEOUT: int = Field(
+        default=10,
+        ge=1,
+        description="Request timeout in seconds",
+    )
+    CONSISTENCY_LEVEL: Literal[
+        "ONE",
+        "TWO",
+        "THREE",
+        "QUORUM",
+        "ALL",
+        "LOCAL_QUORUM",
+        "EACH_QUORUM",
+        "LOCAL_ONE",
+        "ANY",
+    ] = Field(
+        default="ONE",
+        description="Default consistency level",
+    )
+    DISABLE_SHARD_AWARENESS: bool = Field(
+        default=False,
+        description="Disable shard awareness (useful for Docker/Testcontainer/NAT environments)",
+    )
+
+    @model_validator(mode="after")
+    def validate_contact_points(self) -> Self:
+        """Validate that at least one contact point is provided."""
+        if not self.CONTACT_POINTS or len(self.CONTACT_POINTS) == 0:
+            raise InvalidArgumentError(
+                argument_name="CONTACT_POINTS",
+                additional_data={"error": "Empty contact points list"},
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_authentication(self) -> Self:
+        """Validate that both username and password are provided together."""
+        if (self.USERNAME is None) != (self.PASSWORD is None):
+            raise InvalidArgumentError(
+                argument_name="authentication",
+                additional_data={"error": "Both username and password must be provided together"},
+            )
+        return self

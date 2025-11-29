@@ -26,7 +26,7 @@ elastic-apm = ["elastic-apm>=6.24.0"]
 elasticsearch = ["elasticsearch>=9.2.0"]
 elasticsearch-async = ["elasticsearch[async]>=9.2.0"]
 fakeredis = ["fakeredis>=2.32.1"]
-fastapi = ["fastapi[all]>=0.121.3"]
+fastapi = ["fastapi[all]>=0.122.0"]
 grpc = ["grpcio>=1.76.0", "grpcio-health-checking>=1.76.0", "protobuf>=6.33.1"]
 jwt = ["pyjwt>=2.10.1"]
 kafka = ["confluent-kafka>=2.12.2"]
@@ -34,15 +34,16 @@ kavenegar = ["kavenegar>=1.1.2"]
 keycloak = ["python-keycloak>=5.8.1", "cachetools>=6.2.2", "async-lru>=2.0.5"]
 minio = ["minio>=7.2.18", "cachetools>=6.2.2", "async-lru>=2.0.5"]
 parsian-ipg = ["zeep>=4.3.2", "requests[socks]>=2.32.5"]
-postgres = ["psycopg[binary,pool]>=3.2.12"]
+postgres = ["psycopg[binary,pool]>=3.2.13"]
 prometheus = ["prometheus-client>=0.23.1"]
 redis = ["redis[hiredis]>=7.1.0"]
 scheduler = ["apscheduler>=3.11.1"]
-sentry = ["sentry-sdk>=2.45.0"]
+scylladb = ["scylla-driver>=3.29.6", "lz4>=4.4.5"]
+sentry = ["sentry-sdk>=2.46.0"]
 sqlalchemy = ["sqlalchemy>=2.0.44"]
 starrocks = ["starrocks>=1.2.3", "pymysql>=1.1.2"]
 starrocks-async = ["starrocks>=1.2.3", "aiomysql>=0.3.2"]
-temporalio = ["temporalio>=1.19.0"]
+temporalio = ["temporalio>=1.20.0"]
 testcontainers = ["testcontainers>=4.13.3"]
 
 [tool.pytest.ini_options]
@@ -64,13 +65,13 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "add-trailing-comma>=4.0.0",
-    "bandit>=1.9.1",
+    "bandit>=1.9.2",
     "black>=25.11.0",
     "codespell>=2.4.1",
     "mypy>=1.18.2",
     "pre-commit-hooks>=6.0.0",
     "pre-commit>=4.4.0",
-    "ruff>=0.14.5",
+    "ruff>=0.14.7",
     "types-cachetools>=6.2.0.20251022",
     "types-grpcio>=1.0.0.20251009",
     "types-protobuf>=6.32.1.20251105",
@@ -86,7 +87,7 @@ docs = [
     "mkdocs>=1.6.1",
     "mkdocstrings-python>=1.18.2",
     "mkdocstrings>=0.30.1",
-    "pymdown-extensions>=10.17.1",
+    "pymdown-extensions>=10.17.2",
 ]
 
 
@@ -214,11 +215,14 @@ target-version = "py313"
 "archipy/adapters/redis/ports.py" = ["ANN401", "D102", "FBT001", "FBT002", "A002"]
 "archipy/adapters/redis/adapters.py" = ["ANN401", "FBT001", "FBT002", "RET504", "PGH003"]
 "archipy/adapters/redis/mocks.py" = ["ARG002", "ARG004", "ANN401"]
+"archipy/adapters/scylladb/ports.py" = ["ANN401"]  # Allow Any type for CQL parameters
+"archipy/adapters/scylladb/adapters.py" = ["BLE001", "ANN401"]  # Allow broad exceptions and Any types
 "archipy/models/dtos/base_protobuf_dto.py" = ["ANN401"]
 "archipy//helpers/utils/keycloak_utils.py" = ["B008"]
 "archipy/adapters/keycloak/adapters.py" = ["BLE001"]
 "archipy/adapters/kafka/adapters.py" = ["BLE001"]
 "archipy/adapters/temporal/*" = ["ANN401", "TRY300", "RUF006"]  # Allow Any types for Temporal's dynamic system, else blocks, and asyncio task handling
+"archipy/adapters/scylladb/*" = ["S608"]  # False positives - using parameterized queries with %s placeholders
 "features/steps/*" = ["F811"]
 "scripts/*" = ["S603", "S607"]
 
@@ -322,6 +326,9 @@ plugins = [
 module = [
     "apscheduler.*", # Apply overrides to apscheduler
     "archipy.adapters.redis.*",
+    "cassandra.*", # Apply overrides to Cassandra/ScyllaDB driver
+    "cassandra.cluster.*", # Apply overrides to Cassandra cluster
+    "cassandra.auth.*", # Apply overrides to Cassandra auth
     "confluent_kafka.*", # Apply overrides to Kafka
     "confluent_kafka.admin.*", # Apply overrides to Kafka
     "features.*", # Apply overrides to features files
