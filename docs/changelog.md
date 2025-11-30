@@ -2,6 +2,74 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v3.15.1] - 2025-11-30
+
+### Added
+
+#### Database Adapters - ScyllaDB Enhancements
+
+- **Retry Policies** - Added configurable retry policies for handling transient failures in ScyllaDB adapter
+    - Exponential backoff retry policy with configurable min/max intervals and max retries
+    - Fallthrough retry policy for no-retry scenarios
+    - Downgrading consistency retry policy for automatic consistency level adjustment
+    - Configuration options: `RETRY_POLICY`, `RETRY_MAX_NUM_RETRIES`, `RETRY_MIN_INTERVAL`, `RETRY_MAX_INTERVAL`
+
+- **Health Checks** - Added comprehensive health check functionality
+    - Connection status verification with `is_connected()` method for both sync and async adapters
+    - Detailed health metrics including cluster state, host availability, and latency
+    - `health_check()` method returning comprehensive cluster health information
+    - Configurable health check timeout via `HEALTH_CHECK_TIMEOUT` configuration
+
+- **Exception Handling** - Improved error handling with centralized exception management
+    - Centralized `_handle_scylladb_exception()` method for consistent error handling
+    - Specific error messages for connection, query execution, and configuration issues
+    - Proper exception chaining for better debugging and error tracing
+
+- **Helper Methods** - Added convenience methods for common database operations
+    - `insert()` method with TTL support for time-based data expiration
+    - `update()` method with conditional updates and TTL support
+    - `count()` method for counting rows with optional WHERE clause filtering
+    - `exists()` method for checking record existence based on conditions
+    - `close()` method for explicit connection cleanup and resource management
+
+- **Connection Pool Monitoring** - Added connection pool statistics and monitoring capabilities
+    - `get_pool_stats()` method providing detailed metrics on pool utilization
+    - Metrics include connections per host, in-flight requests, and pool health
+    - Configurable pool parameters: `MAX_CONNECTIONS_PER_HOST`, `MIN_CONNECTIONS_PER_HOST`, `CORE_CONNECTIONS_PER_HOST`
+    - `MAX_REQUESTS_PER_CONNECTION` configuration for request throttling
+    - Optional pool monitoring via `ENABLE_CONNECTION_POOL_MONITORING` flag
+
+- **Prepared Statement Caching** - Implemented caching mechanism for prepared statements
+    - LRU cache with configurable size via `PREPARED_STATEMENT_CACHE_SIZE`
+    - Configurable TTL via `PREPARED_STATEMENT_CACHE_TTL_SECONDS`
+    - Automatic cache invalidation after TTL expiration
+    - Enable/disable via `ENABLE_PREPARED_STATEMENT_CACHE` configuration
+    - Improved performance for frequently executed queries
+
+- **Data Center Awareness** - Added support for multi-datacenter deployments
+    - Local datacenter configuration via `LOCAL_DC` for optimized query routing
+    - Replication strategy configuration: `REPLICATION_STRATEGY` (SimpleStrategy, NetworkTopologyStrategy)
+    - Per-datacenter replication factor configuration via `REPLICATION_CONFIG`
+    - Improved latency for geographically distributed deployments
+
+#### Documentation
+
+- **ScyllaDB Adapter Documentation** - Added comprehensive documentation for ScyllaDB adapter
+    - Complete usage examples for all adapter methods
+    - Configuration guide with all available options
+    - Best practices for connection pooling and performance tuning
+    - Examples for retry policies, health checks, and TTL usage
+    - Multi-datacenter deployment configuration examples
+
+#### Testing
+
+- **Enhanced BDD Test Suite** - Expanded Behave test scenarios for ScyllaDB adapter
+    - Added test scenarios for TTL functionality
+    - Added test scenarios for helper methods (count, exists, insert, update)
+    - Added test scenarios for health checks and connection status
+    - Added test scenarios for connection pool monitoring
+    - Improved test coverage for error handling and edge cases
+
 ## [v3.15.0] - 2025-11-29
 
 ### Added
