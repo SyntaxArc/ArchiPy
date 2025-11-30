@@ -51,15 +51,15 @@ def get_scylladb_adapter(context: Context) -> ScyllaDBAdapter | AsyncScyllaDBAda
     is_async = _is_async_scenario(context)
 
     if is_async:
-        if not hasattr(scenario_context, "async_scylladb_adapter") or scenario_context.async_scylladb_adapter is None:
+        if scenario_context.async_adapter is None:
             test_config = BaseConfig.global_config()
-            scenario_context.async_scylladb_adapter = AsyncScyllaDBAdapter(test_config.SCYLLADB)
-        return scenario_context.async_scylladb_adapter
+            scenario_context.async_adapter = AsyncScyllaDBAdapter(test_config.SCYLLADB)
+        return scenario_context.async_adapter
 
-    if not hasattr(scenario_context, "scylladb_adapter") or scenario_context.scylladb_adapter is None:
+    if scenario_context.adapter is None:
         test_config = BaseConfig.global_config()
-        scenario_context.scylladb_adapter = ScyllaDBAdapter(test_config.SCYLLADB)
-    return scenario_context.scylladb_adapter
+        scenario_context.adapter = ScyllaDBAdapter(test_config.SCYLLADB)
+    return scenario_context.adapter
 
 
 # Background steps
@@ -698,3 +698,296 @@ def step_verify_keyspace_not_exists(context: Context, keyspace: str) -> None:
     """
     # If we got here without an exception, the drop was successful
     logger.info("Keyspace '%s' does not exist (as expected)", keyspace)
+
+
+# Count and Exists steps
+
+
+@when('I count rows in table "{table}" with conditions {column} "{value}"')
+def step_count_rows_with_conditions(context: Context, table: str, column: str, value: str) -> None:
+    """Count rows in a table with conditions.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+        column (str): Column name.
+        value (str): Column value.
+    """
+    adapter = get_scylladb_adapter(context)
+    count = adapter.count(table, {column: value})
+
+    scenario_context = _get_scenario_context(context)
+    scenario_context.count_result = count
+    logger.info("Counted %d rows in table '%s' with %s='%s'", count, table, column, value)
+
+
+@when('I count rows in table "{table}"')
+def step_count_rows(context: Context, table: str) -> None:
+    """Count all rows in a table.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+    """
+    adapter = get_scylladb_adapter(context)
+    count = adapter.count(table)
+
+    scenario_context = _get_scenario_context(context)
+    scenario_context.count_result = count
+    logger.info("Counted %d rows in table '%s'", count, table)
+
+
+@when('I async count rows in table "{table}"')
+async def step_async_count_rows(context: Context, table: str) -> None:
+    """Count all rows in a table asynchronously.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+    """
+    adapter = get_scylladb_adapter(context)
+    count = await adapter.count(table)
+
+    scenario_context = _get_scenario_context(context)
+    scenario_context.count_result = count
+    logger.info("Async counted %d rows in table '%s'", count, table)
+
+
+@when('I check if row exists in table "{table}" with id {id:d}')
+def step_check_exists(context: Context, table: str, id: int) -> None:  # noqa: A002
+    """Check if a row exists in a table.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+        id (int): ID to check.
+    """
+    adapter = get_scylladb_adapter(context)
+    exists = adapter.exists(table, {"id": id})
+
+    scenario_context = _get_scenario_context(context)
+    scenario_context.exists_result = exists
+    logger.info("Row exists in '%s' with id=%d: %s", table, id, exists)
+
+
+@when('I async check if row exists in table "{table}" with id {id:d}')
+async def step_async_check_exists(context: Context, table: str, id: int) -> None:  # noqa: A002
+    """Check if a row exists in a table asynchronously.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+        id (int): ID to check.
+    """
+    adapter = get_scylladb_adapter(context)
+    exists = await adapter.exists(table, {"id": id})
+
+    scenario_context = _get_scenario_context(context)
+    scenario_context.exists_result = exists
+    logger.info("Async row exists in '%s' with id=%d: %s", table, id, exists)
+
+
+@then("the count result should be {expected_count:d}")
+def step_verify_count(context: Context, expected_count: int) -> None:
+    """Verify count result.
+
+    Args:
+        context (Context): Behave context.
+        expected_count (int): Expected count.
+    """
+    scenario_context = _get_scenario_context(context)
+    actual_count = scenario_context.count_result
+
+    assert actual_count == expected_count, f"Expected count {expected_count}, got {actual_count}"
+    logger.info("Count verified: %d", expected_count)
+
+
+@then("the async count result should be {expected_count:d}")
+def step_verify_async_count(context: Context, expected_count: int) -> None:
+    """Verify async count result.
+
+    Args:
+        context (Context): Behave context.
+        expected_count (int): Expected count.
+    """
+    scenario_context = _get_scenario_context(context)
+    actual_count = scenario_context.count_result
+
+    assert actual_count == expected_count, f"Expected count {expected_count}, got {actual_count}"
+    logger.info("Async count verified: %d", expected_count)
+
+
+@then("the row should exist")
+def step_verify_exists(context: Context) -> None:
+    """Verify row exists.
+
+    Args:
+        context (Context): Behave context.
+    """
+    scenario_context = _get_scenario_context(context)
+    exists = scenario_context.exists_result
+
+    assert exists is True, "Expected row to exist"
+    logger.info("Row existence verified: True")
+
+
+@then("the row should not exist")
+def step_verify_not_exists(context: Context) -> None:
+    """Verify row does not exist.
+
+    Args:
+        context (Context): Behave context.
+    """
+    scenario_context = _get_scenario_context(context)
+    exists = scenario_context.exists_result
+
+    assert exists is False, "Expected row to not exist"
+    logger.info("Row non-existence verified: False")
+
+
+@then("the async row should exist")
+def step_verify_async_exists(context: Context) -> None:
+    """Verify async row exists.
+
+    Args:
+        context (Context): Behave context.
+    """
+    scenario_context = _get_scenario_context(context)
+    exists = scenario_context.exists_result
+
+    assert exists is True, "Expected row to exist"
+    logger.info("Async row existence verified: True")
+
+
+@then("the async row should not exist")
+def step_verify_async_not_exists(context: Context) -> None:
+    """Verify async row does not exist.
+
+    Args:
+        context (Context): Behave context.
+    """
+    scenario_context = _get_scenario_context(context)
+    exists = scenario_context.exists_result
+
+    assert exists is False, "Expected row to not exist"
+    logger.info("Async row non-existence verified: False")
+
+
+# TTL steps
+
+
+@when('I insert data into table "{table}" with key "{key}", value "{value}", ttl {ttl:d}')
+def step_insert_with_ttl(context: Context, table: str, key: str, value: str, ttl: int) -> None:
+    """Insert data with TTL.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+        key (str): Key value.
+        value (str): Value.
+        ttl (int): TTL in seconds.
+    """
+    adapter = get_scylladb_adapter(context)
+    adapter.insert(table, {"key": key, "value": value}, ttl=ttl)
+    logger.info("Inserted data into '%s' with TTL %d", table, ttl)
+
+
+@when('I update table "{table}" setting data to "{data}" with ttl {ttl:d} where session_id equals "{session_id}"')
+def step_update_with_ttl(context: Context, table: str, data: str, ttl: int, session_id: str) -> None:
+    """Update data with TTL.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+        data (str): New data value.
+        ttl (int): TTL in seconds.
+        session_id (str): Session ID.
+    """
+    adapter = get_scylladb_adapter(context)
+    adapter.update(table, {"data": data}, {"session_id": session_id}, ttl=ttl)
+    logger.info("Updated '%s' with TTL %d where session_id='%s'", table, ttl, session_id)
+
+
+@when('I async insert data into table "{table}" with key "{key}", value "{value}", ttl {ttl:d}')
+async def step_async_insert_with_ttl(context: Context, table: str, key: str, value: str, ttl: int) -> None:
+    """Insert data with TTL asynchronously.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+        key (str): Key value.
+        value (str): Value.
+        ttl (int): TTL in seconds.
+    """
+    adapter = get_scylladb_adapter(context)
+    await adapter.insert(table, {"key": key, "value": value}, ttl=ttl)
+    logger.info("Async inserted data into '%s' with TTL %d", table, ttl)
+
+
+@when('I select from table "{table}" where session_id equals "{session_id}"')
+def step_select_by_session_id(context: Context, table: str, session_id: str) -> None:
+    """Select data by session_id.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+        session_id (str): Session ID to search for.
+    """
+    adapter = get_scylladb_adapter(context)
+    result = adapter.select(table, conditions={"session_id": session_id})
+
+    scenario_context = _get_scenario_context(context)
+    scenario_context.last_result = result
+    logger.info("Selected from '%s' where session_id=%s, got %d rows", table, session_id, len(result))
+
+
+@then('the result row should have data "{expected_data}"')
+def step_verify_data_field(context: Context, expected_data: str) -> None:
+    """Verify data field.
+
+    Args:
+        context (Context): Behave context.
+        expected_data (str): Expected data value.
+    """
+    scenario_context = _get_scenario_context(context)
+    result = scenario_context.last_result
+
+    assert len(result) > 0, "No rows in result"
+    row = result[0]
+
+    assert row.data == expected_data, f"Expected data '{expected_data}', got '{row.data}'"
+    logger.info("Data verified: %s", expected_data)
+
+
+# Pool monitoring steps
+
+
+@when("I get pool statistics")
+def step_get_pool_stats(context: Context) -> None:
+    """Get pool statistics.
+
+    Args:
+        context (Context): Behave context.
+    """
+    adapter = get_scylladb_adapter(context)
+    stats = adapter.get_pool_stats()
+
+    scenario_context = _get_scenario_context(context)
+    scenario_context.pool_stats = stats
+    logger.info("Got pool statistics: %s", stats)
+
+
+@then("the pool statistics should be returned")
+def step_verify_pool_stats(context: Context) -> None:
+    """Verify pool statistics were returned.
+
+    Args:
+        context (Context): Behave context.
+    """
+    scenario_context = _get_scenario_context(context)
+    stats = scenario_context.pool_stats
+
+    assert stats is not None, "Pool statistics should not be None"
+    assert isinstance(stats, dict), "Pool statistics should be a dictionary"
+    assert "monitoring_enabled" in stats, "Pool statistics should contain 'monitoring_enabled' key"
+    logger.info("Pool statistics verified")

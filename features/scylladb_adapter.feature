@@ -62,13 +62,13 @@ Feature: ScyllaDB Adapter
   Scenario: Delete data from table
     Given a ScyllaDB adapter is configured
     And a keyspace "test_ks" with replication factor 1 exists
-    And a table "sessions" with schema "CREATE TABLE IF NOT EXISTS sessions (id int PRIMARY KEY, user_id int, active boolean)"
-    And data exists in table "sessions":
+    And a table "sessions_delete" with schema "CREATE TABLE IF NOT EXISTS sessions_delete (id int PRIMARY KEY, user_id int, active boolean)"
+    And data exists in table "sessions_delete":
       | id | user_id | active |
       | 1  | 101     | true   |
       | 2  | 102     | true   |
-    When I delete from table "sessions" where id equals 1
-    Then the table "sessions" should contain 1 row
+    When I delete from table "sessions_delete" where id equals 1
+    Then the table "sessions_delete" should contain 1 row
 
   @needs-scylladb
   Scenario: Execute prepared statement
@@ -132,3 +132,88 @@ Feature: ScyllaDB Adapter
     When I async prepare statement "INSERT INTO async_logs (id, msg) VALUES (:id, :msg)"
     And I async execute prepared statement with id 1, msg "Async log message"
     Then the async table "async_logs" should contain 1 row
+
+  @needs-scylladb
+  Scenario: Count rows in table
+    Given a ScyllaDB adapter is configured
+    And a keyspace "test_ks" with replication factor 1 exists
+    And a table "items" with schema "CREATE TABLE IF NOT EXISTS items (id int PRIMARY KEY, name text, category text)"
+    And data exists in table "items":
+      | id | name    | category |
+      | 1  | Item A  | cat1     |
+      | 2  | Item B  | cat1     |
+      | 3  | Item C  | cat2     |
+    When I count rows in table "items"
+    Then the count result should be 3
+    When I count rows in table "items" with conditions category "cat1"
+    Then the count result should be 2
+
+  @needs-scylladb
+  Scenario: Check if row exists
+    Given a ScyllaDB adapter is configured
+    And a keyspace "test_ks" with replication factor 1 exists
+    And a table "users_exists" with schema "CREATE TABLE IF NOT EXISTS users_exists (id int PRIMARY KEY, username text, active boolean)"
+    And data exists in table "users_exists":
+      | id | username | active |
+      | 1  | alice    | true   |
+      | 2  | bob      | false  |
+    When I check if row exists in table "users_exists" with id 1
+    Then the row should exist
+    When I check if row exists in table "users_exists" with id 999
+    Then the row should not exist
+
+  @needs-scylladb @async
+  Scenario: Async count rows in table
+    Given an async ScyllaDB adapter is configured
+    And an async keyspace "async_ks" with replication factor 1 exists
+    And an async table "async_items" with schema "CREATE TABLE IF NOT EXISTS async_items (id int PRIMARY KEY, name text)"
+    When I async insert data into table "async_items" with id 1, name "Item1"
+    And I async insert data into table "async_items" with id 2, name "Item2"
+    And I async insert data into table "async_items" with id 3, name "Item3"
+    When I async count rows in table "async_items"
+    Then the async count result should be 3
+
+  @needs-scylladb @async
+  Scenario: Async check if row exists
+    Given an async ScyllaDB adapter is configured
+    And an async keyspace "async_ks" with replication factor 1 exists
+    And an async table "async_users" with schema "CREATE TABLE IF NOT EXISTS async_users (id int PRIMARY KEY, name text)"
+    When I async insert data into table "async_users" with id 1, name "User1"
+    When I async check if row exists in table "async_users" with id 1
+    Then the async row should exist
+    When I async check if row exists in table "async_users" with id 999
+    Then the async row should not exist
+
+  @needs-scylladb
+  Scenario: Insert with TTL
+    Given a ScyllaDB adapter is configured
+    And a keyspace "test_ks" with replication factor 1 exists
+    And a table "cache" with schema "CREATE TABLE IF NOT EXISTS cache (key text PRIMARY KEY, value text)"
+    When I insert data into table "cache" with key "temp_key", value "temp_value", ttl 3600
+    Then the table "cache" should contain 1 row
+
+  @needs-scylladb
+  Scenario: Update with TTL
+    Given a ScyllaDB adapter is configured
+    And a keyspace "test_ks" with replication factor 1 exists
+    And a table "sessions_ttl" with schema "CREATE TABLE IF NOT EXISTS sessions_ttl (session_id text PRIMARY KEY, data text)"
+    And data exists in table "sessions_ttl":
+      | session_id | data        |
+      | sess1      | old_data    |
+    When I update table "sessions_ttl" setting data to "new_data" with ttl 7200 where session_id equals "sess1"
+    And I select from table "sessions_ttl" where session_id equals "sess1"
+    Then the result row should have data "new_data"
+
+  @needs-scylladb @async
+  Scenario: Async insert with TTL
+    Given an async ScyllaDB adapter is configured
+    And an async keyspace "async_ks" with replication factor 1 exists
+    And an async table "async_cache" with schema "CREATE TABLE IF NOT EXISTS async_cache (key text PRIMARY KEY, value text)"
+    When I async insert data into table "async_cache" with key "temp", value "data", ttl 3600
+    Then the async table "async_cache" should contain 1 row
+
+  @needs-scylladb
+  Scenario: Get connection pool statistics
+    Given a ScyllaDB adapter is configured
+    When I get pool statistics
+    Then the pool statistics should be returned

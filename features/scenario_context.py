@@ -32,13 +32,16 @@ class ScenarioContext:
         # Close and dispose of database connections
         if self.adapter:
             try:
-                if hasattr(self.adapter, "session_manager") and hasattr(self.adapter.session_manager, "engine"):
+                # Check if it's a ScyllaDB adapter (has close method but no session_manager)
+                if hasattr(self.adapter, "close") and not hasattr(self.adapter, "session_manager"):
+                    self.adapter.close()
+                elif hasattr(self.adapter, "session_manager") and hasattr(self.adapter.session_manager, "engine"):
                     # First remove any open sessions
                     self.adapter.session_manager.remove_session()
                     # Then dispose of the engine
                     self.adapter.session_manager.engine.dispose()
             except Exception as e:
-                print(f"Error disposing engine: {e}")
+                print(f"Error disposing adapter: {e}")
 
         # Clean up async adapter
         if self.async_adapter:
@@ -69,7 +72,10 @@ class ScenarioContext:
         """Clean up async resources associated with this scenario."""
         if self.async_adapter:
             try:
-                if hasattr(self.async_adapter, "session_manager") and hasattr(
+                # Check if it's an async ScyllaDB adapter (has close method but no session_manager)
+                if hasattr(self.async_adapter, "close") and not hasattr(self.async_adapter, "session_manager"):
+                    await self.async_adapter.close()
+                elif hasattr(self.async_adapter, "session_manager") and hasattr(
                         self.async_adapter.session_manager, "engine",
                 ):
                     # Clean up async sessions and engine

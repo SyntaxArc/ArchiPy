@@ -1016,6 +1016,42 @@ class ScyllaDBConfig(BaseModel):
         description="Enable connection pool monitoring and metrics",
     )
 
+    # Connection Pool Configuration
+    MAX_CONNECTIONS_PER_HOST: int = Field(
+        default=2,
+        ge=1,
+        description="Maximum connections per host (recommended: 1-3 per CPU core)",
+    )
+    MIN_CONNECTIONS_PER_HOST: int = Field(
+        default=1,
+        ge=1,
+        description="Minimum connections per host",
+    )
+    CORE_CONNECTIONS_PER_HOST: int = Field(
+        default=1,
+        ge=1,
+        description="Core connections per host to maintain",
+    )
+    MAX_REQUESTS_PER_CONNECTION: int = Field(
+        default=100,
+        ge=1,
+        description="Maximum concurrent requests per connection",
+    )
+
+    # Datacenter Configuration
+    LOCAL_DC: str | None = Field(
+        default=None,
+        description="Local datacenter name for datacenter-aware routing",
+    )
+    REPLICATION_STRATEGY: Literal["SimpleStrategy", "NetworkTopologyStrategy"] = Field(
+        default="SimpleStrategy",
+        description="Replication strategy for keyspace creation",
+    )
+    REPLICATION_CONFIG: dict[str, int] | None = Field(
+        default=None,
+        description="Replication configuration (e.g., {'dc1': 3, 'dc2': 2} for NetworkTopologyStrategy)",
+    )
+
     @model_validator(mode="after")
     def validate_contact_points(self) -> Self:
         """Validate that at least one contact point is provided."""
@@ -1033,5 +1069,30 @@ class ScyllaDBConfig(BaseModel):
             raise InvalidArgumentError(
                 argument_name="authentication",
                 additional_data={"error": "Both username and password must be provided together"},
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_connection_pool(self) -> Self:
+        """Validate connection pool configuration."""
+        if self.MIN_CONNECTIONS_PER_HOST > self.MAX_CONNECTIONS_PER_HOST:
+            raise InvalidArgumentError(
+                argument_name="connection_pool",
+                additional_data={"error": "MIN_CONNECTIONS_PER_HOST cannot exceed MAX_CONNECTIONS_PER_HOST"},
+            )
+        if self.CORE_CONNECTIONS_PER_HOST > self.MAX_CONNECTIONS_PER_HOST:
+            raise InvalidArgumentError(
+                argument_name="connection_pool",
+                additional_data={"error": "CORE_CONNECTIONS_PER_HOST cannot exceed MAX_CONNECTIONS_PER_HOST"},
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_replication_config(self) -> Self:
+        """Validate replication configuration."""
+        if self.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and not self.REPLICATION_CONFIG:
+            raise InvalidArgumentError(
+                argument_name="replication_config",
+                additional_data={"error": "REPLICATION_CONFIG required for NetworkTopologyStrategy"},
             )
         return self

@@ -129,12 +129,13 @@ class ScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def insert(self, table: str, data: dict[str, Any]) -> None:
+    def insert(self, table: str, data: dict[str, Any], ttl: int | None = None) -> None:
         """Insert data into a table.
 
         Args:
             table (str): The name of the table.
             data (dict[str, Any]): Key-value pairs representing column names and values.
+            ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -164,13 +165,14 @@ class ScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def update(self, table: str, data: dict[str, Any], conditions: dict[str, Any]) -> None:
+    def update(self, table: str, data: dict[str, Any], conditions: dict[str, Any], ttl: int | None = None) -> None:
         """Update data in a table.
 
         Args:
             table (str): The name of the table.
             data (dict[str, Any]): Key-value pairs for SET clause.
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
+            ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -232,6 +234,50 @@ class ScyllaDBPort(ABC):
 
         Returns:
             dict[str, Any]: Health check result with status, latency_ms, and optional error.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def count(self, table: str, conditions: dict[str, Any] | None = None) -> int:
+        """Count rows in a table.
+
+        Args:
+            table (str): The name of the table.
+            conditions (dict[str, Any] | None): WHERE clause conditions as key-value pairs.
+
+        Returns:
+            int: The number of rows matching the conditions.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def exists(self, table: str, conditions: dict[str, Any]) -> bool:
+        """Check if a row exists in a table.
+
+        Args:
+            table (str): The name of the table.
+            conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
+
+        Returns:
+            bool: True if at least one row exists, False otherwise.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_pool_stats(self) -> dict[str, Any]:
+        """Get connection pool statistics.
+
+        Returns:
+            dict[str, Any]: Pool statistics including open connections, in-flight requests, etc.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -359,12 +405,13 @@ class AsyncScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def insert(self, table: str, data: dict[str, Any]) -> None:
+    async def insert(self, table: str, data: dict[str, Any], ttl: int | None = None) -> None:
         """Insert data into a table asynchronously.
 
         Args:
             table (str): The name of the table.
             data (dict[str, Any]): Key-value pairs representing column names and values.
+            ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -394,13 +441,20 @@ class AsyncScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def update(self, table: str, data: dict[str, Any], conditions: dict[str, Any]) -> None:
+    async def update(
+        self,
+        table: str,
+        data: dict[str, Any],
+        conditions: dict[str, Any],
+        ttl: int | None = None,
+    ) -> None:
         """Update data in a table asynchronously.
 
         Args:
             table (str): The name of the table.
             data (dict[str, Any]): Key-value pairs for SET clause.
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
+            ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -462,6 +516,50 @@ class AsyncScyllaDBPort(ABC):
 
         Returns:
             dict[str, Any]: Health check result with status, latency_ms, and optional error.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def count(self, table: str, conditions: dict[str, Any] | None = None) -> int:
+        """Count rows in a table asynchronously.
+
+        Args:
+            table (str): The name of the table.
+            conditions (dict[str, Any] | None): WHERE clause conditions as key-value pairs.
+
+        Returns:
+            int: The number of rows matching the conditions.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def exists(self, table: str, conditions: dict[str, Any]) -> bool:
+        """Check if a row exists in a table asynchronously.
+
+        Args:
+            table (str): The name of the table.
+            conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
+
+        Returns:
+            bool: True if at least one row exists, False otherwise.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_pool_stats(self) -> dict[str, Any]:
+        """Get connection pool statistics asynchronously.
+
+        Returns:
+            dict[str, Any]: Pool statistics including open connections, in-flight requests, etc.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.

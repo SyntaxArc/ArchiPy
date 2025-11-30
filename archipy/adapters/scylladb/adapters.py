@@ -176,7 +176,17 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 username=self.config.USERNAME,
                 password=self.config.PASSWORD.get_secret_value(),
             )
-        load_balancing_policy = TokenAwarePolicy(RoundRobinPolicy())
+
+        # Configure load balancing policy with optional datacenter awareness
+        if self.config.LOCAL_DC:
+            from cassandra.policies import DCAwareRoundRobinPolicy
+
+            base_policy = DCAwareRoundRobinPolicy(local_dc=self.config.LOCAL_DC)
+        else:
+            base_policy = RoundRobinPolicy()
+
+        load_balancing_policy = TokenAwarePolicy(base_policy)
+
         if self.config.RETRY_POLICY == "FALLTHROUGH":
             retry_policy = FallthroughRetryPolicy()
         else:  # EXPONENTIAL_BACKOFF (default)
@@ -201,6 +211,14 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             default_retry_policy=retry_policy,
             shard_aware_options=shard_aware_options,
         )
+
+        # Configure connection pool settings
+
+        profile = cluster.profile_manager.default
+        profile.request_timeout = self.config.REQUEST_TIMEOUT
+
+        # Set pool configuration
+        cluster.connection_class.max_requests_per_connection = self.config.MAX_REQUESTS_PER_CONNECTION
 
         return cluster
 
@@ -364,16 +382,20 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     @override
-    def insert(self, table: str, data: dict[str, Any]) -> None:
+    def insert(self, table: str, data: dict[str, Any], ttl: int | None = None) -> None:
         """Insert data into a table.
 
         Args:
             table (str): The name of the table.
             data (dict[str, Any]): Key-value pairs representing column names and values.
+            ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
         """
         columns = ", ".join(data.keys())
         placeholders = ", ".join(["%s" for _ in data.keys()])
         query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
+
+        if ttl is not None:
+            query += f" USING TTL {ttl}"
 
         try:
             self.execute(query, tuple(data.values()))
@@ -415,17 +437,23 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     @override
-    def update(self, table: str, data: dict[str, Any], conditions: dict[str, Any]) -> None:
+    def update(self, table: str, data: dict[str, Any], conditions: dict[str, Any], ttl: int | None = None) -> None:
         """Update data in a table.
 
         Args:
             table (str): The name of the table.
             data (dict[str, Any]): Key-value pairs for SET clause.
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
+            ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
         """
         set_clause = ", ".join([f"{key} = %s" for key in data.keys()])
         where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
-        query = f"UPDATE {table} SET {set_clause} WHERE {where_clause}"
+        query = f"UPDATE {table}"
+
+        if ttl is not None:
+            query += f" USING TTL {ttl}"
+
+        query += f" SET {set_clause} WHERE {where_clause}"
 
         # Combine params: SET values first, then WHERE values
         params = tuple(data.values()) + tuple(conditions.values())
@@ -490,6 +518,29 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         return self._session is not None and not self._session.is_shutdown
 
+    def close(self) -> None:
+        """Close the connection and clean up resources.
+
+        This method should be called when the adapter is no longer needed
+        to properly release resources.
+        """
+        try:
+            if hasattr(self, "_session") and self._session is not None:
+                self._session.shutdown()
+            if hasattr(self, "_cluster") and self._cluster is not None:
+                self._cluster.shutdown()
+        except Exception as e:
+            # Ignore errors during cleanup, but log them
+            logger.debug(f"Error during ScyllaDB adapter cleanup: {e}")
+
+    def __del__(self) -> None:
+        """Destructor to ensure resources are cleaned up."""
+        try:
+            self.close()
+        except Exception as e:
+            # Ignore errors during destructor cleanup
+            logger.debug(f"Error in ScyllaDB adapter destructor: {e}")
+
     @override
     def health_check(self) -> dict[str, Any]:
         """Perform a health check on the ScyllaDB connection.
@@ -526,6 +577,99 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 "latency_ms": latency_ms,
                 "error": None,
             }
+
+    @override
+    def count(self, table: str, conditions: dict[str, Any] | None = None) -> int:
+        """Count rows in a table.
+
+        Args:
+            table (str): The name of the table.
+            conditions (dict[str, Any] | None): WHERE clause conditions as key-value pairs.
+
+        Returns:
+            int: The number of rows matching the conditions.
+        """
+        query = f"SELECT COUNT(*) FROM {table}"
+
+        params = None
+        if conditions:
+            where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+            query += f" WHERE {where_clause} ALLOW FILTERING"
+            params = tuple(conditions.values())
+
+        try:
+            result = self.execute(query, params)
+            row = result.one()
+        except Exception as e:
+            self._handle_scylladb_exception(e, "count")
+            raise
+        else:
+            return row.count if row else 0
+
+    @override
+    def exists(self, table: str, conditions: dict[str, Any]) -> bool:
+        """Check if a row exists in a table.
+
+        Args:
+            table (str): The name of the table.
+            conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
+
+        Returns:
+            bool: True if at least one row exists, False otherwise.
+        """
+        where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+        query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"
+
+        try:
+            result = self.execute(query, tuple(conditions.values()))
+            row = result.one()
+        except Exception as e:
+            self._handle_scylladb_exception(e, "exists")
+            raise
+        else:
+            return row.count > 0 if row else False
+
+    @override
+    def get_pool_stats(self) -> dict[str, Any]:
+        """Get connection pool statistics.
+
+        Returns:
+            dict[str, Any]: Pool statistics including open connections, in-flight requests, etc.
+        """
+        if not self.config.ENABLE_CONNECTION_POOL_MONITORING:
+            return {
+                "monitoring_enabled": False,
+                "message": "Connection pool monitoring is disabled",
+            }
+
+        stats: dict[str, Any] = {"monitoring_enabled": True}
+
+        try:
+            session = self.get_session()
+            cluster = self._cluster
+
+            # Get pool state for each host
+            hosts_stats = []
+            for host in cluster.metadata.all_hosts():
+                host_pool = session.get_pool_state(host)
+                if host_pool:
+                    hosts_stats.append(
+                        {
+                            "host": str(host),
+                            "open_connections": host_pool.get("open_count", 0),
+                            "in_flight_queries": host_pool.get("in_flight", 0),
+                        },
+                    )
+
+            stats["hosts"] = hosts_stats
+            stats["total_hosts"] = len(hosts_stats)
+            stats["total_open_connections"] = sum(h.get("open_connections", 0) for h in hosts_stats)
+            stats["total_in_flight_queries"] = sum(h.get("in_flight_queries", 0) for h in hosts_stats)
+
+        except Exception as e:
+            stats["error"] = str(e)
+
+        return stats
 
 
 class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
@@ -597,7 +741,17 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 username=self.config.USERNAME,
                 password=self.config.PASSWORD.get_secret_value(),
             )
-        load_balancing_policy = TokenAwarePolicy(RoundRobinPolicy())
+
+        # Configure load balancing policy with optional datacenter awareness
+        if self.config.LOCAL_DC:
+            from cassandra.policies import DCAwareRoundRobinPolicy
+
+            base_policy = DCAwareRoundRobinPolicy(local_dc=self.config.LOCAL_DC)
+        else:
+            base_policy = RoundRobinPolicy()
+
+        load_balancing_policy = TokenAwarePolicy(base_policy)
+
         if self.config.RETRY_POLICY == "FALLTHROUGH":
             retry_policy = FallthroughRetryPolicy()
         else:  # EXPONENTIAL_BACKOFF (default)
@@ -622,6 +776,14 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             default_retry_policy=retry_policy,
             shard_aware_options=shard_aware_options,
         )
+
+        # Configure connection pool settings
+
+        profile = cluster.profile_manager.default
+        profile.request_timeout = self.config.REQUEST_TIMEOUT
+
+        # Set pool configuration
+        cluster.connection_class.max_requests_per_connection = self.config.MAX_REQUESTS_PER_CONNECTION
 
         return cluster
 
@@ -656,7 +818,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 future = session.execute_async(query)
             result = await self._await_future(future)
         except Exception as e:
-            raise RuntimeError(f"Failed to execute query: {e}") from e
+            self._handle_scylladb_exception(e, "execute")
+            raise
         else:
             return result
 
@@ -798,16 +961,20 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     @override
-    async def insert(self, table: str, data: dict[str, Any]) -> None:
+    async def insert(self, table: str, data: dict[str, Any], ttl: int | None = None) -> None:
         """Insert data into a table asynchronously.
 
         Args:
             table (str): The name of the table.
             data (dict[str, Any]): Key-value pairs representing column names and values.
+            ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
         """
         columns = ", ".join(data.keys())
         placeholders = ", ".join(["%s" for _ in data.keys()])
         query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
+
+        if ttl is not None:
+            query += f" USING TTL {ttl}"
 
         try:
             await self.execute(query, tuple(data.values()))
@@ -849,17 +1016,29 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     @override
-    async def update(self, table: str, data: dict[str, Any], conditions: dict[str, Any]) -> None:
+    async def update(
+        self,
+        table: str,
+        data: dict[str, Any],
+        conditions: dict[str, Any],
+        ttl: int | None = None,
+    ) -> None:
         """Update data in a table asynchronously.
 
         Args:
             table (str): The name of the table.
             data (dict[str, Any]): Key-value pairs for SET clause.
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
+            ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
         """
         set_clause = ", ".join([f"{key} = %s" for key in data.keys()])
         where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
-        query = f"UPDATE {table} SET {set_clause} WHERE {where_clause}"
+        query = f"UPDATE {table}"
+
+        if ttl is not None:
+            query += f" USING TTL {ttl}"
+
+        query += f" SET {set_clause} WHERE {where_clause}"
 
         # Combine params: SET values first, then WHERE values
         params = tuple(data.values()) + tuple(conditions.values())
@@ -925,6 +1104,32 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         return self._session is not None and not self._session.is_shutdown
 
+    async def close(self) -> None:
+        """Close the connection and clean up resources asynchronously.
+
+        This method should be called when the adapter is no longer needed
+        to properly release resources.
+        """
+        try:
+            if hasattr(self, "_session") and self._session is not None:
+                self._session.shutdown()
+            if hasattr(self, "_cluster") and self._cluster is not None:
+                self._cluster.shutdown()
+        except Exception as e:
+            # Ignore errors during cleanup, but log them
+            logger.debug(f"Error during async ScyllaDB adapter cleanup: {e}")
+
+    def __del__(self) -> None:
+        """Destructor to ensure resources are cleaned up."""
+        try:
+            if hasattr(self, "_session") and self._session is not None:
+                self._session.shutdown()
+            if hasattr(self, "_cluster") and self._cluster is not None:
+                self._cluster.shutdown()
+        except Exception as e:
+            # Ignore errors during destructor cleanup
+            logger.debug(f"Error in async ScyllaDB adapter destructor: {e}")
+
     @override
     async def health_check(self) -> dict[str, Any]:
         """Perform a health check on the ScyllaDB connection.
@@ -962,3 +1167,96 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 "latency_ms": latency_ms,
                 "error": None,
             }
+
+    @override
+    async def count(self, table: str, conditions: dict[str, Any] | None = None) -> int:
+        """Count rows in a table asynchronously.
+
+        Args:
+            table (str): The name of the table.
+            conditions (dict[str, Any] | None): WHERE clause conditions as key-value pairs.
+
+        Returns:
+            int: The number of rows matching the conditions.
+        """
+        query = f"SELECT COUNT(*) FROM {table}"
+
+        params = None
+        if conditions:
+            where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+            query += f" WHERE {where_clause} ALLOW FILTERING"
+            params = tuple(conditions.values())
+
+        try:
+            result = await self.execute(query, params)
+            row = result.one()
+        except Exception as e:
+            self._handle_scylladb_exception(e, "count")
+            raise
+        else:
+            return row.count if row else 0
+
+    @override
+    async def exists(self, table: str, conditions: dict[str, Any]) -> bool:
+        """Check if a row exists in a table asynchronously.
+
+        Args:
+            table (str): The name of the table.
+            conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
+
+        Returns:
+            bool: True if at least one row exists, False otherwise.
+        """
+        where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+        query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"
+
+        try:
+            result = await self.execute(query, tuple(conditions.values()))
+            row = result.one()
+        except Exception as e:
+            self._handle_scylladb_exception(e, "exists")
+            raise
+        else:
+            return row.count > 0 if row else False
+
+    @override
+    async def get_pool_stats(self) -> dict[str, Any]:
+        """Get connection pool statistics asynchronously.
+
+        Returns:
+            dict[str, Any]: Pool statistics including open connections, in-flight requests, etc.
+        """
+        if not self.config.ENABLE_CONNECTION_POOL_MONITORING:
+            return {
+                "monitoring_enabled": False,
+                "message": "Connection pool monitoring is disabled",
+            }
+
+        stats: dict[str, Any] = {"monitoring_enabled": True}
+
+        try:
+            session = await self.get_session()
+            cluster = self._cluster
+
+            # Get pool state for each host
+            hosts_stats = []
+            for host in cluster.metadata.all_hosts():
+                host_pool = session.get_pool_state(host)
+                if host_pool:
+                    hosts_stats.append(
+                        {
+                            "host": str(host),
+                            "open_connections": host_pool.get("open_count", 0),
+                            "in_flight_queries": host_pool.get("in_flight", 0),
+                        },
+                    )
+
+            stats["hosts"] = hosts_stats
+            stats["total_hosts"] = len(hosts_stats)
+            stats["total_open_connections"] = sum(h.get("open_connections", 0) for h in hosts_stats)
+            stats["total_in_flight_queries"] = sum(h.get("in_flight_queries", 0) for h in hosts_stats)
+
+        except Exception as e:
+            stats["error"] = str(e)
+
+        return stats

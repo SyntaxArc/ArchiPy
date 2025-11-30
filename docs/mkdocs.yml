@@ -144,6 +144,7 @@ nav:
       - Keycloak: examples/adapters/keycloak.md
       - MinIO: examples/adapters/minio.md
       - Kafka: examples/adapters/kafka.md
+      - ScyllaDB: examples/adapters/scylladb.md
       - Temporal: examples/adapters/temporal.md
       - Payment Gateways: examples/adapters/parsian_payment.md
     - Helpers:
