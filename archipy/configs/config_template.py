@@ -884,7 +884,8 @@ class ScyllaDBConfig(BaseModel):
     """Configuration settings for ScyllaDB/Cassandra connections and operations.
 
     Contains settings related to ScyllaDB cluster connectivity, authentication,
-    compression, consistency levels, and connection management.
+    compression, consistency levels, connection management, retry policies,
+    prepared statement caching, and health checks.
 
     Attributes:
         CONTACT_POINTS (list[str]): List of ScyllaDB node addresses.
@@ -898,6 +899,16 @@ class ScyllaDBConfig(BaseModel):
         REQUEST_TIMEOUT (int): Request timeout in seconds.
         CONSISTENCY_LEVEL (Literal): Default consistency level.
         DISABLE_SHARD_AWARENESS (bool): Disable shard awareness (default: False).
+        RETRY_POLICY (Literal): Retry policy type (default: "EXPONENTIAL_BACKOFF").
+            Options: "EXPONENTIAL_BACKOFF", "FALLTHROUGH", "DOWNGRADING_CONSISTENCY".
+        RETRY_MAX_NUM_RETRIES (float): Maximum number of retries for ExponentialBackoffRetryPolicy (default: 3.0).
+        RETRY_MIN_INTERVAL (float): Minimum interval in seconds between retries (default: 0.1).
+        RETRY_MAX_INTERVAL (float): Maximum interval in seconds between retries (default: 10.0).
+        ENABLE_PREPARED_STATEMENT_CACHE (bool): Enable prepared statement caching (default: True).
+        PREPARED_STATEMENT_CACHE_SIZE (int): Maximum cached prepared statements (default: 100).
+        PREPARED_STATEMENT_CACHE_TTL_SECONDS (int): TTL for cache in seconds (default: 3600).
+        HEALTH_CHECK_TIMEOUT (int): Timeout for health check queries in seconds (default: 5).
+        ENABLE_CONNECTION_POOL_MONITORING (bool): Enable pool monitoring (default: False).
     """
 
     CONTACT_POINTS: list[str] = Field(
@@ -959,6 +970,50 @@ class ScyllaDBConfig(BaseModel):
     DISABLE_SHARD_AWARENESS: bool = Field(
         default=False,
         description="Disable shard awareness (useful for Docker/Testcontainer/NAT environments)",
+    )
+    RETRY_POLICY: Literal["EXPONENTIAL_BACKOFF", "FALLTHROUGH"] = Field(
+        default="EXPONENTIAL_BACKOFF",
+        description="Retry policy type (uses native driver RetryPolicy). "
+        "Options: 'EXPONENTIAL_BACKOFF' (retries with exponential backoff), "
+        "'FALLTHROUGH' (never retries, propagates failures to application)",
+    )
+    RETRY_MAX_NUM_RETRIES: float = Field(
+        default=3.0,
+        ge=0.0,
+        description="Maximum number of retries for ExponentialBackoffRetryPolicy",
+    )
+    RETRY_MIN_INTERVAL: float = Field(
+        default=0.1,
+        ge=0.0,
+        description="Minimum interval in seconds between retries for ExponentialBackoffRetryPolicy",
+    )
+    RETRY_MAX_INTERVAL: float = Field(
+        default=10.0,
+        ge=0.0,
+        description="Maximum interval in seconds between retries for ExponentialBackoffRetryPolicy",
+    )
+    ENABLE_PREPARED_STATEMENT_CACHE: bool = Field(
+        default=True,
+        description="Enable prepared statement caching",
+    )
+    PREPARED_STATEMENT_CACHE_SIZE: int = Field(
+        default=100,
+        ge=1,
+        description="Maximum cached prepared statements",
+    )
+    PREPARED_STATEMENT_CACHE_TTL_SECONDS: int = Field(
+        default=3600,
+        ge=1,
+        description="TTL for prepared statement cache in seconds (1 hour)",
+    )
+    HEALTH_CHECK_TIMEOUT: int = Field(
+        default=5,
+        ge=1,
+        description="Timeout for health check queries in seconds",
+    )
+    ENABLE_CONNECTION_POOL_MONITORING: bool = Field(
+        default=False,
+        description="Enable connection pool monitoring and metrics",
     )
 
     @model_validator(mode="after")

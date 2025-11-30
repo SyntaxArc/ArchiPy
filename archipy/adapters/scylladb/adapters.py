@@ -5,21 +5,108 @@ supporting both synchronous and asynchronous database operations.
 """
 
 import asyncio
-import threading
+import logging
+import time
 from typing import Any, override
 
+from async_lru import alru_cache
 from cassandra import ConsistencyLevel
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster, ResponseFuture, Session
-from cassandra.policies import RoundRobinPolicy, TokenAwarePolicy
+from cassandra.policies import (
+    ExponentialBackoffRetryPolicy,
+    FallthroughRetryPolicy,
+    RoundRobinPolicy,
+    TokenAwarePolicy,
+)
 from cassandra.query import BatchStatement, PreparedStatement, SimpleStatement
 
 from archipy.adapters.scylladb.ports import AsyncScyllaDBPort, ScyllaDBPort
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import ScyllaDBConfig
+from archipy.helpers.decorators import ttl_cache_decorator
+from archipy.models.errors import (
+    ConfigurationError,
+    ConnectionTimeoutError,
+    DatabaseConnectionError,
+    DatabaseQueryError,
+    InvalidArgumentError,
+    InvalidCredentialsError,
+    NetworkError,
+    NotFoundError,
+    ServiceUnavailableError,
+)
+
+logger = logging.getLogger(__name__)
 
 
-class ScyllaDBAdapter(ScyllaDBPort):
+class ScyllaDBExceptionHandlerMixin:
+    """Mixin class to handle ScyllaDB/Cassandra exceptions in a consistent way."""
+
+    @classmethod
+    def _handle_scylladb_exception(cls, exception: Exception, operation: str) -> None:
+        """Handle ScyllaDB/Cassandra exceptions and map them to appropriate application errors.
+
+        Args:
+            exception: The original exception
+            operation: The name of the operation that failed
+
+        Raises:
+            Various application-specific errors based on the exception type/content
+        """
+        error_msg = str(exception).lower()
+
+        if "unconfigured table" in error_msg:
+            table_name = operation if operation else "unknown"
+            raise NotFoundError(
+                resource_type="table",
+                additional_data={"table_name": table_name},
+            ) from exception
+
+        try:
+            from cassandra import (
+                AuthenticationFailed,
+                InvalidRequest,
+                OperationTimedOut,
+                ProtocolException,
+                Unavailable,
+            )
+            from cassandra.cluster import NoHostAvailable
+
+            if isinstance(exception, Unavailable) or "unavailable" in error_msg:
+                raise ServiceUnavailableError(service="ScyllaDB") from exception
+
+            if isinstance(exception, OperationTimedOut) or "timeout" in error_msg:
+                raise ConnectionTimeoutError(service="ScyllaDB", timeout=None) from exception
+
+            if isinstance(exception, AuthenticationFailed) or "authentication" in error_msg:
+                raise InvalidCredentialsError() from exception
+
+            if isinstance(exception, InvalidRequest):
+                raise InvalidArgumentError(argument_name=operation) from exception
+
+            if isinstance(exception, ProtocolException) or "protocol" in error_msg:
+                raise ConfigurationError(operation="scylladb", reason="Protocol error") from exception
+
+            # NoHostAvailable
+            if isinstance(exception, NoHostAvailable) or "no host available" in error_msg:
+                raise ServiceUnavailableError(service="ScyllaDB") from exception
+
+        except ImportError:
+            pass
+
+        if "network" in error_msg or "connection" in error_msg or "socket" in error_msg:
+            raise NetworkError(service="ScyllaDB") from exception
+
+        if "configuration" in error_msg or ("config" in error_msg and "unconfigured" not in error_msg):
+            raise ConfigurationError(operation="scylladb", reason="Configuration error") from exception
+
+        if "connection" in operation.lower() or "connect" in operation.lower():
+            raise DatabaseConnectionError(database="scylladb") from exception
+        raise DatabaseQueryError(database="scylladb") from exception
+
+
+class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
     """Synchronous adapter for ScyllaDB operations.
 
     This adapter implements the ScyllaDBPort interface to provide a consistent
@@ -46,9 +133,17 @@ class ScyllaDBAdapter(ScyllaDBPort):
             except AttributeError:
                 # SCYLLADB not configured, use defaults
                 self.config = ScyllaDBConfig()
-        self._cluster: Cluster | None = None
-        self._session: Session | None = None
-        self._lock = threading.Lock()
+        self.__post_init__()
+        try:
+            self._cluster = self._create_cluster()
+            self._session = self._cluster.connect()
+            self._session.default_timeout = self.config.REQUEST_TIMEOUT
+            if self.config.KEYSPACE:
+                self._session.set_keyspace(self.config.KEYSPACE)
+
+        except Exception as e:
+            self._handle_scylladb_exception(e, "connect")
+            raise
 
     def _get_consistency_level(self) -> ConsistencyLevel:
         """Get ConsistencyLevel enum from config string.
@@ -75,22 +170,22 @@ class ScyllaDBAdapter(ScyllaDBPort):
         Returns:
             Cluster: Configured cluster instance.
         """
-        # Set up authentication if credentials provided
         auth_provider = None
         if self.config.USERNAME and self.config.PASSWORD:
             auth_provider = PlainTextAuthProvider(
                 username=self.config.USERNAME,
                 password=self.config.PASSWORD.get_secret_value(),
             )
-
-        # Set up load balancing policy with TokenAwarePolicy for shard awareness
-        # Using RoundRobinPolicy as the child policy for better distribution
-        # TokenAwarePolicy enables shard awareness and tablet awareness automatically
         load_balancing_policy = TokenAwarePolicy(RoundRobinPolicy())
-
-        # Create cluster with configuration
-        # Shard awareness can be disabled for Docker/Testcontainer/NAT environments
-        # as the driver cannot reach individual shard ports through port mapping
+        if self.config.RETRY_POLICY == "FALLTHROUGH":
+            retry_policy = FallthroughRetryPolicy()
+        else:  # EXPONENTIAL_BACKOFF (default)
+            retry_policy = ExponentialBackoffRetryPolicy(
+                max_num_retries=self.config.RETRY_MAX_NUM_RETRIES,
+                min_interval=self.config.RETRY_MIN_INTERVAL,
+                max_interval=self.config.RETRY_MAX_INTERVAL,
+            )
+        # Shard awareness disabled for Docker/NAT environments
         shard_aware_options = None
         if self.config.DISABLE_SHARD_AWARENESS:
             shard_aware_options = {"disable": True}
@@ -103,55 +198,11 @@ class ScyllaDBAdapter(ScyllaDBPort):
             compression=True if self.config.COMPRESSION else False,
             connect_timeout=self.config.CONNECT_TIMEOUT,
             load_balancing_policy=load_balancing_policy,
+            default_retry_policy=retry_policy,
             shard_aware_options=shard_aware_options,
         )
 
         return cluster
-
-    @override
-    def connect(self) -> Session:
-        """Establish connection to ScyllaDB cluster and return session.
-
-        Returns:
-            Session: The active session object.
-        """
-        with self._lock:
-            if self._session is None:
-                try:
-                    self._cluster = self._create_cluster()
-                    self._session = self._cluster.connect()
-
-                    # Set default timeout
-                    self._session.default_timeout = self.config.REQUEST_TIMEOUT
-
-                    # Use keyspace if specified
-                    if self.config.KEYSPACE:
-                        self._session.set_keyspace(self.config.KEYSPACE)
-
-                except Exception as e:
-                    raise ConnectionError(f"Failed to connect to ScyllaDB: {e}") from e
-
-            return self._session
-
-    @override
-    def disconnect(self) -> None:
-        """Close connection to ScyllaDB cluster."""
-        with self._lock:
-            if self._session:
-                try:
-                    self._session.shutdown()
-                except Exception as e:
-                    raise ConnectionError(f"Failed to disconnect from ScyllaDB: {e}") from e
-                finally:
-                    self._session = None
-
-            if self._cluster:
-                try:
-                    self._cluster.shutdown()
-                except Exception as e:
-                    raise ConnectionError(f"Failed to shutdown cluster: {e}") from e
-                finally:
-                    self._cluster = None
 
     @override
     def execute(self, query: str, params: dict[str, Any] | tuple | list | None = None) -> Any:
@@ -171,7 +222,8 @@ class ScyllaDBAdapter(ScyllaDBPort):
             else:
                 result = session.execute(query)
         except Exception as e:
-            raise RuntimeError(f"Failed to execute query: {e}") from e
+            self._handle_scylladb_exception(e, "execute")
+            raise
         else:
             return result
 
@@ -185,13 +237,35 @@ class ScyllaDBAdapter(ScyllaDBPort):
         Returns:
             PreparedStatement: The prepared statement object.
         """
+        return self._prepare_internal(query)
+
+    def _prepare_internal(self, query: str) -> PreparedStatement:
+        """Internal method to prepare a CQL statement (used by cache decorator).
+
+        Args:
+            query (str): The CQL query to prepare.
+
+        Returns:
+            PreparedStatement: The prepared statement object.
+        """
         session = self.get_session()
         try:
             prepared = session.prepare(query)
         except Exception as e:
-            raise RuntimeError(f"Failed to prepare statement: {e}") from e
+            self._handle_scylladb_exception(e, "prepare")
+            raise
         else:
             return prepared
+
+    def __post_init__(self) -> None:
+        """Post-initialization hook to apply cache decorator if enabled."""
+        if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+            # Apply cache decorator to the bound method
+            original_method = self._prepare_internal
+            self._prepare_internal = ttl_cache_decorator(  # type: ignore[method-assign]
+                ttl_seconds=self.config.PREPARED_STATEMENT_CACHE_TTL_SECONDS,
+                maxsize=self.config.PREPARED_STATEMENT_CACHE_SIZE,
+            )(original_method)
 
     @override
     def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> Any:
@@ -211,7 +285,8 @@ class ScyllaDBAdapter(ScyllaDBPort):
             else:
                 result = session.execute(statement)
         except Exception as e:
-            raise RuntimeError(f"Failed to execute prepared statement: {e}") from e
+            self._handle_scylladb_exception(e, "execute_prepared")
+            raise
         else:
             return result
 
@@ -230,7 +305,8 @@ class ScyllaDBAdapter(ScyllaDBPort):
         try:
             self.execute(query)
         except Exception as e:
-            raise RuntimeError(f"Failed to create keyspace '{keyspace}': {e}") from e
+            self._handle_scylladb_exception(e, "create_keyspace")
+            raise
 
     @override
     def drop_keyspace(self, keyspace: str) -> None:
@@ -243,7 +319,8 @@ class ScyllaDBAdapter(ScyllaDBPort):
         try:
             self.execute(query)
         except Exception as e:
-            raise RuntimeError(f"Failed to drop keyspace '{keyspace}': {e}") from e
+            self._handle_scylladb_exception(e, "drop_keyspace")
+            raise
 
     @override
     def use_keyspace(self, keyspace: str) -> None:
@@ -256,7 +333,8 @@ class ScyllaDBAdapter(ScyllaDBPort):
         try:
             session.set_keyspace(keyspace)
         except Exception as e:
-            raise RuntimeError(f"Failed to use keyspace '{keyspace}': {e}") from e
+            self._handle_scylladb_exception(e, "use_keyspace")
+            raise
 
     @override
     def create_table(self, table_schema: str) -> None:
@@ -268,7 +346,8 @@ class ScyllaDBAdapter(ScyllaDBPort):
         try:
             self.execute(table_schema)
         except Exception as e:
-            raise RuntimeError(f"Failed to create table: {e}") from e
+            self._handle_scylladb_exception(e, "create_table")
+            raise
 
     @override
     def drop_table(self, table: str) -> None:
@@ -281,7 +360,8 @@ class ScyllaDBAdapter(ScyllaDBPort):
         try:
             self.execute(query)
         except Exception as e:
-            raise RuntimeError(f"Failed to drop table '{table}': {e}") from e
+            self._handle_scylladb_exception(e, "drop_table")
+            raise
 
     @override
     def insert(self, table: str, data: dict[str, Any]) -> None:
@@ -296,10 +376,10 @@ class ScyllaDBAdapter(ScyllaDBPort):
         query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
 
         try:
-            # Pass values as a tuple in the order of columns
             self.execute(query, tuple(data.values()))
         except Exception as e:
-            raise RuntimeError(f"Failed to insert into table '{table}': {e}") from e
+            self._handle_scylladb_exception(e, "insert")
+            raise
 
     @override
     def select(
@@ -331,7 +411,8 @@ class ScyllaDBAdapter(ScyllaDBPort):
             result = self.execute(query, params)
             return list(result)
         except Exception as e:
-            raise RuntimeError(f"Failed to select from table '{table}': {e}") from e
+            self._handle_scylladb_exception(e, "select")
+            raise
 
     @override
     def update(self, table: str, data: dict[str, Any], conditions: dict[str, Any]) -> None:
@@ -352,7 +433,8 @@ class ScyllaDBAdapter(ScyllaDBPort):
         try:
             self.execute(query, params)
         except Exception as e:
-            raise RuntimeError(f"Failed to update table '{table}': {e}") from e
+            self._handle_scylladb_exception(e, "update")
+            raise
 
     @override
     def delete(self, table: str, conditions: dict[str, Any]) -> None:
@@ -368,7 +450,8 @@ class ScyllaDBAdapter(ScyllaDBPort):
         try:
             self.execute(query, tuple(conditions.values()))
         except Exception as e:
-            raise RuntimeError(f"Failed to delete from table '{table}': {e}") from e
+            self._handle_scylladb_exception(e, "delete")
+            raise
 
     @override
     def batch_execute(self, statements: list[str]) -> None:
@@ -386,7 +469,8 @@ class ScyllaDBAdapter(ScyllaDBPort):
 
             session.execute(batch)
         except Exception as e:
-            raise RuntimeError(f"Failed to execute batch: {e}") from e
+            self._handle_scylladb_exception(e, "batch_execute")
+            raise
 
     @override
     def get_session(self) -> Session:
@@ -395,31 +479,56 @@ class ScyllaDBAdapter(ScyllaDBPort):
         Returns:
             Session: The active session object.
         """
-        if self._session is None:
-            return self.connect()
         return self._session
 
-    def __enter__(self) -> "ScyllaDBAdapter":
-        """Context manager entry.
+    @override
+    def is_connected(self) -> bool:
+        """Check if the adapter is connected to ScyllaDB cluster.
 
         Returns:
-            ScyllaDBAdapter: The adapter instance.
+            bool: True if connected, False otherwise.
         """
-        self.connect()
-        return self
+        return self._session is not None and not self._session.is_shutdown
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Context manager exit.
+    @override
+    def health_check(self) -> dict[str, Any]:
+        """Perform a health check on the ScyllaDB connection.
 
-        Args:
-            exc_type: Exception type.
-            exc_val: Exception value.
-            exc_tb: Exception traceback.
+        Returns:
+            dict[str, Any]: Health check result with status, latency_ms, and optional error.
         """
-        self.disconnect()
+        if not self.is_connected():
+            return {
+                "status": "unhealthy",
+                "latency_ms": 0.0,
+                "error": "Not connected to cluster",
+            }
+
+        try:
+            start_time = time.time()
+            session = self.get_session()
+            original_timeout = session.default_timeout
+            session.default_timeout = self.config.HEALTH_CHECK_TIMEOUT
+            try:
+                session.execute("SELECT now() FROM system.local")
+            finally:
+                session.default_timeout = original_timeout
+            latency_ms = (time.time() - start_time) * 1000
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "latency_ms": 0.0,
+                "error": str(e),
+            }
+        else:
+            return {
+                "status": "healthy",
+                "latency_ms": latency_ms,
+                "error": None,
+            }
 
 
-class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
+class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
     """Asynchronous adapter for ScyllaDB operations.
 
     This adapter implements the AsyncScyllaDBPort interface to provide async
@@ -445,9 +554,17 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
             except AttributeError:
                 # SCYLLADB not configured, use defaults
                 self.config = ScyllaDBConfig()
-        self._cluster: Cluster | None = None
-        self._session: Session | None = None
-        self._lock = asyncio.Lock()
+        self.__post_init__()
+        try:
+            self._cluster = self._create_cluster()
+            self._session = self._cluster.connect()
+            self._session.default_timeout = self.config.REQUEST_TIMEOUT
+            if self.config.KEYSPACE:
+                self._session.set_keyspace(self.config.KEYSPACE)
+
+        except Exception as e:
+            self._handle_scylladb_exception(e, "connect")
+            raise
 
     def _get_consistency_level(self) -> ConsistencyLevel:
         """Get ConsistencyLevel enum from config string.
@@ -474,22 +591,22 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
         Returns:
             Cluster: Configured cluster instance.
         """
-        # Set up authentication if credentials provided
         auth_provider = None
         if self.config.USERNAME and self.config.PASSWORD:
             auth_provider = PlainTextAuthProvider(
                 username=self.config.USERNAME,
                 password=self.config.PASSWORD.get_secret_value(),
             )
-
-        # Set up load balancing policy with TokenAwarePolicy for shard awareness
-        # Using RoundRobinPolicy as the child policy for better distribution
-        # TokenAwarePolicy enables shard awareness and tablet awareness automatically
         load_balancing_policy = TokenAwarePolicy(RoundRobinPolicy())
-
-        # Create cluster with configuration
-        # Shard awareness can be disabled for Docker/Testcontainer/NAT environments
-        # as the driver cannot reach individual shard ports through port mapping
+        if self.config.RETRY_POLICY == "FALLTHROUGH":
+            retry_policy = FallthroughRetryPolicy()
+        else:  # EXPONENTIAL_BACKOFF (default)
+            retry_policy = ExponentialBackoffRetryPolicy(
+                max_num_retries=self.config.RETRY_MAX_NUM_RETRIES,
+                min_interval=self.config.RETRY_MIN_INTERVAL,
+                max_interval=self.config.RETRY_MAX_INTERVAL,
+            )
+        # Shard awareness disabled for Docker/NAT environments
         shard_aware_options = None
         if self.config.DISABLE_SHARD_AWARENESS:
             shard_aware_options = {"disable": True}
@@ -502,6 +619,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
             compression=True if self.config.COMPRESSION else False,
             connect_timeout=self.config.CONNECT_TIMEOUT,
             load_balancing_policy=load_balancing_policy,
+            default_retry_policy=retry_policy,
             shard_aware_options=shard_aware_options,
         )
 
@@ -518,51 +636,6 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
         """
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, future.result)
-
-    @override
-    async def connect(self) -> Session:
-        """Establish connection to ScyllaDB cluster asynchronously.
-
-        Returns:
-            Session: The active session object.
-        """
-        async with self._lock:
-            if self._session is None:
-                try:
-                    self._cluster = self._create_cluster()
-                    self._session = self._cluster.connect()
-
-                    # Set default timeout
-                    self._session.default_timeout = self.config.REQUEST_TIMEOUT
-
-                    # Use keyspace if specified
-                    if self.config.KEYSPACE:
-                        self._session.set_keyspace(self.config.KEYSPACE)
-
-                except Exception as e:
-                    raise ConnectionError(f"Failed to connect to ScyllaDB: {e}") from e
-
-            return self._session
-
-    @override
-    async def disconnect(self) -> None:
-        """Close connection to ScyllaDB cluster asynchronously."""
-        async with self._lock:
-            if self._session:
-                try:
-                    self._session.shutdown()
-                except Exception as e:
-                    raise ConnectionError(f"Failed to disconnect from ScyllaDB: {e}") from e
-                finally:
-                    self._session = None
-
-            if self._cluster:
-                try:
-                    self._cluster.shutdown()
-                except Exception as e:
-                    raise ConnectionError(f"Failed to shutdown cluster: {e}") from e
-                finally:
-                    self._cluster = None
 
     @override
     async def execute(self, query: str, params: dict[str, Any] | tuple | list | None = None) -> Any:
@@ -597,14 +670,35 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
         Returns:
             PreparedStatement: The prepared statement object.
         """
+        return await self._prepare_internal(query)
+
+    async def _prepare_internal(self, query: str) -> PreparedStatement:
+        """Internal method to prepare a CQL statement (used by cache decorator).
+
+        Args:
+            query (str): The CQL query to prepare.
+
+        Returns:
+            PreparedStatement: The prepared statement object.
+        """
         session = await self.get_session()
         try:
-            # Note: prepare is synchronous even for async sessions in cassandra driver
             prepared = session.prepare(query)
         except Exception as e:
-            raise RuntimeError(f"Failed to prepare statement: {e}") from e
+            self._handle_scylladb_exception(e, "prepare")
+            raise
         else:
             return prepared
+
+    def __post_init__(self) -> None:
+        """Post-initialization hook to apply cache decorator if enabled."""
+        if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+            # Apply cache decorator to the bound method
+            original_method = self._prepare_internal
+            self._prepare_internal = alru_cache(  # type: ignore[method-assign]
+                ttl=self.config.PREPARED_STATEMENT_CACHE_TTL_SECONDS,
+                maxsize=self.config.PREPARED_STATEMENT_CACHE_SIZE,
+            )(original_method)
 
     @override
     async def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> Any:
@@ -625,7 +719,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
                 future = session.execute_async(statement)
             result = await self._await_future(future)
         except Exception as e:
-            raise RuntimeError(f"Failed to execute prepared statement: {e}") from e
+            self._handle_scylladb_exception(e, "execute_prepared")
+            raise
         else:
             return result
 
@@ -644,7 +739,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
         try:
             await self.execute(query)
         except Exception as e:
-            raise RuntimeError(f"Failed to create keyspace '{keyspace}': {e}") from e
+            self._handle_scylladb_exception(e, "create_keyspace")
+            raise
 
     @override
     async def drop_keyspace(self, keyspace: str) -> None:
@@ -657,7 +753,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
         try:
             await self.execute(query)
         except Exception as e:
-            raise RuntimeError(f"Failed to drop keyspace '{keyspace}': {e}") from e
+            self._handle_scylladb_exception(e, "drop_keyspace")
+            raise
 
     @override
     async def use_keyspace(self, keyspace: str) -> None:
@@ -670,7 +767,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
         try:
             session.set_keyspace(keyspace)
         except Exception as e:
-            raise RuntimeError(f"Failed to use keyspace '{keyspace}': {e}") from e
+            self._handle_scylladb_exception(e, "use_keyspace")
+            raise
 
     @override
     async def create_table(self, table_schema: str) -> None:
@@ -682,7 +780,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
         try:
             await self.execute(table_schema)
         except Exception as e:
-            raise RuntimeError(f"Failed to create table: {e}") from e
+            self._handle_scylladb_exception(e, "create_table")
+            raise
 
     @override
     async def drop_table(self, table: str) -> None:
@@ -695,7 +794,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
         try:
             await self.execute(query)
         except Exception as e:
-            raise RuntimeError(f"Failed to drop table '{table}': {e}") from e
+            self._handle_scylladb_exception(e, "drop_table")
+            raise
 
     @override
     async def insert(self, table: str, data: dict[str, Any]) -> None:
@@ -712,7 +812,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
         try:
             await self.execute(query, tuple(data.values()))
         except Exception as e:
-            raise RuntimeError(f"Failed to insert into table '{table}': {e}") from e
+            self._handle_scylladb_exception(e, "insert")
+            raise
 
     @override
     async def select(
@@ -744,7 +845,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
             result = await self.execute(query, params)
             return list(result)
         except Exception as e:
-            raise RuntimeError(f"Failed to select from table '{table}': {e}") from e
+            self._handle_scylladb_exception(e, "select")
+            raise
 
     @override
     async def update(self, table: str, data: dict[str, Any], conditions: dict[str, Any]) -> None:
@@ -765,7 +867,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
         try:
             await self.execute(query, params)
         except Exception as e:
-            raise RuntimeError(f"Failed to update table '{table}': {e}") from e
+            self._handle_scylladb_exception(e, "update")
+            raise
 
     @override
     async def delete(self, table: str, conditions: dict[str, Any]) -> None:
@@ -781,7 +884,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
         try:
             await self.execute(query, tuple(conditions.values()))
         except Exception as e:
-            raise RuntimeError(f"Failed to delete from table '{table}': {e}") from e
+            self._handle_scylladb_exception(e, "delete")
+            raise
 
     @override
     async def batch_execute(self, statements: list[str]) -> None:
@@ -800,7 +904,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
             future = session.execute_async(batch)
             await self._await_future(future)
         except Exception as e:
-            raise RuntimeError(f"Failed to execute batch: {e}") from e
+            self._handle_scylladb_exception(e, "batch_execute")
+            raise
 
     @override
     async def get_session(self) -> Session:
@@ -809,25 +914,51 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort):
         Returns:
             Session: The active session object.
         """
-        if self._session is None:
-            return await self.connect()
         return self._session
 
-    async def __aenter__(self) -> "AsyncScyllaDBAdapter":
-        """Async context manager entry.
+    @override
+    async def is_connected(self) -> bool:
+        """Check if the adapter is connected to ScyllaDB cluster.
 
         Returns:
-            AsyncScyllaDBAdapter: The adapter instance.
+            bool: True if connected, False otherwise.
         """
-        await self.connect()
-        return self
+        return self._session is not None and not self._session.is_shutdown
 
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Async context manager exit.
+    @override
+    async def health_check(self) -> dict[str, Any]:
+        """Perform a health check on the ScyllaDB connection.
 
-        Args:
-            exc_type: Exception type.
-            exc_val: Exception value.
-            exc_tb: Exception traceback.
+        Returns:
+            dict[str, Any]: Health check result with status, latency_ms, and optional error.
         """
-        await self.disconnect()
+        if not await self.is_connected():
+            return {
+                "status": "unhealthy",
+                "latency_ms": 0.0,
+                "error": "Not connected to cluster",
+            }
+
+        try:
+            start_time = time.time()
+            session = await self.get_session()
+            original_timeout = session.default_timeout
+            session.default_timeout = self.config.HEALTH_CHECK_TIMEOUT
+            try:
+                future = session.execute_async("SELECT now() FROM system.local")
+                await self._await_future(future)
+            finally:
+                session.default_timeout = original_timeout
+            latency_ms = (time.time() - start_time) * 1000
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "latency_ms": 0.0,
+                "error": str(e),
+            }
+        else:
+            return {
+                "status": "healthy",
+                "latency_ms": latency_ms,
+                "error": None,
+            }
