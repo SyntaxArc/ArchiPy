@@ -122,6 +122,48 @@ options:
 show_root_heading: true
 show_source: true
 
+#### ScyllaDB
+
+ScyllaDB and Apache Cassandra database adapter with native CQL support.
+
+```python
+from archipy.adapters.scylladb.adapters import ScyllaDBAdapter, AsyncScyllaDBAdapter
+
+# Create a ScyllaDB adapter (uses global config)
+adapter = ScyllaDBAdapter()
+
+# Create keyspace
+adapter.create_keyspace("my_app", replication_factor=3)
+adapter.use_keyspace("my_app")
+
+# Create table
+adapter.create_table("""
+    CREATE TABLE IF NOT EXISTS users (
+        id int PRIMARY KEY,
+        username text,
+        email text
+    )
+""")
+
+# Insert data
+adapter.insert("users", {"id": 1, "username": "alice", "email": "alice@example.com"})
+
+# Select data
+users = adapter.select("users", conditions={"id": 1})
+```
+
+For detailed examples and usage guidelines, see the [ScyllaDB Adapter Examples](../examples/adapters/scylladb.md).
+
+::: archipy.adapters.scylladb.adapters
+options:
+show_root_heading: true
+show_source: true
+
+::: archipy.adapters.scylladb.ports
+options:
+show_root_heading: true
+show_source: true
+
 ### Email
 
 Email sending functionality with standardized interface.

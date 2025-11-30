@@ -33,33 +33,63 @@ pip install scylla-driver
 ### Synchronous Adapter
 
 ```python
+import logging
+
 from archipy.adapters.scylladb import ScyllaDBAdapter
 from archipy.configs.config_template import ScyllaDBConfig
+from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
-# Using default configuration
-adapter = ScyllaDBAdapter()
+# Configure logging
+logger = logging.getLogger(__name__)
 
-# Using custom configuration
-config = ScyllaDBConfig(
-    CONTACT_POINTS=["localhost"],
-    PORT=9042,
-    KEYSPACE="my_keyspace",
-)
-adapter = ScyllaDBAdapter(config)
+try:
+    # Using default configuration
+    adapter = ScyllaDBAdapter()
+
+    # Using custom configuration
+    config = ScyllaDBConfig(
+        CONTACT_POINTS=["localhost"],
+        PORT=9042,
+        KEYSPACE="my_keyspace",
+    )
+    adapter = ScyllaDBAdapter(config)
+except DatabaseConnectionError as e:
+    logger.error(f"Failed to connect to ScyllaDB: {e}")
+    raise
 ```
 
 ### Asynchronous Adapter
 
 ```python
+import asyncio
+import logging
+
 from archipy.adapters.scylladb import AsyncScyllaDBAdapter
 from archipy.configs.config_template import ScyllaDBConfig
+from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
-config = ScyllaDBConfig(
-    CONTACT_POINTS=["localhost"],
-    PORT=9042,
-    KEYSPACE="my_keyspace",
-)
-adapter = AsyncScyllaDBAdapter(config)
+# Configure logging
+logger = logging.getLogger(__name__)
+
+
+async def main() -> None:
+    try:
+        config = ScyllaDBConfig(
+            CONTACT_POINTS=["localhost"],
+            PORT=9042,
+            KEYSPACE="my_keyspace",
+        )
+        adapter = AsyncScyllaDBAdapter(config)
+    except DatabaseConnectionError as e:
+        logger.error(f"Failed to connect to ScyllaDB: {e}")
+        raise
+    else:
+        logger.info("Connected to ScyllaDB successfully")
+        return adapter
+
+
+# Run the async function
+asyncio.run(main())
 ```
 
 ## Configuration
@@ -115,65 +145,131 @@ config = ScyllaDBConfig(
 ### Create Keyspace and Table
 
 ```python
+import logging
+
 from archipy.adapters.scylladb import ScyllaDBAdapter
+from archipy.models.errors import DatabaseQueryError
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 adapter = ScyllaDBAdapter()
 
-# Create keyspace
-adapter.create_keyspace("my_app", replication_factor=3)
-adapter.use_keyspace("my_app")
+try:
+    # Create keyspace
+    adapter.create_keyspace("my_app", replication_factor=3)
+    adapter.use_keyspace("my_app")
 
-# Create table
-table_schema = """
-    CREATE TABLE IF NOT EXISTS users (
-        id int PRIMARY KEY,
-        username text,
-        email text,
-        created_at timestamp
-    )
-"""
-adapter.create_table(table_schema)
+    # Create table
+    table_schema = """
+        CREATE TABLE IF NOT EXISTS users (
+            id int PRIMARY KEY,
+            username text,
+            email text,
+            created_at timestamp
+        )
+    """
+    adapter.create_table(table_schema)
+except DatabaseQueryError as e:
+    logger.error(f"Failed to create keyspace or table: {e}")
+    raise
+else:
+    logger.info("Keyspace and table created successfully")
 ```
 
 ### Insert Data
 
 ```python
-# Simple insert
-adapter.insert("users", {
-    "id": 1,
-    "username": "alice",
-    "email": "alice@example.com",
-    "created_at": "2025-01-01 00:00:00"
-})
+import logging
+
+from archipy.models.errors import DatabaseQueryError
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+try:
+    # Simple insert
+    adapter.insert("users", {
+        "id": 1,
+        "username": "alice",
+        "email": "alice@example.com",
+        "created_at": "2025-01-01 00:00:00"
+    })
+except DatabaseQueryError as e:
+    logger.error(f"Failed to insert data: {e}")
+    raise
+else:
+    logger.info("Data inserted successfully")
 ```
 
 ### Select Data
 
 ```python
-# Select all rows
-all_users = adapter.select("users")
+import logging
 
-# Select with conditions
-user = adapter.select("users", conditions={"id": 1})
+from archipy.models.errors import DatabaseQueryError, NotFoundError
 
-# Select specific columns
-user_info = adapter.select("users", columns=["username", "email"], conditions={"id": 1})
+# Configure logging
+logger = logging.getLogger(__name__)
+
+try:
+    # Select all rows
+    all_users = adapter.select("users")
+
+    # Select with conditions
+    user = adapter.select("users", conditions={"id": 1})
+
+    # Select specific columns
+    user_info = adapter.select("users", columns=["username", "email"], conditions={"id": 1})
+except DatabaseQueryError as e:
+    logger.error(f"Failed to select data: {e}")
+    raise
+else:
+    if not user:
+        raise NotFoundError(resource_type="user", additional_data={"id": 1})
+    logger.info(f"Found user: {user[0].username}")
 ```
 
 ### Update Data
 
 ```python
-adapter.update(
-    "users",
-    data={"email": "newemail@example.com"},
-    conditions={"id": 1}
-)
+import logging
+
+from archipy.models.errors import DatabaseQueryError
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+try:
+    adapter.update(
+        "users",
+        data={"email": "newemail@example.com"},
+        conditions={"id": 1}
+    )
+except DatabaseQueryError as e:
+    logger.error(f"Failed to update data: {e}")
+    raise
+else:
+    logger.info("Data updated successfully")
 ```
 
 ### Delete Data
 
 ```python
-adapter.delete("users", conditions={"id": 1})
+import logging
+
+from archipy.models.errors import DatabaseQueryError
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+try:
+    adapter.delete("users", conditions={"id": 1})
+except DatabaseQueryError as e:
+    logger.error(f"Failed to delete data: {e}")
+    raise
+else:
+    logger.info("Data deleted successfully")
 ```
 
 ## Helper Methods
@@ -432,9 +528,11 @@ config = ScyllaDBConfig(
 
 ## Error Handling
 
-The adapter maps ScyllaDB/Cassandra exceptions to ArchiPy's standard exceptions:
+The adapter maps ScyllaDB/Cassandra exceptions to ArchiPy's standard exceptions with proper exception chaining:
 
 ```python
+import logging
+
 from archipy.adapters.scylladb import ScyllaDBAdapter
 from archipy.models.errors import (
     DatabaseConnectionError,
@@ -445,20 +543,33 @@ from archipy.models.errors import (
     InvalidCredentialsError,
 )
 
+# Configure logging
+logger = logging.getLogger(__name__)
+
 adapter = ScyllaDBAdapter()
 
 try:
-    adapter.select("nonexistent_table")
+    result = adapter.select("nonexistent_table")
 except NotFoundError as e:
-    print(f"Table not found: {e}")
+    # The adapter's exception handler will have already
+    # converted the exception with proper chaining using `from e`
+    logger.error(f"Table not found: {e}")
+    raise
 except DatabaseQueryError as e:
-    print(f"Query error: {e}")
+    logger.error(f"Query error: {e}")
+    raise
 except ServiceUnavailableError as e:
-    print(f"ScyllaDB unavailable: {e}")
+    logger.error(f"ScyllaDB unavailable: {e}")
+    raise
 except ConnectionTimeoutError as e:
-    print(f"Connection timeout: {e}")
+    logger.error(f"Connection timeout: {e}")
+    raise
 except DatabaseConnectionError as e:
-    print(f"Connection error: {e}")
+    logger.error(f"Connection error: {e}")
+    raise
+else:
+    logger.info(f"Query executed successfully, found {len(result)} rows")
+    return result
 ```
 
 ## Best Practices
@@ -691,6 +802,14 @@ print(f"Pool stats: {stats}")
 health = adapter.health_check()
 print(f"Health: {health['status']}, Latency: {health['latency_ms']:.2f}ms")
 ```
+
+## See Also
+
+- [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
+- [Configuration Management](../config_management.md) - ScyllaDB configuration setup
+- [BDD Testing](../bdd_testing.md) - Testing ScyllaDB operations
+- [ScyllaDB Adapter Feature](../../features/scylladb_adapter.feature) - BDD test scenarios for ScyllaDB adapter
+- [API Reference](../../api_reference/adapters.md#scylladb) - Full ScyllaDB adapter API documentation
 
 ## References
 

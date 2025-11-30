@@ -5,12 +5,13 @@ productivity.
 
 ## Database Integration
 
-- **Multi-Database Support**: Dedicated adapters for PostgreSQL, SQLite, and StarRocks
+- **Multi-Database Support**: Dedicated adapters for PostgreSQL, SQLite, StarRocks, and ScyllaDB
 - **SQLAlchemy Integration**: Standardized ORM implementation with:
     - Base SQLAlchemy components for common functionality
     - Database-specific session management
     - Enhanced transaction handling with atomic decorators
     - Connection pooling and lifecycle management
+- **NoSQL Support**: Native ScyllaDB/Cassandra adapter with CQL support, prepared statements, and TTL
 
 ## Configuration Management
 
@@ -21,7 +22,7 @@ productivity.
 
 ## Adapters & Mocks
 
-- **Database Adapters**: Dedicated implementations for PostgreSQL, SQLite, and StarRocks
+- **Database Adapters**: Dedicated implementations for PostgreSQL, SQLite, StarRocks, and ScyllaDB
 - **Service Adapters**: Pre-built for Redis, Email, Keycloak, MinIO, and Kafka
 - **Mocks**: Testable mocks for isolated testing
 - **Async Support**: Synchronous and asynchronous implementations
