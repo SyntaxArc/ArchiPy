@@ -382,20 +382,28 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     @override
-    def insert(self, table: str, data: dict[str, Any], ttl: int | None = None) -> None:
+    def insert(self, table: str, data: dict[str, Any], ttl: int | None = None, if_not_exists: bool = False) -> None:
         """Insert data into a table.
 
         Args:
             table (str): The name of the table.
             data (dict[str, Any]): Key-value pairs representing column names and values.
             ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
+            if_not_exists (bool): If True, use lightweight transaction (INSERT ... IF NOT EXISTS).
+                              This prevents errors on duplicate primary keys but is slow
         """
         columns = ", ".join(data.keys())
         placeholders = ", ".join(["%s" for _ in data.keys()])
         query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
 
+        if if_not_exists:
+            query += " IF NOT EXISTS"
+
         if ttl is not None:
-            query += f" USING TTL {ttl}"
+            if if_not_exists:
+                query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders}) USING TTL {ttl} IF NOT EXISTS"
+            else:
+                query += f" USING TTL {ttl}"
 
         try:
             self.execute(query, tuple(data.values()))
@@ -405,10 +413,10 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
     @override
     def select(
-        self,
-        table: str,
-        columns: list[str] | None = None,
-        conditions: dict[str, Any] | None = None,
+            self,
+            table: str,
+            columns: list[str] | None = None,
+            conditions: dict[str, Any] | None = None,
     ) -> list[Any]:
         """Select data from a table.
 
@@ -961,20 +969,29 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     @override
-    async def insert(self, table: str, data: dict[str, Any], ttl: int | None = None) -> None:
+    async def insert(self, table: str, data: dict[str, Any], ttl: int | None = None,
+                     if_not_exists: bool = False) -> None:
         """Insert data into a table asynchronously.
 
         Args:
             table (str): The name of the table.
             data (dict[str, Any]): Key-value pairs representing column names and values.
             ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
+            if_not_exists (bool): If True, use lightweight transaction (INSERT ... IF NOT EXISTS).
+                              This prevents errors on duplicate primary keys but is slow
         """
         columns = ", ".join(data.keys())
         placeholders = ", ".join(["%s" for _ in data.keys()])
         query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
 
+        if if_not_exists:
+            query += " IF NOT EXISTS"
+
         if ttl is not None:
-            query += f" USING TTL {ttl}"
+            if if_not_exists:
+                query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders}) USING TTL {ttl} IF NOT EXISTS"
+            else:
+                query += f" USING TTL {ttl}"
 
         try:
             await self.execute(query, tuple(data.values()))
@@ -984,10 +1001,10 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
     @override
     async def select(
-        self,
-        table: str,
-        columns: list[str] | None = None,
-        conditions: dict[str, Any] | None = None,
+            self,
+            table: str,
+            columns: list[str] | None = None,
+            conditions: dict[str, Any] | None = None,
     ) -> list[Any]:
         """Select data from a table asynchronously.
 
@@ -1017,11 +1034,11 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
     @override
     async def update(
-        self,
-        table: str,
-        data: dict[str, Any],
-        conditions: dict[str, Any],
-        ttl: int | None = None,
+            self,
+            table: str,
+            data: dict[str, Any],
+            conditions: dict[str, Any],
+            ttl: int | None = None,
     ) -> None:
         """Update data in a table asynchronously.
 
