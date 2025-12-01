@@ -413,10 +413,10 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
     @override
     def select(
-            self,
-            table: str,
-            columns: list[str] | None = None,
-            conditions: dict[str, Any] | None = None,
+        self,
+        table: str,
+        columns: list[str] | None = None,
+        conditions: dict[str, Any] | None = None,
     ) -> list[Any]:
         """Select data from a table.
 
@@ -969,8 +969,9 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     @override
-    async def insert(self, table: str, data: dict[str, Any], ttl: int | None = None,
-                     if_not_exists: bool = False) -> None:
+    async def insert(
+        self, table: str, data: dict[str, Any], ttl: int | None = None, if_not_exists: bool = False
+    ) -> None:
         """Insert data into a table asynchronously.
 
         Args:
@@ -1001,10 +1002,10 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
     @override
     async def select(
-            self,
-            table: str,
-            columns: list[str] | None = None,
-            conditions: dict[str, Any] | None = None,
+        self,
+        table: str,
+        columns: list[str] | None = None,
+        conditions: dict[str, Any] | None = None,
     ) -> list[Any]:
         """Select data from a table asynchronously.
 
@@ -1034,11 +1035,11 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
     @override
     async def update(
-            self,
-            table: str,
-            data: dict[str, Any],
-            conditions: dict[str, Any],
-            ttl: int | None = None,
+        self,
+        table: str,
+        data: dict[str, Any],
+        conditions: dict[str, Any],
+        ttl: int | None = None,
     ) -> None:
         """Update data in a table asynchronously.
 

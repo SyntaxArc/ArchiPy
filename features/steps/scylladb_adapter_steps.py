@@ -574,9 +574,9 @@ def step_verify_keyspace_context(context: Context, keyspace: str) -> None:
         keyspace (str): Expected keyspace name.
     """
     scenario_context = _get_scenario_context(context)
-    assert scenario_context.current_keyspace == keyspace, (
-        f"Expected keyspace '{keyspace}', got '{scenario_context.current_keyspace}'"
-    )
+    assert (
+        scenario_context.current_keyspace == keyspace
+    ), f"Expected keyspace '{keyspace}', got '{scenario_context.current_keyspace}'"
     logger.info("Keyspace context verified: %s", keyspace)
 
 

@@ -31,6 +31,7 @@ def get_es_adapter(context):
         scenario_context.adapter = ElasticsearchAdapter(test_config.ELASTIC)
     return scenario_context.adapter
 
+
 def _is_async_scenario(context: Context) -> bool:
     """Check if the current scenario is async."""
     return "async" in context.scenario.tags
@@ -123,7 +124,9 @@ async def step_index_exists(context: Context, index_name: str) -> None:
 
         _log_operation(context, "Index creation", f"Created unique index '{unique_index_name}'")
         _store_result(
-            scenario_context, "latest_index_creation", {
+            scenario_context,
+            "latest_index_creation",
+            {
                 "original_name": index_name,
                 "unique_name": unique_index_name,
                 "status": "created",
@@ -188,7 +191,9 @@ async def step_document_exists(context: Context, index_name: str, doc_id: str, c
         scenario_context.store("created_documents", created_documents)
 
         _store_result(
-            scenario_context, "latest_document_creation", {
+            scenario_context,
+            "latest_document_creation",
+            {
                 "index": actual_index_name,
                 "doc_id": doc_id,
                 "content": doc_content,
@@ -196,7 +201,9 @@ async def step_document_exists(context: Context, index_name: str, doc_id: str, c
             },
         )
 
-        _log_operation(context, "Document creation", f"Document with id '{doc_id}' created in index '{actual_index_name}'")
+        _log_operation(
+            context, "Document creation", f"Document with id '{doc_id}' created in index '{actual_index_name}'"
+        )
 
         # Wait for propagation
         if is_async:
@@ -297,8 +304,6 @@ async def step_search_documents(context: Context, query: str, index_name: str) -
 
         _store_result(scenario_context, "last_search_result", result)
         _log_operation(context, "Document search", f"Searched for '{query}' in '{actual_index_name}'")
-
-
 
     except Exception as e:
         scenario_context.store("last_error", str(e))
@@ -535,8 +540,6 @@ def step_search_returns_hits(context: Context, num_hits: str) -> None:
     scenario_context = _get_scenario_context(context)
     result = scenario_context.get("last_search_result")
 
-
-
     assert result["hits"]["total"]["value"] >= int(num_hits), "Not enough hits returned"
     context.logger.info(f"Search returned at least {num_hits} hits")
 
@@ -708,15 +711,26 @@ def step_bulk_succeeds(context: Context) -> None:
 
             # Verify expected result status
             if action_type in ["index", "create"]:
-                assert action_result.get("result") in ["created", "updated"], f"Index/create failed for item {i}: {action_result}"
+                assert action_result.get("result") in [
+                    "created",
+                    "updated",
+                ], f"Index/create failed for item {i}: {action_result}"
             elif action_type == "update":
-                assert action_result.get("result") in ["updated", "noop"], f"Update failed for item {i}: {action_result}"
+                assert action_result.get("result") in [
+                    "updated",
+                    "noop",
+                ], f"Update failed for item {i}: {action_result}"
             elif action_type == "delete":
                 # Delete can return 'deleted' for existing documents or 'not_found' for non-existing documents
                 # Both are valid results, not errors
-                assert action_result.get("result") in ["deleted", "not_found"], f"Delete failed for item {i}: {action_result}"
+                assert action_result.get("result") in [
+                    "deleted",
+                    "not_found",
+                ], f"Delete failed for item {i}: {action_result}"
                 if action_result.get("result") == "not_found":
-                    context.logger.info(f"Item {i} ({action_type}): Document {action_result.get('_id')} was not found (expected for non-existing documents)")
+                    context.logger.info(
+                        f"Item {i} ({action_type}): Document {action_result.get('_id')} was not found (expected for non-existing documents)"
+                    )
 
     context.logger.info("Bulk operation verified successfully")
 
@@ -741,7 +755,9 @@ async def step_bulk_operations_reflected(context: Context) -> None:
                     doc = adapter.get(index=action_result["_index"], doc_id=action_result["_id"])
                 assert doc["found"], f"Document {action_result['_id']} not found after bulk operation"
             except Exception as e:
-                context.logger.error(f"Failed to verify {action_type} operation for document {action_result['_id']}: {e}")
+                context.logger.error(
+                    f"Failed to verify {action_type} operation for document {action_result['_id']}: {e}"
+                )
                 raise
         elif action_type == "update":
             try:

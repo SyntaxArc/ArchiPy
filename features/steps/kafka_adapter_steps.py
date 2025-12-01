@@ -58,6 +58,7 @@ def get_kafka_consumer_adapter(context, topic_name, group_id):
         setattr(scenario_context, consumer_key, consumer)
     return getattr(scenario_context, consumer_key)
 
+
 def wait_for_topic_condition(adapter, condition_func, topic_name, max_retries=5, initial_delay=0.5):
     """Helper function to wait for a topic condition with retries."""
     delay = initial_delay
@@ -73,6 +74,7 @@ def wait_for_topic_condition(adapter, condition_func, topic_name, max_retries=5,
             time.sleep(delay)
             delay *= 1.5
     return False
+
 
 # Given steps
 @given("a configured Kafka admin adapter")
