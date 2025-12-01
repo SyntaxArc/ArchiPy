@@ -217,3 +217,25 @@ Feature: ScyllaDB Adapter
     Given a ScyllaDB adapter is configured
     When I get pool statistics
     Then the pool statistics should be returned
+
+  @needs-scylladb
+  Scenario: Insert with If Not Exists
+    Given a ScyllaDB adapter is configured
+    And a keyspace "test_ks" with replication factor 1 exists
+    And a table "inventory" with schema "CREATE TABLE IF NOT EXISTS inventory (id int PRIMARY KEY, item text, quantity int)"
+    And data exists in table "inventory":
+      | id | item   | quantity |
+      | 1  | Widget | 100      |
+    When I insert data into table "inventory" with id 1, item "some_item", quantity 500
+    Then the table "inventory" should contain 1 row
+
+  @needs-scylladb @async
+  Scenario: Async Insert with If Not Exists
+    Given an async ScyllaDB adapter is configured
+    And an async keyspace "test_ks" with replication factor 1 exists
+    And an async table "async_inventory" with schema "CREATE TABLE IF NOT EXISTS async_inventory (id int PRIMARY KEY, item text, quantity int)"
+    And data exists in table "async_inventory":
+      | id | item   | quantity |
+      | 1  | Widget | 100      |
+    When I async insert data into table "async_inventory" with id 1, item "some_item", quantity 500
+    Then the async table "async_inventory" should contain 1 row
