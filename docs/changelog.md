@@ -2,6 +2,51 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v3.15.2] - 2025-12-02
+
+### Added
+
+#### Database Adapters - ScyllaDB
+
+- **Conditional Insert Support** - Added `if_not_exists` parameter to `insert()` method in ScyllaDB adapter
+    - Prevents errors on duplicate primary keys using CQL's `IF NOT EXISTS` clause
+    - Available in both synchronous (`ScyllaDBAdapter`) and asynchronous (`AsyncScyllaDBAdapter`) adapters
+    - Uses lightweight transactions to ensure idempotent insert operations
+    - Note: This feature is slower than regular inserts due to the lightweight transaction overhead
+
+#### Testing
+
+- **Enhanced BDD Test Suite** - Added test scenarios for ScyllaDB conditional insert functionality
+    - Test scenarios for `if_not_exists` parameter in insert operations
+    - Validation of duplicate key handling behavior
+
+### Changed
+
+#### Dependencies
+
+- **Core Dependencies**
+    - Updated `pydantic` from `>=2.12.4` to `>=2.12.5`
+
+- **Optional Dependencies**
+    - Updated `elastic-apm` from `>=6.24.0` to `>=6.24.1`
+    - Updated `fastapi` from `>=0.122.0` to `>=0.123.3`
+    - Updated `minio` from `>=7.2.18` to `>=7.2.20`
+    - Updated `postgres` (psycopg) from `>=3.2.13` to `>=3.3.0`
+    - Updated `starrocks` from `>=1.2.3` to `>=1.3.1`
+    - Updated `scylladb` optional dependencies to include `cachetools>=6.2.2` and `async-lru>=2.0.5`
+
+- **Development Dependencies**
+    - Updated `mypy` from `>=1.18.2` to `>=1.19.0`
+    - Updated `pre-commit` from `>=4.4.0` to `>=4.5.0`
+
+- **Documentation Dependencies**
+    - Updated `mkdocstrings-python` from `>=1.18.2` to `>=2.0.0`
+    - Updated `mkdocstrings` from `>=0.30.1` to `>=1.0.0`
+
+### CI
+
+- **GitHub Actions** - Updated `actions/checkout` from v5 to v6
+
 ## [v3.15.1] - 2025-11-30
 
 ### Added
