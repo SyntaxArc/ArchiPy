@@ -1,0 +1,57 @@
+name: "Close stale issues and PRs"
+
+on:
+  schedule:
+    - cron: "30 1 * * *"  # Runs daily at 1:30 AM UTC
+  workflow_dispatch:  # Allows manual triggering for testing
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark stale issues and pull requests
+        uses: actions/stale@v10
+        with:
+          # Time before marking an issue/PR as stale (in days)
+          days-before-stale: 30
+          # Time to wait after marking stale before closing (in days)
+          days-before-close: 5
+          # Operations per run to avoid rate limiting (default: 30)
+          operations-per-run: 30
+          # Issue configuration
+          stale-issue-message: >
+            This issue has been automatically marked as stale because it has been open for 30 days with no activity.
+
+            To keep this issue open, please:
+            - Add a comment with any updates or progress
+            - Add the `not-stale` label
+
+            This issue will be automatically closed in 5 days if no activity occurs.
+          close-issue-message: >
+            This issue was automatically closed because it remained stale for 5 days with no activity.
+
+            If you believe this issue is still relevant, please feel free to reopen it or create a new issue with updated information.
+          stale-issue-label: "stale"
+          close-issue-label: "closed-stale"
+          # PR configuration
+          stale-pr-message: >
+            This pull request has been automatically marked as stale because it has been open for 30 days with no activity.
+
+            To keep this pull request open, please:
+            - Add a comment with any updates or progress
+            - Add the `not-stale` label
+
+            This pull request will be automatically closed in 5 days if no activity occurs.
+          close-pr-message: >
+            This pull request was automatically closed because it remained stale for 5 days with no activity.
+
+            If you believe this pull request is still relevant, please feel free to reopen it or create a new pull request with updated information.
+          stale-pr-label: "stale"
+          close-pr-label: "closed-stale"
+          # Automatically remove stale label when issue/PR is updated (false = don't ignore updates)
+          ignore-issue-updates: false
+          ignore-pr-updates: false
