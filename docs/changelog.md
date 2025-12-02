@@ -2,6 +2,25 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v3.15.3] - 2025-12-02
+
+### Changed
+
+#### Helpers - Decorators
+
+- **Lazy Import for SQLAlchemy Decorators** - Changed SQLAlchemy decorators to use lazy imports via `__getattr__` in `archipy.helpers.decorators`
+    - SQLAlchemy decorators are now only imported when actually accessed, not at module import time
+    - Prevents SQLAlchemy from being required when using archipy without the `sqlalchemy` extra (e.g., `archipy[scylladb]`)
+    - Provides better error messages when SQLAlchemy decorators are accessed without the sqlalchemy extra installed
+    - Maintains full IDE support through type stubs using `TYPE_CHECKING`
+
+#### Adapters - Temporal
+
+- **Lazy Import for SQLAlchemy Decorators** - Updated `AtomicActivity` class to use lazy imports for SQLAlchemy atomic decorators
+    - Moved SQLAlchemy decorator imports from module level to method level in `_get_atomic_decorator()`
+    - Prevents SQLAlchemy from being required when using Temporal adapters without the sqlalchemy extra
+    - Improves modularity and allows using Temporal features independently of SQLAlchemy
+
 ## [v3.15.2] - 2025-12-02
 
 ### Added

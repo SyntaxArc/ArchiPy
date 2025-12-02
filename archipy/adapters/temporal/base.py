@@ -13,12 +13,6 @@ from typing import Any, TypeVar
 from temporalio import activity, workflow
 from temporalio.common import RetryPolicy
 
-from archipy.helpers.decorators import (
-    async_postgres_sqlalchemy_atomic_decorator,
-    async_sqlite_sqlalchemy_atomic_decorator,
-    async_starrocks_sqlalchemy_atomic_decorator,
-)
-
 # Type imports for generic base classes
 
 T = TypeVar("T")
@@ -494,7 +488,17 @@ class AtomicActivity(BaseActivity[T, R]):
 
         Returns:
             Callable: The async atomic decorator function for the configured database.
+
+        Raises:
+            ImportError: If SQLAlchemy is not installed and atomic decorators are needed.
         """
+        # Lazy import to avoid requiring SQLAlchemy when using temporalio without sqlalchemy extra
+        from archipy.helpers.decorators import (
+            async_postgres_sqlalchemy_atomic_decorator,
+            async_sqlite_sqlalchemy_atomic_decorator,
+            async_starrocks_sqlalchemy_atomic_decorator,
+        )
+
         decorators_map = {
             "postgres": async_postgres_sqlalchemy_atomic_decorator,
             "sqlite": async_sqlite_sqlalchemy_atomic_decorator,
