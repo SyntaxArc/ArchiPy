@@ -991,3 +991,40 @@ def step_verify_pool_stats(context: Context) -> None:
     assert isinstance(stats, dict), "Pool statistics should be a dictionary"
     assert "monitoring_enabled" in stats, "Pool statistics should contain 'monitoring_enabled' key"
     logger.info("Pool statistics verified")
+
+
+# If not Exist in insert steps
+
+
+@when('I insert data into table "{table}" with id {id:d}, item "{item}", quantity {quantity:d}')
+def step_insert_with_if_not_exists(
+    context: Context, table: str, id: int, item: str, quantity: int,
+) -> None:
+    """Insert data in a table with if not exists.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+        id (int): User ID.
+        item (str): Item.
+        quantity (int): Quantity
+    """
+    adapter = get_scylladb_adapter(context)
+    adapter.insert(table=table, data={"id": id, "item": item, "quantity": quantity}, if_not_exists=True)
+    logger.info("Inserted user data into '%s'", table)
+
+
+@when('I async insert data into table "{table}" with id {id:d}, item "{item}", quantity {quantity:d}')
+async def step_insert_with_if_not_exists(context: Context, table: str, id: int, item: str, quantity: int) -> None:
+    """Insert data in a table with if not exists asynchronously.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+        id (int): User ID.
+        item (str): Item.
+        quantity (int): Quantity
+    """
+    adapter = get_scylladb_adapter(context)
+    await adapter.insert(table=table, data={"id": id, "item": item, "quantity": quantity}, if_not_exists=True)
+    logger.info("Inserted user data into '%s'", table)
