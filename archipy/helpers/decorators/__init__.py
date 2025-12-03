@@ -7,7 +7,7 @@ from .retry import retry_decorator
 from .singleton import singleton_decorator
 from .timeout import timeout_decorator
 from .timing import timing_decorator
-from .tracing import capture_span, capture_transaction
+from .tracing import async_capture_span, async_capture_transaction, capture_span, capture_transaction
 
 # SQLAlchemy decorators are imported lazily to avoid requiring SQLAlchemy
 # when using archipy without the sqlalchemy extra (e.g., archipy[scylladb])
@@ -91,6 +91,8 @@ def __getattr__(name: str) -> object:
 
 
 __all__ = [
+    "async_capture_span",
+    "async_capture_transaction",
     "async_postgres_sqlalchemy_atomic_decorator",
     "async_sqlite_sqlalchemy_atomic_decorator",
     "async_starrocks_sqlalchemy_atomic_decorator",
