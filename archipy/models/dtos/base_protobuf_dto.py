@@ -24,7 +24,7 @@ class BaseProtobufDTO(BaseDTO):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         # Add a check at runtime when someone tries to use the class
         if not PROTOBUF_AVAILABLE:
-            raise RuntimeError("The 'protobuf' extra is not installed. ")
+            raise RuntimeError("The 'grpc' extra is not installed.\n run `uv add 'archipy[grpc]'` to install.")
         super().__init__(*args, **kwargs)
 
     @classmethod
