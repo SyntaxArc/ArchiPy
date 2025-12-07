@@ -21,7 +21,7 @@ class PostgresSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton
     """
 
     @classmethod
-    def get_sync_manager(cls) -> "SessionManagerPort":
+    def get_sync_manager(cls) -> SessionManagerPort:
         """Get the synchronous PostgreSQL session manager instance.
 
         Lazily initializes a default PostgresSQlAlchemySessionManager if none has been set.
@@ -44,7 +44,7 @@ class PostgresSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton
         return cls._sync_instance
 
     @classmethod
-    def set_sync_manager(cls, manager: "SessionManagerPort") -> None:
+    def set_sync_manager(cls, manager: SessionManagerPort) -> None:
         """Set a custom synchronous session manager.
 
         Args:
@@ -62,7 +62,7 @@ class PostgresSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton
         cls._sync_instance = manager
 
     @classmethod
-    def get_async_manager(cls) -> "AsyncSessionManagerPort":
+    def get_async_manager(cls) -> AsyncSessionManagerPort:
         """Get the asynchronous PostgreSQL session manager instance.
 
         Lazily initializes a default AsyncPostgresSQlAlchemySessionManager if none has been set.
@@ -85,7 +85,7 @@ class PostgresSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton
         return cls._async_instance
 
     @classmethod
-    def set_async_manager(cls, manager: "AsyncSessionManagerPort") -> None:
+    def set_async_manager(cls, manager: AsyncSessionManagerPort) -> None:
         """Set a custom asynchronous session manager.
 
         Args:

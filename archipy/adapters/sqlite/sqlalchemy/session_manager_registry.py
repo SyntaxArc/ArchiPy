@@ -21,7 +21,7 @@ class SQLiteSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):
     """
 
     @classmethod
-    def get_sync_manager(cls) -> "SessionManagerPort":
+    def get_sync_manager(cls) -> SessionManagerPort:
         """Get the synchronous SQLite session manager instance.
 
         Lazily initializes a default SQLiteSQLAlchemySessionManager if none has been set.
@@ -44,7 +44,7 @@ class SQLiteSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):
         return cls._sync_instance
 
     @classmethod
-    def set_sync_manager(cls, manager: "SessionManagerPort") -> None:
+    def set_sync_manager(cls, manager: SessionManagerPort) -> None:
         """Register a synchronous session manager.
 
         Args:
@@ -53,7 +53,7 @@ class SQLiteSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):
         cls._sync_instance = manager
 
     @classmethod
-    def get_async_manager(cls) -> "AsyncSessionManagerPort":
+    def get_async_manager(cls) -> AsyncSessionManagerPort:
         """Get the asynchronous SQLite session manager instance.
 
         Lazily initializes a default AsyncSQLiteSQLAlchemySessionManager if none has been set.
@@ -76,7 +76,7 @@ class SQLiteSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):
         return cls._async_instance
 
     @classmethod
-    def set_async_manager(cls, manager: "AsyncSessionManagerPort") -> None:
+    def set_async_manager(cls, manager: AsyncSessionManagerPort) -> None:
         """Register an asynchronous session manager.
 
         Args:

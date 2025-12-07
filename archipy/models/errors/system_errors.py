@@ -1,8 +1,22 @@
 from typing import Any, ClassVar
 
-from archipy.models.dtos.error_dto import ErrorDetailDTO
+try:
+    from http import HTTPStatus
+
+    HTTP_AVAILABLE = True
+except ImportError:
+    HTTP_AVAILABLE = False
+    HTTPStatus = None
+
+try:
+    from grpc import StatusCode
+
+    GRPC_AVAILABLE = True
+except ImportError:
+    GRPC_AVAILABLE = False
+    StatusCode = None
+
 from archipy.models.errors.base_error import BaseError
-from archipy.models.types.error_message_types import ErrorMessageType
 from archipy.models.types.language_type import LanguageType
 
 
@@ -13,11 +27,20 @@ class InternalError(BaseError):
     that prevents the server from fulfilling the request.
     """
 
+    code: ClassVar[str] = "INTERNAL_ERROR"
+    message_en: ClassVar[str] = "Internal system error occurred"
+    message_fa: ClassVar[str] = "خطای داخلی سیستم رخ داده است."
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE else 500
+    grpc_status: ClassVar[int] = (
+        StatusCode.INTERNAL.value[0]
+        if GRPC_AVAILABLE and isinstance(StatusCode.INTERNAL.value, tuple)
+        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE else 13)
+    )
+
     def __init__(
         self,
         error_code: str | None = None,
         lang: LanguageType | None = None,
-        error: ErrorDetailDTO = ErrorMessageType.INTERNAL_ERROR.value,
         additional_data: dict[str, Any] | None = None,
     ) -> None:
         data = {}
@@ -25,7 +48,7 @@ class InternalError(BaseError):
             data["error_code"] = error_code
         if additional_data:
             data.update(additional_data)
-        super().__init__(error, lang, data if data else None)
+        super().__init__(lang=lang, additional_data=data if data else None)
 
 
 class ConfigurationError(BaseError):
@@ -35,12 +58,21 @@ class ConfigurationError(BaseError):
     configuration that prevents it from operating correctly.
     """
 
+    code: ClassVar[str] = "CONFIGURATION_ERROR"
+    message_en: ClassVar[str] = "Error in system configuration"
+    message_fa: ClassVar[str] = "خطا در پیکربندی سیستم"
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE else 500
+    grpc_status: ClassVar[int] = (
+        StatusCode.INTERNAL.value[0]
+        if GRPC_AVAILABLE and isinstance(StatusCode.INTERNAL.value, tuple)
+        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE else 13)
+    )
+
     def __init__(
         self,
         operation: str | None = None,
         reason: str | None = None,
         lang: LanguageType | None = None,
-        error: ErrorDetailDTO = ErrorMessageType.CONFIGURATION_ERROR.value,
         additional_data: dict[str, Any] | None = None,
     ) -> None:
         data = {}
@@ -50,7 +82,7 @@ class ConfigurationError(BaseError):
             data["reason"] = reason
         if additional_data:
             data.update(additional_data)
-        super().__init__(error, lang, data if data else None)
+        super().__init__(lang=lang, additional_data=data if data else None)
 
 
 class UnavailableError(BaseError):
@@ -60,11 +92,20 @@ class UnavailableError(BaseError):
     but may become available again in the future.
     """
 
+    code: ClassVar[str] = "UNAVAILABLE"
+    message_en: ClassVar[str] = "Service is currently unavailable"
+    message_fa: ClassVar[str] = "سرویس در حال حاضر در دسترس نیست."
+    http_status: ClassVar[int] = HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE else 503
+    grpc_status: ClassVar[int] = (
+        StatusCode.UNAVAILABLE.value[0]
+        if GRPC_AVAILABLE and isinstance(StatusCode.UNAVAILABLE.value, tuple)
+        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE else 14)
+    )
+
     def __init__(
         self,
         resource_type: str | None = None,
         lang: LanguageType | None = None,
-        error: ErrorDetailDTO = ErrorMessageType.UNAVAILABLE.value,
         additional_data: dict[str, Any] | None = None,
     ) -> None:
         data = {}
@@ -72,7 +113,7 @@ class UnavailableError(BaseError):
             data["resource_type"] = resource_type
         if additional_data:
             data.update(additional_data)
-        super().__init__(error, lang, data if data else None)
+        super().__init__(lang=lang, additional_data=data if data else None)
 
 
 class UnknownError(BaseError):
@@ -82,11 +123,20 @@ class UnknownError(BaseError):
     don't fit into other error categories.
     """
 
+    code: ClassVar[str] = "UNKNOWN_ERROR"
+    message_en: ClassVar[str] = "An unknown error occurred"
+    message_fa: ClassVar[str] = "خطای ناشناخته‌ای رخ داده است."
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE else 500
+    grpc_status: ClassVar[int] = (
+        StatusCode.UNKNOWN.value[0]
+        if GRPC_AVAILABLE and isinstance(StatusCode.UNKNOWN.value, tuple)
+        else (StatusCode.UNKNOWN.value if GRPC_AVAILABLE else 2)
+    )
+
     def __init__(
         self,
         config_key: str | None = None,
         lang: LanguageType | None = None,
-        error: ErrorDetailDTO = ErrorMessageType.UNKNOWN_ERROR.value,
         additional_data: dict[str, Any] | None = None,
     ) -> None:
         data = {}
@@ -94,7 +144,7 @@ class UnknownError(BaseError):
             data["config_key"] = config_key
         if additional_data:
             data.update(additional_data)
-        super().__init__(error, lang, data if data else None)
+        super().__init__(lang=lang, additional_data=data if data else None)
 
 
 class AbortedError(BaseError):
@@ -104,12 +154,21 @@ class AbortedError(BaseError):
     a concurrency issue or user cancellation.
     """
 
+    code: ClassVar[str] = "ABORTED"
+    message_en: ClassVar[str] = "Operation was aborted"
+    message_fa: ClassVar[str] = "عملیات متوقف شد."
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE else 409
+    grpc_status: ClassVar[int] = (
+        StatusCode.ABORTED.value[0]
+        if GRPC_AVAILABLE and isinstance(StatusCode.ABORTED.value, tuple)
+        else (StatusCode.ABORTED.value if GRPC_AVAILABLE else 10)
+    )
+
     def __init__(
         self,
         service: str | None = None,
         reason: str | None = None,
         lang: LanguageType | None = None,
-        error: ErrorDetailDTO = ErrorMessageType.UNAVAILABLE.value,
         additional_data: dict[str, Any] | None = None,
     ) -> None:
         data = {}
@@ -119,7 +178,7 @@ class AbortedError(BaseError):
             data["reason"] = reason
         if additional_data:
             data.update(additional_data)
-        super().__init__(error, lang, data if data else None)
+        super().__init__(lang=lang, additional_data=data if data else None)
 
 
 class DeadlockDetectedError(BaseError):
@@ -129,12 +188,21 @@ class DeadlockDetectedError(BaseError):
     typically in database transactions or resource locking scenarios.
     """
 
+    code: ClassVar[str] = "DEADLOCK"
+    message_en: ClassVar[str] = "Deadlock detected"
+    message_fa: ClassVar[str] = "خطای قفل‌شدگی (Deadlock) تشخیص داده شد."
+    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE else 500
+    grpc_status: ClassVar[int] = (
+        StatusCode.INTERNAL.value[0]
+        if GRPC_AVAILABLE and isinstance(StatusCode.INTERNAL.value, tuple)
+        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE else 13)
+    )
+
     def __init__(
         self,
         service: str | None = None,
         reason: str | None = None,
         lang: LanguageType | None = None,
-        error: ErrorDetailDTO = ErrorMessageType.UNAVAILABLE.value,
         additional_data: dict[str, Any] | None = None,
     ) -> None:
         data = {}
@@ -144,7 +212,7 @@ class DeadlockDetectedError(BaseError):
             data["reason"] = reason
         if additional_data:
             data.update(additional_data)
-        super().__init__(error, lang, data if data else None)
+        super().__init__(lang=lang, additional_data=data if data else None)
 
 
 class DeadlineExceededError(BaseError):
@@ -154,8 +222,15 @@ class DeadlineExceededError(BaseError):
     time limits or deadlines for completion.
     """
 
-    http_status_code: ClassVar[int] = 408  # Request Timeout
-    grpc_status_code: ClassVar[int] = 4  # DEADLINE_EXCEEDED
+    code: ClassVar[str] = "DEADLINE_EXCEEDED"
+    message_en: ClassVar[str] = "Operation exceeded its deadline"
+    message_fa: ClassVar[str] = "عملیات از مهلت زمانی مجاز تجاوز کرد"
+    http_status: ClassVar[int] = HTTPStatus.REQUEST_TIMEOUT.value if HTTP_AVAILABLE else 408
+    grpc_status: ClassVar[int] = (
+        StatusCode.DEADLINE_EXCEEDED.value[0]
+        if GRPC_AVAILABLE and isinstance(StatusCode.DEADLINE_EXCEEDED.value, tuple)
+        else (StatusCode.DEADLINE_EXCEEDED.value if GRPC_AVAILABLE else 4)
+    )
 
     def __init__(
         self,
@@ -172,14 +247,6 @@ class DeadlineExceededError(BaseError):
             lang: The language for error messages.
             additional_data: Additional context data.
         """
-        error = ErrorDetailDTO(
-            code="DEADLINE_EXCEEDED",
-            message_en="Operation exceeded its deadline",
-            message_fa="عملیات از مهلت زمانی مجاز تجاوز کرد",
-            http_status=self.http_status_code,
-            grpc_status=self.grpc_status_code,
-        )
-
         data = {}
         if timeout is not None:
             data["timeout"] = timeout
@@ -187,7 +254,7 @@ class DeadlineExceededError(BaseError):
             data["operation"] = operation
         if additional_data:
             data.update(additional_data)
-        super().__init__(error, lang, data if data else None)
+        super().__init__(lang=lang, additional_data=data if data else None)
 
 
 class DeprecationError(BaseError):
@@ -197,8 +264,15 @@ class DeprecationError(BaseError):
     is deprecated and should no longer be used.
     """
 
-    http_status_code: ClassVar[int] = 410  # Gone
-    grpc_status_code: ClassVar[int] = 12  # UNIMPLEMENTED
+    code: ClassVar[str] = "DEPRECATED_FEATURE"
+    message_en: ClassVar[str] = "This feature is deprecated and should no longer be used"
+    message_fa: ClassVar[str] = "این ویژگی منسوخ شده و دیگر نباید استفاده شود"
+    http_status: ClassVar[int] = HTTPStatus.GONE.value if HTTP_AVAILABLE else 410
+    grpc_status: ClassVar[int] = (
+        StatusCode.UNAVAILABLE.value[0]
+        if GRPC_AVAILABLE and isinstance(StatusCode.UNAVAILABLE.value, tuple)
+        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE else 14)
+    )
 
     def __init__(
         self,
@@ -217,14 +291,6 @@ class DeprecationError(BaseError):
             lang: The language for error messages.
             additional_data: Additional context data.
         """
-        error = ErrorDetailDTO(
-            code="DEPRECATED_FEATURE",
-            message_en="This feature is deprecated and should no longer be used",
-            message_fa="این ویژگی منسوخ شده و دیگر نباید استفاده شود",
-            http_status=self.http_status_code,
-            grpc_status=self.grpc_status_code,
-        )
-
         data = {}
         if deprecated_feature:
             data["deprecated_feature"] = deprecated_feature
@@ -234,4 +300,4 @@ class DeprecationError(BaseError):
             data["removal_version"] = removal_version
         if additional_data:
             data.update(additional_data)
-        super().__init__(error, lang, data if data else None)
+        super().__init__(lang=lang, additional_data=data if data else None)

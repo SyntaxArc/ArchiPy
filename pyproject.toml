@@ -7,7 +7,7 @@ authors = [
 ]
 readme = "README.md"
 version = "0.1.0" # This vesrion set on publish flow!
-requires-python = ">=3.13,<4"
+requires-python = ">=3.14,<4"
 dependencies = [
     "pydantic>=2.12.5",
     "pydantic-settings>=2.12.0",
@@ -108,7 +108,7 @@ color = true
 line-length = 120
 
 # Target Python version
-target-version = ["py313"]
+target-version = ["py314"]
 
 # Skip string normalization (useful for projects with mixed quote styles)
 skip-string-normalization = false
@@ -195,7 +195,7 @@ exclude = [
 line-length = 120
 
 # Target Python version
-target-version = "py313"
+target-version = "py314"
 
 # Per-file ignores
 [tool.ruff.lint.per-file-ignores]
@@ -288,7 +288,7 @@ no_implicit_reexport = true
 pretty = true
 
 # Target Python version
-python_version = "3.13"
+python_version = "3.14"
 
 # Show error codes
 show_error_codes = true

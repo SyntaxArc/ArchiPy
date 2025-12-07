@@ -202,7 +202,7 @@ class TemporalPort:
         query: str | None = None,
         page_size: int | None = None,
         next_page_token: bytes | None = None,
-    ) -> "WorkflowListResponse":
+    ) -> WorkflowListResponse:
         """List workflow executions matching the given criteria.
 
         Args:
@@ -222,7 +222,7 @@ class TemporalPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def describe_workflow(self, workflow_id: str, run_id: str | None = None) -> "WorkflowDescription":
+    async def describe_workflow(self, workflow_id: str, run_id: str | None = None) -> WorkflowDescription:
         """Get detailed information about a workflow execution.
 
         Args:
@@ -255,7 +255,7 @@ class TemporalPort:
         self,
         schedule_id: str,
         workflow_class: Any,
-        spec: "ScheduleSpec",
+        spec: ScheduleSpec,
         task_queue: str,
     ) -> None:
         """Create a new schedule."""
@@ -288,7 +288,7 @@ class WorkerPort:
         identity: str | None = None,
         max_concurrent_workflow_tasks: int | None = None,
         max_concurrent_activities: int | None = None,
-    ) -> "WorkerHandle":
+    ) -> WorkerHandle:
         """Start a Temporal worker for the specified task queue.
 
         Args:
@@ -315,7 +315,7 @@ class WorkerPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def stop_worker(self, worker_handle: "WorkerHandle") -> None:
+    async def stop_worker(self, worker_handle: WorkerHandle) -> None:
         """Stop a running Temporal worker.
 
         Args:

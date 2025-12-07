@@ -8,7 +8,7 @@ Feature: File Utilities
   Scenario: Fail to generate secure link due to missing path
     Given an empty file path
     When a secure link creation is attempted
-    Then an error message "Invalid argument provided" should be raised
+    Then an error message "Invalid argument provided: path" should be raised
 
   Scenario: Fail to generate secure link due to negative minutes
     Given a valid file path "/secure/files/document.pdf" and negative minutes

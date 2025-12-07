@@ -21,7 +21,7 @@ class StarRocksSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleto
     """
 
     @classmethod
-    def get_sync_manager(cls) -> "SessionManagerPort":
+    def get_sync_manager(cls) -> SessionManagerPort:
         """Get the synchronous StarRocks session manager instance.
 
         Lazily initializes a default StarRocksSQlAlchemySessionManager if none has been set.
@@ -44,7 +44,7 @@ class StarRocksSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleto
         return cls._sync_instance
 
     @classmethod
-    def set_sync_manager(cls, manager: "SessionManagerPort") -> None:
+    def set_sync_manager(cls, manager: SessionManagerPort) -> None:
         """Set a custom synchronous session manager.
 
         Args:
@@ -62,7 +62,7 @@ class StarRocksSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleto
         cls._sync_instance = manager
 
     @classmethod
-    def get_async_manager(cls) -> "AsyncSessionManagerPort":
+    def get_async_manager(cls) -> AsyncSessionManagerPort:
         """Get the asynchronous StarRocks session manager instance.
 
         Lazily initializes a default AsyncStarRocksSQlAlchemySessionManager if none has been set.
@@ -87,7 +87,7 @@ class StarRocksSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleto
         return cls._async_instance
 
     @classmethod
-    def set_async_manager(cls, manager: "AsyncSessionManagerPort") -> None:
+    def set_async_manager(cls, manager: AsyncSessionManagerPort) -> None:
         """Set a custom asynchronous session manager.
 
         Args:

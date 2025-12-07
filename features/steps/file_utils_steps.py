@@ -43,7 +43,13 @@ def step_when_secure_link_attempted(context):
         secure_link = FileUtils.create_secure_link(file_path, minutes)
         scenario_context.store("secure_link", secure_link)
     except BaseError as e:
-        scenario_context.store("exception_message", e.message_en)
+        # Get English message by temporarily setting language to EN
+        from archipy.models.types.language_type import LanguageType
+
+        original_lang = e.lang
+        e.lang = LanguageType.EN
+        scenario_context.store("exception_message", e.get_message())
+        e.lang = original_lang
 
 
 @then("the secure link should contain a hash and expiration timestamp")

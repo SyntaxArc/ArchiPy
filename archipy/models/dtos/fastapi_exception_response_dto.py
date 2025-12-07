@@ -1,16 +1,16 @@
 from http import HTTPStatus
 
-from archipy.models.dtos.error_dto import ErrorDetailDTO
+from archipy.models.errors.base_error import BaseError
 
 
 class FastAPIErrorResponseDTO:
     """Standardized error response model for OpenAPI documentation."""
 
-    def __init__(self, exception: ErrorDetailDTO, additional_properties: dict | None = None) -> None:
+    def __init__(self, exception: type[BaseError], additional_properties: dict | None = None) -> None:
         """Initialize the error response model.
 
         Args:
-            exception: The error detail object
+            exception: The exception class (not instance) with error details as class attributes
             additional_properties: Additional properties to include in the response
         """
         self.status_code = exception.http_status

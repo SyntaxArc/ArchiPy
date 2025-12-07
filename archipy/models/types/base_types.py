@@ -7,7 +7,7 @@ class BaseType(Enum):
     This class extends the `Enum` class to allow custom values for enum members.
     """
 
-    def __new__(cls: type["BaseType"], *args: object, **_: object) -> "BaseType":
+    def __new__(cls: type[BaseType], *args: object, **_: object) -> BaseType:
         """Create a new instance of the enum member.
 
         Args:

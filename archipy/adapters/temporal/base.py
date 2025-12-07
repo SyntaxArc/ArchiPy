@@ -579,7 +579,7 @@ class AtomicActivity(BaseActivity[T, R]):
 
         return await _execute_operation()
 
-    def with_db_type(self, db_type: str) -> "AtomicActivity[T, R]":
+    def with_db_type(self, db_type: str) -> AtomicActivity[T, R]:
         """Create a new instance with a different database type.
 
         Args:

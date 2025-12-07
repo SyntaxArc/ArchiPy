@@ -25,11 +25,11 @@ class SessionManagerRegistry:
         >>> session = sync_manager.get_session()
     """
 
-    _sync_instance: ClassVar["SessionManagerPort | None"] = None
-    _async_instance: ClassVar["AsyncSessionManagerPort | None"] = None
+    _sync_instance: ClassVar[SessionManagerPort | None] = None
+    _async_instance: ClassVar[AsyncSessionManagerPort | None] = None
 
     @classmethod
-    def get_sync_manager(cls) -> "SessionManagerPort":
+    def get_sync_manager(cls) -> SessionManagerPort:
         """Get the synchronous session manager instance.
 
         Returns:
@@ -44,7 +44,7 @@ class SessionManagerRegistry:
         return cls._sync_instance
 
     @classmethod
-    def set_sync_manager(cls, manager: "SessionManagerPort") -> None:
+    def set_sync_manager(cls, manager: SessionManagerPort) -> None:
         """Set a custom synchronous session manager.
 
         Args:
@@ -62,7 +62,7 @@ class SessionManagerRegistry:
         cls._sync_instance = manager
 
     @classmethod
-    def get_async_manager(cls) -> "AsyncSessionManagerPort":
+    def get_async_manager(cls) -> AsyncSessionManagerPort:
         """Get the asynchronous session manager instance.
 
         Returns:
@@ -77,7 +77,7 @@ class SessionManagerRegistry:
         return cls._async_instance
 
     @classmethod
-    def set_async_manager(cls, manager: "AsyncSessionManagerPort") -> None:
+    def set_async_manager(cls, manager: AsyncSessionManagerPort) -> None:
         """Set a custom asynchronous session manager.
 
         Args:

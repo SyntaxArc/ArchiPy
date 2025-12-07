@@ -42,7 +42,6 @@ from archipy.models.errors import (
     UserAlreadyExistsError,
     ValidationError,
 )
-from archipy.models.types import KeycloakErrorMessageType
 
 logger = logging.getLogger(__name__)
 
@@ -112,90 +111,54 @@ class KeycloakExceptionHandlerMixin:
         # Connection and network errors
         if isinstance(exception, KeycloakConnectionError):
             if "timeout" in error_lower:
-                raise KeycloakConnectionTimeoutError(
-                    error=KeycloakErrorMessageType.CONNECTION_TIMEOUT.value,
-                    additional_data=additional_data,
-                ) from exception
-            raise KeycloakServiceUnavailableError(
-                error=KeycloakErrorMessageType.SERVICE_UNAVAILABLE.value,
-                additional_data=additional_data,
-            ) from exception
+                raise KeycloakConnectionTimeoutError(additional_data=additional_data) from exception
+            raise KeycloakServiceUnavailableError(additional_data=additional_data) from exception
 
         # Authentication errors
         if isinstance(exception, KeycloakAuthenticationError) or any(
             phrase in error_lower
             for phrase in ["invalid user credentials", "invalid credentials", "authentication failed", "unauthorized"]
         ):
-            raise InvalidCredentialsError(
-                error=KeycloakErrorMessageType.INVALID_CREDENTIALS.value,
-                additional_data=additional_data,
-            ) from exception
+            raise InvalidCredentialsError(additional_data=additional_data) from exception
 
         # Resource already exists errors
         if "already exists" in error_lower:
             if "realm" in error_lower:
-                raise RealmAlreadyExistsError(
-                    error=KeycloakErrorMessageType.REALM_ALREADY_EXISTS.value,
-                    additional_data=additional_data,
-                ) from exception
+                raise RealmAlreadyExistsError(additional_data=additional_data) from exception
             elif "user exists with same" in error_lower:
-                raise UserAlreadyExistsError(
-                    error=KeycloakErrorMessageType.USER_ALREADY_EXISTS.value,
-                    additional_data=additional_data,
-                ) from exception
+                raise UserAlreadyExistsError(additional_data=additional_data) from exception
             elif "client" in error_lower:
-                raise ClientAlreadyExistsError(
-                    error=KeycloakErrorMessageType.CLIENT_ALREADY_EXISTS.value,
-                    additional_data=additional_data,
-                ) from exception
+                raise ClientAlreadyExistsError(additional_data=additional_data) from exception
             elif "role" in error_lower:
-                raise RoleAlreadyExistsError(
-                    error=KeycloakErrorMessageType.ROLE_ALREADY_EXISTS.value,
-                    additional_data=additional_data,
-                ) from exception
+                raise RoleAlreadyExistsError(additional_data=additional_data) from exception
 
         # Not found errors
         if "not found" in error_lower:
-            raise ResourceNotFoundError(
-                error=KeycloakErrorMessageType.RESOURCE_NOT_FOUND.value,
-                additional_data=additional_data,
-            ) from exception
+            raise ResourceNotFoundError(additional_data=additional_data) from exception
 
         # Permission errors
         if any(
             phrase in error_lower
             for phrase in ["forbidden", "access denied", "insufficient permissions", "insufficient scope"]
         ):
-            raise InsufficientPermissionsError(
-                error=KeycloakErrorMessageType.INSUFFICIENT_PERMISSIONS.value,
-                additional_data=additional_data,
-            ) from exception
+            raise InsufficientPermissionsError(additional_data=additional_data) from exception
 
         # Password policy errors
         if any(
             phrase in error_lower
             for phrase in ["invalid password", "password policy", "minimum length", "password must"]
         ):
-            raise PasswordPolicyError(
-                error=KeycloakErrorMessageType.PASSWORD_POLICY_VIOLATION.value,
-                additional_data=additional_data,
-            ) from exception
+            raise PasswordPolicyError(additional_data=additional_data) from exception
 
         # Validation errors (400 status codes that don't match above)
         if response_code == 400 or any(
             phrase in error_lower for phrase in ["validation", "invalid", "required field", "bad request"]
         ):
-            raise ValidationError(
-                error=KeycloakErrorMessageType.VALIDATION_ERROR.value,
-                additional_data=additional_data,
-            ) from exception
+            raise ValidationError(additional_data=additional_data) from exception
 
         # Service unavailable
         if response_code in [503, 504] or "unavailable" in error_lower:
-            raise KeycloakServiceUnavailableError(
-                error=KeycloakErrorMessageType.SERVICE_UNAVAILABLE.value,
-                additional_data=additional_data,
-            ) from exception
+            raise KeycloakServiceUnavailableError(additional_data=additional_data) from exception
 
         # Default to InternalError for unrecognized errors
         raise InternalError(additional_data=additional_data) from exception
@@ -224,10 +187,7 @@ class KeycloakExceptionHandlerMixin:
                 "original_error": error_message,
                 "response_code": getattr(exception, "response_code", None),
             }
-            raise RealmAlreadyExistsError(
-                error=KeycloakErrorMessageType.REALM_ALREADY_EXISTS.value,
-                additional_data=additional_data,
-            ) from exception
+            raise RealmAlreadyExistsError(additional_data=additional_data) from exception
 
         # Fall back to general Keycloak error handling
         cls._handle_keycloak_exception(exception, operation)
@@ -261,10 +221,7 @@ class KeycloakExceptionHandlerMixin:
                         "email": user_data.get("email"),
                     },
                 )
-            raise UserAlreadyExistsError(
-                error=KeycloakErrorMessageType.USER_ALREADY_EXISTS.value,
-                additional_data=additional_data,
-            ) from exception
+            raise UserAlreadyExistsError(additional_data=additional_data) from exception
 
         # Fall back to general Keycloak error handling
         cls._handle_keycloak_exception(exception, operation)
@@ -303,10 +260,7 @@ class KeycloakExceptionHandlerMixin:
                         "client_name": client_data.get("name"),
                     },
                 )
-            raise ClientAlreadyExistsError(
-                error=KeycloakErrorMessageType.CLIENT_ALREADY_EXISTS.value,
-                additional_data=additional_data,
-            ) from exception
+            raise ClientAlreadyExistsError(additional_data=additional_data) from exception
 
         # Fall back to general Keycloak error handling
         cls._handle_keycloak_exception(exception, operation)

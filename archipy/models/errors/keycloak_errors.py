@@ -4,89 +4,136 @@ from typing import Any, ClassVar
 try:
     from keycloak.exceptions import KeycloakError
 except ImportError:
-    KeycloakError = Exception  # type: ignore[misc]
+    KeycloakError = Exception
 
+try:
+    from http import HTTPStatus
+
+    HTTP_AVAILABLE = True
+except ImportError:
+    HTTP_AVAILABLE = False
+    HTTPStatus = None
+
+try:
+    from grpc import StatusCode
+
+    GRPC_AVAILABLE = True
+except ImportError:
+    GRPC_AVAILABLE = False
+    StatusCode = None
 
 from archipy.models.errors.base_error import BaseError
 from archipy.models.errors.system_errors import InternalError
-from archipy.models.types.keycloak_error_message_types import KeycloakErrorMessageType
 
 
 class RealmAlreadyExistsError(BaseError):
     """Exception raised when trying to create a realm that already exists."""
 
-    http_status_code: ClassVar[int] = 409
-    grpc_status_code: ClassVar[int] = 6  # ALREADY_EXISTS
+    code: ClassVar[str] = "REALM_ALREADY_EXISTS"
+    message_en: ClassVar[str] = "Realm already exists"
+    message_fa: ClassVar[str] = "قلمرو از قبل وجود دارد"
+    http_status: ClassVar[int] = 409
+    grpc_status: ClassVar[int] = 6
 
 
 class UserAlreadyExistsError(BaseError):
     """Exception raised when trying to create a user that already exists."""
 
-    http_status_code: ClassVar[int] = 409
-    grpc_status_code: ClassVar[int] = 6  # ALREADY_EXISTS
+    code: ClassVar[str] = "USER_ALREADY_EXISTS"
+    message_en: ClassVar[str] = "User already exists"
+    message_fa: ClassVar[str] = "کاربر از قبل وجود دارد"
+    http_status: ClassVar[int] = 409
+    grpc_status: ClassVar[int] = 6
 
 
 class ClientAlreadyExistsError(BaseError):
     """Exception raised when trying to create a client that already exists."""
 
-    http_status_code: ClassVar[int] = 409
-    grpc_status_code: ClassVar[int] = 6  # ALREADY_EXISTS
+    code: ClassVar[str] = "CLIENT_ALREADY_EXISTS"
+    message_en: ClassVar[str] = "Client already exists"
+    message_fa: ClassVar[str] = "کلاینت از قبل وجود دارد"
+    http_status: ClassVar[int] = 409
+    grpc_status: ClassVar[int] = 6
 
 
 class RoleAlreadyExistsError(BaseError):
     """Exception raised when trying to create a role that already exists."""
 
-    http_status_code: ClassVar[int] = 409
-    grpc_status_code: ClassVar[int] = 6  # ALREADY_EXISTS
+    code: ClassVar[str] = "ROLE_ALREADY_EXISTS"
+    message_en: ClassVar[str] = "Role already exists"
+    message_fa: ClassVar[str] = "نقش از قبل وجود دارد"
+    http_status: ClassVar[int] = 409
+    grpc_status: ClassVar[int] = 6
 
 
 class InvalidCredentialsError(BaseError):
     """Exception raised for invalid authentication credentials."""
 
-    http_status_code: ClassVar[int] = 401
-    grpc_status_code: ClassVar[int] = 16  # UNAUTHENTICATED
+    code: ClassVar[str] = "INVALID_CREDENTIALS"
+    message_en: ClassVar[str] = "Invalid credentials"
+    message_fa: ClassVar[str] = "اطلاعات ورود نامعتبر"
+    http_status: ClassVar[int] = 401
+    grpc_status: ClassVar[int] = 16
 
 
 class ResourceNotFoundError(BaseError):
     """Exception raised when a resource is not found."""
 
-    http_status_code: ClassVar[int] = 404
-    grpc_status_code: ClassVar[int] = 5  # NOT_FOUND
+    code: ClassVar[str] = "RESOURCE_NOT_FOUND"
+    message_en: ClassVar[str] = "Resource not found"
+    message_fa: ClassVar[str] = "منبع یافت نشد"
+    http_status: ClassVar[int] = 404
+    grpc_status: ClassVar[int] = 5
 
 
 class InsufficientPermissionsError(BaseError):
     """Exception raised when user lacks required permissions."""
 
-    http_status_code: ClassVar[int] = 403
-    grpc_status_code: ClassVar[int] = 7  # PERMISSION_DENIED
+    code: ClassVar[str] = "INSUFFICIENT_PERMISSIONS"
+    message_en: ClassVar[str] = "Insufficient permissions"
+    message_fa: ClassVar[str] = "دسترسی کافی نیست"
+    http_status: ClassVar[int] = 403
+    grpc_status: ClassVar[int] = 7
 
 
 class ValidationError(BaseError):
     """Exception raised for validation errors."""
 
-    http_status_code: ClassVar[int] = 400
-    grpc_status_code: ClassVar[int] = 3  # INVALID_ARGUMENT
+    code: ClassVar[str] = "VALIDATION_ERROR"
+    message_en: ClassVar[str] = "Validation error"
+    message_fa: ClassVar[str] = "خطای اعتبارسنجی"
+    http_status: ClassVar[int] = 400
+    grpc_status: ClassVar[int] = 3
 
 
 class PasswordPolicyError(BaseError):
     """Exception raised when password doesn't meet policy requirements."""
 
-    http_status_code: ClassVar[int] = 400
-    grpc_status_code: ClassVar[int] = 3  # INVALID_ARGUMENT
+    code: ClassVar[str] = "PASSWORD_POLICY_VIOLATION"
+    message_en: ClassVar[str] = "Password does not meet policy requirements"
+    message_fa: ClassVar[str] = "رمز عبور الزامات سیاست را برآورده نمی‌کند"
+    http_status: ClassVar[int] = 400
+    grpc_status: ClassVar[int] = 3
 
 
 class KeycloakConnectionTimeoutError(BaseError):
     """Exception raised when Keycloak connection times out."""
 
-    http_status_code: ClassVar[int] = 504
-    grpc_status_code: ClassVar[int] = 4  # DEADLINE_EXCEEDED
+    code: ClassVar[str] = "CONNECTION_TIMEOUT"
+    message_en: ClassVar[str] = "Connection timeout"
+    message_fa: ClassVar[str] = "زمان اتصال به پایان رسید"
+    http_status: ClassVar[int] = 504
+    grpc_status: ClassVar[int] = 4
 
 
 class KeycloakServiceUnavailableError(BaseError):
     """Exception raised when Keycloak service is unavailable."""
 
-    http_status_code: ClassVar[int] = 503
-    grpc_status_code: ClassVar[int] = 14  # UNAVAILABLE
+    code: ClassVar[str] = "SERVICE_UNAVAILABLE"
+    message_en: ClassVar[str] = "Service unavailable"
+    message_fa: ClassVar[str] = "سرویس در دسترس نیست"
+    http_status: ClassVar[int] = 503
+    grpc_status: ClassVar[int] = 14
 
 
 def get_error_message(keycloak_error: KeycloakError) -> str:
@@ -132,45 +179,33 @@ def handle_keycloak_error(keycloak_error: KeycloakError, **additional_data: Any)
 
     # Realm errors
     if "realm" in error_lower and "already exists" in error_lower:
-        return RealmAlreadyExistsError(
-            error=KeycloakErrorMessageType.REALM_ALREADY_EXISTS.value,
-            additional_data=context,
-        )
+        return RealmAlreadyExistsError(additional_data=context)
 
     # User errors
     if "user exists with same" in error_lower:
-        return UserAlreadyExistsError(error=KeycloakErrorMessageType.USER_ALREADY_EXISTS.value, additional_data=context)
+        return UserAlreadyExistsError(additional_data=context)
 
     # Client errors
     if "client" in error_lower and "already exists" in error_lower:
-        return ClientAlreadyExistsError(
-            error=KeycloakErrorMessageType.CLIENT_ALREADY_EXISTS.value,
-            additional_data=context,
-        )
+        return ClientAlreadyExistsError(additional_data=context)
 
     # Authentication errors
     if any(
         phrase in error_lower for phrase in ["invalid user credentials", "invalid credentials", "authentication failed"]
     ):
-        return InvalidCredentialsError(
-            error=KeycloakErrorMessageType.INVALID_CREDENTIALS.value,
-            additional_data=context,
-        )
+        return InvalidCredentialsError(additional_data=context)
 
     # Not found errors
     if "not found" in error_lower:
-        return ResourceNotFoundError(error=KeycloakErrorMessageType.RESOURCE_NOT_FOUND.value, additional_data=context)
+        return ResourceNotFoundError(additional_data=context)
 
     # Permission errors
     if any(phrase in error_lower for phrase in ["forbidden", "access denied", "insufficient permissions"]):
-        return InsufficientPermissionsError(
-            error=KeycloakErrorMessageType.INSUFFICIENT_PERMISSIONS.value,
-            additional_data=context,
-        )
+        return InsufficientPermissionsError(additional_data=context)
 
     # Validation errors (400 status codes that don't match above)
     if response_code == 400:
-        return ValidationError(error=KeycloakErrorMessageType.VALIDATION_ERROR.value, additional_data=context)
+        return ValidationError(additional_data=context)
 
     # Default to InternalError for unrecognized errors
     return InternalError(additional_data=context)

@@ -53,11 +53,7 @@ class FastAPIExceptionHandler:
         """
         BaseUtils.capture_exception(exception)
         # Default to internal server error if status code is not set
-        status_code = (
-            exception.http_status_code_value
-            if exception.http_status_code_value
-            else HTTPStatus.INTERNAL_SERVER_ERROR.value
-        )
+        status_code = exception.http_status if exception.http_status else HTTPStatus.INTERNAL_SERVER_ERROR.value
         return JSONResponse(status_code=status_code, content=exception.to_dict())
 
     @staticmethod
@@ -71,7 +67,6 @@ class FastAPIExceptionHandler:
         Returns:
             JSONResponse: A JSON response containing the exception details.
         """
-        BaseUtils.capture_exception(exception)
         return FastAPIExceptionHandler.create_error_response(exception)
 
     @staticmethod
@@ -85,7 +80,6 @@ class FastAPIExceptionHandler:
         Returns:
             JSONResponse: A JSON response containing the exception details.
         """
-        BaseUtils.capture_exception(exception)
         return FastAPIExceptionHandler.create_error_response(UnknownError())
 
     @staticmethod

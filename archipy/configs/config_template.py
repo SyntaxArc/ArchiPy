@@ -317,7 +317,7 @@ class KafkaConfig(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_security_settings(self) -> "KafkaConfig":
+    def validate_security_settings(self) -> KafkaConfig:
         """Validate security-related settings for Kafka configuration.
 
         Ensures that SASL authentication settings are properly configured when
@@ -339,7 +339,7 @@ class KafkaConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_consumer_settings(self) -> "KafkaConfig":
+    def validate_consumer_settings(self) -> KafkaConfig:
         """Validate consumer-specific settings for Kafka configuration.
 
         Ensures that auto-commit and offset reset settings are compatible,
@@ -358,7 +358,7 @@ class KafkaConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_idempotence_and_transactions(self) -> "KafkaConfig":
+    def validate_idempotence_and_transactions(self) -> KafkaConfig:
         """Validate idempotence and transaction settings for Kafka configuration.
 
         Ensures that idempotence is properly configured with 'all' acknowledgments,

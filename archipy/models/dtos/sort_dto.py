@@ -54,7 +54,7 @@ class SortDTO[T](BaseModel):
     order: SortOrderType = Field(default=SortOrderType.DESCENDING, description="Sort order (ASCENDING or DESCENDING)")
 
     @classmethod
-    def default(cls) -> "SortDTO":
+    def default(cls) -> SortDTO:
         """Create a default sort configuration.
 
         Returns a sort configuration that orders by created_at in descending order

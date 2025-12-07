@@ -20,7 +20,7 @@ Feature: Base Utilities
   Scenario: Validate an invalid Iranian mobile number
     Given an invalid mobile phone number "08123456789"
     When the phone number validation is attempted
-    Then an error message "شماره تلفن همراه ایران نامعتبر است." should be raised
+    Then an error message "شماره تلفن همراه ایران نامعتبر است: ۰۸۱۲۳۴۵۶۷۸۹" should be raised
 
   Scenario: Validate a correct Iranian landline number
     Given a valid landline phone number "02112345678"
@@ -30,7 +30,7 @@ Feature: Base Utilities
   Scenario: Validate an incorrect Iranian landline number
     Given an invalid landline phone number "04123"
     When the landline number validation is attempted
-    Then an error message "شماره تلفن ثابت ایران نامعتبر است." should be raised
+    Then an error message "شماره تلفن ثابت ایران نامعتبر است: ۰۴۱۲۳" should be raised
 
   Scenario: Validate a correct Iranian national code
     Given a valid national code "1234567891"
@@ -40,4 +40,4 @@ Feature: Base Utilities
   Scenario: Validate an incorrect Iranian national code
     Given an invalid national code "1234567890"
     When the national code validation is attempted
-    Then an error message "فرمت کد ملی وارد شده اشتباه است." should be raised
+    Then an error message "فرمت کد ملی وارد شده اشتباه است: ۱۲۳۴۵۶۷۸۹۰" should be raised

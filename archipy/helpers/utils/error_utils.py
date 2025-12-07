@@ -136,7 +136,7 @@ class ErrorUtils:
         if not HTTP_AVAILABLE:
             raise NotImplementedError
         return JSONResponse(
-            status_code=exception.http_status_code or HTTPStatus.INTERNAL_SERVER_ERROR,
+            status_code=exception.http_status or HTTPStatus.INTERNAL_SERVER_ERROR,
             content=exception.to_dict(),
         )
 
@@ -155,7 +155,7 @@ class ErrorUtils:
         """
         if not GRPC_AVAILABLE:
             raise NotImplementedError
-        return exception.grpc_status_code or StatusCode.UNKNOWN.value[0], exception.get_message()
+        return exception.grpc_status or StatusCode.UNKNOWN.value[0], exception.get_message()
 
     @staticmethod
     def get_fastapi_exception_responses(exceptions: list[type[BaseError]]) -> dict[int, dict[str, Any]]:
@@ -219,10 +219,10 @@ class ErrorUtils:
         }
 
         for exc in exceptions:
-            error = exc().error_detail
-            if error.http_status:
+            # Use exception class directly (error details are now class attributes)
+            if exc.http_status:
                 additional_properties = exception_schemas.get(exc.__name__)
-                response = FastAPIErrorResponseDTO(error, additional_properties)
+                response = FastAPIErrorResponseDTO(exc, additional_properties)
                 if response.status_code is not None:
                     responses[response.status_code] = response.model
 
