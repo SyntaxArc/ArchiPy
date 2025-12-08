@@ -3,7 +3,7 @@
 ![ArchiPy Logo](assets/logo.jpg)
 
 ArchiPy is a Python framework designed to provide a standardized, scalable, and maintainable architecture for modern
-applications. Built with Python 3.13+, it offers a suite of tools, utilities, and best practices to streamline
+applications. Built with Python 3.14+, it offers a suite of tools, utilities, and best practices to streamline
 development workflows while adhering to clean architecture principles and modern Python practices.
 
 ## Goals

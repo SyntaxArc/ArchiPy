@@ -26,9 +26,9 @@ alwaysApply: true
 
 **Documentation**: Use Pydantic field description attributes and Google-style docstrings for public APIs. Avoid redundant comments.
 
-## Python 3.13 Type Hints
+## Python 3.14 Type Hints
 
-Use modern Python 3.13 type hints to ensure type safety and IDE support.
+Use modern Python 3.14 type hints to ensure type safety and IDE support.
 
 **Rules**:
 - Use `|` for union types instead of `Union` (e.g., `BaseEntity | None`)
@@ -165,7 +165,7 @@ class ElasticsearchConfig(BaseModel):
 
 ## Ruff Compliance
 
-**Target**: Python 3.13, line length 120
+**Target**: Python 3.14, line length 120
 
 **Enabled Rules**:
 - A: flake8-builtins
@@ -282,7 +282,7 @@ Read before generating:
 
 Before completing tasks, verify:
 
-- ✅ Python 3.13 type hints with `|` unions
+- ✅ Python 3.14 type hints with `|` unions
 - ✅ Line length ≤ 120 characters
 - ✅ Google-style docstrings for public APIs
 - ✅ Pydantic Field descriptions

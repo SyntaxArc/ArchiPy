@@ -17,7 +17,7 @@ This document outlines the standards and practices for ArchiPy documentation.
 
 - Use Markdown syntax for all documentation files
 - Follow the Google Python style for code examples
-- Include type hints in code samples (using Python 3.13 syntax)
+- Include type hints in code samples (using Python 3.14 syntax)
 - Include proper exception handling with `raise ... from e` pattern
 - Group related documentation in directories
 - Link between documentation pages using relative links
@@ -26,7 +26,7 @@ This document outlines the standards and practices for ArchiPy documentation.
 
 When including code examples:
 
-1. Include proper type hints using Python 3.13 syntax (`x: list[str]` not `List[str]`)
+1. Include proper type hints using Python 3.14 syntax (`x: list[str]` not `List[str]`)
 2. Demonstrate proper error handling with exception chaining
 3. Include docstrings with Args, Returns, and Raises sections
 4. Show realistic use cases that align with ArchiPy's patterns

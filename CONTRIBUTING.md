@@ -74,7 +74,7 @@ Documentation is crucial for user experience. You can help by:
 
 Before contributing, ensure you have:
 
-- **Python 3.13+**
+- **Python 3.14+**
 - **UV** (dependency management)
 - **Git**
 - **make** (for running development commands)
@@ -170,7 +170,7 @@ make help
 1. **Ensure your code passes all checks**: Run `make check` locally
 2. **Update documentation** if necessary
 3. **Add tests** for new features or bug fixes
-4. **Ensure compatibility** with Python 3.13+
+4. **Ensure compatibility** with Python 3.14+
 5. **Verify all CI checks pass** on your PR
 
 Pull requests are typically reviewed within a few days. Maintainers may request changes or clarifications about your

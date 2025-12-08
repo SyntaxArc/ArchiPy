@@ -1,6 +1,6 @@
 # Parsian Shaparak Payment Gateway
 
-This example demonstrates how to use the Parsian Shaparak payment gateway adapter to process online payments in Iran with proper error handling and Python 3.13 type hints.
+This example demonstrates how to use the Parsian Shaparak payment gateway adapter to process online payments in Iran with proper error handling and Python 3.14 type hints.
 
 ## Configuration
 

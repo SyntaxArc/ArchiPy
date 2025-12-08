@@ -1,10 +1,10 @@
 # Examples
 
-This section contains practical examples of using ArchiPy components with **Python 3.13 type hints**, **proper exception handling patterns**, and **comprehensive error chaining**.
+This section contains practical examples of using ArchiPy components with **Python 3.14 type hints**, **proper exception handling patterns**, and **comprehensive error chaining**.
 
 All examples follow ArchiPy's coding standards:
 
-- ✅ **Python 3.13 Type Hints**: Using `|` for unions, lowercase built-in types (`str`, `int`, `list`, `dict`)
+- ✅ **Python 3.14 Type Hints**: Using `|` for unions, lowercase built-in types (`str`, `int`, `list`, `dict`)
 - ✅ **Exception Chaining**: All exceptions use `raise ... from e` to preserve error context
 - ✅ **Try-Except-Else Pattern**: Explicit `else` blocks with return statements for clear control flow
 - ✅ **Proper Logging**: Using `logger` instead of `print()` statements throughout
@@ -30,7 +30,7 @@ Learn how to use ArchiPy's database, cache, messaging, and storage adapters with
 
 Utility functions and decorators following best practices:
 
-- [Decorators](helpers/decorators.md) - Retry, timeout, caching, and transaction decorators with Python 3.13 types
+- [Decorators](helpers/decorators.md) - Retry, timeout, caching, and transaction decorators with Python 3.14 types
 - [Interceptors](helpers/interceptors.md) - gRPC and FastAPI interceptors for cross-cutting concerns
 - [Utils](helpers/utils.md) - Datetime, JWT, password, file, and validation utilities with proper error handling
 
@@ -50,7 +50,7 @@ Behavior-Driven Development with Behave:
 
 Data Transfer Objects and type-safe models:
 
-- [Protobuf DTOs](models/protobuf_dtos.md) - Converting between Pydantic DTOs and Protocol Buffers with Python 3.13 syntax
+- [Protobuf DTOs](models/protobuf_dtos.md) - Converting between Pydantic DTOs and Protocol Buffers with Python 3.14 syntax
 
 ## Error Handling
 
@@ -60,4 +60,4 @@ Comprehensive error handling patterns:
 
 ---
 
-> **Note**: All code examples in this section have been updated to follow ArchiPy's architectural principles and Python 3.13 best practices. Each adapter example includes links to its corresponding BDD test scenarios and API reference documentation.
+> **Note**: All code examples in this section have been updated to follow ArchiPy's architectural principles and Python 3.14 best practices. Each adapter example includes links to its corresponding BDD test scenarios and API reference documentation.

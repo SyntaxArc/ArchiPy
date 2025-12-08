@@ -1,6 +1,6 @@
 # SQLite Adapter
 
-This example demonstrates how to use the SQLite adapter for database operations with proper exception handling and Python 3.13 type hints.
+This example demonstrates how to use the SQLite adapter for database operations with proper exception handling and Python 3.14 type hints.
 
 ## Basic Usage
 

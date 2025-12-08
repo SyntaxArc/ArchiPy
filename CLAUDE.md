@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-ArchiPy is a Python framework providing standardized, scalable architecture for modern applications. Built with Python 3.13+, it follows clean architecture principles with four main modules:
+ArchiPy is a Python framework providing standardized, scalable architecture for modern applications. Built with Python 3.14+, it follows clean architecture principles with four main modules:
 
 ### 1. **Models** (`archipy/models/`)
 Core data structures and domain layer:
@@ -49,7 +49,7 @@ Configuration management with Pydantic models:
 
 ## Code Style
 
-- **Python Version**: 3.13+ with modern type hints (`|` for unions, lowercase built-ins)
+- **Python Version**: 3.14+ with modern type hints (`|` for unions, lowercase built-ins)
 - **Imports**: Strict section order: `future → stdlib → third-party → first-party → local`
 - **Typing**: Strict typing required with MyPy (`disallow_untyped_defs=true`)
 - **Quotes**: Double quotes for all strings (inline and multiline)

@@ -4,7 +4,7 @@
 
 [![Forks](https://img.shields.io/github/forks/SyntaxArc/ArchiPy)](https://github.com/SyntaxArc/ArchiPy/network/members)
 [![Stars](https://img.shields.io/github/stars/SyntaxArc/ArchiPy)](https://github.com/SyntaxArc/ArchiPy/stargazers)
-[![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/Python-3.14+-blue.svg)](https://www.python.org/downloads/)
 [![UV](https://img.shields.io/badge/UV-package%20manager-blue)](https://docs.astral.sh/uv/)
 [![Documentation](https://img.shields.io/badge/docs-MkDocs-blue.svg)](https://syntaxarc.github.io/ArchiPy/)
 [![License](https://img.shields.io/github/license/SyntaxArc/ArchiPy)](https://github.com/SyntaxArc/ArchiPy/blob/master/LICENSE)
@@ -22,7 +22,7 @@
 
 ## **Structured Python Development Made Simple**
 
-ArchiPy is a Python framework designed to provide a standardized, scalable, and maintainable architecture for modern applications. Built with Python 3.13+, it offers a suite of tools, utilities, and best practices to streamline configuration management, testing, and development workflows while adhering to clean architecture principles.
+ArchiPy is a Python framework designed to provide a standardized, scalable, and maintainable architecture for modern applications. Built with Python 3.14+, it offers a suite of tools, utilities, and best practices to streamline configuration management, testing, and development workflows while adhering to clean architecture principles.
 
 ---
 
@@ -79,7 +79,7 @@ ArchiPy is built with the following objectives in mind:
 
 ## 🛠️ Prerequisites
 
-- **Python 3.13 or higher**
+- **Python 3.14 or higher**
 - **UV** (recommended for development)
 
 ---

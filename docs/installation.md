@@ -4,15 +4,15 @@
 
 Before starting, ensure you have:
 
-- **Python 3.13 or higher**
+- **Python 3.14 or higher**
 
-  ArchiPy requires Python 3.13+. Check your version with:
+  ArchiPy requires Python 3.14+. Check your version with:
 
     ```bash
     python --version
     ```
 
-  If needed, [download Python 3.13+](https://www.python.org/downloads/).
+  If needed, [download Python 3.14+](https://www.python.org/downloads/).
 
 - **UV** (for dependency management)
 
@@ -108,7 +108,7 @@ make install-dev
 
 If issues arise, verify:
 
-1. Python version is 3.13+
+1. Python version is 3.14+
 2. `pip` or `uv` is updated (e.g., `pip install --upgrade pip` or `uv self update`)
 3. Build tools are available (UV handles this automatically)
 4. Database-specific dependencies are installed if using database adapters

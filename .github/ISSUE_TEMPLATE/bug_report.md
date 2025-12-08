@@ -28,7 +28,7 @@ If applicable, add screenshots to help explain your problem.
 
 ## Environment
  - OS: [e.g. Ubuntu 22.04, Windows 11, macOS 13.4]
- - Python version: [e.g. 3.13.1]
+ - Python version: [e.g. 3.14.2]
  - ArchiPy version: [e.g. 0.1.0]
  - Installation method: [e.g. pip, poetry, from source]
  - Dependencies installed: [e.g. archipy[postgres,redis]]

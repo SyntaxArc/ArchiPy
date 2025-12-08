@@ -1,6 +1,6 @@
 # Temporal Adapter
 
-This example demonstrates how to use the Temporal adapter for workflow orchestration and activity execution with proper error handling and Python 3.13 type hints.
+This example demonstrates how to use the Temporal adapter for workflow orchestration and activity execution with proper error handling and Python 3.14 type hints.
 
 ## Basic Usage
 
