@@ -2,6 +2,39 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v4.0.0] - 2025-12-08
+
+### Changed
+
+#### Models - Errors
+
+- **Error System Migration to T-Strings** - Refactored error system to use t-string template formatting with inline context variables
+    - Removed `ErrorDetailDTO` and `ErrorMessageType` dependencies
+    - Added class attributes (`code`, `message_en`, `message_fa`, `http_status`, `grpc_status`) to `BaseError`
+    - Implemented t-string template formatting with context variables in error messages
+    - Override `get_message()` in error classes with explicit variable passing
+    - Applied Persian number conversion for FA language messages
+    - Removed deprecated `http_status_code_value` and `grpc_status_code_value` properties
+    - Removed `_get_grpc_status_code` method, use `_convert_int_to_grpc_status` directly
+    - Updated all error classes (validation, auth, resource, database, business, network, system, keycloak, temporal)
+    - Updated FastAPI integration, adapters, and utilities
+    - Fixed MyPy type errors in `BaseError.to_dict()` and gRPC metadata handling
+
+### Tests
+
+- **Comprehensive Error Handling Tests** - Added comprehensive error handling tests for FastAPI and gRPC
+    - Added BDD test scenarios for FastAPI error handling (`fastapi_error_handling.feature`)
+    - Added BDD test scenarios for gRPC error handling (`grpc_error_handling.feature`)
+    - Implemented test step definitions for error handling scenarios
+    - Added test servers and utilities for FastAPI and gRPC error testing
+    - Renamed "exception" to "error" in behave test files and features for consistency
+
+### Chore
+
+- **Python Version References** - Updated all Python version references to 3.14
+    - Updated documentation and configuration files to reflect Python 3.14 requirement
+    - Aligned version references across the codebase
+
 ## [v3.15.3] - 2025-12-02
 
 ### Changed

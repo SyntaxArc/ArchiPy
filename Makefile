@@ -52,6 +52,7 @@ update-all: ## Aggressively update all dependencies to latest versions
 	@echo "${YELLOW}Note: This updates uv.lock; to change pyproject.toml constraints, edit manually${NC}"
 	$(UV) self update
 	$(UV) python upgrade
+	$(UV) python update-shell
 	$(UV) lock --upgrade
 	$(UV) sync --all-extras --all-groups --upgrade
 
