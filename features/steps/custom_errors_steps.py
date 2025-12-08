@@ -1,7 +1,7 @@
 from behave import given, then
-from features.test_helpers import get_current_scenario_context
 
 from archipy.models.errors import InvalidPhoneNumberError, NotFoundError, TokenExpiredError
+from features.test_helpers import get_current_scenario_context
 
 # Error Mapping - using error classes directly
 error_mapping = {
@@ -21,7 +21,7 @@ def step_given_error_type(context, error_enum):
         error_instance = error_class(phone_number="09123456789")
     else:
         # Other error classes can be instantiated without parameters
-    error_instance = error_class()
+        error_instance = error_class()
 
     scenario_context.store("error_detail", error_instance)
 
@@ -44,7 +44,7 @@ def step_then_check_english_message(context, expected_message_en):
     actual_message = error_detail.get_message()
     error_detail.lang = original_lang
     assert (
-        actual_message == expected_message_en
+            actual_message == expected_message_en
     ), f"Expected '{expected_message_en}', but got '{actual_message}'"
 
 
@@ -59,7 +59,7 @@ def step_then_check_persian_message(context, expected_message_fa):
     actual_message = error_detail.get_message()
     error_detail.lang = original_lang
     assert (
-        actual_message == expected_message_fa
+            actual_message == expected_message_fa
     ), f"Expected '{expected_message_fa}', but got '{actual_message}'"
 
 

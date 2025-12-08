@@ -88,6 +88,7 @@ def before_feature(context: Context, feature: Feature):
     """Setup performed before each feature runs.
 
     This is a fallback to ensure containers are started if they weren't started in before_all().
+    Also starts gRPC servers for gRPC error handling tests.
     """
     # Extract feature-level tags - convert Tag objects to strings
     if hasattr(feature, "tags") and feature.tags:
@@ -100,6 +101,62 @@ def before_feature(context: Context, feature: Feature):
             if required_containers:
                 # Start containers if not already started (start_containers handles this)
                 ContainerManager.start_containers(list(required_containers))
+
+    # Start gRPC servers for gRPC error handling feature
+    # Check feature filename or name
+    feature_filename = ""
+    if hasattr(feature, "filename"):
+        feature_filename = str(feature.filename) if feature.filename else ""
+    feature_name = getattr(feature, "name", "") or ""
+
+    if "grpc_error_handling" in feature_filename or "grpc_error" in feature_name.lower():
+        try:
+            from features.test_servers import (
+                create_test_async_grpc_server,
+                create_test_async_grpc_servicer,
+                create_test_grpc_server,
+                create_test_grpc_servicer,
+                start_async_grpc_server_sync,
+                start_grpc_server,
+            )
+
+            # Create default servicers (will be replaced per scenario)
+            default_sync_servicer = create_test_grpc_servicer()
+            default_async_servicer = create_test_async_grpc_servicer()
+
+            # Create and start sync server
+            sync_server = create_test_grpc_server()
+            sync_server, sync_port = start_grpc_server(sync_server, default_sync_servicer)
+
+            # Store sync server first (even if async fails)
+            context.grpc_sync_server = sync_server
+            context.grpc_sync_port = sync_port
+            context.grpc_sync_servicer = default_sync_servicer
+
+            # Try to start async server (may fail due to event loop issues)
+            try:
+                async_server = create_test_async_grpc_server()
+                async_server, async_port, async_thread, async_loop = start_async_grpc_server_sync(
+                    async_server, default_async_servicer,
+                )
+                context.grpc_async_server = async_server
+                context.grpc_async_port = async_port
+                context.grpc_async_servicer = default_async_servicer
+                context.grpc_async_thread = async_thread
+                context.grpc_async_loop = async_loop
+                context.logger.info(f"Started gRPC servers - sync on port {sync_port}, async on port {async_port}")
+            except Exception as async_error:
+                context.logger.warning(f"Failed to start async gRPC server: {async_error}. Async tests may fail.")
+                # Create a placeholder so tests don't fail on attribute access
+                context.grpc_async_server = None
+                context.grpc_async_port = None
+                context.grpc_async_servicer = None
+                context.grpc_async_thread = None
+                context.grpc_async_loop = None
+                context.logger.info(f"Started gRPC sync server on port {sync_port} (async server failed to start)")
+
+        except Exception as e:
+            context.logger.warning(f"Failed to start gRPC servers: {e}. gRPC tests may fail.")
 
 
 def before_scenario(context: Context, scenario: Scenario):
@@ -138,6 +195,44 @@ def after_scenario(context: Context, scenario: Scenario):
 
     # Reset the registry
     SessionManagerRegistry.reset()
+
+
+def after_feature(context: Context, feature: Feature):
+    """Cleanup performed after each feature runs."""
+    # Stop gRPC servers if they were started
+    if hasattr(context, "grpc_sync_server"):
+        try:
+            context.grpc_sync_server.stop(grace=None)
+            context.logger.info("Stopped sync gRPC server")
+        except Exception as e:
+            context.logger.warning(f"Error stopping sync gRPC server: {e}")
+
+    if hasattr(context, "grpc_async_server") and context.grpc_async_server is not None:
+        try:
+            from features.test_servers import stop_async_grpc_server_gracefully
+
+            if hasattr(context, "grpc_async_thread") and hasattr(context, "grpc_async_loop"):
+                stop_async_grpc_server_gracefully(
+                    context.grpc_async_server,
+                    context.grpc_async_thread,
+                    context.grpc_async_loop,
+                    timeout=5.0,
+                )
+                context.logger.info("Stopped async gRPC server gracefully")
+            else:
+                # Fallback: try to stop without thread/loop info
+                import asyncio
+
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+
+                loop.run_until_complete(context.grpc_async_server.stop(grace=2.0))
+                context.logger.info("Stopped async gRPC server (fallback method)")
+        except Exception as e:
+            context.logger.warning(f"Error stopping async gRPC server: {e}")
 
 
 def after_all(context: Context):

@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package test;
+
+// Minimal test service for error handling tests
+service TestService {
+  rpc TestMethod (TestRequest) returns (TestResponse);
+}
+
+message TestRequest {
+  string data = 1;
+}
+
+message TestResponse {
+  string result = 1;
+}
