@@ -1,15 +1,16 @@
 import signal
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
 from archipy.models.errors import DeadlineExceededError
 
-# Define a type variable for the return type of the decorated function
-F = TypeVar("F", bound=Callable[..., Any])
+# Define type variables for the decorator
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
-def timeout_decorator(seconds: int) -> Callable[[F], F]:
+def timeout_decorator(seconds: int) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """A decorator that adds a timeout to a function.
 
     If the function takes longer than the specified number of seconds to execute,
@@ -42,11 +43,14 @@ def timeout_decorator(seconds: int) -> Callable[[F], F]:
         ```
     """
 
-    def decorator(func: F) -> F:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
+        # Capture function name before wrapping - use getattr for type safety
+        func_name = getattr(func, "__name__", "unknown")
+
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             def handle_timeout(_signum: int, _frame: Any) -> None:
-                raise DeadlineExceededError(operation=func.__name__)
+                raise DeadlineExceededError(operation=func_name)
 
             # Set the signal handler and alarm
             signal.signal(signal.SIGALRM, handle_timeout)

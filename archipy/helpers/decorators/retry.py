@@ -1,14 +1,13 @@
 import logging
 import time
 from collections.abc import Callable
-from typing import Any, ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar
 
 from archipy.models.errors import ResourceExhaustedError
 
 # Define type variables for decorators
 P = ParamSpec("P")
 R = TypeVar("R")
-F = TypeVar("F", bound=Callable[..., Any])
 
 
 def retry_decorator(
@@ -17,7 +16,7 @@ def retry_decorator(
     retry_on: tuple[type[Exception], ...] | None = None,
     ignore: tuple[type[Exception], ...] | None = None,
     resource_type: str | None = None,
-) -> Callable[[F], F]:
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """A decorator that retries a function when it raises an exception.
 
     Args:
@@ -53,11 +52,11 @@ def retry_decorator(
         ```
     """
 
-    def decorator(func: F) -> F:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         from functools import wraps
 
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             retries = 0
             while retries < max_retries:
                 try:

@@ -2,7 +2,11 @@ import functools
 import logging
 from collections.abc import Callable
 from contextvars import ContextVar
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from grpc import ServicerContext
+    from grpc.aio import ServicerContext as AsyncServicerContext
 
 try:
     from grpc import ServicerContext
@@ -314,10 +318,10 @@ class KeycloakUtils:
         if invocation_metadata_result is None:
             return None
         # Convert metadata tuples to dict, handling both str and bytes keys
-        # invocation_metadata_result is an iterable of tuples
+        # invocation_metadata_result is an iterable of tuples at runtime
         metadata: dict[str, str] = {}
         try:
-            for key, value in invocation_metadata_result:
+            for key, value in invocation_metadata_result:  # type: ignore[misc]
                 # Normalize key to string
                 key_str = key.decode("utf-8") if isinstance(key, bytes) else str(key)
                 # Normalize value to string
@@ -617,17 +621,16 @@ class KeycloakUtils:
                     if context is None:
                         raise
                     if isinstance(e, BaseError) and GRPC_AVAILABLE:
-                        # Only call abort if context is actually an AsyncServicerContext
-                        if hasattr(context, "abort"):
+                        if isinstance(context, AsyncServicerContext):
                             await e.abort_grpc_async(context)  # type: ignore[arg-type]
                             return None  # abort_grpc_async will terminate, but satisfy type checker
-                    if GRPC_AVAILABLE and hasattr(context, "abort"):
-                        await InternalError(
+                    if GRPC_AVAILABLE and isinstance(context, AsyncServicerContext):
+                        # False positive: isinstance narrows type at runtime
+                        error_instance = InternalError(
                             lang=lang,
                             additional_data={"original_error": str(e), "error_type": type(e).__name__},
-                        ).abort_grpc_async(
-                            context,
-                        )  # type: ignore[arg-type]
+                        )
+                        await error_instance.abort_grpc_async(context)  # type: ignore[arg-type]
                         return None  # abort_grpc_async will terminate, but satisfy type checker
                     raise
 

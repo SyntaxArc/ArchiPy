@@ -7,6 +7,7 @@ and integration with ArchiPy service adapters.
 
 import asyncio
 import logging
+from collections.abc import Callable
 from typing import Any, override
 from uuid import uuid4
 
@@ -31,7 +32,7 @@ class WorkerHandle(PortWorkerHandle):
         worker_id (str): Unique identifier for this worker instance.
         task_queue (str): The task queue this worker polls from.
         workflows (list[type]): List of workflow types registered with this worker.
-        activities (list[object]): List of activity instances registered with this worker.
+        activities (list[Callable]): List of activity callables registered with this worker.
         build_id (str | None): Build identifier for worker versioning.
         identity (str | None): Worker identity for debugging and monitoring.
         max_concurrent_workflow_tasks (int): Maximum concurrent workflow tasks.
@@ -44,7 +45,7 @@ class WorkerHandle(PortWorkerHandle):
         worker_id: str,
         task_queue: str,
         workflows: list[type] | None = None,
-        activities: list[object] | None = None,
+        activities: list[Callable[..., Any]] | None = None,
         build_id: str | None = None,
         identity: str | None = None,
         max_concurrent_workflow_tasks: int | None = None,
@@ -57,7 +58,7 @@ class WorkerHandle(PortWorkerHandle):
             worker_id (str): Unique identifier for this worker instance.
             task_queue (str): The task queue this worker polls from.
             workflows (list[type], optional): List of workflow types. Defaults to None.
-            activities (list[object], optional): List of activity instances. Defaults to None.
+            activities (list[Callable], optional): List of activity callables. Defaults to None.
             build_id (str, optional): Build identifier for worker versioning. Defaults to None.
             identity (str, optional): Worker identity. Defaults to None.
             max_concurrent_workflow_tasks (int, optional): Maximum concurrent workflow tasks.
@@ -253,7 +254,7 @@ class TemporalWorkerManager(WorkerPort):
         self,
         task_queue: str,
         workflows: list[type] | None = None,
-        activities: list[object] | None = None,
+        activities: list[Callable[..., Any]] | None = None,
         build_id: str | None = None,
         identity: str | None = None,
         max_concurrent_workflow_tasks: int | None = None,
@@ -265,7 +266,7 @@ class TemporalWorkerManager(WorkerPort):
             task_queue (str): The task queue this worker will poll from.
             workflows (list[type], optional): List of workflow classes to register.
                 Defaults to None.
-            activities (list[object], optional): List of activity instances to register.
+            activities (list[Callable], optional): List of activity callables to register.
                 Defaults to None.
             build_id (str, optional): Build identifier for worker versioning.
                 Defaults to None.
@@ -288,13 +289,11 @@ class TemporalWorkerManager(WorkerPort):
 
         try:
             # Create the Temporal worker
-            # Prepare activities list - Worker accepts list of activity instances
-            activities_list: list[Any] = activities if activities is not None else []
             worker = Worker(
                 client,
                 task_queue=task_queue,
                 workflows=workflows or [],
-                activities=activities_list,
+                activities=activities or [],
                 build_id=build_id,
                 identity=worker_identity,
                 max_concurrent_workflow_tasks=max_concurrent_workflow_tasks,
@@ -345,11 +344,11 @@ class TemporalWorkerManager(WorkerPort):
             ) from error
 
     @override
-    async def stop_worker(self, worker_handle: WorkerHandle) -> None:
+    async def stop_worker(self, worker_handle: PortWorkerHandle) -> None:
         """Stop a running Temporal worker.
 
         Args:
-            worker_handle (WorkerHandle): Handle to the worker to stop.
+            worker_handle (PortWorkerHandle): Handle to the worker to stop.
 
         Raises:
             WorkerShutdownError: If the worker fails to stop gracefully.

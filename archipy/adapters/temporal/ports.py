@@ -5,7 +5,7 @@ operations, providing a standardized contract for workflow orchestration within
 the ArchiPy architecture.
 """
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -283,7 +283,7 @@ class WorkerPort:
         self,
         task_queue: str,
         workflows: list[type] | None = None,
-        activities: list[object] | None = None,
+        activities: list[Callable[..., Any]] | None = None,
         build_id: str | None = None,
         identity: str | None = None,
         max_concurrent_workflow_tasks: int | None = None,
@@ -295,7 +295,7 @@ class WorkerPort:
             task_queue (str): The task queue this worker will poll from.
             workflows (list[type], optional): List of workflow classes to register.
                 Defaults to None.
-            activities (list[object], optional): List of activity instances to register.
+            activities (list[Callable], optional): List of activity callables to register.
                 Defaults to None.
             build_id (str, optional): Build identifier for worker versioning.
                 Defaults to None.
@@ -358,7 +358,21 @@ class WorkflowDescription:
     pass
 
 
-class WorkerHandle:
-    """Type stub for worker handle."""
+class WorkerHandle(ABC):
+    """Base type for worker handle.
 
-    pass
+    This is an abstract base class that concrete implementations should extend.
+    It provides a common interface for worker handle operations.
+    """
+
+    worker_id: str
+    task_queue: str
+
+    @abstractmethod
+    async def stop(self, grace_period: int = 30) -> None:
+        """Stop the worker gracefully.
+
+        Args:
+            grace_period: Maximum time in seconds to wait for graceful shutdown.
+        """
+        ...

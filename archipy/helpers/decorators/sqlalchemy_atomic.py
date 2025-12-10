@@ -5,9 +5,9 @@ and support for different database types (PostgreSQL, SQLite, StarRocks).
 """
 
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from functools import partial, wraps
-from typing import Any, TypeVar
+from typing import Any, TypeVar, overload
 
 from sqlalchemy.exc import (
     IntegrityError,
@@ -115,11 +115,27 @@ def _handle_db_exception(exception: Exception, db_type: str, func_name: str) -> 
     raise InternalError() from exception
 
 
+@overload
+def sqlalchemy_atomic_decorator[R](
+    db_type: str,
+    is_async: bool = False,
+    function: Callable[..., R] = ...,
+) -> Callable[..., R]: ...
+
+
+@overload
 def sqlalchemy_atomic_decorator(
     db_type: str,
     is_async: bool = False,
-    function: Callable[..., Any] | None = None,
-) -> Callable[..., Any] | partial[Callable[..., Any]]:
+    function: None = None,
+) -> partial[Callable[..., Any]]: ...
+
+
+def sqlalchemy_atomic_decorator[R](
+    db_type: str,
+    is_async: bool = False,
+    function: Callable[..., R] | None = None,
+) -> Callable[..., R] | partial[Callable[..., Any]]:
     """Factory for creating SQLAlchemy atomic transaction decorators.
 
     This decorator ensures that a function runs within a database transaction for the specified
@@ -193,38 +209,21 @@ def sqlalchemy_atomic_decorator(
         else:
             return registry_class
 
-    def decorator(func: Callable[..., R]) -> Callable[..., R]:
-        """Create a transaction-aware wrapper for the given function.
+    if is_async:
 
-        Args:
-            func (Callable[..., R]): The function to wrap with transaction management.
+        def async_decorator(func: Callable[..., Awaitable[R]]) -> Callable[..., Awaitable[R]]:
+            """Create an async transaction-aware wrapper for the given function.
 
-        Returns:
-            Callable[..., R]: The wrapped function that manages transactions.
-        """
-        if is_async:
+            Args:
+                func: The async function to wrap with transaction management.
+
+            Returns:
+                The wrapped async function that manages transactions.
+            """
 
             @wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> R:
-                """Async wrapper for managing database transactions.
-
-                Args:
-                    *args: Positional arguments to pass to the wrapped function.
-                    **kwargs: Keyword arguments to pass to the wrapped function.
-
-                Returns:
-                    R: The result of the wrapped function.
-
-                Raises:
-                    DatabaseSerializationError: If a serialization failure is detected.
-                    DatabaseDeadlockError: If an operational error occurs due to a deadlock.
-                    DatabaseTransactionError: If a transaction-related error occurs.
-                    DatabaseQueryError: If a query-related error occurs.
-                    DatabaseConnectionError: If a connection-related error occurs.
-                    DatabaseConstraintError: If a constraint violation is detected.
-                    DatabaseIntegrityError: If an integrity violation is detected.
-                    DatabaseTimeoutError: If a database operation times out.
-                """
+                """Async wrapper for managing database transactions."""
                 registry = get_registry()
                 session_manager: AsyncSessionManagerPort = registry.get_async_manager()
                 session = session_manager.get_session()
@@ -234,53 +233,46 @@ def sqlalchemy_atomic_decorator(
 
                 try:
                     if session.in_transaction():
-                        # func is awaitable since is_async=True
                         result = await func(*args, **kwargs)
                         if not is_nested:
                             await session.commit()
-                        # result is R from func, compatible with return type
-                        typed_result: R = result
-                        return typed_result
+                        return result
                     else:
                         async with session.begin():
-                            # func is awaitable since is_async=True
                             result = await func(*args, **kwargs)
-                            # result is R from func, compatible with return type
-                            typed_result: R = result
-                            return typed_result
+                            return result
                 except Exception as exception:
                     await session.rollback()
                     func_name = getattr(func, "__name__", "unknown")
                     _handle_db_exception(exception, db_type, func_name)
+                    # _handle_db_exception always raises, but add this for type checker
+                    raise
                 finally:
                     if not session.in_transaction():
                         await session.close()
                         await session_manager.remove_session()
 
             return async_wrapper
-        else:
+
+        if function is not None:
+            return async_decorator(function)  # type: ignore[arg-type, return-value]
+        return partial(sqlalchemy_atomic_decorator, db_type=db_type, is_async=is_async)
+
+    else:
+
+        def sync_decorator(func: Callable[..., R]) -> Callable[..., R]:
+            """Create a sync transaction-aware wrapper for the given function.
+
+            Args:
+                func: The sync function to wrap with transaction management.
+
+            Returns:
+                The wrapped sync function that manages transactions.
+            """
 
             @wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> R:
-                """Synchronous wrapper for managing database transactions.
-
-                Args:
-                    *args: Positional arguments to pass to the wrapped function.
-                    **kwargs: Keyword arguments to pass to the wrapped function.
-
-                Returns:
-                    R: The result of the wrapped function.
-
-                Raises:
-                    DatabaseSerializationError: If a serialization failure is detected.
-                    DatabaseDeadlockError: If an operational error occurs due to a deadlock.
-                    DatabaseTransactionError: If a transaction-related error occurs.
-                    DatabaseQueryError: If a query-related error occurs.
-                    DatabaseConnectionError: If a connection-related error occurs.
-                    DatabaseConstraintError: If a constraint violation is detected.
-                    DatabaseIntegrityError: If an integrity violation is detected.
-                    DatabaseTimeoutError: If a database operation times out.
-                """
+                """Synchronous wrapper for managing database transactions."""
                 registry = get_registry()
                 session_manager: SessionManagerPort = registry.get_sync_manager()
                 session = session_manager.get_session()
@@ -301,6 +293,8 @@ def sqlalchemy_atomic_decorator(
                     session.rollback()
                     func_name = getattr(func, "__name__", "unknown")
                     _handle_db_exception(exception, db_type, func_name)
+                    # _handle_db_exception always raises, but add this for type checker
+                    raise
                 finally:
                     if not session.in_transaction():
                         session.close()
@@ -308,7 +302,9 @@ def sqlalchemy_atomic_decorator(
 
             return sync_wrapper
 
-    return decorator(function) if function else partial(sqlalchemy_atomic_decorator, db_type=db_type, is_async=is_async)
+        if function is not None:
+            return sync_decorator(function)
+        return partial(sqlalchemy_atomic_decorator, db_type=db_type, is_async=is_async)
 
 
 def postgres_sqlalchemy_atomic_decorator(function: Callable[..., Any] | None = None) -> Callable[..., Any] | partial:

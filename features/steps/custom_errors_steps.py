@@ -39,13 +39,12 @@ def step_then_check_english_message(context, expected_message_en):
     error_detail = scenario_context.get("error_detail")
     # For t-strings, check the processed message with English language
     from archipy.models.types.language_type import LanguageType
+
     original_lang = error_detail.lang
     error_detail.lang = LanguageType.EN
     actual_message = error_detail.get_message()
     error_detail.lang = original_lang
-    assert (
-            actual_message == expected_message_en
-    ), f"Expected '{expected_message_en}', but got '{actual_message}'"
+    assert actual_message == expected_message_en, f"Expected '{expected_message_en}', but got '{actual_message}'"
 
 
 @then('the Persian message should be "{expected_message_fa}"')
@@ -54,13 +53,12 @@ def step_then_check_persian_message(context, expected_message_fa):
     error_detail = scenario_context.get("error_detail")
     # For t-strings, check the processed message with Persian language
     from archipy.models.types.language_type import LanguageType
+
     original_lang = error_detail.lang
     error_detail.lang = LanguageType.FA
     actual_message = error_detail.get_message()
     error_detail.lang = original_lang
-    assert (
-            actual_message == expected_message_fa
-    ), f"Expected '{expected_message_fa}', but got '{actual_message}'"
+    assert actual_message == expected_message_fa, f"Expected '{expected_message_fa}', but got '{actual_message}'"
 
 
 @then("the HTTP status should be {http_status}")

@@ -1,18 +1,22 @@
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
 from archipy.models.errors import DeprecationError
 from archipy.models.types.language_type import LanguageType
 
-# Define a type variable for the return type of the decorated function
-F = TypeVar("F", bound=Callable[..., Any])
+# Define type variables for the decorator
+P = ParamSpec("P")
+R = TypeVar("R")
 
 # Define a type variable for the return type of the decorated class
 T = TypeVar("T", bound=type[Any])
 
 
-def method_deprecation_error(operation: str | None = None, lang: LanguageType = LanguageType.EN) -> Callable[[F], F]:
+def method_deprecation_error(
+    operation: str | None = None,
+    lang: LanguageType = LanguageType.EN,
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator that raises a DeprecationError when the decorated method is called.
 
     This decorator is used to mark methods as deprecated and immediately prevent
@@ -48,10 +52,13 @@ def method_deprecation_error(operation: str | None = None, lang: LanguageType = 
         ```
     """
 
-    def decorator(func: F) -> F:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
+        # Capture function name before wrapping - use getattr for type safety
+        func_name = getattr(func, "__name__", "unknown")
+
         @wraps(func)
-        def wrapper(*_args: Any, **_kwargs: Any) -> Any:
-            operation_name = operation if operation is not None else func.__name__
+        def wrapper(*_args: P.args, **_kwargs: P.kwargs) -> R:
+            operation_name = operation if operation is not None else func_name
             raise DeprecationError(deprecated_feature=operation_name, lang=lang)
 
         return wrapper

@@ -1,10 +1,9 @@
 import logging
 import time
 from collections.abc import Callable
-from typing import Any
 
 
-def timing_decorator[F: Callable[..., Any]](func: F) -> F:
+def timing_decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     """A decorator that measures the execution time of a function and logs it if the logging level is DEBUG.
 
     Args:
@@ -33,13 +32,16 @@ def timing_decorator[F: Callable[..., Any]](func: F) -> F:
     """
     from functools import wraps
 
+    # Capture function name before wrapping - use getattr for type safety
+    func_name = getattr(func, "__name__", "unknown")
+
     @wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         if logging.getLogger().level == logging.DEBUG:
             start_time = time.time()
             result = func(*args, **kwargs)
             end_time = time.time()
-            logging.debug("%s took %.4f seconds to execute.", func.__name__, end_time - start_time)
+            logging.debug("%s took %.4f seconds to execute.", func_name, end_time - start_time)
         else:
             result = func(*args, **kwargs)
         return result

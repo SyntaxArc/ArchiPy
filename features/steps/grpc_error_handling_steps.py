@@ -408,9 +408,7 @@ def step_then_check_grpc_status(context, grpc_status: str):
         # Get status code from actual RPC error
         error_info = extract_grpc_error_info(grpc_error)
         actual_status = error_info["code"]
-        assert (
-            actual_status == expected_status
-        ), f"Expected gRPC status {expected_status}, but got {actual_status}"
+        assert actual_status == expected_status, f"Expected gRPC status {expected_status}, but got {actual_status}"
     elif error:
         # Fallback: Check the error's grpc_status
         assert (
@@ -455,9 +453,7 @@ def step_then_check_grpc_error_code(context, error_code: str):
     error = scenario_context.get("grpc_error")
 
     if error:
-        assert (
-                error.code == error_code
-        ), f"Expected error code '{error_code}', but got '{error.code}'"
+        assert error.code == error_code, f"Expected error code '{error_code}', but got '{error.code}'"
 
 
 @then("the error should contain validation error details")
@@ -639,8 +635,6 @@ def step_then_check_message_matches(context):
         expected_message = error.get_message()
         error_info = extract_grpc_error_info(grpc_error)
         actual_message = error_info["details"]
-        assert (
-            expected_message == actual_message
-        ), f"Expected message '{expected_message}', but got '{actual_message}'"
+        assert expected_message == actual_message, f"Expected message '{expected_message}', but got '{actual_message}'"
     else:
         assert False, "No gRPC error or error instance found to verify message"

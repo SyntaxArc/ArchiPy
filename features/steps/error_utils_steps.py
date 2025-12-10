@@ -132,9 +132,7 @@ def step_given_list_of_errors(context, error_names):
         "BaseError": BaseError,
     }
     error_list = [
-        error_mapping[err.strip()]
-        for err in error_names.strip("[]").split(",")
-        if err.strip() in error_mapping
+        error_mapping[err.strip()] for err in error_names.strip("[]").split(",") if err.strip() in error_mapping
     ]
     scenario_context.store("error_list", error_list)
 

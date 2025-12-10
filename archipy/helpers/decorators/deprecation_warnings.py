@@ -1,15 +1,16 @@
 import warnings
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
-# Define a type variable for the return type of the decorated function
-F = TypeVar("F", bound=Callable[..., Any])
+# Define type variables for the decorator
+P = ParamSpec("P")
+R = TypeVar("R")
 # Define a type variable for the return type of the decorated class
 T = TypeVar("T", bound=type[Any])
 
 
-def method_deprecation_warning(message: str | None = None) -> Callable[[F], F]:
+def method_deprecation_warning(message: str | None = None) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """A decorator that issues a deprecation warning when the decorated method is called.
 
     Args:
@@ -42,16 +43,14 @@ def method_deprecation_warning(message: str | None = None) -> Callable[[F], F]:
     default_message = "This method is deprecated and will be removed in a future version."
     final_message = message if message is not None else default_message
 
-    def decorator(func: F) -> F:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             warnings.warn(final_message, DeprecationWarning, stacklevel=2)
             return func(*args, **kwargs)
 
-        # @wraps preserves the function signature, making wrapper compatible with F
-        # The type checker needs help understanding this, so we preserve attributes explicitly
+        # @wraps preserves the function signature, making wrapper compatible with the original function
         wrapper.__wrapped__ = func
-        # Return the wrapper - it's functionally equivalent to func with added warning
         return wrapper
 
     return decorator

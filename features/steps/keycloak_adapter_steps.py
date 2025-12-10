@@ -24,6 +24,7 @@ def get_keycloak_adapter(context: Context) -> AsyncKeycloakAdapter | KeycloakAda
         scenario_context.adapter = KeycloakAdapter(test_config.KEYCLOAK)
     return scenario_context.adapter
 
+
 # Configuration steps
 @given("a configured {adapter_type} Keycloak adapter")
 def step_configured_adapter(context: Context, adapter_type: str) -> None:
@@ -44,7 +45,9 @@ async def step_create_realm(context: Context, realm_name: str, display_name: str
     try:
         if is_async:
 
-            realm_result = await adapter.create_realm(realm_name=realm_name, display_name=display_name, skip_exists=True)
+            realm_result = await adapter.create_realm(
+                realm_name=realm_name, display_name=display_name, skip_exists=True,
+            )
 
         else:
             realm_result = adapter.create_realm(realm_name=realm_name, display_name=display_name, skip_exists=True)
@@ -64,7 +67,10 @@ async def step_create_realm(context: Context, realm_name: str, display_name: str
     'I create a client named "{client_name}" in realm "{realm_name}" with service accounts enabled using {adapter_type} adapter',
 )
 async def step_create_client_with_service_accounts(
-    context: Context, client_name: str, realm_name: str, adapter_type: str,
+    context: Context,
+    client_name: str,
+    realm_name: str,
+    adapter_type: str,
 ) -> None:
     """Create a client with service accounts enabled in the specified realm."""
     adapter = get_keycloak_adapter(context)
@@ -103,7 +109,6 @@ async def step_create_client_with_service_accounts(
 
         context.logger.info(f"Created client {client_name} in realm {realm_name}")
 
-
     except Exception as e:
         scenario_context.store("client_error", str(e))
         context.logger.exception("Client creation failed")
@@ -121,7 +126,9 @@ async def update_adapter_config(
         adapter.configs.REALM_NAME = realm_name
         adapter._admin_adapter = None
         adapter._admin_token_expiry = 0
-        if adapter.configs.IS_ADMIN_MODE_ENABLED and (adapter.configs.CLIENT_SECRET_KEY or (adapter.configs.ADMIN_USERNAME and adapter.configs.ADMIN_PASSWORD)):
+        if adapter.configs.IS_ADMIN_MODE_ENABLED and (
+            adapter.configs.CLIENT_SECRET_KEY or (adapter.configs.ADMIN_USERNAME and adapter.configs.ADMIN_PASSWORD)
+        ):
             adapter._initialize_admin_client()
         client_result = scenario_context.get(f"client_{client_name}")
         if not client_result or "internal_client_id" not in client_result:
@@ -134,13 +141,13 @@ async def update_adapter_config(
         # The client secret will be retrieved when needed by the adapter
         adapter.configs.CLIENT_SECRET_KEY = None
 
-
-
         # Force recreation of the OpenID client with new configuration
         adapter.openid_adapter = adapter._get_openid_client(adapter.configs)
         adapter._admin_adapter = None
         adapter._admin_token_expiry = 0
-        if adapter.configs.IS_ADMIN_MODE_ENABLED and (adapter.configs.CLIENT_SECRET_KEY or (adapter.configs.ADMIN_USERNAME and adapter.configs.ADMIN_PASSWORD)):
+        if adapter.configs.IS_ADMIN_MODE_ENABLED and (
+            adapter.configs.CLIENT_SECRET_KEY or (adapter.configs.ADMIN_USERNAME and adapter.configs.ADMIN_PASSWORD)
+        ):
             adapter._initialize_admin_client()
         scenario_context.store(
             "client_config_updated",
@@ -164,7 +171,10 @@ async def update_adapter_config(
     'I create a client named "{client_name}" in realm "{realm_name}" with service accounts and update adapter using {adapter_type} adapter',
 )
 async def step_create_client_and_update_adapter(
-    context: Context, client_name: str, realm_name: str, adapter_type: str,
+    context: Context,
+    client_name: str,
+    realm_name: str,
+    adapter_type: str,
 ) -> None:
     """Create a client with service accounts enabled and create a new adapter instance for it."""
     adapter = get_keycloak_adapter(context)
@@ -205,6 +215,7 @@ async def step_create_client_and_update_adapter(
 
             # Get the client secret using the internal client ID with retry logic
             import asyncio
+
             max_retries = 3
             for attempt in range(max_retries):
                 try:
@@ -278,6 +289,7 @@ async def step_create_client_and_update_adapter(
 
             # Get the client secret for confidential client with retry logic
             import time
+
             max_retries = 3
             for attempt in range(max_retries):
                 try:
@@ -373,7 +385,9 @@ async def step_create_user_basic(context: Context, username: str, password: str,
 @when(
     'I create a user including username "{username}" email "{email}" and password "{password}" using {adapter_type} adapter',
 )
-async def step_create_user_with_email(context: Context, username: str, email: str, password: str, adapter_type: str) -> None:
+async def step_create_user_with_email(
+    context: Context, username: str, email: str, password: str, adapter_type: str,
+) -> None:
     """Create a user with the specified username, email, and password."""
     adapter = get_keycloak_adapter(context)
     scenario_context = get_current_scenario_context(context)
@@ -396,7 +410,8 @@ async def step_create_user_with_email(context: Context, username: str, email: st
             user_id = await adapter.create_user(user_data)
             scenario_context.store(f"user_id_{username}", user_id)
             scenario_context.store(
-                "latest_user_creation", {"username": username, "email": email, "user_id": user_id},
+                "latest_user_creation",
+                {"username": username, "email": email, "user_id": user_id},
             )
 
         else:
@@ -625,7 +640,11 @@ async def step_create_realm_role(context: Context, role_name: str, description: 
     'I create a client role named "{role_name}" for client "{client_id}" with description "{description}" using {adapter_type} adapter',
 )
 async def step_create_client_role(
-    context: Context, role_name: str, client_id: str, description: str, adapter_type: str,
+    context: Context,
+    role_name: str,
+    client_id: str,
+    description: str,
+    adapter_type: str,
 ) -> None:
     """Create a client role."""
     adapter = get_keycloak_adapter(context)
@@ -676,7 +695,9 @@ async def step_assign_realm_role(context: Context, role_name: str, username: str
 
 
 @when('I assign client role "{role_name}" of client "{client_id}" to user "{username}" using {adapter_type} adapter')
-async def step_assign_client_role(context: Context, role_name: str, client_id: str, username: str, adapter_type: str) -> None:
+async def step_assign_client_role(
+    context: Context, role_name: str, client_id: str, username: str, adapter_type: str,
+) -> None:
     """Assign a client role to a user."""
     adapter = get_keycloak_adapter(context)
     scenario_context = get_current_scenario_context(context)
@@ -689,13 +710,15 @@ async def step_assign_client_role(context: Context, role_name: str, client_id: s
 
             await adapter.assign_client_role(user_id, client_id, role_name)
             scenario_context.store(
-                "latest_client_role_assignment", {"user": username, "role": role_name, "client": client_id},
+                "latest_client_role_assignment",
+                {"user": username, "role": role_name, "client": client_id},
             )
 
         else:
             adapter.assign_client_role(user_id, client_id, role_name)
             scenario_context.store(
-                "latest_client_role_assignment", {"user": username, "role": role_name, "client": client_id},
+                "latest_client_role_assignment",
+                {"user": username, "role": role_name, "client": client_id},
             )
         context.logger.info(f"Assigned client role {role_name} of client {client_id} to user {username}")
     except Exception as e:
@@ -1009,9 +1032,9 @@ async def step_user_has_realm_role(context: Context, username: str, role_name: s
 
     if is_async:
 
-            roles = await adapter.get_user_roles(user_id)
-            role_names = [role["name"] for role in roles]
-            assert role_name in role_names, f"User {username} does not have realm role {role_name}"
+        roles = await adapter.get_user_roles(user_id)
+        role_names = [role["name"] for role in roles]
+        assert role_name in role_names, f"User {username} does not have realm role {role_name}"
 
     else:
         roles = adapter.get_user_roles(user_id)
@@ -1034,9 +1057,7 @@ async def step_user_has_client_role(context: Context, username: str, role_name: 
         client_id = await adapter.get_client_id(client_name)
         roles = await adapter.get_client_roles_for_user(user_id, client_id)
         role_names = [role["name"] for role in roles]
-        assert (
-            role_name in role_names
-        ), f"User {username} does not have client role {role_name} for client {client_id}"
+        assert role_name in role_names, f"User {username} does not have client role {role_name} for client {client_id}"
 
     else:
         client_id = adapter.get_client_id(client_name)
@@ -1379,9 +1400,6 @@ def step_token_lifecycle_verification(context: Context) -> None:
     context.logger.info("Token lifecycle verification completed")
 
 
-
-
-
 def _create_or_get_realm(
     adapter: AsyncKeycloakAdapter | KeycloakAdapter,
     realm_name: str,
@@ -1488,7 +1506,9 @@ def step_client_has_service_accounts_enabled(context: Context, client_name: str)
 def step_sync_user_creation_succeeds(context: Context) -> None:
     """Verify that the sync user creation succeeded."""
     scenario_context = get_current_scenario_context(context)
-    assert not scenario_context.get("user_creation_error"), f"User creation failed: {scenario_context.get('user_creation_error')}"
+    assert not scenario_context.get(
+        "user_creation_error",
+    ), f"User creation failed: {scenario_context.get('user_creation_error')}"
     assert scenario_context.get("latest_user_creation"), "No user creation result found"
     context.logger.info("Sync user creation succeeded")
 
@@ -1653,7 +1673,9 @@ def step_async_client_creation_succeeds(context: Context) -> None:
 def step_async_user_creation_succeeds(context: Context) -> None:
     """Verify that the async user creation succeeded."""
     scenario_context = get_current_scenario_context(context)
-    assert not scenario_context.get("user_creation_error"), f"User creation failed: {scenario_context.get('user_creation_error')}"
+    assert not scenario_context.get(
+        "user_creation_error",
+    ), f"User creation failed: {scenario_context.get('user_creation_error')}"
     assert scenario_context.get("latest_user_creation"), "No user creation result found"
     context.logger.info("Async user creation succeeded")
 

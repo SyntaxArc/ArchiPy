@@ -14,6 +14,45 @@ from archipy.adapters.redis.ports import (
 from archipy.configs.config_template import RedisConfig, RedisMode
 
 
+class FakeRedisClusterWrapper(fakeredis.FakeRedis):
+    """Wrapper around FakeRedis that adds cluster-specific methods."""
+
+    def cluster_info(self) -> dict[str, Any]:
+        """Return fake cluster info."""
+        return {
+            "cluster_state": "ok",
+            "cluster_slots_assigned": 16384,
+            "cluster_slots_ok": 16384,
+            "cluster_slots_pfail": 0,
+            "cluster_slots_fail": 0,
+            "cluster_known_nodes": 6,
+            "cluster_size": 3,
+        }
+
+    def cluster_nodes(self) -> str:
+        """Return fake cluster nodes info."""
+        return "fake cluster nodes info"
+
+    def cluster_slots(self) -> list[tuple[int, int, list[str]]]:
+        """Return fake cluster slots info."""
+        slot1: tuple[int, int, list[str]] = (0, 5460, ["127.0.0.1", "7000"])
+        slot2: tuple[int, int, list[str]] = (5461, 10922, ["127.0.0.1", "7001"])
+        slot3: tuple[int, int, list[str]] = (10923, 16383, ["127.0.0.1", "7002"])
+        return [slot1, slot2, slot3]
+
+    def cluster_keyslot(self, key: str) -> int:
+        """Return fake cluster keyslot for a key."""
+        return hash(key) % 16384
+
+    def cluster_countkeysinslot(self, slot: int) -> int:
+        """Return fake count of keys in a slot."""
+        return 0
+
+    def cluster_get_keys_in_slot(self, slot: int, count: int) -> list[str]:
+        """Return fake keys in a slot."""
+        return []
+
+
 class RedisMock(RedisAdapter):
     """A Redis adapter implementation using fakeredis for testing."""
 
@@ -28,29 +67,10 @@ class RedisMock(RedisAdapter):
 
     def _setup_fake_clients(self) -> None:
         """Setup fake Redis clients that simulate different modes."""
-        fake_client: Any = fakeredis.FakeRedis(decode_responses=True)
-
-        # For testing purposes, we simulate different modes
         if self.config.MODE == RedisMode.CLUSTER:
-            # Add cluster-specific mock methods using setattr for dynamic attributes
-            fake_client.cluster_info = lambda: {
-                "cluster_state": "ok",
-                "cluster_slots_assigned": 16384,
-                "cluster_slots_ok": 16384,
-                "cluster_slots_pfail": 0,
-                "cluster_slots_fail": 0,
-                "cluster_known_nodes": 6,
-                "cluster_size": 3,
-            }
-            fake_client.cluster_nodes = lambda: "fake cluster nodes info"
-            fake_client.cluster_slots = lambda: [
-                (0, 5460, ["127.0.0.1", 7000]),
-                (5461, 10922, ["127.0.0.1", 7001]),
-                (10923, 16383, ["127.0.0.1", 7002]),
-            ]
-            fake_client.cluster_keyslot = lambda key: hash(key) % 16384
-            fake_client.cluster_countkeysinslot = lambda slot: 0
-            fake_client.cluster_get_keys_in_slot = lambda slot, count: []
+            fake_client: Redis = FakeRedisClusterWrapper(decode_responses=True)
+        else:
+            fake_client = fakeredis.FakeRedis(decode_responses=True)
 
         self.client = fake_client
         self.read_only_client = fake_client

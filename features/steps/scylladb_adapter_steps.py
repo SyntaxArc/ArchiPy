@@ -574,9 +574,9 @@ def step_verify_keyspace_context(context: Context, keyspace: str) -> None:
         keyspace (str): Expected keyspace name.
     """
     scenario_context = _get_scenario_context(context)
-    assert scenario_context.current_keyspace == keyspace, (
-        f"Expected keyspace '{keyspace}', got '{scenario_context.current_keyspace}'"
-    )
+    assert (
+        scenario_context.current_keyspace == keyspace
+    ), f"Expected keyspace '{keyspace}', got '{scenario_context.current_keyspace}'"
     logger.info("Keyspace context verified: %s", keyspace)
 
 
@@ -998,7 +998,11 @@ def step_verify_pool_stats(context: Context) -> None:
 
 @when('I insert data into table "{table}" with id {id:d}, item "{item}", quantity {quantity:d}')
 def step_insert_with_if_not_exists(
-    context: Context, table: str, id: int, item: str, quantity: int,
+    context: Context,
+    table: str,
+    id: int,
+    item: str,
+    quantity: int,
 ) -> None:
     """Insert data in a table with if not exists.
 

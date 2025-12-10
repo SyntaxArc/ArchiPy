@@ -193,9 +193,7 @@ def step_then_check_http_status(context, http_status: str):
     scenario_context = get_current_scenario_context(context)
     response = scenario_context.get("response")
     expected_status = int(http_status)
-    assert (
-            response.status_code == expected_status
-    ), f"Expected HTTP {expected_status}, but got {response.status_code}"
+    assert response.status_code == expected_status, f"Expected HTTP {expected_status}, but got {response.status_code}"
 
 
 @then('the response should contain error code "{error_code}"')
@@ -207,7 +205,7 @@ def step_then_check_response_error_code(context, error_code: str):
 
     assert "error" in response_data, "Response should contain 'error' key"
     assert (
-            response_data["error"] == error_code
+        response_data["error"] == error_code
     ), f"Expected error code '{error_code}', but got '{response_data['error']}'"
 
 
@@ -225,7 +223,7 @@ def step_then_check_message(context, expected_message: str):
     expected_lower = expected_message.lower()
     actual_lower = actual_message.lower()
     assert (
-            expected_lower in actual_lower or actual_lower in expected_lower
+        expected_lower in actual_lower or actual_lower in expected_lower
     ), f"Expected message to contain '{expected_message}', but got '{actual_message}'"
 
 
@@ -260,13 +258,9 @@ def step_then_check_json_key_value(context, key: str, value: str):
     # Try to convert value to int if it's numeric
     try:
         expected_value = int(value)
-        assert (
-                actual_value == expected_value
-        ), f"Expected '{key}' to be {expected_value}, but got {actual_value}"
+        assert actual_value == expected_value, f"Expected '{key}' to be {expected_value}, but got {actual_value}"
     except ValueError:
-        assert (
-                str(actual_value) == value
-        ), f"Expected '{key}' to be '{value}', but got '{actual_value}'"
+        assert str(actual_value) == value, f"Expected '{key}' to be '{value}', but got '{actual_value}'"
 
 
 @then('the response JSON "{key_path}" should contain "{sub_key}" key')
@@ -307,12 +301,10 @@ def step_then_check_json_nested_key_value_string(context, key_path: str, sub_key
     try:
         expected_value = int(value)
         assert (
-                actual_value == expected_value
+            actual_value == expected_value
         ), f"Expected '{key_path}.{sub_key}' to be {expected_value}, but got {actual_value}"
     except ValueError:
-        assert (
-                str(actual_value) == value
-        ), f"Expected '{key_path}.{sub_key}' to be '{value}', but got '{actual_value}'"
+        assert str(actual_value) == value, f"Expected '{key_path}.{sub_key}' to be '{value}', but got '{actual_value}'"
 
 
 @then('the response JSON "{key_path}" should contain "{sub_key}" with value {value}')
@@ -337,7 +329,7 @@ def step_then_check_json_nested_key_value_numeric(context, key_path: str, sub_ke
     expected_int = int(value)
 
     assert (
-            actual_int == expected_int
+        actual_int == expected_int
     ), f"Expected '{key_path}.{sub_key}' to be {expected_int} (type: {type(expected_int).__name__}), but got {actual_value} (type: {type(actual_value).__name__})"
 
 
@@ -396,11 +388,11 @@ def step_then_check_message_language(context, lang: str):
         message = response_data.get("detail", {}).get("message", "")
         if lang.upper() == "FA":
             # Check for Persian characters
-            has_persian = any("\u0600" <= char <= "\u06FF" for char in message)
+            has_persian = any("\u0600" <= char <= "\u06ff" for char in message)
             assert has_persian, f"Expected Persian message, but got: {message}"
         else:
             # English - no Persian characters
-            has_persian = any("\u0600" <= char <= "\u06FF" for char in message)
+            has_persian = any("\u0600" <= char <= "\u06ff" for char in message)
             assert not has_persian, f"Expected English message, but got: {message}"
     else:
         # Verify using the error instance
@@ -410,7 +402,7 @@ def step_then_check_message_language(context, lang: str):
             expected_message = error_instance.get_message()
             actual_message = response_data.get("detail", {}).get("message", "")
             assert (
-                    expected_message == actual_message
+                expected_message == actual_message
             ), f"Expected message '{expected_message}', but got '{actual_message}'"
 
 
@@ -430,7 +422,7 @@ def step_then_check_expected_message(context, lang: str):
             expected_message = error_instance.get_message()
             actual_message = response_data.get("detail", {}).get("message", "")
             assert (
-                    expected_message == actual_message
+                expected_message == actual_message
             ), f"Expected message '{expected_message}', but got '{actual_message}'"
 
 
