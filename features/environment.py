@@ -20,6 +20,8 @@ from archipy.configs.base_config import BaseConfig
 
 
 class TestConfig(BaseConfig):
+    """Configuration for test environment with container images."""
+
     model_config = SettingsConfigDict(
         env_file=".env.test",
     )
@@ -34,7 +36,7 @@ class TestConfig(BaseConfig):
     SCYLLADB__IMAGE: str
     TESTCONTAINERS_RYUK_CONTAINER_IMAGE: str | None = None
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
         # Configure testcontainers to use custom ryuk image
@@ -47,7 +49,7 @@ config = TestConfig()
 BaseConfig.set_global(config)
 
 
-def before_all(context: Context):
+def before_all(context: Context) -> None:
     """Setup performed before all tests run.
 
     Args:
@@ -64,30 +66,11 @@ def before_all(context: Context):
     # Initialize container manager
     context.test_containers = ContainerManager
 
-    # Collect feature-level tags from all features being executed
-    all_tags: set[str] = set()
-    if hasattr(context, "features") and context.features:
-        for feature in context.features:
-            # Get feature-level tags - convert Tag objects to strings
-            if hasattr(feature, "tags") and feature.tags:
-                feature_tags = [str(tag) for tag in feature.tags]
-                all_tags.update(feature_tags)
-                context.logger.debug(f"Feature '{feature.name}' has tags: {feature_tags}")
 
-    # Extract required containers from tags
-    required_containers = ContainerManager.extract_containers_from_tags(list(all_tags))
-
-    if required_containers:
-        context.logger.info(f"Detected required containers from tags: {sorted(required_containers)}")
-        ContainerManager.start_containers(list(required_containers))
-    else:
-        context.logger.info("No container tags detected, no containers will be started")
-
-
-def before_feature(context: Context, feature: Feature):
+def before_feature(context: Context, feature: Feature) -> None:
     """Setup performed before each feature runs.
 
-    This is a fallback to ensure containers are started if they weren't started in before_all().
+    Starts containers required by the feature based on its tags.
     Also starts gRPC servers for gRPC error handling tests.
     """
     # Extract feature-level tags - convert Tag objects to strings
@@ -159,7 +142,7 @@ def before_feature(context: Context, feature: Feature):
             context.logger.warning(f"Failed to start gRPC servers: {e}. gRPC tests may fail.")
 
 
-def before_scenario(context: Context, scenario: Scenario):
+def before_scenario(context: Context, scenario: Scenario) -> None:
     """Setup performed before each scenario runs."""
     # Set up logger
     logger = logging.getLogger("behave.tests")
@@ -177,11 +160,11 @@ def before_scenario(context: Context, scenario: Scenario):
     # Assign test containers to scenario context
     try:
         scenario_context.store("test_containers", context.test_containers)
-    except Exception as e:
-        logger.exception(f"Error setting test containers: {e}")
+    except Exception:
+        logger.exception("Error setting test containers")
 
 
-def after_scenario(context: Context, scenario: Scenario):
+def after_scenario(context: Context, scenario: Scenario) -> None:
     """Cleanup performed after each scenario runs."""
     logger = getattr(context, "logger", logging.getLogger("behave.environment"))
 
@@ -197,7 +180,7 @@ def after_scenario(context: Context, scenario: Scenario):
     SessionManagerRegistry.reset()
 
 
-def after_feature(context: Context, feature: Feature):
+def after_feature(context: Context, feature: Feature) -> None:
     """Cleanup performed after each feature runs."""
     # Stop gRPC servers if they were started
     if hasattr(context, "grpc_sync_server"):
@@ -234,8 +217,13 @@ def after_feature(context: Context, feature: Feature):
         except Exception as e:
             context.logger.warning(f"Error stopping async gRPC server: {e}")
 
+    # Stop all test containers to free up memory
+    if hasattr(context, "test_containers"):
+        context.test_containers.stop_all()
+        context.logger.info("Stopped all test containers after feature")
 
-def after_all(context: Context):
+
+def after_all(context: Context) -> None:
     """Cleanup performed after all tests run."""
     # Stop all test containers
     if hasattr(context, "test_containers"):

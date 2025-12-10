@@ -223,7 +223,7 @@ target-version = "py314"
 "archipy/adapters/kafka/adapters.py" = ["BLE001"]
 "archipy/adapters/temporal/*" = ["ANN401", "TRY300", "RUF006"]  # Allow Any types for Temporal's dynamic system, else blocks, and asyncio task handling
 "archipy/adapters/scylladb/*" = ["S608"]  # False positives - using parameterized queries with %s placeholders
-"features/steps/*" = ["F811"]
+"features/steps/*" = ["F811", "ANN001", "ANN201"]
 "scripts/*" = ["S603", "S607"]
 
 # Configure McCabe complexity
