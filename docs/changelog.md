@@ -2,6 +2,62 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v4.0.1] - 2025-12-10
+
+### Added
+
+#### Helpers - Decorators
+
+- **Comprehensive Cache Decorator BDD Tests** - Added extensive BDD test suite for cache decorators
+    - Test scenarios for function caching with TTL expiration
+    - Test scenarios for async function caching
+    - Test scenarios for method caching (both sync and async)
+    - Test scenarios for bound method caching with instance isolation
+    - Test scenarios for cache key generation with different argument types
+    - Test scenarios for cache invalidation and clearing
+    - Test scenarios for cache statistics and monitoring
+    - Test scenarios for error handling and edge cases
+
+### Fixed
+
+#### Helpers - Decorators
+
+- **Bound Method Caching** - Fixed cache decorator to properly handle bound methods
+    - Fixed cache key generation for bound methods to include instance identity
+    - Ensures each instance has its own cache namespace
+    - Prevents cache collisions between different instances of the same class
+    - Improved cache statistics tracking for bound methods
+
+- **Type Checker Errors** - Resolved all Ty type checker errors (22 fixes)
+    - Refactored decorators with `ParamSpec` for proper type preservation
+    - Implemented descriptor protocol for cache decorator
+    - Updated port interfaces with correct type annotations
+    - Added `TYPE_CHECKING` imports for better type checking
+    - No `cast()` usage - all types properly inferred
+
+### Changed
+
+#### Development Tools
+
+- **Type Checker Migration** - Migrated from MyPy to Ty type checker
+    - Replaced MyPy with Ty for Python 3.14 type checking
+    - Updated all type hints to use Python 3.14 syntax (`|` for unions, lowercase built-ins)
+    - Updated Makefile to use `ty check` instead of `mypy`
+    - Changed cache directory from `.mypy_cache/` to `.ty_cache/`
+    - Updated pre-commit hooks to use Ty
+    - Updated documentation and contributing guides
+
+#### Dependencies
+
+- **Optional Dependencies**
+    - Updated `fastapi` from `>=0.124.0` to `>=0.124.2`
+    - Updated `sqlalchemy` from `>=2.0.44` to `>=2.0.45`
+
+- **Development Dependencies**
+    - Removed `mypy>=1.19.0`
+    - Added `ty` (Ty type checker)
+    - Updated `types-protobuf` from `>=6.32.1.20251105` to `>=6.32.1.20251210`
+
 ## [v4.0.0] - 2025-12-08
 
 ### Changed
