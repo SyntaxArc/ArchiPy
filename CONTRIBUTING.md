@@ -124,7 +124,7 @@ make update
 # Format code with black
 make format
 
-# Run all linters (ruff, mypy)
+# Run all linters (ruff, ty)
 make lint
 
 # Run pre-commit hooks on all files

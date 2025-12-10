@@ -48,7 +48,11 @@ def method_deprecation_warning(message: str | None = None) -> Callable[[F], F]:
             warnings.warn(final_message, DeprecationWarning, stacklevel=2)
             return func(*args, **kwargs)
 
-        return wrapper  # type: ignore[return-value]
+        # @wraps preserves the function signature, making wrapper compatible with F
+        # The type checker needs help understanding this, so we preserve attributes explicitly
+        wrapper.__wrapped__ = func
+        # Return the wrapper - it's functionally equivalent to func with added warning
+        return wrapper
 
     return decorator
 

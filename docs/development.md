@@ -31,7 +31,7 @@
 Run checks:
 
 ```bash
-make check  # Runs ruff, black, mypy
+make check  # Runs ruff, black, ty
 ```
 
 ### Testing

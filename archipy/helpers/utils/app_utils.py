@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from concurrent import futures
 from contextlib import AbstractAsyncContextManager
 from http import HTTPStatus
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
 
@@ -18,13 +18,25 @@ from archipy.models.errors import (
     UnknownError,
 )
 
+if TYPE_CHECKING:
+    from grpc.experimental import aio as grpc_aio
+    from grpc.experimental.aio import Server as GrpcAioServer
+
+    CreateGrpcServerType = Callable[..., GrpcAioServer]
+else:
+    GrpcAioServer = Any
+    CreateGrpcServerType = Any
+
 try:
     import grpc
-    from grpc.experimental.aio import server  # type: ignore[import-not-found]
+    from grpc.experimental import aio as grpc_aio
 
+    create_grpc_server: CreateGrpcServerType = grpc_aio.server
     GRPC_APP = True
 except ImportError:
     GRPC_APP = False
+    grpc_aio: Any = None
+    create_grpc_server: CreateGrpcServerType | None = None
 
 try:
     from fastapi import FastAPI, Request, Response
@@ -152,8 +164,10 @@ class FastAPIUtils:
             config (BaseConfig): The configuration object containing CORS settings.
         """
         origins = [str(origin).strip("/") for origin in config.FASTAPI.CORS_MIDDLEWARE_ALLOW_ORIGINS]
+        # Use app.add_middleware with CORSMiddleware directly
+        # CORSMiddleware is compatible with FastAPI's middleware system at runtime
         app.add_middleware(
-            CORSMiddleware,
+            CORSMiddleware,  # type: ignore[arg-type]
             allow_origins=origins,
             allow_credentials=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_CREDENTIALS,
             allow_methods=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_METHODS,
@@ -172,9 +186,12 @@ class FastAPIUtils:
             return
 
         try:
+
             from elasticapm.contrib.starlette import ElasticAPM, make_apm_client
 
             apm_client = make_apm_client(config.ELASTIC_APM.model_dump())
+            # Use app.add_middleware with ElasticAPM directly
+            # ElasticAPM is compatible with FastAPI's middleware system at runtime
             app.add_middleware(ElasticAPM, client=apm_client)  # type: ignore[arg-type]
         except Exception:
             logging.exception("Failed to initialize Elastic APM")
@@ -186,26 +203,45 @@ class FastAPIUtils:
         Args:
             app (FastAPI): The FastAPI application instance.
         """
-        # While these handlers don't match the exact type signatures expected by FastAPI,
-        # they are compatible in practice as they return JSONResponse objects.
-        # We need to use a more general type cast to bypass the strict type checking.
-        validation_handler = cast(
-            Callable[[Request, Exception], Awaitable[Response]],
-            FastAPIExceptionHandler.validation_exception_handler,
-        )
-        custom_handler = cast(
-            Callable[[Request, Exception], Awaitable[Response]],
-            FastAPIExceptionHandler.custom_exception_handler,
-        )
-        generic_handler = cast(
-            Callable[[Request, Exception], Awaitable[Response]],
-            FastAPIExceptionHandler.generic_exception_handler,
-        )
 
-        app.add_exception_handler(RequestValidationError, validation_handler)
-        app.add_exception_handler(ValidationError, validation_handler)
-        app.add_exception_handler(BaseError, custom_handler)
-        app.add_exception_handler(Exception, generic_handler)
+        # These handlers return JSONResponse which is a subclass of Response,
+        # so they are compatible with FastAPI's exception handler requirements.
+        # We create wrapper functions to match the expected signature
+        async def validation_wrapper(request: Request, exception: Exception) -> Response:
+            if isinstance(exception, ValidationError):
+                return await FastAPIExceptionHandler.validation_exception_handler(request, exception)
+            if isinstance(exception, RequestValidationError):
+                # RequestValidationError has errors() method that returns validation errors
+                # Format them directly since RequestValidationError has a similar structure
+                BaseUtils.capture_exception(exception)
+                formatted_errors = []
+                for error in exception.errors():
+                    error_dict = {
+                        "field": ".".join(str(x) for x in error.get("loc", [])),
+                        "message": error.get("msg", ""),
+                        "value": str(error.get("input", "")),
+                    }
+                    if "type" in error:
+                        error_dict["type"] = error["type"]
+                    formatted_errors.append(error_dict)
+                return JSONResponse(
+                    status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+                    content={"error": "VALIDATION_ERROR", "detail": formatted_errors},
+                )
+            return await FastAPIExceptionHandler.generic_exception_handler(request, exception)
+
+        async def custom_wrapper(request: Request, exception: Exception) -> Response:
+            if isinstance(exception, BaseError):
+                return await FastAPIExceptionHandler.custom_exception_handler(request, exception)
+            return await FastAPIExceptionHandler.generic_exception_handler(request, exception)
+
+        async def generic_wrapper(request: Request, exception: Exception) -> Response:
+            return await FastAPIExceptionHandler.generic_exception_handler(request, exception)
+
+        app.add_exception_handler(RequestValidationError, validation_wrapper)
+        app.add_exception_handler(ValidationError, validation_wrapper)
+        app.add_exception_handler(BaseError, custom_wrapper)
+        app.add_exception_handler(Exception, generic_wrapper)
 
 
 class AsyncGrpcAPIUtils:
@@ -327,6 +363,10 @@ class AppUtils:
         common_responses = BaseUtils.get_fastapi_exception_responses(
             [UnknownError, UnavailableError, InvalidArgumentError],
         )
+        # Convert dict[int, ...] to dict[int | str, ...] for FastAPI compatibility
+        responses_dict: dict[int | str, dict[str, Any]] | None = None
+        if include_common_responses and common_responses:
+            responses_dict = {k: v for k, v in common_responses.items()}
         app = FastAPI(
             title=config.FASTAPI.PROJECT_NAME,
             openapi_url=config.FASTAPI.OPENAPI_URL,
@@ -334,7 +374,7 @@ class AppUtils:
             swagger_ui_parameters=config.FASTAPI.SWAGGER_UI_PARAMS,
             docs_url=config.FASTAPI.DOCS_URL,
             redoc_url=config.FASTAPI.RE_DOC_URL,
-            responses=cast(dict[int | str, Any], common_responses) if include_common_responses else None,
+            responses=responses_dict,
             lifespan=lifespan,
         )
 
@@ -353,7 +393,7 @@ class AppUtils:
         config: BaseConfig,
         customized_interceptors: set[Any] | None = None,
         compression: grpc.Compression | None = None,
-    ) -> server:
+    ) -> GrpcAioServer:
         """Create and configure an async gRPC application."""
         from archipy.helpers.interceptors.grpc.exception import AsyncGrpcServerExceptionInterceptor
 
@@ -362,7 +402,9 @@ class AppUtils:
         AsyncGrpcAPIUtils.setup_trace_interceptor(config, async_interceptors)
         AsyncGrpcAPIUtils.setup_metric_interceptor(config, async_interceptors)
 
-        app = server(
+        if create_grpc_server is None:
+            raise ImportError("grpc.experimental.aio is not available")
+        app = create_grpc_server(
             futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),
             interceptors=async_interceptors,
             compression=compression,
@@ -392,7 +434,7 @@ class AppUtils:
 
         app = grpc.server(
             futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),
-            interceptors=interceptors,  # type: ignore
+            interceptors=interceptors,
             compression=compression,
             options=config.GRPC.SERVER_OPTIONS_CONFIG_LIST,
             maximum_concurrent_rpcs=config.GRPC.MAX_CONCURRENT_RPCS,

@@ -7,7 +7,7 @@ and support for different database types (PostgreSQL, SQLite, StarRocks).
 import logging
 from collections.abc import Callable
 from functools import partial, wraps
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 from sqlalchemy.exc import (
     IntegrityError,
@@ -179,12 +179,19 @@ def sqlalchemy_atomic_decorator(
 
             module_path, class_name = ATOMIC_BLOCK_CONFIGS[db_type]["registry"].rsplit(".", 1)
             module = importlib.import_module(module_path)
-            return cast(type[SessionManagerRegistry], getattr(module, class_name))
+            registry_class = getattr(module, class_name)
+            if not isinstance(registry_class, type) or not issubclass(registry_class, SessionManagerRegistry):
+                raise DatabaseConfigurationError(
+                    database=db_type,
+                    additional_data={"registry_path": ATOMIC_BLOCK_CONFIGS[db_type]["registry"]},
+                )
         except (ImportError, AttributeError) as e:
             raise DatabaseConfigurationError(
                 database=db_type,
                 additional_data={"registry_path": ATOMIC_BLOCK_CONFIGS[db_type]["registry"]},
             ) from e
+        else:
+            return registry_class
 
     def decorator(func: Callable[..., R]) -> Callable[..., R]:
         """Create a transaction-aware wrapper for the given function.
@@ -227,16 +234,24 @@ def sqlalchemy_atomic_decorator(
 
                 try:
                     if session.in_transaction():
+                        # func is awaitable since is_async=True
                         result = await func(*args, **kwargs)
                         if not is_nested:
                             await session.commit()
-                        return result
+                        # result is R from func, compatible with return type
+                        typed_result: R = result
+                        return typed_result
                     else:
                         async with session.begin():
-                            return await func(*args, **kwargs)
+                            # func is awaitable since is_async=True
+                            result = await func(*args, **kwargs)
+                            # result is R from func, compatible with return type
+                            typed_result: R = result
+                            return typed_result
                 except Exception as exception:
                     await session.rollback()
-                    _handle_db_exception(exception, db_type, func.__name__)
+                    func_name = getattr(func, "__name__", "unknown")
+                    _handle_db_exception(exception, db_type, func_name)
                 finally:
                     if not session.in_transaction():
                         await session.close()
@@ -284,7 +299,8 @@ def sqlalchemy_atomic_decorator(
                             return func(*args, **kwargs)
                 except Exception as exception:
                     session.rollback()
-                    _handle_db_exception(exception, db_type, func.__name__)
+                    func_name = getattr(func, "__name__", "unknown")
+                    _handle_db_exception(exception, db_type, func_name)
                 finally:
                     if not session.in_transaction():
                         session.close()

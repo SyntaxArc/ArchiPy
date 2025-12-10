@@ -18,7 +18,7 @@ class EmailAttachmentDTO(BaseDTO):
     attachment_type: EmailAttachmentType
     max_size: int
 
-    @field_validator("content_type")  # type: ignore[type-var]
+    @field_validator("content_type")
     def set_content_type(self, v: str | None, values: dict) -> str | None:
         """Set content type based on filename extension if not provided.
 
@@ -34,12 +34,9 @@ class EmailAttachmentDTO(BaseDTO):
             return content_type or "application/octet-stream"
         return v
 
-    @model_validator(mode="after")  # type: ignore[arg-type]
-    def validate_attachment_size(self, model: Self) -> Self:
+    @model_validator(mode="after")
+    def validate_attachment_size(self) -> Self:
         """Validate that the attachment size does not exceed the maximum allowed size.
-
-        Args:
-            model: The model instance
 
         Returns:
             The validated model instance
@@ -47,15 +44,15 @@ class EmailAttachmentDTO(BaseDTO):
         Raises:
             ValueError: If attachment size exceeds maximum allowed size
         """
-        content = model.content
+        content = self.content
         if isinstance(content, str | bytes):
             content_size = len(content)
-            if content_size > model.max_size:
-                error_msg = f"Attachment size exceeds maximum allowed size of {model.max_size} bytes"
+            if content_size > self.max_size:
+                error_msg = f"Attachment size exceeds maximum allowed size of {self.max_size} bytes"
                 raise ValueError(error_msg)
-        return model
+        return self
 
-    @field_validator("content_id")  # type: ignore[type-var]
+    @field_validator("content_id")
     def validate_content_id(self, v: str | None, _: dict) -> str | None:
         """Ensure content_id is properly formatted with angle brackets.
 

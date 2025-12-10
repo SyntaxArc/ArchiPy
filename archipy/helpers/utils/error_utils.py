@@ -114,8 +114,8 @@ class ErrorUtils:
                 import elasticapm
 
                 # Type ignoring elasticapm.get_client() as it's a third-party function
-                client = elasticapm.get_client()  # type: ignore[attr-defined]
-                client.capture_exception()  # type: ignore[no-untyped-call]
+                client = elasticapm.get_client()
+                client.capture_exception()
             except ImportError:
                 logging.exception("elasticapm is not installed, cannot capture exception in Elastic APM.")
 

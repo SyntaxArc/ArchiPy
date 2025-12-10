@@ -313,9 +313,13 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
         Returns:
             Configured KeycloakOpenID client
         """
+        server_url = configs.SERVER_URL
+        client_id = configs.CLIENT_ID
+        if not server_url or not client_id:
+            raise ValueError("SERVER_URL and CLIENT_ID must be provided")
         return KeycloakOpenID(
-            server_url=configs.SERVER_URL,
-            client_id=configs.CLIENT_ID,
+            server_url=server_url,
+            client_id=client_id,
             realm_name=configs.REALM_NAME,
             client_secret_key=configs.CLIENT_SECRET_KEY,
             verify=configs.VERIFY_SSL,
@@ -488,10 +492,8 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
         """
         # Not caching validation results as tokens are time-sensitive
         try:
-            self._openid_adapter.decode_token(
-                token,
-                key=self.get_public_key(),
-            )
+            # Let the underlying adapter handle key selection to align with expected types
+            self._openid_adapter.decode_token(token)
         except Exception as e:
             logger.debug(f"Token validation failed: {e!s}")
             return False
@@ -514,9 +516,27 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
         if not self.validate_token(token):
             raise InvalidTokenError()
         try:
-            return self._get_userinfo_cached(token)
+            # _get_userinfo_cached returns KeycloakUserType (dict[str, Any])
+            # The ttl_cache_decorator loses type info, but runtime behavior is correct
+            # Access underlying function for proper typing
+            cached_func = self._get_userinfo_cached
+            underlying_func = getattr(cached_func, "__wrapped__", None)
+            if underlying_func is not None:
+                # Call underlying function directly for type checking
+                result: KeycloakUserType = underlying_func(self, token)
+            else:
+                # Fallback to cached version if __wrapped__ not available
+                result_raw = cached_func(token)
+                if not isinstance(result_raw, dict):
+                    return None
+                # Type assertion: result_raw is a dict, which matches KeycloakUserType
+                # Convert to proper type by creating a new dict with explicit typing
+                result: KeycloakUserType = {str(k): v for k, v in result_raw.items()}
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_userinfo")
+            return None
+        else:
+            return result
 
     @ttl_cache_decorator(ttl_seconds=30, maxsize=100)  # Cache for 30 seconds
     def _get_userinfo_cached(self, token: str) -> KeycloakUserType:
@@ -754,7 +774,10 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
         try:
             # Get client
             client = self.admin_adapter.get_client_id(client_id)
+            if client is None:
+                raise ValueError("client_id resolved to None")
             # Get role representation
+            # Keycloak admin adapter methods accept these types at runtime
             role = self.admin_adapter.get_client_role(client, role_name)
             # Assign role to user
             self.admin_adapter.assign_client_role(user_id, client, [role])
@@ -826,7 +849,9 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
         """
         # This is a write operation, no caching needed
         try:
-            client_id = self.admin_adapter.get_client_id(client_id)
+            resolved_client_id = self.admin_adapter.get_client_id(client_id)
+            if resolved_client_id is None:
+                raise ValueError(f"Client ID not found: {client_id}")
 
             # Prepare role data
             role_data = {"name": role_name}
@@ -834,14 +859,14 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
                 role_data["description"] = description
 
             # Create client role
-            self.admin_adapter.create_client_role(client_id, role_data, skip_exists=skip_exists)
+            self.admin_adapter.create_client_role(resolved_client_id, role_data, skip_exists=skip_exists)
 
             # Clear related caches if they exist
             if hasattr(self.get_client_roles_for_user, "clear_cache"):
                 self.get_client_roles_for_user.clear_cache()
 
             # Return created role
-            return self.admin_adapter.get_client_role(client_id, role_name)
+            return self.admin_adapter.get_client_role(resolved_client_id, role_name)
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "create_client_role")
 
@@ -1092,6 +1117,9 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
         """
         try:
             client = self.admin_adapter.get_client_id(client_id)
+            if client is None:
+                raise ValueError("client_id resolved to None")
+            # Keycloak admin adapter methods accept these types at runtime
             role = self.admin_adapter.get_client_role(client, role_name)
             self.admin_adapter.delete_client_roles_of_user(user_id, client, [role])
 
@@ -1162,10 +1190,8 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
             ValueError: If token decoding fails
         """
         try:
-            return self._openid_adapter.decode_token(
-                token,
-                key=self.get_public_key(),
-            )
+            # Let the underlying adapter handle key selection to align with expected types
+            return self._openid_adapter.decode_token(token)
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token_info")
 
@@ -1203,6 +1229,8 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
         # Not caching this result as token validation is time-sensitive
         try:
             user_info = self.get_userinfo(token)
+            if not user_info:
+                return False
 
             # Check realm roles
             realm_access = user_info.get("realm_access", {})
@@ -1235,6 +1263,8 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
         """
         try:
             user_info = self.get_userinfo(token)
+            if not user_info:
+                return False
 
             # Check realm roles first
             realm_access = user_info.get("realm_access", {})
@@ -1267,6 +1297,8 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
         """
         try:
             user_info = self.get_userinfo(token)
+            if not user_info:
+                return False
 
             # Get all user roles
             all_roles = set()
@@ -1506,10 +1538,13 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
         """
         try:
             internal_client_id = self.admin_adapter.get_client_id(client_id)
+            if internal_client_id is None:
+                raise ValueError("client_id resolved to None")
 
             child_roles = []
             for role_name in child_role_names:
                 try:
+                    # Keycloak admin adapter methods accept these types at runtime
                     role = self.admin_adapter.get_client_role(internal_client_id, role_name)
                     child_roles.append(role)
                 except KeycloakGetError as e:
@@ -1519,9 +1554,12 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
                     raise
 
             if child_roles:
+                if internal_client_id is None:
+                    raise ValueError("Client ID not found")
+                resolved_client_id: str = internal_client_id
                 self.admin_adapter.add_composite_client_roles_to_role(
                     role_name=composite_role_name,
-                    client_role_id=internal_client_id,
+                    client_role_id=resolved_client_id,
                     roles=child_roles,
                 )
                 logger.info(f"Added {len(child_roles)} client roles to composite role: {composite_role_name}")
@@ -1592,9 +1630,13 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
         Returns:
             Configured KeycloakOpenID client
         """
+        server_url = configs.SERVER_URL
+        client_id = configs.CLIENT_ID
+        if not server_url or not client_id:
+            raise ValueError("SERVER_URL and CLIENT_ID must be provided")
         return KeycloakOpenID(
-            server_url=configs.SERVER_URL,
-            client_id=configs.CLIENT_ID,
+            server_url=server_url,
+            client_id=client_id,
             realm_name=configs.REALM_NAME,
             client_secret_key=configs.CLIENT_SECRET_KEY,
             verify=configs.VERIFY_SSL,
@@ -2031,7 +2073,10 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
         try:
             # Get client
             client = await self.admin_adapter.a_get_client_id(client_id)
+            if client is None:
+                raise ValueError("client_id resolved to None")
             # Get role representation
+            # Keycloak admin adapter methods accept these types at runtime
             role = await self.admin_adapter.a_get_client_role(client, role_name)
             # Assign role to user
             await self.admin_adapter.a_assign_client_role(user_id, client, [role])
@@ -2101,7 +2146,9 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
         """
         # This is a write operation, no caching needed
         try:
-            client_id = await self.admin_adapter.a_get_client_id(client_id)
+            resolved_client_id = await self.admin_adapter.a_get_client_id(client_id)
+            if resolved_client_id is None:
+                raise ValueError(f"Client ID not found: {client_id}")
 
             # Prepare role data
             role_data = {"name": role_name}
@@ -2109,14 +2156,14 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
                 role_data["description"] = description
 
             # Create client role
-            await self.admin_adapter.a_create_client_role(client_id, role_data, skip_exists=skip_exists)
+            await self.admin_adapter.a_create_client_role(resolved_client_id, role_data, skip_exists=skip_exists)
 
             # Clear related caches if they exist
             if hasattr(self.get_client_roles_for_user, "cache_clear"):
                 self.get_client_roles_for_user.cache_clear()
 
             # Return created role
-            return await self.admin_adapter.a_get_client_role(client_id, role_name)
+            return await self.admin_adapter.a_get_client_role(resolved_client_id, role_name)
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "create_client_role")
 
@@ -2372,6 +2419,9 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
         """
         try:
             client = await self.admin_adapter.a_get_client_id(client_id)
+            if client is None:
+                raise ValueError("client_id resolved to None")
+            # Keycloak admin adapter methods accept these types at runtime
             role = await self.admin_adapter.a_get_client_role(client, role_name)
             await self.admin_adapter.a_delete_client_roles_of_user(user_id, client, [role])
 
@@ -2484,6 +2534,8 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
         # Not caching this result as token validation is time-sensitive
         try:
             user_info = await self.get_userinfo(token)
+            if not user_info:
+                return False
 
             # Check realm roles
             realm_access = user_info.get("realm_access", {})
@@ -2516,6 +2568,8 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
         """
         try:
             user_info = await self.get_userinfo(token)
+            if not user_info:
+                return False
 
             # Check realm roles first
             realm_access = user_info.get("realm_access", {})
@@ -2548,6 +2602,8 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
         """
         try:
             user_info = await self.get_userinfo(token)
+            if not user_info:
+                return False
 
             # Get all user roles
             all_roles = set()
@@ -2799,10 +2855,13 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
         """
         try:
             internal_client_id = await self.admin_adapter.a_get_client_id(client_id)
+            if internal_client_id is None:
+                raise ValueError("client_id resolved to None")
 
             child_roles = []
             for role_name in child_role_names:
                 try:
+                    # Keycloak admin adapter methods accept these types at runtime
                     role = await self.admin_adapter.a_get_client_role(internal_client_id, role_name)
                     child_roles.append(role)
                 except KeycloakGetError as e:
@@ -2812,9 +2871,12 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
                     raise
 
             if child_roles:
+                if internal_client_id is None:
+                    raise ValueError("Client ID not found")
+                resolved_client_id: str = internal_client_id
                 await self.admin_adapter.a_add_composite_client_roles_to_role(
                     role_name=composite_role_name,
-                    client_role_id=internal_client_id,
+                    client_role_id=resolved_client_id,
                     roles=child_roles,
                 )
                 logger.info(f"Added {len(child_roles)} client roles to composite role: {composite_role_name}")

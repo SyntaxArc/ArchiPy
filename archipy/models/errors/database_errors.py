@@ -1,4 +1,12 @@
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
+
+if TYPE_CHECKING:
+    from http import HTTPStatus
+
+    from grpc import StatusCode
+else:
+    HTTPStatus = None
+    StatusCode = None
 
 try:
     from http import HTTPStatus
@@ -6,7 +14,6 @@ try:
     HTTP_AVAILABLE = True
 except ImportError:
     HTTP_AVAILABLE = False
-    HTTPStatus = None
 
 try:
     from grpc import StatusCode
@@ -14,7 +21,6 @@ try:
     GRPC_AVAILABLE = True
 except ImportError:
     GRPC_AVAILABLE = False
-    StatusCode = None
 
 from archipy.models.errors.base_error import BaseError
 from archipy.models.types.language_type import LanguageType
@@ -26,11 +32,13 @@ class DatabaseError(BaseError):
     code: ClassVar[str] = "DATABASE_ERROR"
     message_en: ClassVar[str] = "Database error occurred"
     message_fa: ClassVar[str] = "خطای پایگاه داده رخ داده است"
-    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE else 500
+    http_status: ClassVar[int] = (
+        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
+    )
     grpc_status: ClassVar[int] = (
         StatusCode.INTERNAL.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.INTERNAL.value, tuple)
-        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE else 13)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INTERNAL.value, tuple)
+        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE and StatusCode is not None else 13)
     )
 
     def __init__(
@@ -53,11 +61,13 @@ class DatabaseConnectionError(DatabaseError):
     code: ClassVar[str] = "DATABASE_CONNECTION_ERROR"
     message_en: ClassVar[str] = "Failed to connect to the database"
     message_fa: ClassVar[str] = "خطا در اتصال به پایگاه داده"
-    http_status: ClassVar[int] = HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE else 503
+    http_status: ClassVar[int] = (
+        HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE and HTTPStatus is not None else 503
+    )
     grpc_status: ClassVar[int] = (
         StatusCode.UNAVAILABLE.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.UNAVAILABLE.value, tuple)
-        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE else 14)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.UNAVAILABLE.value, tuple)
+        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE and StatusCode is not None else 14)
     )
 
 
@@ -67,11 +77,13 @@ class DatabaseQueryError(DatabaseError):
     code: ClassVar[str] = "DATABASE_QUERY_ERROR"
     message_en: ClassVar[str] = "Error executing database query"
     message_fa: ClassVar[str] = "خطا در اجرای پرس و جوی پایگاه داده"
-    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE else 500
+    http_status: ClassVar[int] = (
+        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
+    )
     grpc_status: ClassVar[int] = (
         StatusCode.INTERNAL.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.INTERNAL.value, tuple)
-        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE else 13)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INTERNAL.value, tuple)
+        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE and StatusCode is not None else 13)
     )
 
     def __init__(
@@ -95,11 +107,13 @@ class DatabaseTransactionError(DatabaseError):
     code: ClassVar[str] = "DATABASE_TRANSACTION_ERROR"
     message_en: ClassVar[str] = "Error in database transaction"
     message_fa: ClassVar[str] = "خطا در تراکنش پایگاه داده"
-    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE else 500
+    http_status: ClassVar[int] = (
+        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
+    )
     grpc_status: ClassVar[int] = (
         StatusCode.INTERNAL.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.INTERNAL.value, tuple)
-        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE else 13)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INTERNAL.value, tuple)
+        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE and StatusCode is not None else 13)
     )
 
     def __init__(
@@ -123,11 +137,11 @@ class DatabaseTimeoutError(DatabaseError):
     code: ClassVar[str] = "DATABASE_TIMEOUT_ERROR"
     message_en: ClassVar[str] = "Database operation timed out"
     message_fa: ClassVar[str] = "عملیات پایگاه داده با تایم‌اوت مواجه شد"
-    http_status: ClassVar[int] = HTTPStatus.REQUEST_TIMEOUT.value if HTTP_AVAILABLE else 408
+    http_status: ClassVar[int] = HTTPStatus.REQUEST_TIMEOUT.value if HTTP_AVAILABLE and HTTPStatus is not None else 408
     grpc_status: ClassVar[int] = (
         StatusCode.DEADLINE_EXCEEDED.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.DEADLINE_EXCEEDED.value, tuple)
-        else (StatusCode.DEADLINE_EXCEEDED.value if GRPC_AVAILABLE else 4)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.DEADLINE_EXCEEDED.value, tuple)
+        else (StatusCode.DEADLINE_EXCEEDED.value if GRPC_AVAILABLE and StatusCode is not None else 4)
     )
 
     def __init__(
@@ -151,11 +165,11 @@ class DatabaseConstraintError(DatabaseError):
     code: ClassVar[str] = "DATABASE_CONSTRAINT_ERROR"
     message_en: ClassVar[str] = "Database constraint violation"
     message_fa: ClassVar[str] = "نقض محدودیت پایگاه داده"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
     grpc_status: ClassVar[int] = (
         StatusCode.FAILED_PRECONDITION.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
-        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE else 9)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
+        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE and StatusCode is not None else 9)
     )
 
     def __init__(
@@ -179,11 +193,11 @@ class DatabaseIntegrityError(DatabaseError):
     code: ClassVar[str] = "DATABASE_INTEGRITY_ERROR"
     message_en: ClassVar[str] = "Database integrity violation"
     message_fa: ClassVar[str] = "نقض یکپارچگی پایگاه داده"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
     grpc_status: ClassVar[int] = (
         StatusCode.FAILED_PRECONDITION.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
-        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE else 9)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
+        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE and StatusCode is not None else 9)
     )
 
 
@@ -193,11 +207,11 @@ class DatabaseDeadlockError(DatabaseError):
     code: ClassVar[str] = "DATABASE_DEADLOCK_ERROR"
     message_en: ClassVar[str] = "Database deadlock detected"
     message_fa: ClassVar[str] = "قفل‌شدگی پایگاه داده تشخیص داده شد"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
     grpc_status: ClassVar[int] = (
         StatusCode.ABORTED.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.ABORTED.value, tuple)
-        else (StatusCode.ABORTED.value if GRPC_AVAILABLE else 10)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.ABORTED.value, tuple)
+        else (StatusCode.ABORTED.value if GRPC_AVAILABLE and StatusCode is not None else 10)
     )
 
 
@@ -207,11 +221,11 @@ class DatabaseSerializationError(DatabaseError):
     code: ClassVar[str] = "DATABASE_SERIALIZATION_ERROR"
     message_en: ClassVar[str] = "Database serialization failure"
     message_fa: ClassVar[str] = "خطای سریال‌سازی پایگاه داده"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
     grpc_status: ClassVar[int] = (
         StatusCode.ABORTED.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.ABORTED.value, tuple)
-        else (StatusCode.ABORTED.value if GRPC_AVAILABLE else 10)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.ABORTED.value, tuple)
+        else (StatusCode.ABORTED.value if GRPC_AVAILABLE and StatusCode is not None else 10)
     )
 
 
@@ -221,11 +235,13 @@ class DatabaseConfigurationError(DatabaseError):
     code: ClassVar[str] = "DATABASE_CONFIGURATION_ERROR"
     message_en: ClassVar[str] = "Database configuration error"
     message_fa: ClassVar[str] = "خطای پیکربندی پایگاه داده"
-    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE else 500
+    http_status: ClassVar[int] = (
+        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
+    )
     grpc_status: ClassVar[int] = (
         StatusCode.INTERNAL.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.INTERNAL.value, tuple)
-        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE else 13)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INTERNAL.value, tuple)
+        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE and StatusCode is not None else 13)
     )
 
 
@@ -235,11 +251,13 @@ class CacheError(BaseError):
     code: ClassVar[str] = "CACHE_ERROR"
     message_en: ClassVar[str] = "Error accessing cache"
     message_fa: ClassVar[str] = "خطا در دسترسی به حافظه نهان"
-    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE else 500
+    http_status: ClassVar[int] = (
+        HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE and HTTPStatus is not None else 500
+    )
     grpc_status: ClassVar[int] = (
         StatusCode.INTERNAL.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.INTERNAL.value, tuple)
-        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE else 13)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.INTERNAL.value, tuple)
+        else (StatusCode.INTERNAL.value if GRPC_AVAILABLE and StatusCode is not None else 13)
     )
 
     def __init__(
@@ -262,11 +280,11 @@ class CacheMissError(BaseError):
     code: ClassVar[str] = "CACHE_MISS"
     message_en: ClassVar[str] = "Requested data not found in cache: {cache_key}"
     message_fa: ClassVar[str] = "داده درخواستی در حافظه نهان یافت نشد: {cache_key}"
-    http_status: ClassVar[int] = HTTPStatus.NOT_FOUND.value if HTTP_AVAILABLE else 404
+    http_status: ClassVar[int] = HTTPStatus.NOT_FOUND.value if HTTP_AVAILABLE and HTTPStatus is not None else 404
     grpc_status: ClassVar[int] = (
         StatusCode.NOT_FOUND.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.NOT_FOUND.value, tuple)
-        else (StatusCode.NOT_FOUND.value if GRPC_AVAILABLE else 5)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.NOT_FOUND.value, tuple)
+        else (StatusCode.NOT_FOUND.value if GRPC_AVAILABLE and StatusCode is not None else 5)
     )
 
     def __init__(

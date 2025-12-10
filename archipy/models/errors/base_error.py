@@ -2,7 +2,16 @@ import json
 from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
+    from http import HTTPStatus
+
     import grpc
+    from grpc import ServicerContext
+    from grpc.aio import ServicerContext as AsyncServicerContext
+else:
+    HTTPStatus = None
+    grpc = None
+    ServicerContext = object
+    AsyncServicerContext = object
 
 try:
     import grpc
@@ -11,8 +20,7 @@ try:
     GRPC_AVAILABLE = True
 except ImportError:
     GRPC_AVAILABLE = False
-    grpc = None
-    grpc_aio = None
+    grpc_aio: Any | None = None
 
 try:
     from http import HTTPStatus
@@ -20,14 +28,13 @@ try:
     HTTP_AVAILABLE = True
 except ImportError:
     HTTP_AVAILABLE = False
-    HTTPStatus = None
 
 
 if GRPC_AVAILABLE:
     from grpc import ServicerContext
     from grpc.aio import ServicerContext as AsyncServicerContext
-else:
-    # Fallback types for when grpc is not available
+elif not TYPE_CHECKING:
+    # Fallback types for when grpc is not available (only at runtime, not in TYPE_CHECKING)
     ServicerContext = object
     AsyncServicerContext = object
 
@@ -57,11 +64,15 @@ class BaseError(Exception):
     code: ClassVar[str] = "UNKNOWN_ERROR"
     message_en: ClassVar[str] = "An unknown error occurred"
     message_fa: ClassVar[str] = "خطای ناشناخته‌ای رخ داده است."
-    http_status: ClassVar[int] = HTTPStatus.INTERNAL_SERVER_ERROR.value if HTTP_AVAILABLE else 500
+    http_status: ClassVar[int] = (
+        HTTPStatus.INTERNAL_SERVER_ERROR.value
+        if HTTP_AVAILABLE and HTTPStatus is not None and HTTPStatus is not None
+        else 500
+    )
     grpc_status: ClassVar[int] = (
         grpc.StatusCode.INTERNAL.value[0]
-        if GRPC_AVAILABLE and isinstance(grpc.StatusCode.INTERNAL.value, tuple)
-        else (grpc.StatusCode.INTERNAL.value if GRPC_AVAILABLE else 13)
+        if GRPC_AVAILABLE and grpc is not None and isinstance(grpc.StatusCode.INTERNAL.value, tuple)
+        else (grpc.StatusCode.INTERNAL.value if GRPC_AVAILABLE and grpc is not None else 13)
     )
 
     def __init__(
@@ -161,7 +172,6 @@ class BaseError(Exception):
         return self.get_message()
 
     @staticmethod
-    @staticmethod
     def _convert_int_to_grpc_status(status_int: int) -> grpc.StatusCode:
         """Convert integer status code to gRPC StatusCode enum.
 
@@ -217,10 +227,13 @@ class BaseError(Exception):
         status_code: grpc.StatusCode = self._convert_int_to_grpc_status(self.grpc_status)
         message = self.get_message()
 
-        if self.additional_data:
+        if self.additional_data and hasattr(context, "set_trailing_metadata"):
             context.set_trailing_metadata((("additional_data", json.dumps(self.additional_data)),))
 
-        await context.abort(status_code, message)
+        if hasattr(context, "abort") and callable(context.abort):
+            await context.abort(status_code, message)
+        else:
+            raise ValueError("gRPC context abort method not available or not callable")
 
     def abort_grpc_sync(self, context: ServicerContext) -> None:
         """Aborts a sync gRPC call with the appropriate status code and message.
@@ -240,10 +253,13 @@ class BaseError(Exception):
         status_code: grpc.StatusCode = self._convert_int_to_grpc_status(self.grpc_status)
         message = self.get_message()
 
-        if self.additional_data:
+        if self.additional_data and hasattr(context, "set_trailing_metadata"):
             context.set_trailing_metadata((("additional_data", json.dumps(self.additional_data)),))
 
-        context.abort(status_code, message)
+        if hasattr(context, "abort") and callable(context.abort):
+            context.abort(status_code, message)
+        else:
+            raise ValueError("gRPC context abort method not available or not callable")
 
     @classmethod
     async def abort_with_error_async(

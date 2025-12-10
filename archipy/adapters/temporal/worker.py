@@ -18,10 +18,10 @@ from archipy.configs.config_template import TemporalConfig
 from archipy.models.errors.temporal_errors import WorkerConnectionError, WorkerShutdownError
 
 from .adapters import TemporalAdapter
-from .ports import WorkerPort
+from .ports import WorkerHandle as PortWorkerHandle, WorkerPort
 
 
-class WorkerHandle:
+class WorkerHandle(PortWorkerHandle):
     """Handle for managing a Temporal worker instance.
 
     Provides methods to control and monitor a running Temporal worker,
@@ -288,11 +288,13 @@ class TemporalWorkerManager(WorkerPort):
 
         try:
             # Create the Temporal worker
+            # Prepare activities list - Worker accepts list of activity instances
+            activities_list: list[Any] = activities if activities is not None else []
             worker = Worker(
                 client,
                 task_queue=task_queue,
                 workflows=workflows or [],
-                activities=activities or [],
+                activities=activities_list,
                 build_id=build_id,
                 identity=worker_identity,
                 max_concurrent_workflow_tasks=max_concurrent_workflow_tasks,

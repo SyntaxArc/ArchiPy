@@ -25,12 +25,12 @@ class KeycloakPort:
 
     # Token Operations
     @abstractmethod
-    def get_token(self, username: str, password: str) -> KeycloakTokenType:
+    def get_token(self, username: str, password: str) -> KeycloakTokenType | None:
         """Get a user token by username and password."""
         raise NotImplementedError
 
     @abstractmethod
-    def refresh_token(self, refresh_token: str) -> KeycloakTokenType:
+    def refresh_token(self, refresh_token: str) -> KeycloakTokenType | None:
         """Refresh an existing token using a refresh token."""
         raise NotImplementedError
 
@@ -40,22 +40,22 @@ class KeycloakPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_userinfo(self, token: str) -> KeycloakUserType:
+    def get_userinfo(self, token: str) -> KeycloakUserType | None:
         """Get user information from a token."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_token_info(self, token: str) -> dict[str, Any]:
+    def get_token_info(self, token: str) -> dict[str, Any] | None:
         """Decode token to get its claims."""
         raise NotImplementedError
 
     @abstractmethod
-    def introspect_token(self, token: str) -> dict[str, Any]:
+    def introspect_token(self, token: str) -> dict[str, Any] | None:
         """Introspect token to get detailed information about it."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_client_credentials_token(self) -> KeycloakTokenType:
+    def get_client_credentials_token(self) -> KeycloakTokenType | None:
         """Get token using client credentials."""
         raise NotImplementedError
 
@@ -81,7 +81,7 @@ class KeycloakPort:
         raise NotImplementedError
 
     @abstractmethod
-    def create_user(self, user_data: dict[str, Any]) -> str:
+    def create_user(self, user_data: dict[str, Any]) -> str | None:
         """Create a new user in Keycloak."""
         raise NotImplementedError
 
@@ -152,7 +152,7 @@ class KeycloakPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_realm_role(self, role_name: str) -> dict:
+    def get_realm_role(self, role_name: str) -> dict[str, Any]:
         """Get realm role."""
         raise NotImplementedError
 
@@ -162,7 +162,12 @@ class KeycloakPort:
         raise NotImplementedError
 
     @abstractmethod
-    def create_realm_role(self, role_name: str, description: str | None = None) -> dict[str, Any]:
+    def create_realm_role(
+        self,
+        role_name: str,
+        description: str | None = None,
+        skip_exists: bool = True,
+    ) -> dict[str, Any] | None:
         """Create a new realm role."""
         raise NotImplementedError
 
@@ -205,7 +210,7 @@ class KeycloakPort:
 
     # Authorization
     @abstractmethod
-    def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenType:
+    def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenType | None:
         """Exchange authorization code for token."""
         raise NotImplementedError
 
@@ -220,17 +225,23 @@ class KeycloakPort:
         raise NotImplementedError
 
     @abstractmethod
-    def create_client_role(self, client_id: str, role_name: str, description: str | None = None) -> dict[str, Any]:
+    def create_client_role(
+        self,
+        client_id: str,
+        role_name: str,
+        description: str | None = None,
+        skip_exists: bool = True,
+    ) -> dict[str, Any] | None:
         """Create a new client role."""
         raise NotImplementedError
 
     @abstractmethod
-    def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs: Any) -> dict[str, Any]:
+    def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs: Any) -> dict[str, Any] | None:
         """Create a new Keycloak realm."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_realm(self, realm_name: str) -> dict[str, Any]:
+    def get_realm(self, realm_name: str) -> dict[str, Any] | None:
         """Get realm details by realm name."""
         raise NotImplementedError
 
@@ -276,12 +287,12 @@ class AsyncKeycloakPort:
 
     # Token Operations
     @abstractmethod
-    async def get_token(self, username: str, password: str) -> KeycloakTokenType:
+    async def get_token(self, username: str, password: str) -> KeycloakTokenType | None:
         """Get a user token by username and password."""
         raise NotImplementedError
 
     @abstractmethod
-    async def refresh_token(self, refresh_token: str) -> KeycloakTokenType:
+    async def refresh_token(self, refresh_token: str) -> KeycloakTokenType | None:
         """Refresh an existing token using a refresh token."""
         raise NotImplementedError
 
@@ -291,22 +302,22 @@ class AsyncKeycloakPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_userinfo(self, token: str) -> KeycloakUserType:
+    async def get_userinfo(self, token: str) -> KeycloakUserType | None:
         """Get user information from a token."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_token_info(self, token: str) -> dict[str, Any]:
+    async def get_token_info(self, token: str) -> dict[str, Any] | None:
         """Decode token to get its claims."""
         raise NotImplementedError
 
     @abstractmethod
-    async def introspect_token(self, token: str) -> dict[str, Any]:
+    async def introspect_token(self, token: str) -> dict[str, Any] | None:
         """Introspect token to get detailed information about it."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_client_credentials_token(self) -> KeycloakTokenType:
+    async def get_client_credentials_token(self) -> KeycloakTokenType | None:
         """Get token using client credentials."""
         raise NotImplementedError
 
@@ -332,7 +343,7 @@ class AsyncKeycloakPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def create_user(self, user_data: dict[str, Any]) -> str:
+    async def create_user(self, user_data: dict[str, Any]) -> str | None:
         """Create a new user in Keycloak."""
         raise NotImplementedError
 
@@ -403,7 +414,7 @@ class AsyncKeycloakPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_realm_role(self, role_name: str) -> dict:
+    async def get_realm_role(self, role_name: str) -> dict[str, Any]:
         """Get realm role."""
         raise NotImplementedError
 
@@ -413,7 +424,12 @@ class AsyncKeycloakPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def create_realm_role(self, role_name: str, description: str | None = None) -> dict[str, Any]:
+    async def create_realm_role(
+        self,
+        role_name: str,
+        description: str | None = None,
+        skip_exists: bool = True,
+    ) -> dict[str, Any] | None:
         """Create a new realm role."""
         raise NotImplementedError
 
@@ -456,7 +472,7 @@ class AsyncKeycloakPort:
 
     # Authorization
     @abstractmethod
-    async def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenType:
+    async def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenType | None:
         """Exchange authorization code for token."""
         raise NotImplementedError
 
@@ -476,7 +492,8 @@ class AsyncKeycloakPort:
         client_id: str,
         role_name: str,
         description: str | None = None,
-    ) -> dict[str, Any]:
+        skip_exists: bool = True,
+    ) -> dict[str, Any] | None:
         """Create a new client role."""
         raise NotImplementedError
 
@@ -486,7 +503,7 @@ class AsyncKeycloakPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_realm(self, realm_name: str) -> dict[str, Any]:
+    async def get_realm(self, realm_name: str) -> dict[str, Any] | None:
         """Get realm details by realm name."""
         raise NotImplementedError
 

@@ -63,8 +63,10 @@ class GrpcClientTraceInterceptor(BaseGrpcClientInterceptor):
 
         # Handle Elastic APM trace propagation
         metadata = list(call_details.metadata or [])
-        if config.ELASTIC_APM.IS_ENABLED and (trace_parent_id := elasticapm.get_trace_parent_header()):
-            metadata.append((TRACEPARENT_HEADER_NAME, f"{trace_parent_id}"))
+        if config.ELASTIC_APM.IS_ENABLED:
+            trace_parent_id = elasticapm.get_trace_parent_header()
+            if trace_parent_id:
+                metadata.append((TRACEPARENT_HEADER_NAME, f"{trace_parent_id}"))
 
         # Create new call details with updated metadata
         new_details = ClientCallDetails(
@@ -152,8 +154,10 @@ class AsyncGrpcClientTraceInterceptor(BaseAsyncGrpcClientInterceptor):
 
         # Handle Elastic APM trace propagation
         metadata = list(call_details.metadata or [])
-        if config.ELASTIC_APM.IS_ENABLED and (trace_parent_id := elasticapm.get_trace_parent_header()):
-            metadata.append((TRACEPARENT_HEADER_NAME, f"{trace_parent_id}"))
+        if config.ELASTIC_APM.IS_ENABLED:
+            trace_parent_id = elasticapm.get_trace_parent_header()
+            if trace_parent_id:
+                metadata.append((TRACEPARENT_HEADER_NAME, f"{trace_parent_id}"))
 
         # Create new call details with updated metadata
         new_details = AsyncClientCallDetails(

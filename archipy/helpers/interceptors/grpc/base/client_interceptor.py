@@ -1,8 +1,11 @@
 import abc
-from collections.abc import Callable, Iterator, Sequence
-from typing import Any, NamedTuple
+from collections.abc import AsyncIterable, Callable, Iterable, Iterator, Sequence
+from typing import Any, NamedTuple, TypeVar
 
 import grpc
+
+_TRequest = TypeVar("_TRequest")
+_TResponse = TypeVar("_TResponse")
 
 
 class _ClientCallDetailsFields(NamedTuple):
@@ -30,13 +33,6 @@ class ClientCallDetails(_ClientCallDetailsFields, grpc.ClientCallDetails):
 
     This class extends `grpc.ClientCallDetails` and provides additional fields for RPC details.
     See https://grpc.github.io/grpc/python/grpc.html#grpc.ClientCallDetails
-    """
-
-
-class ClientInterceptorReturnType(grpc.Call, grpc.Future):
-    """Return type for the `ClientInterceptor.intercept` method.
-
-    This class combines `grpc.Call` and `grpc.Future` to represent the return type of an interceptor.
     """
 
 
@@ -75,7 +71,7 @@ class BaseGrpcClientInterceptor(
         method: Callable,
         request_or_iterator: Any,
         call_details: grpc.ClientCallDetails,
-    ) -> ClientInterceptorReturnType:
+    ) -> Any:
         """Intercepts a gRPC client call.
 
         Args:
@@ -84,81 +80,85 @@ class BaseGrpcClientInterceptor(
             call_details (grpc.ClientCallDetails): Details of the RPC call.
 
         Returns:
-            ClientInterceptorReturnType: The result of the intercepted RPC call.
+            Any: The result of the intercepted RPC call.
         """
         return method(request_or_iterator, call_details)
 
     def intercept_unary_unary(
         self,
-        continuation: Callable,
-        call_details: grpc.ClientCallDetails,
-        request: Any,
-    ) -> ClientInterceptorReturnType:
+        continuation: Callable[[grpc.ClientCallDetails, _TRequest], Any],
+        client_call_details: grpc.ClientCallDetails,
+        request: _TRequest,
+    ) -> Any:
         """Intercepts a unary-unary RPC call.
 
         Args:
             continuation (Callable): The continuation function to call.
-            call_details (grpc.ClientCallDetails): Details of the RPC call.
+            client_call_details (grpc.ClientCallDetails): Details of the RPC call.
             request (Any): The request object.
 
         Returns:
-            ClientInterceptorReturnType: The result of the intercepted RPC call.
+            Any: The result of the intercepted RPC call.
         """
-        return self.intercept(_swap_args(continuation), request, call_details)
+        result = self.intercept(_swap_args(continuation), request, client_call_details)
+        return result
 
     def intercept_unary_stream(
         self,
-        continuation: Callable,
-        call_details: grpc.ClientCallDetails,
-        request: Any,
-    ) -> ClientInterceptorReturnType:
+        continuation: Callable[[grpc.ClientCallDetails, _TRequest], Any],
+        client_call_details: grpc.ClientCallDetails,
+        request: _TRequest,
+    ) -> Any:
         """Intercepts a unary-stream RPC call.
 
         Args:
             continuation (Callable): The continuation function to call.
-            call_details (grpc.ClientCallDetails): Details of the RPC call.
+            client_call_details (grpc.ClientCallDetails): Details of the RPC call.
             request (Any): The request object.
 
         Returns:
-            ClientInterceptorReturnType: The result of the intercepted RPC call.
+            Any: The result of the intercepted RPC call.
         """
-        return self.intercept(_swap_args(continuation), request, call_details)
+        result = self.intercept(_swap_args(continuation), request, client_call_details)
+        return result
 
     def intercept_stream_unary(
         self,
-        continuation: Callable,
-        call_details: grpc.ClientCallDetails,
-        request_iterator: Iterator[Any],
-    ) -> ClientInterceptorReturnType:
+        continuation: Callable[[grpc.ClientCallDetails, Iterator[_TRequest]], Any],
+        client_call_details: grpc.ClientCallDetails,
+        request_iterator: Iterator[_TRequest],
+    ) -> Any:
         """Intercepts a stream-unary RPC call.
 
         Args:
             continuation (Callable): The continuation function to call.
-            call_details (grpc.ClientCallDetails): Details of the RPC call.
+            client_call_details (grpc.ClientCallDetails): Details of the RPC call.
             request_iterator (Iterator[Any]): The request iterator.
 
         Returns:
-            ClientInterceptorReturnType: The result of the intercepted RPC call.
+            Any: The result of the intercepted RPC call.
         """
-        return self.intercept(_swap_args(continuation), request_iterator, call_details)
+        result = self.intercept(_swap_args(continuation), request_iterator, client_call_details)
+        return result
 
     def intercept_stream_stream(
         self,
-        continuation: Callable,
-        call_details: grpc.ClientCallDetails,
-        request_iterator: Iterator[Any],
-    ) -> ClientInterceptorReturnType:
+        continuation: Callable[[grpc.ClientCallDetails, Iterator[_TRequest]], Any],
+        client_call_details: grpc.ClientCallDetails,
+        request_iterator: Iterator[_TRequest],
+    ) -> Any:
         """Intercepts a stream-stream RPC call.
 
         Args:
             continuation (Callable): The continuation function to call.
-            call_details (grpc.ClientCallDetails): Details of the RPC call.
+            client_call_details (grpc.ClientCallDetails): Details of the RPC call.
             request_iterator (Iterator[Any]): The request iterator.
 
         Returns:
-            ClientInterceptorReturnType: The result of the intercepted RPC call.
+            Any: The result of the intercepted RPC call.
         """
-        return self.intercept(_swap_args(continuation), request_iterator, call_details)
+        result = self.intercept(_swap_args(continuation), request_iterator, client_call_details)
+        return result
 
 
 class _AsyncClientCallDetailsFields(NamedTuple):
@@ -187,13 +187,6 @@ class AsyncClientCallDetails(_AsyncClientCallDetailsFields, grpc.aio.ClientCallD
     """
 
 
-class AsyncClientInterceptorReturnType(grpc.aio.Call, grpc.Future):
-    """Return type for the `ClientInterceptor.intercept` method in an asynchronous context.
-
-    This class combines `grpc.aio.Call` and `grpc.Future` to represent the return type of an interceptor.
-    """
-
-
 class BaseAsyncGrpcClientInterceptor(
     grpc.aio.UnaryUnaryClientInterceptor,
     grpc.aio.UnaryStreamClientInterceptor,
@@ -213,7 +206,7 @@ class BaseAsyncGrpcClientInterceptor(
         method: Callable,
         request_or_iterator: Any,
         call_details: grpc.aio.ClientCallDetails,
-    ) -> AsyncClientInterceptorReturnType:
+    ) -> Any:
         """Intercepts an asynchronous gRPC client call.
 
         Args:
@@ -222,78 +215,82 @@ class BaseAsyncGrpcClientInterceptor(
             call_details (grpc.aio.ClientCallDetails): Details of the RPC call.
 
         Returns:
-            AsyncClientInterceptorReturnType: The result of the intercepted RPC call.
+            Any: The result of the intercepted RPC call.
         """
         return await method(request_or_iterator, call_details)
 
     async def intercept_unary_unary(
         self,
-        continuation: Callable,
-        call_details: grpc.aio.ClientCallDetails,
-        request: Any,
-    ) -> AsyncClientInterceptorReturnType:
+        continuation: Callable[[grpc.aio.ClientCallDetails, _TRequest], Any],
+        client_call_details: grpc.aio.ClientCallDetails,
+        request: _TRequest,
+    ) -> Any:
         """Intercepts an asynchronous unary-unary RPC call.
 
         Args:
             continuation (Callable): The continuation function to call.
-            call_details (grpc.aio.ClientCallDetails): Details of the RPC call.
+            client_call_details (grpc.aio.ClientCallDetails): Details of the RPC call.
             request (Any): The request object.
 
         Returns:
-            AsyncClientInterceptorReturnType: The result of the intercepted RPC call.
+            Any: The result of the intercepted RPC call.
         """
-        return await self.intercept(_swap_args(continuation), request, call_details)
+        result = await self.intercept(_swap_args(continuation), request, client_call_details)
+        return result
 
     async def intercept_unary_stream(
         self,
-        continuation: Callable,
-        call_details: grpc.aio.ClientCallDetails,
-        request: Any,
-    ) -> AsyncClientInterceptorReturnType:
+        continuation: Callable[[grpc.aio.ClientCallDetails, _TRequest], Any],
+        client_call_details: grpc.aio.ClientCallDetails,
+        request: _TRequest,
+    ) -> Any:
         """Intercepts an asynchronous unary-stream RPC call.
 
         Args:
             continuation (Callable): The continuation function to call.
-            call_details (grpc.aio.ClientCallDetails): Details of the RPC call.
+            client_call_details (grpc.aio.ClientCallDetails): Details of the RPC call.
             request (Any): The request object.
 
         Returns:
-            AsyncClientInterceptorReturnType: The result of the intercepted RPC call.
+            Any: The result of the intercepted RPC call.
         """
-        return await self.intercept(_swap_args(continuation), request, call_details)
+        result = await self.intercept(_swap_args(continuation), request, client_call_details)
+        return result
 
     async def intercept_stream_unary(
         self,
-        continuation: Callable,
-        call_details: grpc.aio.ClientCallDetails,
-        request_iterator: Iterator[Any],
-    ) -> AsyncClientInterceptorReturnType:
+        continuation: Callable[[grpc.aio.ClientCallDetails, AsyncIterable[_TRequest] | Iterable[_TRequest]], Any],
+        client_call_details: grpc.aio.ClientCallDetails,
+        request_iterator: AsyncIterable[_TRequest] | Iterable[_TRequest],
+    ) -> Any:
         """Intercepts an asynchronous stream-unary RPC call.
 
         Args:
             continuation (Callable): The continuation function to call.
-            call_details (grpc.aio.ClientCallDetails): Details of the RPC call.
+            client_call_details (grpc.aio.ClientCallDetails): Details of the RPC call.
             request_iterator (Iterator[Any]): The request iterator.
 
         Returns:
-            AsyncClientInterceptorReturnType: The result of the intercepted RPC call.
+            Any: The result of the intercepted RPC call.
         """
-        return await self.intercept(_swap_args(continuation), request_iterator, call_details)
+        result = await self.intercept(_swap_args(continuation), request_iterator, client_call_details)
+        return result
 
     async def intercept_stream_stream(
         self,
-        continuation: Callable,
-        call_details: grpc.aio.ClientCallDetails,
-        request_iterator: Iterator[Any],
-    ) -> AsyncClientInterceptorReturnType:
+        continuation: Callable[[grpc.aio.ClientCallDetails, AsyncIterable[_TRequest] | Iterable[_TRequest]], Any],
+        client_call_details: grpc.aio.ClientCallDetails,
+        request_iterator: AsyncIterable[_TRequest] | Iterable[_TRequest],
+    ) -> Any:
         """Intercepts an asynchronous stream-stream RPC call.
 
         Args:
             continuation (Callable): The continuation function to call.
-            call_details (grpc.aio.ClientCallDetails): Details of the RPC call.
+            client_call_details (grpc.aio.ClientCallDetails): Details of the RPC call.
             request_iterator (Iterator[Any]): The request iterator.
 
         Returns:
-            AsyncClientInterceptorReturnType: The result of the intercepted RPC call.
+            Any: The result of the intercepted RPC call.
         """
-        return await self.intercept(_swap_args(continuation), request_iterator, call_details)
+        result = await self.intercept(_swap_args(continuation), request_iterator, client_call_details)
+        return result

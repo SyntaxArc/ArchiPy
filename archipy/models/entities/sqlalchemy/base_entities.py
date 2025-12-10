@@ -140,7 +140,7 @@ class ArchivableMixin:
     __abstract__ = True
     is_archived = Column(Boolean, default=False, nullable=False)
     # Using Column without Mapped is acceptable since Column works with BaseEntity.__table__
-    origin_uuid = Column(ForeignKey("self.pk_uuid"), nullable=True)  # type: ignore[var-annotated]
+    origin_uuid = Column(ForeignKey("self.pk_uuid"), nullable=True)
 
 
 # Mixins dependent on EntityAttributeChecker

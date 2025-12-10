@@ -47,33 +47,42 @@ class ElasticsearchAdapter(ElasticsearchPort):
         Returns:
             Elasticsearch: Configured Elasticsearch client instance.
         """
-        api_key: tuple | None = None
-        basic_auth: tuple | None = None
+        api_key: tuple[str, str] | None = None
+        basic_auth: tuple[str, str] | None = None
         if configs.API_KEY and configs.API_SECRET:
-            api_key = ((configs.API_KEY, configs.API_SECRET),)
+            api_key = (configs.API_KEY, configs.API_SECRET.get_secret_value())
         elif configs.HTTP_USER_NAME and configs.HTTP_PASSWORD:
             basic_auth = (configs.HTTP_USER_NAME, configs.HTTP_PASSWORD.get_secret_value())
 
-        return Elasticsearch(
-            hosts=configs.HOSTS,
-            api_key=api_key,
-            basic_auth=basic_auth,
-            ca_certs=configs.CA_CERTS,
-            client_key=configs.CLIENT_KEY,
-            client_cert=configs.CLIENT_CERT,
-            ssl_assert_fingerprint=configs.SSL_ASSERT_FINGERPRINT,
-            request_timeout=configs.REQUEST_TIMEOUT,
-            retry_on_status=configs.RETRY_ON_STATUS,
-            retry_on_timeout=configs.RETRY_ON_TIMEOUT,
-            max_retries=configs.MAX_RETRIES,
-            http_compress=configs.HTTP_COMPRESS,
-            connections_per_node=configs.CONNECTIONS_PER_NODE,
-            verify_certs=configs.VERIFY_CERTS,
-            sniff_on_start=configs.SNIFF_ON_START,
-            sniff_before_requests=configs.SNIFF_BEFORE_REQUESTS,
-            sniff_on_node_failure=configs.SNIFF_ON_NODE_FAILURE,
-            max_dead_node_backoff=configs.MAX_DEAD_NODE_BACKOFF,
-        )
+        # Build kwargs, only including SSL parameters if they have values
+        kwargs: dict[str, Any] = {
+            "hosts": configs.HOSTS,
+            "api_key": api_key,
+            "basic_auth": basic_auth,
+            "request_timeout": configs.REQUEST_TIMEOUT,
+            "retry_on_status": configs.RETRY_ON_STATUS,
+            "retry_on_timeout": configs.RETRY_ON_TIMEOUT,
+            "max_retries": configs.MAX_RETRIES,
+            "http_compress": configs.HTTP_COMPRESS,
+            "connections_per_node": configs.CONNECTIONS_PER_NODE,
+            "verify_certs": configs.VERIFY_CERTS,
+            "sniff_on_start": configs.SNIFF_ON_START,
+            "sniff_before_requests": configs.SNIFF_BEFORE_REQUESTS,
+            "sniff_on_node_failure": configs.SNIFF_ON_NODE_FAILURE,
+            "max_dead_node_backoff": configs.MAX_DEAD_NODE_BACKOFF,
+        }
+
+        # Only add SSL parameters if they have values (to avoid passing None)
+        if configs.CA_CERTS:
+            kwargs["ca_certs"] = configs.CA_CERTS
+        if configs.CLIENT_KEY:
+            kwargs["client_key"] = configs.CLIENT_KEY
+        if configs.CLIENT_CERT:
+            kwargs["client_cert"] = configs.CLIENT_CERT
+        if configs.SSL_ASSERT_FINGERPRINT:
+            kwargs["ssl_assert_fingerprint"] = configs.SSL_ASSERT_FINGERPRINT
+
+        return Elasticsearch(**kwargs)
 
     @override
     def ping(self) -> ElasticsearchResponseType:
@@ -305,33 +314,42 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         Returns:
             AsyncElasticsearch: Configured async Elasticsearch client instance.
         """
-        api_key: tuple | None = None
-        basic_auth: tuple | None = None
+        api_key: tuple[str, str] | None = None
+        basic_auth: tuple[str, str] | None = None
         if configs.API_KEY and configs.API_SECRET:
-            api_key = (configs.API_KEY, configs.API_SECRET)
+            api_key = (configs.API_KEY, configs.API_SECRET.get_secret_value())
         elif configs.HTTP_USER_NAME and configs.HTTP_PASSWORD:
             basic_auth = (configs.HTTP_USER_NAME, configs.HTTP_PASSWORD.get_secret_value())
 
-        return AsyncElasticsearch(
-            hosts=configs.HOSTS,
-            api_key=api_key,
-            basic_auth=basic_auth,
-            ca_certs=configs.CA_CERTS,
-            client_key=configs.CLIENT_KEY,
-            client_cert=configs.CLIENT_CERT,
-            ssl_assert_fingerprint=configs.SSL_ASSERT_FINGERPRINT,
-            request_timeout=configs.REQUEST_TIMEOUT,
-            retry_on_status=configs.RETRY_ON_STATUS,
-            retry_on_timeout=configs.RETRY_ON_TIMEOUT,
-            max_retries=configs.MAX_RETRIES,
-            http_compress=configs.HTTP_COMPRESS,
-            connections_per_node=configs.CONNECTIONS_PER_NODE,
-            verify_certs=configs.VERIFY_CERTS,
-            sniff_on_start=configs.SNIFF_ON_START,
-            sniff_before_requests=configs.SNIFF_BEFORE_REQUESTS,
-            sniff_on_node_failure=configs.SNIFF_ON_NODE_FAILURE,
-            max_dead_node_backoff=configs.MAX_DEAD_NODE_BACKOFF,
-        )
+        # Build kwargs, only including SSL parameters if they have values
+        kwargs: dict[str, Any] = {
+            "hosts": configs.HOSTS,
+            "api_key": api_key,
+            "basic_auth": basic_auth,
+            "request_timeout": configs.REQUEST_TIMEOUT,
+            "retry_on_status": configs.RETRY_ON_STATUS,
+            "retry_on_timeout": configs.RETRY_ON_TIMEOUT,
+            "max_retries": configs.MAX_RETRIES,
+            "http_compress": configs.HTTP_COMPRESS,
+            "connections_per_node": configs.CONNECTIONS_PER_NODE,
+            "verify_certs": configs.VERIFY_CERTS,
+            "sniff_on_start": configs.SNIFF_ON_START,
+            "sniff_before_requests": configs.SNIFF_BEFORE_REQUESTS,
+            "sniff_on_node_failure": configs.SNIFF_ON_NODE_FAILURE,
+            "max_dead_node_backoff": configs.MAX_DEAD_NODE_BACKOFF,
+        }
+
+        # Only add SSL parameters if they have values (to avoid passing None)
+        if configs.CA_CERTS:
+            kwargs["ca_certs"] = configs.CA_CERTS
+        if configs.CLIENT_KEY:
+            kwargs["client_key"] = configs.CLIENT_KEY
+        if configs.CLIENT_CERT:
+            kwargs["client_cert"] = configs.CLIENT_CERT
+        if configs.SSL_ASSERT_FINGERPRINT:
+            kwargs["ssl_assert_fingerprint"] = configs.SSL_ASSERT_FINGERPRINT
+
+        return AsyncElasticsearch(**kwargs)
 
     @override
     async def ping(self) -> ElasticsearchResponseType:

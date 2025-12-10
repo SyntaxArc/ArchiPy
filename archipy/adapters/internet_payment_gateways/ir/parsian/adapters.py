@@ -147,7 +147,7 @@ class ParsianShaparakPaymentAdapter:
             )
             logger.debug(f"Payment response: {result}")
         except Fault as exception:
-            raise UnavailableError(service="Parsian Shaparak Sale Service") from exception
+            raise UnavailableError(resource_type="Parsian Shaparak Sale Service") from exception
         except Exception as exception:
             raise InternalError() from exception
         else:
@@ -179,7 +179,7 @@ class ParsianShaparakPaymentAdapter:
             )
             logger.debug(f"Confirm response: {result}")
         except Fault as exception:
-            raise UnavailableError(service="Parsian Shaparak Confirm Service") from exception
+            raise UnavailableError(resource_type="Parsian Shaparak Confirm Service") from exception
         except Exception as exception:
             raise InternalError() from exception
         else:
@@ -216,7 +216,7 @@ class ParsianShaparakPaymentAdapter:
             )
             logger.debug(f"Confirm with amount response: {result}")
         except Fault as exception:
-            raise UnavailableError(service="Parsian Shaparak Confirm Service") from exception
+            raise UnavailableError(resource_type="Parsian Shaparak Confirm Service") from exception
         except Exception as exception:
             raise InternalError() from exception
         else:
@@ -247,7 +247,7 @@ class ParsianShaparakPaymentAdapter:
             )
             logger.debug(f"Reversal response: {result}")
         except Fault as exception:
-            raise UnavailableError(service="Parsian Shaparak Reversal Service") from exception
+            raise UnavailableError(resource_type="Parsian Shaparak Reversal Service") from exception
         except Exception as exception:
             raise InternalError() from exception
         else:

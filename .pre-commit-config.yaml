@@ -80,9 +80,9 @@ repos:
         entry: uv run validate-pyproject pyproject.toml
         language: system
         pass_filenames: false
-      - id: mypy
-        name: mypy
-        entry: uv run mypy --config-file pyproject.toml
+      - id: ty
+        name: ty
+        entry: uv run ty check
         files: \.(py|pyi)$
         language: system
         exclude: ^(features|scripts)/

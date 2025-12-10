@@ -1,7 +1,7 @@
 import logging
 import time
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any
 
 
 def timing_decorator[F: Callable[..., Any]](func: F) -> F:
@@ -31,7 +31,9 @@ def timing_decorator[F: Callable[..., Any]](func: F) -> F:
         Slept for 2 seconds
         ```
     """
+    from functools import wraps
 
+    @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         if logging.getLogger().level == logging.DEBUG:
             start_time = time.time()
@@ -42,4 +44,4 @@ def timing_decorator[F: Callable[..., Any]](func: F) -> F:
             result = func(*args, **kwargs)
         return result
 
-    return cast(F, wrapper)
+    return wrapper

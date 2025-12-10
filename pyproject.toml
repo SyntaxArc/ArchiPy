@@ -68,7 +68,7 @@ dev = [
     "bandit>=1.9.2",
     "black>=25.12.0",
     "codespell>=2.4.1",
-    "mypy>=1.19.0",
+    "ty",
     "pre-commit-hooks>=6.0.0",
     "pre-commit>=4.5.0",
     "ruff>=0.14.7",
@@ -256,150 +256,104 @@ multiline-quotes = "double"  # Use double quotes for multiline strings
 [tool.ruff.lint.pydocstyle]
 convention = "google"  # Use Google-style docstrings
 
-[tool.mypy]
-# Enable checking of untyped function definitions
-check_untyped_defs = true
-
-# Disallow using `Any` in generic types
-disallow_any_generics = false
-
-# Disallow incomplete type definitions
-disallow_incomplete_defs = true
-
-# Disallow subclassing `Any`
-disallow_subclassing_any = true
-
-# Disallow calling untyped functions
-disallow_untyped_calls = true
-
-# Disallow untyped decorators
-disallow_untyped_decorators = true
-
-# Disallow untyped function definitions
-disallow_untyped_defs = true
-
-# Follow imports silently
-follow_imports = "silent"
-
-# Disallow implicit re-exports
-no_implicit_reexport = true
-
-# Enable pretty output
-pretty = true
-
+[tool.ty.environment]
 # Target Python version
-python_version = "3.14"
+python-version = "3.14"
 
-# Show error codes
-show_error_codes = true
+[tool.ty.src]
+# Include source directories
+include = ["archipy"]
+# Exclude directories from type checking
+exclude = ["features", "scripts"]
 
-# Show error context
-show_error_context = true
-
-# Enable strict optional checking
-strict_optional = true
-
-# Warn about missing return statements
-warn_no_return = true
-
-# Warn about redundant casts
-warn_redundant_casts = true
-
-# Warn about returning `Any`
-warn_return_any = true
-
-# Warn about unreachable code
-warn_unreachable = true
-
-# Warn about unused configs
-warn_unused_configs = true
-
-# Warn about unused `# type: ignore` comments
-warn_unused_ignores = true
-
-# Enable Pydantic plugin for better type checking
-plugins = [
-    "pydantic.mypy", # Pydantic plugin for better type checking
-]
-
-[[tool.mypy.overrides]]
-module = [
-    "apscheduler.*", # Apply overrides to apscheduler
-    "archipy.adapters.redis.*",
-    "cassandra.*", # Apply overrides to Cassandra/ScyllaDB driver
-    "cassandra.cluster.*", # Apply overrides to Cassandra cluster
-    "cassandra.auth.*", # Apply overrides to Cassandra auth
-    "confluent_kafka.*", # Apply overrides to Kafka
-    "confluent_kafka.admin.*", # Apply overrides to Kafka
-    "features.*", # Apply overrides to features files
-    "jdatetime.*", # Apply overrides to jdatetime
-    "jwcrypto.*", # Apply overrides to jwcrypto
-    "minio.*", # Apply overrides to minio
-    "redis.*", # Apply overrides to Redis
-    "scripts.*", # Apply overrides to script files
-    "sentry_sdk.*", # Apply overrides to sentry-sdk
-    "zeep.*", # Apply overrides to zeep
-]
-ignore_missing_imports = true
-disable_error_code = ["no-any-return", "misc", "return-value", "arg-type", "type-var", "unused-ignore", "no-untyped-call", "assignment", "call-arg"]
-
-[[tool.mypy.overrides]]
-module = "archipy.models.errors.*"
-disable_error_code = ["assignment", "misc"]  # Allow flexible data dictionary assignments and type assignments for optional imports
-
-[[tool.mypy.overrides]]
-module = "archipy.models.dtos.range_dtos"
-disable_error_code = ["operator"]  # Allow generic type comparisons
-
-[[tool.mypy.overrides]]
-module = "archipy.helpers.decorators.sqlalchemy_atomic"
-disable_error_code = ["return", "misc", "no-any-return", "return-value"]  # Allow complex decorator patterns
-
-[[tool.mypy.overrides]]
-module = "archipy.adapters.elasticsearch.*"
-disable_error_code = ["arg-type"]  # Allow kwargs in elasticsearch client calls
-
-[[tool.mypy.overrides]]
-module = "archipy.helpers.interceptors.grpc.*"
-disable_error_code = ["misc", "no-any-return", "attr-defined", "no-untyped-call", "var-annotated", "override", "arg-type"]  # Allow grpc and elasticapm untyped usage
-
-[[tool.mypy.overrides]]
-module = "archipy.adapters.keycloak.*"
-disable_error_code = ["return", "override", "assignment", "unreachable", "union-attr", "no-untyped-def", "arg-type", "return-value", "no-any-return"]  # Allow Keycloak adapter complex patterns
-
-[[tool.mypy.overrides]]
-module = "archipy.helpers.utils.keycloak_utils"
-disable_error_code = ["arg-type"]  # Allow grpc ServicerContext type compatibility
-
-
-[[tool.mypy.overrides]]
-module = "archipy.models.dtos.base_protobuf_dto"
-disable_error_code = ["misc", "assignment"]  # Allow protobuf type placeholders
-
-[[tool.mypy.overrides]]
-module = "archipy.adapters.minio.*"
-ignore_missing_imports = true
-disable_error_code = ["import-untyped", "call-arg", "return", "override", "no-any-return"]  # Allow minio adapter patterns
-
-[[tool.mypy.overrides]]
-module = "archipy.adapters.kafka.*"
-disable_error_code = ["dict-item", "return", "call-arg"]  # Allow kafka configuration patterns
-
-[[tool.mypy.overrides]]
-module = "archipy.adapters.internet_payment_gateways.*"
-disable_error_code = ["no-untyped-call", "call-arg"]  # Allow zeep and payment gateway integrations
-
-[[tool.mypy.overrides]]
-module = "archipy.adapters.temporal.*"
-disable_error_code = ["no-any-return", "misc", "return-value", "arg-type", "var-annotated", "override", "attr-defined"]  # Allow Temporal's dynamic types and workflow patterns
-
-[[tool.mypy.overrides]]
-module = "archipy.models.errors.temporal_errors"
-disable_error_code = ["attr-defined"]  # Allow BaseConfig issue until global_config() is fixed
-
-[[tool.mypy.overrides]]
-module = "archipy.adapters.redis.mocks"
-disable_error_code = ["attr-defined"]  # Allow dynamic cluster method assignments to FakeRedis
+[tool.ty.rules]
+# Enable strict type checking rules (similar to mypy strict mode)
+# Error-level rules (default)
+byte-string-type-annotation = "error"
+call-non-callable = "error"
+conflicting-argument-forms = "error"
+conflicting-declarations = "error"
+conflicting-metaclass = "error"
+cyclic-class-definition = "error"
+cyclic-type-alias-definition = "error"
+duplicate-base = "error"
+duplicate-kw-only = "error"
+escape-character-in-forward-annotation = "error"
+fstring-type-annotation = "error"
+implicit-concatenated-string-type-annotation = "error"
+inconsistent-mro = "error"
+index-out-of-bounds = "error"
+instance-layout-conflict = "error"
+invalid-argument-type = "error"
+invalid-assignment = "error"
+invalid-attribute-access = "error"
+invalid-await = "error"
+invalid-base = "error"
+invalid-context-manager = "error"
+invalid-declaration = "error"
+invalid-exception-caught = "error"
+invalid-explicit-override = "error"
+invalid-generic-class = "error"
+invalid-key = "error"
+invalid-legacy-type-variable = "error"
+invalid-metaclass = "error"
+invalid-method-override = "error"
+invalid-named-tuple = "error"
+invalid-newtype = "error"
+invalid-overload = "error"
+invalid-parameter-default = "error"
+invalid-paramspec = "error"
+invalid-protocol = "error"
+invalid-raise = "error"
+invalid-return-type = "error"
+invalid-super-argument = "error"
+invalid-syntax-in-forward-annotation = "error"
+invalid-type-alias-type = "error"
+invalid-type-arguments = "error"
+invalid-type-checking-constant = "error"
+invalid-type-form = "error"
+invalid-type-guard-call = "error"
+invalid-type-guard-definition = "error"
+invalid-type-variable-constraints = "error"
+missing-argument = "error"
+missing-typed-dict-key = "error"
+no-matching-overload = "error"
+non-subscriptable = "error"
+not-iterable = "error"
+override-of-final-method = "error"
+parameter-already-assigned = "error"
+positional-only-parameter-as-kwarg = "error"
+raw-string-type-annotation = "error"
+static-assert-error = "error"
+subclass-of-final-class = "error"
+super-call-in-named-tuple-method = "error"
+too-many-positional-arguments = "error"
+type-assertion-failure = "error"
+unavailable-implicit-super-arguments = "error"
+unknown-argument = "error"
+unresolved-attribute = "error"
+unresolved-import = "error"
+unresolved-reference = "error"
+unsupported-bool-conversion = "error"
+unsupported-operator = "error"
+zero-stepsize-in-slice = "error"
+# Warning-level rules (default) - set to error for strict checking
+ambiguous-protocol-member = "error"
+deprecated = "error"
+ignore-comment-unknown-rule = "error"
+invalid-ignore-comment = "error"
+possibly-missing-attribute = "error"
+possibly-missing-implicit-call = "error"
+possibly-missing-import = "error"
+redundant-cast = "error"
+undefined-reveal = "error"
+unresolved-global = "error"
+unsupported-base = "error"
+useless-overload-body = "error"
+# Ignore-level rules (default) - set to error for strict checking
+division-by-zero = "error"
+possibly-unresolved-reference = "error"
+unused-ignore-comment = "error"
 
 [tool.config]
 pyproject_root_var = "pyproject"

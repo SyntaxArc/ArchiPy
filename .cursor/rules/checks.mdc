@@ -153,15 +153,13 @@ class ElasticsearchConfig(BaseModel):
 - Single: `uv run --extra behave behave features/file_name.feature`
 - Scenario: `uv run --extra behave behave features/file_name.feature:line_number`
 
-## MyPy Compliance
+## Ty Compliance
 
-**Strict Mode**: disallow_untyped_defs, disallow_untyped_calls, strict_optional, warn_return_any
-
-**Pragmatic Overrides**: Allow Any for untyped third-party libs (confluent_kafka, zeep, minio), dynamic adapters (Redis, Keycloak, gRPC, Temporal), decorators, protobuf
+**Strict Mode**: Enabled via rules configuration (possibly-unresolved-reference = "error")
 
 **Type Annotations**: Explicit for all parameters, return types, variables
 
-**Pydantic Plugin**: Enabled for proper model type checking
+**Configuration**: Ty handles third-party library type checking automatically
 
 ## Ruff Compliance
 
@@ -184,7 +182,6 @@ class ElasticsearchConfig(BaseModel):
 - UP: pyupgrade
 
 **Ignored**:
-- BLE001: Allow Exception in adapters
 - C901: McCabe max 10
 - F811: Redefinition in steps
 - G004: f-strings in logging
@@ -195,7 +192,7 @@ class ElasticsearchConfig(BaseModel):
 
 **Workflow**:
 - Format: `make format` (Black, 120 chars)
-- Lint: `make lint` (Ruff + MyPy)
+- Lint: `make lint` (Ruff + Ty)
 - Test: `make behave`
 - Security: `make security` (Bandit)
 - All checks: `make check`
@@ -287,7 +284,7 @@ Before completing tasks, verify:
 - ✅ Google-style docstrings for public APIs
 - ✅ Pydantic Field descriptions
 - ✅ Exception chaining with `raise ... from e`
-- ✅ Ruff and MyPy compliant
+- ✅ Ruff and Ty compliant
 - ✅ Behave tests created/updated
 - ✅ Documentation updated
 - ✅ Conventional Commits message ready

@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from typing import Any, cast
+from typing import Any
 from unittest.mock import AsyncMock
 
 import fakeredis
@@ -28,12 +28,12 @@ class RedisMock(RedisAdapter):
 
     def _setup_fake_clients(self) -> None:
         """Setup fake Redis clients that simulate different modes."""
-        self.client = fakeredis.FakeRedis(decode_responses=True)
+        fake_client: Any = fakeredis.FakeRedis(decode_responses=True)
 
         # For testing purposes, we simulate different modes
         if self.config.MODE == RedisMode.CLUSTER:
-            # Add cluster-specific mock methods
-            self.client.cluster_info = lambda: {
+            # Add cluster-specific mock methods using setattr for dynamic attributes
+            fake_client.cluster_info = lambda: {
                 "cluster_state": "ok",
                 "cluster_slots_assigned": 16384,
                 "cluster_slots_ok": 16384,
@@ -42,17 +42,18 @@ class RedisMock(RedisAdapter):
                 "cluster_known_nodes": 6,
                 "cluster_size": 3,
             }
-            self.client.cluster_nodes = lambda: "fake cluster nodes info"
-            self.client.cluster_slots = lambda: [
+            fake_client.cluster_nodes = lambda: "fake cluster nodes info"
+            fake_client.cluster_slots = lambda: [
                 (0, 5460, ["127.0.0.1", 7000]),
                 (5461, 10922, ["127.0.0.1", 7001]),
                 (10923, 16383, ["127.0.0.1", 7002]),
             ]
-            self.client.cluster_keyslot = lambda key: hash(key) % 16384
-            self.client.cluster_countkeysinslot = lambda slot: 0
-            self.client.cluster_getkeysinslot = lambda slot, count: []
+            fake_client.cluster_keyslot = lambda key: hash(key) % 16384
+            fake_client.cluster_countkeysinslot = lambda slot: 0
+            fake_client.cluster_get_keys_in_slot = lambda slot, count: []
 
-        self.read_only_client = self.client
+        self.client = fake_client
+        self.read_only_client = fake_client
 
     def _set_clients(self, configs: RedisConfig) -> None:
         # Override to prevent actual connection setup
@@ -107,7 +108,7 @@ class AsyncRedisMock(AsyncRedisAdapter):
             ]
             self.client.cluster_keyslot.side_effect = lambda key: hash(key) % 16384
             self.client.cluster_countkeysinslot.side_effect = lambda slot: 0
-            self.client.cluster_getkeysinslot.side_effect = lambda slot, count: []
+            self.client.cluster_get_keys_in_slot.side_effect = lambda slot, count: []
 
     def _set_clients(self, configs: RedisConfig) -> None:
         # Override to prevent actual connection setup
@@ -140,6 +141,6 @@ class AsyncRedisMock(AsyncRedisAdapter):
             # Remove 'self' from args when calling the sync method
             if args and args[0] is self:
                 args = args[1:]
-            return cast(RedisResponseType, sync_method(*args, **kwargs))
+            return sync_method(*args, **kwargs)
 
         return wrapper

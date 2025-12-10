@@ -224,7 +224,7 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
         # Cast to ConfigT since subclasses will ensure the proper type
         self.session_manager: BaseSQLAlchemySessionManager[ConfigT] = self._create_session_manager(
             configs,
-        )  # type: ignore[arg-type]
+        )
 
     def _create_session_manager(self, configs: ConfigT) -> BaseSQLAlchemySessionManager[ConfigT]:
         """Create a session manager for the specific database.
@@ -271,8 +271,22 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             paginated_query = self._apply_pagination(sorted_query, pagination)
             result_set = session.execute(paginated_query)
             if has_multiple_entities:
-                results = list(result_set.fetchall())
+                # For multiple entities, fetchall returns list of Row objects
+                raw_results = list(result_set.fetchall())
+                # Convert to list[T] - each row contains entities of type T
+                # Use tuple unpacking to access the first element
+                results: list[T] = []
+                for row in raw_results:
+                    if row:
+                        # Row supports indexing and tuple unpacking
+                        row_tuple = tuple(row)
+                        if row_tuple:
+                            first_entity = row_tuple[0]
+                            # first_entity is T (entity type), verify it's an instance
+                            if isinstance(first_entity, entity):
+                                results.append(first_entity)
             else:
+                # For single entity, scalars() returns list[T] directly
                 results = list(result_set.scalars().all())
             count_query = select(func.count()).select_from(query.subquery())
             total_count = session.execute(count_query).scalar_one()
@@ -280,7 +294,8 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
-            return results, total_count  # type: ignore[return-value]
+            # Type: results is list[T] where T extends BaseEntity, total_count is int
+            return results, total_count
 
     @override
     def get_session(self) -> Session:
@@ -366,7 +381,7 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             return entities
 
     @override
-    def get_by_uuid(self, entity_type: type[T], entity_uuid: UUID) -> T | None:
+    def get_by_uuid(self, entity_type: type[T], entity_uuid: UUID) -> BaseEntity | None:
         """Retrieve an entity by its UUID.
 
         Args:
@@ -397,7 +412,10 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
-            return result
+            # result is T | None where T extends BaseEntity, compatible with BaseEntity | None
+            # The type checker needs explicit type annotation to understand the relationship
+            typed_result: BaseEntity | None = result
+            return typed_result
 
     @override
     def delete(self, entity: T) -> None:
@@ -537,7 +555,7 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
         # Cast to ConfigT since subclasses will ensure the proper type
         self.session_manager: AsyncBaseSQLAlchemySessionManager[ConfigT] = self._create_async_session_manager(
             configs,
-        )  # type: ignore[arg-type]
+        )
 
     def _create_async_session_manager(self, configs: ConfigT) -> AsyncBaseSQLAlchemySessionManager[ConfigT]:
         """Create an async session manager for the specific database.
@@ -584,8 +602,22 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             paginated_query = self._apply_pagination(sorted_query, pagination)
             result_set = await session.execute(paginated_query)
             if has_multiple_entities:
-                results = list(result_set.fetchall())
+                # For multiple entities, fetchall returns list of Row objects
+                raw_results = list(result_set.fetchall())
+                # Convert to list[T] - each row contains entities of type T
+                # Use tuple unpacking to access the first element
+                results: list[T] = []
+                for row in raw_results:
+                    if row:
+                        # Row supports indexing and tuple unpacking
+                        row_tuple = tuple(row)
+                        if row_tuple:
+                            first_entity = row_tuple[0]
+                            # first_entity is T (entity type), verify it's an instance
+                            if isinstance(first_entity, entity):
+                                results.append(first_entity)
             else:
+                # For single entity, scalars() returns list[T] directly
                 results = list(result_set.scalars().all())
             count_query = select(func.count()).select_from(query.subquery())
             total_count_result = await session.execute(count_query)
@@ -594,7 +626,8 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
-            return results, total_count  # type: ignore[return-value]
+            # Type: results is list[T] where T extends BaseEntity, total_count is int
+            return results, total_count
 
     @override
     def get_session(self) -> AsyncSession:
@@ -680,7 +713,7 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             return entities
 
     @override
-    async def get_by_uuid(self, entity_type: type[T], entity_uuid: UUID) -> T | None:
+    async def get_by_uuid(self, entity_type: type[T], entity_uuid: UUID) -> BaseEntity | None:
         """Retrieve an entity by its UUID.
 
         Args:
@@ -711,7 +744,10 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
-            return result
+            # result is T | None where T extends BaseEntity, compatible with BaseEntity | None
+            # The type checker needs explicit type annotation to understand the relationship
+            typed_result: BaseEntity | None = result
+            return typed_result
 
     @override
     async def delete(self, entity: BaseEntity) -> None:

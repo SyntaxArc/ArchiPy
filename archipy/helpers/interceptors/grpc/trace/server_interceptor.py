@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Callable
+from typing import Any
 
 import elasticapm
 import grpc
@@ -54,7 +55,13 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
                 return method(request, context)
 
             # Convert metadata to a dictionary for easier access
-            metadata_dict = dict(context.invocation_metadata())
+            metadata_items = list(context.invocation_metadata())
+            metadata_dict: dict[str, str] = {}
+            for key, value in metadata_items:
+                if isinstance(value, bytes):
+                    metadata_dict[key] = value.decode("utf-8", errors="ignore")
+                else:
+                    metadata_dict[key] = str(value)
 
             # Initialize Sentry transaction if enabled
             sentry_transaction = None
@@ -63,7 +70,8 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
                     import sentry_sdk
 
                     # Initialize Sentry if not already done
-                    if not sentry_sdk.Hub.current.client:
+                    current_hub = sentry_sdk.Hub.current
+                    if not getattr(current_hub, "client", None):
                         sentry_sdk.init(
                             dsn=config.SENTRY.DSN,
                             debug=config.SENTRY.DEBUG,
@@ -85,6 +93,7 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
                     logging.exception("Failed to create Sentry transaction for gRPC server call")
 
             # Handle Elastic APM if enabled
+            elastic_client: Any = None
             if config.ELASTIC_APM.IS_ENABLED:
                 try:
                     # Get the Elastic APM client
@@ -100,6 +109,7 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
                         elastic_client.begin_transaction(transaction_type="request")
                 except Exception:
                     logging.exception("Failed to initialize Elastic APM transaction")
+                    elastic_client = None
 
             try:
                 # Execute the gRPC method
@@ -108,14 +118,14 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
                 # Mark transactions as failed and capture exception
                 if sentry_transaction:
                     sentry_transaction.set_status("internal_error")
-                if elastic_client:
+                if elastic_client is not None:
                     elastic_client.end_transaction(name=method_name_model.full_name, result="failure")
                 raise
             else:
                 # Mark transactions as successful
                 if sentry_transaction:
                     sentry_transaction.set_status("ok")
-                if elastic_client:
+                if elastic_client is not None:
                     elastic_client.end_transaction(name=method_name_model.full_name, result="success")
                 return result
             finally:
@@ -172,7 +182,17 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
                 return await method(request, context)
 
             # Convert metadata to a dictionary for easier access
-            metadata_dict = dict(context.invocation_metadata())
+            invocation_metadata = context.invocation_metadata()
+            if invocation_metadata is not None:
+                metadata_items = list(invocation_metadata)
+            else:
+                metadata_items = []
+            metadata_dict: dict[str, str] = {}
+            for key, value in metadata_items:
+                if isinstance(value, bytes):
+                    metadata_dict[key] = value.decode("utf-8", errors="ignore")
+                else:
+                    metadata_dict[key] = str(value)
 
             # Initialize Sentry transaction if enabled
             sentry_transaction = None
@@ -181,7 +201,8 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
                     import sentry_sdk
 
                     # Initialize Sentry if not already done
-                    if not sentry_sdk.Hub.current.client:
+                    current_hub = sentry_sdk.Hub.current
+                    if not getattr(current_hub, "client", None):
                         sentry_sdk.init(
                             dsn=config.SENTRY.DSN,
                             debug=config.SENTRY.DEBUG,
@@ -203,6 +224,7 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
                     logging.exception("Failed to create Sentry transaction for async gRPC server call")
 
             # Handle Elastic APM if enabled
+            elastic_client: Any = None
             if config.ELASTIC_APM.IS_ENABLED:
                 try:
                     # Get the Elastic APM client
@@ -219,6 +241,7 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
                         elastic_client.begin_transaction(transaction_type="request")
                 except Exception:
                     logging.exception("Failed to initialize Elastic APM transaction")
+                    elastic_client = None
 
             try:
                 # Execute the async gRPC method
@@ -227,14 +250,14 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
                 # Mark transactions as failed and capture exception
                 if sentry_transaction:
                     sentry_transaction.set_status("internal_error")
-                if elastic_client:
+                if elastic_client is not None:
                     elastic_client.end_transaction(name=method_name_model.full_name, result="failure")
                 raise
             else:
                 # Mark transactions as successful
                 if sentry_transaction:
                     sentry_transaction.set_status("ok")
-                if elastic_client:
+                if elastic_client is not None:
                     elastic_client.end_transaction(name=method_name_model.full_name, result="success")
                 return result
             finally:

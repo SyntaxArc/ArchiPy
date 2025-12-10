@@ -1,4 +1,12 @@
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
+
+if TYPE_CHECKING:
+    from http import HTTPStatus
+
+    from grpc import StatusCode
+else:
+    HTTPStatus = None
+    StatusCode = None
 
 try:
     from http import HTTPStatus
@@ -6,7 +14,6 @@ try:
     HTTP_AVAILABLE = True
 except ImportError:
     HTTP_AVAILABLE = False
-    HTTPStatus = None
 
 try:
     from grpc import StatusCode
@@ -14,7 +21,6 @@ try:
     GRPC_AVAILABLE = True
 except ImportError:
     GRPC_AVAILABLE = False
-    StatusCode = None
 
 from archipy.models.errors.base_error import BaseError
 from archipy.models.types.language_type import LanguageType
@@ -26,11 +32,11 @@ class NetworkError(BaseError):
     code: ClassVar[str] = "NETWORK_ERROR"
     message_en: ClassVar[str] = "Network error occurred"
     message_fa: ClassVar[str] = "خطای شبکه رخ داده است"
-    http_status: ClassVar[int] = HTTPStatus.BAD_GATEWAY.value if HTTP_AVAILABLE else 502
+    http_status: ClassVar[int] = HTTPStatus.BAD_GATEWAY.value if HTTP_AVAILABLE and HTTPStatus is not None else 502
     grpc_status: ClassVar[int] = (
         StatusCode.UNAVAILABLE.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.UNAVAILABLE.value, tuple)
-        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE else 14)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.UNAVAILABLE.value, tuple)
+        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE and StatusCode is not None else 14)
     )
 
     def __init__(
@@ -53,11 +59,11 @@ class ConnectionTimeoutError(BaseError):
     code: ClassVar[str] = "CONNECTION_TIMEOUT"
     message_en: ClassVar[str] = "Connection timed out"
     message_fa: ClassVar[str] = "اتصال با تایم‌اوت مواجه شد"
-    http_status: ClassVar[int] = HTTPStatus.REQUEST_TIMEOUT.value if HTTP_AVAILABLE else 408
+    http_status: ClassVar[int] = HTTPStatus.REQUEST_TIMEOUT.value if HTTP_AVAILABLE and HTTPStatus is not None else 408
     grpc_status: ClassVar[int] = (
         StatusCode.DEADLINE_EXCEEDED.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.DEADLINE_EXCEEDED.value, tuple)
-        else (StatusCode.DEADLINE_EXCEEDED.value if GRPC_AVAILABLE else 4)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.DEADLINE_EXCEEDED.value, tuple)
+        else (StatusCode.DEADLINE_EXCEEDED.value if GRPC_AVAILABLE and StatusCode is not None else 4)
     )
 
     def __init__(
@@ -83,11 +89,13 @@ class ServiceUnavailableError(BaseError):
     code: ClassVar[str] = "SERVICE_UNAVAILABLE"
     message_en: ClassVar[str] = "Service is currently unavailable"
     message_fa: ClassVar[str] = "سرویس در حال حاضر در دسترس نیست"
-    http_status: ClassVar[int] = HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE else 503
+    http_status: ClassVar[int] = (
+        HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE and HTTPStatus is not None else 503
+    )
     grpc_status: ClassVar[int] = (
         StatusCode.UNAVAILABLE.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.UNAVAILABLE.value, tuple)
-        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE else 14)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.UNAVAILABLE.value, tuple)
+        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE and StatusCode is not None else 14)
     )
 
     def __init__(
@@ -113,11 +121,11 @@ class GatewayTimeoutError(BaseError):
     code: ClassVar[str] = "GATEWAY_TIMEOUT"
     message_en: ClassVar[str] = "Gateway timeout"
     message_fa: ClassVar[str] = "تایم‌اوت دروازه"
-    http_status: ClassVar[int] = HTTPStatus.GATEWAY_TIMEOUT.value if HTTP_AVAILABLE else 504
+    http_status: ClassVar[int] = HTTPStatus.GATEWAY_TIMEOUT.value if HTTP_AVAILABLE and HTTPStatus is not None else 504
     grpc_status: ClassVar[int] = (
         StatusCode.DEADLINE_EXCEEDED.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.DEADLINE_EXCEEDED.value, tuple)
-        else (StatusCode.DEADLINE_EXCEEDED.value if GRPC_AVAILABLE else 4)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.DEADLINE_EXCEEDED.value, tuple)
+        else (StatusCode.DEADLINE_EXCEEDED.value if GRPC_AVAILABLE and StatusCode is not None else 4)
     )
 
     def __init__(
@@ -143,11 +151,11 @@ class BadGatewayError(BaseError):
     code: ClassVar[str] = "BAD_GATEWAY"
     message_en: ClassVar[str] = "Bad gateway"
     message_fa: ClassVar[str] = "دروازه نامعتبر"
-    http_status: ClassVar[int] = HTTPStatus.BAD_GATEWAY.value if HTTP_AVAILABLE else 502
+    http_status: ClassVar[int] = HTTPStatus.BAD_GATEWAY.value if HTTP_AVAILABLE and HTTPStatus is not None else 502
     grpc_status: ClassVar[int] = (
         StatusCode.UNAVAILABLE.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.UNAVAILABLE.value, tuple)
-        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE else 14)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.UNAVAILABLE.value, tuple)
+        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE and StatusCode is not None else 14)
     )
 
     def __init__(
@@ -170,11 +178,13 @@ class RateLimitExceededError(BaseError):
     code: ClassVar[str] = "RATE_LIMIT_EXCEEDED"
     message_en: ClassVar[str] = "Rate limit has been exceeded"
     message_fa: ClassVar[str] = "محدودیت نرخ درخواست به پایان رسیده است"
-    http_status: ClassVar[int] = HTTPStatus.TOO_MANY_REQUESTS.value if HTTP_AVAILABLE else 429
+    http_status: ClassVar[int] = (
+        HTTPStatus.TOO_MANY_REQUESTS.value if HTTP_AVAILABLE and HTTPStatus is not None else 429
+    )
     grpc_status: ClassVar[int] = (
         StatusCode.RESOURCE_EXHAUSTED.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.RESOURCE_EXHAUSTED.value, tuple)
-        else (StatusCode.RESOURCE_EXHAUSTED.value if GRPC_AVAILABLE else 8)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.RESOURCE_EXHAUSTED.value, tuple)
+        else (StatusCode.RESOURCE_EXHAUSTED.value if GRPC_AVAILABLE and StatusCode is not None else 8)
     )
 
     def __init__(

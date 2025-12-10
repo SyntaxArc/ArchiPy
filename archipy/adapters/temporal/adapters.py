@@ -77,12 +77,17 @@ class TemporalAdapter(TemporalPort):
         """
         if self._client is None:
             try:
-                tls_config = self._build_tls_config() if self._has_tls_config() else None
+                # Build connection kwargs, only including tls if configured
+                connect_kwargs: dict[str, Any] = {
+                    "namespace": self.config.NAMESPACE,
+                }
+                if self._has_tls_config():
+                    tls_config = self._build_tls_config()
+                    connect_kwargs["tls"] = tls_config
 
                 self._client = await Client.connect(
                     f"{self.config.HOST}:{self.config.PORT}",
-                    namespace=self.config.NAMESPACE,
-                    tls=tls_config,
+                    **connect_kwargs,
                 )
             except Exception as error:
                 raise BaseError(
@@ -128,18 +133,23 @@ class TemporalAdapter(TemporalPort):
             )
 
         try:
-            with open(self.config.TLS_CA_CERT, "rb") as f:
+            if self.config.TLS_CA_CERT is None:
+                raise InvalidArgumentError(additional_data={"error": "TLS_CA_CERT is required but not set"})
+            ca_cert_path: str = self.config.TLS_CA_CERT
+            with open(ca_cert_path, "rb") as f:
                 ca_cert_data = f.read()
 
             client_cert_data = None
             client_key_data = None
 
             if self.config.TLS_CLIENT_CERT:
-                with open(self.config.TLS_CLIENT_CERT, "rb") as f:
+                client_cert_path: str = self.config.TLS_CLIENT_CERT
+                with open(client_cert_path, "rb") as f:
                     client_cert_data = f.read()
 
             if self.config.TLS_CLIENT_KEY:
-                with open(self.config.TLS_CLIENT_KEY, "rb") as f:
+                client_key_path: str = self.config.TLS_CLIENT_KEY
+                with open(client_key_path, "rb") as f:
                     client_key_data = f.read()
 
             return TLSConfig(
@@ -418,10 +428,11 @@ class TemporalAdapter(TemporalPort):
         """Create a schedule for a workflow."""
         client = await self.get_client()
 
+        workflow_execution_id = workflow_id or schedule_id
         sched = Schedule(
             action=ScheduleActionStartWorkflow(
-                workflow_class,
-                id=workflow_id,
+                workflow=workflow_class,
+                id=workflow_execution_id,
                 task_queue=task_queue,
             ),
             spec=spec,

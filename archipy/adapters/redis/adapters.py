@@ -73,9 +73,9 @@ class RedisAdapter(RedisPort):
             configs (RedisConfig): Configuration settings for Redis.
         """
         if redis_master_host := configs.MASTER_HOST:
-            self.client: Redis = self._get_client(redis_master_host, configs)
+            self.client: Redis | RedisCluster = self._get_client(redis_master_host, configs)
         if redis_slave_host := configs.SLAVE_HOST:
-            self.read_only_client: Redis = self._get_client(redis_slave_host, configs)
+            self.read_only_client: Redis | RedisCluster = self._get_client(redis_slave_host, configs)
         else:
             self.read_only_client = self.client
 
@@ -108,8 +108,8 @@ class RedisAdapter(RedisPort):
         )
 
         # In cluster mode, both clients point to the cluster
-        self.client = cluster_client
-        self.read_only_client = cluster_client
+        self.client: Redis | RedisCluster = cluster_client
+        self.read_only_client: Redis | RedisCluster = cluster_client
 
     def _set_sentinel_clients(self, configs: RedisConfig) -> None:
         """Set up Redis sentinel clients.
@@ -117,6 +117,9 @@ class RedisAdapter(RedisPort):
         Args:
             configs (RedisConfig): Configuration settings for Redis sentinel.
         """
+        sentinel_service_name = configs.SENTINEL_SERVICE_NAME
+        if not sentinel_service_name:
+            raise ValueError("SENTINEL_SERVICE_NAME must be provided for sentinel mode")
         sentinel_nodes = [(node.split(":")[0], int(node.split(":")[1])) for node in configs.SENTINEL_NODES]
 
         sentinel = Sentinel(
@@ -126,14 +129,14 @@ class RedisAdapter(RedisPort):
         )
 
         self.client = sentinel.master_for(
-            configs.SENTINEL_SERVICE_NAME,
+            sentinel_service_name,
             socket_timeout=configs.SOCKET_TIMEOUT,
             password=configs.PASSWORD,
             decode_responses=configs.DECODE_RESPONSES,
         )
 
         self.read_only_client = sentinel.slave_for(
-            configs.SENTINEL_SERVICE_NAME,
+            sentinel_service_name,
             socket_timeout=configs.SOCKET_TIMEOUT,
             password=configs.PASSWORD,
             decode_responses=configs.DECODE_RESPONSES,
@@ -143,43 +146,43 @@ class RedisAdapter(RedisPort):
     @override
     def cluster_info(self) -> RedisResponseType:
         """Get cluster information."""
-        if hasattr(self.client, "cluster_info"):
+        if isinstance(self.client, RedisCluster):
             return self.client.cluster_info()
         return None
 
     @override
     def cluster_nodes(self) -> RedisResponseType:
         """Get cluster nodes information."""
-        if hasattr(self.client, "cluster_nodes"):
+        if isinstance(self.client, RedisCluster):
             return self.client.cluster_nodes()
         return None
 
     @override
     def cluster_slots(self) -> RedisResponseType:
         """Get cluster slots mapping."""
-        if hasattr(self.client, "cluster_slots"):
+        if isinstance(self.client, RedisCluster):
             return self.client.cluster_slots()
         return None
 
     @override
-    def cluster_keyslot(self, key: str) -> RedisResponseType:
+    def cluster_key_slot(self, key: str) -> RedisResponseType:
         """Get the hash slot for a key."""
-        if hasattr(self.client, "cluster_keyslot"):
+        if isinstance(self.client, RedisCluster):
             return self.client.cluster_keyslot(key)
         return None
 
     @override
-    def cluster_countkeysinslot(self, slot: int) -> RedisResponseType:
+    def cluster_count_keys_in_slot(self, slot: int) -> RedisResponseType:
         """Count keys in a specific slot."""
-        if hasattr(self.client, "cluster_countkeysinslot"):
+        if isinstance(self.client, RedisCluster):
             return self.client.cluster_countkeysinslot(slot)
         return None
 
     @override
-    def cluster_getkeysinslot(self, slot: int, count: int) -> RedisResponseType:
+    def cluster_get_keys_in_slot(self, slot: int, count: int) -> RedisResponseType:
         """Get keys in a specific slot."""
-        if hasattr(self.client, "cluster_getkeysinslot"):
-            return self.client.cluster_getkeysinslot(slot, count)
+        if isinstance(self.client, RedisCluster):
+            return self.client.cluster_get_keys_in_slot(slot, count)
         return None
 
     @staticmethod
@@ -201,6 +204,13 @@ class RedisAdapter(RedisPort):
             decode_responses=configs.DECODE_RESPONSES,
             health_check_interval=configs.HEALTH_CHECK_INTERVAL,
         )
+
+    @staticmethod
+    def _ensure_sync_int(value: int | Awaitable[int]) -> int:
+        """Ensure a synchronous integer result, raising if awaitable."""
+        if isinstance(value, Awaitable):
+            raise TypeError("Unexpected awaitable from sync Redis client")
+        return int(value)
 
     @override
     def pttl(self, name: bytes | str) -> RedisResponseType:
@@ -299,7 +309,9 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisResponseType: Always returns 'OK'.
         """
-        return self.client.mset(mapping)
+        # Convert Mapping to dict for type compatibility with Redis client
+        dict_mapping: dict[str, bytes | str | float] = {str(k): v for k, v in mapping.items()}
+        return self.client.mset(dict_mapping)
 
     @override
     def keys(self, pattern: RedisPatternType = "*", **kwargs: Any) -> RedisResponseType:
@@ -410,7 +422,9 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisIntegerResponseType: Length of the list.
         """
-        return self.read_only_client.llen(name)
+        client: Redis | RedisCluster = self.read_only_client
+        result = client.llen(name)
+        return self._ensure_sync_int(result)
 
     @override
     def lpop(self, name: str, count: int | None = None) -> Any:
@@ -436,7 +450,8 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisIntegerResponseType: Length of the list after push.
         """
-        return self.client.lpush(name, *values)
+        result = self.client.lpush(name, *values)
+        return self._ensure_sync_int(result)
 
     @override
     def lrange(self, name: str, start: int, end: int) -> RedisListResponseType:
@@ -450,7 +465,10 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisListResponseType: List of elements in the specified range.
         """
-        return self.read_only_client.lrange(name, start, end)
+        result = self.read_only_client.lrange(name, start, end)
+        if isinstance(result, Awaitable):
+            raise TypeError("Unexpected awaitable from sync Redis client")
+        return list(result)
 
     @override
     def lrem(self, name: str, count: int, value: str) -> RedisIntegerResponseType:
@@ -464,7 +482,8 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisIntegerResponseType: Number of elements removed.
         """
-        return self.client.lrem(name, count, value)
+        result = self.client.lrem(name, count, value)
+        return self._ensure_sync_int(result)
 
     @override
     def lset(self, name: str, index: int, value: str) -> bool:
@@ -504,7 +523,8 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisIntegerResponseType: Length of the list after push.
         """
-        return self.client.rpush(name, *values)
+        result = self.client.rpush(name, *values)
+        return self._ensure_sync_int(result)
 
     @override
     def scan(
@@ -601,7 +621,8 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisIntegerResponseType: Number of elements added.
         """
-        return self.client.sadd(name, *values)
+        result = self.client.sadd(name, *values)
+        return self._ensure_sync_int(result)
 
     @override
     def scard(self, name: str) -> RedisIntegerResponseType:
@@ -613,10 +634,11 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisIntegerResponseType: Number of members.
         """
-        return self.client.scard(name)
+        result = self.client.scard(name)
+        return self._ensure_sync_int(result)
 
     @override
-    def sismember(self, name: str, value: str) -> Awaitable[bool] | bool:
+    def sismember(self, name: str, value: str) -> bool:
         """Check if a value is a member of a set.
 
         Args:
@@ -624,10 +646,10 @@ class RedisAdapter(RedisPort):
             value (str): Value to check.
 
         Returns:
-            Awaitable[bool] | bool: True if value is a member, False otherwise.
+            bool: True if value is a member, False otherwise.
         """
         result = self.read_only_client.sismember(name, value)
-        return result
+        return bool(result)
 
     @override
     def smembers(self, name: str) -> RedisSetResponseType:
@@ -639,7 +661,10 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisSetResponseType: Set of all members.
         """
-        return self.read_only_client.smembers(name)
+        result = self.read_only_client.smembers(name)
+        if isinstance(result, Awaitable):
+            raise TypeError("Unexpected awaitable from sync Redis client")
+        return set(result) if result else set()
 
     @override
     def spop(self, name: str, count: int | None = None) -> bytes | float | int | str | list | None:
@@ -665,7 +690,8 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisIntegerResponseType: Number of members removed.
         """
-        return self.client.srem(name, *values)
+        result = self.client.srem(name, *values)
+        return self._ensure_sync_int(result)
 
     @override
     def sunion(self, keys: RedisKeyType, *args: bytes | str) -> RedisSetResponseType:
@@ -678,7 +704,11 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisSetResponseType: Set containing union of all sets.
         """
-        result = self.client.sunion(keys, *args)
+        # Redis sunion expects a list of keys as first argument
+        keys_list: list[str | bytes] = [keys, *list(args)]
+        result = self.client.sunion(keys_list)
+        if isinstance(result, Awaitable):
+            raise TypeError("Unexpected awaitable from sync Redis client")
         return set(result) if result else set()
 
     @override
@@ -708,7 +738,10 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisResponseType: Number of elements added or modified.
         """
-        return self.client.zadd(name, mapping, nx, xx, ch, incr, gt, lt)
+        # Convert Mapping to dict for type compatibility with Redis client
+        dict_mapping: dict[str, bytes | str | float] = {str(k): v for k, v in mapping.items()}
+        str_name = str(name)
+        return self.client.zadd(str_name, dict_mapping, nx, xx, ch, incr, gt, lt)
 
     @override
     def zcard(self, name: bytes | str) -> RedisResponseType:
@@ -906,10 +939,13 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisIntegerResponseType: Number of fields deleted.
         """
-        return self.client.hdel(name, *keys)
+        # Convert keys to str for type compatibility with Redis client
+        str_keys: tuple[str, ...] = tuple(str(k) if isinstance(k, bytes) else k for k in keys)
+        result = self.client.hdel(name, *str_keys)
+        return self._ensure_sync_int(result)
 
     @override
-    def hexists(self, name: str, key: str) -> Awaitable[bool] | bool:
+    def hexists(self, name: str, key: str) -> bool:
         """Check if a field exists in a hash.
 
         Args:
@@ -917,12 +953,13 @@ class RedisAdapter(RedisPort):
             key (str): Field to check.
 
         Returns:
-            Awaitable[bool] | bool: True if field exists, False otherwise.
+            bool: True if field exists, False otherwise.
         """
-        return self.read_only_client.hexists(name, key)
+        result = self.read_only_client.hexists(name, key)
+        return bool(result)
 
     @override
-    def hget(self, name: str, key: str) -> Awaitable[str | None] | str | None:
+    def hget(self, name: str, key: str) -> str | None:
         """Get the value of a field in a hash.
 
         Args:
@@ -930,21 +967,27 @@ class RedisAdapter(RedisPort):
             key (str): Field to get.
 
         Returns:
-            Awaitable[str | None] | str | None: Value of the field or None.
+            str | None: Value of the field or None.
         """
-        return self.read_only_client.hget(name, key)
+        result = self.read_only_client.hget(name, key)
+        return str(result) if result is not None else None
 
     @override
-    def hgetall(self, name: str) -> Awaitable[dict] | dict:
+    def hgetall(self, name: str) -> dict[str, Any]:
         """Get all fields and values in a hash.
 
         Args:
             name (str): The hash key name.
 
         Returns:
-            Awaitable[dict] | dict: Dictionary of field-value pairs.
+            dict[str, Any]: Dictionary of field-value pairs.
         """
-        return self.read_only_client.hgetall(name)
+        result = self.read_only_client.hgetall(name)
+        if isinstance(result, Awaitable):
+            raise TypeError("Unexpected awaitable from sync Redis client")
+        if result:
+            return {str(k): v for k, v in result.items()}
+        return {}
 
     @override
     def hkeys(self, name: str) -> RedisListResponseType:
@@ -956,7 +999,10 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisListResponseType: List of field names.
         """
-        return self.read_only_client.hkeys(name)
+        result = self.read_only_client.hkeys(name)
+        if isinstance(result, Awaitable):
+            raise TypeError("Unexpected awaitable from sync Redis client")
+        return list(result) if result else []
 
     @override
     def hlen(self, name: str) -> RedisIntegerResponseType:
@@ -968,7 +1014,8 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisIntegerResponseType: Number of fields.
         """
-        return self.read_only_client.hlen(name)
+        result = self.read_only_client.hlen(name)
+        return self._ensure_sync_int(result)
 
     @override
     def hset(
@@ -991,7 +1038,11 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisIntegerResponseType: Number of fields set.
         """
-        return self.client.hset(name, key, value, mapping, items)
+        # Convert bytes to str for type compatibility with Redis client
+        str_key: str | None = str(key) if key is not None and isinstance(key, bytes) else key
+        str_value: str | None = str(value) if value is not None and isinstance(value, bytes) else value
+        result = self.client.hset(name, str_key, str_value, mapping, items)
+        return self._ensure_sync_int(result)
 
     @override
     def hmget(self, name: str, keys: list, *args: str | bytes) -> RedisListResponseType:
@@ -1005,7 +1056,12 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisListResponseType: List of field values.
         """
-        return self.read_only_client.hmget(name, keys, *args)
+        # Convert keys list and args for type compatibility, combine into single list
+        keys_list: list[str] = [str(k) for k in keys] + [str(arg) if isinstance(arg, bytes) else arg for arg in args]
+        result = self.read_only_client.hmget(name, keys_list)
+        if isinstance(result, Awaitable):
+            raise TypeError("Unexpected awaitable from sync Redis client")
+        return list(result) if result else []
 
     @override
     def hvals(self, name: str) -> RedisListResponseType:
@@ -1017,7 +1073,10 @@ class RedisAdapter(RedisPort):
         Returns:
             RedisListResponseType: List of values.
         """
-        return self.read_only_client.hvals(name)
+        result = self.read_only_client.hvals(name)
+        if isinstance(result, Awaitable):
+            raise TypeError("Unexpected awaitable from sync Redis client")
+        return list(result) if result else []
 
     @override
     def publish(self, channel: RedisKeyType, message: bytes | str, **kwargs: Any) -> RedisResponseType:
@@ -1144,9 +1203,9 @@ class AsyncRedisAdapter(AsyncRedisPort):
             configs (RedisConfig): Configuration settings for Redis.
         """
         if redis_master_host := configs.MASTER_HOST:
-            self.client: AsyncRedis = self._get_client(redis_master_host, configs)
+            self.client: AsyncRedis | AsyncRedisCluster = self._get_client(redis_master_host, configs)
         if redis_slave_host := configs.SLAVE_HOST:
-            self.read_only_client: AsyncRedis = self._get_client(redis_slave_host, configs)
+            self.read_only_client: AsyncRedis | AsyncRedisCluster = self._get_client(redis_slave_host, configs)
         else:
             self.read_only_client = self.client
 
@@ -1179,8 +1238,8 @@ class AsyncRedisAdapter(AsyncRedisPort):
         )
 
         # In cluster mode, both clients point to the cluster
-        self.client = cluster_client
-        self.read_only_client = cluster_client
+        self.client: AsyncRedis | AsyncRedisCluster = cluster_client
+        self.read_only_client: AsyncRedis | AsyncRedisCluster = cluster_client
 
     def _set_sentinel_clients(self, configs: RedisConfig) -> None:
         """Set up async Redis sentinel clients.
@@ -1188,6 +1247,9 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Args:
             configs (RedisConfig): Configuration settings for Redis sentinel.
         """
+        sentinel_service_name = configs.SENTINEL_SERVICE_NAME
+        if not sentinel_service_name:
+            raise ValueError("SENTINEL_SERVICE_NAME must be provided for sentinel mode")
         sentinel_nodes = [(node.split(":")[0], int(node.split(":")[1])) for node in configs.SENTINEL_NODES]
 
         sentinel = AsyncSentinel(
@@ -1197,14 +1259,14 @@ class AsyncRedisAdapter(AsyncRedisPort):
         )
 
         self.client = sentinel.master_for(
-            configs.SENTINEL_SERVICE_NAME,
+            sentinel_service_name,
             socket_timeout=configs.SOCKET_TIMEOUT,
             password=configs.PASSWORD,
             decode_responses=configs.DECODE_RESPONSES,
         )
 
         self.read_only_client = sentinel.slave_for(
-            configs.SENTINEL_SERVICE_NAME,
+            sentinel_service_name,
             socket_timeout=configs.SOCKET_TIMEOUT,
             password=configs.PASSWORD,
             decode_responses=configs.DECODE_RESPONSES,
@@ -1214,43 +1276,43 @@ class AsyncRedisAdapter(AsyncRedisPort):
     @override
     async def cluster_info(self) -> RedisResponseType:
         """Get cluster information asynchronously."""
-        if hasattr(self.client, "cluster_info"):
+        if isinstance(self.client, AsyncRedisCluster):
             return await self.client.cluster_info()
         return None
 
     @override
     async def cluster_nodes(self) -> RedisResponseType:
         """Get cluster nodes information asynchronously."""
-        if hasattr(self.client, "cluster_nodes"):
+        if isinstance(self.client, AsyncRedisCluster):
             return await self.client.cluster_nodes()
         return None
 
     @override
     async def cluster_slots(self) -> RedisResponseType:
         """Get cluster slots mapping asynchronously."""
-        if hasattr(self.client, "cluster_slots"):
+        if isinstance(self.client, AsyncRedisCluster):
             return await self.client.cluster_slots()
         return None
 
     @override
-    async def cluster_keyslot(self, key: str) -> RedisResponseType:
+    async def cluster_key_slot(self, key: str) -> RedisResponseType:
         """Get the hash slot for a key asynchronously."""
-        if hasattr(self.client, "cluster_keyslot"):
+        if isinstance(self.client, AsyncRedisCluster):
             return await self.client.cluster_keyslot(key)
         return None
 
     @override
-    async def cluster_countkeysinslot(self, slot: int) -> RedisResponseType:
+    async def cluster_count_keys_in_slot(self, slot: int) -> RedisResponseType:
         """Count keys in a specific slot asynchronously."""
-        if hasattr(self.client, "cluster_countkeysinslot"):
+        if isinstance(self.client, AsyncRedisCluster):
             return await self.client.cluster_countkeysinslot(slot)
         return None
 
     @override
-    async def cluster_getkeysinslot(self, slot: int, count: int) -> RedisResponseType:
+    async def cluster_get_keys_in_slot(self, slot: int, count: int) -> RedisResponseType:
         """Get keys in a specific slot asynchronously."""
-        if hasattr(self.client, "cluster_getkeysinslot"):
-            return await self.client.cluster_getkeysinslot(slot, count)
+        if isinstance(self.client, AsyncRedisCluster):
+            return await self.client.cluster_get_keys_in_slot(slot, count)
         return None
 
     @staticmethod
@@ -1272,6 +1334,60 @@ class AsyncRedisAdapter(AsyncRedisPort):
             decode_responses=configs.DECODE_RESPONSES,
             health_check_interval=configs.HEALTH_CHECK_INTERVAL,
         )
+
+    @staticmethod
+    async def _ensure_async_int(value: int | Awaitable[int]) -> int:
+        """Ensure an async integer result, awaiting if necessary."""
+        if isinstance(value, Awaitable):
+            awaited_value = await value
+            if not isinstance(awaited_value, int):
+                raise TypeError(f"Expected int, got {type(awaited_value)}")
+            return awaited_value
+        return value
+
+    @staticmethod
+    async def _ensure_async_bool(value: bool | Awaitable[bool]) -> bool:
+        """Ensure an async boolean result, awaiting if necessary."""
+        if isinstance(value, Awaitable):
+            awaited_value = await value
+            return bool(awaited_value)
+        return bool(value)
+
+    @staticmethod
+    async def _ensure_async_str(value: str | None | Awaitable[str | None]) -> str | None:
+        """Ensure an async string result, awaiting if necessary."""
+        if isinstance(value, Awaitable):
+            result = await value
+            if result is not None and not isinstance(result, str):
+                raise TypeError(f"Expected str | None, got {type(result)}")
+            return result
+        return value
+
+    @staticmethod
+    async def _ensure_async_list(value: list[Any] | Awaitable[list[Any]]) -> list[Any]:
+        """Ensure an async list result, awaiting if necessary."""
+        if isinstance(value, Awaitable):
+            result = await value
+            if result is None:
+                return []
+            if isinstance(result, list):
+                return result
+            # Type narrowing: result is iterable but not a list
+            from collections.abc import Iterable
+
+            if isinstance(result, Iterable):
+                return list(result)
+            return []
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return value
+        # Type narrowing: value is iterable but not a list
+        from collections.abc import Iterable
+
+        if isinstance(value, Iterable):
+            return list(value)
+        return []
 
     @override
     async def pttl(self, name: bytes | str) -> RedisResponseType:
@@ -1370,7 +1486,9 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisResponseType: Always returns 'OK'.
         """
-        return await self.client.mset(mapping)
+        # Convert Mapping to dict for type compatibility with Redis client
+        dict_mapping: dict[str, bytes | str | float] = {str(k): v for k, v in mapping.items()}
+        return await self.client.mset(dict_mapping)
 
     @override
     async def keys(self, pattern: RedisPatternType = "*", **kwargs: Any) -> RedisResponseType:
@@ -1481,7 +1599,8 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisIntegerResponseType: Length of the list.
         """
-        return await self.read_only_client.llen(name)
+        result = self.read_only_client.llen(name)
+        return await self._ensure_async_int(result)
 
     @override
     async def lpop(self, name: str, count: int | None = None) -> Any:
@@ -1494,7 +1613,10 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             Any: Popped element(s) or None if list is empty.
         """
-        return await self.client.lpop(name, count)
+        result = self.client.lpop(name, count)
+        if isinstance(result, Awaitable):
+            return await result
+        return result
 
     @override
     async def lpush(self, name: str, *values: bytes | str | float) -> RedisIntegerResponseType:
@@ -1507,7 +1629,8 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisIntegerResponseType: Length of the list after push.
         """
-        return await self.client.lpush(name, *values)
+        result = self.client.lpush(name, *values)
+        return await self._ensure_async_int(result)
 
     @override
     async def lrange(self, name: str, start: int, end: int) -> RedisListResponseType:
@@ -1521,7 +1644,18 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisListResponseType: List of elements in range.
         """
-        return await self.read_only_client.lrange(name, start, end)
+        result = self.read_only_client.lrange(name, start, end)
+        if isinstance(result, Awaitable):
+            result = await result
+        if result is None:
+            return []
+        if isinstance(result, list):
+            return result
+        from collections.abc import Iterable
+
+        if isinstance(result, Iterable):
+            return list(result)
+        return []
 
     @override
     async def lrem(self, name: str, count: int, value: str) -> RedisIntegerResponseType:
@@ -1535,7 +1669,8 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisIntegerResponseType: Number of elements removed.
         """
-        return await self.client.lrem(name, count, value)
+        result = self.client.lrem(name, count, value)
+        return await self._ensure_async_int(result)
 
     @override
     async def lset(self, name: str, index: int, value: str) -> bool:
@@ -1549,7 +1684,9 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             bool: True if successful.
         """
-        result = await self.client.lset(name, index, value)
+        result = self.client.lset(name, index, value)
+        if isinstance(result, Awaitable):
+            result = await result
         return bool(result)
 
     @override
@@ -1563,7 +1700,10 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             Any: Popped element(s) or None if list is empty.
         """
-        return await self.client.rpop(name, count)
+        result = self.client.rpop(name, count)
+        if isinstance(result, Awaitable):
+            return await result
+        return result
 
     @override
     async def rpush(self, name: str, *values: bytes | str | float) -> RedisIntegerResponseType:
@@ -1576,7 +1716,8 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisIntegerResponseType: Length of the list after push.
         """
-        return await self.client.rpush(name, *values)
+        result = self.client.rpush(name, *values)
+        return await self._ensure_async_int(result)
 
     @override
     async def scan(
@@ -1620,7 +1761,13 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             Iterator[Any]: Iterator over matching keys.
         """
-        return self.read_only_client.scan_iter(match, count, _type, **kwargs)
+        result = self.read_only_client.scan_iter(match, count, _type, **kwargs)
+        if isinstance(result, Awaitable):
+            raise TypeError("Unexpected awaitable from sync Redis client")
+        # Type narrowing: result is an Iterator
+        if not isinstance(result, Iterator):
+            raise TypeError(f"Expected Iterator, got {type(result)}")
+        return result
 
     @override
     async def sscan(
@@ -1641,7 +1788,11 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisResponseType: Tuple of cursor and list of members.
         """
-        return await self.read_only_client.sscan(name, cursor, match, count)
+        result = self.read_only_client.sscan(name, cursor, match, count)
+        if isinstance(result, Awaitable):
+            awaited_result: RedisResponseType = await result
+            return awaited_result
+        return result
 
     @override
     async def sscan_iter(
@@ -1660,7 +1811,16 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             Iterator[Any]: Iterator over set members.
         """
-        return self.read_only_client.sscan_iter(name, match, count)
+        result = self.read_only_client.sscan_iter(name, match, count)
+        if isinstance(result, Awaitable):
+            awaited_result = await result
+            if not isinstance(awaited_result, Iterator):
+                raise TypeError(f"Expected Iterator, got {type(awaited_result)}")
+            return awaited_result
+        # Type narrowing: result is an Iterator
+        if not isinstance(result, Iterator):
+            raise TypeError(f"Expected Iterator, got {type(result)}")
+        return result
 
     @override
     async def sadd(self, name: str, *values: bytes | str | float) -> RedisIntegerResponseType:
@@ -1673,7 +1833,8 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisIntegerResponseType: Number of elements added.
         """
-        return await self.client.sadd(name, *values)
+        result = self.client.sadd(name, *values)
+        return await self._ensure_async_int(result)
 
     @override
     async def scard(self, name: str) -> RedisIntegerResponseType:
@@ -1685,10 +1846,11 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisIntegerResponseType: Number of members.
         """
-        return await self.client.scard(name)
+        result = self.client.scard(name)
+        return await self._ensure_async_int(result)
 
     @override
-    async def sismember(self, name: str, value: str) -> Awaitable[bool] | bool:
+    async def sismember(self, name: str, value: str) -> bool:
         """Check if value is in set asynchronously.
 
         Args:
@@ -1696,10 +1858,12 @@ class AsyncRedisAdapter(AsyncRedisPort):
             value (str): Value to check.
 
         Returns:
-            Awaitable[bool] | bool: True if value is member, False otherwise.
+            bool: True if value is member, False otherwise.
         """
-        result = await self.read_only_client.sismember(name, value)
-        return result
+        result = self.read_only_client.sismember(name, value)
+        if isinstance(result, Awaitable):
+            result = await result
+        return bool(result)
 
     @override
     async def smembers(self, name: str) -> RedisSetResponseType:
@@ -1711,7 +1875,18 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisSetResponseType: Set of all members.
         """
-        return await self.read_only_client.smembers(name)
+        result = self.read_only_client.smembers(name)
+        if isinstance(result, Awaitable):
+            result = await result
+        if result is None:
+            return set()
+        if isinstance(result, set):
+            return result
+        from collections.abc import Iterable
+
+        if isinstance(result, Iterable):
+            return set(result)
+        return set()
 
     @override
     async def spop(self, name: str, count: int | None = None) -> bytes | float | int | str | list | None:
@@ -1724,7 +1899,14 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             bytes | float | int | str | list | None: Popped member(s) or None.
         """
-        return await self.client.spop(name, count)
+        result = self.client.spop(name, count)
+        if isinstance(result, Awaitable):
+            awaited_result = await result
+            # Type narrowing: result can be any of the return types
+            if awaited_result is None or isinstance(awaited_result, (bytes, float, int, str, list)):
+                return awaited_result
+            raise TypeError(f"Unexpected type from spop: {type(awaited_result)}")
+        return result
 
     @override
     async def srem(self, name: str, *values: bytes | str | float) -> RedisIntegerResponseType:
@@ -1737,7 +1919,8 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisIntegerResponseType: Number of members removed.
         """
-        return await self.client.srem(name, *values)
+        result = self.client.srem(name, *values)
+        return await self._ensure_async_int(result)
 
     @override
     async def sunion(self, keys: RedisKeyType, *args: bytes | str) -> RedisSetResponseType:
@@ -1750,8 +1933,20 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisSetResponseType: Set containing union of all sets.
         """
-        result = await self.client.sunion(keys, *args)
-        return set(result) if result else set()
+        # Convert keys to str for type compatibility, combine into list
+        keys_list: list[str] = [str(keys)] + [str(arg) if isinstance(arg, bytes) else arg for arg in args]
+        result = self.client.sunion(keys_list)
+        if isinstance(result, Awaitable):
+            result = await result
+        if result is None:
+            return set()
+        if isinstance(result, set):
+            return result
+        from collections.abc import Iterable
+
+        if isinstance(result, Iterable):
+            return set(result)
+        return set()
 
     @override
     async def zadd(
@@ -1780,7 +1975,16 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisResponseType: Number of elements added or modified.
         """
-        return await self.client.zadd(name, mapping, nx, xx, ch, incr, gt, lt)
+        # Convert Mapping to dict for type compatibility with Redis client
+        if isinstance(mapping, dict):
+            dict_mapping: dict[str, bytes | str | float] = {str(k): v for k, v in mapping.items()}
+        else:
+            dict_mapping = {str(k): v for k, v in mapping.items()}
+        str_name = str(name)
+        result = self.client.zadd(str_name, dict_mapping, nx, xx, ch, incr, gt, lt)
+        if isinstance(result, Awaitable):
+            return await result
+        return result
 
     @override
     async def zcard(self, name: bytes | str) -> RedisResponseType:
@@ -1978,10 +2182,13 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisIntegerResponseType: Number of fields deleted.
         """
-        return await self.client.hdel(name, *keys)
+        # Convert keys to str for type compatibility
+        str_keys: tuple[str, ...] = tuple(str(k) if isinstance(k, bytes) else k for k in keys)
+        result = self.client.hdel(name, *str_keys)
+        return await self._ensure_async_int(result)
 
     @override
-    async def hexists(self, name: str, key: str) -> Awaitable[bool] | bool:
+    async def hexists(self, name: str, key: str) -> bool:
         """Check if field exists in hash asynchronously.
 
         Args:
@@ -1989,12 +2196,13 @@ class AsyncRedisAdapter(AsyncRedisPort):
             key (str): Field to check.
 
         Returns:
-            Awaitable[bool] | bool: True if exists, False otherwise.
+            bool: True if exists, False otherwise.
         """
-        return await self.read_only_client.hexists(name, key)
+        result = self.read_only_client.hexists(name, key)
+        return await self._ensure_async_bool(result)
 
     @override
-    async def hget(self, name: str, key: str) -> Awaitable[str | None] | str | None:
+    async def hget(self, name: str, key: str) -> str | None:
         """Get field value from hash asynchronously.
 
         Args:
@@ -2002,21 +2210,43 @@ class AsyncRedisAdapter(AsyncRedisPort):
             key (str): Field to get.
 
         Returns:
-            Awaitable[str | None] | str | None: Value or None.
+            str | None: Value or None.
         """
-        return await self.read_only_client.hget(name, key)
+        result = self.read_only_client.hget(name, key)
+        resolved = await self._ensure_async_str(result)
+        return str(resolved) if resolved is not None else None
 
     @override
-    async def hgetall(self, name: str) -> Awaitable[dict] | dict:
+    async def hgetall(self, name: str) -> dict[str, Any]:
         """Get all fields and values from hash asynchronously.
 
         Args:
             name (str): The hash key name.
 
         Returns:
-            Awaitable[dict] | dict: Dictionary of field-value pairs.
+            dict[str, Any]: Dictionary of field-value pairs.
         """
-        return await self.read_only_client.hgetall(name)
+        result = self.read_only_client.hgetall(name)
+        if isinstance(result, Awaitable):
+            awaited_result = await result
+            if awaited_result is None:
+                return {}
+            if isinstance(awaited_result, dict):
+                return {str(k): v for k, v in awaited_result.items()}
+            from collections.abc import Mapping
+
+            if isinstance(awaited_result, Mapping):
+                return {str(k): v for k, v in awaited_result.items()}
+            return {}
+        if result is None:
+            return {}
+        if isinstance(result, dict):
+            return {str(k): v for k, v in result.items()}
+        from collections.abc import Mapping
+
+        if isinstance(result, Mapping):
+            return {str(k): v for k, v in result.items()}
+        return {}
 
     @override
     async def hkeys(self, name: str) -> RedisListResponseType:
@@ -2028,7 +2258,8 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisListResponseType: List of field names.
         """
-        return await self.read_only_client.hkeys(name)
+        result = self.read_only_client.hkeys(name)
+        return await self._ensure_async_list(result)
 
     @override
     async def hlen(self, name: str) -> RedisIntegerResponseType:
@@ -2040,7 +2271,8 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisIntegerResponseType: Number of fields.
         """
-        return await self.read_only_client.hlen(name)
+        result = self.read_only_client.hlen(name)
+        return await self._ensure_async_int(result)
 
     @override
     async def hset(
@@ -2063,7 +2295,11 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisIntegerResponseType: Number of fields set.
         """
-        return await self.client.hset(name, key, value, mapping, items)
+        # Convert bytes to str for type compatibility with Redis client
+        str_key: str | None = str(key) if key is not None and isinstance(key, bytes) else key
+        str_value: str | None = str(value) if value is not None and isinstance(value, bytes) else value
+        result = self.client.hset(name, str_key, str_value, mapping, items)
+        return await self._ensure_async_int(result)
 
     @override
     async def hmget(self, name: str, keys: list, *args: str | bytes) -> RedisListResponseType:
@@ -2077,7 +2313,10 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisListResponseType: List of field values.
         """
-        return await self.read_only_client.hmget(name, keys, *args)
+        # Convert keys list and args for type compatibility, combine into single list
+        keys_list: list[str] = [str(k) for k in keys] + [str(arg) if isinstance(arg, bytes) else arg for arg in args]
+        result = self.read_only_client.hmget(name, keys_list)
+        return await self._ensure_async_list(result)
 
     @override
     async def hvals(self, name: str) -> RedisListResponseType:
@@ -2089,7 +2328,8 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisListResponseType: List of values.
         """
-        return await self.read_only_client.hvals(name)
+        result = self.read_only_client.hvals(name)
+        return await self._ensure_async_list(result)
 
     @override
     async def publish(self, channel: RedisKeyType, message: bytes | str, **kwargs: Any) -> RedisResponseType:
@@ -2103,7 +2343,14 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisResponseType: Number of subscribers received message.
         """
-        return await self.client.publish(channel, message, **kwargs)
+        # AsyncRedis client has publish method, type stubs may be incomplete
+        publish_method = getattr(self.client, "publish", None)
+        if publish_method and callable(publish_method):
+            result = publish_method(channel, message, **kwargs)
+            if isinstance(result, Awaitable):
+                return await result
+            return result
+        raise AttributeError("publish method not available on Redis client")
 
     @override
     async def pubsub_channels(self, pattern: RedisPatternType = "*", **kwargs: Any) -> RedisResponseType:
@@ -2116,7 +2363,14 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisResponseType: List of channel names.
         """
-        return await self.client.pubsub_channels(pattern, **kwargs)
+        # AsyncRedis client has pubsub_channels method, type stubs may be incomplete
+        pubsub_channels_method = getattr(self.client, "pubsub_channels", None)
+        if pubsub_channels_method and callable(pubsub_channels_method):
+            result = pubsub_channels_method(pattern, **kwargs)
+            if isinstance(result, Awaitable):
+                return await result
+            return result
+        raise AttributeError("pubsub_channels method not available on Redis client")
 
     @override
     async def zincrby(self, name: RedisKeyType, amount: float, value: bytes | str | float) -> RedisResponseType:
@@ -2142,7 +2396,11 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             AsyncPubSub: PubSub object.
         """
-        return self.client.pubsub(**kwargs)
+        # Redis client has pubsub method, type stubs may be incomplete
+        pubsub_method = getattr(self.client, "pubsub", None)
+        if pubsub_method and callable(pubsub_method):
+            return pubsub_method(**kwargs)
+        raise AttributeError("pubsub method not available on Redis client")
 
     @override
     async def get_pipeline(self, transaction: Any = True, shard_hint: Any = None) -> AsyncPipeline:
@@ -2155,7 +2413,11 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             AsyncPipeline: Pipeline object.
         """
-        return self.client.pipeline(transaction, shard_hint)
+        result = self.client.pipeline(transaction, shard_hint)
+        # Type narrowing: result is an AsyncPipeline
+        if not isinstance(result, AsyncPipeline):
+            raise TypeError(f"Expected AsyncPipeline, got {type(result)}")
+        return result
 
     @override
     async def ping(self) -> RedisResponseType:
@@ -2164,4 +2426,7 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisResponseType: 'PONG' if successful.
         """
-        return await self.client.ping()
+        result = self.client.ping()
+        if isinstance(result, Awaitable):
+            return await result
+        return result

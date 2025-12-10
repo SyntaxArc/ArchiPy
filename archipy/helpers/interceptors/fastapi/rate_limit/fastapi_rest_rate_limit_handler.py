@@ -93,7 +93,7 @@ class FastAPIRestRateLimitHandler:
             await self.redis_client.set(key, 1, px=self.milliseconds)
             return 0
 
-        current_request = int(current_request)  # type:ignore[arg-type]
+        current_request = int(current_request)
         if current_request < self.calls_count:
             await self.redis_client.incrby(key)
             return 0
@@ -116,7 +116,7 @@ class FastAPIRestRateLimitHandler:
         key = f"RateLimitHandler:{rate_key}:{request.scope['path']}:{request.method}"
         pexpire = await self._check(key)  # Awaiting the function since it is an async call
         if pexpire != 0:
-            await self._create_callback(pexpire)  # type:ignore[arg-type]
+            await self._create_callback(pexpire)
 
     @staticmethod
     async def _create_callback(pexpire: int) -> None:
@@ -162,19 +162,18 @@ class FastAPIRestRateLimitHandler:
         Returns:
             str: Validated IP address or client host.
         """
-        try:
-            # Check X-Real-IP header first
-            if real_ip := self._validate_ip_from_header(request.headers.get("X-Real-IP")):
-                return real_ip
+        # Check X-Real-IP header first
+        if real_ip := self._validate_ip_from_header(request.headers.get("X-Real-IP")):
+            return real_ip
 
-            # Then check X-Forwarded-For header
-            if forwarded_for := self._validate_forwarded_for_header(request.headers.get("X-Forwarded-For")):
-                return forwarded_for
-            # Fallback to client host
-        except ValueError:
-            return request.client.host  # type:ignore[union-attr]
-        else:
-            return request.client.host  # type:ignore[union-attr]
+        # Then check X-Forwarded-For header
+        if forwarded_for := self._validate_forwarded_for_header(request.headers.get("X-Forwarded-For")):
+            return forwarded_for
+
+        # Fallback to client host
+        if request.client is not None:
+            return request.client.host
+        return "unknown"
 
     def _validate_ip_from_header(self, header_value: str | None) -> str | None:
         """Validates IP address from header value.
@@ -187,15 +186,16 @@ class FastAPIRestRateLimitHandler:
         """
         if not header_value:
             return None
+
         try:
             ip_str = header_value.split(",")[0].strip()
             ip = ip_address(ip_str)  # Validate IP format
             if not (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast):
                 return ip_str
         except ValueError:
-            return None
-        else:
-            return None
+            pass
+
+        return None
 
     def _validate_forwarded_for_header(self, forwarded_for: str | None) -> str | None:
         """Validates IP from X-Forwarded-For header.

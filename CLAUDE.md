@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Setup**: `uv sync --all-extras --all-groups` or `make install-dev`
 - **Format**: `make format` (Black, 120 char line length)
-- **Lint**: `make lint` (Ruff + MyPy)
+- **Lint**: `make lint` (Ruff + Ty)
 - **Test**: `make behave` (all tests with Behave BDD framework)
 - **Single test**: `uv run --extra behave behave features/file_name.feature`
 - **Specific scenario**: `uv run --extra behave behave features/file_name.feature:line_number`
@@ -51,7 +51,7 @@ Configuration management with Pydantic models:
 
 - **Python Version**: 3.14+ with modern type hints (`|` for unions, lowercase built-ins)
 - **Imports**: Strict section order: `future → stdlib → third-party → first-party → local`
-- **Typing**: Strict typing required with MyPy (`disallow_untyped_defs=true`)
+- **Typing**: Strict typing required with Ty (enabled via rules configuration)
 - **Quotes**: Double quotes for all strings (inline and multiline)
 - **Docstrings**: Google-style docstrings required for all public APIs
 - **Naming**: Snake case for functions/vars, PascalCase for classes (enforced by Ruff)

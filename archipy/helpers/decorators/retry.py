@@ -1,11 +1,13 @@
 import logging
 import time
 from collections.abc import Callable
-from typing import Any, TypeVar, cast
+from typing import Any, ParamSpec, TypeVar
 
 from archipy.models.errors import ResourceExhaustedError
 
-# Define a type variable for the return type of the decorated function
+# Define type variables for decorators
+P = ParamSpec("P")
+R = TypeVar("R")
 F = TypeVar("F", bound=Callable[..., Any])
 
 
@@ -52,6 +54,9 @@ def retry_decorator(
     """
 
     def decorator(func: F) -> F:
+        from functools import wraps
+
+        @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             retries = 0
             while retries < max_retries:
@@ -74,6 +79,6 @@ def retry_decorator(
                 return result
             raise ResourceExhaustedError(resource_type=resource_type)
 
-        return cast(F, wrapper)
+        return wrapper
 
     return decorator

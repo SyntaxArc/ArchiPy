@@ -1,4 +1,4 @@
-from typing import Self, TypeVar, cast
+from typing import Self, TypeVar
 
 from pydantic_settings import (
     BaseSettings,
@@ -224,4 +224,4 @@ class BaseConfig[R](BaseSettings):
         """
         if hasattr(config, "customize") and callable(config.customize):
             config.customize()
-        cls.__global_config = cast(Self, config)
+        cls.__global_config = config

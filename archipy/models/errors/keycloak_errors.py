@@ -1,26 +1,18 @@
 import json
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
+
+if TYPE_CHECKING:
+    from http import HTTPStatus
+
+    from grpc import StatusCode
+else:
+    HTTPStatus = None
+    StatusCode = None
 
 try:
     from keycloak.exceptions import KeycloakError
 except ImportError:
-    KeycloakError = Exception
-
-try:
-    from http import HTTPStatus
-
-    HTTP_AVAILABLE = True
-except ImportError:
-    HTTP_AVAILABLE = False
-    HTTPStatus = None
-
-try:
-    from grpc import StatusCode
-
-    GRPC_AVAILABLE = True
-except ImportError:
-    GRPC_AVAILABLE = False
-    StatusCode = None
+    KeycloakError: type[Exception] = Exception
 
 from archipy.models.errors.base_error import BaseError
 from archipy.models.errors.system_errors import InternalError

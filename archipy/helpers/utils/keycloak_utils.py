@@ -8,9 +8,16 @@ try:
     from grpc import ServicerContext
     from grpc.aio import ServicerContext as AsyncServicerContext
 
+    GRPC_AVAILABLE = True
+    GrpcContextType = ServicerContext
+    AsyncGrpcContextType = AsyncServicerContext
 except ImportError:
-    ServicerContext = type(None)  # type: ignore[misc,assignment]
-    AsyncServicerContext = type(None)  # type: ignore[misc,assignment]
+    # Type stubs for when grpc is not available
+    ServicerContext: type = object  # Explicit type annotation for shadowing
+    AsyncServicerContext: type = object  # Explicit type annotation for shadowing
+    GRPC_AVAILABLE = False
+    GrpcContextType = object
+    AsyncGrpcContextType = object
 
 from fastapi import Depends, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -299,9 +306,26 @@ class KeycloakUtils:
         return dependency
 
     @staticmethod
-    def _extract_token_from_metadata(context: ServicerContext) -> str | None:
+    def _extract_token_from_metadata(context: object) -> str | None:
         """Extract Bearer token from gRPC metadata."""
-        metadata = dict(context.invocation_metadata())
+        if not hasattr(context, "invocation_metadata") or not callable(context.invocation_metadata):
+            return None
+        invocation_metadata_result = context.invocation_metadata()
+        if invocation_metadata_result is None:
+            return None
+        # Convert metadata tuples to dict, handling both str and bytes keys
+        # invocation_metadata_result is an iterable of tuples
+        metadata: dict[str, str] = {}
+        try:
+            for key, value in invocation_metadata_result:
+                # Normalize key to string
+                key_str = key.decode("utf-8") if isinstance(key, bytes) else str(key)
+                # Normalize value to string
+                value_str = value.decode("utf-8") if isinstance(value, bytes) else str(value)
+                metadata[key_str] = value_str
+        except (TypeError, ValueError):
+            # If iteration fails, return None
+            return None
 
         auth_keys = ["authorization", "Authorization", "auth", "token"]
 
@@ -356,7 +380,7 @@ class KeycloakUtils:
 
         def decorator(func: Callable) -> Callable:
             @functools.wraps(func)
-            def wrapper(self: object, request: object, context: ServicerContext) -> object:
+            def wrapper(self: object, request: object, context: object) -> object:
                 try:
                     # 1. Extract and validate token
                     token_str = cls._extract_token_from_metadata(context)
@@ -448,8 +472,10 @@ class KeycloakUtils:
                     return func(self, request, context)
 
                 except Exception as e:
-                    if isinstance(e, BaseError):
-                        e.abort_grpc_sync(context)
+                    if isinstance(e, BaseError) and hasattr(e, "abort_grpc_sync") and GRPC_AVAILABLE:
+                        # Only call abort if context is actually a ServicerContext
+                        if hasattr(context, "abort"):
+                            e.abort_grpc_sync(context)  # type: ignore[arg-type]
                     raise InternalError(
                         lang=lang,
                         additional_data={"original_error": str(e), "error_type": type(e).__name__},
@@ -496,7 +522,7 @@ class KeycloakUtils:
 
         def decorator(func: Callable) -> Callable:
             @functools.wraps(func)
-            async def wrapper(self: object, request: object, context: AsyncServicerContext) -> object:
+            async def wrapper(self: object, request: object, context: object) -> object:
                 try:
                     # 1. Extract and validate token
                     token_str = cls._extract_token_from_metadata(context)
@@ -588,14 +614,22 @@ class KeycloakUtils:
                     return await func(self, request, context)
 
                 except Exception as e:
-                    if isinstance(e, BaseError):
-                        await e.abort_grpc_async(context)
+                    if context is None:
+                        raise
+                    if isinstance(e, BaseError) and GRPC_AVAILABLE:
+                        # Only call abort if context is actually an AsyncServicerContext
+                        if hasattr(context, "abort"):
+                            await e.abort_grpc_async(context)  # type: ignore[arg-type]
+                            return None  # abort_grpc_async will terminate, but satisfy type checker
+                    if GRPC_AVAILABLE and hasattr(context, "abort"):
+                        await InternalError(
+                            lang=lang,
+                            additional_data={"original_error": str(e), "error_type": type(e).__name__},
+                        ).abort_grpc_async(
+                            context,
+                        )  # type: ignore[arg-type]
                         return None  # abort_grpc_async will terminate, but satisfy type checker
-                    await InternalError(
-                        lang=lang,
-                        additional_data={"original_error": str(e), "error_type": type(e).__name__},
-                    ).abort_grpc_async(context)
-                    return None  # abort_grpc_async will terminate, but satisfy type checker
+                    raise
 
                 finally:
                     # Clean up auth context

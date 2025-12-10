@@ -84,7 +84,7 @@ class SQLAlchemyPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_by_uuid(self, entity_type: type, entity_uuid: UUID) -> BaseEntity | None:
+    def get_by_uuid(self, entity_type: type[BaseEntity], entity_uuid: UUID) -> BaseEntity | None:
         """Retrieves an entity by its UUID.
 
         Args:
@@ -209,7 +209,7 @@ class AsyncSQLAlchemyPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_by_uuid(self, entity_type: type, entity_uuid: UUID) -> BaseEntity | None:
+    async def get_by_uuid(self, entity_type: type[BaseEntity], entity_uuid: UUID) -> BaseEntity | None:
         """Retrieves an entity by its UUID asynchronously.
 
         Args:

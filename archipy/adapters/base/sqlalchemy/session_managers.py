@@ -179,7 +179,7 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
             DatabaseConfigurationError: If there's an error in the database configuration.
         """
         try:
-            return self._session_generator()  # type: ignore[no-any-return]
+            return self._session_generator()
         except SQLAlchemyError as e:
             if "configuration" in str(e).lower():
                 raise DatabaseConfigurationError(
@@ -365,7 +365,7 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
             DatabaseConfigurationError: If there's an error in the database configuration.
         """
         try:
-            return self._session_generator()  # type: ignore[no-any-return]
+            return self._session_generator()
         except SQLAlchemyError as e:
             if "configuration" in str(e).lower():
                 raise DatabaseConfigurationError(

@@ -135,8 +135,9 @@ class AttachmentHandler:
     def _process_source(source: str | bytes | BinaryIO | HttpUrl, attachment_type: EmailAttachmentType) -> bytes:
         """Process different types of attachment sources."""
         if attachment_type == EmailAttachmentType.FILE:
-            if isinstance(source, str | os.PathLike):
-                with open(source, "rb") as f:
+            if isinstance(source, (str, os.PathLike)):
+                file_path = os.fspath(source)
+                with open(file_path, "rb") as f:
                     return f.read()
             raise ValueError(f"File attachment type requires string path, got {type(source)}")
         elif attachment_type == EmailAttachmentType.BASE64:
@@ -152,8 +153,17 @@ class AttachmentHandler:
         elif attachment_type == EmailAttachmentType.BINARY:
             if isinstance(source, bytes):
                 return source
-            if hasattr(source, "read"):
+            if isinstance(source, BinaryIO):
                 return source.read()
+            if hasattr(source, "read"):
+                read_method = source.read
+                if callable(read_method):
+                    result = read_method()
+                    if isinstance(result, bytes):
+                        return result
+                    if isinstance(result, str):
+                        return result.encode("utf-8")
+                    raise ValueError(f"read() method returned unexpected type: {type(result)}")
             raise ValueError(f"Invalid binary source type: {type(source)}")
         raise ValueError(f"Unsupported attachment type: {attachment_type}")
 

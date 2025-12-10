@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, Protocol, TypeVar, cast
+from typing import Any, Protocol, TypeVar
 
 T = TypeVar("T")
 R = TypeVar("R")
@@ -40,7 +40,8 @@ def ttl_cache_decorator(
         @wraps(func)
         def wrapper(*args: object, **kwargs: object) -> object:
             # Create a key based on function name, args, and kwargs
-            key_parts = [func.__name__]
+            func_name = getattr(func, "__name__", "unknown")
+            key_parts = [func_name]
             key_parts.extend(str(arg) for arg in args[1:])  # Skip self
             key_parts.extend(f"{k}:{v}" for k, v in sorted(kwargs.items()))
             key = ":".join(key_parts)
@@ -58,8 +59,8 @@ def ttl_cache_decorator(
         def clear_cache() -> None:
             cache.clear()
 
-        # Type ignored because we're adding an attribute that's not defined in the function type
-        wrapper.clear_cache = clear_cache  # type: ignore[attr-defined]
-        return cast(ClearableFunction[Callable[..., Any]], wrapper)
+        # Add clear_cache method to wrapper using setattr for dynamic attribute
+        wrapper.clear_cache = clear_cache
+        return wrapper
 
     return decorator

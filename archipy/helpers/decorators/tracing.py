@@ -7,7 +7,7 @@ gRPC or FastAPI frameworks. Supports both Sentry and Elastic APM based on config
 import functools
 import logging
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any
 
 from archipy.configs.base_config import BaseConfig
 
@@ -17,7 +17,7 @@ def capture_transaction[F: Callable[..., Any]](
     *,
     op: str = "function",
     description: str | None = None,
-) -> Callable[[F], F]:
+) -> Callable[[F], Callable[..., Any]]:
     """Decorator to capture a transaction for the decorated function.
 
     This decorator creates a transaction span around the execution of the decorated function.
@@ -43,7 +43,7 @@ def capture_transaction[F: Callable[..., Any]](
         ```
     """
 
-    def decorator(func: F) -> F:
+    def decorator(func: F) -> Callable[..., Any]:
         transaction_name = name or func.__name__
 
         @functools.wraps(func)
@@ -57,7 +57,8 @@ def capture_transaction[F: Callable[..., Any]](
                     import sentry_sdk
 
                     # Initialize Sentry if not already done
-                    if not sentry_sdk.Hub.current.client:
+                    current_hub = sentry_sdk.Hub.current
+                    if not getattr(current_hub, "client", None):
                         sentry_sdk.init(
                             dsn=config.SENTRY.DSN,
                             debug=config.SENTRY.DEBUG,
@@ -78,6 +79,7 @@ def capture_transaction[F: Callable[..., Any]](
                     logging.exception("Failed to initialize Sentry or start transaction")
 
             # Initialize and track with Elastic APM if enabled
+            elastic_client: Any = None
             if config.ELASTIC_APM.IS_ENABLED:
                 try:
                     import elasticapm
@@ -91,6 +93,7 @@ def capture_transaction[F: Callable[..., Any]](
                     logging.debug("elasticapm is not installed, skipping Elastic APM transaction capture.")
                 except Exception:
                     logging.exception("Failed to initialize Elastic APM or start transaction")
+                    elastic_client = None
 
             try:
                 # Execute the function
@@ -99,8 +102,8 @@ def capture_transaction[F: Callable[..., Any]](
                 # Mark transaction as failed and capture the exception
                 if sentry_transaction:
                     sentry_transaction.set_status("internal_error")
-                if elastic_client:
-                    elastic_client.end_transaction(name=transaction_name, result="error")  # type: ignore[no-untyped-call]
+                if elastic_client is not None:
+                    elastic_client.end_transaction(name=transaction_name, result="error")
 
                 # Re-raise the exception
                 raise
@@ -108,8 +111,8 @@ def capture_transaction[F: Callable[..., Any]](
                 # Mark transaction as successful
                 if sentry_transaction:
                     sentry_transaction.set_status("ok")
-                if elastic_client:
-                    elastic_client.end_transaction(name=transaction_name, result="success")  # type: ignore[no-untyped-call]
+                if elastic_client is not None:
+                    elastic_client.end_transaction(name=transaction_name, result="success")
                 return result
             finally:
                 # Clean up Sentry transaction
@@ -119,7 +122,9 @@ def capture_transaction[F: Callable[..., Any]](
                     except Exception:
                         logging.exception("Error closing Sentry transaction")
 
-        return cast(F, wrapper)
+        # @wraps preserves the function signature, making wrapper compatible with F
+        wrapper.__wrapped__ = func
+        return wrapper
 
     return decorator
 
@@ -129,7 +134,7 @@ def capture_span[F: Callable[..., Any]](
     *,
     op: str = "function",
     description: str | None = None,
-) -> Callable[[F], F]:
+) -> Callable[[F], Callable[..., Any]]:
     """Decorator to capture a span for the decorated function.
 
     This decorator creates a span around the execution of the decorated function.
@@ -170,7 +175,7 @@ def capture_span[F: Callable[..., Any]](
         ```
     """
 
-    def decorator(func: F) -> F:
+    def decorator(func: F) -> Callable[..., Any]:
         span_name = name or func.__name__
 
         @functools.wraps(func)
@@ -192,18 +197,21 @@ def capture_span[F: Callable[..., Any]](
                     logging.debug("sentry_sdk is not installed, skipping Sentry span capture.")
 
             # Track with Elastic APM if enabled
-            elastic_client = None
-            elastic_span = None
+            elastic_client: Any = None
+            elastic_span: Any = None
             if config.ELASTIC_APM.IS_ENABLED:
                 try:
                     import elasticapm
 
-                    elastic_client = elasticapm.get_client()  # type: ignore[attr-defined]
+                    elastic_client = elasticapm.get_client()
                     if elastic_client:
-                        elastic_span = elastic_client.begin_span(  # type: ignore[attr-defined]
-                            name=span_name,
-                            span_type=op,
-                        )
+                        # begin_span is a valid method on elasticapm.Client
+                        begin_span_method = getattr(elastic_client, "begin_span", None)
+                        if begin_span_method is not None:
+                            elastic_span = begin_span_method(
+                                name=span_name,
+                                span_type=op,
+                            )
                 except ImportError:
                     logging.debug("elasticapm is not installed, skipping Elastic APM span capture.")
 
@@ -221,7 +229,7 @@ def capture_span[F: Callable[..., Any]](
                     sentry_span.set_data("exception", str(e))
 
                 if elastic_span and elastic_client:
-                    elastic_client.capture_exception()  # type: ignore[no-untyped-call]
+                    elastic_client.capture_exception()
 
                 # Re-raise the exception
                 raise
@@ -234,7 +242,7 @@ def capture_span[F: Callable[..., Any]](
                 # Clean up spans
                 if elastic_span and elastic_client:
                     try:
-                        elastic_client.end_span()  # type: ignore[attr-defined]
+                        elastic_client.end_span()
                     except Exception:
                         logging.exception("Error closing Elastic APM span")
 
@@ -244,6 +252,8 @@ def capture_span[F: Callable[..., Any]](
                     except Exception:
                         logging.exception("Error closing Sentry span")
 
-        return cast(F, wrapper)
+        # @wraps preserves the function signature, making wrapper compatible with F
+        wrapper.__wrapped__ = func
+        return wrapper
 
     return decorator

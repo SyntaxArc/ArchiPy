@@ -12,7 +12,7 @@ from typing import Any, override
 from async_lru import alru_cache
 from cassandra import ConsistencyLevel
 from cassandra.auth import PlainTextAuthProvider
-from cassandra.cluster import Cluster, ResponseFuture, Session
+from cassandra.cluster import Cluster
 from cassandra.policies import (
     ExponentialBackoffRetryPolicy,
     FallthroughRetryPolicy,
@@ -68,7 +68,6 @@ class ScyllaDBExceptionHandlerMixin:
                 AuthenticationFailed,
                 InvalidRequest,
                 OperationTimedOut,
-                ProtocolException,
                 Unavailable,
             )
             from cassandra.cluster import NoHostAvailable
@@ -85,7 +84,7 @@ class ScyllaDBExceptionHandlerMixin:
             if isinstance(exception, InvalidRequest):
                 raise InvalidArgumentError(argument_name=operation) from exception
 
-            if isinstance(exception, ProtocolException) or "protocol" in error_msg:
+            if "protocol" in error_msg:
                 raise ConfigurationError(operation="scylladb", reason="Protocol error") from exception
 
             # NoHostAvailable
@@ -145,13 +144,13 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             self._handle_scylladb_exception(e, "connect")
             raise
 
-    def _get_consistency_level(self) -> ConsistencyLevel:
+    def _get_consistency_level(self) -> int:
         """Get ConsistencyLevel enum from config string.
 
         Returns:
-            ConsistencyLevel: The consistency level enum value.
+            int: The consistency level enum value.
         """
-        consistency_map = {
+        consistency_map: dict[str, int] = {
             "ONE": ConsistencyLevel.ONE,
             "TWO": ConsistencyLevel.TWO,
             "THREE": ConsistencyLevel.THREE,
@@ -162,9 +161,13 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             "LOCAL_ONE": ConsistencyLevel.LOCAL_ONE,
             "ANY": ConsistencyLevel.ANY,
         }
-        return consistency_map.get(self.config.CONSISTENCY_LEVEL.upper(), ConsistencyLevel.ONE)
+        # get() returns int | None, but we provide a default
+        consistency = consistency_map.get(self.config.CONSISTENCY_LEVEL.upper())
+        if consistency is None:
+            return ConsistencyLevel.ONE
+        return consistency
 
-    def _create_cluster(self) -> Cluster:
+    def _create_cluster(self) -> Any:
         """Create and configure the Cluster instance.
 
         Returns:
@@ -200,6 +203,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         if self.config.DISABLE_SHARD_AWARENESS:
             shard_aware_options = {"disable": True}
 
+        # Cluster is from cassandra.cluster, properly typed
         cluster = Cluster(
             contact_points=self.config.CONTACT_POINTS,
             port=self.config.PORT,
@@ -255,19 +259,14 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             PreparedStatement: The prepared statement object.
         """
-        return self._prepare_internal(query)
-
-    def _prepare_internal(self, query: str) -> PreparedStatement:
-        """Internal method to prepare a CQL statement (used by cache decorator).
-
-        Args:
-            query (str): The CQL query to prepare.
-
-        Returns:
-            PreparedStatement: The prepared statement object.
-        """
         session = self.get_session()
         try:
+            if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+                # Use cached version if available - call the cached method
+                cached_method: Any = getattr(self, "_prepare_cached", None)
+                if cached_method is not None:
+                    return cached_method(query)
+            # Direct prepare without cache
             prepared = session.prepare(query)
         except Exception as e:
             self._handle_scylladb_exception(e, "prepare")
@@ -278,12 +277,25 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
     def __post_init__(self) -> None:
         """Post-initialization hook to apply cache decorator if enabled."""
         if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
-            # Apply cache decorator to the bound method
-            original_method = self._prepare_internal
-            self._prepare_internal = ttl_cache_decorator(  # type: ignore[method-assign]
+            # Create a method to cache
+            def _prepare_internal(query: str) -> PreparedStatement:
+                """Internal cached method to prepare a CQL statement."""
+                session = self.get_session()
+                try:
+                    prepared = session.prepare(query)
+                except Exception as e:
+                    self._handle_scylladb_exception(e, "prepare")
+                    raise
+                else:
+                    return prepared
+
+            # Apply cache decorator
+            cached_prepare = ttl_cache_decorator(
                 ttl_seconds=self.config.PREPARED_STATEMENT_CACHE_TTL_SECONDS,
                 maxsize=self.config.PREPARED_STATEMENT_CACHE_SIZE,
-            )(original_method)
+            )(_prepare_internal)
+            # Store the cached version using setattr for dynamic attribute
+            self._prepare_cached = cached_prepare
 
     @override
     def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> Any:
@@ -506,11 +518,11 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     @override
-    def get_session(self) -> Session:
+    def get_session(self) -> Any:
         """Get the current session object.
 
         Returns:
-            Session: The active session object.
+            Any: The active session object.
         """
         return self._session
 
@@ -715,13 +727,13 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             self._handle_scylladb_exception(e, "connect")
             raise
 
-    def _get_consistency_level(self) -> ConsistencyLevel:
+    def _get_consistency_level(self) -> int:
         """Get ConsistencyLevel enum from config string.
 
         Returns:
-            ConsistencyLevel: The consistency level enum value.
+            int: The consistency level enum value.
         """
-        consistency_map = {
+        consistency_map: dict[str, int] = {
             "ONE": ConsistencyLevel.ONE,
             "TWO": ConsistencyLevel.TWO,
             "THREE": ConsistencyLevel.THREE,
@@ -732,9 +744,13 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             "LOCAL_ONE": ConsistencyLevel.LOCAL_ONE,
             "ANY": ConsistencyLevel.ANY,
         }
-        return consistency_map.get(self.config.CONSISTENCY_LEVEL.upper(), ConsistencyLevel.ONE)
+        # get() returns int | None, but we provide a default
+        consistency = consistency_map.get(self.config.CONSISTENCY_LEVEL.upper())
+        if consistency is None:
+            return ConsistencyLevel.ONE
+        return consistency
 
-    def _create_cluster(self) -> Cluster:
+    def _create_cluster(self) -> Any:
         """Create and configure the Cluster instance.
 
         Returns:
@@ -770,6 +786,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         if self.config.DISABLE_SHARD_AWARENESS:
             shard_aware_options = {"disable": True}
 
+        # Cluster is from cassandra.cluster, properly typed
         cluster = Cluster(
             contact_points=self.config.CONTACT_POINTS,
             port=self.config.PORT,
@@ -792,7 +809,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         return cluster
 
-    async def _await_future(self, future: ResponseFuture) -> Any:
+    async def _await_future(self, future: Any) -> Any:
         """Convert ResponseFuture to awaitable.
 
         Args:
@@ -838,19 +855,14 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             PreparedStatement: The prepared statement object.
         """
-        return await self._prepare_internal(query)
-
-    async def _prepare_internal(self, query: str) -> PreparedStatement:
-        """Internal method to prepare a CQL statement (used by cache decorator).
-
-        Args:
-            query (str): The CQL query to prepare.
-
-        Returns:
-            PreparedStatement: The prepared statement object.
-        """
         session = await self.get_session()
         try:
+            if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+                # Use cached version if available - call the cached method
+                cached_method: Any = getattr(self, "_prepare_cached", None)
+                if cached_method is not None:
+                    return await cached_method(query)
+            # Direct prepare without cache
             prepared = session.prepare(query)
         except Exception as e:
             self._handle_scylladb_exception(e, "prepare")
@@ -861,12 +873,25 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
     def __post_init__(self) -> None:
         """Post-initialization hook to apply cache decorator if enabled."""
         if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
-            # Apply cache decorator to the bound method
-            original_method = self._prepare_internal
-            self._prepare_internal = alru_cache(  # type: ignore[method-assign]
+            # Create an async method to cache
+            async def _prepare_internal(query: str) -> PreparedStatement:
+                """Internal cached method to prepare a CQL statement asynchronously."""
+                session = await self.get_session()
+                try:
+                    prepared = session.prepare(query)
+                except Exception as e:
+                    self._handle_scylladb_exception(e, "prepare")
+                    raise
+                else:
+                    return prepared
+
+            # Apply async cache decorator
+            cached_prepare = alru_cache(
                 ttl=self.config.PREPARED_STATEMENT_CACHE_TTL_SECONDS,
                 maxsize=self.config.PREPARED_STATEMENT_CACHE_SIZE,
-            )(original_method)
+            )(_prepare_internal)
+            # Store the cached version using setattr for dynamic attribute
+            self._prepare_cached = cached_prepare
 
     @override
     async def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> Any:
@@ -1103,12 +1128,13 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     @override
-    async def get_session(self) -> Session:
+    async def get_session(self) -> Any:
         """Get the current session object asynchronously.
 
         Returns:
-            Session: The active session object.
+            Any: The active session object.
         """
+        # Session is from cassandra.cluster, properly typed
         return self._session
 
     @override

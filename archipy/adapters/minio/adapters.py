@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Callable
 from datetime import timedelta
-from typing import Any, TypeVar, cast, override
+from typing import Any, TypeVar, override
 
 from minio import Minio
 from minio.error import S3Error
@@ -113,10 +113,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 self.configs = minio_configs
             else:
                 # First get global config, then extract MINIO config
-                global_config: Any = BaseConfig.global_config()
+                global_config = BaseConfig.global_config()
                 if not hasattr(global_config, "MINIO"):
                     raise InvalidArgumentError(argument_name="MINIO")
-                self.configs = cast(MinioConfig, global_config.MINIO)
+                minio_config = getattr(global_config, "MINIO", None)
+                if not isinstance(minio_config, MinioConfig):
+                    raise InvalidArgumentError(argument_name="MINIO")
+                self.configs = minio_config
 
             # Ensure we have a valid endpoint value
             endpoint = str(self.configs.ENDPOINT or "")
@@ -137,7 +140,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except S3Error as e:
             error_msg = str(e).lower()
             if "configuration" in error_msg:
-                raise ConfigurationError(config_key="minio") from e
+                raise ConfigurationError(operation="minio") from e
             elif "connection" in error_msg:
                 raise NetworkError(service="MinIO") from e
             else:
@@ -179,10 +182,14 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             if "NoSuchBucket" in str(e):
                 return False
             self._handle_s3_exception(e, "bucket_exists")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         except Exception as e:
             self._handle_general_exception(e, "bucket_exists")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         else:
-            return result
+            # result is bool from minio client, compatible with return type
+            typed_result: bool = result
+            return typed_result
 
     @override
     def make_bucket(self, bucket_name: str) -> None:
@@ -255,10 +262,14 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             buckets = self._adapter.list_buckets()
         except S3Error as e:
             self._handle_s3_exception(e, "list_buckets")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         except Exception as e:
             self._handle_general_exception(e, "list_buckets")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         else:
-            return [{"name": b.name, "creation_date": b.creation_date} for b in buckets]
+            # Convert buckets to MinioBucketType format
+            bucket_list: list[MinioBucketType] = [{"name": b.name, "creation_date": b.creation_date} for b in buckets]
+            return bucket_list
 
     @override
     def put_object(self, bucket_name: str, object_name: str, file_path: str) -> None:
@@ -401,13 +412,17 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except S3Error as e:
             self._handle_s3_exception(e, "list_objects")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         except Exception as e:
             self._handle_general_exception(e, "list_objects")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         else:
-            return [
+            # Convert objects to MinioObjectType format
+            object_list: list[MinioObjectType] = [
                 {"object_name": obj.object_name, "size": obj.size, "last_modified": obj.last_modified}
                 for obj in objects
             ]
+            return object_list
 
     @override
     @ttl_cache_decorator(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
@@ -443,9 +458,12 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except S3Error as e:
             self._handle_s3_exception(e, "stat_object")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         except Exception as e:
             self._handle_general_exception(e, "stat_object")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         else:
+            # Convert object to MinioObjectType format
             return {
                 "object_name": obj.object_name,
                 "size": obj.size,
@@ -492,10 +510,14 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except S3Error as e:
             self._handle_s3_exception(e, "presigned_get_object")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         except Exception as e:
             self._handle_general_exception(e, "presigned_get_object")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         else:
-            return url
+            # url is str from minio client, compatible with return type
+            typed_url: str = url
+            return typed_url
 
     @override
     def presigned_put_object(self, bucket_name: str, object_name: str, expires: int = 3600) -> str:
@@ -535,10 +557,14 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except S3Error as e:
             self._handle_s3_exception(e, "presigned_put_object")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         except Exception as e:
             self._handle_general_exception(e, "presigned_put_object")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         else:
-            return url
+            # url is str from minio client, compatible with return type
+            typed_url: str = url
+            return typed_url
 
     @override
     def set_bucket_policy(self, bucket_name: str, policy: str) -> None:
@@ -600,7 +626,11 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except S3Error as e:
             self._handle_s3_exception(e, "get_bucket_policy")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         except Exception as e:
             self._handle_general_exception(e, "get_bucket_policy")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         else:
-            return {"policy": policy}
+            # Convert policy to MinioPolicyType format
+            policy_dict: MinioPolicyType = {"policy": policy}
+            return policy_dict

@@ -78,11 +78,18 @@ class GrpcServerMetricInterceptor(BaseGrpcServerInterceptor):
             result = method(request, context)
 
             # Record the response time in the Prometheus histogram
+            status_code = "OK"
+            if hasattr(context, "code") and callable(context.code):
+                code_obj = context.code()
+                if code_obj is not None:
+                    code_name = getattr(code_obj, "name", None)
+                    if code_name is not None:
+                        status_code = code_name
             self.RESPONSE_TIME_SECONDS.labels(
                 package=method_name_model.package,
                 service=method_name_model.service,
                 method=method_name_model.method,
-                status_code=context.code().name if context.code() else "OK",
+                status_code=status_code,
             ).observe(time.time() - start_time)
         except Exception as exception:
             BaseUtils.capture_exception(exception)
@@ -162,9 +169,17 @@ class AsyncGrpcServerMetricInterceptor(BaseAsyncGrpcServerInterceptor):
             except Exception as e:
                 # Determine error status code
                 if isinstance(e, grpc.aio.AioRpcError):
-                    status_code = e.code().name
+                    code_obj = e.code()
+                    if code_obj is not None:
+                        code_name = getattr(code_obj, "name", None)
+                        if code_name is not None:
+                            status_code = code_name
                 elif hasattr(e, "code") and callable(e.code):
-                    status_code = e.code().name
+                    code_obj = e.code()
+                    if code_obj is not None:
+                        code_name = getattr(code_obj, "name", None)
+                        if code_name is not None:
+                            status_code = code_name
                 else:
                     status_code = "INTERNAL"
                 raise

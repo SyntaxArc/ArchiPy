@@ -63,7 +63,7 @@ productivity.
     - Step definitions for common operations
 - **Code Quality**:
     - Automated linting with ruff
-    - Type checking with mypy
+    - Type checking with Ty
     - Code formatting with black
     - Pre-commit hooks for quality assurance
 

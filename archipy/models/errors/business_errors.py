@@ -1,4 +1,12 @@
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
+
+if TYPE_CHECKING:
+    from http import HTTPStatus
+
+    from grpc import StatusCode
+else:
+    HTTPStatus = None
+    StatusCode = None
 
 try:
     from http import HTTPStatus
@@ -6,7 +14,6 @@ try:
     HTTP_AVAILABLE = True
 except ImportError:
     HTTP_AVAILABLE = False
-    HTTPStatus = None
 
 try:
     from grpc import StatusCode
@@ -14,7 +21,6 @@ try:
     GRPC_AVAILABLE = True
 except ImportError:
     GRPC_AVAILABLE = False
-    StatusCode = None
 
 from archipy.models.errors.base_error import BaseError
 from archipy.models.types.language_type import LanguageType
@@ -26,11 +32,11 @@ class InvalidStateError(BaseError):
     code: ClassVar[str] = "INVALID_STATE"
     message_en: ClassVar[str] = "Invalid state for the requested operation"
     message_fa: ClassVar[str] = "وضعیت نامعتبر برای عملیات درخواستی"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
     grpc_status: ClassVar[int] = (
         StatusCode.FAILED_PRECONDITION.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
-        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE else 9)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
+        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE and StatusCode is not None else 9)
     )
 
     def __init__(
@@ -56,11 +62,13 @@ class FailedPreconditionError(BaseError):
     code: ClassVar[str] = "FAILED_PRECONDITION"
     message_en: ClassVar[str] = "Operation preconditions not met"
     message_fa: ClassVar[str] = "پیش‌نیازهای عملیات برآورده نشده است."
-    http_status: ClassVar[int] = HTTPStatus.PRECONDITION_FAILED.value if HTTP_AVAILABLE else 412
+    http_status: ClassVar[int] = (
+        HTTPStatus.PRECONDITION_FAILED.value if HTTP_AVAILABLE and HTTPStatus is not None else 412
+    )
     grpc_status: ClassVar[int] = (
         StatusCode.FAILED_PRECONDITION.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
-        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE else 9)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
+        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE and StatusCode is not None else 9)
     )
 
     def __init__(
@@ -83,11 +91,11 @@ class BusinessRuleViolationError(BaseError):
     code: ClassVar[str] = "BUSINESS_RULE_VIOLATION"
     message_en: ClassVar[str] = "Business rule violation"
     message_fa: ClassVar[str] = "نقض قوانین کسب و کار"
-    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE else 409
+    http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
     grpc_status: ClassVar[int] = (
         StatusCode.FAILED_PRECONDITION.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
-        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE else 9)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
+        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE and StatusCode is not None else 9)
     )
 
     def __init__(
@@ -110,11 +118,11 @@ class InvalidOperationError(BaseError):
     code: ClassVar[str] = "INVALID_OPERATION"
     message_en: ClassVar[str] = "Operation is not allowed in the current context"
     message_fa: ClassVar[str] = "عملیات در وضعیت فعلی مجاز نیست"
-    http_status: ClassVar[int] = HTTPStatus.FORBIDDEN.value if HTTP_AVAILABLE else 403
+    http_status: ClassVar[int] = HTTPStatus.FORBIDDEN.value if HTTP_AVAILABLE and HTTPStatus is not None else 403
     grpc_status: ClassVar[int] = (
         StatusCode.PERMISSION_DENIED.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.PERMISSION_DENIED.value, tuple)
-        else (StatusCode.PERMISSION_DENIED.value if GRPC_AVAILABLE else 7)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.PERMISSION_DENIED.value, tuple)
+        else (StatusCode.PERMISSION_DENIED.value if GRPC_AVAILABLE and StatusCode is not None else 7)
     )
 
     def __init__(
@@ -140,11 +148,11 @@ class InsufficientFundsError(BaseError):
     code: ClassVar[str] = "INSUFFICIENT_FUNDS"
     message_en: ClassVar[str] = "Insufficient funds for the operation"
     message_fa: ClassVar[str] = "موجودی ناکافی برای عملیات"
-    http_status: ClassVar[int] = HTTPStatus.PAYMENT_REQUIRED.value if HTTP_AVAILABLE else 402
+    http_status: ClassVar[int] = HTTPStatus.PAYMENT_REQUIRED.value if HTTP_AVAILABLE and HTTPStatus is not None else 402
     grpc_status: ClassVar[int] = (
         StatusCode.FAILED_PRECONDITION.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
-        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE else 9)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
+        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE and StatusCode is not None else 9)
     )
 
 
@@ -154,11 +162,11 @@ class InsufficientBalanceError(BaseError):
     code: ClassVar[str] = "INSUFFICIENT_BALANCE"
     message_en: ClassVar[str] = "Insufficient balance for operation"
     message_fa: ClassVar[str] = "عدم موجودی کافی برای عملیات."
-    http_status: ClassVar[int] = HTTPStatus.PAYMENT_REQUIRED.value if HTTP_AVAILABLE else 402
+    http_status: ClassVar[int] = HTTPStatus.PAYMENT_REQUIRED.value if HTTP_AVAILABLE and HTTPStatus is not None else 402
     grpc_status: ClassVar[int] = (
         StatusCode.FAILED_PRECONDITION.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
-        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE else 9)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.FAILED_PRECONDITION.value, tuple)
+        else (StatusCode.FAILED_PRECONDITION.value if GRPC_AVAILABLE and StatusCode is not None else 9)
     )
 
 
@@ -168,11 +176,13 @@ class MaintenanceModeError(BaseError):
     code: ClassVar[str] = "MAINTENANCE_MODE"
     message_en: ClassVar[str] = "System is currently in maintenance mode"
     message_fa: ClassVar[str] = "سیستم در حال حاضر در حالت تعمیر و نگهداری است"
-    http_status: ClassVar[int] = HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE else 503
+    http_status: ClassVar[int] = (
+        HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE and HTTPStatus is not None else 503
+    )
     grpc_status: ClassVar[int] = (
         StatusCode.UNAVAILABLE.value[0]
-        if GRPC_AVAILABLE and isinstance(StatusCode.UNAVAILABLE.value, tuple)
-        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE else 14)
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.UNAVAILABLE.value, tuple)
+        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE and StatusCode is not None else 14)
     )
 
     def __init__(

@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 from archipy.models.errors import DeprecationError
 from archipy.models.types.language_type import LanguageType
@@ -54,7 +54,7 @@ def method_deprecation_error(operation: str | None = None, lang: LanguageType = 
             operation_name = operation if operation is not None else func.__name__
             raise DeprecationError(deprecated_feature=operation_name, lang=lang)
 
-        return cast(F, wrapper)
+        return wrapper
 
     return decorator
 

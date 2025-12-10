@@ -1,17 +1,17 @@
 from abc import abstractmethod
-from collections.abc import Awaitable, Callable, Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from datetime import datetime, timedelta
 from typing import Any
 
 # Define generic type variables for better type hinting
 RedisAbsExpiryType = int | datetime
 RedisExpiryType = int | timedelta
-RedisIntegerResponseType = Awaitable[int] | int
+RedisIntegerResponseType = int
 RedisKeyType = bytes | str
-RedisListResponseType = Awaitable[list] | list
-RedisSetResponseType = Awaitable[set] | set
+RedisListResponseType = list[Any]
+RedisSetResponseType = set[Any]
 RedisPatternType = bytes | str
-RedisResponseType = Awaitable[Any] | Any
+RedisResponseType = Any
 RedisSetType = int | bytes | str | float
 RedisScoreCastType = type | Callable
 
@@ -538,7 +538,7 @@ class RedisPort:
         raise NotImplementedError
 
     @abstractmethod
-    def sismember(self, name: str, value: str) -> Awaitable[bool] | bool:
+    def sismember(self, name: str, value: str) -> bool:
         """Checks if a value is a member of a set.
 
         Args:
@@ -546,7 +546,7 @@ class RedisPort:
             value (str): The value to check.
 
         Returns:
-            Awaitable[bool] | bool: True if the value is a member, False otherwise.
+            bool: True if the value is a member, False otherwise.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -869,7 +869,7 @@ class RedisPort:
         raise NotImplementedError
 
     @abstractmethod
-    def hexists(self, name: str, key: str) -> Awaitable[bool] | bool:
+    def hexists(self, name: str, key: str) -> bool:
         """Checks if a field exists in a hash.
 
         Args:
@@ -877,7 +877,7 @@ class RedisPort:
             key (str): The field to check.
 
         Returns:
-            Awaitable[bool] | bool: True if the field exists, False otherwise.
+            bool: True if the field exists, False otherwise.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -885,7 +885,7 @@ class RedisPort:
         raise NotImplementedError
 
     @abstractmethod
-    def hget(self, name: str, key: str) -> Awaitable[str | None] | str | None:
+    def hget(self, name: str, key: str) -> str | None:
         """Gets the value of a field in a hash.
 
         Args:
@@ -893,7 +893,7 @@ class RedisPort:
             key (str): The field to get.
 
         Returns:
-            Awaitable[str | None] | str | None: The value of the field, or None if not found.
+            str | None: The value of the field, or None if not found.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -901,14 +901,14 @@ class RedisPort:
         raise NotImplementedError
 
     @abstractmethod
-    def hgetall(self, name: str) -> Awaitable[dict] | dict:
+    def hgetall(self, name: str) -> dict[str, Any]:
         """Gets all fields and values in a hash.
 
         Args:
             name (str): The key of the hash.
 
         Returns:
-            Awaitable[dict] | dict: A dictionary of field/value pairs.
+            dict[str, Any]: A dictionary of field/value pairs.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -1109,7 +1109,7 @@ class RedisPort:
         """
         return None
 
-    def cluster_keyslot(self, key: str) -> RedisResponseType:
+    def cluster_key_slot(self, key: str) -> RedisResponseType:
         """Get the hash slot for a key.
 
         Args:
@@ -1120,7 +1120,7 @@ class RedisPort:
         """
         return None
 
-    def cluster_countkeysinslot(self, slot: int) -> RedisResponseType:
+    def cluster_count_keys_in_slot(self, slot: int) -> RedisResponseType:
         """Count keys in a specific slot.
 
         Args:
@@ -1131,7 +1131,7 @@ class RedisPort:
         """
         return None
 
-    def cluster_getkeysinslot(self, slot: int, count: int) -> RedisResponseType:
+    def cluster_get_keys_in_slot(self, slot: int, count: int) -> RedisResponseType:
         """Get keys in a specific slot.
 
         Args:
@@ -1666,7 +1666,7 @@ class AsyncRedisPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def sismember(self, name: str, value: str) -> Awaitable[bool] | bool:
+    async def sismember(self, name: str, value: str) -> bool:
         """Checks if a value is a member of a set asynchronously.
 
         Args:
@@ -1674,7 +1674,7 @@ class AsyncRedisPort:
             value (str): The value to check.
 
         Returns:
-            Awaitable[bool] | bool: True if the value is a member, False otherwise.
+            bool: True if the value is a member, False otherwise.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -1997,7 +1997,7 @@ class AsyncRedisPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def hexists(self, name: str, key: str) -> Awaitable[bool] | bool:
+    async def hexists(self, name: str, key: str) -> bool:
         """Checks if a field exists in a hash asynchronously.
 
         Args:
@@ -2005,7 +2005,7 @@ class AsyncRedisPort:
             key (str): The field to check.
 
         Returns:
-            Awaitable[bool] | bool: True if the field exists, False otherwise.
+            bool: True if the field exists, False otherwise.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -2013,7 +2013,7 @@ class AsyncRedisPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def hget(self, name: str, key: str) -> Awaitable[str | None] | str | None:
+    async def hget(self, name: str, key: str) -> str | None:
         """Gets the value of a field in a hash asynchronously.
 
         Args:
@@ -2021,7 +2021,7 @@ class AsyncRedisPort:
             key (str): The field to get.
 
         Returns:
-            Awaitable[str | None] | str | None: The value of the field, or None if not found.
+            str | None: The value of the field, or None if not found.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -2029,14 +2029,14 @@ class AsyncRedisPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def hgetall(self, name: str) -> Awaitable[dict] | dict:
+    async def hgetall(self, name: str) -> dict[str, Any]:
         """Gets all fields and values in a hash asynchronously.
 
         Args:
             name (str): The key of the hash.
 
         Returns:
-            Awaitable[dict] | dict: A dictionary of field/value pairs.
+            dict[str, Any]: A dictionary of field/value pairs.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -2237,7 +2237,7 @@ class AsyncRedisPort:
         """
         return None
 
-    async def cluster_keyslot(self, key: str) -> RedisResponseType:
+    async def cluster_key_slot(self, key: str) -> RedisResponseType:
         """Get the hash slot for a key asynchronously.
 
         Args:
@@ -2248,7 +2248,7 @@ class AsyncRedisPort:
         """
         return None
 
-    async def cluster_countkeysinslot(self, slot: int) -> RedisResponseType:
+    async def cluster_count_keys_in_slot(self, slot: int) -> RedisResponseType:
         """Count keys in a specific slot asynchronously.
 
         Args:
@@ -2259,7 +2259,7 @@ class AsyncRedisPort:
         """
         return None
 
-    async def cluster_getkeysinslot(self, slot: int, count: int) -> RedisResponseType:
+    async def cluster_get_keys_in_slot(self, slot: int, count: int) -> RedisResponseType:
         """Get keys in a specific slot asynchronously.
 
         Args:

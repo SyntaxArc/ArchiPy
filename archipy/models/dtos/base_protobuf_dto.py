@@ -1,7 +1,12 @@
-from typing import Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from archipy.models.dtos.base_dtos import BaseDTO
 from archipy.models.errors import InvalidEntityTypeError
+
+if TYPE_CHECKING:
+    from google.protobuf.message import Message
+else:
+    Message = object
 
 try:
     from google.protobuf.json_format import MessageToDict, ParseDict
@@ -9,7 +14,6 @@ try:
 
     PROTOBUF_AVAILABLE = True
 except ImportError:
-    Message = object  # Define Message as a placeholder
     PROTOBUF_AVAILABLE = False
 
 

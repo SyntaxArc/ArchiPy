@@ -39,7 +39,7 @@ class KafkaExceptionHandlerMixin:
 
         # Configuration errors
         if "configuration" in error_msg:
-            raise ConfigurationError(config_key="kafka") from exception
+            raise ConfigurationError(operation="kafka") from exception
 
         # Invalid argument errors
         if "invalid" in error_msg:
@@ -182,8 +182,11 @@ class KafkaAdminAdapter(KafkaAdminPort, KafkaExceptionHandlerMixin):
             result = self.adapter.list_topics(topic=topic, timeout=timeout)
         except Exception as e:
             self._handle_kafka_exception(e, "list_topics")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         else:
-            return result
+            # result is ClusterMetadata from confluent_kafka, compatible with port return type
+            typed_result: ClusterMetadata = result
+            return typed_result
 
 
 class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
@@ -307,7 +310,9 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
                 result_list.append(message)
         except Exception as e:
             self._handle_kafka_exception(e, "batch_consume")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         else:
+            # result_list is list[Message] from confluent_kafka, compatible with port return type
             return result_list
 
     @override
@@ -521,7 +526,8 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
         """
         try:
             processed_message = self._pre_process_message(message)
-            processed_key = self._pre_process_message(key)
+            # Handle None key - convert to empty bytes if None
+            processed_key = self._pre_process_message(key) if key is not None else b""
             self._adapter.produce(
                 topic=self._topic_name,
                 value=processed_message,
@@ -560,7 +566,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
         try:
             self.list_topics(timeout=1)
         except Exception as e:
-            raise UnavailableError(service="Kafka") from e
+            raise UnavailableError(resource_type="Kafka") from e
 
     @override
     def list_topics(self, topic: str | None = None, timeout: int = 1) -> ClusterMetadata:
@@ -583,5 +589,8 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             result = self._adapter.list_topics(topic=topic, timeout=timeout)
         except Exception as e:
             self._handle_kafka_exception(e, "list_topics")
+            raise  # Exception handler always raises, but type checker needs this to be explicit
         else:
-            return result
+            # result is ClusterMetadata from confluent_kafka, compatible with port return type
+            typed_result: ClusterMetadata = result
+            return typed_result

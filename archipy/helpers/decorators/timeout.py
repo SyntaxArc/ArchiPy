@@ -1,7 +1,7 @@
 import signal
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 from archipy.models.errors import DeadlineExceededError
 
@@ -59,6 +59,6 @@ def timeout_decorator(seconds: int) -> Callable[[F], F]:
                 signal.alarm(0)
             return result
 
-        return cast(F, wrapper)
+        return wrapper
 
     return decorator

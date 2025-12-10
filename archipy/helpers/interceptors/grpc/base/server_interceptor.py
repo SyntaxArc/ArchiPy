@@ -163,9 +163,9 @@ class BaseAsyncGrpcServerInterceptor(grpc.aio.ServerInterceptor, metaclass=abc.A
 
     async def intercept_service(
         self,
-        continuation: Callable[[grpc.HandlerCallDetails], Awaitable[grpc.RpcMethodHandler | None]],
+        continuation: Callable[[grpc.HandlerCallDetails], Awaitable[grpc.RpcMethodHandler]],
         handler_call_details: grpc.HandlerCallDetails,
-    ) -> grpc.RpcMethodHandler | None:
+    ) -> grpc.RpcMethodHandler:
         """Intercepts the service call using the simplified async pattern.
 
         For async gRPC, we don't need the complex handler wrapping that sync interceptors require.
@@ -180,8 +180,6 @@ class BaseAsyncGrpcServerInterceptor(grpc.aio.ServerInterceptor, metaclass=abc.A
             grpc.RpcMethodHandler: The wrapped RPC method handler.
         """
         next_handler = await continuation(handler_call_details)
-        if next_handler is None:
-            return None
 
         handler_factory, next_handler_method = _get_factory_and_method(next_handler)
 

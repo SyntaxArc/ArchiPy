@@ -64,7 +64,7 @@ clean: ## Remove build artifacts and cache directories
 	rm -rf .pytest_cache/
 	rm -rf .coverage
 	rm -rf htmlcov/
-	rm -rf .mypy_cache/
+	rm -rf .ty_cache/
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 
@@ -77,7 +77,7 @@ format: ## Format code using black
 lint: ## Run all linters
 	@echo "${BLUE}Running linters...${NC}"
 	$(PYTHON) ruff check --config pyproject.toml  $(PYTHON_FILES)
-	$(PYTHON) mypy --config-file pyproject.toml $(PYTHON_FILES)
+	$(PYTHON) ty check $(PYTHON_FILES)
 
 .PHONY: security
 security: ## Run security scan with Bandit
