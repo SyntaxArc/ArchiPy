@@ -35,5 +35,5 @@ jobs:
     - name: Run Ruff on changed files
       run: |
         # Filter Python files from changed files and run Ruff
-        echo "${{ steps.changed-files.outputs.all_changed_files }}" | tr ' ' '\n' | grep '\.py$' | xargs -r uv run ruff check
-        echo "${{ steps.changed-files.outputs.all_changed_files }}" | tr ' ' '\n' | grep '\.py$' | xargs -r uv run ruff format --check
+        echo "${{ steps.changed-files.outputs.all_changed_files }}" | tr ' ' '\n' | grep '\.py$' | xargs -r uv run ruff check --config=pyproject.toml
+        echo "${{ steps.changed-files.outputs.all_changed_files }}" | tr ' ' '\n' | grep '\.py$' | xargs -r uv run ruff format --check --config=pyproject.toml

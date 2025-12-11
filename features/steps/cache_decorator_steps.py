@@ -1,9 +1,9 @@
 import time
 
 from behave import given, then, when
-from features.test_helpers import get_current_scenario_context
 
 from archipy.helpers.decorators import ttl_cache_decorator
+from features.test_helpers import get_current_scenario_context
 
 
 # Test helper classes and functions
