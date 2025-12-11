@@ -11,6 +11,8 @@ from typing import Any
 
 from archipy.configs.base_config import BaseConfig
 
+logger = logging.getLogger(__name__)
+
 
 def capture_transaction[F: Callable[..., Any]](
     name: str | None = None,
@@ -74,9 +76,9 @@ def capture_transaction[F: Callable[..., Any]](
                     )
                     sentry_transaction.__enter__()
                 except ImportError:
-                    logging.debug("sentry_sdk is not installed, skipping Sentry transaction capture.")
+                    logger.debug("sentry_sdk is not installed, skipping Sentry transaction capture.")
                 except Exception:
-                    logging.exception("Failed to initialize Sentry or start transaction")
+                    logger.exception("Failed to initialize Sentry or start transaction")
 
             # Initialize and track with Elastic APM if enabled
             elastic_client: Any = None
@@ -90,9 +92,9 @@ def capture_transaction[F: Callable[..., Any]](
                         elastic_client = elasticapm.Client(config.ELASTIC_APM.model_dump())
                     elastic_client.begin_transaction(transaction_type="function")
                 except ImportError:
-                    logging.debug("elasticapm is not installed, skipping Elastic APM transaction capture.")
+                    logger.debug("elasticapm is not installed, skipping Elastic APM transaction capture.")
                 except Exception:
-                    logging.exception("Failed to initialize Elastic APM or start transaction")
+                    logger.exception("Failed to initialize Elastic APM or start transaction")
                     elastic_client = None
 
             try:
@@ -120,7 +122,7 @@ def capture_transaction[F: Callable[..., Any]](
                     try:
                         sentry_transaction.__exit__(None, None, None)
                     except Exception:
-                        logging.exception("Error closing Sentry transaction")
+                        logger.exception("Error closing Sentry transaction")
 
         # @wraps preserves the function signature, making wrapper compatible with F
         wrapper.__wrapped__ = func
@@ -194,7 +196,7 @@ def capture_span[F: Callable[..., Any]](
                     )
                     sentry_span.__enter__()
                 except ImportError:
-                    logging.debug("sentry_sdk is not installed, skipping Sentry span capture.")
+                    logger.debug("sentry_sdk is not installed, skipping Sentry span capture.")
 
             # Track with Elastic APM if enabled
             elastic_client: Any = None
@@ -213,7 +215,7 @@ def capture_span[F: Callable[..., Any]](
                                 span_type=op,
                             )
                 except ImportError:
-                    logging.debug("elasticapm is not installed, skipping Elastic APM span capture.")
+                    logger.debug("elasticapm is not installed, skipping Elastic APM span capture.")
 
             try:
                 # Execute the function
@@ -244,13 +246,13 @@ def capture_span[F: Callable[..., Any]](
                     try:
                         elastic_client.end_span()
                     except Exception:
-                        logging.exception("Error closing Elastic APM span")
+                        logger.exception("Error closing Elastic APM span")
 
                 if sentry_span:
                     try:
                         sentry_span.__exit__(None, None, None)
                     except Exception:
-                        logging.exception("Error closing Sentry span")
+                        logger.exception("Error closing Sentry span")
 
         # @wraps preserves the function signature, making wrapper compatible with F
         wrapper.__wrapped__ = func

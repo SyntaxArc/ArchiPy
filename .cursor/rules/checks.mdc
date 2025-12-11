@@ -168,23 +168,46 @@ class ElasticsearchConfig(BaseModel):
 **Enabled Rules**:
 - A: flake8-builtins
 - ANN: flake8-annotations
+- ARG: flake8-unused-arguments
 - ASYNC: flake8-async
 - B: flake8-bugbear
+- C4: flake8-comprehensions
 - D: pydocstyle (Google-style, except D100, D104, D107)
 - E/W: pycodestyle (except E501)
+- EM: flake8-errmsg
 - ERA: eradicate
 - F: pyflakes (except F811 in steps)
+- FAST: FastAPI best practices
+- FURB: refurb (modern Python patterns)
 - G: logging (allow G004 f-strings)
 - I: isort (future → stdlib → third-party → first-party → local)
+- ICN: flake8-import-conventions
+- LOG: flake8-logging
+- PERF: Perflint (performance)
+- PIE: flake8-pie
+- PL: Pylint (PLC, PLE, PLR, PLW)
+- PTH: flake8-use-pathlib
+- PYI: flake8-pyi (stub files)
 - RUF: Ruff rules (except RUF001/RUF003 for Persian)
 - S: Bandit (allow S101 assert, S301/S403 pickle)
+- SIM: flake8-simplify
+- SLOT: flake8-slots
+- T10: flake8-debugger
+- T20: flake8-print
+- TC: flake8-type-checking
+- TID: flake8-tidy-imports
 - TRY: tryceratops (except TRY003, TRY301)
 - UP: pyupgrade
 
 **Ignored**:
 - C901: McCabe max 10
+- EM101/EM102: Exception message formatting
 - F811: Redefinition in steps
 - G004: f-strings in logging
+- PERF203: try-except in loop
+- PLR0904/PLR0914/PLR1702: Complexity thresholds
+- SIM102/SIM108: Simplification preferences
+- TC001/TC003: TYPE_CHECKING imports (Pydantic compatibility)
 
 ## Development Tools
 

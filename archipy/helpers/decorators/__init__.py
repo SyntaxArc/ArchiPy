@@ -9,9 +9,14 @@ from .timeout import timeout_decorator
 from .timing import timing_decorator
 from .tracing import capture_span, capture_transaction
 
+
 # SQLAlchemy decorators are imported lazily to avoid requiring SQLAlchemy
 # when using archipy without the sqlalchemy extra (e.g., archipy[scylladb])
-_SQLALCHEMY_DECORATORS: dict[str, object] | None = None
+class _SQLAlchemyDecorators:
+    """Container for lazily loaded SQLAlchemy decorators."""
+
+    _cache: dict[str, object] | None = None
+
 
 # Type stubs for IDE support - these are only used for static type checking
 # The actual implementations are provided via __getattr__ at runtime
@@ -45,8 +50,6 @@ def __getattr__(name: str) -> object:
         ImportError: If SQLAlchemy is not installed and a SQLAlchemy decorator is requested.
         AttributeError: If the requested attribute is not a SQLAlchemy decorator.
     """
-    global _SQLALCHEMY_DECORATORS
-
     sqlalchemy_decorator_names = {
         "async_postgres_sqlalchemy_atomic_decorator",
         "async_sqlite_sqlalchemy_atomic_decorator",
@@ -60,7 +63,7 @@ def __getattr__(name: str) -> object:
     if name not in sqlalchemy_decorator_names:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
-    if _SQLALCHEMY_DECORATORS is None:
+    if _SQLAlchemyDecorators._cache is None:
         try:
             from .sqlalchemy_atomic import (
                 async_postgres_sqlalchemy_atomic_decorator,
@@ -72,7 +75,7 @@ def __getattr__(name: str) -> object:
                 starrocks_sqlalchemy_atomic_decorator,
             )
 
-            _SQLALCHEMY_DECORATORS = {
+            _SQLAlchemyDecorators._cache = {
                 "async_postgres_sqlalchemy_atomic_decorator": async_postgres_sqlalchemy_atomic_decorator,
                 "async_sqlite_sqlalchemy_atomic_decorator": async_sqlite_sqlalchemy_atomic_decorator,
                 "async_starrocks_sqlalchemy_atomic_decorator": async_starrocks_sqlalchemy_atomic_decorator,
@@ -87,7 +90,7 @@ def __getattr__(name: str) -> object:
                 "Install with: pip install archipy[sqlalchemy]",
             ) from e
 
-    return _SQLALCHEMY_DECORATORS[name]
+    return _SQLAlchemyDecorators._cache[name]
 
 
 __all__ = [

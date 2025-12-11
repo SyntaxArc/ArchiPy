@@ -1,6 +1,7 @@
 """Step definitions for ScyllaDB adapter Behave tests."""
 
 import logging
+from inspect import iscoroutinefunction
 from typing import Any
 
 from behave import given, then, when
@@ -178,7 +179,7 @@ async def step_async_table_exists(context: Context, table: str, schema: str) -> 
 
 
 @given('data exists in table "{table}":')
-def step_data_exists_in_table(context: Context, table: str) -> None:
+async def step_data_exists_in_table(context: Context, table: str) -> None:
     """Insert data from table into ScyllaDB.
 
     Args:
@@ -202,7 +203,10 @@ def step_data_exists_in_table(context: Context, table: str) -> None:
                     else:
                         data[heading] = value
 
-            adapter.insert(table, data)
+            if iscoroutinefunction(getattr(adapter, "insert", None)):
+                await adapter.insert(table, data)
+            else:
+                adapter.insert(table, data)
 
         logger.info("Data inserted into table '%s'", table)
     except Exception:

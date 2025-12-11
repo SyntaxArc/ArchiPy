@@ -32,6 +32,8 @@ from archipy.models.errors import (
     InternalError,
 )
 
+logger = logging.getLogger(__name__)
+
 # Constants for tracking atomic blocks and their corresponding registries
 ATOMIC_BLOCK_CONFIGS = {
     "postgres": {
@@ -71,7 +73,7 @@ def _handle_db_exception(exception: Exception, db_type: str, func_name: str) -> 
         DatabaseConstraintError: If a constraint violation occurs.
         DatabaseError: If a generic exception occurs within a database transaction.
     """
-    logging.debug(f"Exception in {db_type} atomic block (func: {func_name}): {exception}")
+    logger.debug(f"Exception in {db_type} atomic block (func: {func_name}): {exception}")
 
     # Handle specific SQLAlchemy errors
     if isinstance(exception, OperationalError):

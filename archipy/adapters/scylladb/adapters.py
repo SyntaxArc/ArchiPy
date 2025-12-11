@@ -209,7 +209,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             port=self.config.PORT,
             auth_provider=auth_provider,
             protocol_version=self.config.PROTOCOL_VERSION,
-            compression=True if self.config.COMPRESSION else False,
+            compression=bool(self.config.COMPRESSION),
             connect_timeout=self.config.CONNECT_TIMEOUT,
             load_balancing_policy=load_balancing_policy,
             default_retry_policy=retry_policy,
@@ -405,7 +405,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                               This prevents errors on duplicate primary keys but is slow
         """
         columns = ", ".join(data.keys())
-        placeholders = ", ".join(["%s" for _ in data.keys()])
+        placeholders = ", ".join(["%s" for _ in data])
         query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
 
         if if_not_exists:
@@ -442,7 +442,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         params = None
         if conditions:
-            where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+            where_clause = " AND ".join([f"{key} = %s" for key in conditions])
             query += f" WHERE {where_clause}"
             params = tuple(conditions.values())
 
@@ -463,8 +463,8 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
             ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
         """
-        set_clause = ", ".join([f"{key} = %s" for key in data.keys()])
-        where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+        set_clause = ", ".join([f"{key} = %s" for key in data])
+        where_clause = " AND ".join([f"{key} = %s" for key in conditions])
         query = f"UPDATE {table}"
 
         if ttl is not None:
@@ -489,7 +489,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             table (str): The name of the table.
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
         """
-        where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+        where_clause = " AND ".join([f"{key} = %s" for key in conditions])
         query = f"DELETE FROM {table} WHERE {where_clause}"
 
         try:
@@ -610,7 +610,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         params = None
         if conditions:
-            where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+            where_clause = " AND ".join([f"{key} = %s" for key in conditions])
             query += f" WHERE {where_clause} ALLOW FILTERING"
             params = tuple(conditions.values())
 
@@ -634,7 +634,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             bool: True if at least one row exists, False otherwise.
         """
-        where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+        where_clause = " AND ".join([f"{key} = %s" for key in conditions])
         query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"
 
         try:
@@ -792,7 +792,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             port=self.config.PORT,
             auth_provider=auth_provider,
             protocol_version=self.config.PROTOCOL_VERSION,
-            compression=True if self.config.COMPRESSION else False,
+            compression=bool(self.config.COMPRESSION),
             connect_timeout=self.config.CONNECT_TIMEOUT,
             load_balancing_policy=load_balancing_policy,
             default_retry_policy=retry_policy,
@@ -1008,7 +1008,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                               This prevents errors on duplicate primary keys but is slow
         """
         columns = ", ".join(data.keys())
-        placeholders = ", ".join(["%s" for _ in data.keys()])
+        placeholders = ", ".join(["%s" for _ in data])
         query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
 
         if if_not_exists:
@@ -1045,7 +1045,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         params = None
         if conditions:
-            where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+            where_clause = " AND ".join([f"{key} = %s" for key in conditions])
             query += f" WHERE {where_clause}"
             params = tuple(conditions.values())
 
@@ -1072,8 +1072,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
             ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
         """
-        set_clause = ", ".join([f"{key} = %s" for key in data.keys()])
-        where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+        set_clause = ", ".join([f"{key} = %s" for key in data])
+        where_clause = " AND ".join([f"{key} = %s" for key in conditions])
         query = f"UPDATE {table}"
 
         if ttl is not None:
@@ -1098,7 +1098,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             table (str): The name of the table.
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
         """
-        where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+        where_clause = " AND ".join([f"{key} = %s" for key in conditions])
         query = f"DELETE FROM {table} WHERE {where_clause}"
 
         try:
@@ -1225,7 +1225,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         params = None
         if conditions:
-            where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+            where_clause = " AND ".join([f"{key} = %s" for key in conditions])
             query += f" WHERE {where_clause} ALLOW FILTERING"
             params = tuple(conditions.values())
 
@@ -1249,7 +1249,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             bool: True if at least one row exists, False otherwise.
         """
-        where_clause = " AND ".join([f"{key} = %s" for key in conditions.keys()])
+        where_clause = " AND ".join([f"{key} = %s" for key in conditions])
         query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"
 
         try:

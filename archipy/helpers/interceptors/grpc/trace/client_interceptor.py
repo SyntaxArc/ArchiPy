@@ -14,6 +14,8 @@ from archipy.helpers.interceptors.grpc.base.client_interceptor import (
     ClientCallDetails,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class GrpcClientTraceInterceptor(BaseGrpcClientInterceptor):
     """A gRPC client interceptor for tracing requests using Elastic APM and Sentry APM.
@@ -57,9 +59,9 @@ class GrpcClientTraceInterceptor(BaseGrpcClientInterceptor):
                 )
                 sentry_span.__enter__()
             except ImportError:
-                logging.debug("sentry_sdk is not installed, skipping Sentry span creation.")
+                logger.debug("sentry_sdk is not installed, skipping Sentry span creation.")
             except Exception:
-                logging.exception("Failed to create Sentry span for gRPC client call")
+                logger.exception("Failed to create Sentry span for gRPC client call")
 
         # Handle Elastic APM trace propagation
         metadata = list(call_details.metadata or [])
@@ -99,7 +101,7 @@ class GrpcClientTraceInterceptor(BaseGrpcClientInterceptor):
                 try:
                     sentry_span.__exit__(None, None, None)
                 except Exception:
-                    logging.exception("Error closing Sentry span")
+                    logger.exception("Error closing Sentry span")
 
 
 class AsyncGrpcClientTraceInterceptor(BaseAsyncGrpcClientInterceptor):
@@ -148,9 +150,9 @@ class AsyncGrpcClientTraceInterceptor(BaseAsyncGrpcClientInterceptor):
                 )
                 sentry_span.__enter__()
             except ImportError:
-                logging.debug("sentry_sdk is not installed, skipping Sentry span creation.")
+                logger.debug("sentry_sdk is not installed, skipping Sentry span creation.")
             except Exception:
-                logging.exception("Failed to create Sentry span for async gRPC client call")
+                logger.exception("Failed to create Sentry span for async gRPC client call")
 
         # Handle Elastic APM trace propagation
         metadata = list(call_details.metadata or [])
@@ -189,4 +191,4 @@ class AsyncGrpcClientTraceInterceptor(BaseAsyncGrpcClientInterceptor):
                 try:
                     sentry_span.__exit__(None, None, None)
                 except Exception:
-                    logging.exception("Error closing Sentry span")
+                    logger.exception("Error closing Sentry span")

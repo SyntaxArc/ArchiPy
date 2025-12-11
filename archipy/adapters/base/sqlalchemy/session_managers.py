@@ -71,7 +71,6 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
         Returns:
             The SQLAlchemy configuration class expected by this session manager.
         """
-        pass
 
     @abstractmethod
     def _get_database_name(self) -> str:
@@ -80,7 +79,6 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
         Returns:
             str: The name of the database (e.g., 'postgresql', 'sqlite', 'starrocks').
         """
-        pass
 
     @abstractmethod
     def _create_url(self, configs: ConfigT) -> URL:
@@ -95,7 +93,6 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
         Raises:
             DatabaseConnectionError: If there's an error creating the URL.
         """
-        pass
 
     def _create_engine(self, configs: ConfigT) -> Engine:
         """Create a SQLAlchemy engine with common configuration.
@@ -257,7 +254,6 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
         Returns:
             The SQLAlchemy configuration class expected by this session manager.
         """
-        pass
 
     @abstractmethod
     def _get_database_name(self) -> str:
@@ -266,7 +262,6 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
         Returns:
             str: The name of the database (e.g., 'postgresql', 'sqlite', 'starrocks').
         """
-        pass
 
     @abstractmethod
     def _create_url(self, configs: ConfigT) -> URL:
@@ -281,7 +276,6 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
         Raises:
             DatabaseConnectionError: If there's an error creating the URL.
         """
-        pass
 
     def _create_async_engine(self, configs: ConfigT) -> AsyncEngine:
         """Create an async SQLAlchemy engine with common configuration.

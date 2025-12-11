@@ -46,7 +46,9 @@ async def step_create_realm(context: Context, realm_name: str, display_name: str
         if is_async:
 
             realm_result = await adapter.create_realm(
-                realm_name=realm_name, display_name=display_name, skip_exists=True,
+                realm_name=realm_name,
+                display_name=display_name,
+                skip_exists=True,
             )
 
         else:
@@ -386,7 +388,11 @@ async def step_create_user_basic(context: Context, username: str, password: str,
     'I create a user including username "{username}" email "{email}" and password "{password}" using {adapter_type} adapter',
 )
 async def step_create_user_with_email(
-    context: Context, username: str, email: str, password: str, adapter_type: str,
+    context: Context,
+    username: str,
+    email: str,
+    password: str,
+    adapter_type: str,
 ) -> None:
     """Create a user with the specified username, email, and password."""
     adapter = get_keycloak_adapter(context)
@@ -696,7 +702,11 @@ async def step_assign_realm_role(context: Context, role_name: str, username: str
 
 @when('I assign client role "{role_name}" of client "{client_id}" to user "{username}" using {adapter_type} adapter')
 async def step_assign_client_role(
-    context: Context, role_name: str, client_id: str, username: str, adapter_type: str,
+    context: Context,
+    role_name: str,
+    client_id: str,
+    username: str,
+    adapter_type: str,
 ) -> None:
     """Assign a client role to a user."""
     adapter = get_keycloak_adapter(context)

@@ -2,6 +2,35 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v4.0.2] - 2025-12-11
+
+### Changed
+
+#### Development Tools
+
+- Broadened Ruff configuration (additional ignores, per-file overrides, relaxed limits) and expanded type-checking/lint sections for optional dependency handling (lazy imports, optional extras).
+- Raised Pylint branch/statement limits to accommodate complex decorator and interceptor flows; added explicit flake8 config blocks for comprehensions, errmsg, type-checking, and unused-arguments.
+
+#### Adapters
+
+- SQLAlchemy base adapters: tightened filtering/exception handling helpers and optional dependency guards in session managers.
+- Email/Kafka/ScyllaDB/Temporal adapters: improved lazy import behavior, tracing hooks, and error handling consistency to match optional extras.
+
+#### Helpers
+
+- Decorators (cache/retry/timing/tracing/sqlalchemy_atomic): clarified lazy-import paths, kept TYPE_CHECKING stubs, and aligned __getattr__ caching.
+- gRPC interceptors (trace/metric, client/server): better Sentry span management, traceparent propagation, and guard rails when APM extras are disabled.
+- Utility helpers (app/error/file/keycloak): safer optional imports for HTTP/gRPC/Keycloak, clearer exception logging, and minor robustness fixes.
+
+#### Testing
+
+- BDD updates for cache decorator (TTL, clearing, bound method identity), Elastic adapter, Keycloak adapter, ScyllaDB adapter, and error utils to match revised behaviors and lazy-import handling.
+
+#### Dependencies
+
+- **Optional Dependencies**
+    - Updated `starrocks` extra from `>=1.3.1` to `>=1.3.2` (includes `starrocks-async`)
+
 ## [v4.0.1] - 2025-12-10
 
 ### Added

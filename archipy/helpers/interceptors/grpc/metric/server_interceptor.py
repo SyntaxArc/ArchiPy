@@ -175,7 +175,8 @@ class AsyncGrpcServerMetricInterceptor(BaseAsyncGrpcServerInterceptor):
                         if code_name is not None:
                             status_code = code_name
                 elif hasattr(e, "code") and callable(e.code):
-                    code_obj = e.code()
+                    code_method = e.code
+                    code_obj = code_method()
                     if code_obj is not None:
                         code_name = getattr(code_obj, "name", None)
                         if code_name is not None:

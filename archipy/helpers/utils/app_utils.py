@@ -27,6 +27,8 @@ else:
     GrpcAioServer = Any
     CreateGrpcServerType = Any
 
+logger = logging.getLogger(__name__)
+
 try:
     import grpc
     from grpc.experimental import aio as grpc_aio
@@ -153,7 +155,7 @@ class FastAPIUtils:
                 environment=config.ENVIRONMENT,
             )
         except Exception:
-            logging.exception("Failed to initialize Sentry")
+            logger.exception("Failed to initialize Sentry")
 
     @staticmethod
     def setup_cors(app: FastAPI, config: BaseConfig) -> None:
@@ -194,7 +196,7 @@ class FastAPIUtils:
             # ElasticAPM is compatible with FastAPI's middleware system at runtime
             app.add_middleware(ElasticAPM, client=apm_client)  # type: ignore[arg-type]
         except Exception:
-            logging.exception("Failed to initialize Elastic APM")
+            logger.exception("Failed to initialize Elastic APM")
 
     @staticmethod
     def setup_exception_handlers(app: FastAPI) -> None:
@@ -263,7 +265,7 @@ class AsyncGrpcAPIUtils:
 
             interceptors.append(AsyncGrpcServerTraceInterceptor())
         except Exception:
-            logging.exception("Failed to initialize Trace Interceptor")
+            logger.exception("Failed to initialize Trace Interceptor")
 
     @staticmethod
     def setup_metric_interceptor(config: BaseConfig, interceptors: list) -> None:
@@ -285,7 +287,7 @@ class AsyncGrpcAPIUtils:
             interceptors.append(AsyncGrpcServerMetricInterceptor())
 
         except Exception:
-            logging.exception("Failed to initialize Metric Interceptor")
+            logger.exception("Failed to initialize Metric Interceptor")
 
 
 class GrpcAPIUtils:
@@ -307,7 +309,7 @@ class GrpcAPIUtils:
 
             interceptors.append(GrpcServerTraceInterceptor())
         except Exception:
-            logging.exception("Failed to initialize Trace Interceptor")
+            logger.exception("Failed to initialize Trace Interceptor")
 
     @staticmethod
     def setup_metric_interceptor(config: BaseConfig, interceptors: list) -> None:
@@ -329,7 +331,7 @@ class GrpcAPIUtils:
             interceptors.append(GrpcServerMetricInterceptor())
 
         except Exception:
-            logging.exception("Failed to initialize Metric Interceptor")
+            logger.exception("Failed to initialize Metric Interceptor")
 
 
 class AppUtils:
@@ -366,7 +368,7 @@ class AppUtils:
         # Convert dict[int, ...] to dict[int | str, ...] for FastAPI compatibility
         responses_dict: dict[int | str, dict[str, Any]] | None = None
         if include_common_responses and common_responses:
-            responses_dict = {k: v for k, v in common_responses.items()}
+            responses_dict = dict(common_responses.items())
         app = FastAPI(
             title=config.FASTAPI.PROJECT_NAME,
             openapi_url=config.FASTAPI.OPENAPI_URL,

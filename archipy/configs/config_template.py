@@ -5,6 +5,7 @@ used in the application, including databases, message brokers, authentication se
 and more.
 """
 
+import contextlib
 import logging
 from enum import StrEnum
 from typing import Literal, Self
@@ -13,6 +14,8 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field, PostgresDsn, SecretStr, model_validator
 
 from archipy.models.errors import FailedPreconditionError, InvalidArgumentError
+
+logger = logging.getLogger(__name__)
 
 
 class RedisMode(StrEnum):
@@ -108,7 +111,7 @@ class ElasticsearchConfig(BaseModel):
         """Warn if sniffing is enabled with a load balancer."""
         if any([self.SNIFF_ON_START, self.SNIFF_BEFORE_REQUESTS, self.SNIFF_ON_NODE_FAILURE]):
             if len(self.HOSTS) == 1 and "localhost" not in self.HOSTS[0]:
-                logging.warning("Warning: Sniffing may bypass load balancers or proxies, ensure this is intended.")
+                logger.warning("Warning: Sniffing may bypass load balancers or proxies, ensure this is intended.")
         return self
 
 
@@ -335,7 +338,7 @@ class KafkaConfig(BaseModel):
                 raise ValueError("SASL authentication requires SASL_MECHANISM, USERNAME, and PASSWORD to be set.")
         if self.SECURITY_PROTOCOL == "SSL":
             if not (self.SSL_CA_FILE or self.SSL_CERT_FILE or self.SSL_KEY_FILE):
-                logging.warning("SSL enabled but no SSL certificates provided; this may cause connection issues.")
+                logger.warning("SSL enabled but no SSL certificates provided; this may cause connection issues.")
         return self
 
     @model_validator(mode="after")
@@ -522,10 +525,8 @@ class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
                 if self.HOST is None:
                     self.HOST = host
                 if self.PORT is None:
-                    try:
+                    with contextlib.suppress(ValueError):
                         self.PORT = int(port_str)
-                    except ValueError:
-                        pass
             elif host_part and self.HOST is None:
                 self.HOST = host_part
 
@@ -599,7 +600,7 @@ class RedisConfig(BaseModel):
             if not self.CLUSTER_NODES:
                 raise ValueError("CLUSTER_NODES must be provided when MODE is 'cluster'")
             if self.DATABASE != 0:
-                logging.warning("DATABASE setting ignored in cluster mode")
+                logger.warning("DATABASE setting ignored in cluster mode")
 
         elif self.MODE == RedisMode.SENTINEL:
             if not self.SENTINEL_NODES or not self.SENTINEL_SERVICE_NAME:

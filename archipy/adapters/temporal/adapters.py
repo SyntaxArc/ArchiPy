@@ -7,6 +7,7 @@ and conventions.
 
 from collections.abc import Callable
 from datetime import timedelta
+from pathlib import Path
 from typing import Any, TypeVar, override
 from uuid import uuid4
 
@@ -136,21 +137,18 @@ class TemporalAdapter(TemporalPort):
             if self.config.TLS_CA_CERT is None:
                 raise InvalidArgumentError(additional_data={"error": "TLS_CA_CERT is required but not set"})
             ca_cert_path: str = self.config.TLS_CA_CERT
-            with open(ca_cert_path, "rb") as f:
-                ca_cert_data = f.read()
+            ca_cert_data = Path(ca_cert_path).read_bytes()
 
             client_cert_data = None
             client_key_data = None
 
             if self.config.TLS_CLIENT_CERT:
                 client_cert_path: str = self.config.TLS_CLIENT_CERT
-                with open(client_cert_path, "rb") as f:
-                    client_cert_data = f.read()
+                client_cert_data = Path(client_cert_path).read_bytes()
 
             if self.config.TLS_CLIENT_KEY:
                 client_key_path: str = self.config.TLS_CLIENT_KEY
-                with open(client_key_path, "rb") as f:
-                    client_key_data = f.read()
+                client_key_data = Path(client_key_path).read_bytes()
 
             return TLSConfig(
                 server_root_ca_cert=ca_cert_data,
@@ -384,10 +382,7 @@ class TemporalAdapter(TemporalPort):
             next_page_token=next_page_token,
         )
         # Convert to list for compatibility
-        workflows = []
-        async for workflow in workflows_iter:
-            workflows.append(workflow)
-        return workflows
+        return [workflow async for workflow in workflows_iter]
 
     @override
     async def describe_workflow(self, workflow_id: str, run_id: str | None = None) -> Any:

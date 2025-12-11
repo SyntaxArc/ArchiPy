@@ -79,12 +79,10 @@ class CachedFunction[**P, R]:
         key_parts = [func_name]
 
         # Use repr() with type information for robust key generation
-        for arg in args:
-            key_parts.append(f"{type(arg).__name__}:{arg!r}")
+        key_parts.extend(f"{type(arg).__name__}:{arg!r}" for arg in args)
 
         # Add keyword arguments
-        for k, v in sorted(kwargs.items()):
-            key_parts.append(f"{k}={type(v).__name__}:{v!r}")
+        key_parts.extend(f"{k}={type(v).__name__}:{v!r}" for k, v in sorted(kwargs.items()))
 
         key = ":".join(key_parts)
 

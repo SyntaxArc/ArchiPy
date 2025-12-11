@@ -22,7 +22,7 @@ def step_given_raised_error(context, error_type, message):
 def step_when_error_is_captured(context):
     scenario_context = get_current_scenario_context(context)
     error = scenario_context.get("error")
-    with patch("logging.exception") as mock_log:
+    with patch("archipy.helpers.utils.error_utils.logger.exception") as mock_log:
         ErrorUtils.capture_exception(error)
         scenario_context.store("log_called", mock_log.called)
 

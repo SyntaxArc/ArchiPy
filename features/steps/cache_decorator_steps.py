@@ -498,9 +498,9 @@ def step_then_function_should_not_be_executed_again(context):
     counter = scenario_context.get("counter")
     initial_count = scenario_context.get("initial_count")
 
-    assert counter.count == initial_count, (
-        f"Expected function not to be executed again, but count changed from {initial_count} to {counter.count}"
-    )
+    assert (
+        counter.count == initial_count
+    ), f"Expected function not to be executed again, but count changed from {initial_count} to {counter.count}"
 
 
 @then("the execution count should be {expected:d}")
@@ -534,9 +534,9 @@ def step_then_method_should_not_be_executed_again(context):
     counter = scenario_context.get("counter")
     initial_count = scenario_context.get("initial_count")
 
-    assert counter.count == initial_count, (
-        f"Expected method not to be executed again, but count changed from {initial_count} to {counter.count}"
-    )
+    assert (
+        counter.count == initial_count
+    ), f"Expected method not to be executed again, but count changed from {initial_count} to {counter.count}"
 
 
 @then("both instances should return the same result")
@@ -556,9 +556,9 @@ def step_then_both_methods_should_be_executed(context):
     counter = scenario_context.get("counter")
     initial_count = scenario_context.get("initial_count")
 
-    assert counter.count == initial_count + 2, (
-        f"Expected both methods to be executed, but count changed from {initial_count} to {counter.count}"
-    )
+    assert (
+        counter.count == initial_count + 2
+    ), f"Expected both methods to be executed, but count changed from {initial_count} to {counter.count}"
 
 
 @then("both methods should be executed again")
@@ -568,9 +568,9 @@ def step_then_both_methods_should_be_executed_again(context):
     counter = scenario_context.get("counter")
     second_call_initial_count = scenario_context.get("second_call_initial_count")
 
-    assert counter.count == second_call_initial_count + 2, (
-        f"Expected both methods to be executed again, but count changed from {second_call_initial_count} to {counter.count}"
-    )
+    assert (
+        counter.count == second_call_initial_count + 2
+    ), f"Expected both methods to be executed again, but count changed from {second_call_initial_count} to {counter.count}"
 
 
 @then("the result should be None")

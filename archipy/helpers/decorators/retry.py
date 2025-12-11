@@ -9,6 +9,8 @@ from archipy.models.errors import ResourceExhaustedError
 P = ParamSpec("P")
 R = TypeVar("R")
 
+logger = logging.getLogger(__name__)
+
 
 def retry_decorator(
     max_retries: int = 3,
@@ -62,7 +64,7 @@ def retry_decorator(
                 try:
                     result = func(*args, **kwargs)
                     if retries > 0:
-                        logging.info("Attempt %d succeeded.", retries + 1)
+                        logger.info("Attempt %d succeeded.", retries + 1)
                 except Exception as e:
                     retries += 1
                     # Check if the exception should be ignored
@@ -71,7 +73,7 @@ def retry_decorator(
                     # Check if the exception should be retried
                     if retry_on and not isinstance(e, retry_on):
                         raise
-                    logging.warning("Attempt %d failed: %s", retries, e)
+                    logger.warning("Attempt %d failed: %s", retries, e)
                     if retries < max_retries:
                         time.sleep(delay)
                     continue

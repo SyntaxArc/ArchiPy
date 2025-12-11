@@ -5,7 +5,6 @@ from typing import Any, NamedTuple, TypeVar
 import grpc
 
 _TRequest = TypeVar("_TRequest")
-_TResponse = TypeVar("_TResponse")
 
 
 class _ClientCallDetailsFields(NamedTuple):

@@ -1,3 +1,4 @@
+import contextlib
 import logging
 from typing import override
 
@@ -50,10 +51,8 @@ class KafkaExceptionHandlerMixin:
             # Extract timeout value if available
             timeout = None
             if hasattr(exception, "args") and len(exception.args) > 1:
-                try:
+                with contextlib.suppress(IndexError, ValueError):
                     timeout = int(exception.args[1])
-                except (IndexError, ValueError):
-                    pass
             raise ConnectionTimeoutError(service="Kafka", timeout=timeout) from exception
 
         # Network/connectivity errors

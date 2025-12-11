@@ -123,7 +123,9 @@ def format_commit_message(message: str) -> str:
     """Clean and format a commit message for the changelog."""
     # Remove Conventional Commits prefix (e.g., feat(ui):)
     message = re.sub(
-        r"^(feat|fix|docs|style|refactor|test|chore|ci|build|perf|security|deprecate|remove)(\([^)]+\))?:", "", message,
+        r"^(feat|fix|docs|style|refactor|test|chore|ci|build|perf|security|deprecate|remove)(\([^)]+\))?:",
+        "",
+        message,
     ).strip()
     # Capitalize first letter
     return message[0].upper() + message[1:] if message else message

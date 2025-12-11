@@ -9,6 +9,7 @@ from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from pathlib import Path
 from queue import Queue
 from typing import BinaryIO, override
 
@@ -23,6 +24,8 @@ from archipy.helpers.utils.base_utils import BaseUtils
 from archipy.models.dtos.email_dtos import EmailAttachmentDTO
 from archipy.models.errors import InvalidArgumentError
 from archipy.models.types.email_types import EmailAttachmentDispositionType, EmailAttachmentType
+
+logger = logging.getLogger(__name__)
 
 
 class EmailConnectionManager:
@@ -135,10 +138,10 @@ class AttachmentHandler:
     def _process_source(source: str | bytes | BinaryIO | HttpUrl, attachment_type: EmailAttachmentType) -> bytes:
         """Process different types of attachment sources."""
         if attachment_type == EmailAttachmentType.FILE:
-            if isinstance(source, (str, os.PathLike)):
-                file_path = os.fspath(source)
-                with open(file_path, "rb") as f:
-                    return f.read()
+            if isinstance(source, str):
+                return Path(source).read_bytes()
+            if isinstance(source, os.PathLike):
+                return Path(os.fspath(source)).read_bytes()
             raise ValueError(f"File attachment type requires string path, got {type(source)}")
         elif attachment_type == EmailAttachmentType.BASE64:
             if isinstance(source, str | bytes):
@@ -252,7 +255,7 @@ class EmailAdapter(EmailPort):
                 try:
                     if connection.smtp_connection:
                         connection.smtp_connection.send_message(msg, to_addrs=recipients)
-                        logging.debug(f"Email sent successfully to {to_email}")
+                        logger.debug(f"Email sent successfully to {to_email}")
                         return
                     else:
                         connection.connect()
@@ -300,7 +303,7 @@ class EmailAdapter(EmailPort):
                     # Treat as file path
                     attachment_obj = AttachmentHandler.create_attachment(
                         source=attachment,
-                        filename=os.path.basename(attachment),
+                        filename=Path(attachment).name,
                         attachment_type=EmailAttachmentType.FILE,
                     )
                 else:

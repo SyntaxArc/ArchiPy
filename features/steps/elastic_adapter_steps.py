@@ -202,7 +202,9 @@ async def step_document_exists(context: Context, index_name: str, doc_id: str, c
         )
 
         _log_operation(
-            context, "Document creation", f"Document with id '{doc_id}' created in index '{actual_index_name}'",
+            context,
+            "Document creation",
+            f"Document with id '{doc_id}' created in index '{actual_index_name}'",
         )
 
         # Wait for propagation

@@ -342,9 +342,7 @@ class KeycloakUtils:
                 else:
                     auth_value_str = str(auth_value)
 
-                if auth_value_str.startswith("Bearer "):
-                    return auth_value_str[7:]
-                elif auth_value_str.startswith("bearer "):
+                if auth_value_str.startswith(("Bearer ", "bearer ")):
                     return auth_value_str[7:]
                 else:
                     return auth_value_str

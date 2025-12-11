@@ -363,7 +363,6 @@ class BaseActivity[T, R]:
             ttl (int): Time-to-live in seconds. Defaults to 3600 (1 hour).
         """
         # Override this method to use your logic instance's repository
-        pass
 
     def _log_activity_event(self, event: str, details: dict[str, Any] | None = None) -> None:
         """Log activity events with consistent formatting.

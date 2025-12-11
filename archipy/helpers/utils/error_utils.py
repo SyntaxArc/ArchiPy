@@ -10,6 +10,8 @@ from archipy.models.dtos.fastapi_exception_response_dto import (
 )
 from archipy.models.errors import BaseError
 
+logger = logging.getLogger(__name__)
+
 
 # Define type protocols for better type checking
 class RequestProtocol(Protocol):
@@ -96,7 +98,7 @@ class ErrorUtils:
             exception (BaseException): The exception to capture and report.
         """
         # Always log the exception locally
-        logging.exception("An exception occurred")
+        logger.exception("An exception occurred")
         config: Any = BaseConfig.global_config()
 
         # Report exception to Sentry if enabled
@@ -106,7 +108,7 @@ class ErrorUtils:
 
                 sentry_sdk.capture_exception(exception)
             except ImportError:
-                logging.exception("sentry_sdk is not installed, cannot capture exception in Sentry.")
+                logger.exception("sentry_sdk is not installed, cannot capture exception in Sentry.")
 
         # Report exception to Elastic APM if enabled
         if config.ELASTIC_APM.IS_ENABLED:
@@ -117,7 +119,7 @@ class ErrorUtils:
                 client = elasticapm.get_client()
                 client.capture_exception()
             except ImportError:
-                logging.exception("elasticapm is not installed, cannot capture exception in Elastic APM.")
+                logger.exception("elasticapm is not installed, cannot capture exception in Elastic APM.")
 
     @staticmethod
     async def async_handle_fastapi_exception(_request: RequestProtocol, exception: BaseError) -> JSONResponseProtocol:

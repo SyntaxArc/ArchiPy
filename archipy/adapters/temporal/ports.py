@@ -343,19 +343,13 @@ class WorkerPort:
 class WorkflowHandle:
     """Type stub for workflow handle."""
 
-    pass
-
 
 class WorkflowListResponse:
     """Type stub for workflow list response."""
 
-    pass
-
 
 class WorkflowDescription:
     """Type stub for workflow description."""
-
-    pass
 
 
 class WorkerHandle(ABC):

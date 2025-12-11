@@ -80,10 +80,20 @@ class SQLAlchemyFilterMixin:
     """
 
     @staticmethod
+    def _validate_list_operation(
+        value: str | float | bool | list | UUID | None,
+        operation: FilterOperationType,
+    ) -> list:
+        """Validate that value is a list for list operations."""
+        if not isinstance(value, list):
+            raise InvalidArgumentError(f"{operation.value} operation requires a list, got {type(value)}")
+        return value
+
+    @staticmethod
     def _apply_filter(
         query: Select | Update | Delete,
         field: InstrumentedAttribute,
-        value: str | int | float | bool | list | UUID | None,
+        value: str | float | bool | list | UUID | None,
         operation: FilterOperationType,
     ) -> Select | Update | Delete:
         """Apply a filter to a SQLAlchemy query based on the specified operation.
@@ -97,42 +107,36 @@ class SQLAlchemyFilterMixin:
         Returns:
             The updated query with the filter applied.
         """
-        if value is not None or operation in [FilterOperationType.IS_NULL, FilterOperationType.IS_NOT_NULL]:
-            match operation:
-                case FilterOperationType.EQUAL:
-                    return query.where(field == value)
-                case FilterOperationType.NOT_EQUAL:
-                    return query.where(field != value)
-                case FilterOperationType.LESS_THAN:
-                    return query.where(field < value)
-                case FilterOperationType.LESS_THAN_OR_EQUAL:
-                    return query.where(field <= value)
-                case FilterOperationType.GREATER_THAN:
-                    return query.where(field > value)
-                case FilterOperationType.GREATER_THAN_OR_EQUAL:
-                    return query.where(field >= value)
-                case FilterOperationType.IN_LIST:
-                    if not isinstance(value, list):
-                        raise InvalidArgumentError(f"IN_LIST operation requires a list, got {type(value)}")
-                    return query.where(field.in_(value))
-                case FilterOperationType.NOT_IN_LIST:
-                    if not isinstance(value, list):
-                        raise InvalidArgumentError(f"NOT_IN_LIST operation requires a list, got {type(value)}")
-                    return query.where(~field.in_(value))
-                case FilterOperationType.LIKE:
-                    return query.where(field.like(f"%{value}%"))
-                case FilterOperationType.ILIKE:
-                    return query.where(field.ilike(f"%{value}%"))
-                case FilterOperationType.STARTS_WITH:
-                    return query.where(field.startswith(value))
-                case FilterOperationType.ENDS_WITH:
-                    return query.where(field.endswith(value))
-                case FilterOperationType.CONTAINS:
-                    return query.where(field.contains(value))
-                case FilterOperationType.IS_NULL:
-                    return query.where(field.is_(None))
-                case FilterOperationType.IS_NOT_NULL:
-                    return query.where(field.isnot(None))
+        # Skip filter if value is None (except for IS_NULL/IS_NOT_NULL operations)
+        if value is None and operation not in [FilterOperationType.IS_NULL, FilterOperationType.IS_NOT_NULL]:
+            return query
+
+        # Map operations to their corresponding SQLAlchemy expressions
+        filter_map = {
+            FilterOperationType.EQUAL: lambda: field == value,
+            FilterOperationType.NOT_EQUAL: lambda: field != value,
+            FilterOperationType.LESS_THAN: lambda: field < value,
+            FilterOperationType.LESS_THAN_OR_EQUAL: lambda: field <= value,
+            FilterOperationType.GREATER_THAN: lambda: field > value,
+            FilterOperationType.GREATER_THAN_OR_EQUAL: lambda: field >= value,
+            FilterOperationType.IN_LIST: lambda: field.in_(
+                SQLAlchemyFilterMixin._validate_list_operation(value, operation),
+            ),
+            FilterOperationType.NOT_IN_LIST: lambda: ~field.in_(
+                SQLAlchemyFilterMixin._validate_list_operation(value, operation),
+            ),
+            FilterOperationType.LIKE: lambda: field.like(f"%{value}%"),
+            FilterOperationType.ILIKE: lambda: field.ilike(f"%{value}%"),
+            FilterOperationType.STARTS_WITH: lambda: field.startswith(value),
+            FilterOperationType.ENDS_WITH: lambda: field.endswith(value),
+            FilterOperationType.CONTAINS: lambda: field.contains(value),
+            FilterOperationType.IS_NULL: lambda: field.is_(None),
+            FilterOperationType.IS_NOT_NULL: lambda: field.isnot(None),
+        }
+
+        filter_expr = filter_map.get(operation)
+        if filter_expr:
+            return query.where(filter_expr())
         return query
 
 

@@ -350,8 +350,8 @@ requires-dist = [
     { name = "scylla-driver", marker = "extra == 'scylladb'", specifier = ">=3.29.6" },
     { name = "sentry-sdk", marker = "extra == 'sentry'", specifier = ">=2.47.0" },
     { name = "sqlalchemy", marker = "extra == 'sqlalchemy'", specifier = ">=2.0.45" },
-    { name = "starrocks", marker = "extra == 'starrocks'", specifier = ">=1.3.1" },
-    { name = "starrocks", marker = "extra == 'starrocks-async'", specifier = ">=1.3.1" },
+    { name = "starrocks", marker = "extra == 'starrocks'", specifier = ">=1.3.2" },
+    { name = "starrocks", marker = "extra == 'starrocks-async'", specifier = ">=1.3.2" },
     { name = "temporalio", marker = "extra == 'temporalio'", specifier = ">=1.20.0" },
     { name = "testcontainers", marker = "extra == 'testcontainers'", specifier = ">=4.13.3" },
     { name = "zeep", marker = "extra == 'parsian-ipg'", specifier = ">=4.3.2" },
@@ -2445,7 +2445,7 @@ wheels = [
 
 [[package]]
 name = "starrocks"
-version = "1.3.1"
+version = "1.3.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "alembic" },
@@ -2454,9 +2454,9 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "sqlalchemy-utils" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1e/ca/431498461abc5ced7ec6593a16327636bce1526c958505b7110a2481f2c8/starrocks-1.3.1.tar.gz", hash = "sha256:e410cf72b9ae59aa5b65ff16e3402aacf4d5f261ef1e0d818a9acf8fd04f75f3", size = 101100, upload-time = "2025-11-25T07:28:58.821Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/29/4f/adf8926b90c75a9537df70878e8ee8c4344b755ab562349afdaf7862ab8b/starrocks-1.3.2.tar.gz", hash = "sha256:50f86707f909a3db573dab9bdd98356b0b773e0a32733c1b01472e460fd94cf8", size = 102793, upload-time = "2025-12-11T07:22:58.935Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fa/d7/b74daff2b63b6499e3be77554749e10679cb2f11192a544cc90379978060/starrocks-1.3.1-py3-none-any.whl", hash = "sha256:bbfe00be6f04036923f07f2616619f0cbe937be87bda63b0e01b56b882b23afd", size = 105482, upload-time = "2025-11-25T07:28:56.385Z" },
+    { url = "https://files.pythonhosted.org/packages/80/21/cdd032f7f247eed5890e224f66941939ec9855fac779bd8c59ffa2bd885c/starrocks-1.3.2-py3-none-any.whl", hash = "sha256:a74be05b16e3f746987b1848971de5cc3a1f440772557c7532541bad142d30cc", size = 107711, upload-time = "2025-12-11T07:22:56.518Z" },
 ]
 
 [[package]]

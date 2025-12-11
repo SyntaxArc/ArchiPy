@@ -13,6 +13,8 @@ from archipy.helpers.interceptors.grpc.base.server_interceptor import (
 )
 from archipy.helpers.utils.base_utils import BaseUtils
 
+logger = logging.getLogger(__name__)
+
 
 class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
     """A gRPC server interceptor for tracing requests using Elastic APM and Sentry APM.
@@ -88,9 +90,9 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
                     )
                     sentry_transaction.__enter__()
                 except ImportError:
-                    logging.debug("sentry_sdk is not installed, skipping Sentry transaction creation.")
+                    logger.debug("sentry_sdk is not installed, skipping Sentry transaction creation.")
                 except Exception:
-                    logging.exception("Failed to create Sentry transaction for gRPC server call")
+                    logger.exception("Failed to create Sentry transaction for gRPC server call")
 
             # Handle Elastic APM if enabled
             elastic_client: Any = None
@@ -108,7 +110,7 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
                         # Start a new transaction if no trace parent header is present
                         elastic_client.begin_transaction(transaction_type="request")
                 except Exception:
-                    logging.exception("Failed to initialize Elastic APM transaction")
+                    logger.exception("Failed to initialize Elastic APM transaction")
                     elastic_client = None
 
             try:
@@ -134,7 +136,7 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
                     try:
                         sentry_transaction.__exit__(None, None, None)
                     except Exception:
-                        logging.exception("Error closing Sentry transaction")
+                        logger.exception("Error closing Sentry transaction")
 
         except Exception as exception:
             BaseUtils.capture_exception(exception)
@@ -219,9 +221,9 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
                     )
                     sentry_transaction.__enter__()
                 except ImportError:
-                    logging.debug("sentry_sdk is not installed, skipping Sentry transaction creation.")
+                    logger.debug("sentry_sdk is not installed, skipping Sentry transaction creation.")
                 except Exception:
-                    logging.exception("Failed to create Sentry transaction for async gRPC server call")
+                    logger.exception("Failed to create Sentry transaction for async gRPC server call")
 
             # Handle Elastic APM if enabled
             elastic_client: Any = None
@@ -240,7 +242,7 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
                         # Start a new transaction if no trace parent header is present
                         elastic_client.begin_transaction(transaction_type="request")
                 except Exception:
-                    logging.exception("Failed to initialize Elastic APM transaction")
+                    logger.exception("Failed to initialize Elastic APM transaction")
                     elastic_client = None
 
             try:
@@ -266,7 +268,7 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
                     try:
                         sentry_transaction.__exit__(None, None, None)
                     except Exception:
-                        logging.exception("Error closing Sentry transaction")
+                        logger.exception("Error closing Sentry transaction")
 
         except Exception as exception:
             BaseUtils.capture_exception(exception)

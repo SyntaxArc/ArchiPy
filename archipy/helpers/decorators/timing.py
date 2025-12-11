@@ -2,6 +2,8 @@ import logging
 import time
 from collections.abc import Callable
 
+logger = logging.getLogger(__name__)
+
 
 def timing_decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     """A decorator that measures the execution time of a function and logs it if the logging level is DEBUG.
@@ -41,7 +43,7 @@ def timing_decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
             start_time = time.time()
             result = func(*args, **kwargs)
             end_time = time.time()
-            logging.debug("%s took %.4f seconds to execute.", func_name, end_time - start_time)
+            logger.debug("%s took %.4f seconds to execute.", func_name, end_time - start_time)
         else:
             result = func(*args, **kwargs)
         return result
