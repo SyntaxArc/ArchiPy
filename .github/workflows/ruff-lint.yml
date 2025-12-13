@@ -1,0 +1,30 @@
+name: Ruff Lint
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run Ruff check
+        uses: astral-sh/ruff-action@v3
+        with:
+          python-version: "3.14"  # Aligns with pyproject.toml
+          args: check --output-format=github archipy
+
+      - name: Run Ruff format check
+        uses: astral-sh/ruff-action@v3
+        with:
+          python-version: "3.14"  # Aligns with pyproject.toml
+          args: format --check archipy
