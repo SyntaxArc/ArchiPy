@@ -16,10 +16,6 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Get changed files
-      id: changed-files
-      uses: tj-actions/changed-files@v47
-
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
@@ -32,8 +28,17 @@ jobs:
       run: |
         uv sync --group dev
 
-    - name: Run Ruff on changed files
+    - name: Run Ruff check
       run: |
-        # Filter Python files from changed files and run Ruff
-        echo "${{ steps.changed-files.outputs.all_changed_files }}" | tr ' ' '\n' | grep '\.py$' | xargs -r uv run ruff check --config=pyproject.toml
-        echo "${{ steps.changed-files.outputs.all_changed_files }}" | tr ' ' '\n' | grep '\.py$' | xargs -r uv run ruff format --check --config=pyproject.toml
+        # Ruff automatically reads pyproject.toml configuration
+        uv run ruff check archipy
+
+    - name: Run Ruff format check
+      run: |
+        # Ruff automatically reads pyproject.toml configuration
+        uv run ruff format --check archipy
+
+    - name: Run Ty type checking
+      run: |
+        # Ty automatically reads pyproject.toml configuration
+        uv run ty check archipy

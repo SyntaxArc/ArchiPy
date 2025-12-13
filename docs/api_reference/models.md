@@ -58,7 +58,6 @@ class User(BaseEntity):
 
 **Base Types** - Common type definitions
 **Email Types** - Email-related type definitions
-**Error Message Types** - Error message type definitions
 **Language Type** - Language enumeration
 **Sort Order Type** - Sort order enumeration
 **Time Interval Unit Type** - Time interval unit enumeration
@@ -394,15 +393,6 @@ show_source: true
 Type definitions for email-related operations.
 
 ::: archipy.models.types.email_types
-options:
-show_root_heading: true
-show_source: true
-
-### Error Message Types
-
-Standardized error message types for consistent error handling.
-
-::: archipy.models.types.error_message_types
 options:
 show_root_heading: true
 show_source: true
