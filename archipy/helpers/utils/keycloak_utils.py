@@ -458,8 +458,11 @@ class KeycloakUtils:
                                 )
 
                     # 8. Create auth context for business logic
+                    user_id = user_info.get("sub")
+                    if not user_id:
+                        raise UnauthenticatedError(lang=lang)
                     auth_context = AuthContext(
-                        user_id=user_info.get("sub"),
+                        user_id=user_id,
                         username=user_info.get("preferred_username", ""),
                         email=user_info.get("email", ""),
                         roles=user_info.get("realm_access", {}).get("roles", []),
@@ -600,8 +603,11 @@ class KeycloakUtils:
                                 )
 
                     # 8. Create auth context for business logic
+                    user_id = user_info.get("sub")
+                    if not user_id:
+                        raise UnauthenticatedError(lang=lang)
                     auth_context = AuthContext(
-                        user_id=user_info.get("sub"),
+                        user_id=user_id,
                         username=user_info.get("preferred_username", ""),
                         email=user_info.get("email", ""),
                         roles=user_info.get("realm_access", {}).get("roles", []),

@@ -398,11 +398,11 @@ options:
 show_root_heading: true
 show_source: true
 
-### Time Interval Unit Type
+### Error Message Types
 
-Time interval unit definitions for scheduling and duration handling.
+Standardized error message types for consistent error handling.
 
-::: archipy.models.types.time_interval_unit_type
+::: archipy.models.types.error_message_types
 options:
 show_root_heading: true
 show_source: true

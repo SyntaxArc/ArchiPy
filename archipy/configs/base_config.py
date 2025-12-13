@@ -1,4 +1,4 @@
-from typing import Self, TypeVar
+from typing import TypeVar
 
 from pydantic_settings import (
     BaseSettings,
@@ -121,7 +121,7 @@ class BaseConfig[R](BaseSettings):
         env_ignore_empty=True,
     )
 
-    __global_config: Self | None = None
+    __global_config: BaseConfig | None = None
 
     @classmethod
     def settings_customise_sources(
@@ -189,11 +189,11 @@ class BaseConfig[R](BaseSettings):
         self.ELASTIC_APM.ENVIRONMENT = self.ENVIRONMENT
 
     @classmethod
-    def global_config(cls) -> Self:
+    def global_config(cls) -> BaseConfig:
         """Retrieves the global configuration instance.
 
         Returns:
-            Self: The global configuration instance.
+            BaseConfig: The global configuration instance.
 
         Raises:
             AssertionError: If the global config hasn't been set with
@@ -204,19 +204,20 @@ class BaseConfig[R](BaseSettings):
             >>> redis_host = config.REDIS.MASTER_HOST
         """
         config_not_set_error = "You should set global configs with BaseConfig.set_global(MyConfig())"
-        if cls.__global_config is None:
+        global_config = cls.__global_config
+        if global_config is None:
             raise AssertionError(config_not_set_error)
-        return cls.__global_config
+        return global_config
 
     @classmethod
-    def set_global(cls, config: R) -> None:
+    def set_global(cls, config: BaseConfig) -> None:
         """Sets the global configuration instance.
 
         This method should be called once during application initialization
         to set the global configuration that will be used throughout the app.
 
         Args:
-            config (R): The configuration instance to use globally.
+            config (BaseConfig): The configuration instance to use globally.
 
         Examples:
             >>> my_config = MyAppConfig(BaseConfig)
