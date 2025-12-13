@@ -567,6 +567,7 @@ class AtomicActivity(BaseActivity[T, R]):
                 # Custom database operations
                 return await some_database_work()
 
+
             result = await self.execute_custom_atomic_operation(custom_logic)
             ```
         """

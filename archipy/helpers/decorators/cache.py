@@ -15,6 +15,7 @@ class CachedFunction[**P, R]:
         def expensive_function(x: int) -> int:
             return x * 2
 
+
         # First call executes the function
         result = expensive_function(5)  # Returns 10
 
@@ -134,6 +135,7 @@ def ttl_cache_decorator[**P, R](
             def fetch_data(self, key: str) -> dict:
                 # Expensive operation
                 return {"data": key}
+
 
         service1 = DataService()
         service2 = DataService()

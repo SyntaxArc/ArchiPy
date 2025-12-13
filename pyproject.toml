@@ -66,7 +66,6 @@ build-backend = "hatchling.build"
 dev = [
     "add-trailing-comma>=4.0.0",
     "bandit>=1.9.2",
-    "black>=25.12.0",
     "codespell>=2.4.1",
     "ty",
     "pre-commit-hooks>=6.0.0",
@@ -99,38 +98,6 @@ Documentation = "https://archipy.readthedocs.io/"
 "Contributing" = "https://github.com/SyntaxArc/ArchiPy/blob/master/CONTRIBUTING.md"
 "Code of Conduct" = "https://github.com/SyntaxArc/ArchiPy/blob/master/CODE_OF_CONDUCT.md"
 
-
-[tool.black]
-# Enable colored output
-color = true
-
-# Set the maximum line length
-line-length = 120
-
-# Target Python version
-target-version = ["py314"]
-
-# Skip string normalization (useful for projects with mixed quote styles)
-skip-string-normalization = false
-
-# Exclude specific files and directories
-extend-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-  | migrations  # Exclude database migration files
-  | node_modules  # Exclude Node.js dependencies
-  | __pycache__  # Exclude Python cache directories
-)/
-'''
 
 [tool.ruff]
 # Enable automatic fixes for supported rules
@@ -183,7 +150,7 @@ lint.ignore = [
     "D100", # Missing docstring in public module
     "D104", # Missing docstring in public package
     "D107", # Missing docstring in `__init__`
-    "E501", # Line too long (handled by Black)
+    "E501", # Line too long (handled by Ruff formatter)
     "EM101", # Raw string in exception (conflicts with error handling patterns)
     "EM102", # f-string in exception (conflicts with error handling patterns)
     "F811", # Redefinition of unused function
@@ -194,7 +161,7 @@ lint.ignore = [
     "PLR0914", # Too many locals (complex business logic may require this)
     "PLR1702", # Too many nested blocks (BDD steps may have nested scenarios)
     "PLR2004", # Magic value used in comparison
-    "Q000", # Allow single quotes (conflicts with Black's double-quote preference)
+    "Q000", # Allow single quotes (conflicts with Ruff formatter's double-quote preference)
     "RUF001", "RUF003", # String contains ambiguous characters
     "S101", # Ignore assert used (equivalent to bandit's B101)
     "S301", # Ignore pickle usage (equivalent to bandit's B301)
@@ -216,11 +183,26 @@ exclude = [
     "scripts/*",
 ]
 
-# Set line length to match Black's configuration
+# Set line length for Ruff formatter
 line-length = 120
 
 # Target Python version
 target-version = "py314"
+
+# Ruff format configuration
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+# Use spaces for indentation
+indent-style = "space"
+# Line ending style
+line-ending = "auto"
+# Skip magic trailing comma
+skip-magic-trailing-comma = false
+# Docstring code format
+docstring-code-format = true
+# Docstring code line length
+docstring-code-line-length = "dynamic"
 
 # Per-file ignores
 [tool.ruff.lint.per-file-ignores]

@@ -294,7 +294,11 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                     argument_name=(
                         "bucket_name, object_name or file_path"
                         if not all([bucket_name, object_name, file_path])
-                        else "bucket_name" if not bucket_name else "object_name" if not object_name else "file_path"
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                        if not object_name
+                        else "file_path"
                     ),
                 )
             self._adapter.fput_object(bucket_name, object_name, file_path)
@@ -330,7 +334,11 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                     argument_name=(
                         "bucket_name, object_name or file_path"
                         if not all([bucket_name, object_name, file_path])
-                        else "bucket_name" if not bucket_name else "object_name" if not object_name else "file_path"
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                        if not object_name
+                        else "file_path"
                     ),
                 )
             self._adapter.fget_object(bucket_name, object_name, file_path)
@@ -363,7 +371,9 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                     argument_name=(
                         "bucket_name or object_name"
                         if not all([bucket_name, object_name])
-                        else "bucket_name" if not bucket_name else "object_name"
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
                     ),
                 )
             self._adapter.remove_object(bucket_name, object_name)
@@ -449,7 +459,9 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                     argument_name=(
                         "bucket_name or object_name"
                         if not all([bucket_name, object_name])
-                        else "bucket_name" if not bucket_name else "object_name"
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
                     ),
                 )
             obj = self._adapter.stat_object(bucket_name, object_name)
@@ -497,7 +509,9 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                     argument_name=(
                         "bucket_name or object_name"
                         if not all([bucket_name, object_name])
-                        else "bucket_name" if not bucket_name else "object_name"
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
                     ),
                 )
             url = self._adapter.presigned_get_object(
@@ -544,7 +558,9 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                     argument_name=(
                         "bucket_name or object_name"
                         if not all([bucket_name, object_name])
-                        else "bucket_name" if not bucket_name else "object_name"
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
                     ),
                 )
             url = self._adapter.presigned_put_object(
@@ -587,7 +603,9 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                     argument_name=(
                         "bucket_name or policy"
                         if not all([bucket_name, policy])
-                        else "bucket_name" if not bucket_name else "policy"
+                        else "bucket_name"
+                        if not bucket_name
+                        else "policy"
                     ),
                 )
             self._adapter.set_bucket_policy(bucket_name, policy)

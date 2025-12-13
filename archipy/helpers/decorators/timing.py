@@ -23,6 +23,7 @@ def timing_decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
             time.sleep(n)
             return f"Slept for {n} seconds"
 
+
         result = example_function(2)
         ```
 

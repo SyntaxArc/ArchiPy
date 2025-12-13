@@ -40,6 +40,7 @@ def capture_transaction[F: Callable[..., Any]](
             # Your business logic here
             return {"user_id": user_id, "status": "processed"}
 
+
         # Transaction will be automatically captured when function is called
         result = process_user_data(123)
         ```
@@ -160,15 +161,18 @@ def capture_span[F: Callable[..., Any]](
             save_result(processed_data)
             return processed_data
 
+
         @capture_span(name="database_query", op="db")
         def get_user(user_id: int) -> dict[str, Any]:
             # Database query logic here
             return {"id": user_id, "name": "John"}
 
+
         @capture_span(name="data_transformation", op="processing")
         def transform_data(user: dict[str, Any]) -> dict[str, Any]:
             # Data transformation logic
             return {"processed": True, **user}
+
 
         @capture_span(name="save_operation", op="db")
         def save_result(data: dict[str, Any]) -> None:

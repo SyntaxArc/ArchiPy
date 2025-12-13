@@ -64,11 +64,7 @@ class FastAPIRestRateLimitHandler:
             >>> handler = FastAPIRestRateLimitHandler(calls_count=100, minutes=1)
             >>>
             >>> # Allow 1000 requests per day with specific query params
-            >>> handler = FastAPIRestRateLimitHandler(
-            ...     calls_count=1000,
-            ...     days=1,
-            ...     query_params={'user_id', 'action'}
-            ... )
+            >>> handler = FastAPIRestRateLimitHandler(calls_count=1000, days=1, query_params={"user_id", "action"})
         """
         self.query_params = query_params or set()
         self.calls_count = calls_count

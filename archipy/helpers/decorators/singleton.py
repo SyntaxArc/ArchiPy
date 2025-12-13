@@ -26,6 +26,7 @@ def singleton_decorator(*, thread_safe: bool = True) -> Callable[[type[Any]], Ca
             def __init__(self, value):
                 self.value = value
 
+
         # Create instances of MySingletonClass
         instance1 = MySingletonClass(10)
         instance2 = MySingletonClass(20)

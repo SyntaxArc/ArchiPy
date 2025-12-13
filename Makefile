@@ -69,9 +69,9 @@ clean: ## Remove build artifacts and cache directories
 	find . -type f -name "*.pyc" -delete
 
 .PHONY: format
-format: ## Format code using black
+format: ## Format code using ruff
 	@echo "${BLUE}Formatting code...${NC}"
-	$(PYTHON) black --config pyproject.toml $(PYTHON_FILES)
+	$(PYTHON) ruff format --config pyproject.toml $(PYTHON_FILES)
 
 .PHONY: lint
 lint: ## Run all linters
@@ -147,7 +147,7 @@ pre-commit: ## Run pre-commit hooks
 	$(PRE_COMMIT) run --all-files
 
 .PHONY: check
-check: lint security behave ## Run all checks (linting, security, and tests)
+check: format lint security behave ## Run all checks (format, linting, security, and tests)
 
 .PHONY: ci
 ci: ## Run CI pipeline locally

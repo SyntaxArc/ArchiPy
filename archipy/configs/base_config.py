@@ -96,10 +96,7 @@ class BaseConfig[R](BaseSettings):
         ...     DEBUG = True
         ...
         ...     # Custom configuration
-        ...     FEATURE_FLAGS = {
-        ...         "new_ui": True,
-        ...         "advanced_search": False
-        ...     }
+        ...     FEATURE_FLAGS = {"new_ui": True, "advanced_search": False}
         >>>
         >>> # Set as global configuration
         >>> config = MyAppConfig()

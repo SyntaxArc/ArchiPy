@@ -64,7 +64,7 @@ productivity.
 - **Code Quality**:
     - Automated linting with ruff
     - Type checking with Ty
-    - Code formatting with black
+    - Code formatting with Ruff formatter
     - Pre-commit hooks for quality assurance
 
 ## Best Practices & Tooling

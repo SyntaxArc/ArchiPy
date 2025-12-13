@@ -31,6 +31,7 @@ def timeout_decorator(seconds: int) -> Callable[[Callable[P, R]], Callable[P, R]
             time.sleep(5)  # This will take longer than the timeout
             return "Finished"
 
+
         try:
             result = long_running_function()
         except DeadlineExceededException as e:

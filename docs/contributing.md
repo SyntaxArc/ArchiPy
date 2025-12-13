@@ -38,9 +38,8 @@ contributing to ArchiPy.
 
 ArchiPy follows a strict code style to maintain consistency across the codebase:
 
-- **Black**: For code formatting
-- **Ruff**: For linting
-- **Mypy**: For type checking
+- **Ruff**: For linting and code formatting
+- **Ty**: For type checking
 
 All code must pass these checks before being merged:
 

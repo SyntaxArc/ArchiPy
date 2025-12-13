@@ -21,7 +21,7 @@ class EmailPort:
     email service, managing connections, and ensuring reliable delivery.
 
     Examples:
-        >>> from archipy.adapters.email.email_port import EmailPort
+        >>> from archipy.adapters.email.ports import EmailPort
         >>>
         >>> class CustomEmailAdapter(EmailPort):
         ...     def __init__(self, config):
@@ -37,7 +37,7 @@ class EmailPort:
         ...         attachments=None,
         ...         html=False,
         ...         template=None,
-        ...         template_vars=None
+        ...         template_vars=None,
         ...     ):
         ...         # Implementation details...
         ...         pass
@@ -77,11 +77,7 @@ class EmailPort:
 
         Examples:
             >>> # Simple text email
-            >>> adapter.send_email(
-            ...     to_email="user@example.com",
-            ...     subject="Hello",
-            ...     body="This is a test email"
-            ... )
+            >>> adapter.send_email(to_email="user@example.com", subject="Hello", body="This is a test email")
             >>>
             >>> # HTML email with attachment
             >>> adapter.send_email(
@@ -89,7 +85,7 @@ class EmailPort:
             ...     subject="Report",
             ...     body="<h1>Monthly Report</h1><p>Please see attached</p>",
             ...     html=True,
-            ...     attachments=["path/to/report.pdf"]
+            ...     attachments=["path/to/report.pdf"],
             ... )
             >>>
             >>> # Template-based email
@@ -99,7 +95,7 @@ class EmailPort:
             ...     subject="Account Expiration",
             ...     body="",  # Body will be rendered from template
             ...     template=template,
-            ...     template_vars={"name": "John", "date": "2023-12-31"}
+            ...     template_vars={"name": "John", "date": "2023-12-31"},
             ... )
         """
         raise NotImplementedError

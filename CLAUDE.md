@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 - **Setup**: `uv sync --all-extras --all-groups` or `make install-dev`
-- **Format**: `make format` (Black, 120 char line length)
+- **Format**: `make format` (Ruff formatter, 120 char line length)
 - **Lint**: `make lint` (Ruff + Ty)
 - **Test**: `make behave` (all tests with Behave BDD framework)
 - **Single test**: `uv run --extra behave behave features/file_name.feature`

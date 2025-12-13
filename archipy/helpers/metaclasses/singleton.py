@@ -26,6 +26,7 @@ class Singleton(type):
             def __init__(self, value):
                 self.value = value
 
+
         # Create instances of MySingletonClass
         instance1 = MySingletonClass(10)
         instance2 = MySingletonClass(20)

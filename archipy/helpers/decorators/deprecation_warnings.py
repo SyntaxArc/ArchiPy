@@ -29,6 +29,7 @@ def method_deprecation_warning(message: str | None = None) -> Callable[[Callable
             def old_method(self):
                 return "This is the old method."
 
+
         # Calling the method will issue a deprecation warning
         obj = MyClass()
         result = obj.old_method()
@@ -74,6 +75,7 @@ def class_deprecation_warning(message: str | None = None) -> Callable[[T], T]:
         class OldClass:
             def __init__(self):
                 pass
+
 
         # Instantiating the class will issue a deprecation warning
         obj = OldClass()

@@ -31,7 +31,7 @@
 Run checks:
 
 ```bash
-make check  # Runs ruff, black, ty
+make check  # Runs ruff, ruff format, ty
 ```
 
 ### Testing

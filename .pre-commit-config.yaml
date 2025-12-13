@@ -58,9 +58,9 @@ repos:
         entry: uv run codespell --toml pyproject.toml
         files: \.(py|pyi)$
         language: system
-      - id: black
-        name: black
-        entry: uv run black --config pyproject.toml
+      - id: ruff-format
+        name: ruff-format
+        entry: uv run ruff format --config pyproject.toml
         files: \.(py|pyi)$
         language: system
         exclude: ^(features|scripts)/

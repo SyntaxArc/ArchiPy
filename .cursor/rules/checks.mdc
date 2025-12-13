@@ -20,7 +20,7 @@ alwaysApply: true
 
 **Avoid Over-Engineering**: Do not add speculative generality or unnecessary abstractions unless required.
 
-**Consistent Formatting**: Follow PEP 8, Black (line length 120 characters), and project-specific style (e.g., Pydantic Field descriptions). Use double quotes for strings.
+**Consistent Formatting**: Follow PEP 8, Ruff formatter (line length 120 characters), and project-specific style (e.g., Pydantic Field descriptions). Use double quotes for strings.
 
 **Modular Design**: Organize code into modules (e.g., archipy.configs, archipy.helpers.utils) to minimize coupling and avoid divergent changes.
 
@@ -214,7 +214,7 @@ class ElasticsearchConfig(BaseModel):
 **Package Management**: `uv sync --all-extras --all-groups` or `make install-dev`
 
 **Workflow**:
-- Format: `make format` (Black, 120 chars)
+- Format: `make format` (Ruff formatter, 120 chars)
 - Lint: `make lint` (Ruff + Ty)
 - Test: `make behave`
 - Security: `make security` (Bandit)

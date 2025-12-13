@@ -121,7 +121,7 @@ make update
 #### Code Quality
 
 ```bash
-# Format code with black
+# Format code with Ruff formatter
 make format
 
 # Run all linters (ruff, ty)

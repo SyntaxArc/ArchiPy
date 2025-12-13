@@ -361,7 +361,6 @@ All notable changes to ArchiPy are documented in this changelog, organized by ve
     - Updated confluent-kafka from 2.12.1 to 2.12.2 for improved Kafka messaging reliability and performance
     - Updated psycopg from 3.2.11 to 3.2.12 for enhanced PostgreSQL driver stability and bug fixes
     - Updated pydantic-settings from 2.11.0 to 2.12.0 for improved settings management and validation
-    - Updated black from 25.9.0 to 25.11.0 for enhanced code formatting capabilities
     - Updated pre-commit from 4.3.0 to 4.4.0 for improved git hook management
     - Updated ruff from 0.14.3 to 0.14.4 for enhanced linting capabilities and bug fixes
 

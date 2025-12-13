@@ -40,6 +40,7 @@ def method_deprecation_error(
             def old_method(self):
                 return "This is the old method."
 
+
         # Calling the method will raise a DeprecationException
         obj = MyClass()
         result = obj.old_method()
@@ -85,6 +86,7 @@ def class_deprecation_error(operation: str | None = None, lang: LanguageType = L
         class OldClass:
             def __init__(self):
                 pass
+
 
         # Instantiating the class will raise a DeprecationException
         obj = OldClass()
