@@ -86,8 +86,7 @@ def __getattr__(name: str) -> object:
             }
         except ImportError as e:
             raise ImportError(
-                "SQLAlchemy decorators require the 'sqlalchemy' extra. "
-                "Install with: pip install archipy[sqlalchemy]",
+                "SQLAlchemy decorators require the 'sqlalchemy' extra. Install with: pip install archipy[sqlalchemy]",
             ) from e
 
     return _SQLAlchemyDecorators._cache[name]

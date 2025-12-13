@@ -188,7 +188,6 @@ class FastAPIUtils:
             return
 
         try:
-
             from elasticapm.contrib.starlette import ElasticAPM, make_apm_client
 
             apm_client = make_apm_client(config.ELASTIC_APM.model_dump())
