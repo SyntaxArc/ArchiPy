@@ -32,7 +32,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Install dependencies
-        run: uv sync --group dev  # Follows pyproject.toml exactly
+        run: uv sync --all-extras --all-groups  # Follows pyproject.toml exactly
 
       - name: Run Ty type checking
         run: uv run ty check archipy  # Config from pyproject.toml
