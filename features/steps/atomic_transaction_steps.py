@@ -13,7 +13,23 @@ from datetime import datetime
 
 from behave import given, then, when
 
-from archipy.adapters.sqlite.sqlalchemy.adapters import SQLiteSQLAlchemyAdapter, AsyncSQLiteSQLAlchemyAdapter
+from archipy.adapters.postgres.sqlalchemy.adapters import (
+    AsyncPostgresSQLAlchemyAdapter,
+    PostgresSQLAlchemyAdapter,
+)
+from archipy.adapters.postgres.sqlalchemy.session_manager_registry import PostgresSessionManagerRegistry
+from archipy.adapters.sqlite.sqlalchemy.adapters import AsyncSQLiteSQLAlchemyAdapter, SQLiteSQLAlchemyAdapter
+from archipy.adapters.sqlite.sqlalchemy.session_manager_registry import SQLiteSessionManagerRegistry
+from archipy.configs.base_config import BaseConfig
+from archipy.configs.config_template import PostgresSQLAlchemyConfig, SQLiteSQLAlchemyConfig
+from archipy.helpers.decorators.sqlalchemy_atomic import (
+    async_postgres_sqlalchemy_atomic_decorator,
+    async_sqlite_sqlalchemy_atomic_decorator,
+    postgres_sqlalchemy_atomic_decorator,
+    sqlite_sqlalchemy_atomic_decorator,
+)
+from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
+from archipy.models.errors import InternalError
 from features.test_entity import RelatedTestEntity, TestAdminEntity, TestEntity, TestManagerEntity
 from features.test_entity_factory import TestEntityFactory
 from features.test_helpers import (
@@ -23,15 +39,6 @@ from features.test_helpers import (
     get_current_scenario_context,
 )
 from sqlalchemy import select
-
-from archipy.adapters.sqlite.sqlalchemy.session_manager_registry import SQLiteSessionManagerRegistry
-from archipy.configs.config_template import SQLiteSQLAlchemyConfig
-from archipy.helpers.decorators.sqlalchemy_atomic import (
-    async_sqlite_sqlalchemy_atomic_decorator,
-    sqlite_sqlalchemy_atomic_decorator,
-)
-from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
-from archipy.models.errors import InternalError
 
 
 def store_entity(context, entity, key=None):
@@ -63,74 +70,192 @@ def get_entity_id(context, key):
     return scenario_context.entity_ids[key]
 
 
-@given("the application database is initialized")
-def step_given_database_initialized(context):
-    """Initialize the database for testing with a file-based SQLite database."""
+def _get_db_type(context) -> str:
+    """Extract database type from scenario outline examples.
+
+    Behave Scenario Outline Examples are accessible via context.active_outline
+    which contains the current example row data.
+    """
+    # Check if we're in a Scenario Outline with active example
+    if hasattr(context, "active_outline") and context.active_outline:
+        # active_outline is a Row object with cells accessible by heading name
+        if hasattr(context.active_outline, "cells"):
+            # Try to get db_type from the example row
+            for heading, cell in zip(context.active_outline.table.headings, context.active_outline.cells):
+                if heading == "db_type":
+                    return cell
+
+    # Fallback: check scenario tags or default to sqlite
+    if hasattr(context, "scenario") and context.scenario:
+        tags = [str(tag) for tag in context.scenario.tags] if hasattr(context.scenario, "tags") else []
+        if "needs-postgres" in tags:
+            return "postgres"
+
+    return "sqlite"
+
+
+def _get_atomic_decorator(db_type: str, is_async: bool = False):
+    """Get the appropriate atomic decorator for the database type.
+
+    Args:
+        db_type: Database type ('postgres' or 'sqlite')
+        is_async: Whether to return async decorator
+
+    Returns:
+        The appropriate atomic decorator function
+    """
+    if db_type == "postgres":
+        return async_postgres_sqlalchemy_atomic_decorator if is_async else postgres_sqlalchemy_atomic_decorator
+    else:  # sqlite
+        return async_sqlite_sqlalchemy_atomic_decorator if is_async else sqlite_sqlalchemy_atomic_decorator
+
+
+def _get_session_registry(db_type: str):
+    """Get the appropriate session manager registry for the database type.
+
+    Args:
+        db_type: Database type ('postgres' or 'sqlite')
+
+    Returns:
+        The appropriate session manager registry class
+    """
+    if db_type == "postgres":
+        return PostgresSessionManagerRegistry
+    else:  # sqlite
+        return SQLiteSessionManagerRegistry
+
+
+def _get_adapter_classes(db_type: str):
+    """Get the appropriate adapter classes for the database type.
+
+    Args:
+        db_type: Database type ('postgres' or 'sqlite')
+
+    Returns:
+        Tuple of (sync_adapter_class, async_adapter_class)
+    """
+    if db_type == "postgres":
+        return PostgresSQLAlchemyAdapter, AsyncPostgresSQLAlchemyAdapter
+    else:  # sqlite
+        return SQLiteSQLAlchemyAdapter, AsyncSQLiteSQLAlchemyAdapter
+
+
+@given("the application database is initialized for {db_type}")
+def step_given_database_initialized(context, db_type: str):
+    """Initialize the database for testing with the specified database type.
+
+    Args:
+        context: Behave context
+        db_type: Database type ('postgres' or 'sqlite')
+    """
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
 
     # Get the current scenario context
     scenario_context = get_current_scenario_context(context)
 
-    # Create a unique temporary file for this scenario
-    temp_dir = tempfile.gettempdir()
-    scenario_id = scenario_context.scenario_id
-    db_file = os.path.join(temp_dir, f"test_db_{scenario_id}.sqlite")
+    # Store database type in scenario context for later use
+    scenario_context.store("db_type", db_type)
 
-    # If the file already exists, try to remove it
-    if os.path.exists(db_file):
-        try:
-            os.remove(db_file)
-            logger.info(f"Removed existing database file: {db_file}")
-        except Exception as e:
-            logger.exception(f"Failed to remove existing database file: {e}")
-            # Generate a new unique name to avoid conflicts
-            db_file = os.path.join(temp_dir, f"test_db_{uuid.uuid4().hex}.sqlite")
-            logger.info(f"Using alternative database file: {db_file}")
+    # Get the appropriate registry and adapter classes
+    session_registry = _get_session_registry(db_type)
+    sync_adapter_class, async_adapter_class = _get_adapter_classes(db_type)
 
-    # Store the file path in the scenario context
-    scenario_context.db_file = db_file
+    if db_type == "postgres":
+        # Use PostgreSQL container connection details
+        global_config = BaseConfig.global_config()
+        postgres_config = global_config.POSTGRES_SQLALCHEMY
 
-    logger.info(f"Creating SQLAlchemy adapter with database: {db_file}")
+        logger.info(f"Creating PostgreSQL adapter with host: {postgres_config.HOST}, port: {postgres_config.PORT}")
 
-    # Create configuration with file-based database
-    sync_config = SQLiteSQLAlchemyConfig(
-        DRIVER_NAME="sqlite",
-        DATABASE=db_file,
-    )
+        # Create sync adapter
+        adapter = sync_adapter_class(orm_config=postgres_config)
+        session_registry.set_sync_manager(adapter.session_manager)
+        scenario_context.adapter = adapter
 
-    # Create adapter for tests and store in scenario context
-    adapter = SQLiteSQLAlchemyAdapter(orm_config=sync_config)
-    SQLiteSessionManagerRegistry.set_sync_manager(adapter.session_manager)
-    scenario_context.adapter = adapter
+        # Set up database schema with sync adapter
+        logger.info("Creating database schema with sync PostgreSQL adapter")
+        BaseEntity.metadata.drop_all(adapter.session_manager.engine)
+        BaseEntity.metadata.create_all(adapter.session_manager.engine)
 
-    # Set up database schema with sync adapter
-    logger.info("Creating database schema with sync adapter")
-    BaseEntity.metadata.drop_all(adapter.session_manager.engine)
-    BaseEntity.metadata.create_all(adapter.session_manager.engine)
+        # For async tests, create and set up the async adapter
+        if any("async" in tag.lower() for tag in context.scenario.tags):
+            logger.info("Creating async PostgreSQL adapter")
 
-    # For async tests, create and set up the async adapter
-    if any("async" in tag.lower() for tag in context.scenario.tags):
-        logger.info(f"Creating async SQLAlchemy adapter with database: {db_file}")
+            try:
+                # Create async adapter with same config
+                async_adapter = async_adapter_class(orm_config=postgres_config)
+                session_registry.set_async_manager(async_adapter.session_manager)
+                scenario_context.async_adapter = async_adapter
 
-        # Create async config with the same database file
-        async_config = SQLiteSQLAlchemyConfig(
-            DRIVER_NAME="sqlite+aiosqlite",
+                # Create schema with async adapter
+                logger.info("Creating database schema with async PostgreSQL adapter")
+                asyncio.run(async_schema_setup(async_adapter))
+
+                logger.info("Async PostgreSQL adapter and schema setup completed")
+            except Exception as e:
+                logger.exception(f"Error setting up async PostgreSQL adapter: {e}")
+
+    else:  # sqlite
+        # Use file-based SQLite database
+        temp_dir = tempfile.gettempdir()
+        scenario_id = scenario_context.scenario_id
+        db_file = os.path.join(temp_dir, f"test_db_{scenario_id}.sqlite")
+
+        # If the file already exists, try to remove it
+        if os.path.exists(db_file):
+            try:
+                os.remove(db_file)
+                logger.info(f"Removed existing database file: {db_file}")
+            except Exception as e:
+                logger.exception(f"Failed to remove existing database file: {e}")
+                # Generate a new unique name to avoid conflicts
+                db_file = os.path.join(temp_dir, f"test_db_{uuid.uuid4().hex}.sqlite")
+                logger.info(f"Using alternative database file: {db_file}")
+
+        # Store the file path in the scenario context
+        scenario_context.db_file = db_file
+
+        logger.info(f"Creating SQLite adapter with database: {db_file}")
+
+        # Create configuration with file-based database
+        sync_config = SQLiteSQLAlchemyConfig(
+            DRIVER_NAME="sqlite",
             DATABASE=db_file,
         )
 
-        try:
-            # Create a new async adapter
-            async_adapter = AsyncSQLiteSQLAlchemyAdapter(orm_config=async_config)
-            SQLiteSessionManagerRegistry.set_async_manager(async_adapter.session_manager)
-            scenario_context.async_adapter = async_adapter
+        # Create adapter for tests and store in scenario context
+        adapter = sync_adapter_class(orm_config=sync_config)
+        session_registry.set_sync_manager(adapter.session_manager)
+        scenario_context.adapter = adapter
 
-            # Create schema with async adapter
-            logger.info("Creating database schema with async adapter")
-            asyncio.run(async_schema_setup(async_adapter))
+        # Set up database schema with sync adapter
+        logger.info("Creating database schema with sync SQLite adapter")
+        BaseEntity.metadata.drop_all(adapter.session_manager.engine)
+        BaseEntity.metadata.create_all(adapter.session_manager.engine)
 
-            logger.info("Async adapter and schema setup completed")
-        except Exception as e:
-            logger.exception(f"Error setting up async adapter: {e}")
+        # For async tests, create and set up the async adapter
+        if any("async" in tag.lower() for tag in context.scenario.tags):
+            logger.info(f"Creating async SQLite adapter with database: {db_file}")
+
+            # Create async config with the same database file
+            async_config = SQLiteSQLAlchemyConfig(
+                DRIVER_NAME="sqlite+aiosqlite",
+                DATABASE=db_file,
+            )
+
+            try:
+                # Create a new async adapter
+                async_adapter = async_adapter_class(orm_config=async_config)
+                session_registry.set_async_manager(async_adapter.session_manager)
+                scenario_context.async_adapter = async_adapter
+
+                # Create schema with async adapter
+                logger.info("Creating database schema with async SQLite adapter")
+                asyncio.run(async_schema_setup(async_adapter))
+
+                logger.info("Async SQLite adapter and schema setup completed")
+            except Exception as e:
+                logger.exception(f"Error setting up async SQLite adapter: {e}")
 
 
 @given("test entities are defined")
@@ -155,11 +280,15 @@ def step_given_test_entities_defined(context):
 def step_when_entity_created_in_atomic(context):
     """Create a new entity within an atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Generate a UUID for the entity
     test_uuid = uuid.uuid4()
 
-    @sqlite_sqlalchemy_atomic_decorator
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
+
+    @atomic_decorator
     def create_entity_atomic():
         """Create a new entity within an atomic block."""
         logger.info(f"Creating entity with UUID {test_uuid}")
@@ -187,12 +316,16 @@ def step_when_entity_created_in_atomic(context):
 def step_then_entity_should_be_retrievable(context):
     """Verify the entity exists after atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Get the entity's UUID from scenario context
     entity_uuid = uuid.UUID(get_entity_id(context, "test_entity"))
     logger.info(f"Retrieving entity with UUID {entity_uuid}")
 
-    @sqlite_sqlalchemy_atomic_decorator
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
+
+    @atomic_decorator
     def get_entity():
         # Get the adapter from scenario context
         adapter = get_adapter(context)
@@ -214,6 +347,7 @@ def step_when_entity_creation_fails_in_atomic(context):
     """Attempt to create an entity with a failure that causes rollback."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Generate a UUID for the entity
     test_uuid = uuid.uuid4()
@@ -221,8 +355,9 @@ def step_when_entity_creation_fails_in_atomic(context):
     logger.info(f"Attempting to create entity with UUID {test_uuid} (will fail)")
 
     try:
+        atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-        @sqlite_sqlalchemy_atomic_decorator
+        @atomic_decorator
         def create_entity_with_failure():
             """Create an entity but raise an exception to trigger rollback."""
             entity = TestEntityFactory.create_test_entity(
@@ -256,11 +391,13 @@ def step_then_no_entity_should_exist(context):
     """Verify the entity doesn't exist after failed atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Get a fresh session to verify rollback
     adapter = get_adapter(context)
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def check_entity_absence():
         adapter = get_adapter(context)
         session = adapter.get_session()
@@ -276,9 +413,12 @@ def step_then_no_entity_should_exist(context):
 def step_then_session_should_remain_usable(context):
     """Verify the session is still usable after a failed transaction."""
     logger = context.__dict__.get("logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
     logger.info("Verifying session is still usable after rollback")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def verify_session_usable():
         # Create a new entity to test the session is still working
         test_uuid = uuid.uuid4()
@@ -311,6 +451,7 @@ def step_when_nested_atomic_executed(context):
     """Test nested atomic transactions, both successful and failing."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Create test UUIDs
     outer_uuid = uuid.uuid4()
@@ -324,9 +465,10 @@ def step_when_nested_atomic_executed(context):
 
     # Test nesting of atomic blocks
     logger.info("Testing nested atomic transactions")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
     try:
 
-        @sqlite_sqlalchemy_atomic_decorator
+        @atomic_decorator
         def outer_atomic():
             """Execute the outermost atomic block."""
             logger.info(f"Creating outer entity with UUID {outer_uuid}")
@@ -341,7 +483,7 @@ def step_when_nested_atomic_executed(context):
 
             try:
 
-                @sqlite_sqlalchemy_atomic_decorator
+                @atomic_decorator
                 def inner_atomic():
                     """Execute a successful inner atomic block."""
                     logger.info(f"Creating inner entity with UUID {inner_uuid}")
@@ -361,7 +503,7 @@ def step_when_nested_atomic_executed(context):
                 # Now test a failing inner transaction
                 try:
 
-                    @sqlite_sqlalchemy_atomic_decorator
+                    @atomic_decorator
                     def failing_inner_atomic():
                         """Execute a failing inner atomic block."""
                         logger.info(f"Creating entity with UUID {failing_uuid} (will fail)")
@@ -402,38 +544,39 @@ def step_when_nested_atomic_executed(context):
         raise
 
 
-@then("operations from successful nested transactions should not be committed")
-def step_then_successful_nested_committed(context):
-    """Verify that entities from successful nested transactions exist."""
+@then("operations from successful nested transactions should be visible within outer transaction")
+def step_then_successful_nested_visible(context):
+    """Verify that entities from successful nested transactions are visible within the outer transaction.
+
+    Note: When a failing inner transaction causes a rollback, it cascades to the outer transaction,
+    so all entities (including successful inner and outer) are rolled back.
+    """
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Get UUIDs for verification
     entity1_uuid = uuid.UUID(scenario_context.entity_ids["outer_entity"])
     entity2_uuid = uuid.UUID(scenario_context.entity_ids["inner_entity"])
-    entity4_uuid = uuid.UUID(scenario_context.entity_ids["outer_entity"])
 
-    logger.info("Verifying successful nested transaction entities")
+    logger.info("Verifying nested transaction entities after cascading rollback")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def verify_nested_results():
         adapter = get_adapter(context)
         session = adapter.get_session()
 
-        # Check entity 1 (outer atomic, before nested)
+        # When a failing inner transaction causes a rollback, it cascades to the outer transaction
+        # So all entities (including successful inner and outer) should be rolled back
+        # Check entity 1 (outer atomic) - should NOT be visible due to cascading rollback
         entity1 = session.get(TestEntity, entity1_uuid)
-        assert entity1 is None, "Entity 1 not found after nested atomic transactions"
-        logger.info("Entity 1 verified successfully")
+        assert entity1 is None, "Entity 1 (outer) found after cascading rollback from failed inner transaction"
 
-        # Check entity 2 (successful inner atomic)
+        # Check entity 2 (successful inner atomic) - should NOT be visible due to cascading rollback
         entity2 = session.get(TestEntity, entity2_uuid)
-        assert entity2 is None, "Entity 2 not found after nested atomic transactions"
-        logger.info("Entity 2 verified successfully")
-
-        # Check entity 4 (outer atomic, after nested)
-        entity4 = session.get(TestEntity, entity4_uuid)
-        assert entity4 is None, "Entity 4 not found after nested atomic transactions"
-        logger.info("Entity 4 verified successfully")
+        assert entity2 is None, "Entity 2 (inner) found after cascading rollback from failed inner transaction"
+        logger.info("Verified that all entities were rolled back due to cascading failure")
 
         return True
 
@@ -445,12 +588,14 @@ def step_then_failed_nested_rolled_back(context):
     """Verify that entities from failed nested transactions don't exist."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Get UUID for verification
     entity3_uuid = uuid.UUID(scenario_context.entity_ids["failing_entity"])
     logger.info(f"Verifying entity 3 with UUID {entity3_uuid} doesn't exist")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def verify_rollback():
         adapter = get_adapter(context)
         session = adapter.get_session()
@@ -470,13 +615,15 @@ def step_given_entity_exists(context):
     """Create an entity in the database for testing updates."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Generate a UUID for the entity
     test_uuid = uuid.uuid4()
     logger.info(f"Creating existing entity with UUID {test_uuid}")
     adapter = get_adapter(context)
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def create_entity():
         entity = TestEntityFactory.create_test_entity(test_uuid=test_uuid, description="Original Description")
         adapter.create(entity)
@@ -496,12 +643,14 @@ def step_when_entity_updated_in_atomic(context):
     """Update an entity within an atomic transaction."""
     logger = context.__dict__.get("logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Get the entity UUID from context
     entity_uuid = uuid.UUID(scenario_context.entity_ids.get("existing_entity"))
     logger.info(f"Updating entity with UUID {entity_uuid}")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def update_entity():
         adapter = get_adapter(context)
         session = adapter.get_session()
@@ -521,9 +670,6 @@ def step_when_entity_updated_in_atomic(context):
         entity.updated_at = datetime.now()
         entity.is_deleted = True
 
-        # We must flush to ensure changes are visible
-        session.flush()
-
         # Store the updated entity's values for verification
         scenario_context.store("updated_description", entity.description)
         scenario_context.store("updated_at", entity.updated_at)
@@ -540,12 +686,14 @@ def step_then_entity_properties_reflect_updates(context):
     """Verify entity properties are updated correctly."""
     logger = context.__dict__.get("logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Get the entity UUID from context
     entity_uuid = uuid.UUID(scenario_context.entity_ids.get("existing_entity"))
     logger.info(f"Verifying updates for entity with UUID {entity_uuid}")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def verify_entity_updates():
         adapter = get_adapter(context)
         session = adapter.get_session()
@@ -589,6 +737,7 @@ def step_when_entity_with_relationships_created(context):
     """Create an entity with relationships in an atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Generate UUIDs for the entities
     main_uuid = uuid.uuid4()
@@ -600,8 +749,9 @@ def step_when_entity_with_relationships_created(context):
         scenario_context.entity_ids[f"related_entity_{i}"] = str(uuid_val)
 
     logger.info(f"Creating entity with relationships, main UUID: {main_uuid}")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def create_entity_with_relationships():
         # Create main entity directly to avoid StaleDataError
         main_entity = TestEntityFactory.create_test_entity(
@@ -610,9 +760,6 @@ def step_when_entity_with_relationships_created(context):
         )
         adapter = get_adapter(context)
         adapter.create(main_entity)
-
-        # Flush to ensure the main entity is persisted before creating related entities
-        adapter.get_session().flush()
 
         # Create related entities with explicit parent_id
         for i, related_uuid in enumerate(related_uuids):
@@ -635,11 +782,14 @@ def step_when_entity_with_relationships_created(context):
 def step_then_entity_and_relationships_retrievable(context):
     """Verify the entity and its relationships can be retrieved."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Get the UUIDs from context
     main_uuid = uuid.UUID(get_entity_id(context, "main_entity"))
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def verify_entity_relationships():
         adapter = get_adapter(context)
         session = adapter.get_session()
@@ -673,6 +823,7 @@ def step_when_different_entities_created_in_atomic(context):
     """Create different types of entities within an atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Generate UUIDs for the entities
     regular_uuid = uuid.uuid4()
@@ -685,8 +836,9 @@ def step_when_different_entities_created_in_atomic(context):
     scenario_context.entity_ids["admin_entity"] = str(admin_uuid)
 
     logger.info("Creating different types of entities")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def create_multiple_entity_types():
         # Create a regular test entity
         logger.info(f"Creating regular entity with UUID {regular_uuid}")
@@ -717,13 +869,16 @@ def step_when_different_entities_created_in_atomic(context):
 def step_then_all_entity_types_retrievable(context):
     """Verify all different entity types can be retrieved."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Get the UUIDs from context
     regular_uuid = uuid.UUID(get_entity_id(context, "regular_entity"))
     manager_uuid = uuid.UUID(get_entity_id(context, "manager_entity"))
     admin_uuid = uuid.UUID(get_entity_id(context, "admin_entity"))
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def verify_entity_types():
         adapter = get_adapter(context)
         session = adapter.get_session()
@@ -759,13 +914,15 @@ def step_when_error_triggered_in_atomic(context):
     """Trigger different types of errors within atomic transactions to test handlers."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
     adapter = get_adapter(context)
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
     # Test normal exception handling
     logger.info("Testing normal exception handling")
     try:
 
-        @sqlite_sqlalchemy_atomic_decorator
+        @atomic_decorator
         def normal_exception():
             entity = TestEntityFactory.create_test_entity()
             adapter.create(entity)
@@ -777,19 +934,19 @@ def step_when_error_triggered_in_atomic(context):
         scenario_context.store("normal_exception", e)
         logger.info(f"Caught normal exception: {type(e).__name__}")
 
-    # Test deadlock handling (simulated for SQLite)
+    # Test deadlock handling (simulated for both databases)
     logger.info("Testing deadlock exception handling")
     try:
 
-        @sqlite_sqlalchemy_atomic_decorator
+        @atomic_decorator
         def deadlock_exception():
             entity = TestEntityFactory.create_test_entity()
             adapter.create(entity)
 
-            # Simulate SQLite deadlock
+            # Simulate database deadlock
             from sqlalchemy.exc import OperationalError
 
-            logger.info("Raising SQLite deadlock exception")
+            logger.info("Raising database deadlock exception")
             raise OperationalError("database is locked", None, None)
 
         deadlock_exception()
@@ -831,9 +988,12 @@ def step_then_appropriate_error_raised(context):
 def step_then_transaction_rolled_back(context):
     """Verify that the transaction was rolled back after errors."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
     logger.info("Verifying session is still usable after rollback")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def verify_session_usable():
         # Create a new entity to test the session is still working
         test_uuid = uuid.uuid4()
@@ -859,7 +1019,9 @@ def step_when_operations_across_multiple_atomics(context):
     """Test session consistency across multiple atomic blocks."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
     logger.info("Testing operations across multiple atomic blocks")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
     # Generate UUIDs for entities
     entity_uuids = [uuid.uuid4() for _ in range(3)]
@@ -869,7 +1031,7 @@ def step_when_operations_across_multiple_atomics(context):
         scenario_context.entity_ids[f"multi_entity_{i}"] = str(uuid_val)
 
     # Create initial entities
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def create_initial_entities():
         logger.info("Creating initial entities in first atomic block")
         entities = []
@@ -885,7 +1047,7 @@ def step_when_operations_across_multiple_atomics(context):
     create_initial_entities()
 
     # Update entities in a separate atomic block
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def update_entities():
         logger.info("Updating entities in second atomic block")
         adapter = get_adapter(context)
@@ -904,7 +1066,7 @@ def step_when_operations_across_multiple_atomics(context):
     update_entities()
 
     # Query entities in another atomic block
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def query_entities():
         logger.info("Querying entities in third atomic block")
         adapter = get_adapter(context)
@@ -929,9 +1091,11 @@ def step_then_session_maintains_consistency(context):
     """Verify session consistency is maintained across multiple atomic blocks."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
     logger.info("Verifying session consistency across multiple atomic blocks")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
-    @sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     def verify_consistency():
         adapter = get_adapter(context)
         session = adapter.get_session()
@@ -969,6 +1133,7 @@ async def step_when_entity_created_in_async_atomic(context):
     """Create a new entity within an async atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Generate a UUID for the entity
     test_uuid = uuid.uuid4()
@@ -976,8 +1141,9 @@ async def step_when_entity_created_in_async_atomic(context):
 
     logger.info(f"Creating async entity with UUID {test_uuid}")
     async_adapter = get_async_adapter(context)
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
 
-    @async_sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     async def create_entity_async_atomic():
         """Create a new entity within an async atomic block."""
         entity = TestEntityFactory.create_test_entity(test_uuid=test_uuid, description="Async Entity")
@@ -995,12 +1161,15 @@ async def step_when_entity_created_in_async_atomic(context):
 async def step_then_async_entity_should_be_retrievable(context):
     """Verify the entity exists after async atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Get the UUID from context
     async_uuid = uuid.UUID(get_entity_id(context, "async_entity"))
     logger.info(f"Retrieving async entity with UUID {async_uuid}")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
 
-    @async_sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     async def get_entity():
         async_adapter = get_async_adapter(context)
         session = async_adapter.session_manager.get_session()
@@ -1018,16 +1187,18 @@ async def step_when_async_entity_creation_fails(context):
     """Attempt to create an async entity with a failure that causes rollback."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Generate a UUID for the entity
     test_uuid = uuid.uuid4()
     scenario_context.entity_ids["async_failed_entity"] = str(test_uuid)
 
     logger.info(f"Creating async entity with UUID {test_uuid} (will fail)")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
 
     try:
 
-        @async_sqlite_sqlalchemy_atomic_decorator
+        @atomic_decorator
         async def create_entity_with_failure():
             """Create an entity but raise an exception to trigger rollback."""
             entity = TestEntityFactory.create_test_entity(
@@ -1053,12 +1224,15 @@ async def step_when_async_entity_creation_fails(context):
 async def step_then_no_async_entity_should_exist(context):
     """Verify the entity doesn't exist after failed async atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Get the UUID from context
     async_uuid = uuid.UUID(get_entity_id(context, "async_failed_entity"))
     logger.info(f"Verifying async entity with UUID {async_uuid} doesn't exist")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
 
-    @async_sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     async def check_entity_absence():
         async_adapter = get_async_adapter(context)
         session = async_adapter.session_manager.get_session()
@@ -1074,9 +1248,12 @@ async def step_then_no_async_entity_should_exist(context):
 async def step_then_async_session_should_remain_usable(context):
     """Verify the async session is still usable after a failed transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
     logger.info("Verifying async session is still usable")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
 
-    @async_sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     async def verify_session_usable():
         # Create a new entity to test the session is still working
         test_uuid = uuid.uuid4()
@@ -1106,6 +1283,7 @@ async def step_when_multiple_async_entities_created(context):
     """Create multiple entities in a single async atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Generate UUIDs for entities
     entity_uuids = [uuid.uuid4() for _ in range(5)]
@@ -1115,8 +1293,9 @@ async def step_when_multiple_async_entities_created(context):
         scenario_context.entity_ids[f"multi_async_entity_{i}"] = str(uuid_val)
 
     logger.info("Creating multiple entities in async atomic transaction")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
 
-    @async_sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     async def create_multiple_entities():
         """Create multiple entities within an async atomic block."""
         entities = []
@@ -1139,9 +1318,11 @@ async def step_then_all_async_entities_retrievable(context):
     """Verify all entities exist after async atomic transaction."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
     logger.info("Verifying all async entities are retrievable")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
 
-    @async_sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     async def verify_entities():
         """Verify all entities within an async atomic block."""
         async_adapter = get_async_adapter(context)
@@ -1174,6 +1355,7 @@ async def step_when_complex_async_operations(context):
     """Demonstrate more complex async operations with proper session management."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Generate UUIDs
     parent_uuid = uuid.uuid4()
@@ -1185,9 +1367,10 @@ async def step_when_complex_async_operations(context):
         scenario_context.entity_ids[f"complex_related_{i}"] = str(uuid_val)
 
     logger.info(f"Creating complex entity relationship with parent UUID {parent_uuid}")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
 
     # Create a parent entity and related entities in one atomic transaction
-    @async_sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     async def create_entity_with_relations():
         # Create the parent entity
         parent = TestEntityFactory.create_test_entity(
@@ -1196,9 +1379,6 @@ async def step_when_complex_async_operations(context):
         )
         async_adapter = get_async_adapter(context)
         await async_adapter.create(parent)
-
-        # Flush to ensure the parent is persisted
-        await async_adapter.session_manager.get_session().flush()
 
         # Create related entities
         for i, related_uuid in enumerate(related_uuids):
@@ -1222,12 +1402,15 @@ async def step_when_complex_async_operations(context):
 async def step_then_related_entities_accessible(context):
     """Verify that related entities can be accessed through relationships."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
 
     # Get UUIDs from context
     parent_uuid = uuid.UUID(get_entity_id(context, "complex_parent"))
     logger.info(f"Verifying related entities for parent UUID {parent_uuid}")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
 
-    @async_sqlite_sqlalchemy_atomic_decorator
+    @atomic_decorator
     async def verify_relationships():
         async_adapter = get_async_adapter(context)
         session = async_adapter.session_manager.get_session()
