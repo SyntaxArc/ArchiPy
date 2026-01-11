@@ -19,6 +19,7 @@ from archipy.configs.config_template import (
     PostgresSQLAlchemyConfig,
     RedisConfig,
     ScyllaDBConfig,
+    StarRocksSQLAlchemyConfig,
 )
 from archipy.helpers.metaclasses.singleton import Singleton
 
@@ -33,6 +34,7 @@ TAG_CONTAINER_MAP: dict[str, str] = {
     "needs-keycloak": "keycloak",
     "needs-redis": "redis",
     "needs-scylladb": "scylladb",
+    "needs-starrocks": "starrocks",
 }
 
 
@@ -642,3 +644,83 @@ class ScyllaDBTestContainer(metaclass=Singleton, thread_safe=True):
         self.port = None
 
         logger.info("ScyllaDB container stopped")
+
+
+@ContainerManager.register("starrocks")
+class StarRocksTestContainer(metaclass=Singleton, thread_safe=True):
+    """Test container for StarRocks."""
+
+    def __init__(self, config: StarRocksSQLAlchemyConfig | None = None, image: str | None = None) -> None:
+        """Initialize StarRocks test container.
+
+        Args:
+            config (StarRocksSQLAlchemyConfig | None): Configuration for StarRocks. Defaults to None.
+            image (str | None): Docker image to use. Defaults to None (uses STARROCKS__IMAGE from config).
+        """
+        self.name = "starrocks"
+        self.config = config or BaseConfig.global_config().STARROCKS_SQLALCHEMY
+        self.image = image or BaseConfig.global_config().STARROCKS__IMAGE
+        self._is_running: bool = False
+
+        # Container properties
+        self.host: str | None = None
+        self.port: int | None = None
+        self.database: str | None = self.config.DATABASE
+        self.username: str | None = self.config.USERNAME
+        self.password: str | None = self.config.PASSWORD
+
+        # Set up the container
+        self._container = DockerContainer(self.image)
+        # Expose ports: 9030 (MySQL protocol), 8030 (FE HTTP), 8040 (BE HTTP)
+        # These will be mapped to random available host ports automatically
+        self._container.with_exposed_ports(9030, 8030, 8040)
+
+    def start(self) -> DockerContainer:
+        """Start the StarRocks container.
+
+        Returns:
+            DockerContainer: The running container instance.
+        """
+        if self._is_running:
+            return self._container
+
+        # Start the container
+        self._container.start()
+
+        # Wait for StarRocks to be ready
+        # StarRocks logs "cluster initialization DONE!" when the cluster is fully initialized
+        # This appears after "FE service query port:9030 is alive!" and indicates readiness
+        wait_for_logs(self._container, "Enjoy the journey to StarRocks blazing-fast lake-house engine!", timeout=120)
+
+        self._is_running = True
+
+        # Get dynamic host and random port (container port 9030 mapped to random host port)
+        self.host = self._container.get_container_host_ip()
+        # get_exposed_port returns the random host port that maps to container port 9030
+        self.port = int(self._container.get_exposed_port(9030))
+
+        # Update global config with actual container endpoint
+        global_config = BaseConfig.global_config()
+        global_config.STARROCKS_SQLALCHEMY.HOST = self.host
+        global_config.STARROCKS_SQLALCHEMY.PORT = self.port
+
+        logger.info("StarRocks container started on %s:%s", self.host, self.port)
+
+        return self._container
+
+    def stop(self) -> None:
+        """Stop the StarRocks container."""
+        if not self._is_running:
+            return
+
+        if self._container:
+            self._container.stop()
+
+        self._container = None
+        self._is_running = False
+
+        # Reset container properties
+        self.host = None
+        self.port = None
+
+        logger.info("StarRocks container stopped")

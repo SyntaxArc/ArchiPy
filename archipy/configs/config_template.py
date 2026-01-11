@@ -11,7 +11,7 @@ from enum import StrEnum
 from typing import Literal, Self
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field, PostgresDsn, SecretStr, model_validator
+from pydantic import BaseModel, Field, PostgresDsn, SecretStr, field_validator, model_validator
 
 from archipy.models.errors import FailedPreconditionError, InvalidArgumentError
 
@@ -541,9 +541,39 @@ class StarRocksSQLAlchemyConfig(SQLAlchemyConfig):
     """Configuration settings for Starrocks SQLAlchemy ORM.
 
     Extends SQLAlchemyConfig with Starrocks-specific settings.
+
+    Note: StarRocks only supports READ COMMITTED isolation level.
     """
 
+    DRIVER_NAME: str = Field(default="starrocks", description="StarRocks driver name")
     CATALOG: str | None = Field(default=None, description="Starrocks catalog name")
+    ISOLATION_LEVEL: str = Field(
+        default="READ COMMITTED",
+        description="Transaction isolation level (StarRocks only supports READ COMMITTED)",
+    )
+
+    @field_validator("ISOLATION_LEVEL")
+    @classmethod
+    def validate_isolation_level(cls, v: str) -> str:
+        """Validate that isolation level is READ COMMITTED for StarRocks.
+
+        Args:
+            v: The isolation level value to validate.
+
+        Returns:
+            The validated isolation level.
+
+        Raises:
+            ValueError: If the isolation level is not READ COMMITTED.
+        """
+        # Normalize the value (handle case variations and underscores)
+        normalized = v.upper().replace("_", " ").strip()
+        if normalized != "READ COMMITTED":
+            raise ValueError(
+                f"StarRocks only supports READ COMMITTED isolation level. Got: {v}. "
+                "StarRocks does not support other isolation levels like REPEATABLE READ or SERIALIZABLE.",
+            )
+        return "READ COMMITTED"
 
 
 class PrometheusConfig(BaseModel):

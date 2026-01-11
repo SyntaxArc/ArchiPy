@@ -29,6 +29,13 @@ class TestEntity(UpdatableDeletableEntity):
 
     __tablename__ = "test_entities"
 
+    __table_args__ = {
+        "comment": "Test entity table",
+        "starrocks_primary_key": "test_uuid",
+        "starrocks_distributed_by": "HASH(test_uuid) BUCKETS 10",
+        "starrocks_properties": {"replication_num": "1"},
+    }
+
     test_uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     pk_uuid = Synonym("test_uuid")
 
@@ -84,6 +91,13 @@ class TestManagerEntity(UpdatableManagerEntity):
     """
 
     __tablename__ = "test_manager_entities"
+
+    __table_args__ = {
+        "comment": "Test manager entity table",
+        "starrocks_primary_key": "test_uuid",
+        "starrocks_distributed_by": "HASH(test_uuid) BUCKETS 10",
+        "starrocks_properties": {"replication_num": "1"},
+    }
 
     test_uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     pk_uuid = Synonym("test_uuid")
@@ -143,6 +157,13 @@ class TestAdminEntity(UpdatableAdminEntity):
 
     __tablename__ = "test_admin_entities"
 
+    __table_args__ = {
+        "comment": "Test admin entity table",
+        "starrocks_primary_key": "test_uuid",
+        "starrocks_distributed_by": "HASH(test_uuid) BUCKETS 10",
+        "starrocks_properties": {"replication_num": "1"},
+    }
+
     test_uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     pk_uuid = Synonym("test_uuid")
 
@@ -201,6 +222,13 @@ class RelatedTestEntity(BaseEntity):
     """
 
     __tablename__ = "related_test_entities"
+
+    __table_args__ = {
+        "comment": "Related test entity table",
+        "starrocks_primary_key": "related_uuid",
+        "starrocks_distributed_by": "HASH(related_uuid) BUCKETS 10",
+        "starrocks_properties": {"replication_num": "1"},
+    }
 
     related_uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     pk_uuid = Synonym("related_uuid")

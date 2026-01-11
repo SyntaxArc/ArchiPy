@@ -34,6 +34,7 @@ class TestConfig(BaseConfig):
     MINIO__IMAGE: str
     KEYCLOAK__IMAGE: str
     SCYLLADB__IMAGE: str
+    STARROCKS__IMAGE: str
     TESTCONTAINERS_RYUK_CONTAINER_IMAGE: str | None = None
 
     def __init__(self, **kwargs) -> None:
