@@ -2,29 +2,75 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v4.0.3] - 2026-01-24
+
+### Added
+
+#### Tests
+
+- Add PostgreSQL and SQLite support for atomic transaction tests
+- Add Starrocks TestContainer support
+
+### Changed
+
+- Replace Black with Ruff formatter
+
+### Fixed
+
+#### Configs
+
+- Resolve type errors in base_config and keycloak_utils
+
+- Remove reference to non-existent error_message_types module
+
+### Chore
+
+#### Configs
+
+- Configure Ruff to respect pyproject.toml in CI lint workflow
+
+- Apply Ruff formatting fixes
+- Merge branch 'master' of github.com:SyntaxArc/ArchiPy
+- Merge pull request #102 from SyntaxArc/dependabot/github_actions/actions/cache-5
+- Update dependencies
+
+### CI
+
+- Bump actions/cache from 4 to 5
+- Refactor ty workflow
+- Separate ruff and ty linting into dedicated workflows
+
 ## [v4.0.2] - 2025-12-11
 
 ### Changed
 
 #### Development Tools
 
-- Broadened Ruff configuration (additional ignores, per-file overrides, relaxed limits) and expanded type-checking/lint sections for optional dependency handling (lazy imports, optional extras).
-- Raised Pylint branch/statement limits to accommodate complex decorator and interceptor flows; added explicit flake8 config blocks for comprehensions, errmsg, type-checking, and unused-arguments.
+- Broadened Ruff configuration (additional ignores, per-file overrides, relaxed limits) and expanded type-checking/lint
+  sections for optional dependency handling (lazy imports, optional extras).
+- Raised Pylint branch/statement limits to accommodate complex decorator and interceptor flows; added explicit flake8
+  config blocks for comprehensions, errmsg, type-checking, and unused-arguments.
 
 #### Adapters
 
-- SQLAlchemy base adapters: tightened filtering/exception handling helpers and optional dependency guards in session managers.
-- Email/Kafka/ScyllaDB/Temporal adapters: improved lazy import behavior, tracing hooks, and error handling consistency to match optional extras.
+- SQLAlchemy base adapters: tightened filtering/exception handling helpers and optional dependency guards in session
+  managers.
+- Email/Kafka/ScyllaDB/Temporal adapters: improved lazy import behavior, tracing hooks, and error handling consistency
+  to match optional extras.
 
 #### Helpers
 
-- Decorators (cache/retry/timing/tracing/sqlalchemy_atomic): clarified lazy-import paths, kept TYPE_CHECKING stubs, and aligned __getattr__ caching.
-- gRPC interceptors (trace/metric, client/server): better Sentry span management, traceparent propagation, and guard rails when APM extras are disabled.
-- Utility helpers (app/error/file/keycloak): safer optional imports for HTTP/gRPC/Keycloak, clearer exception logging, and minor robustness fixes.
+- Decorators (cache/retry/timing/tracing/sqlalchemy_atomic): clarified lazy-import paths, kept TYPE_CHECKING stubs, and
+  aligned __getattr__ caching.
+- gRPC interceptors (trace/metric, client/server): better Sentry span management, traceparent propagation, and guard
+  rails when APM extras are disabled.
+- Utility helpers (app/error/file/keycloak): safer optional imports for HTTP/gRPC/Keycloak, clearer exception logging,
+  and minor robustness fixes.
 
 #### Testing
 
-- BDD updates for cache decorator (TTL, clearing, bound method identity), Elastic adapter, Keycloak adapter, ScyllaDB adapter, and error utils to match revised behaviors and lazy-import handling.
+- BDD updates for cache decorator (TTL, clearing, bound method identity), Elastic adapter, Keycloak adapter, ScyllaDB
+  adapter, and error utils to match revised behaviors and lazy-import handling.
 
 #### Dependencies
 
@@ -93,7 +139,8 @@ All notable changes to ArchiPy are documented in this changelog, organized by ve
 
 #### Models - Errors
 
-- **Error System Migration to T-Strings** - Refactored error system to use t-string template formatting with inline context variables
+- **Error System Migration to T-Strings** - Refactored error system to use t-string template formatting with inline
+  context variables
     - Removed `ErrorDetailDTO` and `ErrorMessageType` dependencies
     - Added class attributes (`code`, `message_en`, `message_fa`, `http_status`, `grpc_status`) to `BaseError`
     - Implemented t-string template formatting with context variables in error messages
@@ -126,15 +173,18 @@ All notable changes to ArchiPy are documented in this changelog, organized by ve
 
 #### Helpers - Decorators
 
-- **Lazy Import for SQLAlchemy Decorators** - Changed SQLAlchemy decorators to use lazy imports via `__getattr__` in `archipy.helpers.decorators`
+- **Lazy Import for SQLAlchemy Decorators** - Changed SQLAlchemy decorators to use lazy imports via `__getattr__` in
+  `archipy.helpers.decorators`
     - SQLAlchemy decorators are now only imported when actually accessed, not at module import time
-    - Prevents SQLAlchemy from being required when using archipy without the `sqlalchemy` extra (e.g., `archipy[scylladb]`)
+    - Prevents SQLAlchemy from being required when using archipy without the `sqlalchemy` extra (e.g.,
+      `archipy[scylladb]`)
     - Provides better error messages when SQLAlchemy decorators are accessed without the sqlalchemy extra installed
     - Maintains full IDE support through type stubs using `TYPE_CHECKING`
 
 #### Adapters - Temporal
 
-- **Lazy Import for SQLAlchemy Decorators** - Updated `AtomicActivity` class to use lazy imports for SQLAlchemy atomic decorators
+- **Lazy Import for SQLAlchemy Decorators** - Updated `AtomicActivity` class to use lazy imports for SQLAlchemy atomic
+  decorators
     - Moved SQLAlchemy decorator imports from module level to method level in `_get_atomic_decorator()`
     - Prevents SQLAlchemy from being required when using Temporal adapters without the sqlalchemy extra
     - Improves modularity and allows using Temporal features independently of SQLAlchemy
@@ -344,7 +394,8 @@ All notable changes to ArchiPy are documented in this changelog, organized by ve
 
 #### Redis Configuration
 
-- **Removed Invalid Retry on Timeout Configuration** - Fixed Redis adapter configuration by removing unsupported parameter
+- **Removed Invalid Retry on Timeout Configuration** - Fixed Redis adapter configuration by removing unsupported
+  parameter
     - Removed `RETRY_ON_TIMEOUT` field from `RedisConfig` class as it does not exist in Redis cluster configuration
     - Removed `retry_on_timeout` parameter from both synchronous and asynchronous Redis adapter initialization
     - Resolves configuration errors when using Redis cluster mode with invalid parameters
