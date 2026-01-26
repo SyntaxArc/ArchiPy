@@ -31,6 +31,7 @@ from archipy.models.errors import (
     DatabaseTransactionError,
     InternalError,
 )
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -243,6 +244,19 @@ def sqlalchemy_atomic_decorator[R](
                         async with session.begin():
                             result = await func(*args, **kwargs)
                             return result
+                except asyncio.CancelledError:
+                    # Real scenarios: request cancelled (client disconnect), timeouts (asyncio/AnyIO),
+                    # TaskGroup/structured concurrency cancellation, or graceful shutdown.
+                    #
+                    # In Python 3.14, CancelledError inherits from BaseException (not Exception),
+                    # so it bypasses `except Exception:` unless handled explicitly.
+                    # We rollback for DB safety and re-raise to preserve cancellation semantics.
+                    await asyncio.shield(session.rollback())
+                    raise
+                except (SystemExit, KeyboardInterrupt):
+                    # Process is exiting (shutdown / Ctrl+C). Roll back to avoid leaving a transaction open, happens in dev mostly i think.
+                    await asyncio.shield(session.rollback())
+                    raise
                 except Exception as exception:
                     await session.rollback()
                     func_name = getattr(func, "__name__", "unknown")
@@ -291,6 +305,10 @@ def sqlalchemy_atomic_decorator[R](
                     else:
                         with session.begin():
                             return func(*args, **kwargs)
+                except (KeyboardInterrupt, SystemExit):
+                    # Ctrl+C / shutdown: rollback for DB safety, then re-raise.
+                    session.rollback()
+                    raise
                 except Exception as exception:
                     session.rollback()
                     func_name = getattr(func, "__name__", "unknown")
