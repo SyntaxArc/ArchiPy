@@ -448,6 +448,5 @@ except CacheError as e:
 - [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) - Redis configuration setup
 - [BDD Testing](../bdd_testing.md) - Testing Redis operations
-- [Redis Mock Feature](../../features/redis_mock.feature) - BDD test scenarios for Redis mock
 - [Cache Decorator](../helpers/decorators.md#cache-decorator) - TTL cache decorator usage
 - [API Reference](../../api_reference/adapters.md) - Full Redis adapter API documentation

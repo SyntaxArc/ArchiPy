@@ -210,7 +210,7 @@ logger.info("FastAPI app configured successfully")
 
 String manipulation utilities:
 
-## keycloak_utils
+## keycloak_utils {#keycloak-utils}
 
 Authentication and authorization utilities with Keycloak integration:
 

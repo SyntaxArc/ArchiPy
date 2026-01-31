@@ -203,6 +203,5 @@ def get_user_by_id(user_id: UUID) -> User | None:
 - [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) - PostgreSQL configuration setup
 - [BDD Testing](../bdd_testing.md) - Testing database operations
-- [Atomic Transactions](../../features/atomic_transactions.feature) - BDD test scenarios for transactions
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) - Transaction decorator usage
 - [API Reference](../../api_reference/adapters.md) - Full PostgreSQL adapter API documentation

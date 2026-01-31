@@ -296,5 +296,4 @@ Feature: Kafka Operations Testing
 - [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) - Kafka configuration setup
 - [BDD Testing](../bdd_testing.md) - Testing Kafka operations
-- [Kafka Adapters Feature](../../features/kafka_adapters.feature) - BDD test scenarios for Kafka
 - [API Reference](../../api_reference/adapters.md) - Full Kafka adapter API documentation

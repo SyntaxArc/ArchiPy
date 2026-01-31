@@ -808,7 +808,6 @@ print(f"Health: {health['status']}, Latency: {health['latency_ms']:.2f}ms")
 - [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) - ScyllaDB configuration setup
 - [BDD Testing](../bdd_testing.md) - Testing ScyllaDB operations
-- [ScyllaDB Adapter Feature](../../features/scylladb_adapter.feature) - BDD test scenarios for ScyllaDB adapter
 - [API Reference](../../api_reference/adapters.md#scylladb) - Full ScyllaDB adapter API documentation
 
 ## References

@@ -380,6 +380,5 @@ async_keycloak.clear_all_caches()
 - [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) - Keycloak configuration setup
 - [BDD Testing](../bdd_testing.md) - Testing Keycloak operations
-- [Keycloak Adapter Feature](../../features/keycloak_adapter.feature) - BDD test scenarios for Keycloak
 - [Keycloak Utils](../helpers/utils.md#keycloak-utils) - Authentication utilities with Keycloak
 - [API Reference](../../api_reference/adapters.md) - Full Keycloak adapter API documentation
