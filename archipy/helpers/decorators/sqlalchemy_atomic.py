@@ -54,11 +54,11 @@ ATOMIC_BLOCK_CONFIGS = {
 R = TypeVar("R")
 
 
-def _handle_db_exception(exception: Exception, db_type: str, func_name: str) -> None:
+def _handle_db_exception(exception: BaseException, db_type: str, func_name: str) -> None:
     """Handle database exceptions and raise appropriate errors.
 
     Args:
-        exception (Exception): The exception to handle.
+        exception (BaseException): The exception to handle.
         db_type (str): The database type ("postgres", "sqlite", or "starrocks").
         func_name (str): The name of the function being executed.
 
@@ -243,7 +243,7 @@ def sqlalchemy_atomic_decorator[R](
                         async with session.begin():
                             result = await func(*args, **kwargs)
                             return result
-                except Exception as exception:
+                except BaseException as exception:
                     await session.rollback()
                     func_name = getattr(func, "__name__", "unknown")
                     _handle_db_exception(exception, db_type, func_name)
@@ -291,7 +291,7 @@ def sqlalchemy_atomic_decorator[R](
                     else:
                         with session.begin():
                             return func(*args, **kwargs)
-                except Exception as exception:
+                except BaseException as exception:
                     session.rollback()
                     func_name = getattr(func, "__name__", "unknown")
                     _handle_db_exception(exception, db_type, func_name)

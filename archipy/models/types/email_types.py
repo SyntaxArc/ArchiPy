@@ -31,5 +31,5 @@ class EmailAttachmentDispositionType(StrEnum):
         INLINE (str): Represents an attachment that should be displayed inline.
     """
 
-    ATTACHMENT = "attachment"
-    INLINE = "inline"
+    ATTACHMENT = "ATTACHMENT"
+    INLINE = "INLINE"

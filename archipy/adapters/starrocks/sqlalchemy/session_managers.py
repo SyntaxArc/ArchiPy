@@ -208,9 +208,7 @@ class AsyncStarRocksSQlAlchemySessionManager(
         """Return connection arguments for async StarRocks to ensure proper transaction support.
 
         StarRocks (using MySQL protocol) requires autocommit to be explicitly disabled
-        to ensure transactions work properly with rollback support.
-
-        Returns:
+        to ensure transactions work properly with rollback support.        Returns:
             A dictionary with autocommit=False to ensure transaction support.
         """
         return {"autocommit": False}

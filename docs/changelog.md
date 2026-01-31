@@ -2,6 +2,55 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v4.0.4] - 2026-01-31
+
+### Changed
+
+#### Helpers - Decorators
+
+- **Enhanced Exception Handling** - Improved exception handling in SQLAlchemy atomic decorators
+  - Changed exception handling from `Exception` to `BaseException` for comprehensive error catching
+  - Updated `_handle_db_exception()` function signature to accept `BaseException` instead of `Exception`
+  - Enhanced error handling in both sync and async atomic decorator implementations
+  - Ensures all exceptions (including system exceptions) are properly caught and handled
+
+#### Models - Types
+
+- **Enum Value Standardization** - Standardized all enum values to uppercase format for consistency
+  - **SortOrderType**: Changed `ASCENDING` and `DESCENDING` from lowercase to uppercase
+  - **FilterOperationType**: Changed all 15 operation types to uppercase (EQUAL, NOT_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL, IN_LIST, NOT_IN_LIST, LIKE, ILIKE, STARTS_WITH, ENDS_WITH, CONTAINS, IS_NULL, IS_NOT_NULL)
+  - **EmailAttachmentDispositionType**: Changed `ATTACHMENT` and `INLINE` from lowercase to uppercase
+  - **TimeIntervalUnitType**: Changed all 7 unit types to uppercase (SECONDS, MINUTES, HOURS, DAYS, WEEKS, MONTHS, YEAR)
+  - Improved consistency with other enum patterns in the codebase
+  - Enhanced code readability and standardization across all type definitions
+
+### Fixed
+
+#### Adapters - StarRocks
+
+- **Docstring Formatting** - Fixed docstring formatting in StarRocks session manager
+  - Corrected docstring formatting in `get_connection_args()` method
+  - Improved code documentation consistency
+
+### Chore
+
+#### Dependencies
+
+- **Comprehensive Dependency Updates** - Updated multiple dependencies to latest versions
+  - Updated `cachetools` from `>=6.2.4` to `>=6.2.6` (cache, keycloak, minio, scylladb extras)
+  - Updated `cryptography` from `46.0.3` to `46.0.4` for enhanced security
+  - Updated `protobuf` from `>=6.33.4` to `>=6.33.5` (grpc extra)
+  - Updated `pyjwt` from `>=2.10.1` to `>=2.11.0` (jwt extra)
+  - Updated `python-keycloak` from `>=7.0.2` to `>=7.0.3` (keycloak extra)
+  - Updated `python-multipart` from `0.0.21` to `0.0.22`
+  - Updated `rich` from `14.3.0` to `14.3.1`
+  - Updated `rich-toolkit` from `0.17.1` to `0.17.2`
+  - Updated `sentry-sdk` from `>=2.50.0` to `>=2.51.0` (sentry extra)
+  - Updated `ty` from `>=0.0.13` to `>=0.0.14` (dev dependency)
+  - Updated `mkdocstrings` from `>=1.0.1` to `>=1.0.2` (docs dependency)
+  - Updated `pathspec` from `1.0.3` to `1.0.4`
+  - Updated `orjson` from `3.11.5` to `3.11.6`
+
 ## [v4.0.3] - 2026-01-24
 
 ### Added

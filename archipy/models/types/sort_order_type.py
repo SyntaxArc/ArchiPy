@@ -12,5 +12,5 @@ class SortOrderType(Enum):
         DESCENDING (str): Represents sorting in descending order.
     """
 
-    ASCENDING = "ascending"
-    DESCENDING = "descending"
+    ASCENDING = "ASCENDING"
+    DESCENDING = "DESCENDING"

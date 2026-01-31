@@ -10,10 +10,10 @@ class TimeIntervalUnitType(str, Enum):
     seamless integration with string-based APIs or databases.
     """
 
-    SECONDS = "seconds"
-    MINUTES = "minutes"
-    HOURS = "hours"
-    DAYS = "days"
-    WEEKS = "weeks"
-    MONTHS = "months"
-    YEAR = "year"
+    SECONDS = "SECONDS"
+    MINUTES = "MINUTES"
+    HOURS = "HOURS"
+    DAYS = "DAYS"
+    WEEKS = "WEEKS"
+    MONTHS = "MONTHS"
+    YEAR = "YEAR"
