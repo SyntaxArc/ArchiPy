@@ -328,6 +328,8 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
             username=username,
             password=password,
         )
+        # enable Organizations feature for Keycloak 25+
+        self._container.with_command("start-dev --features organization")
 
     def start(self) -> KeycloakContainer:
         """Start the Keycloak container."""

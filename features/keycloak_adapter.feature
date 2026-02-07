@@ -17,6 +17,18 @@ Feature: Keycloak Authentication Testing
       | sync         | test-realm      | Test Realm         | test-client      |
       | async        | async-test-realm| Async Test Realm   | async-test-client|
 
+  Scenario Outline: Realm update
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And the <adapter_type> realm creation should succeed
+    When I update the realm "<realm_name>" display name to "<new_display_name>" using <adapter_type> adapter
+    Then the realm "<realm_name>" should have display name "<new_display_name>"
+
+    Examples:
+      | adapter_type | realm_name        | realm_display_name | new_display_name   |
+      | sync         | update-realm      | Original           | Updated Display    |
+      | async        | async-update-realm| Async Original     | Async Updated Name |
+
   Scenario Outline: User authentication flow
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -295,3 +307,54 @@ Feature: Keycloak Authentication Testing
       | adapter_type | username | password | realm_name      | realm_display_name | client_name      |
       | sync         | testuser | pass123  | test-realm      | Test Realm         | test-client      |
       | async        | asyncuser6| async123| async-test-realm| Async Test Realm   | async-test-client|
+
+  @organizations
+  Scenario Outline: Organization create get update and delete
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I enable organization of realm named "<realm_name>"
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    When I create an organization with name "<org_name>" and alias "<org_alias>" using <adapter_type> adapter
+    Then the <adapter_type> organization creation should succeed
+    And the organization "<org_name>" should exist
+    And the organization should have alias "<org_alias>"
+    When I get all organizations using <adapter_type> adapter
+    Then the organizations list should contain organization "<org_name>"
+    When I get organizations with search "<org_name>" using <adapter_type> adapter
+    Then the organizations list should contain organization "<org_name>"
+    When I update the organization name to "<org_display_name>" using <adapter_type> adapter
+    Then the <adapter_type> organization update should succeed
+    And the organization should have name "<org_display_name>"
+    When I delete the organization using <adapter_type> adapter
+    Then the <adapter_type> organization deletion should succeed
+
+    Examples:
+      | adapter_type | org_name      | org_alias     | org_display_name | realm_name      | realm_display_name | client_name      |
+      | sync         | test-org      | test-org-alias| Test Org Display | test-realm  | Test Realm         | test-client      |
+      | async        | async-test-org| async-org-alias| Async Org Display| test-realm  | Async Test Realm   | async-test-client|
+
+  @organizations
+  Scenario Outline: Organization members add and remove
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I enable organization of realm named "<realm_name>"
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
+    And I create an organization with name "<org_name>" and alias "<org_alias>" using <adapter_type> adapter
+    When I add user "<username>" to the organization using <adapter_type> adapter
+    Then the <adapter_type> organization add member should succeed
+    When I get organization members using <adapter_type> adapter
+    Then the organization should have 1 member
+    When I get organizations for user "<username>" using <adapter_type> adapter
+    Then the user organizations list should contain organization "<org_name>"
+    When I remove user "<username>" from the organization using <adapter_type> adapter
+    Then the <adapter_type> organization remove member should succeed
+    When I get organization members count using <adapter_type> adapter
+    Then the organization members count should be 0
+    When I get organizations for user "<username>" using <adapter_type> adapter
+    Then the user organizations list should not contain organization "<org_name>"
+
+    Examples:
+      | adapter_type | username | password | org_name | org_alias | realm_name     | realm_display_name | client_name      |
+      | sync         | orguser  | pass123  | test-org1 | test-alias1| test-realm | Test Realm         | test-client      |
+      | async        | asyncorguser| async123| async-org1| async-alias1| test-realm | Async Test Realm   | async-test-client|

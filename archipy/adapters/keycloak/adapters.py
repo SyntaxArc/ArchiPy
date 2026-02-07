@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-from typing import Any, override
+from typing import Any, NoReturn, override
 
 from async_lru import alru_cache
 from keycloak import KeycloakAdmin, KeycloakOpenID
@@ -86,7 +86,7 @@ class KeycloakExceptionHandlerMixin:
         return error_message
 
     @classmethod
-    def _handle_keycloak_exception(cls, exception: KeycloakError, operation: str) -> None:
+    def _handle_keycloak_exception(cls, exception: KeycloakError, operation: str) -> NoReturn:
         """Handle Keycloak exceptions and map them to appropriate application errors.
 
         Args:
@@ -1414,6 +1414,22 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
             self._handle_keycloak_exception(e, "get_realm")
 
     @override
+    def update_realm(self, realm_name: str, **kwargs: Any) -> dict[str, Any] | None:
+        """Update a realm. Kwargs are RealmRepresentation.
+
+        Args:
+            realm_name: Realm name (not the realm id).
+            **kwargs: RealmRepresentation attributes to update (e.g. displayName).
+
+        Returns:
+            Response from Keycloak, or None on error (handled via exception).
+        """
+        try:
+            return self.admin_adapter.update_realm(realm_name, dict(kwargs))
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_realm")
+
+    @override
     def create_client(
         self,
         client_id: str,
@@ -1581,6 +1597,101 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
             return self.admin_adapter.get_composite_realm_roles_of_role(role_name)
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_composite_realm_roles")
+
+    @override
+    def get_organizations(self, query: dict | None = None) -> list[dict[str, Any]]:
+        """Fetch all organizations, optionally filtered by query parameters."""
+        try:
+            return self.admin_adapter.get_organizations(query=query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_organizations")
+
+    @override
+    def get_organization(self, organization_id: str) -> dict[str, Any]:
+        """Get representation of the organization by ID."""
+        try:
+            return self.admin_adapter.get_organization(organization_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_organization")
+
+    @override
+    def create_organization(self, name: str, alias: str, **kwargs: Any) -> str | None:
+        """Create a new organization. Name and alias must be unique. Returns org_id."""
+        try:
+            payload = {"name": name, "alias": alias}
+            for key, value in kwargs.items():
+                if key in ["name", "alias"]:
+                    continue
+
+                # Convert snake_case to camelCase
+                camel_key = StringUtils.snake_to_camel_case(key)
+                payload[camel_key] = value
+
+            return self.admin_adapter.create_organization(payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_organization")
+
+    @override
+    def update_organization(self, organization_id: str, **kwargs: Any) -> dict[str, Any]:
+        """Update an existing organization. Kwargs are organization attributes (e.g. name, alias)."""
+        try:
+            payload = {}
+            for key, value in kwargs.items():
+                # Convert snake_case to camelCase
+                camel_key = StringUtils.snake_to_camel_case(key)
+                payload[camel_key] = value
+
+            return self.admin_adapter.update_organization(organization_id=organization_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_organization")
+
+    @override
+    def delete_organization(self, organization_id: str) -> dict[str, Any]:
+        """Delete an organization."""
+        try:
+            return self.admin_adapter.delete_organization(organization_id=organization_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_organization")
+
+    @override
+    def get_user_organizations(self, user_id: str) -> list[dict[str, Any]]:
+        """Get organizations by user id."""
+        try:
+            return self.admin_adapter.get_user_organizations(user_id=user_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_user_organizations")
+
+    @override
+    def get_organization_members(self, organization_id: str, query: dict | None = None) -> list[dict[str, Any]]:
+        """Get members by organization id, optionally filtered by query parameters."""
+        try:
+            return self.admin_adapter.get_organization_members(organization_id=organization_id, query=query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_organization_members")
+
+    @override
+    def get_organization_members_count(self, organization_id: str) -> int:
+        """Get the number of members in the organization."""
+        try:
+            return self.admin_adapter.get_organization_members_count(organization_id=organization_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_organization_members_count")
+
+    @override
+    def organization_user_add(self, user_id: str, organization_id: str) -> bytes:
+        """Add a user to an organization."""
+        try:
+            return self.admin_adapter.organization_user_add(user_id=user_id, organization_id=organization_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "organization_user_add")
+
+    @override
+    def organization_user_remove(self, user_id: str, organization_id: str) -> dict[str, Any]:
+        """Remove a user from an organization."""
+        try:
+            return self.admin_adapter.organization_user_remove(user_id=user_id, organization_id=organization_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "organization_user_remove")
 
 
 class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
@@ -2725,6 +2836,22 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
             self._handle_keycloak_exception(e, "get_realm")
 
     @override
+    async def update_realm(self, realm_name: str, **kwargs: Any) -> dict[str, Any] | None:
+        """Update a realm. Kwargs are RealmRepresentation top-level attributes (e.g. displayName, organizationsEnabled).
+
+        Args:
+            realm_name: Realm name (not the realm id).
+            **kwargs: RealmRepresentation attributes to update (e.g. displayName, organizationsEnabled).
+
+        Returns:
+            Response from Keycloak, or None on error (handled via exception).
+        """
+        try:
+            return await self.admin_adapter.a_update_realm(realm_name, dict(kwargs))
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_realm")
+
+    @override
     async def create_client(
         self,
         client_id: str,
@@ -2898,3 +3025,98 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
             return await self.admin_adapter.a_get_composite_realm_roles_of_role(role_name)
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_composite_realm_roles")
+
+    @override
+    async def get_organizations(self, query: dict | None = None) -> list[dict[str, Any]]:
+        """Fetch all organizations, optionally filtered by query parameters."""
+        try:
+            return await self.admin_adapter.a_get_organizations(query=query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_organizations")
+
+    @override
+    async def get_organization(self, organization_id: str) -> dict[str, Any]:
+        """Get representation of the organization by ID."""
+        try:
+            return await self.admin_adapter.a_get_organization(organization_id=organization_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_organization")
+
+    @override
+    async def create_organization(self, name: str, alias: str, **kwargs: Any) -> str | None:
+        """Create a new organization. Name and alias must be unique. Returns org_id."""
+        try:
+            payload = {"name": name, "alias": alias}
+            for key, value in kwargs.items():
+                if key in ["name", "alias"]:
+                    continue
+
+                # Convert snake_case to camelCase
+                camel_key = StringUtils.snake_to_camel_case(key)
+                payload[camel_key] = value
+
+            return await self.admin_adapter.a_create_organization(payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_organization")
+
+    @override
+    async def update_organization(self, organization_id: str, **kwargs: Any) -> dict[str, Any]:
+        """Update an existing organization. Kwargs are organization attributes (e.g. name, alias)."""
+        try:
+            payload = {}
+            for key, value in kwargs.items():
+                # Convert snake_case to camelCase
+                camel_key = StringUtils.snake_to_camel_case(key)
+                payload[camel_key] = value
+
+            return await self.admin_adapter.a_update_organization(organization_id=organization_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_organization")
+
+    @override
+    async def delete_organization(self, organization_id: str) -> dict[str, Any]:
+        """Delete an organization."""
+        try:
+            return await self.admin_adapter.a_delete_organization(organization_id=organization_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_organization")
+
+    @override
+    async def get_user_organizations(self, user_id: str) -> list[dict[str, Any]]:
+        """Get organizations by user id."""
+        try:
+            return await self.admin_adapter.a_get_user_organizations(user_id=user_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_user_organizations")
+
+    @override
+    async def get_organization_members(self, organization_id: str, query: dict | None = None) -> list[dict[str, Any]]:
+        """Get members by organization id, optionally filtered by query parameters."""
+        try:
+            return await self.admin_adapter.a_get_organization_members(organization_id=organization_id, query=query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_organization_members")
+
+    @override
+    async def get_organization_members_count(self, organization_id: str) -> int:
+        """Get the number of members in the organization."""
+        try:
+            return await self.admin_adapter.a_get_organization_members_count(organization_id=organization_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_organization_members_count")
+
+    @override
+    async def organization_user_add(self, user_id: str, organization_id: str) -> bytes:
+        """Add a user to an organization."""
+        try:
+            return await self.admin_adapter.a_organization_user_add(user_id=user_id, organization_id=organization_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "organization_user_add")
+
+    @override
+    async def organization_user_remove(self, user_id: str, organization_id: str) -> dict[str, Any]:
+        """Remove a user from an organization."""
+        try:
+            return await self.admin_adapter.a_organization_user_remove(user_id=user_id, organization_id=organization_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "organization_user_remove")
