@@ -61,6 +61,34 @@ async def step_create_realm(context: Context, realm_name: str, display_name: str
         context.logger.exception("Realm creation failed")
 
 
+
+@given('I enable organization of realm named "{realm_name}"')
+async def step_enable_realm_organizations(
+    context: Context, realm_name: str,
+) -> None:
+    """Get realm and, if organizations not enabled, update realm via adapter.update_realm."""
+    adapter = get_keycloak_adapter(context)
+    is_async = "async" in context.scenario.tags
+
+    try:
+        if is_async:
+            realm = await adapter.get_realm(realm_name)
+        else:
+            realm = adapter.get_realm(realm_name)
+        if realm is not None and not realm.get("organizationsEnabled"):
+            realm = dict(realm)
+            realm["organizationsEnabled"] = True
+            if is_async:
+                await adapter.update_realm(realm_name, **realm)
+            else:
+                adapter.update_realm(realm_name, **realm)
+            context.logger.info(f"Enabled organizations for realm {realm_name}")
+        else:
+            context.logger.info(f"Realm {realm_name} already has organizations enabled")
+    except Exception as enabler_err:
+        context.logger.warning(f"Could not enable organizations for realm {realm_name}: {enabler_err}")
+
+
 # Client management steps
 @given(
     'I create a client named "{client_name}" in realm "{realm_name}" with service accounts enabled using {adapter_type} adapter',
@@ -1456,6 +1484,7 @@ async def _create_or_get_realm_async(
     scenario_context.store(f"realm_{realm_name}", realm_result)
 
 
+@given("the sync realm creation should succeed")
 @then("the sync realm creation should succeed")
 def step_sync_realm_creation_succeeds(context: Context) -> None:
     """Verify that the sync realm creation succeeded."""
@@ -1472,6 +1501,46 @@ def step_realm_exists(context: Context, realm_name: str) -> None:
     realm_result = scenario_context.get(f"realm_{realm_name}")
     assert realm_result is not None, f"Realm {realm_name} was not created"
     context.logger.info(f"Verified realm {realm_name} exists")
+
+@when(
+    'I update the realm "{realm_name}" display name to "{new_display_name}" using {adapter_type} adapter',
+)
+async def step_update_realm_display_name(
+    context: Context, realm_name: str, new_display_name: str, adapter_type: str,
+) -> None:
+    """Update realm display name via adapter.update_realm (get realm, set displayName, update)."""
+    adapter = get_keycloak_adapter(context)
+    is_async = "async" in context.scenario.tags
+    if is_async:
+        realm = await adapter.get_realm(realm_name)
+    else:
+        realm = adapter.get_realm(realm_name)
+    assert realm is not None, f"Realm {realm_name!r} not found"
+    payload = dict(realm)
+    payload["displayName"] = new_display_name
+    if is_async:
+        await adapter.update_realm(realm_name, **payload)
+    else:
+        adapter.update_realm(realm_name, **payload)
+    context.logger.info(f"Updated realm {realm_name} display name to {new_display_name!r}")
+
+
+@given('the realm "{realm_name}" should have display name "{display_name}"')
+@then('the realm "{realm_name}" should have display name "{display_name}"')
+async def step_realm_has_display_name_by_name(
+    context: Context, realm_name: str, display_name: str,
+) -> None:
+    """Verify the realm has the given display name by fetching the realm."""
+    adapter = get_keycloak_adapter(context)
+    is_async = "async" in context.scenario.tags
+    if is_async:
+        realm = await adapter.get_realm(realm_name)
+    else:
+        realm = adapter.get_realm(realm_name)
+    assert realm is not None, f"Realm {realm_name!r} not found"
+    actual = realm.get("displayName")
+    assert actual == display_name, f"Expected displayName {display_name!r}, got {actual!r}"
+    context.logger.info(f"Realm {realm_name} has display name {display_name!r}")
 
 
 @then('the realm should have display name "{display_name}"')
@@ -1661,6 +1730,7 @@ def step_async_token_response_contains_access_token(context: Context) -> None:
     context.logger.info("Verified async token response contains access_token")
 
 
+@given("the async realm creation should succeed")
 @then("the async realm creation should succeed")
 def step_async_realm_creation_succeeds(context: Context) -> None:
     """Verify that the async realm creation succeeded."""
@@ -1746,3 +1816,383 @@ def step_async_token_validation_succeeds(context: Context) -> None:
     assert not scenario_context.get("token_error"), f"Token validation failed: {scenario_context.get('token_error')}"
     assert scenario_context.get("validation_result"), "No validation result found"
     context.logger.info("Async token validation succeeded")
+
+
+# Organization steps
+@given('I create an organization with name "{org_name}" and alias "{org_alias}" using {adapter_type} adapter')
+@when('I create an organization with name "{org_name}" and alias "{org_alias}" using {adapter_type} adapter')
+async def step_create_organization(context: Context, org_name: str, org_alias: str, adapter_type: str) -> None:
+    """Create an organization with the specified name and alias."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+
+    try:
+        if is_async:
+            org_id = await adapter.create_organization(name=org_name, alias=org_alias)
+        else:
+            org_id = adapter.create_organization(name=org_name, alias=org_alias)
+        scenario_context.store("latest_organization_id", org_id)
+        scenario_context.store("latest_organization_creation", {"name": org_name, "alias": org_alias, "id": org_id})
+        context.logger.info(f"Created organization {org_name} with id {org_id}")
+    except Exception as e:
+        scenario_context.store("organization_creation_error", str(e))
+        context.logger.exception("Organization creation failed")
+
+
+@then("the {adapter_type} organization creation should succeed")
+def step_organization_creation_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify organization creation succeeded."""
+    scenario_context = get_current_scenario_context(context)
+    assert not scenario_context.get("organization_creation_error"), (
+        f"Organization creation failed: {scenario_context.get('organization_creation_error')}"
+    )
+    assert scenario_context.get("latest_organization_id"), "No organization id in context"
+    context.logger.info(f"{adapter_type} organization creation succeeded")
+
+
+@when('I update the organization name to "{name}" using {adapter_type} adapter')
+async def step_update_organization_name(context: Context, name: str, adapter_type: str) -> None:
+    """Update the current organization's name (Keycloak 26 uses name, not displayName)."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+    org_id = scenario_context.get("latest_organization_id")
+    assert org_id, "No organization id in context (create organization first)"
+
+    try:
+        if is_async:
+            current = await adapter.get_organization(organization_id=org_id)
+        else:
+            current = adapter.get_organization(organization_id=org_id)
+        update_kwargs: dict[str, str] = (
+            {"name": name, "alias": current.get("alias", "")} if isinstance(current, dict) else {"name": name}
+        )
+    except Exception:
+        update_kwargs = {"name": name}
+
+    try:
+        if is_async:
+            await adapter.update_organization(org_id, **update_kwargs)
+        else:
+            adapter.update_organization(org_id, **update_kwargs)
+        scenario_context.store("latest_organization_update", {"name": name})
+        context.logger.info(f"Updated organization name to {name}")
+    except Exception as e:
+        scenario_context.store("organization_update_error", str(e))
+        context.logger.exception("Organization update failed")
+
+
+@when("I delete the organization using {adapter_type} adapter")
+async def step_delete_organization(context: Context, adapter_type: str) -> None:
+    """Delete the current organization."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+    org_id = scenario_context.get("latest_organization_id")
+    assert org_id, "No organization id in context"
+
+    try:
+        if is_async:
+            await adapter.delete_organization(organization_id=org_id)
+        else:
+            adapter.delete_organization(organization_id=org_id)
+        scenario_context.store("latest_organization_deletion", org_id)
+        context.logger.info("Deleted organization")
+    except Exception as e:
+        scenario_context.store("organization_deletion_error", str(e))
+        context.logger.exception("Organization deletion failed")
+
+
+@given('I add user "{username}" to the organization using {adapter_type} adapter')
+@when('I add user "{username}" to the organization using {adapter_type} adapter')
+async def step_organization_user_add(context: Context, username: str, adapter_type: str) -> None:
+    """Add a user to the current organization."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+    org_id = scenario_context.get("latest_organization_id")
+    user_id = scenario_context.get(f"user_id_{username}")
+    assert org_id, "No organization id in context"
+    assert user_id, f"No user id for username {username}"
+
+    try:
+        if is_async:
+            await adapter.organization_user_add(user_id=user_id, organization_id=org_id)
+        else:
+            adapter.organization_user_add(user_id=user_id, organization_id=org_id)
+        scenario_context.store("organization_add_member_error", None)
+        context.logger.info(f"Added user {username} to organization")
+    except Exception as e:
+        scenario_context.store("organization_add_member_error", str(e))
+        context.logger.exception("Organization add member failed")
+
+
+@when("I get organization members using {adapter_type} adapter")
+async def step_get_organization_members(context: Context, adapter_type: str) -> None:
+    """Get members of the current organization."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+    org_id = scenario_context.get("latest_organization_id")
+    assert org_id, "No organization id in context"
+
+    try:
+        if is_async:
+            members = await adapter.get_organization_members(organization_id=org_id)
+        else:
+            members = adapter.get_organization_members(organization_id=org_id)
+        scenario_context.store("organization_members", members)
+        context.logger.info(f"Got {len(members)} organization members")
+    except Exception as e:
+        scenario_context.store("organization_members_error", str(e))
+        context.logger.exception("Get organization members failed")
+
+
+@when('I remove user "{username}" from the organization using {adapter_type} adapter')
+async def step_organization_user_remove(context: Context, username: str, adapter_type: str) -> None:
+    """Remove a user from the current organization."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+    org_id = scenario_context.get("latest_organization_id")
+    user_id = scenario_context.get(f"user_id_{username}")
+    assert org_id, "No organization id in context"
+    assert user_id, f"No user id for username {username}"
+
+    try:
+        if is_async:
+            await adapter.organization_user_remove(user_id=user_id, organization_id=org_id)
+        else:
+            adapter.organization_user_remove(user_id=user_id, organization_id=org_id)
+        scenario_context.store("organization_remove_member_error", None)
+        context.logger.info(f"Removed user {username} from organization")
+    except Exception as e:
+        scenario_context.store("organization_remove_member_error", str(e))
+        context.logger.exception("Organization remove member failed")
+
+
+@when("I get organization members count using {adapter_type} adapter")
+async def step_get_organization_members_count(context: Context, adapter_type: str) -> None:
+    """Get the number of members in the current organization."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+    org_id = scenario_context.get("latest_organization_id")
+    assert org_id, "No organization id in context"
+
+    try:
+        if is_async:
+            count = await adapter.get_organization_members_count(organization_id=org_id)
+        else:
+            count = adapter.get_organization_members_count(organization_id=org_id)
+        scenario_context.store("organization_members_count", count)
+        context.logger.info(f"Organization members count: {count}")
+    except Exception as e:
+        scenario_context.store("organization_members_count_error", str(e))
+        context.logger.exception("Get organization members count failed")
+
+
+@when('I get organizations for user "{username}" using {adapter_type} adapter')
+async def step_get_user_organizations(context: Context, username: str, adapter_type: str) -> None:
+    """Get organizations the user is member of."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+    user_id = scenario_context.get(f"user_id_{username}")
+    assert user_id, f"No user id for username {username}"
+
+    try:
+        if is_async:
+            orgs = await adapter.get_user_organizations(user_id=user_id)
+        else:
+            orgs = adapter.get_user_organizations(user_id=user_id)
+        scenario_context.store("user_organizations", orgs)
+        scenario_context.store("user_organizations_error", None)
+        context.logger.info(f"Got {len(orgs)} organizations for user {username}")
+    except Exception as e:
+        scenario_context.store("user_organizations_error", str(e))
+        context.logger.exception("Get user organizations failed")
+
+
+
+
+@then('the organization "{org_name}" should exist')
+async def step_organization_exists(context: Context, org_name: str) -> None:
+    """Verify the organization exists by fetching it by id."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+    org_id = scenario_context.get("latest_organization_id")
+    assert org_id, "No organization id in context"
+
+    if is_async:
+        org = await adapter.get_organization(organization_id=org_id)
+    else:
+        org = adapter.get_organization(organization_id=org_id)
+    scenario_context.store("latest_organization_result", org)
+    assert org is not None, "Organization not found"
+    assert org.get("name") == org_name, f"Organization name mismatch: expected {org_name}, got {org.get('name')}"
+    context.logger.info(f"Organization {org_name} exists")
+
+
+@then('the organization should have alias "{org_alias}"')
+def step_organization_has_alias(context: Context, org_alias: str) -> None:
+    """Verify the organization has the expected alias."""
+    scenario_context = get_current_scenario_context(context)
+    org = scenario_context.get("latest_organization_result")
+    assert org is not None, "No organization result in context"
+    assert org.get("alias") == org_alias, f"Expected alias {org_alias}, got {org.get('alias')}"
+    context.logger.info(f"Organization has alias {org_alias}")
+
+
+@when("I get all organizations using {adapter_type} adapter")
+async def step_get_all_organizations(context: Context, adapter_type: str) -> None:
+    """Get all organizations (no query). Tests get_organizations(query=None)."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+    try:
+        if is_async:
+            orgs = await adapter.get_organizations(query=None)
+        else:
+            orgs = adapter.get_organizations(query=None)
+        scenario_context.store("organizations_list", orgs)
+        context.logger.info(f"Got {len(orgs)} organizations (all)")
+    except Exception as e:
+        scenario_context.store("organizations_list_error", str(e))
+        context.logger.exception("Get all organizations failed")
+
+
+@when('I get organizations with search "{search}" using {adapter_type} adapter')
+async def step_get_organizations_with_search(
+    context: Context, search: str, adapter_type: str,
+) -> None:
+    """Get organizations with query search. Tests get_organizations(query={\"search\": search})."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+    query = {"search": search}
+    try:
+        if is_async:
+            orgs = await adapter.get_organizations(query=query)
+        else:
+            orgs = adapter.get_organizations(query=query)
+        scenario_context.store("organizations_list", orgs)
+        context.logger.info(f"Got {len(orgs)} organizations with search={search!r}")
+    except Exception as e:
+        scenario_context.store("organizations_list_error", str(e))
+        context.logger.exception("Get organizations with search failed")
+
+
+@then('the organizations list should contain organization "{org_name}"')
+def step_organizations_list_contain_org(context: Context, org_name: str) -> None:
+    """Verify the organizations list (from get_organizations) contains the given organization by name."""
+    scenario_context = get_current_scenario_context(context)
+    orgs = scenario_context.get("organizations_list")
+    assert orgs is not None, "No organizations_list in context (call get all organizations or get with search first)"
+    names = [o.get("name") for o in orgs if o.get("name")]
+    assert org_name in names, f"Organization {org_name} not in organizations list: {names}"
+    context.logger.info(f"Organizations list contains {org_name}")
+
+
+@then("the {adapter_type} organization update should succeed")
+def step_organization_update_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify organization update succeeded."""
+    scenario_context = get_current_scenario_context(context)
+    assert not scenario_context.get("organization_update_error"), (
+        f"Organization update failed: {scenario_context.get('organization_update_error')}"
+    )
+    context.logger.info(f"{adapter_type} organization update succeeded")
+
+
+@then('the organization should have name "{name}"')
+async def step_organization_has_name(context: Context, name: str) -> None:
+    """Verify the organization has the expected name (Keycloak 26 uses name)."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+    org_id = scenario_context.get("latest_organization_id")
+    assert org_id, "No organization id in context"
+
+    if is_async:
+        org = await adapter.get_organization(organization_id=org_id)
+    else:
+        org = adapter.get_organization(organization_id=org_id)
+    assert org is not None, "Organization not found"
+    actual = org.get("name")
+    assert actual == name, f"Expected organization name {name!r}, got {actual!r}"
+    context.logger.info(f"Organization has name {name}")
+
+
+@then("the {adapter_type} organization deletion should succeed")
+def step_organization_deletion_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify organization deletion succeeded."""
+    scenario_context = get_current_scenario_context(context)
+    assert not scenario_context.get("organization_deletion_error"), (
+        f"Organization deletion failed: {scenario_context.get('organization_deletion_error')}"
+    )
+    context.logger.info(f"{adapter_type} organization deletion succeeded")
+
+
+@then("the {adapter_type} organization add member should succeed")
+def step_organization_add_member_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify adding a member to the organization succeeded."""
+    scenario_context = get_current_scenario_context(context)
+    assert not scenario_context.get("organization_add_member_error"), (
+        f"Organization add member failed: {scenario_context.get('organization_add_member_error')}"
+    )
+    context.logger.info(f"{adapter_type} organization add member succeeded")
+
+
+@then("the organization should have {count:d} member")
+def step_organization_member_count(context: Context, count: int) -> None:
+    """Verify the organization has the expected number of members."""
+    scenario_context = get_current_scenario_context(context)
+    members = scenario_context.get("organization_members")
+    assert members is not None, "No organization_members in context"
+    assert len(members) == count, f"Expected {count} member(s), got {len(members)}"
+    context.logger.info(f"Organization has {count} member(s)")
+
+
+@then("the {adapter_type} organization remove member should succeed")
+def step_organization_remove_member_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify removing a member from the organization succeeded."""
+    scenario_context = get_current_scenario_context(context)
+    assert not scenario_context.get("organization_remove_member_error"), (
+        f"Organization remove member failed: {scenario_context.get('organization_remove_member_error')}"
+    )
+    context.logger.info(f"{adapter_type} organization remove member succeeded")
+
+
+@then("the organization members count should be {count:d}")
+def step_organization_members_count_equals(context: Context, count: int) -> None:
+    """Verify the organization members count."""
+    scenario_context = get_current_scenario_context(context)
+    actual = scenario_context.get("organization_members_count")
+    assert actual is not None, "No organization_members_count in context"
+    assert actual == count, f"Expected members count {count}, got {actual}"
+    context.logger.info(f"Organization members count is {count}")
+
+
+
+@then('the user organizations list should contain organization "{org_name}"')
+def step_user_organizations_contain_org(context: Context, org_name: str) -> None:
+    """Verify the user organizations list contains the given organization by name."""
+    scenario_context = get_current_scenario_context(context)
+    orgs = scenario_context.get("user_organizations")
+    assert orgs is not None, "No user_organizations in context"
+    names = [o.get("name") for o in orgs if o.get("name")]
+    assert org_name in names, f"Organization {org_name} not in user organizations: {names}"
+    context.logger.info(f"User organizations list contains {org_name}")
+
+
+@then('the user organizations list should not contain organization "{org_name}"')
+def step_user_organizations_not_contain_org(context: Context, org_name: str) -> None:
+    """Verify the user organizations list does not contain the given organization by name."""
+    scenario_context = get_current_scenario_context(context)
+    orgs = scenario_context.get("user_organizations")
+    assert orgs is not None, "No user_organizations in context"
+    names = [o.get("name") for o in orgs if o.get("name")]
+    assert org_name not in names, f"Organization {org_name} should not be in user organizations: {names}"
+    context.logger.info(f"User organizations list does not contain {org_name}")

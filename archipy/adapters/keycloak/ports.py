@@ -9,6 +9,7 @@ KeycloakRoleType = dict[str, Any]
 KeycloakUserType = dict[str, Any]
 KeycloakGroupType = dict[str, Any]
 KeycloakTokenType = dict[str, Any]
+KeycloakOrganizationType = dict[str, Any]
 
 # Define a type for the public key return type
 # Using Any for JWK.JWK object, since we don't want to depend on jwcrypto types
@@ -246,6 +247,11 @@ class KeycloakPort:
         raise NotImplementedError
 
     @abstractmethod
+    def update_realm(self, realm_name: str, **kwargs: Any) -> dict[str, Any] | None:
+        """Update a realm. Kwargs are RealmRepresentation top-level attributes (e.g. displayName, organizationsEnabled)."""
+        raise NotImplementedError
+
+    @abstractmethod
     def create_client(
         self,
         client_id: str,
@@ -274,6 +280,62 @@ class KeycloakPort:
     @abstractmethod
     def get_composite_realm_roles(self, role_name: str) -> list[dict[str, Any]] | None:
         """Get composite roles for a realm role."""
+        raise NotImplementedError
+
+    # Organization Operations
+    @abstractmethod
+    def get_organizations(self, query: dict | None = None) -> list[KeycloakOrganizationType]:
+        """Fetch all organizations. Returns list of OrganizationRepresentation, filtered by query."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_organization(self, organization_id: str) -> KeycloakOrganizationType:
+        """Get representation of the organization by ID."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_organization(self, name: str, alias: str, **kwargs: Any) -> str | None:
+        """Create a new organization. Name and alias must be unique. Returns org_id."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_organization(self, organization_id: str, **kwargs: Any) -> dict[str, Any]:
+        """Update an existing organization. Kwargs are organization attributes (e.g. name, alias)."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete_organization(self, organization_id: str) -> dict[str, Any]:
+        """Delete an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_organization_idps(self, organization_id: str) -> list[dict[str, Any]]:
+        """Get IDPs by organization id."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_user_organizations(self, user_id: str) -> list[KeycloakOrganizationType]:
+        """Get organizations by user id. Returns list of organizations the user is member of."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_organization_members(self, organization_id: str, query: dict | None = None) -> list[dict[str, Any]]:
+        """Get members by organization id, optionally filtered by query parameters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_organization_members_count(self, organization_id: str) -> int:
+        """Get the number of members in the organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def organization_user_add(self, user_id: str, organization_id: str) -> bytes:
+        """Add a user to an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def organization_user_remove(self, user_id: str, organization_id: str) -> dict[str, Any]:
+        """Remove a user from an organization."""
         raise NotImplementedError
 
 
@@ -508,6 +570,11 @@ class AsyncKeycloakPort:
         raise NotImplementedError
 
     @abstractmethod
+    async def update_realm(self, realm_name: str, **kwargs: Any) -> dict[str, Any] | None:
+        """Update a realm. Kwargs are RealmRepresentation top-level attributes (e.g. displayName, organizationsEnabled)."""
+        raise NotImplementedError
+
+    @abstractmethod
     async def create_client(
         self,
         client_id: str,
@@ -536,4 +603,60 @@ class AsyncKeycloakPort:
     @abstractmethod
     async def get_composite_realm_roles(self, role_name: str) -> list[dict[str, Any]] | None:
         """Get composite roles for a realm role."""
+        raise NotImplementedError
+
+    # Organization Operations
+    @abstractmethod
+    async def get_organizations(self, query: dict | None = None) -> list[KeycloakOrganizationType]:
+        """Fetch all organizations. Returns list of OrganizationRepresentation, filtered by query."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_organization(self, organization_id: str) -> KeycloakOrganizationType:
+        """Get representation of the organization by ID."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def create_organization(self, name: str, alias: str, **kwargs: Any) -> str | None:
+        """Create a new organization. Name and alias must be unique. Returns org_id."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update_organization(self, organization_id: str, **kwargs: Any) -> dict[str, Any]:
+        """Update an existing organization. Kwargs are organization attributes (e.g. name, alias)."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete_organization(self, organization_id: str) -> dict[str, Any]:
+        """Delete an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_organization_idps(self, organization_id: str) -> list[dict[str, Any]]:
+        """Get IDPs by organization id."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_user_organizations(self, user_id: str) -> list[KeycloakOrganizationType]:
+        """Get organizations by user id. Returns list of organizations the user is member of."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_organization_members(self, organization_id: str, query: dict | None = None) -> list[dict[str, Any]]:
+        """Get members by organization id, optionally filtered by query parameters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_organization_members_count(self, organization_id: str) -> int:
+        """Get the number of members in the organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def organization_user_add(self, user_id: str, organization_id: str) -> bytes:
+        """Add a user to an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def organization_user_remove(self, user_id: str, organization_id: str) -> dict[str, Any]:
+        """Remove a user from an organization."""
         raise NotImplementedError
