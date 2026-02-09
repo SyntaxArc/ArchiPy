@@ -2,6 +2,101 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v4.1.0] - 2026-02-09
+
+### Added
+
+#### Adapters - Keycloak
+
+- **Organization Management** - Implemented comprehensive organization management functionality
+    - Added `create_organization()` method for creating new organizations
+    - Added `update_organization()` method for updating existing organizations
+    - Added `delete_organization()` method for removing organizations
+    - Added `add_organization_member()` method for adding members to organizations
+    - Added `remove_organization_member()` method for removing members from organizations
+    - Added `get_organization_members()` method for retrieving organization member lists
+    - Implemented both sync (`KeycloakAdapter`) and async (`AsyncKeycloakAdapter`) versions
+    - Enhanced feature tests to cover all organization operations
+
+- **Realm Configuration** - Added realm update functionality
+    - Implemented `update_realm()` method to enable organization support
+    - Added configuration options for organization features in realms
+    - Updated test containers to support organization feature in Keycloak
+
+#### Tests
+
+- **StarRocks TestContainer** - Added TestContainer support for StarRocks database
+    - Integrated StarRocks container for integration testing
+    - Enhanced test coverage for StarRocks adapter functionality
+
+- **Atomic Transaction Tests** - Expanded test coverage for atomic decorators
+    - Added PostgreSQL support for atomic transaction tests
+    - Added SQLite support for atomic transaction tests
+    - Improved test reliability across different database backends
+
+### Changed
+
+#### Development Tools
+
+- **Formatter Migration** - Replaced Black with Ruff formatter
+    - Migrated from Black to Ruff formatter for code formatting
+    - Applied Ruff formatting fixes across entire codebase
+    - Updated CI/CD workflows to use Ruff formatter
+    - Maintained 120 character line length standard
+
+#### CI/CD
+
+- **Workflow Improvements** - Enhanced GitHub Actions workflows
+    - Separated Ruff and Ty linting into dedicated workflows
+    - Refactored Ty workflow for better performance
+    - Bumped `actions/cache` from version 4 to 5
+    - Improved workflow reliability and execution speed
+
+### Fixed
+
+#### Configuration
+
+- **Type Safety** - Resolved type checker errors
+    - Fixed type errors in `base_config.py`
+    - Fixed type errors in `keycloak_utils.py`
+    - Improved type hint accuracy across configuration modules
+
+#### Documentation
+
+- **Module References** - Fixed documentation issues
+    - Removed reference to non-existent `error_message_types` module
+    - Updated documentation to reflect current module structure
+
+### Chore
+
+#### Dependencies
+
+- **Python Version** - Updated to Python 3.14
+    - Added `.python-version` file with Python 3.14
+    - Updated all Python version references to 3.14
+    - Ensured compatibility with Python 3.14 features
+
+- **Core Dependencies** - Updated multiple dependencies to latest versions
+    - Updated `cachetools` from `>=6.2.6` to `>=7.0.0` (cache, keycloak, minio, scylladb extras)
+    - Updated `elasticsearch` from `>=9.2.1` to `>=9.3.0` (elasticsearch and elasticsearch-async extras)
+    - Updated `fastapi` from `>=0.128.0` to `>=0.128.5` (fastapi extra)
+    - Updated `grpcio` from `>=1.76.0` to `>=1.78.0` (grpc extra)
+    - Updated `grpcio-health-checking` from `>=1.76.0` to `>=1.78.0` (grpc extra)
+    - Updated `sentry-sdk` from `>=2.51.0` to `>=2.52.0` (sentry extra)
+    - Updated `temporalio` from `>=1.21.1` to `>=1.22.0` (temporalio extra)
+    - Updated `testcontainers` from `>=4.14.0` to `>=4.14.1` (testcontainers extra)
+
+- **Development Dependencies** - Updated development tools
+    - Updated `ty` from `>=0.0.14` to `>=0.0.15` (type checker)
+    - Updated `ruff` from `>=0.14.14` to `>=0.15.0` (linter and formatter)
+    - Updated `validate-pyproject` from `>=0.24.1` to `>=0.25`
+
+- **Documentation Dependencies** - Updated documentation tools
+    - Updated `mkdocstrings` from `>=1.0.2` to `>=1.0.3`
+    -
+- **Test Environment** - Updated test configuration
+    - Updated Elasticsearch test image from `9.2.1` to `9.3.0` in `.env.test`
+
 ## [v4.0.4] - 2026-01-31
 
 ### Changed
@@ -9,47 +104,50 @@ All notable changes to ArchiPy are documented in this changelog, organized by ve
 #### Helpers - Decorators
 
 - **Enhanced Exception Handling** - Improved exception handling in SQLAlchemy atomic decorators
-  - Changed exception handling from `Exception` to `BaseException` for comprehensive error catching
-  - Updated `_handle_db_exception()` function signature to accept `BaseException` instead of `Exception`
-  - Enhanced error handling in both sync and async atomic decorator implementations
-  - Ensures all exceptions (including system exceptions) are properly caught and handled
+    - Changed exception handling from `Exception` to `BaseException` for comprehensive error catching
+    - Updated `_handle_db_exception()` function signature to accept `BaseException` instead of `Exception`
+    - Enhanced error handling in both sync and async atomic decorator implementations
+    - Ensures all exceptions (including system exceptions) are properly caught and handled
 
 #### Models - Types
 
 - **Enum Value Standardization** - Standardized all enum values to uppercase format for consistency
-  - **SortOrderType**: Changed `ASCENDING` and `DESCENDING` from lowercase to uppercase
-  - **FilterOperationType**: Changed all 15 operation types to uppercase (EQUAL, NOT_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL, IN_LIST, NOT_IN_LIST, LIKE, ILIKE, STARTS_WITH, ENDS_WITH, CONTAINS, IS_NULL, IS_NOT_NULL)
-  - **EmailAttachmentDispositionType**: Changed `ATTACHMENT` and `INLINE` from lowercase to uppercase
-  - **TimeIntervalUnitType**: Changed all 7 unit types to uppercase (SECONDS, MINUTES, HOURS, DAYS, WEEKS, MONTHS, YEAR)
-  - Improved consistency with other enum patterns in the codebase
-  - Enhanced code readability and standardization across all type definitions
+    - **SortOrderType**: Changed `ASCENDING` and `DESCENDING` from lowercase to uppercase
+    - **FilterOperationType**: Changed all 15 operation types to uppercase (EQUAL, NOT_EQUAL, LESS_THAN,
+      LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL, IN_LIST, NOT_IN_LIST, LIKE, ILIKE, STARTS_WITH,
+      ENDS_WITH, CONTAINS, IS_NULL, IS_NOT_NULL)
+    - **EmailAttachmentDispositionType**: Changed `ATTACHMENT` and `INLINE` from lowercase to uppercase
+    - **TimeIntervalUnitType**: Changed all 7 unit types to uppercase (SECONDS, MINUTES, HOURS, DAYS, WEEKS, MONTHS,
+      YEAR)
+    - Improved consistency with other enum patterns in the codebase
+    - Enhanced code readability and standardization across all type definitions
 
 ### Fixed
 
 #### Adapters - StarRocks
 
 - **Docstring Formatting** - Fixed docstring formatting in StarRocks session manager
-  - Corrected docstring formatting in `get_connection_args()` method
-  - Improved code documentation consistency
+    - Corrected docstring formatting in `get_connection_args()` method
+    - Improved code documentation consistency
 
 ### Chore
 
 #### Dependencies
 
 - **Comprehensive Dependency Updates** - Updated multiple dependencies to latest versions
-  - Updated `cachetools` from `>=6.2.4` to `>=6.2.6` (cache, keycloak, minio, scylladb extras)
-  - Updated `cryptography` from `46.0.3` to `46.0.4` for enhanced security
-  - Updated `protobuf` from `>=6.33.4` to `>=6.33.5` (grpc extra)
-  - Updated `pyjwt` from `>=2.10.1` to `>=2.11.0` (jwt extra)
-  - Updated `python-keycloak` from `>=7.0.2` to `>=7.0.3` (keycloak extra)
-  - Updated `python-multipart` from `0.0.21` to `0.0.22`
-  - Updated `rich` from `14.3.0` to `14.3.1`
-  - Updated `rich-toolkit` from `0.17.1` to `0.17.2`
-  - Updated `sentry-sdk` from `>=2.50.0` to `>=2.51.0` (sentry extra)
-  - Updated `ty` from `>=0.0.13` to `>=0.0.14` (dev dependency)
-  - Updated `mkdocstrings` from `>=1.0.1` to `>=1.0.2` (docs dependency)
-  - Updated `pathspec` from `1.0.3` to `1.0.4`
-  - Updated `orjson` from `3.11.5` to `3.11.6`
+    - Updated `cachetools` from `>=6.2.4` to `>=6.2.6` (cache, keycloak, minio, scylladb extras)
+    - Updated `cryptography` from `46.0.3` to `46.0.4` for enhanced security
+    - Updated `protobuf` from `>=6.33.4` to `>=6.33.5` (grpc extra)
+    - Updated `pyjwt` from `>=2.10.1` to `>=2.11.0` (jwt extra)
+    - Updated `python-keycloak` from `>=7.0.2` to `>=7.0.3` (keycloak extra)
+    - Updated `python-multipart` from `0.0.21` to `0.0.22`
+    - Updated `rich` from `14.3.0` to `14.3.1`
+    - Updated `rich-toolkit` from `0.17.1` to `0.17.2`
+    - Updated `sentry-sdk` from `>=2.50.0` to `>=2.51.0` (sentry extra)
+    - Updated `ty` from `>=0.0.13` to `>=0.0.14` (dev dependency)
+    - Updated `mkdocstrings` from `>=1.0.1` to `>=1.0.2` (docs dependency)
+    - Updated `pathspec` from `1.0.3` to `1.0.4`
+    - Updated `orjson` from `3.11.5` to `3.11.6`
 
 ## [v4.0.3] - 2026-01-24
 
