@@ -70,7 +70,7 @@ class InvalidCredentialsError(BaseError):
         data = {"username": username} if username else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
     def get_message(self) -> str:
         """Gets the localized error message with username."""
@@ -141,7 +141,7 @@ class SessionExpiredError(BaseError):
         data = {"session_id": session_id} if session_id else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
     def get_message(self) -> str:
         """Gets the localized error message with session ID."""
@@ -203,7 +203,7 @@ class AccountLockedError(BaseError):
             data["lockout_duration"] = lockout_duration
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class AccountDisabledError(BaseError):
@@ -239,7 +239,7 @@ class AccountDisabledError(BaseError):
             data["reason"] = reason
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class InvalidVerificationCodeError(BaseError):
@@ -275,4 +275,4 @@ class InvalidVerificationCodeError(BaseError):
             data["remaining_attempts"] = remaining_attempts
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)

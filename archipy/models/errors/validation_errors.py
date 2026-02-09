@@ -49,7 +49,7 @@ class InvalidArgumentError(BaseError):
         data = {"argument": argument_name} if argument_name else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
     def get_message(self) -> str:
         """Gets the localized error message with argument name."""
@@ -85,7 +85,7 @@ class InvalidFormatError(BaseError):
             data["expected_format"] = expected_format
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class InvalidEmailError(BaseError):
@@ -110,7 +110,7 @@ class InvalidEmailError(BaseError):
         data = {"email": email} if email else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
     def get_message(self) -> str:
         """Gets the localized error message with email."""
@@ -252,7 +252,7 @@ class InvalidPasswordError(BaseError):
         data = {"requirements": requirements} if requirements else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class InvalidDateError(BaseError):
@@ -282,7 +282,7 @@ class InvalidDateError(BaseError):
             data["expected_format"] = expected_format
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class InvalidUrlError(BaseError):
@@ -307,7 +307,7 @@ class InvalidUrlError(BaseError):
         data = {"url": url} if url else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
     def get_message(self) -> str:
         """Gets the localized error message with URL."""
@@ -338,7 +338,7 @@ class InvalidIpError(BaseError):
         data = {"ip": ip} if ip else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
     def get_message(self) -> str:
         """Gets the localized error message with IP address."""
@@ -371,7 +371,7 @@ class InvalidJsonError(BaseError):
             data["json_data"] = json_data
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class InvalidTimestampError(BaseError):
@@ -401,7 +401,7 @@ class InvalidTimestampError(BaseError):
             data["expected_format"] = expected_format
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class OutOfRangeError(BaseError):
@@ -426,4 +426,4 @@ class OutOfRangeError(BaseError):
         data = {"field": field_name} if field_name else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)

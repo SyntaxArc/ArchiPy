@@ -7,7 +7,7 @@ and support for different database types (PostgreSQL, SQLite, StarRocks).
 import logging
 from collections.abc import Awaitable, Callable
 from functools import partial, wraps
-from typing import Any, TypeVar, overload
+from typing import Any, NoReturn, TypeVar, overload
 
 from sqlalchemy.exc import (
     IntegrityError,
@@ -54,7 +54,7 @@ ATOMIC_BLOCK_CONFIGS = {
 R = TypeVar("R")
 
 
-def _handle_db_exception(exception: BaseException, db_type: str, func_name: str) -> None:
+def _handle_db_exception(exception: BaseException, db_type: str, func_name: str) -> NoReturn:
     """Handle database exceptions and raise appropriate errors.
 
     Args:

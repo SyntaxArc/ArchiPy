@@ -58,7 +58,7 @@ class PasswordUtils:
 
             # Compare in constant time to prevent timing attacks
             return hmac.compare_digest(pw_hash, stored_hash)
-        except (ValueError, TypeError, IndexError):
+        except ValueError, TypeError, IndexError:
             # Catch specific exceptions that could occur during decoding or comparison
             return False
 

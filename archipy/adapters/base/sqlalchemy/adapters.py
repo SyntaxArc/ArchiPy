@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, TypeVar, override
+from typing import Any, NoReturn, TypeVar, override
 from uuid import UUID
 
 from sqlalchemy import Delete, Executable, Result, ScalarResult, Update, func, select
@@ -43,7 +43,7 @@ class SQLAlchemyExceptionHandlerMixin:
     """
 
     @classmethod
-    def _handle_db_exception(cls, exception: Exception, db_name: str | None = None) -> None:
+    def _handle_db_exception(cls, exception: Exception, db_name: str | None = None) -> NoReturn:
         """Handle database exceptions and raise appropriate errors.
 
         Args:
@@ -122,8 +122,10 @@ class SQLAlchemyFilterMixin:
             FilterOperationType.IN_LIST: lambda: field.in_(
                 SQLAlchemyFilterMixin._validate_list_operation(value, operation),
             ),
-            FilterOperationType.NOT_IN_LIST: lambda: ~field.in_(
-                SQLAlchemyFilterMixin._validate_list_operation(value, operation),
+            FilterOperationType.NOT_IN_LIST: lambda: (
+                ~field.in_(
+                    SQLAlchemyFilterMixin._validate_list_operation(value, operation),
+                )
             ),
             FilterOperationType.LIKE: lambda: field.like(f"%{value}%"),
             FilterOperationType.ILIKE: lambda: field.ilike(f"%{value}%"),

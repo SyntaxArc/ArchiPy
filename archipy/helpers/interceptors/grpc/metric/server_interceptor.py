@@ -1,7 +1,7 @@
 import asyncio
 import time
 from collections.abc import Callable
-from typing import ClassVar
+from typing import Any, ClassVar, cast
 
 import grpc
 
@@ -80,7 +80,8 @@ class GrpcServerMetricInterceptor(BaseGrpcServerInterceptor):
             # Record the response time in the Prometheus histogram
             status_code = "OK"
             if hasattr(context, "code") and callable(context.code):
-                code_obj = context.code()
+                code_method = cast("Callable[[], Any]", context.code)
+                code_obj = code_method()
                 if code_obj is not None:
                     code_name = getattr(code_obj, "name", None)
                     if code_name is not None:
@@ -175,7 +176,7 @@ class AsyncGrpcServerMetricInterceptor(BaseAsyncGrpcServerInterceptor):
                         if code_name is not None:
                             status_code = code_name
                 elif hasattr(e, "code") and callable(e.code):
-                    code_method = e.code
+                    code_method = cast("Callable[[], Any]", e.code)
                     code_obj = code_method()
                     if code_obj is not None:
                         code_name = getattr(code_obj, "name", None)

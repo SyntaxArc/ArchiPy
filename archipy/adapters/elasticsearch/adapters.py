@@ -99,7 +99,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         index: ElasticsearchIndexType,
         document: ElasticsearchDocumentType,
         doc_id: ElasticsearchIdType | None = None,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Index a document in Elasticsearch.
 
@@ -119,7 +119,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         self,
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Get a document from Elasticsearch.
 
@@ -138,7 +138,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         self,
         index: ElasticsearchIndexType,
         query: ElasticsearchQueryType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Search for documents in Elasticsearch.
 
@@ -158,7 +158,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
         doc: ElasticsearchDocumentType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Update a document in Elasticsearch.
 
@@ -178,7 +178,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         self,
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Delete a document from Elasticsearch.
 
@@ -196,7 +196,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
     def bulk(
         self,
         actions: list[dict[str, Any]],
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Perform bulk operations in Elasticsearch.
 
@@ -217,7 +217,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         self,
         index: ElasticsearchIndexType,
         body: dict[str, Any] | None = None,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Create an index in Elasticsearch.
 
@@ -235,7 +235,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
     def delete_index(
         self,
         index: ElasticsearchIndexType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Delete an index from Elasticsearch.
 
@@ -253,7 +253,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         self,
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Check if a document exists in Elasticsearch.
 
@@ -271,7 +271,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
     def index_exists(
         self,
         index: ElasticsearchIndexType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Check if an index exists in Elasticsearch.
 
@@ -366,7 +366,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         index: ElasticsearchIndexType,
         document: ElasticsearchDocumentType,
         doc_id: ElasticsearchIdType | None = None,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Index a document in Elasticsearch.
 
@@ -386,7 +386,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         self,
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Get a document from Elasticsearch.
 
@@ -405,7 +405,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         self,
         index: ElasticsearchIndexType,
         query: ElasticsearchQueryType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Search for documents in Elasticsearch.
 
@@ -425,7 +425,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
         doc: ElasticsearchDocumentType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Update a document in Elasticsearch.
 
@@ -445,7 +445,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         self,
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Delete a document from Elasticsearch.
 
@@ -463,7 +463,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
     async def bulk(
         self,
         actions: list[dict[str, Any]],
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Perform bulk operations in Elasticsearch.
 
@@ -481,7 +481,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         self,
         index: ElasticsearchIndexType,
         body: dict[str, Any] | None = None,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Create an index in Elasticsearch.
 
@@ -499,7 +499,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
     async def delete_index(
         self,
         index: ElasticsearchIndexType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Delete an index from Elasticsearch.
 
@@ -517,7 +517,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         self,
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Check if a document exists in Elasticsearch.
 
@@ -535,7 +535,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
     async def index_exists(
         self,
         index: ElasticsearchIndexType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Check if an index exists in Elasticsearch.
 

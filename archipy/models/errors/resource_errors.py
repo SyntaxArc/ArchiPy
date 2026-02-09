@@ -48,7 +48,7 @@ class NotFoundError(BaseError):
         data = {"resource_type": resource_type} if resource_type else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
     def get_message(self) -> str:
         """Gets the localized error message with resource type."""
@@ -79,7 +79,7 @@ class AlreadyExistsError(BaseError):
         data = {"resource_type": resource_type} if resource_type else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
     def get_message(self) -> str:
         """Gets the localized error message with resource type."""
@@ -115,7 +115,7 @@ class ConflictError(BaseError):
             data["resource_id"] = resource_id
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class ResourceLockedError(BaseError):
@@ -145,7 +145,7 @@ class ResourceLockedError(BaseError):
             data["lock_owner"] = lock_owner
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class ResourceBusyError(BaseError):
@@ -175,7 +175,7 @@ class ResourceBusyError(BaseError):
             data["busy_reason"] = busy_reason
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class DataLossError(BaseError):
@@ -224,7 +224,7 @@ class InvalidEntityTypeError(BaseError):
             data["actual_type"] = actual_type
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class FileTooLargeError(BaseError):
@@ -257,7 +257,7 @@ class FileTooLargeError(BaseError):
             data["max_size"] = max_size
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class InvalidFileTypeError(BaseError):
@@ -290,7 +290,7 @@ class InvalidFileTypeError(BaseError):
             data["allowed_types"] = allowed_types
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class QuotaExceededError(BaseError):
@@ -323,7 +323,7 @@ class QuotaExceededError(BaseError):
             data["quota_limit"] = quota_limit
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class ResourceExhaustedError(BaseError):
@@ -350,7 +350,7 @@ class ResourceExhaustedError(BaseError):
         data = {"resource_type": resource_type} if resource_type else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class StorageError(BaseError):
@@ -377,4 +377,4 @@ class StorageError(BaseError):
         data = {"storage_type": storage_type} if storage_type else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)

@@ -1,6 +1,6 @@
 import contextlib
 import logging
-from typing import override
+from typing import NoReturn, override
 
 from confluent_kafka import Consumer, KafkaError, Message, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient, ClusterMetadata, NewTopic
@@ -26,7 +26,7 @@ class KafkaExceptionHandlerMixin:
     """Mixin class to handle Kafka exceptions in a consistent way."""
 
     @classmethod
-    def _handle_kafka_exception(cls, exception: Exception, operation: str) -> None:
+    def _handle_kafka_exception(cls, exception: Exception, operation: str) -> NoReturn:
         """Handle Kafka exceptions and map them to appropriate application errors.
 
         Args:
@@ -65,7 +65,7 @@ class KafkaExceptionHandlerMixin:
         raise InternalError(additional_data={"operation": operation}) from exception
 
     @classmethod
-    def _handle_producer_exception(cls, exception: Exception, operation: str) -> None:
+    def _handle_producer_exception(cls, exception: Exception, operation: str) -> NoReturn:
         """Handle producer-specific exceptions.
 
         Args:
@@ -549,7 +549,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             InternalError: If there is an error flushing the queue.
         """
         try:
-            remaining_messages = self._adapter.flush(timeout=timeout)
+            remaining_messages = self._adapter.flush(timeout=timeout if timeout is not None else -1)
             if remaining_messages > 0:
                 logger.warning("%d messages left in the queue after flush", remaining_messages)
         except Exception as e:

@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class TimeIntervalUnitType(str, Enum):
+class TimeIntervalUnitType(StrEnum):
     """Enum representing units of time for intervals.
 
     This enum defines standard time units used to specify intervals or durations in

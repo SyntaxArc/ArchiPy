@@ -50,7 +50,7 @@ class NetworkError(BaseError):
             data["service"] = service
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class ConnectionTimeoutError(BaseError):
@@ -80,7 +80,7 @@ class ConnectionTimeoutError(BaseError):
             data["timeout"] = timeout
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class ServiceUnavailableError(BaseError):
@@ -112,7 +112,7 @@ class ServiceUnavailableError(BaseError):
             data["retry_after"] = retry_after
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class GatewayTimeoutError(BaseError):
@@ -142,7 +142,7 @@ class GatewayTimeoutError(BaseError):
             data["timeout"] = timeout
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class BadGatewayError(BaseError):
@@ -169,7 +169,7 @@ class BadGatewayError(BaseError):
             data["gateway"] = gateway
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class RateLimitExceededError(BaseError):
@@ -201,4 +201,4 @@ class RateLimitExceededError(BaseError):
             data["retry_after"] = retry_after
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)

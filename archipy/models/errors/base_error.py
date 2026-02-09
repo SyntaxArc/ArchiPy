@@ -93,7 +93,7 @@ class BaseError(Exception):
                 from archipy.configs.base_config import BaseConfig
 
                 self.lang = BaseConfig.global_config().LANGUAGE
-            except (ImportError, AssertionError):
+            except ImportError, AssertionError:
                 self.lang = LanguageType.FA
         else:
             self.lang = lang

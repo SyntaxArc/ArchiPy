@@ -53,7 +53,7 @@ class InvalidStateError(BaseError):
             data["expected_state"] = expected_state
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class FailedPreconditionError(BaseError):
@@ -82,7 +82,7 @@ class FailedPreconditionError(BaseError):
             data["precondition"] = precondition
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class BusinessRuleViolationError(BaseError):
@@ -109,7 +109,7 @@ class BusinessRuleViolationError(BaseError):
             data["rule"] = rule
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class InvalidOperationError(BaseError):
@@ -139,7 +139,7 @@ class InvalidOperationError(BaseError):
             data["context"] = context
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class InsufficientFundsError(BaseError):
@@ -194,4 +194,4 @@ class MaintenanceModeError(BaseError):
         data = {"estimated_duration": estimated_duration} if estimated_duration else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)

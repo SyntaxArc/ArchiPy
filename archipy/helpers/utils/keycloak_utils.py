@@ -2,7 +2,7 @@ import functools
 import logging
 from collections.abc import Callable
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from grpc import ServicerContext
@@ -314,20 +314,21 @@ class KeycloakUtils:
         """Extract Bearer token from gRPC metadata."""
         if not hasattr(context, "invocation_metadata") or not callable(context.invocation_metadata):
             return None
-        invocation_metadata_result = context.invocation_metadata()
+        invocation_metadata_method = cast("Callable[[], Any]", context.invocation_metadata)
+        invocation_metadata_result = invocation_metadata_method()
         if invocation_metadata_result is None:
             return None
         # Convert metadata tuples to dict, handling both str and bytes keys
         # invocation_metadata_result is an iterable of tuples at runtime
         metadata: dict[str, str] = {}
         try:
-            for key, value in invocation_metadata_result:  # type: ignore[misc]
+            for key, value in invocation_metadata_result:
                 # Normalize key to string
                 key_str = key.decode("utf-8") if isinstance(key, bytes) else str(key)
                 # Normalize value to string
                 value_str = value.decode("utf-8") if isinstance(value, bytes) else str(value)
                 metadata[key_str] = value_str
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             # If iteration fails, return None
             return None
 

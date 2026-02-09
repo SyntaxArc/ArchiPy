@@ -59,7 +59,7 @@ class CachedFunction[**P, R]:
             # Store in instance __dict__ to maintain identity
             try:
                 object.__setattr__(obj, bound_method_name, bound_cached)
-            except (AttributeError, TypeError):
+            except AttributeError, TypeError:
                 # If we can't set the attribute (frozen dataclass, etc.), return a new instance
                 return CachedFunction(self._func, self._cache, instance=obj)
 
@@ -162,4 +162,4 @@ def ttl_cache_decorator[**P, R](
     def decorator(func: Callable[P, R]) -> CachedFunction[P, R]:
         return CachedFunction(func, cache, instance=None)
 
-    return decorator
+    return decorator  # type: ignore[return-value]

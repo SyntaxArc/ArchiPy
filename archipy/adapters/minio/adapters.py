@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Callable
 from datetime import timedelta
-from typing import Any, TypeVar, override
+from typing import Any, NoReturn, TypeVar, override
 
 from minio import Minio
 from minio.error import S3Error
@@ -35,7 +35,7 @@ class MinioExceptionHandlerMixin:
     """Mixin class to handle MinIO/S3 exceptions in a consistent way."""
 
     @classmethod
-    def _handle_s3_exception(cls, exception: S3Error, operation: str) -> None:
+    def _handle_s3_exception(cls, exception: S3Error, operation: str) -> NoReturn:
         """Handle S3Error exceptions and map them to appropriate application errors.
 
         Args:
@@ -80,7 +80,7 @@ class MinioExceptionHandlerMixin:
         raise StorageError(additional_data={"operation": operation}) from exception
 
     @classmethod
-    def _handle_general_exception(cls, exception: Exception, component: str) -> None:
+    def _handle_general_exception(cls, exception: Exception, component: str) -> NoReturn:
         """Handle general exceptions by converting them to appropriate application errors.
 
         Args:

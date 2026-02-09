@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class LanguageType(str, Enum):
+class LanguageType(StrEnum):
     """Enum representing supported languages for error messages.
 
     This enum defines the languages that are supported for generating or displaying

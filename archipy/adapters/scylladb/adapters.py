@@ -7,7 +7,7 @@ supporting both synchronous and asynchronous database operations.
 import asyncio
 import logging
 import time
-from typing import Any, override
+from typing import Any, NoReturn, override
 
 from async_lru import alru_cache
 from cassandra import ConsistencyLevel
@@ -44,7 +44,7 @@ class ScyllaDBExceptionHandlerMixin:
     """Mixin class to handle ScyllaDB/Cassandra exceptions in a consistent way."""
 
     @classmethod
-    def _handle_scylladb_exception(cls, exception: Exception, operation: str) -> None:
+    def _handle_scylladb_exception(cls, exception: Exception, operation: str) -> NoReturn:
         """Handle ScyllaDB/Cassandra exceptions and map them to appropriate application errors.
 
         Args:
@@ -57,7 +57,7 @@ class ScyllaDBExceptionHandlerMixin:
         error_msg = str(exception).lower()
 
         if "unconfigured table" in error_msg:
-            table_name = operation if operation else "unknown"
+            table_name = operation or "unknown"
             raise NotFoundError(
                 resource_type="table",
                 additional_data={"table_name": table_name},
@@ -217,9 +217,9 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         )
 
         # Configure connection pool settings
-
-        profile = cluster.profile_manager.default
-        profile.request_timeout = self.config.REQUEST_TIMEOUT
+        if cluster.profile_manager is not None:
+            profile = cluster.profile_manager.default
+            profile.request_timeout = self.config.REQUEST_TIMEOUT
 
         # Set pool configuration
         cluster.connection_class.max_requests_per_connection = self.config.MAX_REQUESTS_PER_CONNECTION
@@ -800,9 +800,9 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         )
 
         # Configure connection pool settings
-
-        profile = cluster.profile_manager.default
-        profile.request_timeout = self.config.REQUEST_TIMEOUT
+        if cluster.profile_manager is not None:
+            profile = cluster.profile_manager.default
+            profile.request_timeout = self.config.REQUEST_TIMEOUT
 
         # Set pool configuration
         cluster.connection_class.max_requests_per_connection = self.config.MAX_REQUESTS_PER_CONNECTION

@@ -56,7 +56,7 @@ class InternalError(BaseError):
             data["error_code"] = error_code
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class ConfigurationError(BaseError):
@@ -92,7 +92,7 @@ class ConfigurationError(BaseError):
             data["reason"] = reason
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class UnavailableError(BaseError):
@@ -125,7 +125,7 @@ class UnavailableError(BaseError):
             data["resource_type"] = resource_type
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class UnknownError(BaseError):
@@ -158,7 +158,7 @@ class UnknownError(BaseError):
             data["config_key"] = config_key
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class AbortedError(BaseError):
@@ -192,7 +192,7 @@ class AbortedError(BaseError):
             data["reason"] = reason
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class DeadlockDetectedError(BaseError):
@@ -228,7 +228,7 @@ class DeadlockDetectedError(BaseError):
             data["reason"] = reason
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class DeadlineExceededError(BaseError):
@@ -270,7 +270,7 @@ class DeadlineExceededError(BaseError):
             data["operation"] = operation
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class DeprecationError(BaseError):
@@ -316,4 +316,4 @@ class DeprecationError(BaseError):
             data["removal_version"] = removal_version
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)

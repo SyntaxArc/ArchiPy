@@ -2,6 +2,7 @@ import base64
 import logging
 import os
 import smtplib
+from collections.abc import Callable
 from datetime import datetime
 from email import encoders
 from email.mime.audio import MIMEAudio
@@ -11,7 +12,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from queue import Queue
-from typing import BinaryIO, override
+from typing import Any, BinaryIO, cast, override
 
 import requests
 from jinja2 import Template
@@ -161,7 +162,8 @@ class AttachmentHandler:
             if hasattr(source, "read"):
                 read_method = source.read
                 if callable(read_method):
-                    result = read_method()
+                    read_callable = cast("Callable[[], Any]", read_method)
+                    result = read_callable()
                     if isinstance(result, bytes):
                         return result
                     if isinstance(result, str):

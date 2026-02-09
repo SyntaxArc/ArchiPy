@@ -147,7 +147,7 @@ def get_error_message(keycloak_error: KeycloakError) -> str:
                     or parsed.get("error")
                     or error_message
                 )
-        except (json.JSONDecodeError, UnicodeDecodeError):
+        except json.JSONDecodeError, UnicodeDecodeError:
             pass
 
     return error_message

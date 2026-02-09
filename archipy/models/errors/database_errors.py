@@ -52,7 +52,7 @@ class DatabaseError(BaseError):
             data["database"] = database
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class DatabaseConnectionError(DatabaseError):
@@ -98,7 +98,7 @@ class DatabaseQueryError(DatabaseError):
             data["query"] = query
         if additional_data:
             data.update(additional_data)
-        super().__init__(database=database, lang=lang, additional_data=data if data else None)
+        super().__init__(database=database, lang=lang, additional_data=data or None)
 
 
 class DatabaseTransactionError(DatabaseError):
@@ -128,7 +128,7 @@ class DatabaseTransactionError(DatabaseError):
             data["transaction_id"] = transaction_id
         if additional_data:
             data.update(additional_data)
-        super().__init__(database=database, lang=lang, additional_data=data if data else None)
+        super().__init__(database=database, lang=lang, additional_data=data or None)
 
 
 class DatabaseTimeoutError(DatabaseError):
@@ -156,7 +156,7 @@ class DatabaseTimeoutError(DatabaseError):
             data["timeout"] = timeout
         if additional_data:
             data.update(additional_data)
-        super().__init__(database=database, lang=lang, additional_data=data if data else None)
+        super().__init__(database=database, lang=lang, additional_data=data or None)
 
 
 class DatabaseConstraintError(DatabaseError):
@@ -184,7 +184,7 @@ class DatabaseConstraintError(DatabaseError):
             data["constraint"] = constraint
         if additional_data:
             data.update(additional_data)
-        super().__init__(database=database, lang=lang, additional_data=data if data else None)
+        super().__init__(database=database, lang=lang, additional_data=data or None)
 
 
 class DatabaseIntegrityError(DatabaseError):
@@ -271,7 +271,7 @@ class CacheError(BaseError):
             data["cache_type"] = cache_type
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
 
 class CacheMissError(BaseError):
@@ -296,7 +296,7 @@ class CacheMissError(BaseError):
         data = {"cache_key": cache_key} if cache_key else {}
         if additional_data:
             data.update(additional_data)
-        super().__init__(lang=lang, additional_data=data if data else None)
+        super().__init__(lang=lang, additional_data=data or None)
 
     def get_message(self) -> str:
         """Gets the localized error message with cache key."""

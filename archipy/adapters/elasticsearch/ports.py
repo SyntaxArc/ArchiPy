@@ -36,7 +36,7 @@ class ElasticsearchPort:
         index: ElasticsearchIndexType,
         document: ElasticsearchDocumentType,
         doc_id: ElasticsearchIdType | None = None,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Index a document in Elasticsearch.
 
@@ -44,7 +44,7 @@ class ElasticsearchPort:
             index (ElasticsearchIndexType): The index name.
             document (ElasticsearchDocumentType): The document to index.
             doc_id (ElasticsearchIdType | None): Optional document ID. If not provided, Elasticsearch will generate one.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
@@ -59,14 +59,14 @@ class ElasticsearchPort:
         self,
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Get a document from Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
             doc_id (ElasticsearchIdType): The document ID.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The document if found.
@@ -81,14 +81,14 @@ class ElasticsearchPort:
         self,
         index: ElasticsearchIndexType,
         query: ElasticsearchQueryType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Search for documents in Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
             query (ElasticsearchQueryType): The search query.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The search results.
@@ -104,7 +104,7 @@ class ElasticsearchPort:
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
         doc: ElasticsearchDocumentType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Update a document in Elasticsearch.
 
@@ -112,7 +112,7 @@ class ElasticsearchPort:
             index (ElasticsearchIndexType): The index name.
             doc_id (ElasticsearchIdType): The document ID.
             doc (ElasticsearchDocumentType): The document update.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
@@ -127,14 +127,14 @@ class ElasticsearchPort:
         self,
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Delete a document from Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
             doc_id (ElasticsearchIdType): The document ID.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
@@ -148,13 +148,13 @@ class ElasticsearchPort:
     def bulk(
         self,
         actions: list[dict[str, Any]],
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Perform bulk operations in Elasticsearch.
 
         Args:
             actions (list[dict[str, Any]]): List of bulk actions to perform.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
@@ -169,14 +169,14 @@ class ElasticsearchPort:
         self,
         index: ElasticsearchIndexType,
         body: dict[str, Any] | None = None,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Create an index in Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
             body (dict[str, Any] | None): Optional index settings and mappings.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
@@ -190,13 +190,13 @@ class ElasticsearchPort:
     def delete_index(
         self,
         index: ElasticsearchIndexType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Delete an index from Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
@@ -211,14 +211,14 @@ class ElasticsearchPort:
         self,
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Check if a document exists in Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
             doc_id (ElasticsearchIdType): The document ID.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: True if the document exists, False otherwise.
@@ -232,13 +232,13 @@ class ElasticsearchPort:
     def index_exists(
         self,
         index: ElasticsearchIndexType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Check if an index exists in Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: True if the index exists, False otherwise.
@@ -276,7 +276,7 @@ class AsyncElasticsearchPort:
         index: ElasticsearchIndexType,
         document: ElasticsearchDocumentType,
         doc_id: ElasticsearchIdType | None = None,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Index a document in Elasticsearch.
 
@@ -284,7 +284,7 @@ class AsyncElasticsearchPort:
             index (ElasticsearchIndexType): The index name.
             document (ElasticsearchDocumentType): The document to index.
             doc_id (ElasticsearchIdType | None): Optional document ID. If not provided, Elasticsearch will generate one.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
@@ -299,14 +299,14 @@ class AsyncElasticsearchPort:
         self,
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Get a document from Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
             doc_id (ElasticsearchIdType): The document ID.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The document if found.
@@ -321,14 +321,14 @@ class AsyncElasticsearchPort:
         self,
         index: ElasticsearchIndexType,
         query: ElasticsearchQueryType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Search for documents in Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
             query (ElasticsearchQueryType): The search query.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The search results.
@@ -344,7 +344,7 @@ class AsyncElasticsearchPort:
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
         doc: ElasticsearchDocumentType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Update a document in Elasticsearch.
 
@@ -352,7 +352,7 @@ class AsyncElasticsearchPort:
             index (ElasticsearchIndexType): The index name.
             doc_id (ElasticsearchIdType): The document ID.
             doc (ElasticsearchDocumentType): The document update.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
@@ -367,14 +367,14 @@ class AsyncElasticsearchPort:
         self,
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Delete a document from Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
             doc_id (ElasticsearchIdType): The document ID.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
@@ -388,13 +388,13 @@ class AsyncElasticsearchPort:
     async def bulk(
         self,
         actions: list[dict[str, Any]],
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Perform bulk operations in Elasticsearch.
 
         Args:
             actions (list[dict[str, Any]]): List of bulk actions to perform.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
@@ -409,14 +409,14 @@ class AsyncElasticsearchPort:
         self,
         index: ElasticsearchIndexType,
         body: dict[str, Any] | None = None,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Create an index in Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
             body (dict[str, Any] | None): Optional index settings and mappings.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
@@ -430,13 +430,13 @@ class AsyncElasticsearchPort:
     async def delete_index(
         self,
         index: ElasticsearchIndexType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Delete an index from Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
@@ -451,14 +451,14 @@ class AsyncElasticsearchPort:
         self,
         index: ElasticsearchIndexType,
         doc_id: ElasticsearchIdType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Check if a document exists in Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
             doc_id (ElasticsearchIdType): The document ID.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: True if the document exists, False otherwise.
@@ -472,13 +472,13 @@ class AsyncElasticsearchPort:
     async def index_exists(
         self,
         index: ElasticsearchIndexType,
-        **kwargs: object,
+        **kwargs: Any,
     ) -> ElasticsearchResponseType:
         """Check if an index exists in Elasticsearch.
 
         Args:
             index (ElasticsearchIndexType): The index name.
-            **kwargs (object): Additional keyword arguments passed to the Elasticsearch client.
+            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
 
         Returns:
             ElasticsearchResponseType: True if the index exists, False otherwise.

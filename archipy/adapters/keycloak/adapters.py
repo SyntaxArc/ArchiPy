@@ -80,7 +80,7 @@ class KeycloakExceptionHandlerMixin:
                         or parsed.get("error")
                         or error_message
                     )
-            except (json.JSONDecodeError, UnicodeDecodeError):
+            except json.JSONDecodeError, UnicodeDecodeError:
                 pass
 
         return error_message
@@ -164,7 +164,12 @@ class KeycloakExceptionHandlerMixin:
         raise InternalError(additional_data=additional_data) from exception
 
     @classmethod
-    def _handle_realm_exception(cls, exception: KeycloakError, operation: str, realm_name: str | None = None) -> None:
+    def _handle_realm_exception(
+        cls,
+        exception: KeycloakError,
+        operation: str,
+        realm_name: str | None = None,
+    ) -> NoReturn:
         """Handle realm-specific exceptions.
 
         Args:
@@ -193,7 +198,12 @@ class KeycloakExceptionHandlerMixin:
         cls._handle_keycloak_exception(exception, operation)
 
     @classmethod
-    def _handle_user_exception(cls, exception: KeycloakError, operation: str, user_data: dict | None = None) -> None:
+    def _handle_user_exception(
+        cls,
+        exception: KeycloakError,
+        operation: str,
+        user_data: dict | None = None,
+    ) -> NoReturn:
         """Handle user-specific exceptions.
 
         Args:
@@ -540,7 +550,7 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
 
     @ttl_cache_decorator(ttl_seconds=30, maxsize=100)  # Cache for 30 seconds
     def _get_userinfo_cached(self, token: str) -> KeycloakUserType:
-        return self._openid_adapter.userinfo(token)
+        return self._openid_adapter.userinfo(token)  # type: ignore[return-value]
 
     @override
     @ttl_cache_decorator(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
@@ -1951,7 +1961,7 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
 
     @alru_cache(ttl=30, maxsize=100)  # Cache for 30 seconds
     async def _get_userinfo_cached(self, token: str) -> KeycloakUserType:
-        return await self.openid_adapter.a_userinfo(token)
+        return await self.openid_adapter.a_userinfo(token)  # type: ignore[return-value]
 
     @override
     @alru_cache(ttl=300, maxsize=100)  # Cache for 5 minutes
@@ -2316,6 +2326,8 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
         """
         try:
             client_id = await self.get_client_id(self.configs.CLIENT_ID)
+            if client_id is None:
+                return None
             service_account = await self.admin_adapter.a_get_client_service_account_user(client_id)
             return service_account.get("id")
         except KeycloakError as e:

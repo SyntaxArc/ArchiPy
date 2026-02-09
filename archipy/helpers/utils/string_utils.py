@@ -324,9 +324,10 @@ class StringUtils(StringUtilsConstants):
         """
         mask = mask or "MASK_NUMBERS"
         numbers = re.findall("[0-9]+", text)
+        result: str = text
         for number in sorted(numbers, key=len, reverse=True):
-            text = text.replace(number, f" {mask} ")
-        return text
+            result = result.replace(number, f" {mask} ")  # type: ignore[arg-type]
+        return result
 
     @classmethod
     def is_string_none_or_empty(cls, text: str) -> bool:
