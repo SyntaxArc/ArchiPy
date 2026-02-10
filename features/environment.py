@@ -35,6 +35,7 @@ class TestConfig(BaseConfig):
     KEYCLOAK__IMAGE: str
     SCYLLADB__IMAGE: str
     STARROCKS__IMAGE: str
+    TEMPORAL__IMAGE: str
     TESTCONTAINERS_RYUK_CONTAINER_IMAGE: str | None = None
 
     def __init__(self, **kwargs) -> None:
@@ -172,6 +173,14 @@ def after_scenario(context: Context, scenario: Scenario) -> None:
     # Get the scenario ID
     scenario_id = getattr(scenario, "id", "unknown")
     logger.info(f"Cleaning up scenario: {scenario.name} (ID: {scenario_id})")
+
+    # Clean up Temporal event loop and workers (must happen before context cleanup)
+    try:
+        from features.steps.temporal_adapter_steps import cleanup_event_loop
+
+        cleanup_event_loop(context)
+    except Exception:
+        pass
 
     # Clean up the scenario context and remove from pool
     if hasattr(context, "scenario_context_pool"):

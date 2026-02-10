@@ -134,3 +134,45 @@ async def async_schema_setup(async_adapter):
         await conn.run_sync(BaseEntity.metadata.drop_all)
         # Create all tables
         await conn.run_sync(BaseEntity.metadata.create_all)
+
+
+# Temporal-specific helper functions
+def wait_for_temporal_condition(condition_func, max_retries: int = 10, delay: float = 0.5) -> bool:
+    """Wait for a Temporal condition to be met with retries.
+
+    Args:
+        condition_func: Function that returns True when condition is met.
+        max_retries (int): Maximum number of retry attempts. Defaults to 10.
+        delay (float): Delay between retries in seconds. Defaults to 0.5.
+
+    Returns:
+        bool: True if condition was met, False if max retries exceeded.
+    """
+    import time
+
+    for attempt in range(max_retries):
+        try:
+            if condition_func():
+                return True
+        except Exception:
+            pass
+        if attempt < max_retries - 1:
+            time.sleep(delay)
+    return False
+
+
+def create_test_workflow_id(prefix: str = "test") -> str:
+    """Generate a unique workflow ID for testing.
+
+    Args:
+        prefix (str): Prefix for the workflow ID. Defaults to "test".
+
+    Returns:
+        str: Unique workflow ID with timestamp and UUID.
+    """
+    import time
+    from uuid import uuid4
+
+    timestamp = int(time.time() * 1000)
+    unique_id = str(uuid4())[:8]
+    return f"{prefix}-{timestamp}-{unique_id}"

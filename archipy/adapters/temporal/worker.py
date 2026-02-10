@@ -283,6 +283,14 @@ class TemporalWorkerManager(WorkerPort):
         Raises:
             WorkerConnectionError: If the worker fails to start.
         """
+        if not task_queue or not task_queue.strip():
+            raise WorkerConnectionError(
+                additional_data={
+                    "message": "Task queue name cannot be empty",
+                    "task_queue": task_queue,
+                },
+            )
+
         client = await self._get_client()
         worker_id = str(uuid4())
         worker_identity = identity or f"worker-{worker_id[:8]}"

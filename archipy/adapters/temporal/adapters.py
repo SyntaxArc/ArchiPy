@@ -211,9 +211,13 @@ class TemporalAdapter(TemporalPort):
         workflow_id = workflow_id or str(uuid4())
         task_queue = task_queue or self.config.TASK_QUEUE
 
+        # Build positional args: only include arg if it's not None,
+        # so workflows that take no parameters aren't given an extra argument.
+        positional_args: list[Any] = [] if arg is None else [arg]
+
         return await client.start_workflow(
             workflow,
-            arg,
+            *positional_args,
             id=workflow_id,
             task_queue=task_queue,
             execution_timeout=timedelta(seconds=execution_timeout or self.config.WORKFLOW_EXECUTION_TIMEOUT),
@@ -259,9 +263,13 @@ class TemporalAdapter(TemporalPort):
         workflow_id = workflow_id or str(uuid4())
         task_queue = task_queue or self.config.TASK_QUEUE
 
+        # Build positional args: only include arg if it's not None,
+        # so workflows that take no parameters aren't given an extra argument.
+        positional_args: list[Any] = [] if arg is None else [arg]
+
         return await client.execute_workflow(
             workflow,
-            arg,
+            *positional_args,
             id=workflow_id,
             task_queue=task_queue,
             execution_timeout=timedelta(seconds=execution_timeout or self.config.WORKFLOW_EXECUTION_TIMEOUT),
@@ -329,7 +337,9 @@ class TemporalAdapter(TemporalPort):
                 If None, signals the latest run. Defaults to None.
         """
         handle = await self.get_workflow_handle(workflow_id, run_id)
-        await handle.signal(signal_name, arg)
+        # Only pass arg if it's not None, so signal handlers with no parameters work correctly.
+        positional_args: list[Any] = [] if arg is None else [arg]
+        await handle.signal(signal_name, *positional_args)
 
     @override
     async def query_workflow(
@@ -352,7 +362,9 @@ class TemporalAdapter(TemporalPort):
             Any: The query result from the workflow.
         """
         handle = await self.get_workflow_handle(workflow_id, run_id)
-        return await handle.query(query_name, arg)
+        # Only pass arg if it's not None, so query handlers with no parameters work correctly.
+        positional_args: list[Any] = [] if arg is None else [arg]
+        return await handle.query(query_name, *positional_args)
 
     @override
     async def list_workflows(

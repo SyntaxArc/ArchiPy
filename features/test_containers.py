@@ -20,6 +20,7 @@ from archipy.configs.config_template import (
     RedisConfig,
     ScyllaDBConfig,
     StarRocksSQLAlchemyConfig,
+    TemporalConfig,
 )
 from archipy.helpers.metaclasses.singleton import Singleton
 
@@ -35,6 +36,7 @@ TAG_CONTAINER_MAP: dict[str, str] = {
     "needs-redis": "redis",
     "needs-scylladb": "scylladb",
     "needs-starrocks": "starrocks",
+    "needs-temporal": "temporal",
 }
 
 
@@ -726,3 +728,93 @@ class StarRocksTestContainer(metaclass=Singleton, thread_safe=True):
         self.port = None
 
         logger.info("StarRocks container stopped")
+
+
+@ContainerManager.register("temporal")
+class TemporalContainer(metaclass=Singleton, thread_safe=True):
+    """Temporal test container for workflow orchestration testing.
+
+    This container uses temporalio/temporal in development mode with embedded SQLite.
+    This is a single container with no external database dependencies.
+
+    The server runs with `temporal server start-dev` which includes:
+    - Temporal server
+    - Embedded SQLite database
+    - Auto-configured default namespace
+    - Web UI on port 8233
+
+    Note: Development mode is for testing only, not production use.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the Temporal container with configuration from global config."""
+        self.name = "temporal"
+        global_config = BaseConfig.global_config()
+        self.image = global_config.TEMPORAL__IMAGE
+
+        # Configure Temporal server in development mode with SQLite
+        self._container = DockerContainer(self.image)
+        self._container.with_exposed_ports(7233, 8233)
+
+        # Use development mode with embedded SQLite
+        self._container.with_command(
+            "server start-dev --namespace default --db-filename /tmp/temporal.db --ip 0.0.0.0",
+        )
+
+        self._is_running = False
+        self.host: str | None = None
+        self.port: int | None = None
+        self.config: TemporalConfig | None = None
+
+    def start(self) -> DockerContainer:
+        """Start the Temporal container.
+
+        Returns:
+            DockerContainer: The running container instance.
+        """
+        if self._is_running:
+            return self._container
+
+        # Start Temporal development server
+        logger.info("Starting Temporal development server...")
+        self._container.start()
+
+        # Wait for Temporal to be ready
+        # The dev server logs "CLI" when it starts
+        wait_for_logs(self._container, "CLI", timeout=60)
+
+        self._is_running = True
+
+        # Get dynamic host and port
+        self.host = self._container.get_container_host_ip()
+        self.port = int(self._container.get_exposed_port(7233))
+
+        # Create Temporal configuration with container endpoint
+        self.config = TemporalConfig(
+            HOST=self.host,
+            PORT=self.port,
+            NAMESPACE="default",
+            TASK_QUEUE="test-task-queue",
+        )
+
+        logger.info("Temporal container started on %s:%s", self.host, self.port)
+
+        return self._container
+
+    def stop(self) -> None:
+        """Stop the Temporal container."""
+        if not self._is_running:
+            return
+
+        if self._container:
+            self._container.stop()
+
+        self._container = None
+        self._is_running = False
+
+        # Reset container properties
+        self.host = None
+        self.port = None
+        self.config = None
+
+        logger.info("Temporal container stopped")
