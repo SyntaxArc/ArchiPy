@@ -6,11 +6,15 @@ Redis mock scenarios as defined in the Redis Mock Testing feature.
 
 import logging
 
-from behave import given, then, when
+from behave import given, then, use_step_matcher, when
 from features.test_helpers import get_current_scenario_context
 
+from archipy.adapters.redis.adapters import AsyncRedisAdapter, RedisAdapter
 from archipy.adapters.redis.mocks import AsyncRedisMock, RedisMock
 from archipy.configs.config_template import RedisConfig
+
+# Use regex matcher to avoid ambiguity between "configured {adapter_type}" and "configured async {adapter_type}"
+use_step_matcher("re")
 
 
 def store_result(context, key, value):
@@ -28,56 +32,67 @@ def get_result(context, key):
 
 
 # Setup steps
-@given("a configured Redis mock")
-def step_given_configured_redis_mock(context):
-    """Set up a RedisMock instance for testing."""
+@given(r"a configured (?P<adapter_type>mock|container)")
+def step_given_configured_adapter(context, adapter_type):
+    """Set up a Redis adapter instance (mock or container) for testing."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
 
-    logger.info("Configuring RedisMock")
-    redis_config = RedisConfig(
-        MASTER_HOST="localhost",
-        PORT=6379,
-        DATABASE=0,
-        DECODE_RESPONSES=True,
-    )
-    redis_mock = RedisMock(redis_config=redis_config)
-    scenario_context.adapter = redis_mock
-    logger.info("RedisMock configured successfully")
+    if adapter_type == "mock":
+        logger.info("Configuring RedisMock")
+        redis_config = RedisConfig(
+            MASTER_HOST="localhost",
+            PORT=6379,
+            DATABASE=0,
+            DECODE_RESPONSES=True,
+        )
+        redis_adapter = RedisMock(redis_config=redis_config)
+        scenario_context.adapter = redis_adapter
+        logger.info("RedisMock configured successfully")
+    elif adapter_type == "container":
+        logger.info("Configuring Redis container")
+        redis_adapter = RedisAdapter()
+        scenario_context.adapter = redis_adapter
+        logger.info("Redis container adapter configured successfully")
 
-
-@given("a configured async Redis mock")
-def step_given_configured_async_redis_mock(context):
-    """Set up an AsyncRedisMock instance for testing."""
+@given(r"a configured async (?P<adapter_type>mock|container)")
+def step_given_configured_async_adapter(context, adapter_type):
+    """Set up an async Redis adapter instance (mock or container) for testing."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
 
-    logger.info("Configuring AsyncRedisMock")
-    redis_config = RedisConfig(
-        MASTER_HOST="localhost",
-        PORT=6379,
-        DATABASE=0,
-        DECODE_RESPONSES=True,
-    )
-    async_redis_mock = AsyncRedisMock(redis_config=redis_config)
-    scenario_context.async_adapter = async_redis_mock
-    logger.info("AsyncRedisMock configured successfully")
-
+    if adapter_type == "mock":
+        logger.info("Configuring AsyncRedisMock")
+        redis_config = RedisConfig(
+            MASTER_HOST="localhost",
+            PORT=6379,
+            DATABASE=0,
+            DECODE_RESPONSES=True,
+        )
+        async_redis_adapter = AsyncRedisMock(redis_config=redis_config)
+        scenario_context.async_adapter = async_redis_adapter
+        logger.info("AsyncRedisMock configured successfully")
+    elif adapter_type == "container":
+        logger.info("Configuring async Redis container")
+        async_redis_adapter = AsyncRedisAdapter()
+        scenario_context.async_adapter = async_redis_adapter
+        logger.info("Async Redis container adapter configured successfully")
 
 # Synchronous Redis Mock Steps
-@when('I store the key "{key}" with value "{value}" in Redis mock')
-def step_when_store_key_in_redis_mock(context, key, value):
+@when(r'I store the key "(?P<key>[^"]+)" with value "(?P<value>[^"]+)" in (?P<adapter_type>mock|container)')
+def step_when_store_key_in_adapter(context, key, value, adapter_type):
     """Store a key-value pair in the Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    redis_mock = scenario_context.adapter
+    redis_adapter = scenario_context.adapter
 
-    logger.info(f"Storing key '{key}' with value '{value}' in Redis mock")
-    result = redis_mock.set(key, value)
+    logger.info(f"Storing key '{key}' with value '{value}' in {adapter_type}")
+    result = redis_adapter.set(key, value)
     store_result(context, f"store_result_{key}", result)
 
 
-@then("the sync store operation should succeed")
+
+@then(r"the sync store operation should succeed")
 def step_then_sync_store_operation_succeeds(context):
     """Verify the sync store operation succeeded."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -97,19 +112,19 @@ def step_then_sync_store_operation_succeeds(context):
     logger.info("Sync store operation verified as successful")
 
 
-@when('I retrieve the value for key "{key}" from Redis mock')
-def step_when_retrieve_key_from_redis_mock(context, key):
+@when(r'I retrieve the value for key "(?P<key>[^"]+)" from (?P<adapter_type>mock|container)')
+def step_when_retrieve_key_from_adapter(context, key, adapter_type):
     """Retrieve a value from the Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    redis_mock = scenario_context.adapter
+    redis_adapter = scenario_context.adapter
 
-    logger.info(f"Retrieving value for key '{key}' from Redis mock")
-    value = redis_mock.get(key)
+    logger.info(f"Retrieving value for key '{key}' from {adapter_type}")
+    value = redis_adapter.get(key)
     store_result(context, f"retrieve_result_{key}", value)
 
 
-@then('the sync retrieved value should be "{expected_value}"')
+@then(r'the sync retrieved value should be "(?P<expected_value>[^"]+)"')
 def step_then_sync_retrieved_value_is(context, expected_value):
     """Verify the sync retrieved value matches the expected value."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -125,19 +140,19 @@ def step_then_sync_retrieved_value_is(context, expected_value):
     logger.info("Sync retrieved value verified successfully")
 
 
-@when('I remove the key "{key}" from Redis mock')
-def step_when_remove_key_from_redis_mock(context, key):
+@when(r'I remove the key "(?P<key>[^"]+)" from (?P<adapter_type>mock|container)')
+def step_when_remove_key_from_adapter(context, key, adapter_type):
     """Remove a key from the Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    redis_mock = scenario_context.adapter
+    redis_adapter = scenario_context.adapter
 
-    logger.info(f"Removing key '{key}' from Redis mock")
-    result = redis_mock.delete(key)
+    logger.info(f"Removing key '{key}' from {adapter_type}")
+    result = redis_adapter.delete(key)
     store_result(context, f"remove_result_{key}", result)
 
 
-@then("the sync remove operation should delete one key")
+@then(r"the sync remove operation should delete one key")
 def step_then_sync_remove_operation_deletes_one(context):
     """Verify the sync remove operation deleted one key."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -153,19 +168,19 @@ def step_then_sync_remove_operation_deletes_one(context):
     logger.info("Sync remove operation verified successfully")
 
 
-@when('I check if "{key}" exists in Redis mock')
-def step_when_check_key_exists_in_redis_mock(context, key):
+@when(r'I check if "(?P<key>[^"]+)" exists in (?P<adapter_type>mock|container)')
+def step_when_check_key_exists_in_adapter(context, key, adapter_type):
     """Check if a key exists in the Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    redis_mock = scenario_context.adapter
+    redis_adapter = scenario_context.adapter
 
-    logger.info(f"Checking if key '{key}' exists in Redis mock")
-    result = redis_mock.exists(key)
+    logger.info(f"Checking if key '{key}' exists in {adapter_type}")
+    result = redis_adapter.exists(key)
     store_result(context, f"exists_result_{key}", result)
 
 
-@then("the sync key should not exist")
+@then(r"the sync key should not exist")
 def step_then_sync_key_does_not_exist(context):
     """Verify the sync key does not exist."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -181,45 +196,46 @@ def step_then_sync_key_does_not_exist(context):
     logger.info("Sync key absence verified successfully")
 
 
-@when('I add "{values}" to the list "{list_name}" in Redis mock')
-def step_when_add_to_list_in_redis_mock(context, values, list_name):
+@when(r'I add "(?P<values>[^"]+)" to the list "(?P<list_name>[^"]+)" in (?P<adapter_type>mock|container)')
+def step_when_add_to_list_in_adapter(context, values, list_name, adapter_type):
     """Add values to a list in the Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    redis_mock = scenario_context.adapter
+    redis_adapter = scenario_context.adapter
 
     value_list = [v.strip() for v in values.split(",")]
-    logger.info(f"Adding values {value_list} to list '{list_name}' in Redis mock")
-    result = redis_mock.rpush(list_name, *value_list)
+    logger.info(f"Adding values {value_list} to list '{list_name}' in {adapter_type}")
+    result = redis_adapter.rpush(list_name, *value_list)
     store_result(context, f"list_add_result_{list_name}", result)
 
 
-@then('the sync list "{list_name}" should have {count:d} items')
+@then(r'the sync list "(?P<list_name>[^"]+)" should have (?P<count>\d+) items')
 def step_then_sync_list_has_count_items(context, list_name, count):
+    count = int(count)
     """Verify the sync list has the expected number of items."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    redis_mock = scenario_context.adapter
+    redis_adapter = scenario_context.adapter
 
     logger.info(f"Verifying sync list '{list_name}' has {count} items")
-    length = redis_mock.llen(list_name)
+    length = redis_adapter.llen(list_name)
     assert length == count, f"Sync list '{list_name}' has {length} items, expected {count}"
     logger.info("Sync list item count verified successfully")
 
 
-@when('I fetch all items from the list "{list_name}" in Redis mock')
-def step_when_fetch_list_items_in_redis_mock(context, list_name):
+@when(r'I fetch all items from the list "(?P<list_name>[^"]+)" in (?P<adapter_type>mock|container)')
+def step_when_fetch_list_items_in_adapter(context, list_name, adapter_type):
     """Fetch all items from a list in the Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    redis_mock = scenario_context.adapter
+    redis_adapter = scenario_context.adapter
 
-    logger.info(f"Fetching all items from list '{list_name}' in Redis mock")
-    items = redis_mock.lrange(list_name, 0, -1)
+    logger.info(f"Fetching all items from list '{list_name}' in {adapter_type}")
+    items = redis_adapter.lrange(list_name, 0, -1)
     store_result(context, f"list_items_{list_name}", items)
 
 
-@then('the sync list "{list_name}" should contain "{expected_values}"')
+@then(r'the sync list "(?P<list_name>[^"]+)" should contain "(?P<expected_values>[^"]+)"')
 def step_then_sync_list_contains_values(context, list_name, expected_values):
     """Verify the sync list contains the expected values."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -231,19 +247,19 @@ def step_then_sync_list_contains_values(context, list_name, expected_values):
     logger.info("Sync list contents verified successfully")
 
 
-@when('I assign "{field}" to "{value}" in the hash "{hash_name}" in Redis mock')
-def step_when_assign_hash_field_in_redis_mock(context, field, hash_name, value):
+@when(r'I assign "(?P<field>[^"]+)" to "(?P<value>[^"]+)" in the hash "(?P<hash_name>[^"]+)" in (?P<adapter_type>mock|container)')
+def step_when_assign_hash_field_in_adapter(context, field, hash_name, value, adapter_type):
     """Assign a field-value pair to a hash in the Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    redis_mock = scenario_context.adapter
+    redis_adapter = scenario_context.adapter
 
-    logger.info(f"Assigning '{field}' to '{value}' in hash '{hash_name}' in Redis mock")
-    result = redis_mock.hset(hash_name, field, value)
+    logger.info(f"Assigning '{field}' to '{value}' in hash '{hash_name}' in {adapter_type}")
+    result = redis_adapter.hset(hash_name, field, value)
     store_result(context, f"hash_assign_result_{hash_name}_{field}", result)
 
 
-@then("the sync hash assignment should succeed")
+@then(r"the sync hash assignment should succeed")
 def step_then_sync_hash_assignment_succeeds(context):
     """Verify the sync hash assignment succeeded."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -266,19 +282,19 @@ def step_then_sync_hash_assignment_succeeds(context):
     logger.info("Sync hash assignment verified successfully")
 
 
-@when('I retrieve the "{field}" field from the hash "{hash_name}" in Redis mock')
-def step_when_retrieve_hash_field_in_redis_mock(context, field, hash_name):
+@when(r'I retrieve the "(?P<field>[^"]+)" field from the hash "(?P<hash_name>[^"]+)" in (?P<adapter_type>mock|container)')
+def step_when_retrieve_hash_field_in_adapter(context, field, hash_name, adapter_type):
     """Retrieve a field from a hash in the Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    redis_mock = scenario_context.adapter
+    redis_adapter = scenario_context.adapter
 
-    logger.info(f"Retrieving field '{field}' from hash '{hash_name}' in Redis mock")
-    value = redis_mock.hget(hash_name, field)
+    logger.info(f"Retrieving field '{field}' from hash '{hash_name}' in {adapter_type}")
+    value = redis_adapter.hget(hash_name, field)
     store_result(context, f"hash_field_{hash_name}_{field}", value)
 
 
-@then('the sync retrieved field value should be "{expected_value}"')
+@then(r'the sync retrieved field value should be "(?P<expected_value>[^"]+)"')
 def step_then_sync_hash_field_value_is(context, expected_value):
     """Verify the sync retrieved hash field value matches the expected value."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -295,45 +311,46 @@ def step_then_sync_hash_field_value_is(context, expected_value):
     logger.info("Sync hash field value verified successfully")
 
 
-@when('I add "{members}" to the set "{set_name}" in Redis mock')
-def step_when_add_to_set_in_redis_mock(context, members, set_name):
+@when(r'I add "(?P<members>[^"]+)" to the set "(?P<set_name>[^"]+)" in (?P<adapter_type>mock|container)')
+def step_when_add_to_set_in_adapter(context, members, set_name, adapter_type):
     """Add members to a set in the Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    redis_mock = scenario_context.adapter
+    redis_adapter = scenario_context.adapter
 
     member_list = [m.strip() for m in members.split(",")]
-    logger.info(f"Adding members {member_list} to set '{set_name}' in Redis mock")
-    result = redis_mock.sadd(set_name, *member_list)
+    logger.info(f"Adding members {member_list} to set '{set_name}' in {adapter_type}")
+    result = redis_adapter.sadd(set_name, *member_list)
     store_result(context, f"set_add_result_{set_name}", result)
 
 
-@then('the sync set "{set_name}" should have {count:d} members')
+@then(r'the sync set "(?P<set_name>[^"]+)" should have (?P<count>\d+) members')
 def step_then_sync_set_has_count_members(context, set_name, count):
+    count = int(count)
     """Verify the sync set has the expected number of members."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    redis_mock = scenario_context.adapter
+    redis_adapter = scenario_context.adapter
 
     logger.info(f"Verifying sync set '{set_name}' has {count} members")
-    cardinality = redis_mock.scard(set_name)
+    cardinality = redis_adapter.scard(set_name)
     assert cardinality == count, f"Sync set '{set_name}' has {cardinality} members, expected {count}"
     logger.info("Sync set member count verified successfully")
 
 
-@when('I fetch all members from the set "{set_name}" in Redis mock')
-def step_when_fetch_set_members_in_redis_mock(context, set_name):
+@when(r'I fetch all members from the set "(?P<set_name>[^"]+)" in (?P<adapter_type>mock|container)')
+def step_when_fetch_set_members_in_adapter(context, set_name, adapter_type):
     """Fetch all members from a set in the Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    redis_mock = scenario_context.adapter
+    redis_adapter = scenario_context.adapter
 
-    logger.info(f"Fetching all members from set '{set_name}' in Redis mock")
-    members = redis_mock.smembers(set_name)
+    logger.info(f"Fetching all members from set '{set_name}' in {adapter_type}")
+    members = redis_adapter.smembers(set_name)
     store_result(context, f"set_members_{set_name}", members)
 
 
-@then('the sync set "{set_name}" should contain "{expected_members}"')
+@then(r'the sync set "(?P<set_name>[^"]+)" should contain "(?P<expected_members>[^"]+)"')
 def step_then_sync_set_contains_members(context, set_name, expected_members):
     """Verify the sync set contains the expected members."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -346,19 +363,19 @@ def step_then_sync_set_contains_members(context, set_name, expected_members):
 
 
 # Asynchronous Redis Mock Steps
-@when('I store the key "{key}" with value "{value}" in async Redis mock')
-async def step_when_store_key_in_async_redis_mock(context, key, value):
+@when(r'I store the key "(?P<key>[^"]+)" with value "(?P<value>[^"]+)" in async (?P<adapter_type>mock|container)')
+async def step_when_store_key_in_async_adapter(context, key, value, adapter_type):
     """Store a key-value pair in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    async_redis_mock = scenario_context.async_adapter
+    async_redis_adapter = scenario_context.async_adapter
 
-    logger.info(f"Storing key '{key}' with value '{value}' in async Redis mock")
-    result = await async_redis_mock.set(key, value)
+    logger.info(f"Storing key '{key}' with value '{value}' in async {adapter_type}")
+    result = await async_redis_adapter.set(key, value)
     store_result(context, f"async_store_result_{key}", result)
 
 
-@then("the async store operation should succeed")
+@then(r"the async store operation should succeed")
 async def step_then_async_store_operation_succeeds(context):
     """Verify the async store operation succeeded."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -378,19 +395,19 @@ async def step_then_async_store_operation_succeeds(context):
     logger.info("Async store operation verified as successful")
 
 
-@when('I retrieve the value for key "{key}" from async Redis mock')
-async def step_when_retrieve_key_from_async_redis_mock(context, key):
+@when(r'I retrieve the value for key "(?P<key>[^"]+)" from async (?P<adapter_type>mock|container)')
+async def step_when_retrieve_key_from_async_adapter(context, key, adapter_type):
     """Retrieve a value from the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    async_redis_mock = scenario_context.async_adapter
+    async_redis_adapter = scenario_context.async_adapter
 
-    logger.info(f"Retrieving value for key '{key}' from async Redis mock")
-    value = await async_redis_mock.get(key)
+    logger.info(f"Retrieving value for key '{key}' from async {adapter_type}")
+    value = await async_redis_adapter.get(key)
     store_result(context, f"async_retrieve_result_{key}", value)
 
 
-@then('the async retrieved value should be "{expected_value}"')
+@then(r'the async retrieved value should be "(?P<expected_value>[^"]+)"')
 async def step_then_async_retrieved_value_is(context, expected_value):
     """Verify the async retrieved value matches the expected value."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -406,19 +423,19 @@ async def step_then_async_retrieved_value_is(context, expected_value):
     logger.info("Async retrieved value verified successfully")
 
 
-@when('I remove the key "{key}" from async Redis mock')
-async def step_when_remove_key_from_async_redis_mock(context, key):
+@when(r'I remove the key "(?P<key>[^"]+)" from async (?P<adapter_type>mock|container)')
+async def step_when_remove_key_from_async_adapter(context, key, adapter_type):
     """Remove a key from the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    async_redis_mock = scenario_context.async_adapter
+    async_redis_adapter = scenario_context.async_adapter
 
-    logger.info(f"Removing key '{key}' from async Redis mock")
-    result = await async_redis_mock.delete(key)
+    logger.info(f"Removing key '{key}' from async {adapter_type}")
+    result = await async_redis_adapter.delete(key)
     store_result(context, f"async_remove_result_{key}", result)
 
 
-@then("the async remove operation should delete one key")
+@then(r"the async remove operation should delete one key")
 async def step_then_async_remove_operation_deletes_one(context):
     """Verify the async remove operation deleted one key."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -434,19 +451,19 @@ async def step_then_async_remove_operation_deletes_one(context):
     logger.info("Async remove operation verified successfully")
 
 
-@when('I check if "{key}" exists in async Redis mock')
-async def step_when_check_key_exists_in_async_redis_mock(context, key):
+@when(r'I check if "(?P<key>[^"]+)" exists in async (?P<adapter_type>mock|container)')
+async def step_when_check_key_exists_in_async_adapter(context, key, adapter_type):
     """Check if a key exists in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    async_redis_mock = scenario_context.async_adapter
+    async_redis_adapter = scenario_context.async_adapter
 
-    logger.info(f"Checking if key '{key}' exists in async Redis mock")
-    result = await async_redis_mock.exists(key)
+    logger.info(f"Checking if key '{key}' exists in async {adapter_type}")
+    result = await async_redis_adapter.exists(key)
     store_result(context, f"async_exists_result_{key}", result)
 
 
-@then("the async key should not exist")
+@then(r"the async key should not exist")
 async def step_then_async_key_does_not_exist(context):
     """Verify the async key does not exist."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -462,45 +479,46 @@ async def step_then_async_key_does_not_exist(context):
     logger.info("Async key absence verified successfully")
 
 
-@when('I add "{values}" to the list "{list_name}" in async Redis mock')
-async def step_when_add_to_list_in_async_redis_mock(context, values, list_name):
+@when(r'I add "(?P<values>[^"]+)" to the list "(?P<list_name>[^"]+)" in async (?P<adapter_type>mock|container)')
+async def step_when_add_to_list_in_async_adapter(context, values, list_name, adapter_type):
     """Add values to a list in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    async_redis_mock = scenario_context.async_adapter
+    async_redis_adapter = scenario_context.async_adapter
 
     value_list = [v.strip() for v in values.split(",")]
-    logger.info(f"Adding values {value_list} to list '{list_name}' in async Redis mock")
-    result = await async_redis_mock.rpush(list_name, *value_list)
+    logger.info(f"Adding values {value_list} to list '{list_name}' in async {adapter_type}")
+    result = await async_redis_adapter.rpush(list_name, *value_list)
     store_result(context, f"async_list_add_result_{list_name}", result)
 
 
-@then('the async list "{list_name}" should have {count:d} items')
+@then(r'the async list "(?P<list_name>[^"]+)" should have (?P<count>\d+) items')
 async def step_then_async_list_has_count_items(context, list_name, count):
+    count = int(count)
     """Verify the async list has the expected number of items."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    async_redis_mock = scenario_context.async_adapter
+    async_redis_adapter = scenario_context.async_adapter
 
     logger.info(f"Verifying async list '{list_name}' has {count} items")
-    length = await async_redis_mock.llen(list_name)
+    length = await async_redis_adapter.llen(list_name)
     assert length == count, f"Async list '{list_name}' has {length} items, expected {count}"
     logger.info("Async list item count verified successfully")
 
 
-@when('I fetch all items from the list "{list_name}" in async Redis mock')
-async def step_when_fetch_list_items_in_async_redis_mock(context, list_name):
+@when(r'I fetch all items from the list "(?P<list_name>[^"]+)" in async (?P<adapter_type>mock|container)')
+async def step_when_fetch_list_items_in_async_adapter(context, list_name, adapter_type):
     """Fetch all items from a list in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    async_redis_mock = scenario_context.async_adapter
+    async_redis_adapter = scenario_context.async_adapter
 
-    logger.info(f"Fetching all items from list '{list_name}' in async Redis mock")
-    items = await async_redis_mock.lrange(list_name, 0, -1)
+    logger.info(f"Fetching all items from list '{list_name}' in async {adapter_type}")
+    items = await async_redis_adapter.lrange(list_name, 0, -1)
     store_result(context, f"async_list_items_{list_name}", items)
 
 
-@then('the async list "{list_name}" should contain "{expected_values}"')
+@then(r'the async list "(?P<list_name>[^"]+)" should contain "(?P<expected_values>[^"]+)"')
 async def step_then_async_list_contains_values(context, list_name, expected_values):
     """Verify the async list contains the expected values."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -512,19 +530,19 @@ async def step_then_async_list_contains_values(context, list_name, expected_valu
     logger.info("Async list contents verified successfully")
 
 
-@when('I assign "{field}" to "{value}" in the hash "{hash_name}" in async Redis mock')
-async def step_when_assign_hash_field_in_async_redis_mock(context, field, hash_name, value):
+@when(r'I assign "(?P<field>[^"]+)" to "(?P<value>[^"]+)" in the hash "(?P<hash_name>[^"]+)" in async (?P<adapter_type>mock|container)')
+async def step_when_assign_hash_field_in_async_adapter(context, field, hash_name, value, adapter_type):
     """Assign a field-value pair to a hash in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    async_redis_mock = scenario_context.async_adapter
+    async_redis_adapter = scenario_context.async_adapter
 
-    logger.info(f"Assigning '{field}' to '{value}' in hash '{hash_name}' in async Redis mock")
-    result = await async_redis_mock.hset(hash_name, field, value)
+    logger.info(f"Assigning '{field}' to '{value}' in hash '{hash_name}' in async {adapter_type}")
+    result = await async_redis_adapter.hset(hash_name, field, value)
     store_result(context, f"async_hash_assign_result_{hash_name}_{field}", result)
 
 
-@then("the async hash assignment should succeed")
+@then(r"the async hash assignment should succeed")
 async def step_then_async_hash_assignment_succeeds(context):
     """Verify the async hash assignment succeeded."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -547,19 +565,19 @@ async def step_then_async_hash_assignment_succeeds(context):
     logger.info("Async hash assignment verified successfully")
 
 
-@when('I retrieve the "{field}" field from the hash "{hash_name}" in async Redis mock')
-async def step_when_retrieve_hash_field_in_async_redis_mock(context, field, hash_name):
+@when(r'I retrieve the "(?P<field>[^"]+)" field from the hash "(?P<hash_name>[^"]+)" in async (?P<adapter_type>mock|container)')
+async def step_when_retrieve_hash_field_in_async_adapter(context, field, hash_name, adapter_type):
     """Retrieve a field from a hash in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    async_redis_mock = scenario_context.async_adapter
+    async_redis_adapter = scenario_context.async_adapter
 
-    logger.info(f"Retrieving field '{field}' from hash '{hash_name}' in async Redis mock")
-    value = await async_redis_mock.hget(hash_name, field)
+    logger.info(f"Retrieving field '{field}' from hash '{hash_name}' in async {adapter_type}")
+    value = await async_redis_adapter.hget(hash_name, field)
     store_result(context, f"async_hash_field_{hash_name}_{field}", value)
 
 
-@then('the async retrieved field value should be "{expected_value}"')
+@then(r'the async retrieved field value should be "(?P<expected_value>[^"]+)"')
 async def step_then_async_hash_field_value_is(context, expected_value):
     """Verify the async retrieved hash field value matches the expected value."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -576,45 +594,46 @@ async def step_then_async_hash_field_value_is(context, expected_value):
     logger.info("Async hash field value verified successfully")
 
 
-@when('I add "{members}" to the set "{set_name}" in async Redis mock')
-async def step_when_add_to_set_in_async_redis_mock(context, members, set_name):
+@when(r'I add "(?P<members>[^"]+)" to the set "(?P<set_name>[^"]+)" in async (?P<adapter_type>mock|container)')
+async def step_when_add_to_set_in_async_adapter(context, members, set_name, adapter_type):
     """Add members to a set in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    async_redis_mock = scenario_context.async_adapter
+    async_redis_adapter = scenario_context.async_adapter
 
     member_list = [m.strip() for m in members.split(",")]
-    logger.info(f"Adding members {member_list} to set '{set_name}' in async Redis mock")
-    result = await async_redis_mock.sadd(set_name, *member_list)
+    logger.info(f"Adding members {member_list} to set '{set_name}' in async {adapter_type}")
+    result = await async_redis_adapter.sadd(set_name, *member_list)
     store_result(context, f"async_set_add_result_{set_name}", result)
 
 
-@then('the async set "{set_name}" should have {count:d} members')
+@then(r'the async set "(?P<set_name>[^"]+)" should have (?P<count>\d+) members')
 async def step_then_async_set_has_count_members(context, set_name, count):
+    count = int(count)
     """Verify the async set has the expected number of members."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    async_redis_mock = scenario_context.async_adapter
+    async_redis_adapter = scenario_context.async_adapter
 
     logger.info(f"Verifying async set '{set_name}' has {count} members")
-    cardinality = await async_redis_mock.scard(set_name)
+    cardinality = await async_redis_adapter.scard(set_name)
     assert cardinality == count, f"Async set '{set_name}' has {cardinality} members, expected {count}"
     logger.info("Async set member count verified successfully")
 
 
-@when('I fetch all members from the set "{set_name}" in async Redis mock')
-async def step_when_fetch_set_members_in_async_redis_mock(context, set_name):
+@when(r'I fetch all members from the set "(?P<set_name>[^"]+)" in async (?P<adapter_type>mock|container)')
+async def step_when_fetch_set_members_in_async_adapter(context, set_name, adapter_type):
     """Fetch all members from a set in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
-    async_redis_mock = scenario_context.async_adapter
+    async_redis_adapter = scenario_context.async_adapter
 
-    logger.info(f"Fetching all members from set '{set_name}' in async Redis mock")
-    members = await async_redis_mock.smembers(set_name)
+    logger.info(f"Fetching all members from set '{set_name}' in async {adapter_type}")
+    members = await async_redis_adapter.smembers(set_name)
     store_result(context, f"async_set_members_{set_name}", members)
 
 
-@then('the async set "{set_name}" should contain "{expected_members}"')
+@then(r'the async set "(?P<set_name>[^"]+)" should contain "(?P<expected_members>[^"]+)"')
 async def step_then_async_set_contains_members(context, set_name, expected_members):
     """Verify the async set contains the expected members."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))

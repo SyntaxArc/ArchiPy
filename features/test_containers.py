@@ -213,8 +213,9 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
 
         # Update global config with actual container endpoint
         global_config = BaseConfig.global_config()
-        global_config.REDIS.MASTER_HOST = f"{self.host}:{self.port}"
+        global_config.REDIS.MASTER_HOST = self.host
         global_config.REDIS.PORT = self.port
+        global_config.REDIS.PASSWORD = None  # Test container has no password
 
         logger.info("Redis container started on %s:%s", self.host, self.port)
 
