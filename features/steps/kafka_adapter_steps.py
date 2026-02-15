@@ -232,7 +232,7 @@ def step_topic_list_includes(context, topic_name):
 def step_consumer_receive(context, expected_message, topic_name, group_id):
     adapter = get_kafka_consumer_adapter(context, topic_name, group_id)
     try:
-        messages = adapter.batch_consume(messages_number=1, timeout=2)
+        messages = adapter.batch_consume(messages_number=1, timeout=10)
         assert len(messages) > 0, "No messages received"
         received_message = messages[0].value().decode("utf-8")
         assert received_message == expected_message, f"Expected '{expected_message}', got '{received_message}'"

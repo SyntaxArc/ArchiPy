@@ -14,6 +14,8 @@ from cassandra import ConsistencyLevel
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.policies import (
+    AddressTranslator,
+    DCAwareRoundRobinPolicy,
     ExponentialBackoffRetryPolicy,
     FallthroughRetryPolicy,
     RoundRobinPolicy,
@@ -38,6 +40,19 @@ from archipy.models.errors import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class _FixedAddressTranslator(AddressTranslator):
+    """Translates all discovered node addresses to a fixed host address.
+
+    Used in Docker/NAT environments where gossip-discovered internal IPs are unreachable.
+    """
+
+    def __init__(self, address: str) -> None:
+        self._address = address
+
+    def translate(self, addr: str) -> str:  # noqa: ARG002
+        return self._address
 
 
 class ScyllaDBExceptionHandlerMixin:
@@ -182,13 +197,10 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         # Configure load balancing policy with optional datacenter awareness
         if self.config.LOCAL_DC:
-            from cassandra.policies import DCAwareRoundRobinPolicy
-
             base_policy = DCAwareRoundRobinPolicy(local_dc=self.config.LOCAL_DC)
+            load_balancing_policy = TokenAwarePolicy(base_policy)
         else:
-            base_policy = RoundRobinPolicy()
-
-        load_balancing_policy = TokenAwarePolicy(base_policy)
+            load_balancing_policy = TokenAwarePolicy(RoundRobinPolicy())
 
         if self.config.RETRY_POLICY == "FALLTHROUGH":
             retry_policy = FallthroughRetryPolicy()
@@ -203,6 +215,12 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         if self.config.DISABLE_SHARD_AWARENESS:
             shard_aware_options = {"disable": True}
 
+        # Address translation for Docker/NAT environments where gossip-discovered
+        # internal container IPs are unreachable from the host
+        address_translator = None
+        if self.config.ADDRESS_TRANSLATION_ENABLED:
+            address_translator = _FixedAddressTranslator(self.config.CONTACT_POINTS[0])
+
         # Cluster is from cassandra.cluster, properly typed
         cluster = Cluster(
             contact_points=self.config.CONTACT_POINTS,
@@ -214,12 +232,17 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             load_balancing_policy=load_balancing_policy,
             default_retry_policy=retry_policy,
             shard_aware_options=shard_aware_options,
+            address_translator=address_translator,
         )
 
         # Configure connection pool settings
         if cluster.profile_manager is not None:
             profile = cluster.profile_manager.default
             profile.request_timeout = self.config.REQUEST_TIMEOUT
+            # Configure connection pool limits per host
+            profile.max_connections_per_host = self.config.MAX_CONNECTIONS_PER_HOST
+            profile.min_connections_per_host = self.config.MIN_CONNECTIONS_PER_HOST
+            profile.core_connections_per_host = self.config.CORE_CONNECTIONS_PER_HOST
 
         # Set pool configuration
         cluster.connection_class.max_requests_per_connection = self.config.MAX_REQUESTS_PER_CONNECTION
@@ -328,10 +351,23 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             keyspace (str): The name of the keyspace to create.
             replication_factor (int): The replication factor. Defaults to 1.
         """
-        query = f"""
-            CREATE KEYSPACE IF NOT EXISTS {keyspace}
-            WITH replication = {{'class': 'SimpleStrategy', 'replication_factor': {replication_factor}}}
-        """
+        # Use configured replication strategy
+        if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
+            # Build replication config for NetworkTopologyStrategy
+            replication_parts = ["'class': 'NetworkTopologyStrategy'"]
+            for dc, rf in self.config.REPLICATION_CONFIG.items():
+                replication_parts.append(f"'{dc}': {rf}")
+            replication_str = ", ".join(replication_parts)
+            query = f"""
+                CREATE KEYSPACE IF NOT EXISTS {keyspace}
+                WITH replication = {{{replication_str}}}
+            """
+        else:
+            # Use SimpleStrategy (default)
+            query = f"""
+                CREATE KEYSPACE IF NOT EXISTS {keyspace}
+                WITH replication = {{'class': 'SimpleStrategy', 'replication_factor': {replication_factor}}}
+            """
         try:
             self.execute(query)
         except Exception as e:
@@ -765,13 +801,10 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         # Configure load balancing policy with optional datacenter awareness
         if self.config.LOCAL_DC:
-            from cassandra.policies import DCAwareRoundRobinPolicy
-
             base_policy = DCAwareRoundRobinPolicy(local_dc=self.config.LOCAL_DC)
+            load_balancing_policy = TokenAwarePolicy(base_policy)
         else:
-            base_policy = RoundRobinPolicy()
-
-        load_balancing_policy = TokenAwarePolicy(base_policy)
+            load_balancing_policy = TokenAwarePolicy(RoundRobinPolicy())
 
         if self.config.RETRY_POLICY == "FALLTHROUGH":
             retry_policy = FallthroughRetryPolicy()
@@ -786,6 +819,12 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         if self.config.DISABLE_SHARD_AWARENESS:
             shard_aware_options = {"disable": True}
 
+        # Address translation for Docker/NAT environments where gossip-discovered
+        # internal container IPs are unreachable from the host
+        address_translator = None
+        if self.config.ADDRESS_TRANSLATION_ENABLED:
+            address_translator = _FixedAddressTranslator(self.config.CONTACT_POINTS[0])
+
         # Cluster is from cassandra.cluster, properly typed
         cluster = Cluster(
             contact_points=self.config.CONTACT_POINTS,
@@ -797,12 +836,17 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             load_balancing_policy=load_balancing_policy,
             default_retry_policy=retry_policy,
             shard_aware_options=shard_aware_options,
+            address_translator=address_translator,
         )
 
         # Configure connection pool settings
         if cluster.profile_manager is not None:
             profile = cluster.profile_manager.default
             profile.request_timeout = self.config.REQUEST_TIMEOUT
+            # Configure connection pool limits per host
+            profile.max_connections_per_host = self.config.MAX_CONNECTIONS_PER_HOST
+            profile.min_connections_per_host = self.config.MIN_CONNECTIONS_PER_HOST
+            profile.core_connections_per_host = self.config.CORE_CONNECTIONS_PER_HOST
 
         # Set pool configuration
         cluster.connection_class.max_requests_per_connection = self.config.MAX_REQUESTS_PER_CONNECTION
@@ -925,10 +969,23 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             keyspace (str): The name of the keyspace to create.
             replication_factor (int): The replication factor. Defaults to 1.
         """
-        query = f"""
-            CREATE KEYSPACE IF NOT EXISTS {keyspace}
-            WITH replication = {{'class': 'SimpleStrategy', 'replication_factor': {replication_factor}}}
-        """
+        # Use configured replication strategy
+        if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
+            # Build replication config for NetworkTopologyStrategy
+            replication_parts = ["'class': 'NetworkTopologyStrategy'"]
+            for dc, rf in self.config.REPLICATION_CONFIG.items():
+                replication_parts.append(f"'{dc}': {rf}")
+            replication_str = ", ".join(replication_parts)
+            query = f"""
+                CREATE KEYSPACE IF NOT EXISTS {keyspace}
+                WITH replication = {{{replication_str}}}
+            """
+        else:
+            # Use SimpleStrategy (default)
+            query = f"""
+                CREATE KEYSPACE IF NOT EXISTS {keyspace}
+                WITH replication = {{'class': 'SimpleStrategy', 'replication_factor': {replication_factor}}}
+            """
         try:
             await self.execute(query)
         except Exception as e:

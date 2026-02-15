@@ -1002,6 +1002,13 @@ class ScyllaDBConfig(BaseModel):
         default=False,
         description="Disable shard awareness (useful for Docker/Testcontainer/NAT environments)",
     )
+    ADDRESS_TRANSLATION_ENABLED: bool = Field(
+        default=False,
+        description="Enable address translation to redirect all discovered node connections to the first contact point. "
+        "In Docker/Testcontainer/NAT environments, ScyllaDB nodes advertise their internal container IPs "
+        "via gossip, which are unreachable from the host. When enabled, the driver translates all discovered "
+        "addresses to the first configured contact point, allowing connections through Docker's port mapping.",
+    )
     RETRY_POLICY: Literal["EXPONENTIAL_BACKOFF", "FALLTHROUGH"] = Field(
         default="EXPONENTIAL_BACKOFF",
         description="Retry policy type (uses native driver RetryPolicy). "

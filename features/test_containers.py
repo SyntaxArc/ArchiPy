@@ -1,6 +1,7 @@
 """Container manager for test containers"""
 
 import logging
+from pathlib import Path
 
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
@@ -452,8 +453,8 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
         self.port: int | None = None
         self.bootstrap_servers: str | None = None
 
-        # Set up the container
-        self._container = KafkaContainer(image=self.image)
+        # Set up the container with KRaft mode (required for cp-kafka 7.4+, mandatory for 8.0+)
+        self._container = KafkaContainer(image=self.image).with_kraft()
 
     def start(self) -> KafkaContainer:
         """Start the Kafka container."""
@@ -566,6 +567,9 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
 class ScyllaDBTestContainer(metaclass=Singleton, thread_safe=True):
     """Test container for ScyllaDB."""
 
+    # Minimum aio-max-nr required by ScyllaDB's Seastar framework
+    MIN_AIO_MAX_NR = 131072
+
     def __init__(self, config: ScyllaDBConfig | None = None, image: str | None = None) -> None:
         """Initialize ScyllaDB test container.
 
@@ -597,14 +601,46 @@ class ScyllaDBTestContainer(metaclass=Singleton, thread_safe=True):
         # Add environment variables for single-node configuration
         self._container.with_env("SCYLLA_ARGS", "--smp 1 --memory 750M")
 
+    @staticmethod
+    def _check_aio_max_nr() -> None:
+        """Check that the host system's fs.aio-max-nr is sufficient for ScyllaDB.
+
+        ScyllaDB's Seastar framework requires a minimum number of AIO slots.
+        If the system value is too low, ScyllaDB will crash on startup.
+
+        Raises:
+            RuntimeError: If aio-max-nr is below the required minimum.
+        """
+        aio_path = Path("/proc/sys/fs/aio-max-nr")
+        if not aio_path.exists():
+            logger.warning("Cannot check aio-max-nr: %s not found (non-Linux system?)", aio_path)
+            return
+
+        current_value = int(aio_path.read_text().strip())
+        if current_value < ScyllaDBTestContainer.MIN_AIO_MAX_NR:
+            msg = (
+                f"ScyllaDB requires fs.aio-max-nr >= {ScyllaDBTestContainer.MIN_AIO_MAX_NR}, "
+                f"but the current value is {current_value}. "
+                f"Fix this by running: sudo sysctl -w fs.aio-max-nr={ScyllaDBTestContainer.MIN_AIO_MAX_NR} "
+                f"To make it permanent, add 'fs.aio-max-nr = {ScyllaDBTestContainer.MIN_AIO_MAX_NR}' "
+                f"to /etc/sysctl.conf and run 'sudo sysctl -p'."
+            )
+            raise RuntimeError(msg)
+
     def start(self) -> DockerContainer:
         """Start the ScyllaDB container.
 
         Returns:
             DockerContainer: The running container instance.
+
+        Raises:
+            RuntimeError: If the host system's aio-max-nr is too low for ScyllaDB.
         """
         if self._is_running:
             return self._container
+
+        # Pre-flight check: verify host AIO configuration
+        self._check_aio_max_nr()
 
         # Start the container
         self._container.start()
