@@ -543,6 +543,8 @@ class StarRocksSQLAlchemyConfig(SQLAlchemyConfig):
     Extends SQLAlchemyConfig with Starrocks-specific settings.
 
     Note: StarRocks only supports READ COMMITTED isolation level.
+    StarRocks uses MySQL protocol which requires explicit connection timeouts
+    to prevent indefinite hangs on network issues.
     """
 
     DRIVER_NAME: str = Field(default="starrocks", description="StarRocks driver name")
@@ -550,6 +552,12 @@ class StarRocksSQLAlchemyConfig(SQLAlchemyConfig):
     ISOLATION_LEVEL: str = Field(
         default="READ COMMITTED",
         description="Transaction isolation level (StarRocks only supports READ COMMITTED)",
+    )
+
+    # Override timeout default for StarRocks (MySQL protocol requirement)
+    CONNECT_TIMEOUT: int | None = Field(
+        default=10,
+        description="Timeout in seconds for establishing connection (MySQL protocol default: 10s)",
     )
 
     @field_validator("ISOLATION_LEVEL")

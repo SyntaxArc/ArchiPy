@@ -43,7 +43,7 @@ sentry = ["sentry-sdk>=2.52.0"]
 sqlalchemy = ["sqlalchemy>=2.0.46"]
 sqlalchemy-async = ["sqlalchemy[asyncio]>=2.0.46"]
 starrocks = ["starrocks>=1.3.3", "pymysql>=1.1.2"]
-starrocks-async = ["starrocks>=1.3.3", "aiomysql>=0.3.2"]
+starrocks-async = ["starrocks>=1.3.3", "aiomysql>=0.3.2", "asyncmy>=0.2.11"]
 temporalio = ["temporalio>=1.22.0"]
 testcontainers = ["testcontainers>=4.14.1"]
 

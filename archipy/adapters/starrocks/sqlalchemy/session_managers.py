@@ -100,6 +100,28 @@ class StarRocksSQlAlchemySessionManager(BaseSQLAlchemySessionManager[StarRocksSQ
         return "starrocks"
 
     @override
+    def _get_connect_args(self) -> dict:
+        """Return connection arguments for StarRocks to ensure proper transaction support.
+
+        StarRocks (using MySQL protocol) requires autocommit to be explicitly disabled
+        to ensure transactions work properly with rollback support.
+
+        Returns:
+            A dictionary with autocommit=False and connect_timeout from config.
+        """
+        connect_args = {}
+
+        # Add connect_timeout if configured
+        if hasattr(self, "_configs"):
+            if hasattr(self._configs, "CONNECT_TIMEOUT") and self._configs.CONNECT_TIMEOUT is not None:
+                connect_args["connect_timeout"] = self._configs.CONNECT_TIMEOUT
+
+        # Add StarRocks-specific setting for transaction support
+        connect_args["autocommit"] = False
+
+        return connect_args
+
+    @override
     def _create_url(self, configs: StarRocksSQLAlchemyConfig) -> URL:
         """Create a StarRocks connection URL.
 
@@ -171,8 +193,9 @@ class AsyncStarRocksSQlAlchemySessionManager(
     def _create_url(self, configs: StarRocksSQLAlchemyConfig) -> URL:
         """Create an async StarRocks connection URL.
 
-        For async operations, StarRocks requires an async driver (mysql+aiomysql)
-        instead of the sync driver (mysql+pymysql).
+        For async operations, StarRocks requires the starrocks+asyncmy driver
+        which uses the asyncmy library for async MySQL protocol support while
+        maintaining StarRocks dialect features (type mapping, compiler patches).
 
         Args:
             configs: StarRocks configuration.
@@ -184,14 +207,8 @@ class AsyncStarRocksSQlAlchemySessionManager(
             DatabaseConnectionError: If there's an error creating the URL.
         """
         try:
-            # For async operations, use mysql+aiomysql driver
-            # If the driver is mysql+pymysql or starrocks, replace with mysql+aiomysql
-            async_driver = configs.DRIVER_NAME
-            if async_driver in ("mysql+pymysql", "starrocks", "mysql"):
-                async_driver = "mysql+aiomysql"
-
             return URL.create(
-                drivername=async_driver,
+                drivername="starrocks+asyncmy",
                 username=configs.USERNAME,
                 password=configs.PASSWORD,
                 host=configs.HOST,
@@ -207,8 +224,23 @@ class AsyncStarRocksSQlAlchemySessionManager(
     def _get_connect_args(self) -> dict:
         """Return connection arguments for async StarRocks to ensure proper transaction support.
 
-        StarRocks (using MySQL protocol) requires autocommit to be explicitly disabled
-        to ensure transactions work properly with rollback support.        Returns:
-            A dictionary with autocommit=False to ensure transaction support.
+        StarRocks (using MySQL protocol via asyncmy) requires autocommit to be explicitly disabled
+        to ensure transactions work properly with rollback support.
+
+        Note: asyncmy driver only supports connect_timeout, not read_timeout/write_timeout.
+        These socket-level timeouts are handled differently in async drivers.
+
+        Returns:
+            A dictionary with autocommit=False and connect_timeout (no read/write timeouts for asyncmy).
         """
-        return {"autocommit": False}
+        connect_args = {}
+
+        # Add connect_timeout if configured
+        if hasattr(self, "_configs"):
+            if hasattr(self._configs, "CONNECT_TIMEOUT") and self._configs.CONNECT_TIMEOUT is not None:
+                connect_args["connect_timeout"] = self._configs.CONNECT_TIMEOUT
+
+        # Add StarRocks async-specific setting for transaction support
+        connect_args["autocommit"] = False
+
+        return connect_args

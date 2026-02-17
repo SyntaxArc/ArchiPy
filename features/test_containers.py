@@ -142,10 +142,9 @@ class ContainerManager:
                 container_name = TAG_CONTAINER_MAP[tag_name]
                 containers.add(container_name)
                 logger.debug(f"Tag '{tag}' maps to container '{container_name}'")
-            else:
-                # Only log warning for tags that look like container tags but aren't mapped
-                if tag_name.startswith("needs-"):
-                    logger.warning(f"Unknown container tag '{tag}'. Available tags: {list(TAG_CONTAINER_MAP.keys())}")
+            # Only log warning for tags that look like container tags but aren't mapped
+            elif tag_name.startswith("needs-"):
+                logger.warning(f"Unknown container tag '{tag}'. Available tags: {list(TAG_CONTAINER_MAP.keys())}")
 
         return containers
 
@@ -395,6 +394,9 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         if self.password:
             self._container.with_env("ELASTIC_PASSWORD", self.password)
         self._container.with_env("cluster.name", self.cluster_name)
+        # Limit memory to prevent OOM kills (ES_JAVA_OPTS sets JVM heap size)
+        self._container.with_env("ES_JAVA_OPTS", "-Xms512m -Xmx512m")
+        self._container.with_env("bootstrap.memory_lock", "false")
         self._container.with_exposed_ports(9200)
 
     def start(self) -> DockerContainer:
@@ -740,6 +742,10 @@ class StarRocksTestContainer(metaclass=Singleton, thread_safe=True):
         # get_exposed_port returns the random host port that maps to container port 9030
         self.port = int(self._container.get_exposed_port(9030))
 
+        # Create the test database if it doesn't exist
+        if self.database:
+            self._create_database(self.database)
+
         # Update global config with actual container endpoint
         global_config = BaseConfig.global_config()
         global_config.STARROCKS_SQLALCHEMY.HOST = self.host
@@ -748,6 +754,35 @@ class StarRocksTestContainer(metaclass=Singleton, thread_safe=True):
         logger.info("StarRocks container started on %s:%s", self.host, self.port)
 
         return self._container
+
+    def _create_database(self, database_name: str) -> None:
+        """Create a database in StarRocks if it doesn't exist.
+
+        Args:
+            database_name: Name of the database to create.
+        """
+        import pymysql
+
+        try:
+            # Connect without specifying a database
+            connection = pymysql.connect(
+                host=self.host,
+                port=self.port,
+                user=self.username or "root",
+                password=self.password or "",
+                connect_timeout=10,
+            )
+
+            with connection.cursor() as cursor:
+                # Create database if not exists
+                cursor.execute(f"CREATE DATABASE IF NOT EXISTS {database_name}")
+                logger.info(f"Created database '{database_name}' in StarRocks")
+
+            connection.close()
+        except Exception as e:
+            logger.warning(f"Failed to create database '{database_name}': {e}")
+            # Don't fail the container start if database creation fails
+            # The adapter might handle this or it might already exist
 
     def stop(self) -> None:
         """Stop the StarRocks container."""
