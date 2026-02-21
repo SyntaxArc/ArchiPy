@@ -2,6 +2,88 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v4.2.0] - 2026-02-21
+
+### Added
+
+#### Helpers - Interceptors
+
+- **Metric Interceptors** - Enhanced Prometheus metrics collection across frameworks
+    - Implemented `FastAPIMetricInterceptor` for HTTP request metrics with path template support
+    - Added `ACTIVE_REQUESTS` gauge metric to both sync and async gRPC interceptors
+    - Implemented path template caching in FastAPI interceptor for improved performance
+    - Added comprehensive metrics for request duration, status codes, and concurrency tracking
+
+#### Helpers - Utils
+
+- **Prometheus Server Management** - Added server deduplication functionality
+    - Implemented `_is_prometheus_server_running()` helper to detect existing Prometheus servers
+    - Prevents duplicate Prometheus server starts across FastAPI and gRPC applications
+    - Checks port availability before starting Prometheus HTTP server
+
+#### Adapters - Temporal
+
+- **BDD Test Coverage** - Added comprehensive Behave tests for Temporal adapter
+    - Implemented persistent event loop per scenario to keep workers alive across steps
+    - Added test workflows and activities for various scenarios (greeting, signal/query, timeout, retry)
+    - Integrated Temporal container support with dev mode SQLite backend
+    - Fixed workflow execution to use `run_async` helper for proper async handling
+
+### Changed
+
+#### Adapters - StarRocks
+
+- **Async Driver Migration** - Improved async database driver support
+    - Switched async driver from `aiomysql` to `asyncmy` for better StarRocks compatibility
+    - Added `autocommit=False` in connect_args for both sync and async sessions to ensure proper transaction support
+    - Implemented `_get_connect_args()` in sync session manager with configurable `connect_timeout`
+    - Updated async `_get_connect_args()` with `connect_timeout` (asyncmy only supports connect_timeout)
+    - Added `CONNECT_TIMEOUT` default (10s) to `StarRocksSQLAlchemyConfig` for MySQL protocol requirement
+    - Upgraded StarRocks test container image from 4.0.4 to 4.0.6
+    - Added automatic test database creation in `StarRocksTestContainer`
+    - Added `asyncmy>=0.2.11` dependency to starrocks-async extra
+
+#### Adapters - ScyllaDB
+
+- **Docker Support** - Enhanced ScyllaDB adapter for containerized environments
+    - Added address translator for Docker/NAT environments
+    - Configured connection pool limits per host
+    - Updated test containers and config template
+
+#### Tests
+
+- **Test Structure Improvements** - Enhanced test organization and coverage
+    - Converted Redis tests to scenario outlines for both mock and container testing
+    - Unified metric interceptor tests with scenario outlines
+    - Support for FastAPI, gRPC, and AsyncgRPC in parameterized tests
+    - Removed duplicate test scenarios
+
+- **Container Optimization** - Improved test container configuration
+    - Optimized Elasticsearch test container memory limits to prevent OOM kills
+    - Refactored container tag validation logic in `ContainerManager`
+
+### Fixed
+
+#### Type Safety
+
+- **Ty Compliance** - Resolved all 418 type checker errors
+    - Replaced `**kwargs: object` with `**kwargs: Any` across adapters
+    - Added `NoReturn` type hints to exception handlers
+    - Updated to Pydantic v2 validator signatures
+    - Modernized enums to use `StrEnum`
+    - Added type casts and None checks for improved type safety
+    - All linting checks now pass with zero errors
+
+### Chore
+
+#### Dependencies
+
+- **Core Dependencies** - Updated dependency constraints to match uv.lock versions
+    - Updated dependency lock file (pydantic-settings, redis, sentry-sdk, typer, uvicorn, virtualenv,
+      pymdown-extensions)
+    - Aligned version constraints across all extras and groups
+    - Ensured consistency between pyproject.toml and uv.lock
+
 ## [v4.1.0] - 2026-02-09
 
 ### Added
