@@ -314,10 +314,10 @@ requires-dist = [
     { name = "aiomysql", marker = "extra == 'starrocks-async'", specifier = ">=0.3.2" },
     { name = "aiosqlite", marker = "extra == 'aiosqlite'", specifier = ">=0.22.1" },
     { name = "apscheduler", marker = "extra == 'scheduler'", specifier = ">=3.11.2" },
-    { name = "async-lru", marker = "extra == 'cache'", specifier = ">=2.1.0" },
-    { name = "async-lru", marker = "extra == 'keycloak'", specifier = ">=2.1.0" },
-    { name = "async-lru", marker = "extra == 'minio'", specifier = ">=2.1.0" },
-    { name = "async-lru", marker = "extra == 'scylladb'", specifier = ">=2.1.0" },
+    { name = "async-lru", marker = "extra == 'cache'", specifier = ">=2.2.0" },
+    { name = "async-lru", marker = "extra == 'keycloak'", specifier = ">=2.2.0" },
+    { name = "async-lru", marker = "extra == 'minio'", specifier = ">=2.2.0" },
+    { name = "async-lru", marker = "extra == 'scylladb'", specifier = ">=2.2.0" },
     { name = "asyncmy", marker = "extra == 'starrocks-async'", specifier = ">=0.2.11" },
     { name = "behave", marker = "extra == 'behave'", specifier = ">=1.3.3" },
     { name = "cachetools", marker = "extra == 'cache'", specifier = ">=7.0.1" },
@@ -329,32 +329,32 @@ requires-dist = [
     { name = "elastic-apm", marker = "extra == 'elastic-apm'", specifier = ">=6.25.0" },
     { name = "elasticsearch", marker = "extra == 'elasticsearch'", specifier = ">=9.3.0" },
     { name = "elasticsearch", extras = ["async"], marker = "extra == 'elasticsearch-async'", specifier = ">=9.3.0" },
-    { name = "fakeredis", marker = "extra == 'fakeredis'", specifier = ">=2.33.0" },
-    { name = "fastapi", extras = ["all"], marker = "extra == 'fastapi'", specifier = ">=0.129.0" },
-    { name = "grpcio", marker = "extra == 'grpc'", specifier = ">=1.78.0" },
-    { name = "grpcio-health-checking", marker = "extra == 'grpc'", specifier = ">=1.78.0" },
+    { name = "fakeredis", marker = "extra == 'fakeredis'", specifier = ">=2.34.0" },
+    { name = "fastapi", extras = ["all"], marker = "extra == 'fastapi'", specifier = ">=0.129.1" },
+    { name = "grpcio", marker = "extra == 'grpc'", specifier = ">=1.78.1" },
+    { name = "grpcio-health-checking", marker = "extra == 'grpc'", specifier = ">=1.78.1" },
     { name = "jdatetime", specifier = ">=5.2.0" },
     { name = "kavenegar", marker = "extra == 'kavenegar'", specifier = ">=1.1.2" },
     { name = "lz4", marker = "extra == 'scylladb'", specifier = ">=4.4.5" },
     { name = "minio", marker = "extra == 'minio'", specifier = ">=7.2.20" },
     { name = "prometheus-client", marker = "extra == 'prometheus'", specifier = ">=0.24.1" },
     { name = "protobuf", marker = "extra == 'grpc'", specifier = ">=6.33.5" },
-    { name = "psycopg", extras = ["binary", "pool"], marker = "extra == 'postgres'", specifier = ">=3.3.2" },
+    { name = "psycopg", extras = ["binary", "pool"], marker = "extra == 'postgres'", specifier = ">=3.3.3" },
     { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pydantic-settings", specifier = ">=2.12.0" },
+    { name = "pydantic-settings", specifier = ">=2.13.1" },
     { name = "pyjwt", marker = "extra == 'jwt'", specifier = ">=2.11.0" },
     { name = "pymysql", marker = "extra == 'starrocks'", specifier = ">=1.1.2" },
     { name = "python-keycloak", marker = "extra == 'keycloak'", specifier = ">=7.1.1" },
-    { name = "redis", extras = ["hiredis"], marker = "extra == 'redis'", specifier = ">=7.1.1" },
+    { name = "redis", extras = ["hiredis"], marker = "extra == 'redis'", specifier = ">=7.2.0" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "requests", extras = ["socks"], marker = "extra == 'parsian-ipg'", specifier = ">=2.32.5" },
     { name = "scylla-driver", marker = "extra == 'scylladb'", specifier = ">=3.29.8" },
-    { name = "sentry-sdk", marker = "extra == 'sentry'", specifier = ">=2.52.0" },
+    { name = "sentry-sdk", marker = "extra == 'sentry'", specifier = ">=2.53.0" },
     { name = "sqlalchemy", marker = "extra == 'sqlalchemy'", specifier = ">=2.0.46" },
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlalchemy-async'", specifier = ">=2.0.46" },
     { name = "starrocks", marker = "extra == 'starrocks'", specifier = ">=1.3.3" },
     { name = "starrocks", marker = "extra == 'starrocks-async'", specifier = ">=1.3.3" },
-    { name = "temporalio", marker = "extra == 'temporalio'", specifier = ">=1.22.0" },
+    { name = "temporalio", marker = "extra == 'temporalio'", specifier = ">=1.23.0" },
     { name = "testcontainers", marker = "extra == 'testcontainers'", specifier = ">=4.14.1" },
     { name = "zeep", marker = "extra == 'parsian-ipg'", specifier = ">=4.3.2" },
 ]
@@ -367,23 +367,23 @@ dev = [
     { name = "codespell", specifier = ">=2.4.1" },
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "pre-commit-hooks", specifier = ">=6.0.0" },
-    { name = "ruff", specifier = ">=0.15.1" },
-    { name = "ty", specifier = ">=0.0.17" },
+    { name = "ruff", specifier = ">=0.15.2" },
+    { name = "ty", specifier = ">=0.0.18" },
     { name = "types-cachetools", specifier = ">=6.2.0.20251022" },
     { name = "types-grpcio", specifier = ">=1.0.0.20251009" },
-    { name = "types-protobuf", specifier = ">=6.32.1.20251210" },
+    { name = "types-protobuf", specifier = ">=6.32.1.20260221" },
     { name = "types-pymysql", specifier = ">=1.1.0.20251220" },
-    { name = "types-regex", specifier = ">=2026.1.15.20260116" },
+    { name = "types-regex", specifier = ">=2026.2.19.20260221" },
     { name = "types-requests", specifier = ">=2.32.4.20260107" },
     { name = "validate-pyproject", specifier = ">=0.25" },
 ]
 docs = [
     { name = "mkdocs", specifier = ">=1.6.1" },
-    { name = "mkdocs-autorefs", specifier = ">=1.4.3" },
-    { name = "mkdocs-material", specifier = ">=9.7.1" },
+    { name = "mkdocs-autorefs", specifier = ">=1.4.4" },
+    { name = "mkdocs-material", specifier = ">=9.7.2" },
     { name = "mkdocstrings", specifier = ">=1.0.3" },
-    { name = "mkdocstrings-python", specifier = ">=2.0.1" },
-    { name = "pymdown-extensions", specifier = ">=10.20.1" },
+    { name = "mkdocstrings-python", specifier = ">=2.0.3" },
+    { name = "pymdown-extensions", specifier = ">=10.21" },
 ]
 
 [[package]]
@@ -883,7 +883,7 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.129.0"
+version = "0.129.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -892,9 +892,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/48/47/75f6bea02e797abff1bca968d5997793898032d9923c1935ae2efdece642/fastapi-0.129.0.tar.gz", hash = "sha256:61315cebd2e65df5f97ec298c888f9de30430dd0612d59d6480beafbc10655af", size = 375450, upload-time = "2026-02-12T13:54:52.541Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f6/37/4aa7f6ce92745458b6ce0acd706dde2ac23a3bf341266b5311c904109f67/fastapi-0.129.1.tar.gz", hash = "sha256:6ccf0eca9644e0d6280115b4fc8281bf55ec5878d4d95572f7b2034ab15708ba", size = 369852, upload-time = "2026-02-21T13:10:03.335Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/dd/d0ee25348ac58245ee9f90b6f3cbb666bf01f69be7e0911f9851bddbda16/fastapi-0.129.0-py3-none-any.whl", hash = "sha256:b4946880e48f462692b31c083be0432275cbfb6e2274566b1be91479cc1a84ec", size = 102950, upload-time = "2026-02-12T13:54:54.528Z" },
+    { url = "https://files.pythonhosted.org/packages/01/f9/f15d92bd6035d4f83be8b82dc527a3e7abc87648fda62cf8d1df344410a7/fastapi-0.129.1-py3-none-any.whl", hash = "sha256:022462403bc385b791df418d8f088eb0e8f1fe7cb8f625d682f5e9da6157cc83", size = 103226, upload-time = "2026-02-21T13:10:05.058Z" },
 ]
 
 [package.optional-dependencies]
