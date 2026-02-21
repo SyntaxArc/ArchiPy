@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import socket
 from collections.abc import Callable
 from concurrent import futures
 from contextlib import AbstractAsyncContextManager
@@ -50,6 +51,21 @@ try:
     FASTAPI_APP = True
 except ImportError:
     FASTAPI_APP = False
+
+
+def _is_prometheus_server_running(port: int) -> bool:
+    """Check if Prometheus server is already running on the specified port.
+
+    Args:
+        port (int): The port number to check.
+
+    Returns:
+        bool: True if server is running, False otherwise.
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    result = sock.connect_ex(("localhost", port))
+    sock.close()
+    return result == 0
 
 
 class FastAPIExceptionHandler:
@@ -209,18 +225,11 @@ class FastAPIUtils:
             return
 
         try:
-            import socket
-
             from prometheus_client import start_http_server
 
             from archipy.helpers.interceptors.fastapi.metric.interceptor import FastAPIMetricInterceptor
 
-            # Conditionally start Prometheus server (check if already running)
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex(("localhost", config.PROMETHEUS.SERVER_PORT))
-            sock.close()
-
-            if result != 0:
+            if not _is_prometheus_server_running(config.PROMETHEUS.SERVER_PORT):
                 start_http_server(config.PROMETHEUS.SERVER_PORT)
 
             app.add_middleware(FastAPIMetricInterceptor)  # type: ignore[arg-type]
@@ -312,7 +321,9 @@ class AsyncGrpcAPIUtils:
 
             from archipy.helpers.interceptors.grpc.metric.server_interceptor import AsyncGrpcServerMetricInterceptor
 
-            start_http_server(config.PROMETHEUS.SERVER_PORT)
+            if not _is_prometheus_server_running(config.PROMETHEUS.SERVER_PORT):
+                start_http_server(config.PROMETHEUS.SERVER_PORT)
+
             interceptors.append(AsyncGrpcServerMetricInterceptor())
 
         except Exception:
@@ -356,7 +367,9 @@ class GrpcAPIUtils:
 
             from archipy.helpers.interceptors.grpc.metric.server_interceptor import GrpcServerMetricInterceptor
 
-            start_http_server(config.PROMETHEUS.SERVER_PORT)
+            if not _is_prometheus_server_running(config.PROMETHEUS.SERVER_PORT):
+                start_http_server(config.PROMETHEUS.SERVER_PORT)
+
             interceptors.append(GrpcServerMetricInterceptor())
 
         except Exception:

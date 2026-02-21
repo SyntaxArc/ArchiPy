@@ -18,10 +18,11 @@ class GrpcServerMetricInterceptor(BaseGrpcServerInterceptor):
     """A gRPC server interceptor for collecting and reporting metrics using Prometheus.
 
     This interceptor measures the response time of gRPC methods and records it in a Prometheus histogram.
+    It also tracks the number of active requests using a Prometheus gauge.
     It also captures errors and logs them for monitoring purposes.
     """
 
-    from prometheus_client import Histogram
+    from prometheus_client import Gauge, Histogram
 
     "Buckets for measuring response times between 0 and 1 second."
     ZERO_TO_ONE_SECONDS_BUCKETS: ClassVar[list[float]] = [i / 1000 for i in range(0, 1000, 5)]
@@ -39,10 +40,17 @@ class GrpcServerMetricInterceptor(BaseGrpcServerInterceptor):
 
     "Prometheus histogram for tracking response times of gRPC methods."
     RESPONSE_TIME_SECONDS = Histogram(
-        "response_time_seconds",
-        "Time spent processing request",
+        "grpc_response_time_seconds",
+        "Time spent processing gRPC request",
         labelnames=("package", "service", "method", "status_code"),
         buckets=TOTAL_BUCKETS,
+    )
+
+    "Prometheus gauge for tracking active gRPC requests."
+    ACTIVE_REQUESTS = Gauge(
+        "grpc_active_requests",
+        "Number of active gRPC requests",
+        labelnames=("package", "service", "method"),
     )
 
     def intercept(
@@ -52,7 +60,7 @@ class GrpcServerMetricInterceptor(BaseGrpcServerInterceptor):
         context: grpc.ServicerContext,
         method_name_model: MethodName,
     ) -> object:
-        """Intercepts a gRPC server call to measure response time and capture errors.
+        """Intercepts a gRPC server call to measure response time and track active requests.
 
         Args:
             method (Callable): The gRPC method being intercepted.
@@ -66,19 +74,21 @@ class GrpcServerMetricInterceptor(BaseGrpcServerInterceptor):
         Raises:
             Exception: If an exception occurs during the method execution, it is captured and logged.
         """
+        if not BaseConfig.global_config().PROMETHEUS.IS_ENABLED:
+            return method(request, context)
+
+        package = method_name_model.package
+        service = method_name_model.service
+        method_name = method_name_model.method
+
+        self.ACTIVE_REQUESTS.labels(package=package, service=service, method=method_name).inc()
+
+        start_time = time.time()
+        status_code = "OK"
+
         try:
-            # Skip metric collection if Prometheus is disabled
-            if not BaseConfig.global_config().PROMETHEUS.IS_ENABLED:
-                return method(request, context)
-
-            # Measure the start time
-            start_time = time.time()
-
-            # Execute the gRPC method
             result = method(request, context)
 
-            # Record the response time in the Prometheus histogram
-            status_code = "OK"
             if hasattr(context, "code") and callable(context.code):
                 code_method = cast("Callable[[], Any]", context.code)
                 code_obj = code_method()
@@ -86,27 +96,31 @@ class GrpcServerMetricInterceptor(BaseGrpcServerInterceptor):
                     code_name = getattr(code_obj, "name", None)
                     if code_name is not None:
                         status_code = code_name
-            self.RESPONSE_TIME_SECONDS.labels(
-                package=method_name_model.package,
-                service=method_name_model.service,
-                method=method_name_model.method,
-                status_code=status_code,
-            ).observe(time.time() - start_time)
         except Exception as exception:
             BaseUtils.capture_exception(exception)
             raise
         else:
             return result
+        finally:
+            duration = time.time() - start_time
+            self.RESPONSE_TIME_SECONDS.labels(
+                package=package,
+                service=service,
+                method=method_name,
+                status_code=status_code,
+            ).observe(duration)
+            self.ACTIVE_REQUESTS.labels(package=package, service=service, method=method_name).dec()
 
 
 class AsyncGrpcServerMetricInterceptor(BaseAsyncGrpcServerInterceptor):
     """An async gRPC server interceptor for collecting and reporting metrics using Prometheus.
 
     This interceptor measures the response time of async gRPC methods and records it in a Prometheus histogram.
+    It also tracks the number of active requests using a Prometheus gauge.
     It also captures errors and logs them for monitoring purposes.
     """
 
-    from prometheus_client import Histogram
+    from prometheus_client import Gauge, Histogram
 
     "Buckets for measuring response times between 0 and 1 second."
     ZERO_TO_ONE_SECONDS_BUCKETS: ClassVar[list[float]] = [i / 1000 for i in range(0, 1000, 5)]
@@ -124,10 +138,17 @@ class AsyncGrpcServerMetricInterceptor(BaseAsyncGrpcServerInterceptor):
 
     "Prometheus histogram for tracking response times of async gRPC methods."
     RESPONSE_TIME_SECONDS = Histogram(
-        "grpc_async_server_response_time_seconds",
+        "grpc_async_response_time_seconds",
         "Time spent processing async gRPC request",
         labelnames=("package", "service", "method", "status_code"),
         buckets=TOTAL_BUCKETS,
+    )
+
+    "Prometheus gauge for tracking active async gRPC requests."
+    ACTIVE_REQUESTS = Gauge(
+        "grpc_async_active_requests",
+        "Number of active async gRPC requests",
+        labelnames=("package", "service", "method"),
     )
 
     async def intercept(
@@ -137,7 +158,7 @@ class AsyncGrpcServerMetricInterceptor(BaseAsyncGrpcServerInterceptor):
         context: grpc.aio.ServicerContext,
         method_name_model: MethodName,
     ) -> object:
-        """Intercepts an async gRPC server call to measure response time and capture errors.
+        """Intercepts an async gRPC server call to measure response time and track active requests.
 
         Args:
             method (Callable): The async gRPC method being intercepted.
@@ -151,24 +172,25 @@ class AsyncGrpcServerMetricInterceptor(BaseAsyncGrpcServerInterceptor):
         Raises:
             Exception: If an exception occurs during the method execution, it is captured and logged.
         """
+        if not BaseConfig.global_config().PROMETHEUS.IS_ENABLED:
+            return await method(request, context)
+
+        package = method_name_model.package
+        service = method_name_model.service
+        method_name = method_name_model.method
+
+        self.ACTIVE_REQUESTS.labels(package=package, service=service, method=method_name).inc()
+
+        start_time = asyncio.get_event_loop().time()
+        status_code = "OK"
+
         try:
-            # Skip metric collection if Prometheus is disabled
-            if not BaseConfig.global_config().PROMETHEUS.IS_ENABLED:
-                return await method(request, context)
-
-            # Measure the start time using asyncio event loop time for better precision
-            start_time = asyncio.get_event_loop().time()
-            status_code = "OK"
-
             try:
-                # Execute the async gRPC method
                 result = await method(request, context)
 
-                # Get the actual status code from context
                 if hasattr(context, "code") and context.code():
                     status_code = context.code().name
             except Exception as e:
-                # Determine error status code
                 if isinstance(e, grpc.aio.AioRpcError):
                     code_obj = e.code()
                     if code_obj is not None:
@@ -188,14 +210,14 @@ class AsyncGrpcServerMetricInterceptor(BaseAsyncGrpcServerInterceptor):
             else:
                 return result
             finally:
-                # Record the response time in the Prometheus histogram
                 duration = asyncio.get_event_loop().time() - start_time
                 self.RESPONSE_TIME_SECONDS.labels(
-                    package=method_name_model.package,
-                    service=method_name_model.service,
-                    method=method_name_model.method,
+                    package=package,
+                    service=service,
+                    method=method_name,
                     status_code=status_code,
                 ).observe(duration)
+                self.ACTIVE_REQUESTS.labels(package=package, service=service, method=method_name).dec()
 
         except Exception as exception:
             BaseUtils.capture_exception(exception)
