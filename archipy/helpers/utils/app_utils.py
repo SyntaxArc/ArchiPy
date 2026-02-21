@@ -198,6 +198,36 @@ class FastAPIUtils:
             logger.exception("Failed to initialize Elastic APM")
 
     @staticmethod
+    def setup_metric_interceptor(app: FastAPI, config: BaseConfig) -> None:
+        """Configures metric interceptor for FastAPI if Prometheus is enabled.
+
+        Args:
+            app (FastAPI): The FastAPI application instance.
+            config (BaseConfig): The configuration object containing Prometheus settings.
+        """
+        if not config.PROMETHEUS.IS_ENABLED:
+            return
+
+        try:
+            import socket
+
+            from prometheus_client import start_http_server
+
+            from archipy.helpers.interceptors.fastapi.metric.interceptor import FastAPIMetricInterceptor
+
+            # Conditionally start Prometheus server (check if already running)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            result = sock.connect_ex(("localhost", config.PROMETHEUS.SERVER_PORT))
+            sock.close()
+
+            if result != 0:
+                start_http_server(config.PROMETHEUS.SERVER_PORT)
+
+            app.add_middleware(FastAPIMetricInterceptor)  # type: ignore[arg-type]
+        except Exception:
+            logger.exception("Failed to initialize Metric Interceptor")
+
+    @staticmethod
     def setup_exception_handlers(app: FastAPI) -> None:
         """Configures exception handlers for the FastAPI application.
 
@@ -382,6 +412,7 @@ class AppUtils:
         FastAPIUtils.setup_sentry(config)
         FastAPIUtils.setup_cors(app, config)
         FastAPIUtils.setup_elastic_apm(app, config)
+        FastAPIUtils.setup_metric_interceptor(app, config)
 
         if configure_exception_handlers:
             FastAPIUtils.setup_exception_handlers(app)
