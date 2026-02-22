@@ -2,6 +2,46 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v4.3.0] - 2026-02-22
+
+### Added
+
+#### Helpers - Utils
+
+- **Prometheus Utilities** - Added shared Prometheus server management module
+    - Implemented `prometheus_utils` module with `is_prometheus_server_running()` helper
+    - Added `start_prometheus_server_if_needed()` helper for automatic Prometheus server lifecycle management
+    - Prevents duplicate Prometheus server starts across FastAPI, gRPC, and Temporal adapters
+    - Supports port availability checking before starting Prometheus HTTP server
+
+#### Adapters - Temporal
+
+- **Prometheus Metrics Integration** - Added Temporal metrics collection with Prometheus
+    - Implemented `TemporalRuntimeManager` singleton for managing Runtime instances with telemetry
+    - Integrated Runtime with PrometheusConfig into TemporalAdapter client and Worker
+    - Added `ENABLE_METRICS` and `METRICS_PORT` configuration options to `TemporalConfig`
+    - Temporal SDK metrics now exported to Prometheus when metrics are enabled
+    - Metrics include workflow operations, activity executions, and task queue operations
+    - Added BDD tests for Temporal metrics collection scenarios (`temporal_metric_interceptor.feature`)
+
+### Changed
+
+#### Configs
+
+- **Prometheus Configuration** - Enhanced BaseConfig with Prometheus support
+    - Added `PROMETHEUS.IS_ENABLED` flag for enabling/disabling Prometheus metrics globally
+    - Added `PROMETHEUS.SERVER_PORT` configuration for Prometheus HTTP server port
+    - Updated `.env.test` with Prometheus configuration for testing
+    - Added Temporal metrics configuration (`TEMPORAL.ENABLE_METRICS`, `TEMPORAL.METRICS_PORT`)
+
+### Fixed
+
+#### Adapters - Redis
+
+- **Type Safety** - Fixed Redis adapter type handling
+    - Added type check for unexpected awaitable results from sync Redis client in `spop()` method
+    - Prevents async/sync mismatch errors in Redis operations
+
 ## [v4.2.0] - 2026-02-21
 
 ### Added
@@ -20,16 +60,33 @@ All notable changes to ArchiPy are documented in this changelog, organized by ve
     - Implemented `_is_prometheus_server_running()` helper to detect existing Prometheus servers
     - Prevents duplicate Prometheus server starts across FastAPI and gRPC applications
     - Checks port availability before starting Prometheus HTTP server
+    - Added `prometheus_utils` module with `is_prometheus_server_running()` and `start_prometheus_server_if_needed()` helpers for shared Prometheus server management across adapters
 
 #### Adapters - Temporal
+
+- **Prometheus Metrics Integration** - Added Temporal metrics collection with Prometheus
+    - Implemented `TemporalRuntimeManager` singleton for managing Runtime instances with telemetry
+    - Integrated Runtime with PrometheusConfig into TemporalAdapter client and Worker
+    - Added `ENABLE_METRICS` and `METRICS_PORT` configuration options to `TemporalConfig`
+    - Temporal SDK metrics now exported to Prometheus when metrics are enabled
+    - Metrics include workflow operations, activity executions, and task queue operations
 
 - **BDD Test Coverage** - Added comprehensive Behave tests for Temporal adapter
     - Implemented persistent event loop per scenario to keep workers alive across steps
     - Added test workflows and activities for various scenarios (greeting, signal/query, timeout, retry)
     - Integrated Temporal container support with dev mode SQLite backend
     - Fixed workflow execution to use `run_async` helper for proper async handling
+    - Added BDD tests for Temporal metrics collection scenarios
 
 ### Changed
+
+#### Configs
+
+- **Prometheus Configuration** - Added Prometheus configuration to BaseConfig
+    - Added `PROMETHEUS.IS_ENABLED` flag for enabling/disabling Prometheus metrics globally
+    - Added `PROMETHEUS.SERVER_PORT` configuration for Prometheus HTTP server port
+    - Updated `.env.test` with Prometheus configuration for testing
+    - Added Temporal metrics configuration (`TEMPORAL.ENABLE_METRICS`, `TEMPORAL.METRICS_PORT`)
 
 #### Adapters - StarRocks
 
@@ -63,6 +120,12 @@ All notable changes to ArchiPy are documented in this changelog, organized by ve
     - Refactored container tag validation logic in `ContainerManager`
 
 ### Fixed
+
+#### Adapters - Redis
+
+- **Type Safety** - Fixed Redis adapter type handling
+    - Added type check for unexpected awaitable results from sync Redis client in `spop()` method
+    - Prevents async/sync mismatch errors in Redis operations
 
 #### Type Safety
 
