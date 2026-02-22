@@ -389,13 +389,18 @@ def step_execute_workflow_with_arg(context, workflow_name, arg):
     workflow_class = workflow_map.get(workflow_name)
     assert workflow_class is not None, f"Unknown workflow: {workflow_name}"
 
+    # Use task queue from last worker if available, otherwise default to "test-queue"
+    task_queue = "test-queue"
+    if hasattr(scenario_context, "last_worker") and scenario_context.last_worker:
+        task_queue = scenario_context.last_worker.task_queue
+
     async def run():
-        result = await adapter.execute_workflow(workflow_class, arg, task_queue="test-queue")
+        result = await adapter.execute_workflow(workflow_class, arg, task_queue=task_queue)
         return result
 
     result = run_async(context, run())
     scenario_context.workflow_result = result
-    context.logger.info(f"Executed workflow {workflow_name}, result: {result}")
+    context.logger.info(f"Executed workflow {workflow_name} on queue {task_queue}, result: {result}")
 
 
 @when('I cancel workflow "{workflow_id}"')

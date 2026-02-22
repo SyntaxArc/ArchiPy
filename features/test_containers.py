@@ -204,6 +204,12 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
         if self._is_running:
             return self._container
 
+        # Recreate container if it was stopped
+        if self._container is None:
+            self._container = RedisContainer(self.image)
+            if self.config.PASSWORD:
+                self._container.with_env("REDIS_PASSWORD", self.config.PASSWORD)
+
         self._container.start()
         self._is_running = True
 
@@ -272,6 +278,19 @@ class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
         if self._is_running:
             return self._container
 
+        # Recreate container if it was stopped
+        if self._container is None:
+            dbname = self.database or "test_db"
+            username = self.username or "test_user"
+            password = self.password or "test_password"
+
+            self._container = PostgresContainer(
+                image=self.image,
+                dbname=dbname,
+                username=username,
+                password=password,
+            )
+
         self._container.start()
         self._is_running = True
 
@@ -339,6 +358,19 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
         if self._is_running:
             return self._container
 
+        # Recreate container if it was stopped
+        if self._container is None:
+            username = self.admin_username or "admin"
+            password = self.admin_password or "admin"
+
+            self._container = KeycloakContainer(
+                image=self.image,
+                username=username,
+                password=password,
+            )
+            # enable Organizations feature for Keycloak 25+
+            self._container.with_command("start-dev --features organization")
+
         self._container.start()
         self._is_running = True
 
@@ -404,6 +436,19 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         if self._is_running:
             return self._container
 
+        # Recreate container if it was stopped
+        if self._container is None:
+            self._container = DockerContainer(self.image)
+            self._container.with_env("discovery.type", "single-node")
+            self._container.with_env("xpack.security.enabled", "true")
+            if self.password:
+                self._container.with_env("ELASTIC_PASSWORD", self.password)
+            self._container.with_env("cluster.name", self.cluster_name)
+            # Limit memory to prevent OOM kills (ES_JAVA_OPTS sets JVM heap size)
+            self._container.with_env("ES_JAVA_OPTS", "-Xms512m -Xmx512m")
+            self._container.with_env("bootstrap.memory_lock", "false")
+            self._container.with_exposed_ports(9200)
+
         # Start the container
         self._container.start()
 
@@ -462,6 +507,10 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
         """Start the Kafka container."""
         if self._is_running:
             return self._container
+
+        # Recreate container if it was stopped
+        if self._container is None:
+            self._container = KafkaContainer(image=self.image).with_kraft()
 
         self._container.start()
         self._is_running = True
@@ -527,6 +576,14 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
         """Start the MinIO container."""
         if self._is_running:
             return self._container
+
+        # Recreate container if it was stopped
+        if self._container is None:
+            self._container = MinioContainer(
+                image=self.image,
+                access_key=self.access_key,
+                secret_key=self.secret_key,
+            )
 
         try:
             self._container.start()
@@ -644,6 +701,13 @@ class ScyllaDBTestContainer(metaclass=Singleton, thread_safe=True):
         # Pre-flight check: verify host AIO configuration
         self._check_aio_max_nr()
 
+        # Recreate container if it was stopped
+        if self._container is None:
+            self._container = DockerContainer(self.image)
+            self._container.with_exposed_ports(9042)  # CQL native transport port
+            # Add environment variables for single-node configuration
+            self._container.with_env("SCYLLA_ARGS", "--smp 1 --memory 750M")
+
         # Start the container
         self._container.start()
 
@@ -726,6 +790,13 @@ class StarRocksTestContainer(metaclass=Singleton, thread_safe=True):
         """
         if self._is_running:
             return self._container
+
+        # Recreate container if it was stopped
+        if self._container is None:
+            self._container = DockerContainer(self.image)
+            # Expose ports: 9030 (MySQL protocol), 8030 (FE HTTP), 8040 (BE HTTP)
+            # These will be mapped to random available host ports automatically
+            self._container.with_exposed_ports(9030, 8030, 8040)
 
         # Start the container
         self._container.start()
@@ -846,6 +917,20 @@ class TemporalContainer(metaclass=Singleton, thread_safe=True):
         """
         if self._is_running:
             return self._container
+
+        # Recreate container if it was stopped
+        if self._container is None:
+            global_config = BaseConfig.global_config()
+            self.image = global_config.TEMPORAL__IMAGE
+
+            # Configure Temporal server in development mode with SQLite
+            self._container = DockerContainer(self.image)
+            self._container.with_exposed_ports(7233, 8233)
+
+            # Use development mode with embedded SQLite
+            self._container.with_command(
+                "server start-dev --namespace default --db-filename /tmp/temporal.db --ip 0.0.0.0",
+            )
 
         # Start Temporal development server
         logger.info("Starting Temporal development server...")

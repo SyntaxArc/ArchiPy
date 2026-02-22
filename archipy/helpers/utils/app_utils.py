@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import socket
 from collections.abc import Callable
 from concurrent import futures
 from contextlib import AbstractAsyncContextManager
@@ -12,6 +11,7 @@ from pydantic import ValidationError
 
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers.utils.base_utils import BaseUtils
+from archipy.helpers.utils.prometheus_utils import is_prometheus_server_running
 from archipy.models.errors import (
     BaseError,
     InvalidArgumentError,
@@ -20,8 +20,8 @@ from archipy.models.errors import (
 )
 
 if TYPE_CHECKING:
-    from grpc.experimental import aio as grpc_aio
-    from grpc.experimental.aio import Server as GrpcAioServer
+    from grpc import aio as grpc_aio
+    from grpc.aio import Server as GrpcAioServer
 
     CreateGrpcServerType = Callable[..., GrpcAioServer]
 else:
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import grpc
-    from grpc.experimental import aio as grpc_aio
+    from grpc import aio as grpc_aio
 
     create_grpc_server: CreateGrpcServerType = grpc_aio.server
     GRPC_APP = True
@@ -53,19 +53,8 @@ except ImportError:
     FASTAPI_APP = False
 
 
-def _is_prometheus_server_running(port: int) -> bool:
-    """Check if Prometheus server is already running on the specified port.
-
-    Args:
-        port (int): The port number to check.
-
-    Returns:
-        bool: True if server is running, False otherwise.
-    """
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    result = sock.connect_ex(("localhost", port))
-    sock.close()
-    return result == 0
+# Backward compatibility alias
+_is_prometheus_server_running = is_prometheus_server_running
 
 
 class FastAPIExceptionHandler:
@@ -225,12 +214,10 @@ class FastAPIUtils:
             return
 
         try:
-            from prometheus_client import start_http_server
-
             from archipy.helpers.interceptors.fastapi.metric.interceptor import FastAPIMetricInterceptor
+            from archipy.helpers.utils.prometheus_utils import start_prometheus_server_if_needed
 
-            if not _is_prometheus_server_running(config.PROMETHEUS.SERVER_PORT):
-                start_http_server(config.PROMETHEUS.SERVER_PORT)
+            start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
 
             app.add_middleware(FastAPIMetricInterceptor)  # type: ignore[arg-type]
         except Exception:
@@ -317,12 +304,10 @@ class AsyncGrpcAPIUtils:
             return
 
         try:
-            from prometheus_client import start_http_server
-
             from archipy.helpers.interceptors.grpc.metric.server_interceptor import AsyncGrpcServerMetricInterceptor
+            from archipy.helpers.utils.prometheus_utils import start_prometheus_server_if_needed
 
-            if not _is_prometheus_server_running(config.PROMETHEUS.SERVER_PORT):
-                start_http_server(config.PROMETHEUS.SERVER_PORT)
+            start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
 
             interceptors.append(AsyncGrpcServerMetricInterceptor())
 
@@ -363,12 +348,10 @@ class GrpcAPIUtils:
             return
 
         try:
-            from prometheus_client import start_http_server
-
             from archipy.helpers.interceptors.grpc.metric.server_interceptor import GrpcServerMetricInterceptor
+            from archipy.helpers.utils.prometheus_utils import start_prometheus_server_if_needed
 
-            if not _is_prometheus_server_running(config.PROMETHEUS.SERVER_PORT):
-                start_http_server(config.PROMETHEUS.SERVER_PORT)
+            start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
 
             interceptors.append(GrpcServerMetricInterceptor())
 
@@ -448,7 +431,7 @@ class AppUtils:
         AsyncGrpcAPIUtils.setup_metric_interceptor(config, async_interceptors)
 
         if create_grpc_server is None:
-            raise ImportError("grpc.experimental.aio is not available")
+            raise ImportError("grpc.aio is not available")
         app = create_grpc_server(
             futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),
             interceptors=async_interceptors,

@@ -1,3 +1,4 @@
+@needs-temporal
 Feature: Metric Interceptor
 
   Scenario Outline: Interceptor is added when Prometheus is enabled
@@ -87,3 +88,49 @@ Feature: Metric Interceptor
     When multiple GET requests are made to "/users/123"
     Then all metrics should have the same path_template label "/users/{id}"
     And the cache should have stored the path template
+
+  Scenario: Temporal metrics are not collected when disabled
+    Given a Temporal test container is running
+    And a Temporal worker manager is configured
+    And a Temporal adapter with metrics disabled
+    And a worker is started for task queue "no-metrics-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "TestUser"
+    Then Temporal metrics should not be present in Prometheus registry
+
+  Scenario: Temporal metrics are collected when enabled
+    Given a Temporal test container is running
+    And a Temporal worker manager is configured
+    And a Temporal adapter with metrics enabled
+    And a worker is started for task queue "metrics-test-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "TestUser"
+    Then Temporal metrics should be present in Prometheus registry
+    And Temporal client metrics should include workflow operations
+    And Temporal worker metrics should include task execution
+
+  Scenario: Temporal worker metrics track task queue operations
+    Given a Temporal test container is running
+    And a Temporal worker manager is configured
+    And a Temporal adapter with metrics enabled
+    And a worker is started for task queue "worker-metrics-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "TestUser"
+    Then Temporal worker task execution metrics should be recorded
+    And worker metrics should include task queue labels
+
+  Scenario: Temporal activity execution metrics are recorded
+    Given a Temporal test container is running
+    And a Temporal worker manager is configured
+    And a Temporal adapter with metrics enabled
+    And a worker is started for task queue "activity-metrics-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "TestData"
+    Then Temporal activity execution metrics should be recorded
+    And activity metrics should include activity type information
+
+  Scenario: Temporal workflow execution count increments correctly
+    Given a Temporal test container is running
+    And a Temporal worker manager is configured
+    And a Temporal adapter with metrics enabled
+    And a worker is started for task queue "count-metrics-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "User1"
+    And I execute workflow "GreetingWorkflow" with argument "User2"
+    And I execute workflow "GreetingWorkflow" with argument "User3"
+    Then Temporal workflow execution count metrics should show at least 3 executions

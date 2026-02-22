@@ -29,6 +29,7 @@ from archipy.models.errors import InvalidArgumentError
 from archipy.models.errors.base_error import BaseError
 
 from .ports import TemporalPort
+from .runtime import TemporalRuntimeManager
 
 T = TypeVar("T")
 
@@ -85,6 +86,16 @@ class TemporalAdapter(TemporalPort):
                 if self._has_tls_config():
                     tls_config = self._build_tls_config()
                     connect_kwargs["tls"] = tls_config
+
+                # Configure Runtime with Prometheus telemetry if enabled
+                if self.config.ENABLE_METRICS:
+                    runtime_manager = TemporalRuntimeManager()
+                    runtime = runtime_manager.get_runtime(
+                        prometheus_enabled=True,
+                        prometheus_port=self.config.METRICS_PORT,
+                    )
+                    if runtime is not None:
+                        connect_kwargs["runtime"] = runtime
 
                 self._client = await Client.connect(
                     f"{self.config.HOST}:{self.config.PORT}",

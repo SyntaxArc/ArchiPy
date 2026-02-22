@@ -31,30 +31,6 @@ class ElasticsearchConfig(BaseModel):
 
     Contains settings related to Elasticsearch server connectivity, authentication,
     TLS/SSL, request handling, node status management, and batch operation parameters.
-
-    Attributes:
-        HOSTS (list[str]): List of Elasticsearch server hosts (e.g., ['https://localhost:9200']).
-        HTTP_USER_NAME (str | None): Username for HTTP authentication.
-        HTTP_PASSWORD (SecretStr | None): Password for HTTP authentication.
-        CA_CERTS (str | None): Path to CA bundle for SSL verification.
-        SSL_ASSERT_FINGERPRINT (str | None): SSL certificate fingerprint for verification.
-        VERIFY_CERTS (bool): Whether to verify SSL certificates.
-        CLIENT_CERT (str | None): Path to client certificate for TLS authentication.
-        CLIENT_KEY (str | None): Path to client key for TLS authentication.
-        HTTP_COMPRESS (bool): Whether to enable HTTP compression (gzip).
-        REQUEST_TIMEOUT (float | None): Timeout for HTTP requests in seconds.
-        MAX_RETRIES (int): Maximum number of retries per request.
-        RETRY_ON_TIMEOUT (bool): Whether to retry on connection timeouts.
-        RETRY_ON_STATUS (tuple[int, ...]): HTTP status codes to retry on.
-        IGNORE_STATUS (tuple[int, ...]): HTTP status codes to ignore as errors.
-        SNIFF_ON_START (bool): Whether to sniff nodes on client instantiation.
-        SNIFF_BEFORE_REQUESTS (bool): Whether to sniff nodes before requests.
-        SNIFF_ON_NODE_FAILURE (bool): Whether to sniff nodes on node failure.
-        MIN_DELAY_BETWEEN_SNIFFING (float): Minimum delay between sniffing attempts in seconds.
-        NODE_SELECTOR_CLASS (str): Node selector strategy ('round_robin' or 'random').
-        CONNECTIONS_PER_NODE (int): Number of HTTP connections per node.
-        DEAD_NODE_BACKOFF_FACTOR (float): Factor for calculating node timeout duration after failures.
-        MAX_DEAD_NODE_BACKOFF (float): Maximum timeout duration for a dead node in seconds.
     """
 
     HOSTS: list[str] = Field(default=["https://localhost:9200"], description="List of Elasticsearch server hosts")
@@ -821,29 +797,24 @@ class TemporalConfig(BaseModel):
 
     Controls connection parameters, security settings, and timeout configurations
     for Temporal workflow orchestration services.
-
-    Attributes:
-        HOST (str): Temporal server host address.
-        PORT (int): Temporal server port number.
-        NAMESPACE (str): Temporal namespace for workflow isolation.
-        TASK_QUEUE (str): Default task queue for workflow and activity execution.
-        TLS_CA_CERT (str | None): Path to TLS CA certificate for secure connections.
-        TLS_CLIENT_CERT (str | None): Path to TLS client certificate for mutual authentication.
-        TLS_CLIENT_KEY (str | None): Path to TLS client private key.
-        WORKFLOW_EXECUTION_TIMEOUT (int): Maximum workflow execution time in seconds.
-        WORKFLOW_RUN_TIMEOUT (int): Maximum single workflow run time in seconds.
-        WORKFLOW_TASK_TIMEOUT (int): Maximum workflow task processing time in seconds.
-        ACTIVITY_START_TO_CLOSE_TIMEOUT (int): Maximum activity execution time in seconds.
-        ACTIVITY_HEARTBEAT_TIMEOUT (int): Activity heartbeat timeout in seconds.
-        RETRY_MAXIMUM_ATTEMPTS (int): Maximum retry attempts for failed activities.
-        RETRY_BACKOFF_COEFFICIENT (float): Backoff multiplier for retry delays.
-        RETRY_MAXIMUM_INTERVAL (int): Maximum retry interval in seconds.
     """
 
     HOST: str = Field(default="localhost", description="Temporal server host address")
     PORT: int = Field(default=7233, ge=1, le=65535, description="Temporal server port number")
     NAMESPACE: str = Field(default="default", description="Temporal namespace for workflow isolation")
     TASK_QUEUE: str = Field(default="task-queue", description="Default task queue name")
+
+    # Metrics Configuration
+    ENABLE_METRICS: bool = Field(
+        default=False,
+        description="Enable Prometheus metrics collection for Temporal workflows and activities",
+    )
+    METRICS_PORT: int = Field(
+        default=8201,
+        ge=1,
+        le=65535,
+        description="Port for Temporal Prometheus metrics endpoint (separate from main Prometheus port)",
+    )
 
     # TLS Configuration
     TLS_CA_CERT: str | None = Field(default=None, description="Path to TLS CA certificate")
@@ -925,29 +896,6 @@ class ScyllaDBConfig(BaseModel):
     Contains settings related to ScyllaDB cluster connectivity, authentication,
     compression, consistency levels, connection management, retry policies,
     prepared statement caching, and health checks.
-
-    Attributes:
-        CONTACT_POINTS (list[str]): List of ScyllaDB node addresses.
-        PORT (int): CQL native transport port number.
-        KEYSPACE (str | None): Default keyspace name.
-        USERNAME (str | None): Username for authentication.
-        PASSWORD (SecretStr | None): Password for authentication.
-        PROTOCOL_VERSION (int): Protocol version to use.
-        COMPRESSION (bool): Enable LZ4 compression.
-        CONNECT_TIMEOUT (int): Connection timeout in seconds.
-        REQUEST_TIMEOUT (int): Request timeout in seconds.
-        CONSISTENCY_LEVEL (Literal): Default consistency level.
-        DISABLE_SHARD_AWARENESS (bool): Disable shard awareness (default: False).
-        RETRY_POLICY (Literal): Retry policy type (default: "EXPONENTIAL_BACKOFF").
-            Options: "EXPONENTIAL_BACKOFF", "FALLTHROUGH", "DOWNGRADING_CONSISTENCY".
-        RETRY_MAX_NUM_RETRIES (float): Maximum number of retries for ExponentialBackoffRetryPolicy (default: 3.0).
-        RETRY_MIN_INTERVAL (float): Minimum interval in seconds between retries (default: 0.1).
-        RETRY_MAX_INTERVAL (float): Maximum interval in seconds between retries (default: 10.0).
-        ENABLE_PREPARED_STATEMENT_CACHE (bool): Enable prepared statement caching (default: True).
-        PREPARED_STATEMENT_CACHE_SIZE (int): Maximum cached prepared statements (default: 100).
-        PREPARED_STATEMENT_CACHE_TTL_SECONDS (int): TTL for cache in seconds (default: 3600).
-        HEALTH_CHECK_TIMEOUT (int): Timeout for health check queries in seconds (default: 5).
-        ENABLE_CONNECTION_POOL_MONITORING (bool): Enable pool monitoring (default: False).
     """
 
     CONTACT_POINTS: list[str] = Field(

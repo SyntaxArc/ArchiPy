@@ -622,6 +622,269 @@ class RobustUserActivity(AtomicActivity[dict, dict]):
 6. **Monitoring**: Leverage workflow logging and error tracking
 7. **Timeouts**: Set appropriate timeouts for workflows and activities
 8. **Retries**: Configure retry policies based on error types and business requirements
+9. **Metrics**: Enable Prometheus metrics for production observability
+
+## Prometheus Metrics Integration
+
+The Temporal adapter supports comprehensive metrics collection via Prometheus when enabled in configuration. The Temporal SDK automatically emits detailed metrics about workflow and activity execution, task queue operations, and worker performance.
+
+### Configuration
+
+Enable Prometheus metrics for Temporal by setting both the global Prometheus flag and the Temporal-specific metrics flag:
+
+```python
+import logging
+
+from archipy.configs.base_config import BaseConfig
+from archipy.configs.config_template import TemporalConfig, PrometheusConfig
+from archipy.adapters.temporal import TemporalAdapter, TemporalWorkerManager
+from archipy.adapters.temporal.runtime import TemporalRuntimeManager
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# Configure global Prometheus settings
+config = BaseConfig()
+config.PROMETHEUS = PrometheusConfig(
+    IS_ENABLED=True,      # Enable Prometheus globally
+    SERVER_PORT=8200      # Metrics endpoint port
+)
+
+# Configure Temporal with metrics enabled
+temporal_config = TemporalConfig(
+    HOST="localhost",
+    PORT=7233,
+    NAMESPACE="default",
+    TASK_QUEUE="my-task-queue",
+    ENABLE_METRICS=True   # Enable Temporal metrics
+)
+
+# Create adapter - metrics will be automatically configured
+# The TemporalRuntimeManager singleton ensures consistent Runtime across all clients/workers
+temporal_adapter = TemporalAdapter(temporal_config)
+worker_manager = TemporalWorkerManager(temporal_config)
+
+logger.info("Temporal adapter created with Prometheus metrics enabled")
+```
+
+### Environment-Based Configuration
+
+```python
+import os
+
+# Configure using environment variables
+temporal_config = TemporalConfig(
+    HOST=os.getenv("TEMPORAL_HOST", "localhost"),
+    PORT=int(os.getenv("TEMPORAL_PORT", "7233")),
+    NAMESPACE=os.getenv("TEMPORAL_NAMESPACE", "default"),
+    TASK_QUEUE=os.getenv("TEMPORAL_TASK_QUEUE", "task-queue"),
+    ENABLE_METRICS=os.getenv("TEMPORAL_METRICS_ENABLED", "false").lower() == "true"
+)
+
+# Or via pyproject.toml [tool.configs] section
+# TEMPORAL__ENABLE_METRICS = true
+# TEMPORAL__HOST = "temporal.production.com"
+```
+
+### Available Metrics
+
+When metrics are enabled, the Temporal SDK automatically exposes comprehensive metrics at `http://localhost:8200/metrics` (or your configured port). These metrics are shared with any existing FastAPI or gRPC metrics.
+
+#### Client-Side Metrics
+
+Metrics emitted by the Temporal client (adapter):
+
+- `temporal_request_*` - Client request counts and latency
+- `temporal_long_request_*` - Long-polling request metrics
+- `temporal_workflow_*` - Workflow operation metrics (start, execute, cancel, terminate)
+- `temporal_sticky_cache_*` - Sticky workflow cache statistics
+
+#### Worker-Side Metrics
+
+Metrics emitted by Temporal workers:
+
+- `temporal_worker_task_slots_available` - Available task slots (gauge)
+- `temporal_worker_task_slots_used` - Task slots currently in use (gauge)
+- `temporal_worker_task_queue_poll_*` - Task queue polling metrics
+- `temporal_workflow_task_execution_*` - Workflow task execution metrics
+- `temporal_activity_task_execution_*` - Activity task execution metrics
+- `temporal_workflow_task_replay_latency` - Workflow replay latency histogram
+- `temporal_activity_execution_*` - Activity execution counts and latency
+
+### Prometheus Queries
+
+Example PromQL queries for monitoring Temporal workflows:
+
+```promql
+# Workflow execution rate (per second)
+rate(temporal_workflow_task_execution_total[5m])
+
+# Average workflow task execution time
+rate(temporal_workflow_task_execution_latency_sum[5m])
+/ rate(temporal_workflow_task_execution_latency_count[5m])
+
+# Active workers by task queue
+temporal_worker_task_slots_used{task_queue="my-task-queue"}
+
+# Activity failure rate
+rate(temporal_activity_task_execution_failed_total[5m])
+
+# Task queue poll success rate
+rate(temporal_worker_task_queue_poll_succeed_total[5m])
+/ rate(temporal_worker_task_queue_poll_total[5m])
+
+# P95 activity execution latency
+histogram_quantile(0.95,
+  rate(temporal_activity_execution_latency_bucket[5m])
+)
+```
+
+### Grafana Dashboard
+
+Create a Grafana dashboard to visualize Temporal metrics:
+
+```json
+{
+  "dashboard": {
+    "title": "Temporal Workflows",
+    "panels": [
+      {
+        "title": "Workflow Execution Rate",
+        "targets": [{
+          "expr": "rate(temporal_workflow_task_execution_total[5m])"
+        }]
+      },
+      {
+        "title": "Active Workers",
+        "targets": [{
+          "expr": "temporal_worker_task_slots_used"
+        }]
+      },
+      {
+        "title": "Activity Success Rate",
+        "targets": [{
+          "expr": "rate(temporal_activity_task_execution_succeed_total[5m]) / rate(temporal_activity_task_execution_total[5m])"
+        }]
+      },
+      {
+        "title": "Workflow Task Latency (P95)",
+        "targets": [{
+          "expr": "histogram_quantile(0.95, rate(temporal_workflow_task_execution_latency_bucket[5m]))"
+        }]
+      }
+    ]
+  }
+}
+```
+
+### Complete Example with Metrics
+
+```python
+import asyncio
+import logging
+
+from archipy.adapters.temporal import TemporalAdapter, TemporalWorkerManager, BaseWorkflow
+from archipy.configs.base_config import BaseConfig
+from archipy.configs.config_template import TemporalConfig, PrometheusConfig
+from temporalio import workflow, activity
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# Configure Prometheus
+config = BaseConfig()
+config.PROMETHEUS = PrometheusConfig(IS_ENABLED=True, SERVER_PORT=8200)
+
+# Configure Temporal with metrics
+temporal_config = TemporalConfig(
+    HOST="localhost",
+    PORT=7233,
+    NAMESPACE="default",
+    TASK_QUEUE="metrics-demo",
+    ENABLE_METRICS=True
+)
+
+# Define workflow
+class MetricsWorkflow(BaseWorkflow[str, str]):
+    """Workflow with metrics collection."""
+
+    @workflow.run
+    async def run(self, name: str) -> str:
+        """Process with metrics tracking."""
+        self._log_workflow_event("workflow_started", {"name": name})
+
+        result = await self._execute_activity_with_retry(
+            greet_activity,
+            name
+        )
+
+        self._log_workflow_event("workflow_completed", {"result": result})
+        return result
+
+@activity.defn
+async def greet_activity(name: str) -> str:
+    """Activity with metrics tracking."""
+    logger.info(f"Processing greeting for {name}")
+    await asyncio.sleep(0.1)  # Simulate work
+    return f"Hello, {name}!"
+
+async def main() -> None:
+    """Run workflow with metrics collection."""
+    # Create adapter and worker
+    temporal_adapter = TemporalAdapter(temporal_config)
+    worker_manager = TemporalWorkerManager(temporal_config)
+
+    try:
+        # Start worker
+        worker_handle = await worker_manager.start_worker(
+            task_queue="metrics-demo",
+            workflows=[MetricsWorkflow],
+            activities=[greet_activity]
+        )
+        logger.info("Worker started with metrics enabled")
+
+        # Execute workflows - metrics will be collected
+        results = []
+        for i in range(10):
+            result = await temporal_adapter.execute_workflow(
+                MetricsWorkflow,
+                f"User{i}",
+                workflow_id=f"metrics-workflow-{i}",
+                task_queue="metrics-demo"
+            )
+            results.append(result)
+
+        logger.info(f"Completed {len(results)} workflows")
+        logger.info("Metrics available at http://localhost:8200/metrics")
+
+    finally:
+        await worker_manager.shutdown_all_workers()
+        await temporal_adapter.close()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### Monitoring Best Practices
+
+1. **Set Alerts**: Configure Prometheus alerts for high failure rates or latency
+2. **Track Task Queues**: Monitor task queue depths and worker availability
+3. **Workflow Duration**: Alert on workflows exceeding expected execution time
+4. **Activity Failures**: Track activity failure patterns for debugging
+5. **Worker Health**: Monitor worker task slot usage and availability
+6. **Resource Usage**: Correlate Temporal metrics with system resource metrics
+
+### Troubleshooting
+
+If metrics are not appearing:
+
+1. Verify `PROMETHEUS.IS_ENABLED = True` in global config
+2. Verify `ENABLE_METRICS = True` in TemporalConfig
+3. Check that the Prometheus endpoint is accessible: `curl http://localhost:8200/metrics`
+4. Ensure the `temporalio` package is installed with metrics support
+5. Check logs for any Runtime initialization errors
+
+The Temporal Runtime with Prometheus is created lazily on first client connection using a singleton manager (`TemporalRuntimeManager`) that ensures consistent Runtime configuration across all clients and workers. The singleton pattern prevents multiple Runtime instances and guarantees thread-safe access.
 
 ## See Also
 

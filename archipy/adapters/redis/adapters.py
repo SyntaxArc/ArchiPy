@@ -677,7 +677,10 @@ class RedisAdapter(RedisPort):
         Returns:
             bytes | float | int | str | list | None: Popped member(s) or None.
         """
-        return self.client.spop(name, count)
+        result = self.client.spop(name, count)
+        if isinstance(result, Awaitable):
+            raise TypeError("Unexpected awaitable from sync Redis client")
+        return result
 
     @override
     def srem(self, name: str, *values: bytes | str | float) -> RedisIntegerResponseType:
