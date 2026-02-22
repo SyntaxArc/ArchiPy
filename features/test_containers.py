@@ -7,7 +7,6 @@ from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 from testcontainers.kafka import KafkaContainer
 from testcontainers.keycloak import KeycloakContainer
-from testcontainers.minio import MinioContainer
 from testcontainers.postgres import PostgresContainer
 from testcontainers.redis import RedisContainer
 
@@ -552,11 +551,13 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
 
 @ContainerManager.register("minio")
 class MinioTestContainer(metaclass=Singleton, thread_safe=True):
+    """Custom MinIO test container using DockerContainer directly."""
+
     def __init__(self, config: MinioConfig | None = None, image: str | None = None) -> None:
         self.name = "minio"
         self.config = config or BaseConfig.global_config().MINIO
         self.image = image or BaseConfig.global_config().MINIO__IMAGE
-        self._container: MinioContainer | None = None
+        self._container: DockerContainer | None = None
         self._is_running: bool = False
 
         # Container properties
@@ -566,27 +567,35 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
         self.secret_key = self.config.SECRET_KEY or "minioadmin"
 
         # Set up the container
-        self._container = MinioContainer(
-            image=self.image,
-            access_key=self.access_key,
-            secret_key=self.secret_key,
+        self._container = (
+            DockerContainer(image=self.image)
+            .with_env("MINIO_ROOT_USER", self.access_key)
+            .with_env("MINIO_ROOT_PASSWORD", self.secret_key)
+            .with_command("server /data --console-address :9001")
+            .with_exposed_ports(9000, 9001)
         )
 
-    def start(self) -> MinioContainer:
+    def start(self) -> DockerContainer:
         """Start the MinIO container."""
         if self._is_running:
             return self._container
 
         # Recreate container if it was stopped
         if self._container is None:
-            self._container = MinioContainer(
-                image=self.image,
-                access_key=self.access_key,
-                secret_key=self.secret_key,
+            self._container = (
+                DockerContainer(image=self.image)
+                .with_env("MINIO_ROOT_USER", self.access_key)
+                .with_env("MINIO_ROOT_PASSWORD", self.secret_key)
+                .with_command("server /data --console-address :9001")
+                .with_exposed_ports(9000, 9001)
             )
 
         try:
             self._container.start()
+
+            # Wait for MinIO to be ready
+            wait_for_logs(self._container, "API:.*http://")
+
             self._is_running = True
 
             # Get dynamic host and port
@@ -596,6 +605,9 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
             # Update global config with actual container endpoint
             global_config = BaseConfig.global_config()
             global_config.MINIO.ENDPOINT = f"{self.host}:{self.port}"
+            global_config.MINIO.ACCESS_KEY = self.access_key
+            global_config.MINIO.SECRET_KEY = self.secret_key
+            global_config.MINIO.SECURE = False
 
             logger.info("MinIO container started on %s:%s", self.host, self.port)
             return self._container

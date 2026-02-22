@@ -1,10 +1,10 @@
 import logging
 from collections.abc import Callable
-from datetime import timedelta
 from typing import Any, NoReturn, TypeVar, override
 
-from minio import Minio
-from minio.error import S3Error
+import boto3
+from botocore.client import Config
+from botocore.exceptions import ClientError, ConnectionError as BotocoreConnectionError, EndpointConnectionError
 
 from archipy.adapters.minio.ports import MinioBucketType, MinioObjectType, MinioPolicyType, MinioPort
 from archipy.configs.base_config import BaseConfig
@@ -32,52 +32,73 @@ logger = logging.getLogger(__name__)
 
 
 class MinioExceptionHandlerMixin:
-    """Mixin class to handle MinIO/S3 exceptions in a consistent way."""
+    """Mixin class to handle boto3 S3 exceptions in a consistent way."""
 
     @classmethod
-    def _handle_s3_exception(cls, exception: S3Error, operation: str) -> NoReturn:
-        """Handle S3Error exceptions and map them to appropriate application errors.
+    def _handle_client_exception(cls, exception: ClientError, operation: str) -> NoReturn:
+        """Handle ClientError exceptions and map them to appropriate application errors.
 
         Args:
-            exception: The original S3Error exception
+            exception: The original ClientError exception from boto3
             operation: The name of the operation that failed
 
         Raises:
-            Various application-specific errors based on the exception type/content
+            Various application-specific errors based on the exception error code
         """
-        error_msg = str(exception).lower()
+        error_code = exception.response.get("Error", {}).get("Code", "")
 
         # Bucket existence errors
-        if "NoSuchBucket" in str(exception):
+        if error_code in ("NoSuchBucket", "404"):
             raise NotFoundError(resource_type="bucket") from exception
 
         # Object existence errors
-        if "NoSuchKey" in str(exception):
+        if error_code in ("NoSuchKey", "NoSuchObject"):
             raise NotFoundError(resource_type="object") from exception
 
         # Bucket ownership/existence errors
-        if "BucketAlreadyOwnedByYou" in str(exception) or "BucketAlreadyExists" in str(exception):
+        if error_code in ("BucketAlreadyOwnedByYou", "BucketAlreadyExists"):
             raise AlreadyExistsError(resource_type="bucket") from exception
 
         # Permission errors
-        if "AccessDenied" in str(exception):
+        if error_code in ("AccessDenied", "Forbidden", "403"):
             raise PermissionDeniedError(
                 additional_data={"details": f"Permission denied for operation: {operation}"},
             ) from exception
 
         # Resource limit errors
-        if "quota" in error_msg or "limit" in error_msg or "exceeded" in error_msg:
+        if error_code in ("QuotaExceeded", "LimitExceeded", "TooManyBuckets"):
             raise ResourceExhaustedError(resource_type="storage") from exception
 
-        # Connection/availability errors
-        if "timeout" in error_msg:
-            raise ConnectionTimeoutError(service="MinIO") from exception
-
-        if "unavailable" in error_msg or "connection" in error_msg:
-            raise ServiceUnavailableError(service="MinIO") from exception
+        # Invalid parameter errors
+        if error_code in ("InvalidArgument", "InvalidParameterValue", "InvalidRequest"):
+            raise InvalidArgumentError(argument_name=operation) from exception
 
         # Default: general storage error
-        raise StorageError(additional_data={"operation": operation}) from exception
+        raise StorageError(additional_data={"operation": operation, "error_code": error_code}) from exception
+
+    @classmethod
+    def _handle_connection_exception(cls, exception: Exception, _operation: str) -> NoReturn:
+        """Handle connection-related exceptions.
+
+        Args:
+            exception: The original exception
+            operation: The operation that failed
+
+        Raises:
+            ConnectionTimeoutError or NetworkError or ServiceUnavailableError
+        """
+        error_msg = str(exception).lower()
+
+        if "timeout" in error_msg or "timed out" in error_msg:
+            raise ConnectionTimeoutError(service="S3") from exception
+
+        if isinstance(exception, (BotocoreConnectionError, EndpointConnectionError)):
+            raise NetworkError(service="S3") from exception
+
+        if "unavailable" in error_msg or "connection" in error_msg:
+            raise ServiceUnavailableError(service="S3") from exception
+
+        raise NetworkError(service="S3") from exception
 
     @classmethod
     def _handle_general_exception(cls, exception: Exception, component: str) -> NoReturn:
@@ -94,18 +115,18 @@ class MinioExceptionHandlerMixin:
 
 
 class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
-    """Concrete implementation of the MinioPort interface using the minio library."""
+    """Concrete implementation of the MinioPort interface using boto3."""
 
     def __init__(self, minio_configs: MinioConfig | None = None) -> None:
         """Initialize MinioAdapter with configuration.
 
         Args:
-            minio_configs: Optional MinIO configuration. If None, global config is used.
+            minio_configs: Optional MinIO/S3 configuration. If None, global config is used.
 
         Raises:
-            ConfigurationError: If there is an error in the MinIO configuration.
+            ConfigurationError: If there is an error in the configuration.
             InvalidArgumentError: If required parameters are missing.
-            NetworkError: If there are network errors connecting to MinIO server.
+            NetworkError: If there are network errors connecting to S3/MinIO server.
         """
         try:
             # Determine config source (explicit or from global config)
@@ -126,27 +147,52 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             if not endpoint:
                 raise InvalidArgumentError(argument_name="endpoint")
 
-            self._adapter = Minio(
-                endpoint,
-                access_key=self.configs.ACCESS_KEY,
-                secret_key=self.configs.SECRET_KEY,
-                session_token=self.configs.SESSION_TOKEN,
-                secure=self.configs.SECURE,
-                region=self.configs.REGION,
+            # Determine SSL usage (USE_SSL overrides SECURE if set)
+            use_ssl = self.configs.USE_SSL if self.configs.USE_SSL is not None else self.configs.SECURE
+
+            # Construct endpoint URL with protocol
+            protocol = "https" if use_ssl else "http"
+            endpoint_url = f"{protocol}://{endpoint}"
+
+            # Configure boto3 client with retry and timeout settings
+            boto_config = Config(
+                signature_version=self.configs.SIGNATURE_VERSION,
+                s3={
+                    "addressing_style": self.configs.ADDRESSING_STYLE,
+                },
+                retries={
+                    "max_attempts": self.configs.RETRIES_MAX_ATTEMPTS,
+                    "mode": self.configs.RETRIES_MODE,
+                },
+                connect_timeout=self.configs.CONNECT_TIMEOUT,
+                read_timeout=self.configs.READ_TIMEOUT,
+                max_pool_connections=self.configs.MAX_POOL_CONNECTIONS,
+            )
+
+            # Create boto3 S3 client
+            self._client = boto3.client(
+                "s3",
+                endpoint_url=endpoint_url,
+                aws_access_key_id=self.configs.ACCESS_KEY,
+                aws_secret_access_key=self.configs.SECRET_KEY,
+                aws_session_token=self.configs.SESSION_TOKEN,
+                region_name=self.configs.REGION,
+                config=boto_config,
+                verify=self.configs.VERIFY_SSL,
             )
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
-        except S3Error as e:
-            error_msg = str(e).lower()
-            if "configuration" in error_msg:
-                raise ConfigurationError(operation="minio") from e
-            elif "connection" in error_msg:
-                raise NetworkError(service="MinIO") from e
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code", "")
+            if "configuration" in error_code.lower():
+                raise ConfigurationError(operation="s3") from e
             else:
-                raise InternalError(additional_data={"component": "MinIO"}) from e
+                raise InternalError(additional_data={"component": "S3"}) from e
+        except (BotocoreConnectionError, EndpointConnectionError) as e:
+            raise NetworkError(service="S3") from e
         except Exception as e:
-            raise InternalError(additional_data={"component": "MinIO"}) from e
+            raise InternalError(additional_data={"component": "S3"}) from e
 
     def clear_all_caches(self) -> None:
         """Clear all cached values."""
@@ -156,7 +202,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 attr.clear_cache()
 
     @override
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
+    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
     def bucket_exists(self, bucket_name: str) -> bool:
         """Check if a bucket exists.
 
@@ -168,28 +214,30 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
 
         Raises:
             InvalidArgumentError: If bucket_name is empty.
-            ServiceUnavailableError: If the MinIO service is unavailable.
+            ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
         try:
             if not bucket_name:
                 raise InvalidArgumentError(argument_name="bucket_name")
-            result = self._adapter.bucket_exists(bucket_name)
+            self._client.head_bucket(Bucket=bucket_name)
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
-        except S3Error as e:
-            if "NoSuchBucket" in str(e):
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code", "")
+            if error_code in ("NoSuchBucket", "404"):
                 return False
-            self._handle_s3_exception(e, "bucket_exists")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+            self._handle_client_exception(e, "bucket_exists")
+            raise
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "bucket_exists")
+            raise
         except Exception as e:
             self._handle_general_exception(e, "bucket_exists")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+            raise
         else:
-            # result is bool from minio client, compatible with return type
-            typed_result: bool = result
-            return typed_result
+            return True
 
     @override
     def make_bucket(self, bucket_name: str) -> None:
@@ -202,19 +250,31 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             InvalidArgumentError: If bucket_name is empty.
             AlreadyExistsError: If the bucket already exists.
             PermissionDeniedError: If permission to create bucket is denied.
-            ServiceUnavailableError: If the MinIO service is unavailable.
+            ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
         try:
             if not bucket_name:
                 raise InvalidArgumentError(argument_name="bucket_name")
-            self._adapter.make_bucket(bucket_name)
-            self.clear_all_caches()  # Clear cache since bucket list changed
+
+            # Handle region-specific bucket creation
+            create_bucket_config = {}
+            if self.configs.REGION and self.configs.REGION != "us-east-1":
+                create_bucket_config = {"CreateBucketConfiguration": {"LocationConstraint": self.configs.REGION}}
+
+            if create_bucket_config:
+                self._client.create_bucket(Bucket=bucket_name, **create_bucket_config)
+            else:
+                self._client.create_bucket(Bucket=bucket_name)
+
+            self.clear_all_caches()
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
-        except S3Error as e:
-            self._handle_s3_exception(e, "make_bucket")
+        except ClientError as e:
+            self._handle_client_exception(e, "make_bucket")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "make_bucket")
         except Exception as e:
             self._handle_general_exception(e, "make_bucket")
 
@@ -229,24 +289,26 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             InvalidArgumentError: If bucket_name is empty.
             NotFoundError: If the bucket does not exist.
             PermissionDeniedError: If permission to delete bucket is denied.
-            ServiceUnavailableError: If the MinIO service is unavailable.
+            ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
         try:
             if not bucket_name:
                 raise InvalidArgumentError(argument_name="bucket_name")
-            self._adapter.remove_bucket(bucket_name)
-            self.clear_all_caches()  # Clear cache since bucket list changed
+            self._client.delete_bucket(Bucket=bucket_name)
+            self.clear_all_caches()
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
-        except S3Error as e:
-            self._handle_s3_exception(e, "remove_bucket")
+        except ClientError as e:
+            self._handle_client_exception(e, "remove_bucket")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "remove_bucket")
         except Exception as e:
             self._handle_general_exception(e, "remove_bucket")
 
     @override
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=1)  # Cache for 5 minutes
+    @ttl_cache_decorator(ttl_seconds=300, maxsize=1)
     def list_buckets(self) -> list[MinioBucketType]:
         """List all buckets.
 
@@ -255,20 +317,26 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
 
         Raises:
             PermissionDeniedError: If permission to list buckets is denied.
-            ServiceUnavailableError: If the MinIO service is unavailable.
+            ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
         try:
-            buckets = self._adapter.list_buckets()
-        except S3Error as e:
-            self._handle_s3_exception(e, "list_buckets")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+            response = self._client.list_buckets()
+        except ClientError as e:
+            self._handle_client_exception(e, "list_buckets")
+            raise
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "list_buckets")
+            raise
         except Exception as e:
             self._handle_general_exception(e, "list_buckets")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+            raise
         else:
             # Convert buckets to MinioBucketType format
-            bucket_list: list[MinioBucketType] = [{"name": b.name, "creation_date": b.creation_date} for b in buckets]
+            buckets = response.get("Buckets", [])
+            bucket_list: list[MinioBucketType] = [
+                {"name": b["Name"], "creation_date": b["CreationDate"]} for b in buckets
+            ]
             return bucket_list
 
     @override
@@ -285,7 +353,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             NotFoundError: If the bucket does not exist.
             PermissionDeniedError: If permission to upload is denied.
             ResourceExhaustedError: If storage limits are exceeded.
-            ServiceUnavailableError: If the MinIO service is unavailable.
+            ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
         try:
@@ -301,14 +369,16 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                         else "file_path"
                     ),
                 )
-            self._adapter.fput_object(bucket_name, object_name, file_path)
+            self._client.upload_file(file_path, bucket_name, object_name)
             if hasattr(self.list_objects, "clear_cache"):
-                self.list_objects.clear_cache()  # Clear object list cache
+                self.list_objects.clear_cache()
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
-        except S3Error as e:
-            self._handle_s3_exception(e, "put_object")
+        except ClientError as e:
+            self._handle_client_exception(e, "put_object")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "put_object")
         except Exception as e:
             self._handle_general_exception(e, "put_object")
 
@@ -325,7 +395,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             InvalidArgumentError: If any required parameter is empty.
             NotFoundError: If the bucket or object does not exist.
             PermissionDeniedError: If permission to download is denied.
-            ServiceUnavailableError: If the MinIO service is unavailable.
+            ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
         try:
@@ -341,12 +411,14 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                         else "file_path"
                     ),
                 )
-            self._adapter.fget_object(bucket_name, object_name, file_path)
+            self._client.download_file(bucket_name, object_name, file_path)
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
-        except S3Error as e:
-            self._handle_s3_exception(e, "get_object")
+        except ClientError as e:
+            self._handle_client_exception(e, "get_object")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "get_object")
         except Exception as e:
             self._handle_general_exception(e, "get_object")
 
@@ -362,7 +434,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             InvalidArgumentError: If any required parameter is empty.
             NotFoundError: If the bucket or object does not exist.
             PermissionDeniedError: If permission to remove is denied.
-            ServiceUnavailableError: If the MinIO service is unavailable.
+            ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
         try:
@@ -376,19 +448,21 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                         else "object_name"
                     ),
                 )
-            self._adapter.remove_object(bucket_name, object_name)
+            self._client.delete_object(Bucket=bucket_name, Key=object_name)
             if hasattr(self.list_objects, "clear_cache"):
-                self.list_objects.clear_cache()  # Clear object list cache
+                self.list_objects.clear_cache()
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
-        except S3Error as e:
-            self._handle_s3_exception(e, "remove_object")
+        except ClientError as e:
+            self._handle_client_exception(e, "remove_object")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "remove_object")
         except Exception as e:
             self._handle_general_exception(e, "remove_object")
 
     @override
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
+    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
     def list_objects(
         self,
         bucket_name: str,
@@ -410,32 +484,49 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             InvalidArgumentError: If bucket_name is empty.
             NotFoundError: If the bucket does not exist.
             PermissionDeniedError: If permission to list objects is denied.
-            ServiceUnavailableError: If the MinIO service is unavailable.
+            ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
         try:
             if not bucket_name:
                 raise InvalidArgumentError(argument_name="bucket_name")
-            objects = self._adapter.list_objects(bucket_name, prefix=prefix, recursive=recursive)
+
+            # Build list_objects_v2 parameters
+            params = {"Bucket": bucket_name}
+            if prefix:
+                params["Prefix"] = prefix
+            if not recursive:
+                params["Delimiter"] = "/"
+
+            # Handle pagination
+            object_list: list[MinioObjectType] = []
+            paginator = self._client.get_paginator("list_objects_v2")
+            for page in paginator.paginate(**params):
+                object_list.extend(
+                    {
+                        "object_name": obj["Key"],
+                        "size": obj["Size"],
+                        "last_modified": obj["LastModified"],
+                    }
+                    for obj in page.get("Contents", [])
+                )
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
-        except S3Error as e:
-            self._handle_s3_exception(e, "list_objects")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+        except ClientError as e:
+            self._handle_client_exception(e, "list_objects")
+            raise
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "list_objects")
+            raise
         except Exception as e:
             self._handle_general_exception(e, "list_objects")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+            raise
         else:
-            # Convert objects to MinioObjectType format
-            object_list: list[MinioObjectType] = [
-                {"object_name": obj.object_name, "size": obj.size, "last_modified": obj.last_modified}
-                for obj in objects
-            ]
             return object_list
 
     @override
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
+    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
     def stat_object(self, bucket_name: str, object_name: str) -> MinioObjectType:
         """Get object metadata.
 
@@ -450,7 +541,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             InvalidArgumentError: If any required parameter is empty.
             NotFoundError: If the bucket or object does not exist.
             PermissionDeniedError: If permission to get stats is denied.
-            ServiceUnavailableError: If the MinIO service is unavailable.
+            ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
         try:
@@ -464,24 +555,27 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                         else "object_name"
                     ),
                 )
-            obj = self._adapter.stat_object(bucket_name, object_name)
+            response = self._client.head_object(Bucket=bucket_name, Key=object_name)
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
-        except S3Error as e:
-            self._handle_s3_exception(e, "stat_object")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+        except ClientError as e:
+            self._handle_client_exception(e, "stat_object")
+            raise
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "stat_object")
+            raise
         except Exception as e:
             self._handle_general_exception(e, "stat_object")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+            raise
         else:
-            # Convert object to MinioObjectType format
+            # Convert response to MinioObjectType format
             return {
-                "object_name": obj.object_name,
-                "size": obj.size,
-                "last_modified": obj.last_modified,
-                "content_type": obj.content_type,
-                "etag": obj.etag,
+                "object_name": object_name,
+                "size": response.get("ContentLength", 0),
+                "last_modified": response.get("LastModified"),
+                "content_type": response.get("ContentType"),
+                "etag": response.get("ETag", "").strip('"'),
             }
 
     @override
@@ -500,7 +594,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             InvalidArgumentError: If any required parameter is empty.
             NotFoundError: If the bucket or object does not exist.
             PermissionDeniedError: If permission to generate URL is denied.
-            ServiceUnavailableError: If the MinIO service is unavailable.
+            ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
         try:
@@ -514,22 +608,24 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                         else "object_name"
                     ),
                 )
-            url = self._adapter.presigned_get_object(
-                bucket_name=bucket_name,
-                object_name=object_name,
-                expires=timedelta(seconds=expires),
+            url = self._client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": bucket_name, "Key": object_name},
+                ExpiresIn=expires,
             )
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
-        except S3Error as e:
-            self._handle_s3_exception(e, "presigned_get_object")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+        except ClientError as e:
+            self._handle_client_exception(e, "presigned_get_object")
+            raise
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "presigned_get_object")
+            raise
         except Exception as e:
             self._handle_general_exception(e, "presigned_get_object")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+            raise
         else:
-            # url is str from minio client, compatible with return type
             typed_url: str = url
             return typed_url
 
@@ -549,7 +645,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             InvalidArgumentError: If any required parameter is empty.
             NotFoundError: If the bucket does not exist.
             PermissionDeniedError: If permission to generate URL is denied.
-            ServiceUnavailableError: If the MinIO service is unavailable.
+            ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
         try:
@@ -563,22 +659,24 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                         else "object_name"
                     ),
                 )
-            url = self._adapter.presigned_put_object(
-                bucket_name=bucket_name,
-                object_name=object_name,
-                expires=timedelta(seconds=expires),
+            url = self._client.generate_presigned_url(
+                "put_object",
+                Params={"Bucket": bucket_name, "Key": object_name},
+                ExpiresIn=expires,
             )
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
-        except S3Error as e:
-            self._handle_s3_exception(e, "presigned_put_object")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+        except ClientError as e:
+            self._handle_client_exception(e, "presigned_put_object")
+            raise
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "presigned_put_object")
+            raise
         except Exception as e:
             self._handle_general_exception(e, "presigned_put_object")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+            raise
         else:
-            # url is str from minio client, compatible with return type
             typed_url: str = url
             return typed_url
 
@@ -594,7 +692,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             InvalidArgumentError: If any required parameter is empty.
             NotFoundError: If the bucket does not exist.
             PermissionDeniedError: If permission to set policy is denied.
-            ServiceUnavailableError: If the MinIO service is unavailable.
+            ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
         try:
@@ -608,17 +706,19 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                         else "policy"
                     ),
                 )
-            self._adapter.set_bucket_policy(bucket_name, policy)
+            self._client.put_bucket_policy(Bucket=bucket_name, Policy=policy)
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
-        except S3Error as e:
-            self._handle_s3_exception(e, "set_bucket_policy")
+        except ClientError as e:
+            self._handle_client_exception(e, "set_bucket_policy")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "set_bucket_policy")
         except Exception as e:
             self._handle_general_exception(e, "set_bucket_policy")
 
     @override
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
+    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
     def get_bucket_policy(self, bucket_name: str) -> MinioPolicyType:
         """Get bucket policy.
 
@@ -632,22 +732,26 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             InvalidArgumentError: If bucket_name is empty.
             NotFoundError: If the bucket does not exist.
             PermissionDeniedError: If permission to get policy is denied.
-            ServiceUnavailableError: If the MinIO service is unavailable.
+            ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
         try:
             if not bucket_name:
                 raise InvalidArgumentError(argument_name="bucket_name")
-            policy = self._adapter.get_bucket_policy(bucket_name)
+            response = self._client.get_bucket_policy(Bucket=bucket_name)
+            policy = response.get("Policy", "{}")
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
-        except S3Error as e:
-            self._handle_s3_exception(e, "get_bucket_policy")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+        except ClientError as e:
+            self._handle_client_exception(e, "get_bucket_policy")
+            raise
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "get_bucket_policy")
+            raise
         except Exception as e:
             self._handle_general_exception(e, "get_bucket_policy")
-            raise  # Exception handler always raises, but type checker needs this to be explicit
+            raise
         else:
             # Convert policy to MinioPolicyType format
             policy_dict: MinioPolicyType = {"policy": policy}

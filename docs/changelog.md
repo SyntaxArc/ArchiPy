@@ -2,6 +2,30 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v4.3.1] - 2026-02-22
+
+### Changed
+
+#### Adapters - MinIO
+
+- **Boto3 Migration** - Migrated MinIO adapter from minio library to boto3
+    - Replaced `minio` library with `boto3` for S3-compatible object storage operations
+    - Added new configuration fields to `MinioConfig`:
+        - `ADDRESSING_STYLE`: S3 addressing style (auto, path, or virtual) - critical for CDN compatibility
+        - `SIGNATURE_VERSION`: AWS signature version (default: s3v4)
+        - `CONNECT_TIMEOUT`: Connection timeout in seconds (default: 60)
+        - `READ_TIMEOUT`: Read timeout in seconds (default: 60)
+        - `MAX_POOL_CONNECTIONS`: Maximum connections in the pool (default: 10)
+        - `RETRIES_MAX_ATTEMPTS`: Maximum retry attempts for failed requests (default: 3)
+        - `RETRIES_MODE`: Retry strategy - legacy, standard, or adaptive (default: standard)
+        - `USE_SSL`: Explicit SSL usage control (overrides SECURE if set)
+        - `VERIFY_SSL`: SSL certificate verification (default: true)
+    - Improved presigned URL generation with better control over addressing styles
+    - Enhanced exception handling using structured boto3 error codes instead of string parsing
+    - All existing functionality preserved with zero breaking changes to the `MinioPort` interface
+    - Resolves CDN and presigned URL compatibility issues
+    - Custom MinIO test container implementation eliminates minio library dependency entirely
+
 ## [v4.3.0] - 2026-02-22
 
 ### Added
