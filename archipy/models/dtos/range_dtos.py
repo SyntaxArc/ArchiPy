@@ -46,7 +46,7 @@ class BaseRangeDTO[R](BaseDTO):
             # The protocol ensures both values support comparison
             try:
                 if self.from_ > self.to:  # type: ignore[operator]
-                    raise OutOfRangeError(field_name="from_")
+                    raise OutOfRangeError(field_name=type(self).from_)  # type: ignore[arg-type]
             except TypeError:
                 # If comparison fails, skip validation (shouldn't happen with proper types)
                 pass
@@ -175,7 +175,7 @@ class DatetimeIntervalRangeDTO(BaseRangeDTO[datetime]):
             if max_to_age:
                 age_threshold = current_time - max_to_age
                 if self.to < age_threshold:
-                    raise OutOfRangeError(field_name="to")
+                    raise OutOfRangeError(field_name=type(self).to)  # type: ignore[arg-type]
 
             # Calculate number of intervals
             step = self.INTERVAL_TO_TIMEDELTA[self.interval]
