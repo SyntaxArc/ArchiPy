@@ -388,6 +388,8 @@ class MinioConfig(BaseModel):
     SECURE: bool = Field(default=False, description="Whether to use secure (HTTPS) connection")
     SESSION_TOKEN: str | None = Field(default=None, description="Session token for temporary credentials")
     REGION: str | None = Field(default=None, description="AWS region for S3 compatibility")
+
+    # New boto3-specific fields
     ADDRESSING_STYLE: Literal["auto", "path", "virtual"] = Field(
         default="auto",
         description="S3 addressing style for URLs",

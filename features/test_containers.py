@@ -639,7 +639,7 @@ class ScyllaDBTestContainer(metaclass=Singleton, thread_safe=True):
     """Test container for ScyllaDB."""
 
     # Minimum aio-max-nr required by ScyllaDB's Seastar framework
-    MIN_AIO_MAX_NR = 65536
+    MIN_AIO_MAX_NR = 131072
 
     def __init__(self, config: ScyllaDBConfig | None = None, image: str | None = None) -> None:
         """Initialize ScyllaDB test container.
