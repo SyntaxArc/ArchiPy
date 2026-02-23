@@ -2,6 +2,30 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v4.3.2] - 2026-02-23
+
+### Changed
+
+#### Dependencies
+
+- **FastAPI** - Updated FastAPI dependency constraint
+    - Bumped minimum version from `0.129.1` to `0.131.0`
+    - Removed `orjson` and `ujson` from FastAPI's bundled dependencies (no longer included in `fastapi[all]`)
+    - These JSON libraries can still be added separately if needed for specific use cases
+
+#### Adapters - ScyllaDB
+
+- **Test Container Configuration** - Reduced minimum AIO configuration requirement
+    - Decreased `MIN_AIO_MAX_NR` from `131072` to `65536` for ScyllaDB test containers
+    - Improves compatibility with systems having lower kernel AIO limits
+    - Maintains stability while reducing resource requirements
+
+#### Configs
+
+- **MinIO Configuration** - Code cleanup
+    - Removed redundant comment about boto3-specific fields in `MinioConfig`
+    - No functional changes to configuration behavior
+
 ## [v4.3.1] - 2026-02-22
 
 ### Changed
