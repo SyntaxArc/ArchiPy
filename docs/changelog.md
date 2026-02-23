@@ -2,6 +2,27 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v4.3.3] - 2026-02-23
+
+### Reverted
+
+#### Models - DTOs
+
+- **Type-Safe Field References** - Reverted the experimental type-safe field references feature
+    - Removed `FieldStr` utility class that was introduced for field name representation
+    - Removed `BaseMeta` metaclass from BaseDTO
+    - Reverted changes to `range_dtos.py` model validators
+    - Removed associated BDD tests (`base_dtos.feature` and test steps)
+    - This feature is being reconsidered for a future implementation with better design
+
+### Changed
+
+#### Release Management
+
+- **Version Management** - Reverted v4.3.2 release preparation
+    - Reset version numbers back to v4.3.1 state
+    - This version (v4.3.3) supersedes the cancelled v4.3.2 release
+
 ## [v4.3.1] - 2026-02-22
 
 ### Changed
