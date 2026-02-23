@@ -4,20 +4,6 @@ All notable changes to ArchiPy are documented in this changelog, organized by ve
 
 ## [v4.3.2] - 2026-02-23
 
-### Added
-
-#### Models - DTOs
-
-- **Type-Safe Field References** - Enhanced BaseDTO with automatic field name references
-    - Implemented `FieldStr` utility class for type-safe field name representation
-    - Added `BaseMeta` metaclass that automatically exposes field names as class attributes
-    - All DTO subclasses now support IDE autocompletion for field names (e.g., `PaginationDTO.page` returns `FieldStr("page")`)
-    - Eliminates hardcoded field name strings and enables better refactoring support
-    - Instance attribute access remains unaffected - only class-level access provides `FieldStr` objects
-    - Memory-efficient implementation using `__slots__` in `FieldStr`
-    - Updated `range_dtos.py` model validators to use type-safe field references
-    - Added comprehensive BDD tests covering `FieldStr` behavior
-
 ### Changed
 
 #### Dependencies
