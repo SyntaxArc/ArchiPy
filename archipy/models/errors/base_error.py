@@ -144,7 +144,15 @@ class BaseError(Exception):
         Returns:
             str: A formatted string containing the error code and message.
         """
-        return f"[{self.code}] {self.get_message()}"
+        return (
+            f"{self.__class__.__name__}("
+            f"code='{self.code}', "
+            f"message='{self.get_message()}', "
+            f"http_status={self.http_status}, "
+            f"grpc_status={self.grpc_status}, "
+            f"additional_data={self.additional_data}"
+            f")"
+        )
 
     def __repr__(self) -> str:
         """Detailed string representation of the exception.

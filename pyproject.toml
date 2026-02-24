@@ -26,13 +26,13 @@ elastic-apm = ["elastic-apm>=6.25.0"]
 elasticsearch = ["elasticsearch>=9.3.0"]
 elasticsearch-async = ["elasticsearch[async]>=9.3.0"]
 fakeredis = ["fakeredis>=2.34.0"]
-fastapi = ["fastapi[all]>=0.131.0"]
+fastapi = ["fastapi[all]>=0.133.0"]
 grpc = ["grpcio>=1.78.1", "grpcio-health-checking>=1.78.1", "protobuf>=6.33.5"]
 jwt = ["pyjwt>=2.11.0"]
 kafka = ["confluent-kafka>=2.13.0"]
 kavenegar = ["kavenegar>=1.1.2"]
 keycloak = ["python-keycloak>=7.1.1", "cachetools>=7.0.1", "async-lru>=2.2.0"]
-minio = ["boto3>=1.42.54", "cachetools>=7.0.1", "async-lru>=2.2.0"]
+minio = ["boto3>=1.42.55", "cachetools>=7.0.1", "async-lru>=2.2.0"]
 parsian-ipg = ["zeep>=4.3.2", "requests[socks]>=2.32.5"]
 postgres = ["psycopg[binary,pool]>=3.3.3"]
 prometheus = ["prometheus-client>=0.24.1"]
@@ -83,7 +83,7 @@ dev = [
 
 docs = [
     "mkdocs-autorefs>=1.4.4",
-    "mkdocs-material>=9.7.2",
+    "mkdocs-material>=9.7.3",
     "mkdocs>=1.6.1",
     "mkdocstrings-python>=2.0.3",
     "mkdocstrings>=1.0.3",
