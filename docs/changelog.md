@@ -2,6 +2,38 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v4.3.4] - 2026-02-24
+
+### Fixed
+
+#### Models - Errors
+
+- **BaseError `__str__` Enhancement** - Improved string representation to expose full error context
+    - `__str__` now returns a structured, human-readable string including `class name`, `code`, `message`, `http_status`, `grpc_status`, and `additional_data`
+    - Previous output was a minimal `[code] message` format, making debugging difficult
+    - New format: `ClassName(code='...', message='...', http_status=..., grpc_status=..., additional_data=...)`
+    - Consistent with `__repr__` behaviour — no information is hidden in logs or tracebacks
+
+### Changed
+
+#### Dependencies
+
+- **FastAPI** bumped from `>=0.131.0` to `>=0.133.0`
+- **boto3** (minio extra) bumped from `>=1.42.54` to `>=1.42.55`
+- **mkdocs-material** (docs group) bumped from `>=9.7.2` to `>=9.7.3`
+
+### Internal
+
+#### Developer Tooling
+
+- **Cursor Rules Restructured** - Replaced monolithic `checks.mdc` and `CLAUDE.md` with focused, single-responsibility rule files
+    - Added `python-code-style.mdc` — string quoting, docstrings, line length, type hints, imports, error handling, complexity
+    - Added `architecture-patterns.mdc` — Clean Architecture layer map, import direction, lazy import policy
+    - Added `typing-strict.mdc` — strict type annotation conventions
+    - Added `testing-bdd.mdc` — BDD/Behave test conventions
+    - Added `tooling-workflow.mdc` — `uv`, Make targets, pre-commit hooks, docs, version bumping
+    - Added `adapter-conventions.mdc` — ports & adapters pattern, mock requirements, naming rules
+
 ## [v4.3.3] - 2026-02-23
 
 ### Reverted
