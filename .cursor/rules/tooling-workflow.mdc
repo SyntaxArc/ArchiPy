@@ -1,0 +1,79 @@
+---
+description: ArchiPy developer workflow — package manager, make targets, pre-commit, versioning
+alwaysApply: true
+---
+
+# Developer Tooling & Workflow
+
+## Package Manager
+
+Always use **`uv`** — never `pip install` directly.
+
+```bash
+# Install all deps (including dev + all extras)
+uv sync --all-extras --all-groups
+
+# Add a new dependency
+uv add <package>
+
+# Add a dev dependency
+uv add --group dev <package>
+```
+
+## Common Make Targets
+
+| Command | What it does |
+|---|---|
+| `make install-dev` | Install all deps + pre-commit hooks |
+| `make format` | Ruff formatter (fixes in place) |
+| `make lint` | Ruff linter + ty type checker |
+| `make behave` | Run all BDD tests |
+| `make check` | format + lint + security + tests |
+| `make security` | Bandit scan → `bandit-report.json` |
+| `make pre-commit` | Run all pre-commit hooks manually |
+| `make clean` | Remove build artifacts and caches |
+| `make build` | Build distribution packages |
+| `make ci` | Full CI pipeline locally |
+
+## Pre-commit Hooks
+
+Hooks run automatically on `git commit`. They include (in order):
+1. `check-added-large-files`
+2. `check-yaml`, `check-toml`, `check-json`, `pretty-format-json`
+3. `end-of-file-fixer`, `trailing-whitespace-fixer`
+4. `uv lock` / `uv sync` (on post-checkout and post-merge)
+5. `codespell` — catches common typos in `.py`/`.pyi` files
+6. `ruff-format` → `ruff check --fix` → `add-trailing-comma`
+7. `validate-pyproject` — validates `pyproject.toml`
+8. `ty check` — strict type checking
+
+Run manually:
+```bash
+make pre-commit
+# or directly:
+uv run pre-commit run --all-files
+```
+
+## Documentation
+
+```bash
+make docs-serve        # Live-reload local server (balanced)
+make docs-serve-fast   # Fast rebuild (skip heavy API gen)
+make docs-build        # Build static site
+make docs-deploy       # Deploy to GitHub Pages
+```
+
+## Version Bumping
+
+```bash
+make bump-patch message="fix: correct edge case in JWT utils"
+make bump-minor message="feat: add ScyllaDB async adapter"
+make bump-major message="breaking: redesign config layer"
+```
+
+## Dependency Updates
+
+```bash
+make update        # Update uv.lock to latest compatible versions
+make update-all    # Also upgrade uv itself and Python
+```

@@ -1,0 +1,80 @@
+---
+description: BDD/Behave testing conventions for ArchiPy feature files and step implementations
+globs: features/**/*.py,features/**/*.feature
+alwaysApply: false
+---
+
+# Testing with BDD (Behave)
+
+ArchiPy uses the **Behave** BDD framework. Tests are written as Gherkin scenarios.
+
+## Directory Structure
+
+```
+features/
+├── *.feature          # Gherkin scenario files
+└── steps/
+    └── *.py           # Step implementations (Given/When/Then)
+```
+
+## Running Tests
+
+```bash
+# All tests
+make behave
+# or:
+uv run --extra behave behave
+
+# Single feature file
+uv run --extra behave behave features/file_name.feature
+
+# Specific scenario (by line number)
+uv run --extra behave behave features/file_name.feature:42
+```
+
+## Writing Feature Files
+
+- Keep `.feature` files **declarative** — describe behavior, not implementation.
+- Use `@tags` to categorize scenarios for selective runs.
+- Avoid logic in `.feature` files; all logic belongs in `features/steps/`.
+
+```gherkin
+# ✅ GOOD
+@redis @cache
+Feature: Cache adapter
+  Scenario: Store and retrieve a value
+    Given a running Redis instance
+    When I store "hello" under key "greeting"
+    Then I can retrieve "hello" from key "greeting"
+```
+
+## Writing Step Files
+
+- Step functions are exempt from: `ANN001`, `ANN201`, `ARG001`, `PLR0913`, `F811`.
+- Step redefinition (`F811`) is allowed — Behave reuses steps across features.
+- Use `context` to share state between steps within a scenario.
+
+```python
+# ✅ GOOD
+from behave import given, then, when
+
+@given("a running Redis instance")
+def step_redis_running(context):
+    context.redis = FakeRedisAdapter()
+
+@when('I store "{value}" under key "{key}"')
+def step_store_value(context, value, key):
+    context.redis.set(key, value)
+
+@then('I can retrieve "{value}" from key "{key}"')
+def step_retrieve_value(context, value, key):
+    assert context.redis.get(key) == value
+```
+
+## Parallel Execution
+
+Behave is configured to run with **8 parallel workers** (multiprocessing). Ensure steps do not share mutable global state across scenarios.
+
+## Linting Exclusions
+
+`features/` and `scripts/` directories are excluded from Ruff linting (`exclude` in `pyproject.toml`). Do not add type annotations to step functions.

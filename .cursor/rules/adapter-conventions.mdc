@@ -1,0 +1,83 @@
+---
+description: ArchiPy adapter layer conventions — ports, mocks, session managers, lazy imports
+globs: archipy/adapters/**/*.py
+alwaysApply: false
+---
+
+# Adapter Conventions
+
+## Required Files per Adapter
+
+Every adapter package must contain at minimum:
+
+```
+archipy/adapters/<service>/
+├── __init__.py
+├── ports.py        # Abstract interface (ABC)
+└── adapters.py     # Concrete implementation
+```
+
+A `mocks.py` is **optional** — only add it when the adapter is used directly in BDD tests and an in-memory test double is needed (e.g., Redis, Kafka). Do not create mocks for adapters that are tested via real instances or testcontainers.
+
+## Ports (Abstract Interfaces)
+
+`ports.py` defines the contract using `abc.ABC`. Implementations (and mocks, if they exist) must both satisfy this interface.
+
+```python
+# ✅ GOOD
+from abc import ABC, abstractmethod
+
+class CachePort(ABC):
+    @abstractmethod
+    def get(self, key: str) -> str | None: ...
+
+    @abstractmethod
+    def set(self, key: str, value: str, ttl: int | None = None) -> None: ...
+```
+
+- `ANN401` (Any) is allowed in ports for `**kwargs` parameters.
+- `ARG002` (unused arguments) is allowed — interface stubs may not use all params.
+
+## Mocks (Test Doubles) — Optional
+
+Add `mocks.py` only when an in-memory test double is genuinely needed for BDD tests. When present, mocks are exempt from:
+- `ARG001`, `ARG002`, `ARG004`, `ARG005` — unused arguments common in mock signatures
+- `ANN401` — Any types for compatibility
+- `PLR0913` — mock constructors may accept many params
+
+For adapters tested via real service instances (e.g., using `testcontainers`), skip `mocks.py` entirely.
+
+## Session Managers
+
+Database adapters use `session_manager_registry.py` for managing SQLAlchemy sessions. These files use lazy imports (`PLC0415`) to break circular import chains — this is intentional and expected.
+
+```python
+# ✅ GOOD — lazy import in session registry
+def get_session_manager() -> SessionManager:
+    from archipy.adapters.postgres.sqlalchemy.adapters import PostgresAdapter  # noqa: PLC0415
+    ...
+```
+
+## Async vs Sync Adapters
+
+- Async variants are declared as separate `optional-dependencies` extras (e.g., `sqlalchemy-async`, `starrocks-async`).
+- Async adapters use `asyncio` and `sqlalchemy[asyncio]`.
+- Sync and async implementations are separate classes — do not mix `async def` into sync adapter classes.
+
+## Exception Handling at Boundaries
+
+Adapters at the infrastructure boundary (Kafka, Redis, ScyllaDB) may use broad `except Exception` (`BLE001`) only at the outermost boundary where converting to domain errors:
+
+```python
+# ✅ GOOD — broad catch only at adapter boundary, then re-raise as domain error
+try:
+    await self._client.produce(topic, message)
+except Exception as e:  # noqa: BLE001
+    raise KafkaProduceError("Failed to produce message") from e
+```
+
+## Optional Dependency Imports
+
+Adapters rely on their optional extra being installed — do **not** use lazy imports to guard third-party dependencies inside adapter classes. If the extra is not installed, the import at module level will fail with a clear `ImportError`, which is the expected behavior.
+
+Lazy imports (`PLC0415`) are only permitted in `session_manager_registry.py` files to break circular import chains, and in `archipy/helpers/` for optional utility dependencies.

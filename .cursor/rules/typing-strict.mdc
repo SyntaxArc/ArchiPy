@@ -1,0 +1,77 @@
+---
+description: Strict type annotation rules for ArchiPy source code (enforced by ty)
+globs: archipy/**/*.py
+alwaysApply: false
+---
+
+# Strict Typing
+
+ArchiPy enforces strict type checking via `ty` (configured in `pyproject.toml` under `[tool.ty.rules]`).
+
+## Annotations Required
+
+All public functions and methods must have **complete type annotations** — parameters and return types.
+
+```python
+# ❌ BAD
+def get_user(user_id):
+    ...
+
+# ✅ GOOD
+def get_user(user_id: int) -> User:
+    ...
+```
+
+## Modern Union Syntax
+
+Use Python 3.14+ union syntax throughout:
+
+```python
+# ❌ BAD
+from typing import Optional, Union
+def process(value: Optional[str]) -> Union[int, str]: ...
+
+# ✅ GOOD
+def process(value: str | None) -> int | str: ...
+```
+
+## Avoid `Any`
+
+`Any` is prohibited in production code except in explicitly exempted files (ports interfaces, gRPC message types, Redis mocks). When `Any` is genuinely needed, add a `# noqa: ANN401` comment with a justification.
+
+## `TYPE_CHECKING` Guard
+
+Move imports used only for type hints under `TYPE_CHECKING` **only when safe**. Do not move imports that Pydantic evaluates at runtime:
+
+```python
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from archipy.models.entities import UserEntity  # safe — only used in annotation
+
+# ❌ Do NOT guard Pydantic field types — Pydantic evaluates them at runtime
+class MyModel(BaseModel):
+    user: UserEntity  # must be importable at runtime
+```
+
+## Exemptions (per pyproject.toml)
+
+These files have `ANN401` (Any) exemptions due to interface constraints:
+- `archipy/adapters/orm/sqlalchemy/ports.py`
+- `archipy/adapters/elasticsearch/ports.py`
+- `archipy/adapters/keycloak/ports.py`
+- `archipy/adapters/redis/ports.py`
+- `archipy/adapters/scylladb/ports.py`
+- `archipy/helpers/decorators/*`
+- `archipy/helpers/interceptors/grpc/base/client_interceptor.py`
+
+BDD step files (`features/steps/*`) are exempt from `ANN001` and `ANN201`.
+
+## Running the Type Checker
+
+```bash
+uv run ty check archipy/
+# or via make:
+make lint
+```
