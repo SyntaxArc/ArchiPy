@@ -7,11 +7,13 @@ This example demonstrates how to use the Temporal adapter for workflow orchestra
 ```python
 import asyncio
 import logging
+import time
 
-from archipy.adapters.temporal import TemporalAdapter, BaseWorkflow, BaseActivity
+from temporalio import activity, workflow
+
+from archipy.adapters.temporal import BaseActivity, BaseWorkflow, TemporalAdapter
 from archipy.configs.config_template import TemporalConfig
 from archipy.models.errors import ConfigurationError, InternalError
-from temporalio import workflow, activity
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -103,8 +105,6 @@ async def process_data_activity(data: dict[str, list[str]]) -> str:
     Returns:
         Processed result
     """
-    import time
-
     logger.info(f"Processing {len(data)} items")
     time.sleep(1)  # Simulate processing
 
@@ -220,7 +220,7 @@ async def long_running_activity(data: dict[str, str]) -> str:
 @activity.defn
 async def critical_activity(data: dict[str, str]) -> str:
     """Critical activity that needs more retry attempts."""
-    if random.random() < 0.8:  # 80% failure rate for demo
+    if random.random() < 0.8:  # 80% failure rate for demo  # noqa: S311
         logger.warning("Critical operation failed, will retry")
         raise Exception("Critical operation failed")
     return f"Critical work completed: {data}"
@@ -319,10 +319,11 @@ Activities can use atomic transactions for database operations:
 
 ```python
 import logging
+from datetime import timedelta
 
 from archipy.adapters.temporal import AtomicActivity
 from archipy.helpers.decorators.sqlalchemy_atomic import postgres_sqlalchemy_atomic_decorator
-from archipy.models.errors import DatabaseQueryError, DatabaseConnectionError
+from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -497,16 +498,13 @@ async def send_welcome_email_activity(data: dict[str, str]) -> bool:
 import asyncio
 import logging
 
-from archipy.models.errors.temporal_errors import (
-    TemporalError,
-    WorkerConnectionError,
-    WorkerShutdownError
-)
 from archipy.models.errors import (
-    DatabaseQueryError,
     DatabaseConnectionError,
-    NotFoundError
+    DatabaseQueryError,
+    InternalError,
+    NotFoundError,
 )
+from archipy.models.errors.temporal_errors import TemporalError, WorkerConnectionError, WorkerShutdownError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -569,7 +567,7 @@ class RobustUserActivity(AtomicActivity[dict, dict]):
     async def _do_execute(self, activity_input: dict[str, str]) -> dict[str, str]:
         """Execute with comprehensive error handling."""
         try:
-            result = await self._execute_with_atomic("process_user_data", activity_input)
+            result = await self._call_atomic_method("process_user_data", activity_input)
         except DatabaseQueryError as e:
             self._log_activity_event("database_query_failed", {
                 "error": str(e),
@@ -635,10 +633,9 @@ Enable Prometheus metrics for Temporal by setting both the global Prometheus fla
 ```python
 import logging
 
-from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import TemporalConfig, PrometheusConfig
 from archipy.adapters.temporal import TemporalAdapter, TemporalWorkerManager
-from archipy.adapters.temporal.runtime import TemporalRuntimeManager
+from archipy.configs.base_config import BaseConfig
+from archipy.configs.config_template import PrometheusConfig, TemporalConfig
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -783,10 +780,11 @@ Create a Grafana dashboard to visualize Temporal metrics:
 import asyncio
 import logging
 
-from archipy.adapters.temporal import TemporalAdapter, TemporalWorkerManager, BaseWorkflow
+from temporalio import activity, workflow
+
+from archipy.adapters.temporal import BaseWorkflow, TemporalAdapter, TemporalWorkerManager
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import TemporalConfig, PrometheusConfig
-from temporalio import workflow, activity
+from archipy.configs.config_template import PrometheusConfig, TemporalConfig
 
 # Configure logging
 logger = logging.getLogger(__name__)

@@ -50,13 +50,13 @@ Each adapter in ArchiPy comes with a corresponding mock implementation for testi
 
 ```python
 # Production code
-from archipy.adapters.redis import RedisAdapter
+from archipy.adapters.redis.adapters import RedisAdapter
 
-redis = RedisAdapter(host="redis.example.com", port=6379)
+redis = RedisAdapter()
 redis.set("key", "value")
 
 # Test code
-from archipy.adapters.redis import RedisMock
+from archipy.adapters.redis.mocks import RedisMock
 
 redis_mock = RedisMock()
 redis_mock.set("key", "test_value")

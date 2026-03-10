@@ -35,21 +35,23 @@ from typing import Any
 
 from behave import given, when, then
 
-from app.models import User
-from app.services import UserService
-from archipy.models.errors import NotFoundError, DatabaseQueryError
+# NOTE: These imports are project-specific placeholders.
+# Replace with your actual model/service imports in your application.
+from app.models import User  # type: ignore[import-not-found]
+from app.services import UserService  # type: ignore[import-not-found]
+from archipy.models.errors import DatabaseQueryError, NotFoundError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 @given('I have admin privileges')
-def step_impl(context: Any) -> None:
+def step_impl(context: Any) -> None:  # noqa: F811
     """Set admin privileges in context."""
     context.is_admin = True
     logger.info("Admin privileges set")
 
 @when('I create a user with username "{username}" and email "{email}"')
-def step_impl(context: Any, username: str, email: str) -> None:
+def step_impl(context: Any, username: str, email: str) -> None:  # noqa: F811
     """Create a user with the given username and email."""
     service = UserService()
     try:
@@ -65,7 +67,7 @@ def step_impl(context: Any, username: str, email: str) -> None:
         logger.info(f"User created: {username}")
 
 @then('the user should be saved in the database')
-def step_impl(context: Any) -> None:
+def step_impl(context: Any) -> None:  # noqa: F811
     """Verify user exists in the database."""
     try:
         db_user = User.query.filter_by(username=context.user.username).first()
@@ -81,7 +83,7 @@ def step_impl(context: Any) -> None:
         logger.info(f"User verified in database: {context.user.username}")
 
 @then('the user should have default permissions')
-def step_impl(context: Any) -> None:
+def step_impl(context: Any) -> None:  # noqa: F811
     """Verify user has default permissions."""
     assert len(context.user.permissions) > 0, "User should have at least one permission"
     assert 'user:read' in context.user.permissions, "User should have user:read permission"
@@ -127,7 +129,7 @@ Then all users should be saved in the database
 
 ```python
 @when('I create the following users')
-def step_impl(context: Any) -> None:
+def step_impl(context: Any) -> None:  # noqa: F811
     """Create multiple users from table data."""
     service = UserService()
     context.users = []

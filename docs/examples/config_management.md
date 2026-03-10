@@ -23,7 +23,7 @@ class AppConfig(BaseConfig):
     DB_PORT: int = 5432
     DB_NAME: str = "myapp"
     DB_USER: str = "postgres"
-    DB_PASSWORD: str = "password"
+    DB_PASSWORD: str = "password"  # noqa: S105
 
     # Redis settings
     REDIS_HOST: str = "localhost"
@@ -85,8 +85,15 @@ logger.info(f"Environment: {config.ENVIRONMENT}")  # EnvironmentType.PRODUCTION
 You can create environment-specific configurations:
 
 ```python
+import logging
+import os
+
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.environment_type import EnvironmentType
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
 
 class BaseAppConfig(BaseConfig):
     APP_NAME: str = "MyService"
@@ -104,12 +111,6 @@ class ProductionConfig(BaseAppConfig):
     LOG_LEVEL: str = "WARNING"
 
 # Choose configuration based on environment
-import os
-import logging
-
-# Configure logging
-logger = logging.getLogger(__name__)
-
 env: str = os.getenv("ENVIRONMENT", "development").lower()
 
 config: BaseAppConfig
@@ -135,7 +136,7 @@ class DatabaseConfig(BaseModel):
     PORT: int = 5432
     NAME: str = "myapp"
     USER: str = "postgres"
-    PASSWORD: str = "password"
+    PASSWORD: str = "password"  # noqa: S105
 
     def connection_string(self) -> str:
         return f"postgresql://{self.USER}:{self.PASSWORD}@{self.HOST}:{self.PORT}/{self.NAME}"
@@ -153,7 +154,7 @@ class AppConfig(BaseConfig):
 
 # Usage
 config = AppConfig()
-print(config.DATABASE.connection_string())
+logger.info(config.DATABASE.connection_string())
 ```
 
 ## Configuration Template
@@ -172,7 +173,7 @@ class AppConfig(BaseConfig):
     # AUTH, DATETIME, ELASTIC, EMAIL, FASTAPI, KAFKA, REDIS, etc.
 
 config = AppConfig()
-print(config.ENVIRONMENT)  # Default value from BaseConfig (EnvironmentType.LOCAL)
+logger.info(f"Environment: {config.ENVIRONMENT}")  # Default value from BaseConfig (EnvironmentType.LOCAL)
 ```
 
 ## Configuration in Different Components
@@ -225,32 +226,22 @@ def get_config_info() -> dict[str, str | bool]:
 ### With Database Adapters
 
 ```python
-from archipy.adapters.postgres.sqlalchemy.session_managers import SQlAlchemySessionManager
+from archipy.adapters.postgres.sqlalchemy.adapters import PostgresSQLAlchemyAdapter
 from archipy.configs.base_config import BaseConfig
 
 config = BaseConfig.global_config()
 
-# Create session manager with config
-session_manager = SQlAlchemySessionManager(
-    connection_string=config.POSTGRES_SQLALCHEMY.POSTGRES_DSN,
-    echo=config.POSTGRES_SQLALCHEMY.ECHO
-)
+# Create PostgreSQL adapter with global config (reads from config.POSTGRES_SQLALCHEMY)
+adapter = PostgresSQLAlchemyAdapter()
 ```
 
 ### With Redis Adapters
 
 ```python
 from archipy.adapters.redis.adapters import RedisAdapter
-from archipy.configs.base_config import BaseConfig
 
-config = BaseConfig.global_config()
-
-# Create Redis adapter with config
-redis_adapter = RedisAdapter(
-    host=config.REDIS.MASTER_HOST,
-    port=config.REDIS.PORT,
-    db=config.REDIS.DATABASE
-)
+# Create Redis adapter using global config (reads from config.REDIS automatically)
+redis_adapter = RedisAdapter()
 ```
 
 ## Best Practices

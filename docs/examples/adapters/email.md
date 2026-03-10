@@ -1,32 +1,62 @@
 # Email Adapter Examples
 
-This page demonstrates how to use ArchiPy's email adapter functionality for sending emails with proper error handling and logging.
+This page demonstrates how to use ArchiPy's email adapter for sending emails with proper error
+handling and logging.
 
 ## Basic Usage
 
+### Configuration
+
+Configure email settings via environment variables or a config object:
+
 ```python
+from archipy.configs.base_config import BaseConfig
+
+# Using environment variables:
+# EMAIL__SMTP_SERVER=smtp.example.com
+# EMAIL__SMTP_PORT=587
+# EMAIL__USERNAME=your-username
+# EMAIL__PASSWORD=your-password
+
+# Or directly (useful for testing):
+from archipy.configs.config_template import EmailConfig
+
+custom_config = EmailConfig(
+    SMTP_SERVER="smtp.example.com",
+    SMTP_PORT=587,
+    USERNAME="your-username",
+    PASSWORD="your-password",  # noqa: S106
+)
+```
+
+### Initializing the Adapter
 import logging
 
-from archipy.adapters.email import EmailAdapter
-from archipy.models.errors import InternalError, InvalidArgumentError
+from archipy.adapters.email.adapters import EmailAdapter
+from archipy.models.errors import InternalError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Configure email adapter
+# Use global configuration (reads from BaseConfig.global_config().EMAIL)
 try:
-    email_adapter = EmailAdapter(
-        host="smtp.example.com",
-        port=587,
-        username="your-username",
-        password="your-password",
-        use_tls=True
-    )
-except Exception as e:
+    email_adapter = EmailAdapter()
+except InternalError as e:
     logger.error(f"Failed to configure email adapter: {e}")
-    raise InternalError() from e
+    raise
 else:
     logger.info("Email adapter configured successfully")
+
+# Or pass a custom config
+from archipy.configs.config_template import EmailConfig
+
+custom_config = EmailConfig(
+    SMTP_SERVER="smtp.example.com",
+    SMTP_PORT=587,
+    USERNAME="your-username",
+    PASSWORD="your-password",  # noqa: S106
+)
+email_adapter = EmailAdapter(config=custom_config)
 ```
 
 ## Sending Simple Emails
@@ -34,31 +64,21 @@ else:
 ```python
 import logging
 
-from archipy.adapters.email import EmailAdapter
+from archipy.adapters.email.adapters import EmailAdapter
 from archipy.models.errors import InternalError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-email_adapter = EmailAdapter(
-    host="smtp.example.com",
-    port=587,
-    username="your-username",
-    password="your-password",
-    use_tls=True
-)
+email_adapter = EmailAdapter()
 
-# Send an email
+# Send a plain-text email
 try:
     email_adapter.send_email(
+        to_email="recipient@example.com",
         subject="Test Email",
         body="This is a test email from ArchiPy",
-        recipients=["recipient@example.com"],
-        from_email="sender@example.com"
     )
-except InvalidArgumentError as e:
-    logger.error(f"Invalid email parameters: {e}")
-    raise
 except InternalError as e:
     logger.error(f"Failed to send email: {e}")
     raise
@@ -71,29 +91,22 @@ else:
 ```python
 import logging
 
-from archipy.adapters.email import EmailAdapter
+from archipy.adapters.email.adapters import EmailAdapter
 from archipy.models.errors import InternalError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-email_adapter = EmailAdapter(
-    host="smtp.example.com",
-    port=587,
-    username="your-username",
-    password="your-password",
-    use_tls=True
-)
+email_adapter = EmailAdapter()
 
-# Send email with CC and BCC
+# Single recipient or list for to_email, cc, and bcc
 try:
     email_adapter.send_email(
+        to_email=["primary@example.com"],
         subject="Important Notification",
         body="This message has CC and BCC recipients",
-        recipients=["primary@example.com"],
         cc=["cc1@example.com", "cc2@example.com"],
-        bcc=["bcc@example.com"],
-        from_email="sender@example.com"
+        bcc="bcc@example.com",
     )
 except InternalError as e:
     logger.error(f"Failed to send email with CC/BCC: {e}")
@@ -107,19 +120,13 @@ else:
 ```python
 import logging
 
-from archipy.adapters.email import EmailAdapter
+from archipy.adapters.email.adapters import EmailAdapter
 from archipy.models.errors import InternalError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-email_adapter = EmailAdapter(
-    host="smtp.example.com",
-    port=587,
-    username="your-username",
-    password="your-password",
-    use_tls=True
-)
+email_adapter = EmailAdapter()
 
 html_content = """
 <html>
@@ -132,11 +139,10 @@ html_content = """
 
 try:
     email_adapter.send_email(
+        to_email="user@example.com",
         subject="HTML Email",
         body=html_content,
-        recipients=["user@example.com"],
-        from_email="sender@example.com",
-        is_html=True
+        html=True,
     )
 except InternalError as e:
     logger.error(f"Failed to send HTML email: {e}")
@@ -147,33 +153,28 @@ else:
 
 ## Sending Emails with Attachments
 
+Pass file paths as strings or `EmailAttachmentDTO` objects in the `attachments` list:
+
 ```python
 import logging
 
-from archipy.adapters.email import EmailAdapter
+from archipy.adapters.email.adapters import EmailAdapter
 from archipy.models.errors import InternalError, InvalidArgumentError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-email_adapter = EmailAdapter(
-    host="smtp.example.com",
-    port=587,
-    username="your-username",
-    password="your-password",
-    use_tls=True
-)
+email_adapter = EmailAdapter()
 
 try:
     email_adapter.send_email(
+        to_email="user@example.com",
         subject="Email with Attachment",
-        body="Please find the attached document",
-        recipients=["user@example.com"],
-        from_email="sender@example.com",
-        attachments=["/path/to/document.pdf", "/path/to/image.png"]
+        body="Please find the attached document.",
+        attachments=["/path/to/document.pdf", "/path/to/image.png"],
     )
 except InvalidArgumentError as e:
-    logger.error(f"Invalid attachment path: {e}")
+    logger.error(f"Invalid attachment: {e}")
     raise
 except InternalError as e:
     logger.error(f"Failed to send email with attachments: {e}")
@@ -190,20 +191,14 @@ import logging
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, EmailStr
 
-from archipy.adapters.email import EmailAdapter
+from archipy.adapters.email.adapters import EmailAdapter
 from archipy.models.errors import InternalError, InvalidArgumentError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
-email_adapter = EmailAdapter(
-    host="smtp.example.com",
-    port=587,
-    username="your-username",
-    password="your-password",
-    use_tls=True
-)
+email_adapter = EmailAdapter()
 
 
 class EmailRequest(BaseModel):
@@ -216,15 +211,24 @@ class EmailRequest(BaseModel):
 
 @app.post("/send-email")
 async def send_email(email_request: EmailRequest) -> dict[str, str]:
-    """Send an email via API endpoint."""
+    """Send an email via API endpoint.
+
+    Args:
+        email_request: Email details including recipients, subject, and body.
+
+    Returns:
+        Status message.
+
+    Raises:
+        HTTPException: If sending fails.
+    """
     try:
         email_adapter.send_email(
+            to_email=email_request.to,
             subject=email_request.subject,
             body=email_request.body,
-            recipients=email_request.to,
             cc=email_request.cc,
             bcc=email_request.bcc,
-            from_email="noreply@example.com"
         )
     except InvalidArgumentError as e:
         logger.error(f"Invalid email request: {e}")
@@ -242,8 +246,9 @@ async def send_email(email_request: EmailRequest) -> dict[str, str]:
 ```python
 import logging
 
-from archipy.adapters.email import EmailAdapter
-from archipy.models.errors import InternalError, InvalidArgumentError, ConfigurationError
+from archipy.adapters.email.adapters import EmailAdapter
+from archipy.configs.config_template import EmailConfig
+from archipy.models.errors import ConfigurationError, InternalError, InvalidArgumentError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -253,36 +258,29 @@ def send_notification_email(recipient: str, subject: str, body: str) -> bool:
     """Send a notification email with comprehensive error handling.
 
     Args:
-        recipient: Email address of the recipient
-        subject: Email subject line
-        body: Email body content
+        recipient: Email address of the recipient.
+        subject: Email subject line.
+        body: Email body content.
 
     Returns:
-        True if email sent successfully, False otherwise
+        True if the email was sent successfully.
 
     Raises:
-        InvalidArgumentError: If email parameters are invalid
-        InternalError: If email service fails
-        ConfigurationError: If email adapter is not configured
+        ConfigurationError: If the email adapter cannot be initialised.
+        InvalidArgumentError: If email parameters are invalid.
+        InternalError: If the email service fails.
     """
     try:
-        email_adapter = EmailAdapter(
-            host="smtp.example.com",
-            port=587,
-            username="your-username",
-            password="your-password",
-            use_tls=True
-        )
-    except Exception as e:
+        email_adapter = EmailAdapter()
+    except ConfigurationError as e:
         logger.error(f"Email adapter configuration failed: {e}")
-        raise ConfigurationError() from e
+        raise
 
     try:
         email_adapter.send_email(
+            to_email=recipient,
             subject=subject,
             body=body,
-            recipients=[recipient],
-            from_email="noreply@example.com"
         )
     except InvalidArgumentError as e:
         logger.error(f"Invalid email parameters: {e}")

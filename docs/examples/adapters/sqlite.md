@@ -7,10 +7,11 @@ This example demonstrates how to use the SQLite adapter for database operations 
 ```python
 import logging
 
+from sqlalchemy import Column, String
+
 from archipy.adapters.sqlite.sqlalchemy.adapters import SQLiteSQLAlchemyAdapter
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
-from archipy.models.errors import DatabaseQueryError, DatabaseConnectionError
-from sqlalchemy import Column, String
+from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -43,23 +44,27 @@ else:
 
 # Basic operations
 try:
-    with adapter.session() as session:
+    with adapter.get_session() as session:
         # Create
         user = User(username="john_doe", email="john@example.com")
         session.add(user)
         session.commit()
+        session.refresh(user)
 
         # Read
-        user = session.query(User).filter_by(username="john_doe").first()
-        logger.info(f"User email: {user.email}")  # john@example.com
+        from sqlalchemy import select
+        stmt = select(User).where(User.username == "john_doe")
+        found_user = session.execute(stmt).scalar_one_or_none()
+        if found_user:
+            logger.info(f"User email: {found_user.email}")  # john@example.com
 
-        # Update
-        user.email = "john.doe@example.com"
-        session.commit()
+            # Update
+            found_user.email = "john.doe@example.com"
+            session.commit()
 
-        # Delete
-        session.delete(user)
-        session.commit()
+            # Delete
+            session.delete(found_user)
+            session.commit()
 except DatabaseQueryError as e:
     logger.error(f"Database operation failed: {e}")
     raise
@@ -97,18 +102,14 @@ def create_user_with_profile(username: str, email: str, profile_data: dict[str, 
     Raises:
         DatabaseQueryError: If database operation fails
     """
-    try:
-        user = User(username=username, email=email)
-        adapter.create(user)
+    user = User(username=username, email=email)
+    adapter.create(user)
 
-        profile = Profile(user_id=user.uuid, **profile_data)
-        adapter.create(profile)
-    except Exception as e:
-        logger.error(f"Failed to create user with profile: {e}")
-        raise DatabaseQueryError() from e
-    else:
-        logger.info(f"User and profile created: {username}")
-        return user
+    profile = Profile(user_id=user.uuid, **profile_data)  # type: ignore[name-defined]
+    adapter.create(profile)
+
+    logger.info(f"User and profile created: {username}")
+    return user
 ```
 
 ## Async Operations
@@ -180,9 +181,9 @@ from uuid import UUID
 
 from archipy.models.errors import (
     AlreadyExistsError,
-    NotFoundError,
+    DatabaseConnectionError,
     DatabaseQueryError,
-    DatabaseConnectionError
+    NotFoundError,
 )
 
 # Configure logging
@@ -261,7 +262,7 @@ adapter = SQLiteSQLAlchemyAdapter()
 
 try:
     # Use context manager for automatic session management
-    with adapter.session() as session:
+    with adapter.get_session() as session:
         # Create multiple users
         users = [
             User(username="user1", email="user1@example.com"),
@@ -275,8 +276,9 @@ try:
         session.commit()
 
         # Query users
-        all_users = session.query(User).all()
-        logger.info(f"Created {len(all_users)} users")
+        from sqlalchemy import select, func
+        count = session.execute(select(func.count()).select_from(User)).scalar_one()
+        logger.info(f"Created {count} users")
 
 except DatabaseQueryError as e:
     logger.error(f"Batch operation failed: {e}")
@@ -291,11 +293,11 @@ else:
 import logging
 from uuid import UUID
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, EmailStr
 
 from archipy.adapters.sqlite.sqlalchemy.adapters import SQLiteSQLAlchemyAdapter
-from archipy.models.errors import NotFoundError, AlreadyExistsError, DatabaseQueryError
+from archipy.models.errors import AlreadyExistsError, DatabaseQueryError, NotFoundError
 
 # Configure logging
 logger = logging.getLogger(__name__)

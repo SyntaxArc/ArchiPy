@@ -85,7 +85,7 @@ async def main() -> None:
         raise
     else:
         logger.info("Connected to ScyllaDB successfully")
-        return adapter
+        logger.info(f"Adapter ready: {adapter}")
 
 
 # Run the async function
@@ -279,11 +279,11 @@ else:
 ```python
 # Count all rows
 total_users = adapter.count("users")
-print(f"Total users: {total_users}")
+logger.info(f"Total users: {total_users}")
 
 # Count with conditions (uses ALLOW FILTERING)
 active_users = adapter.count("users", conditions={"active": True})
-print(f"Active users: {active_users}")
+logger.info(f"Active users: {active_users}")
 ```
 
 **Note:** When using conditions with `count()`, the query automatically includes `ALLOW FILTERING` to support filtering on non-primary key columns. Be aware that this may impact performance on large tables.
@@ -293,13 +293,13 @@ print(f"Active users: {active_users}")
 ```python
 # Check if a specific row exists
 if adapter.exists("users", {"id": 1}):
-    print("User exists")
+    logger.info("User exists")
 else:
-    print("User not found")
+    logger.info("User not found")
 
 # Check with multiple conditions (uses ALLOW FILTERING)
 if adapter.exists("users", {"username": "alice", "active": True}):
-    print("Active user 'alice' exists")
+    logger.info("Active user 'alice' exists")
 ```
 
 **Note:** The `exists()` method uses `ALLOW FILTERING` to support checking conditions on any column. For best performance, use primary key columns in the conditions when possible.
@@ -407,9 +407,13 @@ All operations have async equivalents:
 
 ```python
 import asyncio
+import logging
+
 from archipy.adapters.scylladb import AsyncScyllaDBAdapter
 
-async def main():
+logger = logging.getLogger(__name__)
+
+async def main() -> None:
     adapter = AsyncScyllaDBAdapter()
 
     # Create keyspace
@@ -437,11 +441,11 @@ async def main():
 
     # Count rows
     total = await adapter.count("products")
-    print(f"Total products: {total}")
+    logger.info(f"Total products: {total}")
 
     # Check existence
     exists = await adapter.exists("products", {"id": 1})
-    print(f"Product exists: {exists}")
+    logger.info(f"Product exists: {exists}")
 
     # Insert with TTL
     await adapter.insert("cache", {
@@ -457,8 +461,12 @@ asyncio.run(main())
 Monitor connection pool health and performance:
 
 ```python
-from archipy.configs.config_template import ScyllaDBConfig
+import logging
+
 from archipy.adapters.scylladb import ScyllaDBAdapter
+from archipy.configs.config_template import ScyllaDBConfig
+
+logger = logging.getLogger(__name__)
 
 # Enable monitoring
 config = ScyllaDBConfig(
@@ -470,16 +478,16 @@ adapter = ScyllaDBAdapter(config)
 # Get pool statistics
 stats = adapter.get_pool_stats()
 
-print(f"Monitoring enabled: {stats['monitoring_enabled']}")
-print(f"Total hosts: {stats.get('total_hosts', 0)}")
-print(f"Total open connections: {stats.get('total_open_connections', 0)}")
-print(f"Total in-flight queries: {stats.get('total_in_flight_queries', 0)}")
+logger.info(f"Monitoring enabled: {stats['monitoring_enabled']}")
+logger.info(f"Total hosts: {stats.get('total_hosts', 0)}")
+logger.info(f"Total open connections: {stats.get('total_open_connections', 0)}")
+logger.info(f"Total in-flight queries: {stats.get('total_in_flight_queries', 0)}")
 
 # Per-host statistics
 for host_stat in stats.get('hosts', []):
-    print(f"Host: {host_stat['host']}")
-    print(f"  Open connections: {host_stat['open_connections']}")
-    print(f"  In-flight queries: {host_stat['in_flight_queries']}")
+    logger.info(f"Host: {host_stat['host']}")
+    logger.info(f"  Open connections: {host_stat['open_connections']}")
+    logger.info(f"  In-flight queries: {host_stat['in_flight_queries']}")
 ```
 
 ## Advanced Configuration
@@ -662,9 +670,9 @@ Implement regular health checks:
 ```python
 health = adapter.health_check()
 if health["status"] == "healthy":
-    print(f"ScyllaDB healthy (latency: {health['latency_ms']:.2f}ms)")
+    logger.info(f"ScyllaDB healthy (latency: {health['latency_ms']:.2f}ms)")
 else:
-    print(f"ScyllaDB unhealthy: {health['error']}")
+    logger.info(f"ScyllaDB unhealthy: {health['error']}")
 ```
 
 ### 8. Batch Operations Carefully
@@ -697,7 +705,7 @@ if not adapter.exists("users", {"id": 123}):
 
 # Caution: Uses ALLOW FILTERING (may be slow on large tables)
 if adapter.exists("users", {"email": "user@example.com"}):
-    print("User with this email exists")
+    logger.info("User with this email exists")
 
 # Good: Count all rows
 total_items = adapter.count("items")
@@ -719,7 +727,7 @@ total_pages = (adapter.count("items") + page_size - 1) // page_size
 Use async adapter for I/O-bound workloads:
 
 ```python
-async def process_users(user_ids):
+async def process_users(user_ids: list[str]) -> None:
     adapter = AsyncScyllaDBAdapter()
     tasks = [adapter.select("users", conditions={"id": uid}) for uid in user_ids]
     results = await asyncio.gather(*tasks)
@@ -775,16 +783,16 @@ for product in products:
 
 # Query products
 electronics = adapter.select("products", conditions={"category": "Electronics"})
-print(f"Found {len(electronics)} electronics")
+logger.info(f"Found {len(electronics)} electronics")
 
 # Count by category
 total_products = adapter.count("products")
-print(f"Total products: {total_products}")
+logger.info(f"Total products: {total_products}")
 
 # Check stock
 if adapter.exists("products", {"id": 1}):
     product = adapter.select("products", conditions={"id": 1})[0]
-    print(f"Product: {product.name}, Stock: {product.stock}")
+    logger.info(f"Product: {product.name}, Stock: {product.stock}")
 
 # Update with TTL for flash sale
 adapter.update(
@@ -796,11 +804,11 @@ adapter.update(
 
 # Monitor pool
 stats = adapter.get_pool_stats()
-print(f"Pool stats: {stats}")
+logger.info(f"Pool stats: {stats}")
 
 # Health check
 health = adapter.health_check()
-print(f"Health: {health['status']}, Latency: {health['latency_ms']:.2f}ms")
+logger.info(f"Health: {health['status']}, Latency: {health['latency_ms']:.2f}ms")
 ```
 
 ## See Also

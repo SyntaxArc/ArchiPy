@@ -1,16 +1,15 @@
 # Kafka Adapter
 
-The Kafka adapter provides a clean interface for interacting with Apache Kafka, supporting both synchronous and
-asynchronous operations.
+The Kafka adapter provides a clean interface for interacting with Apache Kafka through three
+separate adapters — one for each concern: admin (topic management), producing, and consuming.
 
 ## Features
 
 - Topic operations (create, list, delete)
-- Message publishing and consuming
-- Consumer group management
-- Built-in error handling and retry mechanisms
-- Support for both sync and async operations
-- Comprehensive logging and monitoring
+- Message producing (single, with key)
+- Message consuming (batch, poll, commit)
+- Built-in error handling with domain-specific exceptions
+- SASL+SSL authentication support
 
 ## Basic Usage
 
@@ -21,217 +20,279 @@ Configure Kafka in your application's config:
 ```python
 from archipy.configs.base_config import BaseConfig
 
-# Using environment variables
-# KAFKA__BOOTSTRAP_SERVERS=localhost:9092
+# Using environment variables:
+# KAFKA__BROKERS_LIST='["localhost:9092"]'
 # KAFKA__CLIENT_ID=my-app
-# KAFKA__GROUP_ID=my-group
 ```
 
-### Initializing the Adapter
+Or provide a custom `KafkaConfig` directly to any adapter:
 
 ```python
-from archipy.adapters.kafka.adapters import KafkaAdapter, AsyncKafkaAdapter
-
-# Use global configuration
-kafka = KafkaAdapter()
-
-# Or provide specific configuration
 from archipy.configs.config_template import KafkaConfig
 
 custom_config = KafkaConfig(
-    BOOTSTRAP_SERVERS="kafka1:9092,kafka2:9092",
+    BROKERS_LIST=["kafka1:9092", "kafka2:9092"],
     CLIENT_ID="custom-client",
-    GROUP_ID="custom-group"
 )
-kafka = KafkaAdapter(custom_config)
 ```
 
-### Topic Operations
+### Admin — Topic Management
+
+`KafkaAdminAdapter` handles topic CRUD operations.
 
 ```python
 import logging
 
+from archipy.adapters.kafka.adapters import KafkaAdminAdapter
+from archipy.models.errors import (
+    AlreadyExistsError,
+    InternalError,
+    InvalidArgumentError,
+    ServiceUnavailableError,
+)
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Use global configuration
+admin = KafkaAdminAdapter()
+
 # Create a topic
 try:
-    kafka.create_topic("my-topic", num_partitions=3, replication_factor=1)
-except Exception as e:
-    logger.error(f"Failed to create topic: {e}")
+    admin.create_topic("my-topic", num_partitions=3, replication_factor=1)
+except InvalidArgumentError as e:
+    logger.error(f"Invalid topic configuration: {e}")
+    raise
+except ServiceUnavailableError as e:
+    logger.error(f"Kafka service unavailable: {e}")
+    raise
+except InternalError as e:
+    logger.error(f"Internal error creating topic: {e}")
     raise
 else:
     logger.info("Topic created successfully")
 
-# List all topics
+# List all topics — returns ClusterMetadata
 try:
-    topics = kafka.list_topics()
-except Exception as e:
+    cluster_metadata = admin.list_topics()
+except InternalError as e:
     logger.error(f"Failed to list topics: {e}")
     raise
 else:
-    for topic in topics:
-        logger.info(f"Topic: {topic}")
+    for topic_name in cluster_metadata.topics:
+        logger.info(f"Topic: {topic_name}")
 
-# Delete a topic
+# Delete topics — accepts a list of topic names
 try:
-    kafka.delete_topic("my-topic")
-except Exception as e:
+    admin.delete_topic(["my-topic"])
+except InvalidArgumentError as e:
+    logger.error(f"Invalid topic list: {e}")
+    raise
+except InternalError as e:
     logger.error(f"Failed to delete topic: {e}")
     raise
 else:
     logger.info("Topic deleted successfully")
 ```
 
-### Publishing Messages
+### Producer — Publishing Messages
+
+`KafkaProducerAdapter` is bound to a single topic at construction time.
 
 ```python
 import logging
-from typing import Any
+
+from archipy.adapters.kafka.adapters import KafkaProducerAdapter
+from archipy.models.errors import InternalError, NetworkError, ResourceExhaustedError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Publish a simple message
-try:
-    kafka.publish("my-topic", "Hello, Kafka!")
-except Exception as e:
-    logger.error(f"Failed to publish message: {e}")
-    raise
-else:
-    logger.info("Message published successfully")
+# Requires topic_name at construction
+producer = KafkaProducerAdapter(topic_name="my-topic")
 
-# Publish with key and headers
-headers = {"source": "my-app", "version": "1.0"}
+# Publish a simple string message
 try:
-    kafka.publish("my-topic", "Hello, Kafka!", key="message-1", headers=headers)
-except Exception as e:
-    logger.error(f"Failed to publish message with headers: {e}")
+    producer.produce("Hello, Kafka!")
+except NetworkError as e:
+    logger.error(f"Network error producing message: {e}")
+    raise
+except ResourceExhaustedError as e:
+    logger.error(f"Producer queue full: {e}")
+    raise
+except InternalError as e:
+    logger.error(f"Failed to produce message: {e}")
     raise
 else:
-    logger.info("Message with headers published successfully")
+    logger.info("Message enqueued successfully")
 
-# Publish multiple messages
-messages = [
-    {"key": "msg1", "value": "Message 1"},
-    {"key": "msg2", "value": "Message 2"}
-]
+# Publish with a message key (for partition affinity)
 try:
-    kafka.publish_batch("my-topic", messages)
-except Exception as e:
-    logger.error(f"Failed to publish batch: {e}")
+    producer.produce("Hello, Kafka with key!", key="user-123")
+except InternalError as e:
+    logger.error(f"Failed to produce keyed message: {e}")
     raise
 else:
-    logger.info("Batch published successfully")
+    logger.info("Keyed message enqueued")
+
+# Flush to ensure all pending messages are delivered
+try:
+    producer.flush(timeout=10)
+except InternalError as e:
+    logger.error(f"Flush failed: {e}")
+    raise
+else:
+    logger.info("All messages flushed")
 ```
 
-### Consuming Messages
+### Consumer — Consuming Messages
+
+`KafkaConsumerAdapter` requires a `group_id` and **exactly one** of `topic_list` (subscribe)
+or `partition_list` (assign). Providing both or neither raises `InvalidArgumentError`.
 
 ```python
 import logging
-from typing import Any
+
+from archipy.adapters.kafka.adapters import KafkaConsumerAdapter
+from archipy.models.errors import InternalError, ServiceUnavailableError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Consume messages with a callback
-def process_message(message: dict[str, Any]) -> None:
-    logger.info(f"Received message: {message['value']}")
+# Subscribe to topics by name
+consumer = KafkaConsumerAdapter(
+    group_id="my-consumer-group",
+    topic_list=["my-topic"],
+)
 
-# Start consuming
-kafka.consume("my-topic", process_message)
+# Batch consume — returns list[Message], skips messages with errors
+try:
+    messages = consumer.batch_consume(messages_number=10, timeout=5)
+except ServiceUnavailableError as e:
+    logger.error(f"Kafka unavailable during consume: {e}")
+    raise
+except InternalError as e:
+    logger.error(f"Error consuming messages: {e}")
+    raise
+else:
+    for msg in messages:
+        value = msg.value()
+        if isinstance(value, bytes):
+            value = value.decode("utf-8")
+        logger.info(f"Received: {value}")
+        # Commit offset after processing
+        consumer.commit(msg, asynchronous=False)
 
-# Consume with specific partition and offset
-kafka.consume("my-topic", process_message, partition=0, offset=0)
-
-# Consume with timeout
-kafka.consume("my-topic", process_message, timeout_ms=5000)
+# Poll for a single message
+msg = consumer.poll(timeout=1)
+if msg is not None:
+    logger.info(f"Polled: {msg.value().decode('utf-8')}")
 ```
 
-### Async Operations
+### Assign to Specific Partitions
 
 ```python
-import asyncio
 import logging
-from typing import Any
+
+from confluent_kafka import TopicPartition
+
+from archipy.adapters.kafka.adapters import KafkaConsumerAdapter
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-async def async_example():
-    # Create async Kafka adapter
-    async_kafka = AsyncKafkaAdapter()
+# Assign to specific topic partitions (manual partition control)
+consumer = KafkaConsumerAdapter(
+    group_id="partition-consumer-group",
+    partition_list=[
+        TopicPartition("my-topic", partition=0),
+        TopicPartition("my-topic", partition=1),
+    ],
+)
 
-    # Publish message asynchronously
-    await async_kafka.publish("my-topic", "Async message")
-
-    # Consume messages asynchronously
-    async def process_async(message: dict[str, Any]) -> None:
-        logger.info(f"Received async message: {message['value']}")
-
-    await async_kafka.consume("my-topic", process_async)
-
-# Run the async example
-asyncio.run(async_example())
+messages = consumer.batch_consume(messages_number=100, timeout=10)
+logger.info(f"Consumed {len(messages)} messages from assigned partitions")
 ```
 
 ## Error Handling
 
-The KafkaAdapter uses ArchiPy's domain-specific exceptions for consistent error handling:
+The Kafka adapters map low-level Kafka errors to ArchiPy domain exceptions:
 
 ```python
 import logging
 
+from archipy.adapters.kafka.adapters import KafkaAdminAdapter, KafkaProducerAdapter
 from archipy.models.errors import (
-    AlreadyExistsError,
+    ConfigurationError,
+    ConnectionTimeoutError,
     InternalError,
     InvalidArgumentError,
-    NotFoundError,
-    PermissionDeniedError,
+    NetworkError,
+    ResourceExhaustedError,
+    ServiceUnavailableError,
 )
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 try:
-    kafka.create_topic("existing-topic")
-except AlreadyExistsError as e:
-    logger.warning(f"Topic already exists: {e}")
-except PermissionDeniedError as e:
-    logger.error(f"Permission denied to create topic: {e}")
+    admin = KafkaAdminAdapter()
+    admin.create_topic("my-topic")
+except ConfigurationError as e:
+    logger.error(f"Kafka misconfigured: {e}")
     raise
 except InvalidArgumentError as e:
-    logger.error(f"Invalid argument: {e}")
+    logger.error(f"Invalid topic name or partition config: {e}")
+    raise
+except ConnectionTimeoutError as e:
+    logger.error(f"Timed out connecting to Kafka: {e}")
+    raise
+except ServiceUnavailableError as e:
+    logger.error(f"Kafka broker unavailable: {e}")
     raise
 except InternalError as e:
-    logger.error(f"Internal error: {e}")
+    logger.error(f"Unexpected Kafka error: {e}")
+    raise
+
+try:
+    producer = KafkaProducerAdapter(topic_name="my-topic")
+    producer.produce("test message")
+    producer.flush()
+except NetworkError as e:
+    logger.error(f"Network error: {e}")
+    raise
+except ResourceExhaustedError as e:
+    # Producer internal queue is full
+    logger.error(f"Producer queue exhausted: {e}")
+    raise
+except InternalError as e:
+    logger.error(f"Unexpected error: {e}")
     raise
 ```
 
-## Consumer Group Management
+## Producer Health Check
 
 ```python
 import logging
 
+from archipy.adapters.kafka.adapters import KafkaProducerAdapter
+from archipy.models.errors import UnavailableError
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# List consumer groups
-groups = kafka.list_consumer_groups()
-for group in groups:
-    logger.info(f"Group: {group['group_id']}, State: {group['state']}")
+producer = KafkaProducerAdapter(topic_name="my-topic")
 
-# Describe consumer group
-group_info = kafka.describe_consumer_group("my-group")
-logger.info(f"Group members: {group_info['members']}")
-
-# Delete consumer group
-kafka.delete_consumer_group("my-group")
+try:
+    producer.validate_healthiness()
+except UnavailableError as e:
+    logger.error(f"Kafka producer is unhealthy: {e}")
+    raise
+else:
+    logger.info("Kafka producer connection is healthy")
 ```
 
-## Integration with Web Applications
-
-### FastAPI Example
+## Integration with FastAPI
 
 ```python
 import logging
@@ -239,45 +300,77 @@ import logging
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from archipy.adapters.kafka.adapters import KafkaAdapter
-from archipy.models.errors import InternalError
+from archipy.adapters.kafka.adapters import KafkaProducerAdapter
+from archipy.models.errors import InternalError, NetworkError, UnavailableError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
-kafka = KafkaAdapter()
+producer = KafkaProducerAdapter(topic_name="events")
 
-class Message(BaseModel):
+
+class EventMessage(BaseModel):
     content: str
     key: str | None = None
 
-@app.post("/publish/{topic}")
-async def publish_message(topic: str, message: Message) -> dict[str, str]:
+
+@app.post("/events/publish")
+async def publish_event(event: EventMessage) -> dict[str, str]:
+    """Publish an event to Kafka.
+
+    Args:
+        event: Event message with content and optional key.
+
+    Returns:
+        Status message.
+
+    Raises:
+        HTTPException: If the message cannot be delivered.
+    """
     try:
-        kafka.publish(topic, message.content, key=message.key)
+        producer.produce(event.content, key=event.key)
+        producer.flush(timeout=5)
+    except UnavailableError as e:
+        logger.error(f"Kafka unavailable: {e}")
+        raise HTTPException(status_code=503, detail="Kafka service unavailable") from e
+    except NetworkError as e:
+        logger.error(f"Network error publishing event: {e}")
+        raise HTTPException(status_code=502, detail="Network error") from e
     except InternalError as e:
-        logger.error(f"Failed to publish message: {e}")
+        logger.error(f"Failed to publish event: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
     else:
-        logger.info(f"Message published to {topic}")
-        return {"message": "Message published successfully"}
+        logger.info("Event published to 'events' topic")
+        return {"message": "Event published successfully"}
+
 
 @app.get("/topics")
 async def list_topics() -> dict[str, list[str]]:
+    """List all Kafka topics.
+
+    Returns:
+        Dictionary with list of topic names.
+
+    Raises:
+        HTTPException: If topic listing fails.
+    """
+    from archipy.adapters.kafka.adapters import KafkaAdminAdapter
+
     try:
-        topics = kafka.list_topics()
+        admin = KafkaAdminAdapter()
+        cluster_metadata = admin.list_topics()
     except InternalError as e:
         logger.error(f"Failed to list topics: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
     else:
-        logger.info(f"Retrieved {len(topics)} topics")
-        return {"topics": topics}
+        logger.info("Retrieved topic list")
+        return {"topics": list(cluster_metadata.topics.keys())}
 ```
 
 ## Testing with BDD
 
-The Kafka adapter comes with BDD tests to verify functionality. Here's a sample feature file:
+The Kafka adapter ships with BDD tests that run against a real Kafka broker via testcontainers:
 
 ```gherkin
 Feature: Kafka Operations Testing
@@ -285,10 +378,16 @@ Feature: Kafka Operations Testing
   I want to test Kafka messaging operations
   So that I can ensure reliable message delivery
 
-  Scenario: Publishing and consuming messages
-    Given I have a Kafka topic "test-topic"
-    When I publish a message "Hello, Kafka!" to "test-topic"
-    Then I should be able to consume the message from "test-topic"
+  Scenario: Produce and consume a message
+    Given I have a Kafka producer for topic "test-topic"
+    And I have a Kafka consumer subscribed to "test-topic"
+    When I produce the message "Hello Kafka"
+    Then I should consume the message "Hello Kafka" from "test-topic"
+
+  Scenario: Validate producer health
+    Given I have a Kafka producer for topic "test-topic"
+    When I validate the producer healthiness
+    Then the producer should be healthy
 ```
 
 ## See Also

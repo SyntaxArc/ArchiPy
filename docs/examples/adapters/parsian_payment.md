@@ -9,7 +9,6 @@ First, configure the Parsian Shaparak settings in your environment or configurat
 ```python
 import logging
 
-from pydantic import BaseModel
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import ParsianShaparakConfig
 from archipy.models.errors import ConfigurationError
@@ -48,11 +47,11 @@ else:
 import logging
 
 from archipy.adapters.internet_payment_gateways.ir.parsian.adapters import (
-    ParsianShaparakPaymentAdapter,
-    PaymentRequestDTO,
     ConfirmRequestDTO,
     ConfirmWithAmountRequestDTO,
-    ReverseRequestDTO
+    ParsianShaparakPaymentAdapter,
+    PaymentRequestDTO,
+    ReverseRequestDTO,
 )
 from archipy.models.errors import ConfigurationError
 
@@ -62,9 +61,9 @@ logger = logging.getLogger(__name__)
 # Initialize the payment adapter
 try:
     payment_adapter = ParsianShaparakPaymentAdapter()
-except Exception as e:
+except ConfigurationError as e:
     logger.error(f"Failed to initialize payment adapter: {e}")
-    raise ConfigurationError() from e
+    raise
 else:
     logger.info("Payment adapter initialized successfully")
 ```
@@ -263,11 +262,11 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from archipy.adapters.internet_payment_gateways.ir.parsian.adapters import (
+    ConfirmRequestDTO,
     ParsianShaparakPaymentAdapter,
     PaymentRequestDTO,
-    ConfirmRequestDTO
 )
-from archipy.models.errors import UnavailableError, InternalError, InvalidArgumentError
+from archipy.models.errors import InternalError, InvalidArgumentError, UnavailableError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -341,7 +340,7 @@ async def create_payment(order: OrderCreate) -> dict[str, int | str]:
 
 
 @app.get("/payments/callback")
-async def payment_callback(token: int, request: Request) -> dict[str, str]:
+async def payment_callback(token: int, request: Request) -> dict[str, str]:  # noqa: ARG001
     """Handle payment callback from gateway.
 
     Args:

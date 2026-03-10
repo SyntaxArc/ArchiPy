@@ -37,8 +37,10 @@ Generate and verify JWT tokens:
 
 ```python
 import logging
-from archipy.helpers.utils.jwt_utils import JWTUtils
 from uuid import uuid4
+
+from archipy.helpers.utils.jwt_utils import JWTUtils
+from archipy.models.errors import InvalidTokenError, TokenExpiredError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -76,7 +78,6 @@ Secure password handling:
 import logging
 
 from archipy.helpers.utils.password_utils import PasswordUtils
-from archipy.models.types.language_type import LanguageType
 from archipy.models.errors import InvalidPasswordError
 
 # Configure logging
@@ -96,9 +97,10 @@ logger.info(f"Generated password: {secure_password}")
 
 # Validate a password against policy
 try:
-    PasswordUtils.validate_password(password, lang=LanguageType.EN)
+    PasswordUtils.validate_password(password)
 except InvalidPasswordError as e:
-    logger.warning(f"Invalid password: {e.requirements}")
+    requirements = e.additional_data.get("requirements", [])
+    logger.warning(f"Invalid password. Requirements not met: {requirements}")
     raise
 else:
     logger.info("Password meets policy requirements")
@@ -197,11 +199,8 @@ app = AppUtils.create_fastapi_app(BaseConfig.global_config())
 FastAPIUtils.setup_exception_handlers(app)
 
 
-# Set up CORS
-FastAPIUtils.setup_cors(
-    app,
-    allowed_origins=["https://example.com"]
-)
+# Set up CORS (reads origins from config.FASTAPI.CORS_MIDDLEWARE_ALLOW_ORIGINS)
+FastAPIUtils.setup_cors(app, BaseConfig.global_config())
 
 logger.info("FastAPI app configured successfully")
 ```
@@ -258,7 +257,7 @@ if __name__ == '__main__':
             "username": employee.get("preferred_username")
         }
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)  # noqa: S104
 ```
 
 # Additional Resources

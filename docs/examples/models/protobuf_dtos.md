@@ -286,7 +286,7 @@ except ImportError:
 if PROTOBUF_AVAILABLE:
     BaseClass = BaseProtobufDTO
 else:
-    BaseClass = BaseDTO  # Fallback to regular DTO
+    BaseClass = BaseDTO  # type: ignore[name-defined]  # Fallback to regular DTO
 ```
 
 ### 3. Use Type Annotations
@@ -456,13 +456,16 @@ class TestUserProtobufDTO:
 ```python
 # Enable debug logging
 import logging
+
 logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Check protobuf availability
 from archipy.models.dtos.base_protobuf_dto import PROTOBUF_AVAILABLE
-print(f"Protobuf available: {PROTOBUF_AVAILABLE}")
+
+logger.info(f"Protobuf available: {PROTOBUF_AVAILABLE}")
 
 # Validate DTO structure
-user_dto = UserProtobufDTO(id="123", username="test")
-print(user_dto.model_dump())
+user_dto = UserProtobufDTO(id="123", username="test")  # type: ignore[name-defined]
+logger.info(user_dto.model_dump())
 ```

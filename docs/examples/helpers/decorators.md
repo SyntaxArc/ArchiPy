@@ -9,10 +9,10 @@ The retry decorator automatically retries a function when it encounters specific
 ```python
 import logging
 import random
+from typing import Any
 
 from archipy.helpers.decorators.retry import retry_decorator
 from archipy.models.errors import ResourceExhaustedError
-from archipy.models.types.language_type import LanguageType
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
     retry_on=(ConnectionError, TimeoutError),
     ignore=(ValueError,),
     resource_type="API",
-    lang=LanguageType.EN
 )
 def unreliable_api_call(item_id: int) -> dict[str, Any]:
     """Make an API call that might fail temporarily.
@@ -217,15 +216,18 @@ These decorators automatically manage database transactions.
 import logging
 from uuid import UUID
 
-from archipy.helpers.decorators.sqlalchemy_atomic import postgres_sqlalchemy_atomic_decorator
-from archipy.models.errors import DatabaseQueryError, DatabaseConnectionError
+from archipy.helpers.decorators.sqlalchemy_atomic import (
+    async_postgres_sqlalchemy_atomic_decorator,
+    postgres_sqlalchemy_atomic_decorator,
+)
+from archipy.models.errors import DatabaseQueryError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
 @postgres_sqlalchemy_atomic_decorator
-def create_user(username: str, email: str) -> User:
+def create_user(username: str, email: str) -> "User":  # type: ignore[name-defined]
     """Create a user in a database transaction.
 
     All database operations are wrapped in a transaction that
@@ -240,29 +242,16 @@ def create_user(username: str, email: str) -> User:
 
     Raises:
         DatabaseQueryError: If the database operation fails
-        DatabaseConnectionError: If the database connection fails
     """
-    try:
-        user = User(username=username, email=email)
-        # Get session from the adapter injected by the decorator
-        session = adapter.get_session()
-        session.add(user)
-    except Exception as e:
-        # The decorator handles rolling back the transaction
-        # and converting exceptions to appropriate types
-        logger.error(f"Failed to create user: {e}")
-        raise DatabaseQueryError() from e
-    else:
-        logger.info(f"User created: {username}")
-        return user
-
-
-# For async operations
-from archipy.helpers.decorators.sqlalchemy_atomic import async_postgres_sqlalchemy_atomic_decorator
+    user = User(username=username, email=email)  # type: ignore[name-defined]
+    session = adapter.get_session()  # type: ignore[name-defined]
+    session.add(user)
+    logger.info(f"User created: {username}")
+    return user
 
 
 @async_postgres_sqlalchemy_atomic_decorator
-async def update_user_email(user_id: UUID, new_email: str) -> User | None:
+async def update_user_email(user_id: UUID, new_email: str) -> "User | None":  # type: ignore[name-defined]
     """Update a user's email in an async transaction.
 
     Args:
@@ -275,20 +264,13 @@ async def update_user_email(user_id: UUID, new_email: str) -> User | None:
     Raises:
         DatabaseQueryError: If the database operation fails
     """
-    try:
-        # Get async session from the adapter injected by the decorator
-        session = adapter.get_session()
-        user = await session.get(User, user_id)
-    except Exception as e:
-        # The decorator handles the error conversion and rollback
-        logger.error(f"Failed to update user email: {e}")
-        raise DatabaseQueryError() from e
-    else:
-        if not user:
-            logger.warning(f"User not found: {user_id}")
-            return None
+    session = adapter.get_session()  # type: ignore[name-defined]
+    user = await session.get(User, user_id)  # type: ignore[name-defined]
+    if not user:
+        logger.warning(f"User not found: {user_id}")
+        return None
 
-        user.email = new_email
-        logger.info(f"Updated email for user: {user_id}")
-        return user
+    user.email = new_email
+    logger.info(f"Updated email for user: {user_id}")
+    return user
 ```

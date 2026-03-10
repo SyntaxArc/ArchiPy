@@ -19,7 +19,7 @@ class AppConfig(BaseConfig):
         SERVER_URL="https://keycloak.example.com",
         REALM_NAME="my-realm",
         CLIENT_ID="my-client",
-        CLIENT_SECRET_KEY="client-secret",  # Optional, required for admin operations
+    CLIENT_SECRET_KEY="client-secret",  # noqa: S105  # Optional, required for admin operations
         VERIFY_SSL=True,
         TIMEOUT=10
     )
@@ -33,11 +33,13 @@ The synchronous adapter provides a blocking API for Keycloak operations.
 import logging
 
 from archipy.adapters.keycloak.adapters import KeycloakAdapter
+from archipy.configs.config_template import KeycloakConfig
 from archipy.models.errors import (
-    AuthenticationError,
+    InternalError,
+    InvalidCredentialsError,
     NotFoundError,
     PermissionDeniedError,
-    InternalError
+    UnauthenticatedError,
 )
 
 # Configure logging
@@ -51,7 +53,7 @@ custom_config = KeycloakConfig(
     SERVER_URL="https://keycloak.example.com",
     REALM_NAME="another-realm",
     CLIENT_ID="another-client",
-    CLIENT_SECRET_KEY="client-secret"
+    CLIENT_SECRET_KEY="client-secret",  # noqa: S105
 )
 keycloak = KeycloakAdapter(custom_config)
 
@@ -59,7 +61,7 @@ keycloak = KeycloakAdapter(custom_config)
 try:
     # Get token with username/password
     token = keycloak.get_token("username", "password")
-except AuthenticationError as e:
+except InvalidCredentialsError as e:
     logger.error(f"Authentication failed: {e}")
     raise
 else:
@@ -70,7 +72,7 @@ else:
 try:
     # Refresh an existing token
     new_token = keycloak.refresh_token(refresh_token)
-except AuthenticationError as e:
+except (UnauthenticatedError, InvalidCredentialsError) as e:
     logger.error(f"Token refresh failed: {e}")
     raise
 else:
@@ -79,7 +81,7 @@ else:
 try:
     # Validate a token
     is_valid = keycloak.validate_token(access_token)
-except AuthenticationError as e:
+except UnauthenticatedError as e:
     logger.error(f"Token validation failed: {e}")
     raise
 else:
@@ -88,7 +90,7 @@ else:
 try:
     # Get user info from token
     user_info = keycloak.get_userinfo(access_token)
-except (AuthenticationError, InternalError) as e:
+except (UnauthenticatedError, InternalError) as e:
     logger.error(f"Failed to get user info: {e}")
     raise
 else:
@@ -97,7 +99,7 @@ else:
 try:
     # Get token using client credentials
     client_token = keycloak.get_client_credentials_token()
-except AuthenticationError as e:
+except InvalidCredentialsError as e:
     logger.error(f"Client credentials authentication failed: {e}")
     raise
 else:
@@ -260,8 +262,9 @@ try:
 
     # Delete a realm role
     keycloak.delete_realm_role("new-role")
-except ValueError as e:
-    print(f"Keycloak error: {e}")
+except (NotFoundError, PermissionDeniedError, InternalError) as e:
+    logger.error(f"Keycloak role operation failed: {e}")
+    raise
 
 # Client operations
 try:
@@ -273,8 +276,9 @@ try:
 
     # Get service account ID
     service_account_id = keycloak.get_service_account_id()
-except ValueError as e:
-    print(f"Keycloak error: {e}")
+except (NotFoundError, InternalError) as e:
+    logger.error(f"Keycloak client operation failed: {e}")
+    raise
 
 # System operations
 try:
@@ -286,8 +290,9 @@ try:
 
     # Get JWT certificates
     certs = keycloak.get_certs()
-except ValueError as e:
-    print(f"Keycloak error: {e}")
+except InternalError as e:
+    logger.error(f"Keycloak system operation failed: {e}")
+    raise
 
 # Authorization
 try:
@@ -296,8 +301,9 @@ try:
 
     # Check permissions
     has_permission = keycloak.check_permissions(access_token, "resource-name", "view")
-except ValueError as e:
-    print(f"Keycloak error: {e}")
+except (UnauthenticatedError, PermissionDeniedError, InternalError) as e:
+    logger.error(f"Keycloak authorization operation failed: {e}")
+    raise
 ```
 
 ## Asynchronous Adapter
@@ -306,9 +312,21 @@ The asynchronous adapter provides a non-blocking API using `async/await` syntax:
 
 ```python
 import asyncio
-from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter
+import logging
 
-async def main():
+from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter
+from archipy.models.errors import (
+    InternalError,
+    InvalidCredentialsError,
+    NotFoundError,
+    PermissionDeniedError,
+    UnauthenticatedError,
+)
+
+logger = logging.getLogger(__name__)
+
+
+async def main() -> None:
     # Initialize with global config
     keycloak = AsyncKeycloakAdapter()
 
@@ -316,18 +334,28 @@ async def main():
         # Get token
         token = await keycloak.get_token("username", "password")
         access_token = token["access_token"]
+    except InvalidCredentialsError as e:
+        logger.error(f"Authentication failed: {e}")
+        raise
+    else:
+        logger.info("Authentication successful")
 
+    try:
         # Get user info
         user_info = await keycloak.get_userinfo(access_token)
-        print(f"Logged in as: {user_info.get('preferred_username')}")
+        logger.info(f"Logged in as: {user_info.get('preferred_username')}")
 
         # Check if user has role
         if await keycloak.has_role(access_token, "admin"):
-            print("User has admin role")
+            logger.info("User has admin role")
+    except (UnauthenticatedError, InternalError) as e:
+        logger.error(f"Failed to get user info or check role: {e}")
+        raise
 
+    try:
         # Search for users
         users = await keycloak.search_users("john")
-        print(f"Found {len(users)} users matching 'john'")
+        logger.info(f"Found {len(users)} users matching 'john'")
 
         # Create a new user
         user_data = {
@@ -336,12 +364,15 @@ async def main():
             "enabled": True,
         }
         user_id = await keycloak.create_user(user_data)
-        print(f"Created user with ID: {user_id}")
+        logger.info(f"Created user with ID: {user_id}")
 
         # Delete the user
         await keycloak.delete_user(user_id)
-    except ValueError as e:
-        print(f"Keycloak error: {e}")
+        logger.info(f"Deleted user: {user_id}")
+    except (NotFoundError, PermissionDeniedError, InternalError) as e:
+        logger.error(f"User management operation failed: {e}")
+        raise
+
 
 # Run the async function
 asyncio.run(main())
@@ -359,6 +390,8 @@ configured for each method based on how frequently the data typically changes:
 You can clear all caches if needed:
 
 ```python
+from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
+
 # Sync adapter
 keycloak = KeycloakAdapter()
 keycloak.clear_all_caches()

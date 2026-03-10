@@ -224,7 +224,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import RedirectResponse
 
 from archipy.adapters.minio.adapters import MinioAdapter
-from archipy.models.errors import NotFoundError, PermissionDeniedError, InternalError
+from archipy.models.errors import InternalError, NotFoundError, PermissionDeniedError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -259,7 +259,7 @@ async def upload_file(bucket_name: str, file: UploadFile) -> dict[str, str]:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 @app.get("/download/{bucket_name}/{object_name}")
-async def download_file(bucket_name: str, object_name: str):
+async def download_file(bucket_name: str, object_name: str) -> RedirectResponse:
     try:
         # Generate presigned URL
         url = minio.presigned_get_object(bucket_name, object_name, expires=3600)

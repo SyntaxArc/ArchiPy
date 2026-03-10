@@ -100,9 +100,11 @@ class ConfigurationManager(metaclass=Singleton):
         Raises:
             ConfigurationError: If configuration cannot be loaded
         """
-        if config_file and not hasattr(self, "_config"):
+        self._config: dict[str, Any] = {}
+        if config_file and not hasattr(self, "_loaded"):
             try:
                 self._config = self._load_config(config_file)
+                self._loaded = True
             except Exception as e:
                 logger.error(f"Failed to load configuration: {e}")
                 raise ConfigurationError() from e

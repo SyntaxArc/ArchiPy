@@ -1,6 +1,6 @@
 # Interceptor Examples
 
-This page demonstrates how to use ArchiPy's interceptors for cross-cutting concerns like logging, tracing, and error
+This page demonstrates how to use ArchiPy's interceptors for cross-cutting concerns like tracing, metrics, and error
 handling.
 
 ## gRPC Interceptors
@@ -12,9 +12,8 @@ The tracing interceptor adds request/response tracking to gRPC services:
 ```python
 import grpc
 from concurrent import futures
-from typing import Any, Callable
 
-from archipy.helpers.interceptors.grpc.trace import GrpcServerTraceInterceptor
+from archipy.helpers.interceptors.grpc.trace.server_interceptor import GrpcServerTraceInterceptor
 from archipy.models.errors import InternalError
 
 
@@ -35,11 +34,11 @@ def create_grpc_server(max_workers: int = 10) -> grpc.Server:
         # Create the server with the interceptor
         server = grpc.server(
             futures.ThreadPoolExecutor(max_workers=max_workers),
-            interceptors=[trace_interceptor]
+            interceptors=[trace_interceptor],
         )
         return server
     except Exception as e:
-        raise InternalError(error_details="Failed to create gRPC server") from e
+        raise InternalError(additional_data={"detail": "Failed to create gRPC server"}) from e
 
 
 # Usage
@@ -50,96 +49,90 @@ server = create_grpc_server()
 # server.start()
 ```
 
-## FastAPI Interceptors
+### Metrics Interceptor
 
-### Request Logging
-
-Log all incoming requests and responses:
+The metrics interceptor records gRPC call durations and counts for Prometheus:
 
 ```python
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
-from typing import Awaitable, Callable
+import grpc
+from concurrent import futures
 
-from archipy.helpers.interceptors.fastapi.logging import RequestLoggingMiddleware
-from archipy.helpers.utils.app_utils import AppUtils
-from archipy.configs.base_config import BaseConfig
-
-# Create a FastAPI app with request logging
-app = AppUtils.create_fastapi_app()
-
-# Add the logging middleware
-app.add_middleware(RequestLoggingMiddleware)
+from archipy.helpers.interceptors.grpc.metric.server_interceptor import GrpcServerMetricInterceptor
+from archipy.helpers.interceptors.grpc.trace.server_interceptor import GrpcServerTraceInterceptor
 
 
-# Example endpoint
-@app.get("/items/{item_id}")
-async def read_item(item_id: int):
-    return {"item_id": item_id}
+def create_grpc_server_with_metrics(max_workers: int = 10) -> grpc.Server:
+    """Create a gRPC server with both tracing and metrics interceptors.
+
+    Args:
+        max_workers: Maximum worker threads for the server
+
+    Returns:
+        Configured gRPC server instance
+    """
+    interceptors = [
+        GrpcServerTraceInterceptor(),
+        GrpcServerMetricInterceptor(),
+    ]
+    return grpc.server(
+        futures.ThreadPoolExecutor(max_workers=max_workers),
+        interceptors=interceptors,
+    )
 ```
 
-### Performance Monitoring
+## FastAPI Interceptors
 
-Monitor endpoint performance:
+### Metrics Middleware
+
+`FastAPIMetricInterceptor` records request durations and counts for Prometheus:
 
 ```python
 from fastapi import FastAPI
-from typing import Awaitable, Callable, Dict, Any
 
-from archipy.helpers.interceptors.fastapi.performance import PerformanceMonitoringMiddleware
+from archipy.helpers.interceptors.fastapi.metric.interceptor import FastAPIMetricInterceptor
 from archipy.helpers.utils.app_utils import AppUtils
-from archipy.configs.base_config import BaseConfig
 
 # Create a FastAPI app
 app = AppUtils.create_fastapi_app()
 
-# Add the performance monitoring middleware
-app.add_middleware(PerformanceMonitoringMiddleware)
+# Add the metrics middleware
+app.add_middleware(FastAPIMetricInterceptor)
 
 
-# Example endpoint
+# Example endpoint — duration and status will be recorded automatically
 @app.get("/process")
-async def process_data(query: str) -> Dict[str, Any]:
-    # Some processing here
+async def process_data(query: str) -> dict[str, str]:
     return {"query": query, "result": "processed"}
-
-# The middleware will log performance metrics for each request
-# Example log: "Endpoint GET /process completed in 123.45ms"
 ```
 
 ## Using Multiple Interceptors
 
-Combining multiple interceptors together:
+Combining gRPC and FastAPI interceptors in an application:
 
 ```python
 import grpc
 from concurrent import futures
 from fastapi import FastAPI
 
-from archipy.helpers.interceptors.grpc.trace import GrpcServerTraceInterceptor
-from archipy.helpers.interceptors.fastapi.logging import RequestLoggingMiddleware
-from archipy.helpers.interceptors.fastapi.performance import PerformanceMonitoringMiddleware
+from archipy.helpers.interceptors.fastapi.metric.interceptor import FastAPIMetricInterceptor
+from archipy.helpers.interceptors.grpc.trace.server_interceptor import GrpcServerTraceInterceptor
 from archipy.helpers.utils.app_utils import AppUtils
 
 
-# Create a FastAPI app with multiple interceptors
+# Create a FastAPI app with metrics middleware
 def create_fastapi_app() -> FastAPI:
     app = AppUtils.create_fastapi_app()
 
-    # Add middlewares in order (last added = first executed)
-    app.add_middleware(PerformanceMonitoringMiddleware)
-    app.add_middleware(RequestLoggingMiddleware)
+    # Add metrics middleware
+    app.add_middleware(FastAPIMetricInterceptor)
 
     return app
 
 
 # Create a gRPC server with the tracing interceptor
 def create_grpc_server() -> grpc.Server:
-    server = grpc.server(
+    return grpc.server(
         futures.ThreadPoolExecutor(max_workers=10),
-        interceptors=[GrpcServerTraceInterceptor()]
+        interceptors=[GrpcServerTraceInterceptor()],
     )
-
-    return server
 ```

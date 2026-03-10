@@ -10,8 +10,8 @@ from datetime import datetime
 
 from archipy.adapters.starrocks.sqlalchemy.adapters import StarrocksSQLAlchemyAdapter
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
-from archipy.models.errors import DatabaseQueryError, DatabaseConnectionError
-from sqlalchemy import Column, String, Integer, DateTime
+from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
+from sqlalchemy import Column, DateTime, Integer, String
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -44,30 +44,37 @@ except Exception as e:
 else:
     logger.info("Database tables created")
 
-# Basic operations
+# Basic CRUD operations using get_session()
 try:
-    with adapter.session() as session:
+    with adapter.get_session() as session:
         # Create
         user = User(
             username="john_doe",
             email="john@example.com",
             age=30,
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
         session.add(user)
         session.commit()
+        session.refresh(user)
+        logger.info(f"User created with uuid: {user.uuid}")
 
         # Read
-        user = session.query(User).filter_by(username="john_doe").first()
-        logger.info(f"User email: {user.email}")  # john@example.com
+        found_user = session.get(User, user.uuid)
+        if found_user:
+            logger.info(f"User email: {found_user.email}")  # john@example.com
 
         # Update
-        user.age = 31
-        session.commit()
+        if found_user:
+            found_user.age = 31
+            session.commit()
+            logger.info(f"User age updated to: {found_user.age}")
 
         # Delete
-        session.delete(user)
-        session.commit()
+        if found_user:
+            session.delete(found_user)
+            session.commit()
+            logger.info("User deleted")
 except (DatabaseQueryError, DatabaseConnectionError) as e:
     logger.error(f"Database operation failed: {e}")
     raise
@@ -92,7 +99,7 @@ def create_user_with_profile(
     username: str,
     email: str,
     age: int,
-    profile_data: dict[str, str]
+    profile_data: dict[str, str],
 ) -> User:
     """Create a user and profile in a single transaction.
 
@@ -108,18 +115,14 @@ def create_user_with_profile(
     Raises:
         DatabaseQueryError: If database operation fails
     """
-    try:
-        user = User(username=username, email=email, age=age)
-        adapter.create(user)
+    user = User(username=username, email=email, age=age)
+    adapter.create(user)
 
-        profile = Profile(user_id=user.uuid, **profile_data)
-        adapter.create(profile)
-    except Exception as e:
-        logger.error(f"Failed to create user with profile: {e}")
-        raise DatabaseQueryError() from e
-    else:
-        logger.info(f"User and profile created: {username}")
-        return user
+    profile = Profile(user_id=user.uuid, **profile_data)
+    adapter.create(profile)
+
+    logger.info(f"User and profile created: {username}")
+    return user
 ```
 
 ## Async Operations
@@ -130,7 +133,7 @@ import logging
 
 from archipy.adapters.starrocks.sqlalchemy.adapters import AsyncStarrocksSQLAlchemyAdapter
 from archipy.helpers.decorators.sqlalchemy_atomic import async_starrocks_sqlalchemy_atomic_decorator
-from archipy.models.errors import DatabaseQueryError, DatabaseConnectionError
+from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -161,15 +164,10 @@ async def main() -> None:
         Raises:
             DatabaseQueryError: If database operation fails
         """
-        try:
-            user = User(username=username, email=email, age=age)
-            result = await adapter.create(user)
-        except Exception as e:
-            logger.error(f"Failed to create user: {e}")
-            raise DatabaseQueryError() from e
-        else:
-            logger.info(f"User created: {username}")
-            return result
+        user = User(username=username, email=email, age=age)
+        result = await adapter.create(user)
+        logger.info(f"User created: {username}")
+        return result
 
     try:
         user = await create_user_async("jane_doe", "jane@example.com", 28)
@@ -192,9 +190,9 @@ from uuid import UUID
 
 from archipy.models.errors import (
     AlreadyExistsError,
-    NotFoundError,
+    DatabaseConnectionError,
     DatabaseQueryError,
-    DatabaseConnectionError
+    NotFoundError,
 )
 
 # Configure logging
@@ -224,7 +222,7 @@ def get_user_by_id(user_id: UUID) -> User | None:
         if not user:
             raise NotFoundError(
                 resource_type="user",
-                additional_data={"user_id": str(user_id)}
+                additional_data={"user_id": str(user_id)},
             )
         logger.info(f"User retrieved: {user.username}")
         return user
@@ -232,55 +230,58 @@ def get_user_by_id(user_id: UUID) -> User | None:
 
 ## Advanced Queries
 
-StarRocks is optimized for analytical queries. Here are some advanced patterns:
+StarRocks is optimized for analytical queries. Use `get_session()` for direct SQLAlchemy session access to run complex queries:
 
 ```python
 import logging
 from datetime import datetime, timedelta
 
-from sqlalchemy import func
+from sqlalchemy import func, select, update
+
+from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 try:
-    # Complex filtering for analytics
-    recent_users = adapter.query(User).filter(
-        User.age > 25,
-        User.created_at >= datetime.now() - timedelta(days=30)
-    ).all()
-except DatabaseQueryError as e:
+    with adapter.get_session() as session:
+        # Complex filtering for analytics
+        stmt = select(User).where(
+            User.age > 25,
+            User.created_at >= datetime.now() - timedelta(days=30),
+        )
+        recent_users = session.execute(stmt).scalars().all()
+        logger.info(f"Found {len(recent_users)} recent users")
+except (DatabaseQueryError, DatabaseConnectionError) as e:
     logger.error(f"Failed to query recent users: {e}")
     raise
-else:
-    logger.info(f"Found {len(recent_users)} recent users")
 
 try:
-    # Aggregation for reporting
-    age_stats = adapter.query(
-        func.avg(User.age).label('avg_age'),
-        func.max(User.age).label('max_age'),
-        func.min(User.age).label('min_age')
-    ).first()
-except DatabaseQueryError as e:
+    with adapter.get_session() as session:
+        # Aggregation for reporting
+        stmt = select(
+            func.avg(User.age).label("avg_age"),
+            func.max(User.age).label("max_age"),
+            func.min(User.age).label("min_age"),
+        )
+        age_stats = session.execute(stmt).one()
+        logger.info(f"Age statistics: avg={age_stats.avg_age}, max={age_stats.max_age}, min={age_stats.min_age}")
+except (DatabaseQueryError, DatabaseConnectionError) as e:
     logger.error(f"Failed to compute age statistics: {e}")
     raise
-else:
-    logger.info(f"Age statistics: avg={age_stats.avg_age}, max={age_stats.max_age}, min={age_stats.min_age}")
 
 try:
-    # Joins for complex analytics
-    from sqlalchemy import join
-
-    user_profiles = adapter.query(User).join(
-        Profile,
-        User.uuid == Profile.user_id
-    ).all()
-except DatabaseQueryError as e:
+    with adapter.get_session() as session:
+        # Joins for complex analytics
+        stmt = (
+            select(User)
+            .join(Profile, User.uuid == Profile.user_id)  # type: ignore[name-defined]
+        )
+        user_profiles = session.execute(stmt).scalars().all()
+        logger.info(f"Retrieved {len(user_profiles)} user profiles")
+except (DatabaseQueryError, DatabaseConnectionError) as e:
     logger.error(f"Failed to join users and profiles: {e}")
     raise
-else:
-    logger.info(f"Retrieved {len(user_profiles)} user profiles")
 ```
 
 ## Batch Operations
@@ -289,20 +290,21 @@ StarRocks excels at batch operations for analytical workloads:
 
 ```python
 import logging
+from datetime import datetime
 
-from archipy.models.errors import DatabaseQueryError
+from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 try:
-    # Batch insert
+    # Batch insert via bulk_create
     users = [
         User(
             username=f"user{i}",
             email=f"user{i}@example.com",
             age=20 + i,
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
         for i in range(1000)
     ]
@@ -314,16 +316,16 @@ else:
     logger.info(f"Successfully inserted {len(users)} users")
 
 try:
-    # Batch update
-    rows_updated = adapter.query(User).filter(User.age < 30).update(
-        {"age": User.age + 1},
-        synchronize_session=False
-    )
-except DatabaseQueryError as e:
+    # Batch update via session
+    with adapter.get_session() as session:
+        stmt = update(User).where(User.age < 30).values(age=User.age + 1)
+        result = session.execute(stmt)
+        session.commit()
+        rows_updated = result.rowcount
+        logger.info(f"Updated {rows_updated} users")
+except (DatabaseQueryError, DatabaseConnectionError) as e:
     logger.error(f"Batch update failed: {e}")
     raise
-else:
-    logger.info(f"Updated {rows_updated} users")
 ```
 
 ## Configuration
@@ -331,8 +333,8 @@ else:
 ```python
 import logging
 
-from archipy.configs.config_template import StarrocksConfig
 from archipy.adapters.starrocks.sqlalchemy.adapters import StarrocksSQLAlchemyAdapter
+from archipy.configs.config_template import StarRocksSQLAlchemyConfig
 from archipy.models.errors import ConfigurationError, DatabaseConnectionError
 
 # Configure logging
@@ -340,12 +342,12 @@ logger = logging.getLogger(__name__)
 
 # Configure StarRocks connection
 try:
-    config = StarrocksConfig(
+    config = StarRocksSQLAlchemyConfig(
         HOST="localhost",
         PORT=9030,
-        USER="root",
+        USERNAME="root",
         PASSWORD="password",
-        DATABASE="analytics_db"
+        DATABASE="analytics_db",
     )
 except Exception as e:
     logger.error(f"Invalid configuration: {e}")
@@ -355,7 +357,7 @@ else:
 
 # Create adapter with custom config
 try:
-    adapter = StarrocksSQLAlchemyAdapter(config=config)
+    adapter = StarrocksSQLAlchemyAdapter(orm_config=config)
 except Exception as e:
     logger.error(f"Failed to create adapter with config: {e}")
     raise DatabaseConnectionError() from e
@@ -367,13 +369,15 @@ else:
 
 ```python
 import logging
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import func, select
 
 from archipy.adapters.starrocks.sqlalchemy.adapters import StarrocksSQLAlchemyAdapter
-from archipy.models.errors import NotFoundError, DatabaseQueryError
+from archipy.models.errors import DatabaseQueryError, NotFoundError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -403,7 +407,7 @@ async def create_user(user_data: UserCreate) -> dict[str, str | UUID | int]:
             username=user_data.username,
             email=user_data.email,
             age=user_data.age,
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
         created_user = adapter.create(user)
     except DatabaseQueryError as e:
@@ -415,7 +419,7 @@ async def create_user(user_data: UserCreate) -> dict[str, str | UUID | int]:
             "uuid": created_user.uuid,
             "username": created_user.username,
             "email": created_user.email,
-            "age": created_user.age
+            "age": created_user.age,
         }
 
 
@@ -423,12 +427,13 @@ async def create_user(user_data: UserCreate) -> dict[str, str | UUID | int]:
 async def get_age_distribution() -> dict[str, list[dict[str, int]]]:
     """Get age distribution analytics."""
     try:
-        from sqlalchemy import func
-
-        distribution = adapter.query(
-            User.age,
-            func.count(User.uuid).label('count')
-        ).group_by(User.age).order_by(User.age).all()
+        with adapter.get_session() as session:
+            stmt = (
+                select(User.age, func.count(User.uuid).label("count"))
+                .group_by(User.age)
+                .order_by(User.age)
+            )
+            distribution = session.execute(stmt).all()
     except DatabaseQueryError as e:
         logger.error(f"Analytics query failed: {e}")
         raise HTTPException(status_code=500, detail="Query failed") from e

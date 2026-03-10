@@ -8,10 +8,11 @@ This example demonstrates how to use the PostgreSQL adapter for database operati
 import logging
 from uuid import UUID
 
+from sqlalchemy import Column, String
+
 from archipy.adapters.postgres.sqlalchemy.adapters import PostgresSQLAlchemyAdapter
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
-from archipy.models.errors import DatabaseQueryError, DatabaseConnectionError
-from sqlalchemy import Column, String
+from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -63,14 +64,15 @@ except (DatabaseQueryError, DatabaseConnectionError) as e:
 
 ```python
 from archipy.helpers.decorators.sqlalchemy_atomic import postgres_sqlalchemy_atomic_decorator
-from archipy.models.errors import DatabaseQueryError, AlreadyExistsError
+from archipy.models.errors import AlreadyExistsError, DatabaseQueryError
 
 
 @postgres_sqlalchemy_atomic_decorator
 def create_user_with_profile(username: str, email: str, profile_data: dict[str, str]) -> User:
     """Create a user and associated profile in a transaction.
 
-    If any part fails, the entire transaction is rolled back.
+    If any part fails, the entire transaction is rolled back automatically
+    by the decorator.
 
     Args:
         username: User's username
@@ -81,23 +83,18 @@ def create_user_with_profile(username: str, email: str, profile_data: dict[str, 
         User: The created user object
 
     Raises:
-        DatabaseQueryError: If a database error occurs
         AlreadyExistsError: If the user or profile already exists
+        DatabaseQueryError: If a database error occurs
     """
-    try:
-        # Create user
-        user = User(username=username, email=email)
-        adapter.create(user)
+    # Create user
+    user = User(username=username, email=email)
+    adapter.create(user)
 
-        # Create profile with user's UUID
-        profile = Profile(user_id=user.uuid, **profile_data)
-        adapter.create(profile)
-    except Exception as e:
-        # The decorator will automatically handle the transaction,
-        # rolling back on error and converting exceptions
-        raise DatabaseQueryError() from e
-    else:
-        return user
+    # Create profile with user's UUID
+    profile = Profile(user_id=user.uuid, **profile_data)  # type: ignore[name-defined]
+    adapter.create(profile)
+
+    return user
 ```
 
 ## Async Operations
@@ -133,13 +130,8 @@ async def main() -> None:
             DatabaseQueryError: If a database error occurs
             DatabaseConnectionError: If a connection error occurs
         """
-        try:
-            user = User(username=username, email=email)
-            result = await adapter.create(user)
-        except Exception as e:
-            raise DatabaseQueryError() from e
-        else:
-            return result
+        user = User(username=username, email=email)
+        return await adapter.create(user)
 
     try:
         user = await create_user_async("jane_doe", "jane@example.com")
@@ -148,7 +140,6 @@ async def main() -> None:
         raise
     else:
         logger.info(f"User created: {user.username}")  # jane_doe
-        return user
 ```
 
 ## Error Handling
@@ -159,9 +150,9 @@ from uuid import UUID
 
 from archipy.models.errors import (
     AlreadyExistsError,
-    NotFoundError,
     DatabaseConnectionError,
-    DatabaseQueryError
+    DatabaseQueryError,
+    NotFoundError,
 )
 
 # Configure logging
