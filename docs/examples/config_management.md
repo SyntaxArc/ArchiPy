@@ -128,8 +128,14 @@ logger.info(f"Configuration loaded for environment: {env}")
 You can use nested Pydantic models for more complex configurations:
 
 ```python
+import logging
+
 from pydantic import BaseModel
 from archipy.configs.base_config import BaseConfig
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
 
 class DatabaseConfig(BaseModel):
     HOST: str = "localhost"
@@ -162,8 +168,14 @@ logger.info(config.DATABASE.connection_string())
 ArchiPy provides pre-configured templates for common configuration objects:
 
 ```python
+import logging
+
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.environment_type import EnvironmentType
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
 
 class AppConfig(BaseConfig):
     # Override only what you need

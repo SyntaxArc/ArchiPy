@@ -19,17 +19,21 @@ Configure MinIO in your application's config:
 
 ```python
 from archipy.configs.base_config import BaseConfig
+from archipy.configs.config_template import MinioConfig
 
 # Method 1: Using environment variables
 # MINIO__ENDPOINT=localhost:9000
 # MINIO__ACCESS_KEY=minioadmin
 # MINIO__SECRET_KEY=minioadmin
 
-# Method 2: Direct configuration
-BaseConfig.global_config().MINIO.ENDPOINT = "localhost:9000"
-BaseConfig.global_config().MINIO.ACCESS_KEY = "minioadmin"
-BaseConfig.global_config().MINIO.SECRET_KEY = "minioadmin"
-BaseConfig.global_config().MINIO.SECURE = False  # Set to True for HTTPS
+# Method 2: Subclass BaseConfig to set MinIO defaults declaratively
+class AppConfig(BaseConfig):
+    MINIO: MinioConfig = MinioConfig(
+        ENDPOINT="localhost:9000",
+        ACCESS_KEY="minioadmin",
+        SECRET_KEY="minioadmin",  # noqa: S106
+        SECURE=False,  # Set to True for HTTPS
+    )
 ```
 
 ### Initializing the Adapter

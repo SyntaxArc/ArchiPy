@@ -16,13 +16,15 @@ The `BaseProtobufDTO` provides a bridge between Pydantic DTOs and Protocol Buffe
 To use `BaseProtobufDTO`, you need to install the protobuf extra:
 
 ```bash
-pip install archipy[protobuf]
+uv add "archipy[grpc]"
+# or install google-protobuf directly if not using gRPC:
+uv add google-protobuf
 ```
 
 Or install the protobuf dependency directly:
 
 ```bash
-pip install google-protobuf
+uv add google-protobuf
 ```
 
 ## Basic Usage
@@ -439,7 +441,7 @@ class TestUserProtobufDTO:
 ### Common Issues
 
 1. **ImportError: No module named 'google.protobuf'**
-   - Install the protobuf dependency: `pip install google-protobuf`
+   - Install the protobuf dependency: `uv add google-protobuf`
 
 2. **NotImplementedError: Class is not mapped to a proto class**
    - Set the `_proto_class` attribute in your DTO

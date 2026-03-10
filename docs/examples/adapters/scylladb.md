@@ -23,9 +23,7 @@ The ScyllaDB adapter provides a clean, Pythonic interface for interacting with S
 The ScyllaDB adapter is included with ArchiPy. Ensure you have the required dependencies:
 
 ```bash
-uv add scylla-driver
-# or
-pip install scylla-driver
+uv add "archipy[scylladb]"
 ```
 
 ## Basic Setup

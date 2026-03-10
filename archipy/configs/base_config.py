@@ -18,7 +18,6 @@ from archipy.configs.config_template import (
     FileConfig,
     GrpcConfig,
     KafkaConfig,
-    KavenegarConfig,
     KeycloakConfig,
     MinioConfig,
     ParsianShaparakConfig,
@@ -73,7 +72,6 @@ class BaseConfig[R](BaseSettings):
         FILE (FileConfig): File handling configuration
         GRPC (GrpcConfig): gRPC service configuration
         KAFKA (KafkaConfig): Kafka integration configuration
-        KAVENEGAR (KavenegarConfig): Kavenegar SMS service configuration
         KEYCLOAK (KeycloakConfig): Keycloak integration configuration
         MINIO (MinioConfig): MinIO object storage configuration
         PARSIAN_SHAPARAK (ParsianShaparakConfig): Parsian Shaparak payment gateway configuration
@@ -162,7 +160,6 @@ class BaseConfig[R](BaseSettings):
     FILE: FileConfig = FileConfig()
     GRPC: GrpcConfig = GrpcConfig()
     KAFKA: KafkaConfig = KafkaConfig()
-    KAVENEGAR: KavenegarConfig = KavenegarConfig()
     KEYCLOAK: KeycloakConfig = KeycloakConfig()
     MINIO: MinioConfig = MinioConfig()
     PARSIAN_SHAPARAK: ParsianShaparakConfig = ParsianShaparakConfig()

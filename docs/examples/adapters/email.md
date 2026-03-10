@@ -30,6 +30,8 @@ custom_config = EmailConfig(
 ```
 
 ### Initializing the Adapter
+
+```python
 import logging
 
 from archipy.adapters.email.adapters import EmailAdapter

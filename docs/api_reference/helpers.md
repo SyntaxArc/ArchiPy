@@ -75,11 +75,6 @@ Classes for cross-cutting concerns:
 - Performance monitoring
 - Request/response tracking
 
-## Overview
-
-The helpers module offers utilities, decorators, and interceptors to enhance productivity and simplify common
-development tasks, such as retry logic, rate limiting, and tracing.
-
 **See Examples**: [Examples Helpers](../examples/helpers/index.md)
 
 ## Decorators
@@ -104,9 +99,9 @@ result = risky_operation()
 ```
 
 ::: archipy.helpers.decorators.retry
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### Singleton Decorator
 
@@ -127,9 +122,9 @@ assert db1 is db2
 ```
 
 ::: archipy.helpers.decorators.singleton
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### SQLAlchemy Atomic Decorator
 
@@ -147,9 +142,9 @@ def create_user(username: str, email: str):
 ```
 
 ::: archipy.helpers.decorators.sqlalchemy_atomic
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ## Interceptors
 
@@ -177,23 +172,23 @@ async def get_data():
 ```
 
 ::: archipy.helpers.interceptors.fastapi.rate_limit.fastapi_rest_rate_limit_handler
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### gRPC Interceptors
 
 gRPC interceptors for tracing and monitoring:
 
 ::: archipy.helpers.interceptors.grpc.trace.client_interceptor
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.helpers.interceptors.grpc.trace.server_interceptor
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ## Metaclasses
 
@@ -215,9 +210,9 @@ assert db1 is db2
 ```
 
 ::: archipy.helpers.metaclasses.singleton
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ## Key Classes
 

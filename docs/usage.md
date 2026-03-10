@@ -5,14 +5,15 @@ This is a quick-start guide to get you up and running with ArchiPy in minutes. F
 ## Installation
 
 ```bash
-# Basic installation
-pip install archipy
+# Recommended
+uv add archipy
 
 # With specific adapters
-pip install archipy[postgres,redis,fastapi]
+uv add "archipy[postgres,redis,fastapi]"
 
-# Or using uv
-uv add archipy[postgres,redis,fastapi]
+# Or using pip
+pip install archipy
+pip install archipy[postgres,redis,fastapi]
 ```
 
 ## Quick Start: 5-Minute API
@@ -194,4 +195,4 @@ my_app/
 - **API reference?** → [API Documentation](api_reference/index.md)
 - **Contributing?** → [Contributing Guide](contributing.md)
 
-Happy coding! 🚀
+Happy coding!

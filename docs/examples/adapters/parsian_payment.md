@@ -2,6 +2,12 @@
 
 This example demonstrates how to use the Parsian Shaparak payment gateway adapter to process online payments in Iran with proper error handling and Python 3.14 type hints.
 
+## Installation
+
+```bash
+uv add "archipy[parsian-ipg]"
+```
+
 ## Configuration
 
 First, configure the Parsian Shaparak settings in your environment or configuration file:

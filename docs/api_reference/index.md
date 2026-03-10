@@ -14,6 +14,7 @@ The adapters module provides standardized interfaces to external systems:
     - [PostgreSQL](adapters.md#postgresql)
     - [SQLite](adapters.md#sqlite)
     - [StarRocks](adapters.md#starrocks)
+    - [ScyllaDB](adapters.md#scylladb)
 - [Redis Adapters](adapters.md#redis)
 - [Email Adapters](adapters.md#email)
 - [Keycloak Adapters](adapters.md#keycloak)
@@ -70,6 +71,7 @@ archipy/
 │   ├── postgres/      # PostgreSQL database adapters
 │   │   └── sqlalchemy/  # PostgreSQL SQLAlchemy components
 │   ├── redis/         # Redis adapters
+│   ├── scylladb/      # ScyllaDB/Cassandra adapters
 │   ├── sqlite/        # SQLite database adapters
 │   │   └── sqlalchemy/  # SQLite SQLAlchemy components
 │   ├── starrocks/     # StarRocks database adapters
@@ -77,7 +79,8 @@ archipy/
 │   └── temporal/      # Temporal workflow orchestration adapters
 ├── configs/           # Configuration management
 │   ├── base_config.py
-│   └── templates/
+│   ├── config_template.py
+│   └── environment_type.py
 ├── helpers/           # Utility functions
 │   ├── decorators/
 │   ├── interceptors/

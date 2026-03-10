@@ -400,7 +400,7 @@ class UserGetOutputDTO(BaseDTO):
 
 
 # models/errors/user_errors.py
-from archipy.models.errors.base_errors import AlreadyExistsError
+from archipy.models.errors import AlreadyExistsError
 
 
 class UserAlreadyExistsError(AlreadyExistsError):
@@ -576,7 +576,7 @@ class UserRegistrationLogic:
 from uuid import UUID
 from models.dtos.user_dtos import GetUserByIdQueryDTO, SearchUsersQueryDTO, UserResponseDTO
 from repositories.user.user_repository import UserRepository
-from archipy.models.errors.base_errors import NotFoundError
+from archipy.models.errors import NotFoundError
 
 
 class UserQueryLogic:
@@ -611,7 +611,7 @@ from models.dtos.user_dtos import (
     UserGetOutputDTO
 )
 from models.errors.user_errors import UserAlreadyExistsError
-from archipy.models.errors.base_errors import NotFoundError
+from archipy.models.errors import NotFoundError
 from logic.user.user_registration_logic import UserRegistrationLogic
 from logic.user.user_query_logic import UserQueryLogic
 from repositories.user.user_repository import UserRepository

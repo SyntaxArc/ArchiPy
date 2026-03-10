@@ -32,6 +32,7 @@ Utility functions and decorators following best practices:
 
 - [Decorators](helpers/decorators.md) - Retry, timeout, caching, and transaction decorators with Python 3.14 types
 - [Interceptors](helpers/interceptors.md) - gRPC and FastAPI interceptors for cross-cutting concerns
+- [Metaclasses](helpers/metaclasses.md) - Singleton and registry metaclass patterns
 - [Utils](helpers/utils.md) - Datetime, JWT, password, file, and validation utilities with proper error handling
 
 ## Configuration

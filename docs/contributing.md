@@ -73,8 +73,8 @@ All new features or changes should be documented:
 Building the documentation locally:
 
 ```bash
-cd docs
-make html
+make docs-serve   # live-reload local server
+make docs-build   # build static site
 ```
 
 ### Commit Messages

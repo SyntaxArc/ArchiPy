@@ -22,24 +22,24 @@ type has its own dedicated adapter implementation.
 The base SQLAlchemy components provide the core functionality used by all database-specific adapters:
 
 ::: archipy.adapters.base.sqlalchemy.adapters
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.base.sqlalchemy.ports
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.base.sqlalchemy.session_managers
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.base.sqlalchemy.session_manager_registry
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 #### PostgreSQL
 
@@ -56,19 +56,19 @@ users = orm_adapter.query(User).filter(User.active == True).all()
 ```
 
 ::: archipy.adapters.postgres.sqlalchemy.adapters
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.postgres.sqlalchemy.session_managers
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.postgres.sqlalchemy.session_manager_registry
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 #### SQLite
 
@@ -82,19 +82,19 @@ orm_adapter = SQLiteSQLAlchemyAdapter()
 ```
 
 ::: archipy.adapters.sqlite.sqlalchemy.adapters
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.sqlite.sqlalchemy.session_managers
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.sqlite.sqlalchemy.session_manager_registry
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 #### StarRocks
 
@@ -108,19 +108,19 @@ orm_adapter = StarrocksSQLAlchemyAdapter()
 ```
 
 ::: archipy.adapters.starrocks.sqlalchemy.adapters
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.starrocks.sqlalchemy.session_managers
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.starrocks.sqlalchemy.session_manager_registry
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 #### ScyllaDB
 
@@ -155,14 +155,46 @@ users = adapter.select("users", conditions={"id": 1})
 For detailed examples and usage guidelines, see the [ScyllaDB Adapter Examples](../examples/adapters/scylladb.md).
 
 ::: archipy.adapters.scylladb.adapters
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.scylladb.ports
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
+
+### Elasticsearch
+
+Full-text search and analytics adapter with sync and async support.
+
+```python
+from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter, AsyncElasticsearchAdapter
+
+# Create a sync adapter (uses global config)
+es = ElasticsearchAdapter()
+
+# Ping the cluster
+alive = es.ping()
+
+# Index a document
+es.index(index="articles", document={"title": "Hello World"}, doc_id="doc-1")
+
+# Search
+results = es.search(index="articles", query={"query": {"match_all": {}}})
+```
+
+For detailed examples and usage guidelines, see the [Elasticsearch Adapter Examples](../examples/adapters/elasticsearch.md).
+
+::: archipy.adapters.elasticsearch.adapters
+    options:
+      show_root_heading: true
+      show_source: true
+
+::: archipy.adapters.elasticsearch.ports
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### Email
 
@@ -183,14 +215,14 @@ email_adapter.send_email(
 ```
 
 ::: archipy.adapters.email.adapters
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.email.ports
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### Keycloak
 
@@ -232,14 +264,14 @@ user_info = asyncio.run(auth_example())
 For detailed examples and usage guidelines, see the [Keycloak Adapter Examples](../examples/adapters/keycloak.md).
 
 ::: archipy.adapters.keycloak.adapters
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.keycloak.ports
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### MinIO
 
@@ -265,14 +297,14 @@ download_url = minio.presigned_get_object("my-bucket", "document.pdf")
 For detailed examples and usage guidelines, see the [MinIO Adapter Examples](../examples/adapters/minio.md).
 
 ::: archipy.adapters.minio.adapters
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.minio.ports
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### Redis
 
@@ -286,14 +318,14 @@ redis = RedisAdapter()
 ```
 
 ::: archipy.adapters.redis.adapters
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.redis.ports
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### Kafka
 
@@ -319,14 +351,14 @@ kafka.consume("my-topic", process_message)
 For detailed examples and usage guidelines, see the [Kafka Adapter Examples](../examples/adapters/kafka.md).
 
 ::: archipy.adapters.kafka.adapters
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ::: archipy.adapters.kafka.ports
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### Payment Gateways
 
@@ -364,9 +396,9 @@ if payment_response.status == 0:  # 0 means success
 For detailed examples and usage guidelines, see the [Parsian Payment Gateway Examples](../examples/adapters/parsian_payment.md).
 
 ::: archipy.adapters.internet_payment_gateways.ir.parsian.adapters
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### Temporal {#temporal}
 
@@ -425,27 +457,27 @@ For detailed examples and usage guidelines, see the [Temporal Examples](../examp
 #### Temporal Adapter
 
 ::: archipy.adapters.temporal.adapters
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 #### Temporal Ports
 
 ::: archipy.adapters.temporal.ports
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 #### Temporal Worker Manager
 
 ::: archipy.adapters.temporal.worker
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 #### Temporal Base Classes
 
 ::: archipy.adapters.temporal.base
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true

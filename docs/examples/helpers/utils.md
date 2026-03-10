@@ -177,7 +177,8 @@ else:
 
 ## error_utils
 
-Standardized exception handling:
+Utilities for standardized error introspection. See the [Error Handling examples](../error_handling.md) for
+comprehensive patterns using ArchiPy's domain-specific exceptions.
 
 ## app_utils
 
@@ -207,60 +208,66 @@ logger.info("FastAPI app configured successfully")
 
 ## string_utils
 
-String manipulation utilities:
+String manipulation utilities. `StringUtils` provides helpers for common string operations. See the
+[Utils API Reference](../../api_reference/utils.md#string_utils) for the full method list.
 
 ## keycloak_utils {#keycloak-utils}
 
 Authentication and authorization utilities with Keycloak integration:
 
 ```python
-if __name__ == '__main__':
-    import uvicorn
-    from uuid import UUID
-    from archipy.configs.base_config import BaseConfig
-    from archipy.helpers.utils.app_utils import AppUtils
-    from archipy.helpers.utils.keycloak_utils import KeycloakUtils
-    from archipy.models.types.language_type import LanguageType
-    from fastapi import Depends
+import logging
+from uuid import UUID
 
-    # Initialize your app configuration
-    config = BaseConfig()
-    BaseConfig.set_global(config)
-    app = AppUtils.create_fastapi_app()
+import uvicorn
+from fastapi import Depends
 
-    # Resource-based authorization for users with role and admin access
-    @app.get("/users/{user_uuid}/info")
-    def get_user_info(user_uuid: UUID, user: dict = Depends(KeycloakUtils.fastapi_auth(
-        resource_type_param="user_uuid",
-        resource_type="users",
-        required_roles={"user"},
-        admin_roles={"superusers", "administrators"},
-        lang=LanguageType.EN,
-    ))):
-        return {
-            "message": f"User info for {user_uuid}",
-            "username": user.get("preferred_username")
-        }
+from archipy.configs.base_config import BaseConfig
+from archipy.helpers.utils.app_utils import AppUtils
+from archipy.helpers.utils.keycloak_utils import KeycloakUtils
+from archipy.models.types.language_type import LanguageType
 
-    # Async version for employees with multiple acceptable roles
-    @app.get("/employees/{employee_uuid}/info")
-    async def get_employee_info(employee_uuid: UUID, employee: dict = Depends(KeycloakUtils.async_fastapi_auth(
-        resource_type_param="employee_uuid",
-        resource_type="employees",
-        required_roles={"employee", "manager", "user"},
-        all_roles_required=False,  # User can have any of these roles
-        admin_roles={"hr_admins", "system_admins"},
-        lang=LanguageType.FA,
-    ))):
-        return {
-            "message": f"Employee info for {employee_uuid}",
-            "username": employee.get("preferred_username")
-        }
+# Configure logging
+logger = logging.getLogger(__name__)
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)  # noqa: S104
+# Initialize your app configuration
+config = BaseConfig()
+BaseConfig.set_global(config)
+app = AppUtils.create_fastapi_app()
+
+# Resource-based authorization for users with role and admin access
+@app.get("/users/{user_uuid}/info")
+def get_user_info(user_uuid: UUID, user: dict = Depends(KeycloakUtils.fastapi_auth(
+    resource_type_param="user_uuid",
+    resource_type="users",
+    required_roles={"user"},
+    admin_roles={"superusers", "administrators"},
+    lang=LanguageType.EN,
+))):
+    return {
+        "message": f"User info for {user_uuid}",
+        "username": user.get("preferred_username")
+    }
+
+# Async version for employees with multiple acceptable roles
+@app.get("/employees/{employee_uuid}/info")
+async def get_employee_info(employee_uuid: UUID, employee: dict = Depends(KeycloakUtils.async_fastapi_auth(
+    resource_type_param="employee_uuid",
+    resource_type="employees",
+    required_roles={"employee", "manager", "user"},
+    all_roles_required=False,  # User can have any of these roles
+    admin_roles={"hr_admins", "system_admins"},
+    lang=LanguageType.FA,
+))):
+    return {
+        "message": f"Employee info for {employee_uuid}",
+        "username": employee.get("preferred_username")
+    }
+
+uvicorn.run(app, host="0.0.0.0", port=8000)  # noqa: S104
 ```
 
-# Additional Resources
+## Additional Resources
 
 For more examples and detailed documentation:
 

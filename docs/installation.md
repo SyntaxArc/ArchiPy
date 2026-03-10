@@ -31,7 +31,7 @@ pip install archipy
 With optional dependencies (e.g., database adapters, services):
 
 ```bash
-pip install archipy[postgres,sqlite,starrocks,redis,keycloak,minio,kafka]
+pip install archipy[postgres,sqlalchemy,starrocks,redis,keycloak,minio,kafka]
 ```
 
 ### Using UV
@@ -45,7 +45,7 @@ uv add archipy
 With optional dependencies:
 
 ```bash
-uv add "archipy[postgres,sqlite,starrocks,redis,keycloak,minio,kafka]"
+uv add "archipy[postgres,sqlalchemy,starrocks,redis,keycloak,minio,kafka]"
 ```
 
 ## Optional Dependencies
@@ -57,7 +57,7 @@ ArchiPy supports modular features through optional dependencies:
 | Feature    | Installation Command | Description                                             |
 |------------|----------------------|---------------------------------------------------------|
 | PostgreSQL | `archipy[postgres]`  | PostgreSQL database adapter with SQLAlchemy integration |
-| SQLite     | `archipy[sqlite]`    | SQLite database adapter with SQLAlchemy integration     |
+| SQLite     | `archipy[aiosqlite]` | SQLite database adapter with async SQLAlchemy integration |
 | StarRocks  | `archipy[starrocks]` | StarRocks database adapter with SQLAlchemy integration  |
 
 ### Service Adapters
@@ -109,11 +109,11 @@ make install-dev
 If issues arise, verify:
 
 1. Python version is 3.14+
-2. `pip` or `uv` is updated (e.g., `pip install --upgrade pip` or `uv self update`)
+2. `uv` is updated (`uv self update`)
 3. Build tools are available (UV handles this automatically)
 4. Database-specific dependencies are installed if using database adapters
 
 !!! tip "IDE Integration"
-For the best development experience, use an IDE that supports Python type hints, such as PyCharm or VS Code with the
-Python extension. The project uses modern Python type hints and benefits from IDE support for type checking and
-autocompletion.
+    For the best development experience, use an IDE that supports Python type hints, such as PyCharm or VS Code with the
+    Python extension. The project uses modern Python type hints and benefits from IDE support for type checking and
+    autocompletion.

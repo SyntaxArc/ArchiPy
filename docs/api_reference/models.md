@@ -67,15 +67,11 @@ class User(BaseEntity):
 For detailed examples, see:
 - [Protobuf DTOs](../examples/models/protobuf_dtos.md)
 - [Error Handling](../examples/error_handling.md)
-    page_size=10,
-    total_items=100
-)
-```
 
 ::: archipy.models.dtos.pagination_dto
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### Range DTOs
 
@@ -106,9 +102,9 @@ dt_range = DatetimeRangeDTO(
 ```
 
 ::: archipy.models.dtos.range_dtos
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### Search Input DTO
 
@@ -125,9 +121,9 @@ search = SearchInputDTO[str](
 ```
 
 ::: archipy.models.dtos.search_input_dto
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### Sort DTO
 
@@ -143,9 +139,9 @@ sort = SortDTO[str](
 ```
 
 ::: archipy.models.dtos.sort_dto
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ## Entities
 
@@ -207,9 +203,9 @@ class ManagerLog(ManagerEntity):
 ```
 
 ::: archipy.models.entities.sqlalchemy.base_entities
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ## Errors
 
@@ -373,9 +369,9 @@ except DeadlockDetectedError as e:
 ```
 
 ::: archipy.models.errors
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ## Types
 
@@ -384,36 +380,36 @@ show_source: true
 Basic type definitions used throughout the application.
 
 ::: archipy.models.types.base_types
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### Email Types
 
 Type definitions for email-related operations.
 
 ::: archipy.models.types.email_types
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### Language Type
 
 Language code type definition.
 
 ::: archipy.models.types.language_type
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ### Sort Order Type
 
 Sort order type definition for queries.
 
 ::: archipy.models.types.sort_order_type
-options:
-show_root_heading: true
-show_source: true
+    options:
+      show_root_heading: true
+      show_source: true
 
 ## Key Classes
 

@@ -73,8 +73,9 @@ make clean  # Remove artifacts
 Build docs:
 
 ```bash
-cd docs
-make html
+make docs-build    # Build static site
+make docs-serve    # Live-reload local server
+make docs-deploy   # Deploy to GitHub Pages
 ```
 
 Update dependencies:

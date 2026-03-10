@@ -19,7 +19,7 @@ class AppConfig(BaseConfig):
         SERVER_URL="https://keycloak.example.com",
         REALM_NAME="my-realm",
         CLIENT_ID="my-client",
-    CLIENT_SECRET_KEY="client-secret",  # noqa: S105  # Optional, required for admin operations
+        CLIENT_SECRET_KEY="client-secret",  # noqa: S105  # Optional, required for admin operations
         VERIFY_SSL=True,
         TIMEOUT=10
     )

@@ -49,7 +49,7 @@ class ElasticsearchConfig(BaseModel):
     RETRY_ON_TIMEOUT: bool = Field(default=True, description="Retry on connection timeouts")
     RETRY_ON_STATUS: tuple[int, ...] = Field(default=(429, 502, 503, 504), description="HTTP status codes to retry on")
     IGNORE_STATUS: tuple[int, ...] = Field(default=(), description="HTTP status codes to ignore as errors")
-    SNIFF_ON_START: bool = Field(default=False, description="Sniff nodes on client instantiation")
+    SNIFF_ON_START: bool = Field(default=True, description="Sniff nodes on client instantiation")
     SNIFF_BEFORE_REQUESTS: bool = Field(default=False, description="Sniff nodes before requests")
     SNIFF_ON_NODE_FAILURE: bool = Field(default=True, description="Sniff nodes on node failure")
     MIN_DELAY_BETWEEN_SNIFFING: float = Field(
@@ -651,18 +651,6 @@ class SentryConfig(BaseModel):
     RELEASE: str = Field(default="", description="Application release version")
     SAMPLE_RATE: float = Field(default=1.0, description="Error sampling rate (0.0 to 1.0)")
     TRACES_SAMPLE_RATE: float = Field(default=0.0, description="Performance monitoring sampling rate (0.0 to 1.0)")
-
-
-class KavenegarConfig(BaseModel):
-    """Configuration settings for Kavenegar SMS service integration.
-
-    Controls connection parameters and authentication for sending SMS messages
-    through the Kavenegar service.
-    """
-
-    SERVER_URL: str | None = Field(default=None, description="Kavenegar API server URL")
-    API_KEY: str | None = Field(default=None, description="Kavenegar API key")
-    PHONE_NUMBER: str | None = Field(default=None, description="Default sender phone number")
 
 
 class AuthConfig(BaseModel):
