@@ -106,18 +106,16 @@ class KafkaAdminAdapter(KafkaAdminPort, KafkaExceptionHandlerMixin):
         configs: KafkaConfig = kafka_configs or BaseConfig.global_config().KAFKA
         try:
             broker_list_csv = ",".join(configs.BROKERS_LIST)
-            config = {"bootstrap.servers": broker_list_csv}
+            config: dict[str, str | int | float] = {"bootstrap.servers": broker_list_csv}
             if configs.USERNAME and configs.PASSWORD and configs.SSL_CA_FILE:
-                config |= {
-                    "sasl.username": configs.USERNAME,
-                    "sasl.password": configs.PASSWORD.get_secret_value(),
-                    "security.protocol": configs.SECURITY_PROTOCOL,
-                    "sasl.mechanism": configs.SASL_MECHANISM,
-                    "ssl.ca.location": configs.SSL_CA_FILE,
-                    "ssl.certificate.location": configs.SSL_CERT_FILE,
-                    "ssl.key.location": configs.SSL_KEY_FILE,
-                    "ssl.endpoint.identification.algorithm": "none",
-                }
+                config["sasl.username"] = configs.USERNAME
+                config["sasl.password"] = configs.PASSWORD.get_secret_value()
+                config["security.protocol"] = configs.SECURITY_PROTOCOL
+                config["sasl.mechanism"] = configs.SASL_MECHANISM or ""
+                config["ssl.ca.location"] = configs.SSL_CA_FILE
+                config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
+                config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
+                config["ssl.endpoint.identification.algorithm"] = "none"
             self.adapter: AdminClient = AdminClient(config)
         except Exception as e:
             self._handle_kafka_exception(e, "KafkaAdmin_init")
@@ -249,7 +247,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
         """
         try:
             broker_list_csv = ",".join(configs.BROKERS_LIST)
-            config = {
+            config: dict[str, str | int | float] = {
                 "bootstrap.servers": broker_list_csv,
                 "group.id": group_id,
                 "session.timeout.ms": configs.SESSION_TIMEOUT_MS,
@@ -264,16 +262,14 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
                 "max.partition.fetch.bytes": configs.MAX_PARTITION_FETCH_BYTES,
             }
             if configs.USERNAME and configs.PASSWORD and configs.SSL_CA_FILE:
-                config |= {
-                    "sasl.username": configs.USERNAME,
-                    "sasl.password": configs.PASSWORD.get_secret_value(),
-                    "security.protocol": configs.SECURITY_PROTOCOL,
-                    "sasl.mechanism": configs.SASL_MECHANISM,
-                    "ssl.ca.location": configs.SSL_CA_FILE,
-                    "ssl.certificate.location": configs.SSL_CERT_FILE,
-                    "ssl.key.location": configs.SSL_KEY_FILE,
-                    "ssl.endpoint.identification.algorithm": "none",
-                }
+                config["sasl.username"] = configs.USERNAME
+                config["sasl.password"] = configs.PASSWORD.get_secret_value()
+                config["security.protocol"] = configs.SECURITY_PROTOCOL
+                config["sasl.mechanism"] = configs.SASL_MECHANISM or ""
+                config["ssl.ca.location"] = configs.SSL_CA_FILE
+                config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
+                config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
+                config["ssl.endpoint.identification.algorithm"] = "none"
             consumer = Consumer(config)
         except Exception as e:
             cls._handle_kafka_exception(e, "KafkaConsumer_init")
@@ -445,7 +441,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
         """
         try:
             broker_list_csv = ",".join(configs.BROKERS_LIST)
-            config = {
+            config: dict[str, str | int | float] = {
                 "bootstrap.servers": broker_list_csv,
                 "linger.ms": configs.LINGER_MS,
                 "batch.size": configs.BATCH_SIZE,
@@ -462,16 +458,14 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             if configs.TRANSACTIONAL_ID:
                 config["transactional.id"] = configs.TRANSACTIONAL_ID
             if configs.USERNAME and configs.PASSWORD and configs.SSL_CA_FILE:
-                config |= {
-                    "sasl.username": configs.USERNAME,
-                    "sasl.password": configs.PASSWORD.get_secret_value(),
-                    "security.protocol": configs.SECURITY_PROTOCOL,
-                    "sasl.mechanism": configs.SASL_MECHANISM,
-                    "ssl.ca.location": configs.SSL_CA_FILE,
-                    "ssl.certificate.location": configs.SSL_CERT_FILE,
-                    "ssl.key.location": configs.SSL_KEY_FILE,
-                    "ssl.endpoint.identification.algorithm": "none",
-                }
+                config["sasl.username"] = configs.USERNAME
+                config["sasl.password"] = configs.PASSWORD.get_secret_value()
+                config["security.protocol"] = configs.SECURITY_PROTOCOL
+                config["sasl.mechanism"] = configs.SASL_MECHANISM or ""
+                config["ssl.ca.location"] = configs.SSL_CA_FILE
+                config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
+                config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
+                config["ssl.endpoint.identification.algorithm"] = "none"
             producer = Producer(config)
         except Exception as e:
             cls._handle_kafka_exception(e, "KafkaProducer_init")
