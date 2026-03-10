@@ -2,6 +2,50 @@
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.
 
+## [v4.3.5] - 2026-03-10
+
+### Fixed
+
+#### Adapters - Kafka
+
+- **SSL Config Typing** - Improved type safety and optional-field handling for SSL configuration in all three Kafka
+  adapters (`KafkaAdminAdapter`, `KafkaConsumerAdapter`, `KafkaProducerAdapter`)
+    - Replaced dict merge (`|=`) with explicit per-key assignment to satisfy the `dict[str, str | int | float]` type
+      annotation
+    - Optional SSL fields (`SASL_MECHANISM`, `SSL_CERT_FILE`, `SSL_KEY_FILE`) now fall back to `""` when `None`,
+      preventing type errors
+    - Config dicts are now explicitly typed as `dict[str, str | int | float]` across all three adapters
+
+#### Helpers - Utils
+
+- **gRPC Interceptors Type Annotation** - Added explicit `list[grpc.ServerInterceptor]` type annotation to the
+  interceptors list in `AppUtils.create_async_grpc_app`
+
+### Changed
+
+#### Adapters - Testing
+
+- **ScyllaDB Test Container** - Lowered minimum `aio-max-nr` requirement from `131072` to `65536`
+    - Reduces the kernel parameter requirement for running ScyllaDB in CI and local environments
+    - Reflects the actual minimum needed by the Seastar framework in containerised setups
+
+#### Tests - Redis
+
+- **Unified Redis BDD Tests** - Consolidated Redis mock and container tests into a single feature file
+    - Renamed `redis_mock.feature` → `redis_adapter.feature` and `redis_mock_steps.py` → `redis_adapter_steps.py`
+    - Single feature now covers both mock (fakeredis) and real container scenarios
+
+#### Dependencies
+
+- **cachetools** bumped from `>=7.0.1` to `>=7.0.5` (affects `cache`, `keycloak`, `minio`, `scylladb` extras)
+- **fakeredis** bumped from `>=2.34.0` to `>=2.34.1`
+- **fastapi** bumped from `>=0.133.0` to `>=0.135.1`
+- **grpcio** / **grpcio-health-checking** floor lowered from `>=1.78.1` to `>=1.78.0`
+- **confluent-kafka** bumped from `>=2.13.0` to `>=2.13.2`
+- **boto3** (minio extra) bumped from `>=1.42.55` to `>=1.42.64`
+- **sqlalchemy** / **sqlalchemy[asyncio]** bumped from `>=2.0.46` to `>=2.0.47`
+- **bandit** (dev) bumped from `>=1.9.3` to `>=1.9.4`
+
 ## [v4.3.4] - 2026-02-24
 
 ### Fixed
@@ -9,7 +53,8 @@ All notable changes to ArchiPy are documented in this changelog, organized by ve
 #### Models - Errors
 
 - **BaseError `__str__` Enhancement** - Improved string representation to expose full error context
-    - `__str__` now returns a structured, human-readable string including `class name`, `code`, `message`, `http_status`, `grpc_status`, and `additional_data`
+    - `__str__` now returns a structured, human-readable string including `class name`, `code`, `message`,
+      `http_status`, `grpc_status`, and `additional_data`
     - Previous output was a minimal `[code] message` format, making debugging difficult
     - New format: `ClassName(code='...', message='...', http_status=..., grpc_status=..., additional_data=...)`
     - Consistent with `__repr__` behaviour — no information is hidden in logs or tracebacks
@@ -26,8 +71,10 @@ All notable changes to ArchiPy are documented in this changelog, organized by ve
 
 #### Developer Tooling
 
-- **Cursor Rules Restructured** - Replaced monolithic `checks.mdc` and `CLAUDE.md` with focused, single-responsibility rule files
-    - Added `python-code-style.mdc` — string quoting, docstrings, line length, type hints, imports, error handling, complexity
+- **Cursor Rules Restructured** - Replaced monolithic `checks.mdc` and `CLAUDE.md` with focused, single-responsibility
+  rule files
+    - Added `python-code-style.mdc` — string quoting, docstrings, line length, type hints, imports, error handling,
+      complexity
     - Added `architecture-patterns.mdc` — Clean Architecture layer map, import direction, lazy import policy
     - Added `typing-strict.mdc` — strict type annotation conventions
     - Added `testing-bdd.mdc` — BDD/Behave test conventions
@@ -137,7 +184,8 @@ All notable changes to ArchiPy are documented in this changelog, organized by ve
     - Implemented `_is_prometheus_server_running()` helper to detect existing Prometheus servers
     - Prevents duplicate Prometheus server starts across FastAPI and gRPC applications
     - Checks port availability before starting Prometheus HTTP server
-    - Added `prometheus_utils` module with `is_prometheus_server_running()` and `start_prometheus_server_if_needed()` helpers for shared Prometheus server management across adapters
+    - Added `prometheus_utils` module with `is_prometheus_server_running()` and `start_prometheus_server_if_needed()`
+      helpers for shared Prometheus server management across adapters
 
 #### Adapters - Temporal
 
