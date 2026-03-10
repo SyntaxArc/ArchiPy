@@ -1,3 +1,5 @@
+from datetime import date, datetime
+from decimal import Decimal
 from enum import Enum
 from typing import Any, NoReturn, TypeVar, override
 from uuid import UUID
@@ -81,7 +83,7 @@ class SQLAlchemyFilterMixin:
 
     @staticmethod
     def _validate_list_operation(
-        value: str | float | bool | list | UUID | None,
+        value: str | float | bool | Decimal | list | UUID | datetime | date | Enum | None,
         operation: FilterOperationType,
     ) -> list:
         """Validate that value is a list for list operations."""
@@ -93,7 +95,7 @@ class SQLAlchemyFilterMixin:
     def _apply_filter(
         query: Select | Update | Delete,
         field: InstrumentedAttribute,
-        value: str | float | bool | list | UUID | None,
+        value: str | float | bool | Decimal | list | UUID | datetime | date | Enum | None,
         operation: FilterOperationType,
     ) -> Select | Update | Delete:
         """Apply a filter to a SQLAlchemy query based on the specified operation.
