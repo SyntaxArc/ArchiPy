@@ -986,6 +986,8 @@
       
         
       
+        
+      
     
     
     
@@ -1284,6 +1286,34 @@
     
   
     ScyllaDB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/elasticsearch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elasticsearch
   
 
     
@@ -2572,10 +2602,12 @@
 </ul>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <p>To use <code>BaseProtobufDTO</code>, you need to install the protobuf extra:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>archipy<span class="o">[</span>protobuf<span class="o">]</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[grpc]&quot;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># or install google-protobuf directly if not using gRPC:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>uv<span class="w"> </span>add<span class="w"> </span>google-protobuf
 </span></code></pre></div>
 <p>Or install the protobuf dependency directly:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>google-protobuf
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>add<span class="w"> </span>google-protobuf
 </span></code></pre></div>
 <h2 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
 <h3 id="1-define-your-protobuf-message">1. Define Your Protobuf Message<a class="headerlink" href="#1-define-your-protobuf-message" title="Permanent link">&para;</a></h3>
@@ -2941,7 +2973,7 @@
 <ol>
 <li><strong>ImportError: No module named 'google.protobuf'</strong></li>
 <li>
-<p>Install the protobuf dependency: <code>pip install google-protobuf</code></p>
+<p>Install the protobuf dependency: <code>uv add google-protobuf</code></p>
 </li>
 <li>
 <p><strong>NotImplementedError: Class is not mapped to a proto class</strong></p>

@@ -983,6 +983,8 @@
       
         
       
+        
+      
     
     
     
@@ -1278,6 +1280,34 @@
     
   
     ScyllaDB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/adapters/elasticsearch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elasticsearch
   
 
     
@@ -2783,7 +2813,7 @@ architectural style chosen for your project.</p>
 </span><span id="__span-8-71"><a id="__codelineno-8-71" name="__codelineno-8-71" href="#__codelineno-8-71"></a>
 </span><span id="__span-8-72"><a id="__codelineno-8-72" name="__codelineno-8-72" href="#__codelineno-8-72"></a>
 </span><span id="__span-8-73"><a id="__codelineno-8-73" name="__codelineno-8-73" href="#__codelineno-8-73"></a><span class="c1"># models/errors/user_errors.py</span>
-</span><span id="__span-8-74"><a id="__codelineno-8-74" name="__codelineno-8-74" href="#__codelineno-8-74"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors.base_errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">AlreadyExistsError</span>
+</span><span id="__span-8-74"><a id="__codelineno-8-74" name="__codelineno-8-74" href="#__codelineno-8-74"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">AlreadyExistsError</span>
 </span><span id="__span-8-75"><a id="__codelineno-8-75" name="__codelineno-8-75" href="#__codelineno-8-75"></a>
 </span><span id="__span-8-76"><a id="__codelineno-8-76" name="__codelineno-8-76" href="#__codelineno-8-76"></a>
 </span><span id="__span-8-77"><a id="__codelineno-8-77" name="__codelineno-8-77" href="#__codelineno-8-77"></a><span class="k">class</span><span class="w"> </span><span class="nc">UserAlreadyExistsError</span><span class="p">(</span><span class="n">AlreadyExistsError</span><span class="p">):</span>
@@ -2959,7 +2989,7 @@ architectural style chosen for your project.</p>
 </span><span id="__span-8-247"><a id="__codelineno-8-247" name="__codelineno-8-247" href="#__codelineno-8-247"></a><span class="kn">from</span><span class="w"> </span><span class="nn">uuid</span><span class="w"> </span><span class="kn">import</span> <span class="n">UUID</span>
 </span><span id="__span-8-248"><a id="__codelineno-8-248" name="__codelineno-8-248" href="#__codelineno-8-248"></a><span class="kn">from</span><span class="w"> </span><span class="nn">models.dtos.user_dtos</span><span class="w"> </span><span class="kn">import</span> <span class="n">GetUserByIdQueryDTO</span><span class="p">,</span> <span class="n">SearchUsersQueryDTO</span><span class="p">,</span> <span class="n">UserResponseDTO</span>
 </span><span id="__span-8-249"><a id="__codelineno-8-249" name="__codelineno-8-249" href="#__codelineno-8-249"></a><span class="kn">from</span><span class="w"> </span><span class="nn">repositories.user.user_repository</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserRepository</span>
-</span><span id="__span-8-250"><a id="__codelineno-8-250" name="__codelineno-8-250" href="#__codelineno-8-250"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors.base_errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">NotFoundError</span>
+</span><span id="__span-8-250"><a id="__codelineno-8-250" name="__codelineno-8-250" href="#__codelineno-8-250"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">NotFoundError</span>
 </span><span id="__span-8-251"><a id="__codelineno-8-251" name="__codelineno-8-251" href="#__codelineno-8-251"></a>
 </span><span id="__span-8-252"><a id="__codelineno-8-252" name="__codelineno-8-252" href="#__codelineno-8-252"></a>
 </span><span id="__span-8-253"><a id="__codelineno-8-253" name="__codelineno-8-253" href="#__codelineno-8-253"></a><span class="k">class</span><span class="w"> </span><span class="nc">UserQueryLogic</span><span class="p">:</span>
@@ -2994,7 +3024,7 @@ architectural style chosen for your project.</p>
 </span><span id="__span-8-282"><a id="__codelineno-8-282" name="__codelineno-8-282" href="#__codelineno-8-282"></a>    <span class="n">UserGetOutputDTO</span>
 </span><span id="__span-8-283"><a id="__codelineno-8-283" name="__codelineno-8-283" href="#__codelineno-8-283"></a><span class="p">)</span>
 </span><span id="__span-8-284"><a id="__codelineno-8-284" name="__codelineno-8-284" href="#__codelineno-8-284"></a><span class="kn">from</span><span class="w"> </span><span class="nn">models.errors.user_errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserAlreadyExistsError</span>
-</span><span id="__span-8-285"><a id="__codelineno-8-285" name="__codelineno-8-285" href="#__codelineno-8-285"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors.base_errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">NotFoundError</span>
+</span><span id="__span-8-285"><a id="__codelineno-8-285" name="__codelineno-8-285" href="#__codelineno-8-285"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">NotFoundError</span>
 </span><span id="__span-8-286"><a id="__codelineno-8-286" name="__codelineno-8-286" href="#__codelineno-8-286"></a><span class="kn">from</span><span class="w"> </span><span class="nn">logic.user.user_registration_logic</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserRegistrationLogic</span>
 </span><span id="__span-8-287"><a id="__codelineno-8-287" name="__codelineno-8-287" href="#__codelineno-8-287"></a><span class="kn">from</span><span class="w"> </span><span class="nn">logic.user.user_query_logic</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserQueryLogic</span>
 </span><span id="__span-8-288"><a id="__codelineno-8-288" name="__codelineno-8-288" href="#__codelineno-8-288"></a><span class="kn">from</span><span class="w"> </span><span class="nn">repositories.user.user_repository</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserRepository</span>

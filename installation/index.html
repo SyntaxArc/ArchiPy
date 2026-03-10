@@ -1163,6 +1163,8 @@
       
         
       
+        
+      
     
     
     
@@ -1458,6 +1460,34 @@
     
   
     ScyllaDB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/adapters/elasticsearch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elasticsearch
   
 
     
@@ -2258,14 +2288,14 @@ python --version
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>archipy
 </span></code></pre></div>
 <p>With optional dependencies (e.g., database adapters, services):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>archipy<span class="o">[</span>postgres,sqlite,starrocks,redis,keycloak,minio,kafka<span class="o">]</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>archipy<span class="o">[</span>postgres,sqlalchemy,starrocks,redis,keycloak,minio,kafka<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="using-uv">Using UV<a class="headerlink" href="#using-uv" title="Permanent link">&para;</a></h3>
 <p>Add the core library:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>add<span class="w"> </span>archipy
 </span></code></pre></div>
 <p>With optional dependencies:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[postgres,sqlite,starrocks,redis,keycloak,minio,kafka]&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[postgres,sqlalchemy,starrocks,redis,keycloak,minio,kafka]&quot;</span>
 </span></code></pre></div>
 <h2 id="optional-dependencies">Optional Dependencies<a class="headerlink" href="#optional-dependencies" title="Permanent link">&para;</a></h2>
 <p>ArchiPy supports modular features through optional dependencies:</p>
@@ -2286,8 +2316,8 @@ python --version
 </tr>
 <tr>
 <td>SQLite</td>
-<td><code>archipy[sqlite]</code></td>
-<td>SQLite database adapter with SQLAlchemy integration</td>
+<td><code>archipy[aiosqlite]</code></td>
+<td>SQLite database adapter with async SQLAlchemy integration</td>
 </tr>
 <tr>
 <td>StarRocks</td>
@@ -2401,16 +2431,16 @@ python --version
 <p>If issues arise, verify:</p>
 <ol>
 <li>Python version is 3.14+</li>
-<li><code>pip</code> or <code>uv</code> is updated (e.g., <code>pip install --upgrade pip</code> or <code>uv self update</code>)</li>
+<li><code>uv</code> is updated (<code>uv self update</code>)</li>
 <li>Build tools are available (UV handles this automatically)</li>
 <li>Database-specific dependencies are installed if using database adapters</li>
 </ol>
 <div class="admonition tip">
 <p class="admonition-title">IDE Integration</p>
-</div>
 <p>For the best development experience, use an IDE that supports Python type hints, such as PyCharm or VS Code with the
 Python extension. The project uses modern Python type hints and benefits from IDE support for type checking and
 autocompletion.</p>
+</div>
 
 
 
