@@ -1,3 +1,8 @@
+---
+title: Decorator Examples
+description: Practical examples for using ArchiPy helper decorators.
+---
+
 # Decorator Examples
 
 This page demonstrates how to use ArchiPy's decorators for common cross-cutting concerns.
@@ -274,3 +279,9 @@ async def update_user_email(user_id: UUID, new_email: str) -> "User | None":  # 
     logger.info(f"Updated email for user: {user_id}")
     return user
 ```
+
+
+## See Also
+
+- [API Reference - Decorators](../../api_reference/helpers/decorators.md) - Full decorators API documentation
+- [Helper Examples](index.md) - Overview of all helper examples

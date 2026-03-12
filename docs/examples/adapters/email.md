@@ -1,33 +1,48 @@
-# Email Adapter Examples
+---
+title: Email Adapter Guide
+description: Practical examples for using the ArchiPy email adapter.
+---
+
+# Email Adapter Guide
 
 This page demonstrates how to use ArchiPy's email adapter for sending emails with proper error
 handling and logging.
 
-## Basic Usage
+## Installation
 
-### Configuration
+```bash
+uv add "archipy[email]"
+```
 
-Configure email settings via environment variables or a config object:
+## Configuration
+
+Configure the email adapter via environment variables or an `EmailConfig` object.
+
+### Environment Variables
+
+```bash
+EMAIL__SMTP_SERVER=smtp.example.com
+EMAIL__SMTP_PORT=587
+EMAIL__USERNAME=your-username
+EMAIL__PASSWORD=your-password
+EMAIL__POOL_SIZE=5
+EMAIL__CONNECTION_TIMEOUT=30
+```
+
+### Direct Configuration
 
 ```python
-from archipy.configs.base_config import BaseConfig
-
-# Using environment variables:
-# EMAIL__SMTP_SERVER=smtp.example.com
-# EMAIL__SMTP_PORT=587
-# EMAIL__USERNAME=your-username
-# EMAIL__PASSWORD=your-password
-
-# Or directly (useful for testing):
 from archipy.configs.config_template import EmailConfig
 
-custom_config = EmailConfig(
+config = EmailConfig(
     SMTP_SERVER="smtp.example.com",
     SMTP_PORT=587,
     USERNAME="your-username",
     PASSWORD="your-password",  # noqa: S106
 )
 ```
+
+## Basic Usage
 
 ### Initializing the Adapter
 
@@ -243,7 +258,7 @@ async def send_email(email_request: EmailRequest) -> dict[str, str]:
         return {"message": "Email sent successfully"}
 ```
 
-## Error Handling Patterns
+## Error Handling
 
 ```python
 import logging

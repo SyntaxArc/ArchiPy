@@ -1,3 +1,8 @@
+---
+title: Redis
+description: API reference for the Redis adapter ports, adapters, and mocks.
+---
+
 # Redis
 
 The `redis` adapter provides a complete Redis integration including the concrete adapter, its abstract port interface, and a mock implementation for testing.
@@ -8,7 +13,6 @@ Abstract port interface defining the Redis adapter contract.
 
 ::: archipy.adapters.redis.ports
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -18,7 +22,6 @@ Concrete Redis adapter wrapping the Redis client with ArchiPy conventions for ca
 
 ::: archipy.adapters.redis.adapters
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -28,6 +31,5 @@ In-memory mock implementation of the Redis port for use in unit tests and BDD sc
 
 ::: archipy.adapters.redis.mocks
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3

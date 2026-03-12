@@ -1,3 +1,8 @@
+---
+title: Utilities
+description: Practical examples for using ArchiPy utility functions.
+---
+
 # Utilities
 
 Examples of ArchiPy's utility functions:
@@ -267,7 +272,7 @@ async def get_employee_info(employee_uuid: UUID, employee: dict = Depends(Keyclo
 uvicorn.run(app, host="0.0.0.0", port=8000)  # noqa: S104
 ```
 
-## Additional Resources
+## See Also
 
 For more examples and detailed documentation:
 

@@ -1,3 +1,8 @@
+---
+title: Entities
+description: API reference for ArchiPy domain model entities.
+---
+
 # Entities
 
 The `models/entities` subpackage contains SQLAlchemy ORM base entity classes that all domain entities in an ArchiPy application should inherit from.
@@ -8,6 +13,5 @@ Base SQLAlchemy entity providing common columns (id, created_at, updated_at) and
 
 ::: archipy.models.entities.sqlalchemy.base_entities
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3

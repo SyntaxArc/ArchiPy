@@ -1,6 +1,58 @@
-# Temporal Adapter
+---
+title: Temporal Adapter Guide
+description: Practical examples for using the ArchiPy Temporal adapter.
+---
+
+# Temporal Adapter Guide
 
 This example demonstrates how to use the Temporal adapter for workflow orchestration and activity execution with proper error handling and Python 3.14 type hints.
+
+## Installation
+
+```bash
+uv add "archipy[temporal]"
+```
+
+## Configuration
+
+Configure the Temporal adapter via environment variables or a `TemporalConfig` object.
+
+### Environment Variables
+
+```bash
+TEMPORAL__HOST=localhost
+TEMPORAL__PORT=7233
+TEMPORAL__NAMESPACE=default
+TEMPORAL__TASK_QUEUE=my-task-queue
+TEMPORAL__TLS_CA_CERT=/path/to/ca.crt
+TEMPORAL__TLS_CLIENT_CERT=/path/to/client.crt
+TEMPORAL__TLS_CLIENT_KEY=/path/to/client.key
+TEMPORAL__WORKFLOW_EXECUTION_TIMEOUT=300
+TEMPORAL__WORKFLOW_RUN_TIMEOUT=60
+TEMPORAL__ACTIVITY_START_TO_CLOSE_TIMEOUT=30
+TEMPORAL__RETRY_MAXIMUM_ATTEMPTS=3
+TEMPORAL__RETRY_BACKOFF_COEFFICIENT=2.0
+TEMPORAL__RETRY_MAXIMUM_INTERVAL=60
+```
+
+### Direct Configuration
+
+```python
+from archipy.configs.config_template import TemporalConfig
+
+config = TemporalConfig(
+    HOST="localhost",
+    PORT=7233,
+    NAMESPACE="default",
+    TASK_QUEUE="my-task-queue",
+    WORKFLOW_EXECUTION_TIMEOUT=300,
+    WORKFLOW_RUN_TIMEOUT=60,
+    ACTIVITY_START_TO_CLOSE_TIMEOUT=30,
+    RETRY_MAXIMUM_ATTEMPTS=3,
+    RETRY_BACKOFF_COEFFICIENT=2.0,
+    RETRY_MAXIMUM_INTERVAL=60,
+)
+```
 
 ## Basic Usage
 
@@ -17,49 +69,6 @@ from archipy.models.errors import ConfigurationError, InternalError
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
-# Configure Temporal connection with all available settings
-try:
-    temporal_config = TemporalConfig(
-        # Connection settings
-        HOST="localhost",
-        PORT=7233,
-        NAMESPACE="default",
-        TASK_QUEUE="my-task-queue",
-
-        # TLS settings (optional - for secure connections)
-        TLS_CA_CERT="/path/to/ca.crt",
-        TLS_CLIENT_CERT="/path/to/client.crt",
-        TLS_CLIENT_KEY="/path/to/client.key",
-
-        # Workflow timeout settings (in seconds)
-        WORKFLOW_EXECUTION_TIMEOUT=300,  # Maximum total workflow execution time
-        WORKFLOW_RUN_TIMEOUT=60,         # Maximum single workflow run time
-        WORKFLOW_TASK_TIMEOUT=30,        # Maximum workflow task processing time
-
-        # Activity timeout settings (in seconds)
-        ACTIVITY_START_TO_CLOSE_TIMEOUT=30,  # Maximum activity execution time
-        ACTIVITY_HEARTBEAT_TIMEOUT=10,       # Activity heartbeat timeout
-
-        # Retry configuration for failed activities
-        RETRY_MAXIMUM_ATTEMPTS=3,        # Maximum number of retry attempts
-        RETRY_BACKOFF_COEFFICIENT=2.0,   # Backoff multiplier between retries
-        RETRY_MAXIMUM_INTERVAL=60        # Maximum interval between retries
-    )
-except Exception as e:
-    logger.error(f"Invalid Temporal configuration: {e}")
-    raise ConfigurationError() from e
-else:
-    logger.info("Temporal configuration created successfully")
-
-# Create adapter
-try:
-    temporal = TemporalAdapter(temporal_config)
-except Exception as e:
-    logger.error(f"Failed to create Temporal adapter: {e}")
-    raise InternalError() from e
-else:
-    logger.info("Temporal adapter created successfully")
 
 
 # Define a simple workflow
@@ -135,7 +144,7 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-## Configuration Override Examples
+### Configuration Override Examples
 
 ```python
 import asyncio
@@ -241,76 +250,6 @@ class ChildWorkflow(BaseWorkflow[dict, str]):
         """Child workflow with its own logic."""
         logger.info(f"Child workflow processing: {workflow_input}")
         return f"Child workflow processed: {workflow_input['parent_data']}"
-```
-
-## Environment-Based Configuration
-
-```python
-import logging
-import os
-
-from archipy.configs.config_template import TemporalConfig
-from archipy.models.errors import ConfigurationError
-
-# Configure logging
-logger = logging.getLogger(__name__)
-
-try:
-    # Production configuration
-    production_config = TemporalConfig(
-        HOST=os.getenv("TEMPORAL_HOST", "temporal.production.com"),
-        PORT=int(os.getenv("TEMPORAL_PORT", "7233")),
-        NAMESPACE=os.getenv("TEMPORAL_NAMESPACE", "production"),
-        TASK_QUEUE=os.getenv("TEMPORAL_TASK_QUEUE", "production-queue"),
-
-        # Production TLS settings
-        TLS_CA_CERT=os.getenv("TEMPORAL_TLS_CA_CERT"),
-        TLS_CLIENT_CERT=os.getenv("TEMPORAL_TLS_CLIENT_CERT"),
-        TLS_CLIENT_KEY=os.getenv("TEMPORAL_TLS_CLIENT_KEY"),
-
-        # Production timeout settings (longer timeouts)
-        WORKFLOW_EXECUTION_TIMEOUT=1800,  # 30 minutes
-        WORKFLOW_RUN_TIMEOUT=600,         # 10 minutes
-        ACTIVITY_START_TO_CLOSE_TIMEOUT=120,  # 2 minutes
-
-        # Production retry settings (more aggressive)
-        RETRY_MAXIMUM_ATTEMPTS=5,
-        RETRY_BACKOFF_COEFFICIENT=1.5,
-        RETRY_MAXIMUM_INTERVAL=300  # 5 minutes
-    )
-except Exception as e:
-    logger.error(f"Failed to create production config: {e}")
-    raise ConfigurationError() from e
-else:
-    logger.info("Production configuration created")
-
-try:
-    # Development configuration
-    development_config = TemporalConfig(
-        HOST="localhost",
-        PORT=7233,
-        NAMESPACE="development",
-        TASK_QUEUE="dev-queue",
-
-        # Development timeout settings (shorter timeouts for faster feedback)
-        WORKFLOW_EXECUTION_TIMEOUT=120,  # 2 minutes
-        WORKFLOW_RUN_TIMEOUT=60,         # 1 minute
-        ACTIVITY_START_TO_CLOSE_TIMEOUT=30,  # 30 seconds
-
-        # Development retry settings (fewer retries for faster failures)
-        RETRY_MAXIMUM_ATTEMPTS=2,
-        RETRY_BACKOFF_COEFFICIENT=2.0,
-        RETRY_MAXIMUM_INTERVAL=30  # 30 seconds
-    )
-except Exception as e:
-    logger.error(f"Failed to create development config: {e}")
-    raise ConfigurationError() from e
-else:
-    logger.info("Development configuration created")
-
-# Select config based on environment
-config = production_config if os.getenv("ENV") == "production" else development_config
-temporal = TemporalAdapter(config)
 ```
 
 ## Using Atomic Activities
@@ -666,21 +605,17 @@ logger.info("Temporal adapter created with Prometheus metrics enabled")
 
 ### Environment-Based Configuration
 
+`BaseConfig` automatically reads `TEMPORAL__*` environment variables — no manual `os.getenv()` calls needed:
+
 ```python
-import os
+# TEMPORAL__HOST=temporal.production.com
+# TEMPORAL__ENABLE_METRICS=true
+# TEMPORAL__METRICS_PORT=8201
 
-# Configure using environment variables
-temporal_config = TemporalConfig(
-    HOST=os.getenv("TEMPORAL_HOST", "localhost"),
-    PORT=int(os.getenv("TEMPORAL_PORT", "7233")),
-    NAMESPACE=os.getenv("TEMPORAL_NAMESPACE", "default"),
-    TASK_QUEUE=os.getenv("TEMPORAL_TASK_QUEUE", "task-queue"),
-    ENABLE_METRICS=os.getenv("TEMPORAL_METRICS_ENABLED", "false").lower() == "true"
-)
-
-# Or via pyproject.toml [tool.configs] section
-# TEMPORAL__ENABLE_METRICS = true
-# TEMPORAL__HOST = "temporal.production.com"
+# Or via pyproject.toml [tool.configs] section:
+# [tool.configs.TEMPORAL]
+# ENABLE_METRICS = true
+# HOST = "temporal.production.com"
 ```
 
 ### Available Metrics

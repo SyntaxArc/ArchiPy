@@ -1,3 +1,8 @@
+---
+title: Installation
+description: Installation guide for ArchiPy and its optional dependencies.
+---
+
 # Installation
 
 ## Prerequisites
@@ -17,6 +22,9 @@ Before starting, ensure you have:
 - **UV** (for dependency management)
 
   UV is a fast Python package installer and resolver. Install it via the [official guide](https://docs.astral.sh/uv/getting-started/installation/).
+
+!!! tip "Recommended Package Manager"
+    ArchiPy recommends using **`uv`** for dependency management. It is significantly faster than `pip` and provides better dependency resolution. See the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/) to get started.
 
 ## Installation Methods
 

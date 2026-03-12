@@ -1,3 +1,8 @@
+---
+title: License
+description: ArchiPy license information.
+---
+
 # License
 
 ArchiPy is licensed under the terms of the license file included in the repository.

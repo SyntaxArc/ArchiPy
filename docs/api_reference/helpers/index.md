@@ -1,3 +1,8 @@
+---
+title: Helpers Overview
+description: Overview of ArchiPy helper utilities including decorators, interceptors, metaclasses, and utils.
+---
+
 # Helpers
 
 The `helpers` module provides pure utility functions, decorators, interceptors, and metaclasses that support common development patterns across the application. All helpers are free of direct external I/O and database calls.

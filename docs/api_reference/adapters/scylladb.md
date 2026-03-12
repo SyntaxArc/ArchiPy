@@ -1,3 +1,8 @@
+---
+title: ScyllaDB
+description: API reference for the ScyllaDB adapter ports, adapters, and mocks.
+---
+
 # ScyllaDB
 
 The `scylladb` adapter provides integration with ScyllaDB (and Apache Cassandra) for high-throughput, low-latency wide-column store operations.
@@ -8,7 +13,6 @@ Abstract port interface defining the ScyllaDB adapter contract.
 
 ::: archipy.adapters.scylladb.ports
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -18,6 +22,5 @@ Concrete ScyllaDB adapter implementing session management and query execution fo
 
 ::: archipy.adapters.scylladb.adapters
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3

@@ -1,4 +1,9 @@
-# Parsian Shaparak Payment Gateway
+---
+title: Payment Gateways Adapter Guide
+description: Practical examples for using the ArchiPy Parsian Shaparak payment gateway adapter.
+---
+
+# Payment Gateways Adapter Guide
 
 This example demonstrates how to use the Parsian Shaparak payment gateway adapter to process online payments in Iran with proper error handling and Python 3.14 type hints.
 
@@ -8,46 +13,39 @@ This example demonstrates how to use the Parsian Shaparak payment gateway adapte
 uv add "archipy[parsian-ipg]"
 ```
 
+!!! tip
+    The Parsian Shaparak payment gateway is an optional extra. Install it only when integrating with Iranian payment services.
+
 ## Configuration
 
-First, configure the Parsian Shaparak settings in your environment or configuration file:
+Configure the payment gateway adapter via environment variables or a `ParsianShaparakConfig` object.
 
-```python
-import logging
+### Environment Variables
 
-from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import ParsianShaparakConfig
-from archipy.models.errors import ConfigurationError
-
-# Configure logging
-logger = logging.getLogger(__name__)
-
-
-class MyAppConfig(BaseConfig):
-    """Application configuration with Parsian Shaparak settings."""
-
-    # Parsian Shaparak Configuration
-    PARSIAN_SHAPARAK: ParsianShaparakConfig = ParsianShaparakConfig(
-        LOGIN_ACCOUNT="your_merchant_login_account",
-        # Optionally specify custom WSDL URLs if needed
-        # PAYMENT_WSDL_URL="https://custom.url/to/payment/wsdl",
-        # CONFIRM_WSDL_URL="https://custom.url/to/confirm/wsdl",
-        # REVERSAL_WSDL_URL="https://custom.url/to/reversal/wsdl",
-        # Optionally specify proxy settings
-        # PROXIES={"http": "http://proxy:port", "https": "https://proxy:port"}
-    )
-
-
-try:
-    config = MyAppConfig()
-except Exception as e:
-    logger.error(f"Failed to load configuration: {e}")
-    raise ConfigurationError() from e
-else:
-    logger.info("Configuration loaded successfully")
+```bash
+PARSIAN_SHAPARAK__LOGIN_ACCOUNT=your_merchant_login_account
+PARSIAN_SHAPARAK__PAYMENT_WSDL_URL=https://pec.shaparak.ir/NewIPGServices/Sale/SaleService.asmx?WSDL
+PARSIAN_SHAPARAK__CONFIRM_WSDL_URL=https://pec.shaparak.ir/NewIPGServices/Confirm/ConfirmService.asmx?WSDL
+PARSIAN_SHAPARAK__REVERSAL_WSDL_URL=https://pec.shaparak.ir/NewIPGServices/Reverse/ReversalService.asmx?WSDL
 ```
 
-## Initializing the Adapter
+### Direct Configuration
+
+```python
+from archipy.configs.config_template import ParsianShaparakConfig
+
+config = ParsianShaparakConfig(
+    LOGIN_ACCOUNT="your_merchant_login_account",
+    # Override WSDL URLs only if using a staging/custom endpoint:
+    # PAYMENT_WSDL_URL="https://custom.url/to/payment/wsdl",
+    # CONFIRM_WSDL_URL="https://custom.url/to/confirm/wsdl",
+    # REVERSAL_WSDL_URL="https://custom.url/to/reversal/wsdl",
+)
+```
+
+## Basic Usage
+
+### Initializing the Adapter
 
 ```python
 import logging
@@ -74,9 +72,9 @@ else:
     logger.info("Payment adapter initialized successfully")
 ```
 
-## Processing Payments
+### Processing Payments
 
-### Initiating a Payment
+#### Initiating a Payment
 
 To start a payment transaction:
 
@@ -118,7 +116,7 @@ else:
         logger.error(f"Payment initiation failed: {payment_response.message}")
 ```
 
-### Confirming a Payment
+#### Confirming a Payment
 
 After the user completes the payment and returns to your callback URL, confirm the payment:
 
@@ -157,7 +155,7 @@ else:
         logger.warning(f"Payment confirmation failed with status: {confirm_response.status}")
 ```
 
-### Confirming with Amount Verification
+#### Confirming with Amount Verification
 
 For enhanced security, you can confirm with amount verification:
 
@@ -197,7 +195,7 @@ else:
         logger.warning(f"Payment confirmation failed with status: {confirm_response.status}")
 ```
 
-### Reversing a Payment
+#### Reversing a Payment
 
 If needed, you can reverse (refund) a successful payment:
 

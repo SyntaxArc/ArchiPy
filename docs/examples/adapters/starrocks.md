@@ -1,6 +1,47 @@
-# StarRocks Adapter
+---
+title: StarRocks Adapter Guide
+description: Practical examples for using the ArchiPy StarRocks adapter.
+---
+
+# StarRocks Adapter Guide
 
 This example demonstrates how to use the StarRocks adapter for analytical database operations with proper exception handling and Python 3.14 type hints.
+
+## Installation
+
+```bash
+uv add "archipy[starrocks]"
+```
+
+## Configuration
+
+Configure the StarRocks adapter via environment variables or a `StarRocksSQLAlchemyConfig` object.
+
+### Environment Variables
+
+```bash
+STARROCKS_SQLALCHEMY__HOST=localhost
+STARROCKS_SQLALCHEMY__PORT=9030
+STARROCKS_SQLALCHEMY__USERNAME=root
+STARROCKS_SQLALCHEMY__PASSWORD=password
+STARROCKS_SQLALCHEMY__DATABASE=analytics_db
+STARROCKS_SQLALCHEMY__POOL_SIZE=20
+STARROCKS_SQLALCHEMY__ECHO=false
+```
+
+### Direct Configuration
+
+```python
+from archipy.configs.config_template import StarRocksSQLAlchemyConfig
+
+config = StarRocksSQLAlchemyConfig(
+    HOST="localhost",
+    PORT=9030,
+    USERNAME="root",
+    PASSWORD="password",
+    DATABASE="analytics_db",
+)
+```
 
 ## Basic Usage
 
@@ -326,43 +367,6 @@ try:
 except (DatabaseQueryError, DatabaseConnectionError) as e:
     logger.error(f"Batch update failed: {e}")
     raise
-```
-
-## Configuration
-
-```python
-import logging
-
-from archipy.adapters.starrocks.sqlalchemy.adapters import StarrocksSQLAlchemyAdapter
-from archipy.configs.config_template import StarRocksSQLAlchemyConfig
-from archipy.models.errors import ConfigurationError, DatabaseConnectionError
-
-# Configure logging
-logger = logging.getLogger(__name__)
-
-# Configure StarRocks connection
-try:
-    config = StarRocksSQLAlchemyConfig(
-        HOST="localhost",
-        PORT=9030,
-        USERNAME="root",
-        PASSWORD="password",
-        DATABASE="analytics_db",
-    )
-except Exception as e:
-    logger.error(f"Invalid configuration: {e}")
-    raise ConfigurationError() from e
-else:
-    logger.info("StarRocks configuration created")
-
-# Create adapter with custom config
-try:
-    adapter = StarrocksSQLAlchemyAdapter(orm_config=config)
-except Exception as e:
-    logger.error(f"Failed to create adapter with config: {e}")
-    raise DatabaseConnectionError() from e
-else:
-    logger.info("StarRocks adapter initialized with custom config")
 ```
 
 ## Integration with FastAPI

@@ -1,3 +1,8 @@
+---
+title: PostgreSQL
+description: API reference for the PostgreSQL adapter session managers and adapters.
+---
+
 # PostgreSQL
 
 The `postgres/sqlalchemy` adapter provides a PostgreSQL-specific SQLAlchemy integration, including a concrete adapter, session manager, and session manager registry that extend the base SQLAlchemy components.
@@ -8,7 +13,6 @@ PostgreSQL-specific session manager handling connection pooling and lifecycle fo
 
 ::: archipy.adapters.postgres.sqlalchemy.session_managers
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -18,7 +22,6 @@ Registry for PostgreSQL session manager instances.
 
 ::: archipy.adapters.postgres.sqlalchemy.session_manager_registry
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -28,6 +31,5 @@ Concrete PostgreSQL adapter built on top of the base SQLAlchemy adapter with Pos
 
 ::: archipy.adapters.postgres.sqlalchemy.adapters
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3

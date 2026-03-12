@@ -1,3 +1,8 @@
+---
+title: Models Overview
+description: Overview of ArchiPy domain model layer including entities, DTOs, errors, and types.
+---
+
 # Models
 
 The `models` module contains the domain layer data structures — entities, DTOs, errors, and types. This layer holds no business logic or I/O; it defines only the shapes of data flowing through the application.

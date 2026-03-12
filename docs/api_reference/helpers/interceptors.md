@@ -1,3 +1,8 @@
+---
+title: Interceptors
+description: API reference for ArchiPy helper interceptors.
+---
+
 # Interceptors
 
 The `helpers/interceptors` subpackage provides request/response interceptors for FastAPI and gRPC, covering rate limiting, metrics collection, exception handling, and distributed tracing.
@@ -10,7 +15,6 @@ FastAPI middleware interceptor for collecting Prometheus metrics on HTTP request
 
 ::: archipy.helpers.interceptors.fastapi.metric.interceptor
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -20,7 +24,6 @@ FastAPI interceptor that enforces configurable rate limits on HTTP endpoints usi
 
 ::: archipy.helpers.interceptors.fastapi.rate_limit.fastapi_rest_rate_limit_handler
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -32,13 +35,11 @@ Abstract base classes for gRPC client and server interceptors.
 
 ::: archipy.helpers.interceptors.grpc.base.client_interceptor
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.helpers.interceptors.grpc.base.server_interceptor
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -48,7 +49,6 @@ gRPC server interceptor that catches exceptions and converts them to gRPC status
 
 ::: archipy.helpers.interceptors.grpc.exception.server_interceptor
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -58,7 +58,6 @@ gRPC server interceptor for collecting Prometheus metrics on RPC calls.
 
 ::: archipy.helpers.interceptors.grpc.metric.server_interceptor
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -68,12 +67,10 @@ gRPC interceptors for propagating distributed tracing context across client and 
 
 ::: archipy.helpers.interceptors.grpc.trace.client_interceptor
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.helpers.interceptors.grpc.trace.server_interceptor
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3

@@ -1,3 +1,8 @@
+---
+title: Error Handling Examples
+description: Practical examples for error handling patterns in ArchiPy.
+---
+
 # Error Handling Examples
 
 This document provides examples of how to use the error handling system in different scenarios.
@@ -495,3 +500,9 @@ def get_data(key: str) -> Any:
     except ResourceExhaustedError as e:
         return ErrorRecovery.handle_resource_exhaustion(e)
 ```
+
+
+## See Also
+
+- [API Reference - Errors](../api_reference/models/errors.md) - Full error model API documentation
+- [Examples Overview](index.md) - Overview of all examples

@@ -1,3 +1,8 @@
+---
+title: Base SQLAlchemy
+description: API reference for the base SQLAlchemy adapter ports, session managers, and registry.
+---
+
 # Base SQLAlchemy
 
 The `base/sqlalchemy` subpackage provides the foundational SQLAlchemy components shared across all relational database adapters, including the abstract port interface, session managers, and session manager registries.
@@ -8,7 +13,6 @@ Abstract port interface defining the contract all SQLAlchemy-based adapters must
 
 ::: archipy.adapters.base.sqlalchemy.ports
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -18,7 +22,6 @@ Abstract interface for SQLAlchemy session managers, decoupling session lifecycle
 
 ::: archipy.adapters.base.sqlalchemy.session_manager_ports
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -28,7 +31,6 @@ Registry for tracking and resolving active session manager instances.
 
 ::: archipy.adapters.base.sqlalchemy.session_manager_registry
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -38,7 +40,6 @@ Concrete session manager implementations that handle SQLAlchemy session creation
 
 ::: archipy.adapters.base.sqlalchemy.session_managers
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -48,6 +49,5 @@ The base SQLAlchemy adapter implements generic CRUD operations that concrete dat
 
 ::: archipy.adapters.base.sqlalchemy.adapters
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3

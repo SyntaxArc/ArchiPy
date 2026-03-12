@@ -1,3 +1,8 @@
+---
+title: Errors
+description: API reference for ArchiPy custom exception classes.
+---
+
 # Errors
 
 The `models/errors` subpackage defines the custom exception hierarchy for ArchiPy. All errors subclass `BaseError` and are organized by domain: authentication, authorization, validation, resource management, networking, database, system, Keycloak, and Temporal.
@@ -8,7 +13,6 @@ The root `BaseError` class that all ArchiPy exceptions inherit from, providing s
 
 ::: archipy.models.errors.base_error
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -18,7 +22,6 @@ Exceptions for authentication and authorization failures.
 
 ::: archipy.models.errors.auth_errors
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -28,7 +31,6 @@ Exceptions for input validation and data integrity failures.
 
 ::: archipy.models.errors.validation_errors
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -38,7 +40,6 @@ Exceptions for resource lifecycle issues such as not found, already exists, and 
 
 ::: archipy.models.errors.resource_errors
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -48,7 +49,6 @@ Exceptions representing violations of business rules and domain constraints.
 
 ::: archipy.models.errors.business_errors
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -58,7 +58,6 @@ Exceptions for network communication failures including timeouts and connectivit
 
 ::: archipy.models.errors.network_errors
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -68,7 +67,6 @@ Exceptions for database-level failures including connection errors, constraint v
 
 ::: archipy.models.errors.database_errors
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -78,7 +76,6 @@ Exceptions for system-level failures including configuration errors and unexpect
 
 ::: archipy.models.errors.system_errors
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -88,7 +85,6 @@ Exceptions specific to Keycloak integration failures, such as token validation e
 
 ::: archipy.models.errors.keycloak_errors
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -98,6 +94,5 @@ Exceptions specific to Temporal workflow orchestration failures, such as workflo
 
 ::: archipy.models.errors.temporal_errors
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3

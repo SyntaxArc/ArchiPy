@@ -1,29 +1,54 @@
-# Keycloak Adapter Usage Guide
+---
+title: Keycloak Adapter Guide
+description: Practical examples for using the ArchiPy Keycloak adapter.
+---
+
+# Keycloak Adapter Guide
 
 The Keycloak adapter provides an interface for interacting with Keycloak's API to manage authentication and
 authorization. ArchiPy offers both synchronous and asynchronous implementations.
+
+## Installation
+
+```bash
+uv add "archipy[keycloak]"
+```
 
 For full API reference, see the [Keycloak Adapters API Documentation](../../api_reference/adapters/keycloak.md).
 
 ## Configuration
 
-First, configure your Keycloak settings in your application config:
+Configure the Keycloak adapter via environment variables or a `KeycloakConfig` object.
+
+### Environment Variables
+
+```bash
+KEYCLOAK__SERVER_URL=https://keycloak.example.com
+KEYCLOAK__REALM_NAME=my-realm
+KEYCLOAK__CLIENT_ID=my-client
+KEYCLOAK__CLIENT_SECRET_KEY=client-secret
+KEYCLOAK__VERIFY_SSL=true
+KEYCLOAK__TIMEOUT=10
+```
+
+### Direct Configuration
 
 ```python
-from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import KeycloakConfig
 
-class AppConfig(BaseConfig):
-    # Keycloak configuration
-    KEYCLOAK = KeycloakConfig(
-        SERVER_URL="https://keycloak.example.com",
-        REALM_NAME="my-realm",
-        CLIENT_ID="my-client",
-        CLIENT_SECRET_KEY="client-secret",  # noqa: S105  # Optional, required for admin operations
-        VERIFY_SSL=True,
-        TIMEOUT=10
-    )
+config = KeycloakConfig(
+    SERVER_URL="https://keycloak.example.com",
+    REALM_NAME="my-realm",
+    CLIENT_ID="my-client",
+    CLIENT_SECRET_KEY="client-secret",  # noqa: S105
+    VERIFY_SSL=True,
+    TIMEOUT=10,
+)
 ```
+
+## Basic Usage
+
+The Keycloak adapter provides both synchronous and asynchronous implementations. Use the synchronous adapter for standard request-response flows and the asynchronous adapter with `async/await` patterns.
 
 ## Synchronous Adapter
 

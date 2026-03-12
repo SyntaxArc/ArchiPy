@@ -1,40 +1,48 @@
-# Kafka Adapter
+---
+title: Kafka Adapter Guide
+description: Practical examples for using the ArchiPy Kafka adapter.
+---
+
+# Kafka Adapter Guide
 
 The Kafka adapter provides a clean interface for interacting with Apache Kafka through three
 separate adapters — one for each concern: admin (topic management), producing, and consuming.
 
-## Features
+## Installation
 
-- Topic operations (create, list, delete)
-- Message producing (single, with key)
-- Message consuming (batch, poll, commit)
-- Built-in error handling with domain-specific exceptions
-- SASL+SSL authentication support
-
-## Basic Usage
-
-### Configuration
-
-Configure Kafka in your application's config:
-
-```python
-from archipy.configs.base_config import BaseConfig
-
-# Using environment variables:
-# KAFKA__BROKERS_LIST='["localhost:9092"]'
-# KAFKA__CLIENT_ID=my-app
+```bash
+uv add "archipy[kafka]"
 ```
 
-Or provide a custom `KafkaConfig` directly to any adapter:
+## Configuration
+
+Configure Kafka via environment variables or a `KafkaConfig` object.
+
+### Environment Variables
+
+```bash
+KAFKA__BROKERS_LIST='["localhost:9092"]'
+KAFKA__CLIENT_ID=my-app
+KAFKA__SECURITY_PROTOCOL=PLAINTEXT
+KAFKA__ACKS=all
+KAFKA__AUTO_OFFSET_RESET=earliest
+```
+
+### Direct Configuration
 
 ```python
 from archipy.configs.config_template import KafkaConfig
 
-custom_config = KafkaConfig(
+config = KafkaConfig(
     BROKERS_LIST=["kafka1:9092", "kafka2:9092"],
-    CLIENT_ID="custom-client",
+    CLIENT_ID="my-app",
+    SECURITY_PROTOCOL="SASL_SSL",
+    SASL_MECHANISM="PLAIN",
+    USERNAME="kafka-user",
 )
 ```
+
+## Basic Usage
 
 ### Admin — Topic Management
 
@@ -366,28 +374,6 @@ async def list_topics() -> dict[str, list[str]]:
     else:
         logger.info("Retrieved topic list")
         return {"topics": list(cluster_metadata.topics.keys())}
-```
-
-## Testing with BDD
-
-The Kafka adapter ships with BDD tests that run against a real Kafka broker via testcontainers:
-
-```gherkin
-Feature: Kafka Operations Testing
-  As a developer
-  I want to test Kafka messaging operations
-  So that I can ensure reliable message delivery
-
-  Scenario: Produce and consume a message
-    Given I have a Kafka producer for topic "test-topic"
-    And I have a Kafka consumer subscribed to "test-topic"
-    When I produce the message "Hello Kafka"
-    Then I should consume the message "Hello Kafka" from "test-topic"
-
-  Scenario: Validate producer health
-    Given I have a Kafka producer for topic "test-topic"
-    When I validate the producer healthiness
-    Then the producer should be healthy
 ```
 
 ## See Also

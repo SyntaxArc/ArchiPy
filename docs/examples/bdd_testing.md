@@ -1,3 +1,8 @@
+---
+title: BDD Testing with ArchiPy
+description: Guide and examples for writing BDD tests with ArchiPy.
+---
+
 # BDD Testing with ArchiPy
 
 This page demonstrates how to use ArchiPy's integrated BDD testing capabilities with Behave.
@@ -150,3 +155,9 @@ def step_impl(context: Any) -> None:  # noqa: F811
             logger.info(f"Created user: {row['username']}")
     logger.info(f"Created {len(context.users)} users total")
 ```
+
+
+## See Also
+
+- [Error Handling](error_handling.md) - Exception handling patterns with proper chaining
+- [Examples Overview](index.md) - Overview of all examples

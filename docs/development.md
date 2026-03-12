@@ -1,3 +1,8 @@
+---
+title: Development
+description: Development setup and workflow guide for ArchiPy contributors.
+---
+
 # Development
 
 ## Development Environment

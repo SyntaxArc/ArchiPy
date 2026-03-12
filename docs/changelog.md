@@ -1,3 +1,8 @@
+---
+title: Changelog
+description: Release history and version changelog for ArchiPy.
+---
+
 # Changelog
 
 All notable changes to ArchiPy are documented in this changelog, organized by version.

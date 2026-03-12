@@ -1,3 +1,8 @@
+---
+title: Features
+description: Overview of ArchiPy features and capabilities.
+---
+
 # Features
 
 ArchiPy provides a robust framework for structured Python development, focusing on standardization, testability, and

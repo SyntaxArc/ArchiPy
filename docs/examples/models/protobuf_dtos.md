@@ -1,3 +1,8 @@
+---
+title: Protobuf DTOs
+description: Practical examples for using ArchiPy Protobuf Data Transfer Objects.
+---
+
 # Protobuf DTOs
 
 This guide demonstrates how to use the `BaseProtobufDTO` class to create Data Transfer Objects that can seamlessly convert between Pydantic models and Google Protocol Buffer messages.
@@ -471,3 +476,9 @@ logger.info(f"Protobuf available: {PROTOBUF_AVAILABLE}")
 user_dto = UserProtobufDTO(id="123", username="test")  # type: ignore[name-defined]
 logger.info(user_dto.model_dump())
 ```
+
+
+## See Also
+
+- [API Reference - DTOs](../../api_reference/models/dtos.md) - Full DTOs API documentation
+- [Examples Overview](../index.md) - Overview of all examples

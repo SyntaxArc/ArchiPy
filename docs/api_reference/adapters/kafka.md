@@ -1,3 +1,8 @@
+---
+title: Kafka
+description: API reference for the Kafka adapter ports, adapters, and mocks.
+---
+
 # Kafka
 
 The `kafka` adapter provides integration with Apache Kafka for producing and consuming messages in event-driven architectures.
@@ -8,7 +13,6 @@ Abstract port interface defining the Kafka adapter contract for message producti
 
 ::: archipy.adapters.kafka.ports
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -18,6 +22,5 @@ Concrete Kafka adapter implementing producer and consumer patterns with ArchiPy 
 
 ::: archipy.adapters.kafka.adapters
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3

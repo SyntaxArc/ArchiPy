@@ -1,3 +1,8 @@
+---
+title: Utils
+description: API reference for ArchiPy utility functions.
+---
+
 # Utils
 
 The `helpers/utils` subpackage provides utility classes with static methods for common operations including date/time handling, string manipulation, file I/O, JWT tokens, passwords, TOTP, Keycloak integration, Prometheus metrics, and application-level utilities.
@@ -8,7 +13,6 @@ Base utility class providing foundational helpers shared across other utility cl
 
 ::: archipy.helpers.utils.base_utils
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -18,7 +22,6 @@ Application-level utilities for runtime environment inspection and process manag
 
 ::: archipy.helpers.utils.app_utils
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -28,7 +31,6 @@ Utilities for timezone-aware date and time operations with microsecond precision
 
 ::: archipy.helpers.utils.datetime_utils
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -38,7 +40,6 @@ Utilities for string manipulation including slugification, truncation, random st
 
 ::: archipy.helpers.utils.string_utils
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -48,7 +49,6 @@ Constants used by `string_utils` for character sets, patterns, and limits.
 
 ::: archipy.helpers.utils.string_utils_constants
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -58,7 +58,6 @@ Utilities for file operations including reading, writing, hashing, and type vali
 
 ::: archipy.helpers.utils.file_utils
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -68,7 +67,6 @@ Utilities for error formatting, context enrichment, and error chain inspection.
 
 ::: archipy.helpers.utils.error_utils
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -78,7 +76,6 @@ Utilities for JWT generation, verification, and decoding with configurable signi
 
 ::: archipy.helpers.utils.jwt_utils
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -88,7 +85,6 @@ Utilities for secure password hashing, verification, generation, and strength va
 
 ::: archipy.helpers.utils.password_utils
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -98,7 +94,6 @@ Utilities for TOTP (Time-based One-Time Password) generation, verification, and 
 
 ::: archipy.helpers.utils.totp_utils
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -108,7 +103,6 @@ Utilities for Keycloak token acquisition, validation, user info retrieval, and r
 
 ::: archipy.helpers.utils.keycloak_utils
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -118,6 +112,5 @@ Utilities for registering and exposing Prometheus metrics within ArchiPy applica
 
 ::: archipy.helpers.utils.prometheus_utils
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3

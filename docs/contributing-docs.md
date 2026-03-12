@@ -1,3 +1,8 @@
+---
+title: Documentation Guidelines
+description: Standards and practices for contributing to ArchiPy documentation.
+---
+
 # ArchiPy Documentation Guidelines
 
 This document outlines the standards and practices for ArchiPy documentation.

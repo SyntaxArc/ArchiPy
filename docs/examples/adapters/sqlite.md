@@ -1,6 +1,41 @@
-# SQLite Adapter
+---
+title: SQLite Adapter Guide
+description: Practical examples for using the ArchiPy SQLite adapter.
+---
+
+# SQLite Adapter Guide
 
 This example demonstrates how to use the SQLite adapter for database operations with proper exception handling and Python 3.14 type hints.
+
+## Installation
+
+```bash
+uv add "archipy[sqlite]"
+```
+
+## Configuration
+
+Configure the SQLite adapter via environment variables or a `SQLiteSQLAlchemyConfig` object.
+
+### Environment Variables
+
+```bash
+SQLITE_SQLALCHEMY__DATABASE=./app.db
+SQLITE_SQLALCHEMY__ECHO=false
+SQLITE_SQLALCHEMY__POOL_SIZE=20
+SQLITE_SQLALCHEMY__POOL_TIMEOUT=30
+```
+
+### Direct Configuration
+
+```python
+from archipy.configs.config_template import SQLiteSQLAlchemyConfig
+
+config = SQLiteSQLAlchemyConfig(
+    DATABASE="./my_app.db",
+    ECHO=False,
+)
+```
 
 ## Basic Usage
 

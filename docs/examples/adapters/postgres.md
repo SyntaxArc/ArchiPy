@@ -1,4 +1,9 @@
-# PostgreSQL Adapter
+---
+title: PostgreSQL Adapter Guide
+description: Practical examples for using the ArchiPy PostgreSQL adapter.
+---
+
+# PostgreSQL Adapter Guide
 
 This guide demonstrates how to use the ArchiPy PostgreSQL adapter for database operations with SQLAlchemy, covering
 configuration, CRUD, transactions, filtering, pagination, async patterns, and testing.
@@ -8,6 +13,9 @@ configuration, CRUD, transactions, filtering, pagination, async patterns, and te
 ```bash
 uv add "archipy[postgres]"
 ```
+
+!!! tip
+    The PostgreSQL adapter is an optional extra. Install it alongside any ORM extras you need, for example `archipy[postgres]`.
 
 ## Configuration
 
@@ -816,58 +824,6 @@ logger.info(f"Found: {found.username}")
 
 users, total = repo.list_paginated(page=1, page_size=10)
 logger.info(f"Total users: {total}")
-```
-
-## Testing with Mocks
-
-ArchiPy provides `SQLAlchemyMock` for unit testing without a real database.
-
-```python
-import logging
-import unittest
-from uuid import UUID
-
-from archipy.adapters.base.sqlalchemy.mocks import SQLAlchemyMock
-from archipy.models.errors import NotFoundError
-
-logger = logging.getLogger(__name__)
-
-
-class UserRepository:
-    def __init__(self, adapter: SQLAlchemyMock) -> None:
-        self._adapter = adapter
-
-    def save(self, user: User) -> User:
-        return self._adapter.create(user)
-
-    def get(self, user_id: UUID) -> User:
-        result = self._adapter.get_by_uuid(User, user_id)
-        if result is None:
-            raise NotFoundError()
-        return result
-
-
-class TestUserRepository(unittest.TestCase):
-    def setUp(self) -> None:
-        self.mock_adapter = SQLAlchemyMock()
-        self.repo = UserRepository(self.mock_adapter)
-
-    def test_save_and_retrieve(self) -> None:
-        user = User(username="test_user", email="test@example.com")
-        saved = self.repo.save(user)
-
-        self.assertIsNotNone(saved.uuid)
-        retrieved = self.repo.get(saved.uuid)
-        self.assertEqual(retrieved.username, "test_user")
-
-    def test_get_missing_raises_not_found(self) -> None:
-        from uuid import uuid4
-        with self.assertRaises(NotFoundError):
-            self.repo.get(uuid4())
-
-
-if __name__ == "__main__":
-    unittest.main()
 ```
 
 ## Connection Pool Tuning

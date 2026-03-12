@@ -1,11 +1,14 @@
-# Redis Adapter Examples
+---
+title: Redis Adapter Guide
+description: Practical examples for using the ArchiPy Redis adapter.
+---
+
+# Redis Adapter Guide
 
 This guide demonstrates how to use the ArchiPy Redis adapter for common caching and
 key-value storage patterns.
 
-## Basic Usage
-
-### Installation
+## Installation
 
 First, ensure you have the Redis dependencies installed:
 
@@ -13,27 +16,37 @@ First, ensure you have the Redis dependencies installed:
 uv add "archipy[redis]"
 ```
 
-### Configuration
+!!! tip
+    The Redis adapter is an optional extra. Install only when Redis support is needed.
 
-Configure Redis via environment variables or a `RedisConfig` object:
+## Configuration
+
+Configure Redis via environment variables or a `RedisConfig` object.
+
+### Environment Variables
+
+```bash
+REDIS__MASTER_HOST=localhost
+REDIS__PORT=6379
+REDIS__PASSWORD=your-password
+REDIS__DATABASE=0
+REDIS__MAX_CONNECTIONS=50
+```
+
+### Direct Configuration
 
 ```python
-from archipy.configs.base_config import BaseConfig
-
-# Using environment variables (standalone mode):
-# REDIS__MASTER_HOST=localhost
-# REDIS__PORT=6379
-# REDIS__PASSWORD=your-password  # optional
-
-# Or provide a config directly:
 from archipy.configs.config_template import RedisConfig
 
-custom_config = RedisConfig(
+config = RedisConfig(
     MASTER_HOST="localhost",
     PORT=6379,
-    PASSWORD=None,  # optional
+    PASSWORD=None,
+    DATABASE=0,
 )
 ```
+
+## Basic Usage
 
 ### Synchronous Redis Adapter
 
@@ -187,148 +200,6 @@ logger.info(f"First call: {result1}")
 # Second call returns the cached result
 result2 = expensive_api_call(123)
 logger.info(f"Second call (cached): {result2}")
-```
-
-## Mock Redis for Testing
-
-ArchiPy provides a Redis mock for unit testing that does not require a real Redis server:
-
-```python
-import logging
-import unittest
-
-from archipy.adapters.redis.adapters import RedisAdapter
-from archipy.adapters.redis.mocks import RedisMock
-from archipy.models.errors import CacheError
-
-# Configure logging
-logger = logging.getLogger(__name__)
-
-
-class UserService:
-    def __init__(self, redis_adapter: RedisAdapter) -> None:
-        self.redis = redis_adapter
-
-    def get_user(self, user_id: int) -> str:
-        """Get user data, either from cache or backend.
-
-        Args:
-            user_id: User ID to look up.
-
-        Returns:
-            User data as a string.
-
-        Raises:
-            CacheError: If the Redis operation fails.
-        """
-        cache_key = f"user:{user_id}"
-        try:
-            cached = self.redis.get(cache_key)
-        except CacheError as e:
-            logger.warning(f"Cache read failed: {e}")
-            cached = None
-
-        if cached:
-            return cached
-
-        user_data = f"User {user_id} data"
-        try:
-            self.redis.set(cache_key, user_data, ex=300)
-        except CacheError as e:
-            logger.warning(f"Cache write failed: {e}")
-        return user_data
-
-
-class TestUserService(unittest.TestCase):
-    def setUp(self) -> None:
-        self.redis_mock = RedisMock()
-        self.user_service = UserService(self.redis_mock)
-
-    def test_get_user(self) -> None:
-        user_data = self.user_service.get_user(123)
-        self.assertEqual(user_data, "User 123 data")
-
-        # Verify it was cached
-        self.assertEqual(self.redis_mock.get("user:123"), "User 123 data")
-
-        # Change the cached value to test cache hit
-        self.redis_mock.set("user:123", "Modified data")
-        user_data = self.user_service.get_user(123)
-        self.assertEqual(user_data, "Modified data")
-
-
-if __name__ == "__main__":
-    unittest.main()
-```
-
-### Async Redis Mock
-
-```python
-import asyncio
-import logging
-import unittest
-
-from archipy.adapters.redis.adapters import AsyncRedisAdapter
-from archipy.adapters.redis.mocks import AsyncRedisMock
-from archipy.models.errors import CacheError
-
-# Configure logging
-logger = logging.getLogger(__name__)
-
-
-class AsyncUserService:
-    def __init__(self, redis_adapter: AsyncRedisAdapter) -> None:
-        self.redis = redis_adapter
-
-    async def get_user(self, user_id: int) -> str:
-        """Get user data asynchronously, either from cache or backend.
-
-        Args:
-            user_id: User ID to look up.
-
-        Returns:
-            User data as a string.
-
-        Raises:
-            CacheError: If the Redis operation fails.
-        """
-        cache_key = f"user:{user_id}"
-        try:
-            cached = await self.redis.get(cache_key)
-        except CacheError as e:
-            logger.error(f"Cache error: {e}")
-            raise
-
-        if cached:
-            return cached
-
-        user_data = f"User {user_id} data"
-        try:
-            await self.redis.set(cache_key, user_data, ex=300)
-        except CacheError as e:
-            logger.warning(f"Failed to cache user data: {e}")
-        return user_data
-
-
-class TestAsyncUserService(unittest.IsolatedAsyncioTestCase):
-    async def asyncSetUp(self) -> None:
-        self.redis_mock = AsyncRedisMock()
-        self.user_service = AsyncUserService(self.redis_mock)
-
-    async def test_get_user(self) -> None:
-        user_data = await self.user_service.get_user(123)
-        self.assertEqual(user_data, "User 123 data")
-
-        cached = await self.redis_mock.get("user:123")
-        self.assertEqual(cached, "User 123 data")
-
-        await self.redis_mock.set("user:123", "Modified data")
-        user_data = await self.user_service.get_user(123)
-        self.assertEqual(user_data, "Modified data")
-
-
-if __name__ == "__main__":
-    unittest.main()
 ```
 
 ## Advanced Redis Features

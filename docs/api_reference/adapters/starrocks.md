@@ -1,3 +1,8 @@
+---
+title: StarRocks
+description: API reference for the StarRocks adapter session managers and adapters.
+---
+
 # StarRocks
 
 The `starrocks/sqlalchemy` adapter provides integration with StarRocks, a high-performance analytical database compatible with the MySQL protocol, using SQLAlchemy.
@@ -8,7 +13,6 @@ StarRocks-specific session manager handling connection management for the StarRo
 
 ::: archipy.adapters.starrocks.sqlalchemy.session_managers
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -18,7 +22,6 @@ Registry for StarRocks session manager instances.
 
 ::: archipy.adapters.starrocks.sqlalchemy.session_manager_registry
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -28,6 +31,5 @@ Concrete StarRocks adapter built on the base SQLAlchemy adapter with StarRocks-s
 
 ::: archipy.adapters.starrocks.sqlalchemy.adapters
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3

@@ -1,3 +1,8 @@
+---
+title: ArchiPy Architecture
+description: Overview of ArchiPy's Clean Architecture design and layer responsibilities.
+---
+
 # ArchiPy Architecture
 
 ## Overview
@@ -12,6 +17,9 @@ applications:
 
 This architecture follows clean architecture principles, separating concerns and ensuring that dependencies point inward
 toward the domain core.
+
+!!! note "Import Direction"
+    Imports flow in one direction only: `configs ← models ← helpers ← adapters`. Never import upward — for example, `models` must not import from `adapters` or `helpers`.
 
 ## Modules
 

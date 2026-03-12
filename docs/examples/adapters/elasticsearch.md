@@ -1,4 +1,9 @@
-# Elasticsearch Adapter
+---
+title: Elasticsearch Adapter Guide
+description: Practical examples for using the ArchiPy Elasticsearch adapter.
+---
+
+# Elasticsearch Adapter Guide
 
 This guide demonstrates how to use the ArchiPy Elasticsearch adapter for document indexing, searching, and cluster
 management with proper error handling and Python 3.14+ type hints.
@@ -8,6 +13,9 @@ management with proper error handling and Python 3.14+ type hints.
 ```bash
 uv add "archipy[elasticsearch]"
 ```
+
+!!! tip
+    The Elasticsearch adapter is an optional extra. Only install it when you need Elasticsearch support to keep your environment lean.
 
 ## Configuration
 
@@ -810,159 +818,6 @@ logger.info(f"Retrieved: {found.title}")
 repo.increment_views("arch-001")
 alice_articles = repo.search_by_author("alice")
 logger.info(f"Alice has {len(alice_articles)} articles")
-```
-
-## Testing with a Mock
-
-Since no `ElasticsearchMock` is included in ArchiPy yet, use `unittest.mock.MagicMock` or build a simple in-memory
-fake that implements `ElasticsearchPort`.
-
-```python
-import logging
-import unittest
-from collections.abc import Sequence
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
-from typing import Any
-from unittest.mock import MagicMock
-
-from archipy.adapters.elasticsearch.ports import ElasticsearchPort
-from archipy.models.errors import NotFoundError
-
-logger = logging.getLogger(__name__)
-
-
-class InMemoryElasticsearchMock(ElasticsearchPort):
-    """Simple in-memory Elasticsearch mock for unit tests.
-
-    Stores documents in a dict keyed by ``index/doc_id``.
-    """
-
-    def __init__(self) -> None:
-        self._store: dict[str, dict[str, Any]] = {}
-        self._indices: set[str] = set()
-
-    def ping(self) -> bool:
-        return True
-
-    def index(
-        self,
-        index: str,
-        document: dict[str, Any],
-        doc_id: str | None = None,
-        **kwargs: Any,
-    ) -> dict[str, Any]:
-        import uuid
-        if doc_id is None:
-            doc_id = str(uuid.uuid4())
-        self._store[f"{index}/{doc_id}"] = document
-        self._indices.add(index)
-        return {"_id": doc_id, "result": "created"}
-
-    def get(self, index: str, doc_id: str, **kwargs: Any) -> dict[str, Any]:
-        key = f"{index}/{doc_id}"
-        if key not in self._store:
-            raise KeyError(f"Document {key} not found")
-        return {"_id": doc_id, "_source": self._store[key]}
-
-    def search(self, index: str, query: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
-        docs = [
-            {"_id": k.split("/")[1], "_source": v, "_score": 1.0}
-            for k, v in self._store.items()
-            if k.startswith(f"{index}/")
-        ]
-        return {"hits": {"hits": docs, "total": {"value": len(docs)}}}
-
-    def update(self, index: str, doc_id: str, doc: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
-        key = f"{index}/{doc_id}"
-        if key not in self._store:
-            raise KeyError(f"Document {key} not found")
-        self._store[key].update(doc)
-        return {"_id": doc_id, "result": "updated"}
-
-    def delete(self, index: str, doc_id: str, **kwargs: Any) -> dict[str, Any]:
-        key = f"{index}/{doc_id}"
-        self._store.pop(key, None)
-        return {"_id": doc_id, "result": "deleted"}
-
-    def bulk(self, actions: list[dict[str, Any]], **kwargs: Any) -> dict[str, Any]:
-        return {"errors": False, "items": []}
-
-    def create_index(self, index: str, body: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
-        self._indices.add(index)
-        return {"acknowledged": True}
-
-    def delete_index(self, index: str, **kwargs: Any) -> dict[str, Any]:
-        self._indices.discard(index)
-        self._store = {k: v for k, v in self._store.items() if not k.startswith(f"{index}/")}
-        return {"acknowledged": True}
-
-    def exists(self, index: str, doc_id: str, **kwargs: Any) -> bool:
-        return f"{index}/{doc_id}" in self._store
-
-    def index_exists(self, index: str, **kwargs: Any) -> bool:
-        return index in self._indices
-
-
-@dataclass
-class Article:
-    title: str
-    author: str
-    view_count: int = 0
-
-
-class ArticleRepository:
-    INDEX = "articles"
-
-    def __init__(self, es_adapter: ElasticsearchPort) -> None:
-        self._es = es_adapter
-
-    def save(self, article_id: str, article: Article) -> None:
-        self._es.index(index=self.INDEX, document=asdict(article), doc_id=article_id)
-
-    def get(self, article_id: str) -> Article:
-        try:
-            response = self._es.get(index=self.INDEX, doc_id=article_id)
-            return Article(**response["_source"])
-        except KeyError as e:
-            raise NotFoundError() from e
-
-
-class TestArticleRepository(unittest.TestCase):
-    def setUp(self) -> None:
-        self.mock_es = InMemoryElasticsearchMock()
-        self.repo = ArticleRepository(self.mock_es)
-
-    def test_save_and_get(self) -> None:
-        article = Article(title="Test Article", author="alice")
-        self.repo.save("test-001", article)
-
-        retrieved = self.repo.get("test-001")
-        self.assertEqual(retrieved.title, "Test Article")
-        self.assertEqual(retrieved.author, "alice")
-
-    def test_get_missing_raises_not_found(self) -> None:
-        with self.assertRaises(NotFoundError):
-            self.repo.get("non-existent-id")
-
-    def test_update_document(self) -> None:
-        article = Article(title="Original", author="bob", view_count=0)
-        self.repo.save("update-001", article)
-
-        self.mock_es.update(index="articles", doc_id="update-001", doc={"view_count": 10})
-        updated = self.repo.get("update-001")
-        self.assertEqual(updated.view_count, 10)
-
-    def test_document_exists(self) -> None:
-        article = Article(title="Exist Test", author="carol")
-        self.repo.save("exist-001", article)
-
-        self.assertTrue(self.mock_es.exists("articles", "exist-001"))
-        self.assertFalse(self.mock_es.exists("articles", "ghost-id"))
-
-
-if __name__ == "__main__":
-    unittest.main()
 ```
 
 ## Advanced Patterns

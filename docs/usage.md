@@ -1,3 +1,8 @@
+---
+title: Getting Started
+description: Quick-start guide to get up and running with ArchiPy.
+---
+
 # Getting Started
 
 This is a quick-start guide to get you up and running with ArchiPy in minutes. For comprehensive architectural patterns, detailed code examples, and production-ready project structure, see the **[Architecture Guide](architecture.md)**.
@@ -15,6 +20,9 @@ uv add "archipy[postgres,redis,fastapi]"
 pip install archipy
 pip install archipy[postgres,redis,fastapi]
 ```
+
+!!! tip "Optional Extras"
+    ArchiPy uses optional extras to keep the base install lightweight. Only install the extras you need — for example, `archipy[postgres,redis]` for database and cache support. See [Installation](installation.md) for the full list of available extras.
 
 ## Quick Start: 5-Minute API
 

@@ -1,3 +1,8 @@
+---
+title: Adapters Overview
+description: Overview of all available ArchiPy adapter integrations.
+---
+
 # Adapters
 
 The `adapters` module provides concrete implementations of external system integrations following the Ports & Adapters pattern. Each adapter directory exposes a `ports.py` (abstract interface) and an `adapters.py` (concrete implementation).

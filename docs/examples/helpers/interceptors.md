@@ -1,3 +1,8 @@
+---
+title: Interceptor Examples
+description: Practical examples for using ArchiPy helper interceptors.
+---
+
 # Interceptor Examples
 
 This page demonstrates how to use ArchiPy's interceptors for cross-cutting concerns like tracing, metrics, and error
@@ -136,3 +141,9 @@ def create_grpc_server() -> grpc.Server:
         interceptors=[GrpcServerTraceInterceptor()],
     )
 ```
+
+
+## See Also
+
+- [API Reference - Interceptors](../../api_reference/helpers/interceptors.md) - Full interceptors API documentation
+- [Helper Examples](index.md) - Overview of all helper examples

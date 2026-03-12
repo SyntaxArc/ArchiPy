@@ -1,3 +1,8 @@
+---
+title: Metaclass Examples
+description: Practical examples for using ArchiPy helper metaclasses.
+---
+
 # Metaclass Examples
 
 This page demonstrates how to use ArchiPy's metaclasses for advanced Python patterns with proper type hints and error handling.

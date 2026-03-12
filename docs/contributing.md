@@ -1,3 +1,8 @@
+---
+title: Contributing
+description: Guidelines for contributing to ArchiPy development.
+---
+
 # Contributing
 
 Welcome to ArchiPy! We're excited that you're interested in contributing. This document outlines the process for
@@ -23,6 +28,9 @@ contributing to ArchiPy.
    make install
    make install-dev
    ```
+
+   !!! tip "Pre-commit Hooks"
+       Running `make install-dev` sets up pre-commit hooks that automatically run linting, formatting, and type checking on every commit. Use `make pre-commit` to run all hooks manually before opening a pull request.
 
 4. **Create a Branch**
 

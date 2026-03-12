@@ -1,3 +1,8 @@
+---
+title: Configuration Management
+description: Guide and examples for managing configuration in ArchiPy applications.
+---
+
 # Configuration Management
 
 ArchiPy provides a robust configuration management system that ensures type safety, environment variable support, and
@@ -267,3 +272,9 @@ redis_adapter = RedisAdapter()
 4. **Document configuration options**: Add clear docstrings to your configuration classes
 
 5. **Keep configurations centralized**: Avoid creating multiple configuration sources
+
+
+## See Also
+
+- [API Reference - Configs](../api_reference/configs.md) - Full configuration API documentation
+- [Examples Overview](index.md) - Overview of all examples

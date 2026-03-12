@@ -1,40 +1,46 @@
-# Minio Adapter
+---
+title: MinIO Adapter Guide
+description: Practical examples for using the ArchiPy MinIO adapter.
+---
+
+# MinIO Adapter Guide
 
 The Minio adapter provides a clean interface for interacting with MinIO and S3-compatible object storage services.
 
-## Features
+## Installation
 
-- Bucket operations (create, list, delete)
-- Object operations (upload, download, delete)
-- Presigned URL generation
-- Bucket policy management
-- Built-in caching for performance optimization
-- Comprehensive error handling with domain-specific exceptions
+```bash
+uv add "archipy[minio]"
+```
 
-## Basic Usage
+## Configuration
 
-### Configuration
+Configure the MinIO adapter via environment variables or a `MinioConfig` object.
 
-Configure MinIO in your application's config:
+### Environment Variables
+
+```bash
+MINIO__ENDPOINT=localhost:9000
+MINIO__ACCESS_KEY=minioadmin
+MINIO__SECRET_KEY=minioadmin
+MINIO__SECURE=false
+MINIO__REGION=us-east-1
+```
+
+### Direct Configuration
 
 ```python
-from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import MinioConfig
 
-# Method 1: Using environment variables
-# MINIO__ENDPOINT=localhost:9000
-# MINIO__ACCESS_KEY=minioadmin
-# MINIO__SECRET_KEY=minioadmin
-
-# Method 2: Subclass BaseConfig to set MinIO defaults declaratively
-class AppConfig(BaseConfig):
-    MINIO: MinioConfig = MinioConfig(
-        ENDPOINT="localhost:9000",
-        ACCESS_KEY="minioadmin",
-        SECRET_KEY="minioadmin",  # noqa: S106
-        SECURE=False,  # Set to True for HTTPS
-    )
+config = MinioConfig(
+    ENDPOINT="localhost:9000",
+    ACCESS_KEY="minioadmin",
+    SECRET_KEY="minioadmin",  # noqa: S106
+    SECURE=False,
+)
 ```
+
+## Basic Usage
 
 ### Initializing the Adapter
 
@@ -279,31 +285,6 @@ async def download_file(bucket_name: str, object_name: str) -> RedirectResponse:
     else:
         logger.info(f"Generated download URL for {object_name}")
         return RedirectResponse(url)
-```
-
-## Testing with BDD
-
-The Minio adapter comes with BDD tests to verify functionality. Here's a sample feature file:
-
-```gherkin
-Feature: MinIO Operations Testing
-  As a developer
-  I want to test MinIO storage operations
-  So that I can ensure reliable object storage functionality
-
-  Background:
-    Given a configured MinIO adapter
-
-  Scenario: Create and verify a bucket
-    When I create a bucket named "test-bucket"
-    Then the bucket "test-bucket" should exist
-    And the bucket list should include "test-bucket"
-
-  Scenario: Upload and retrieve object
-    Given a bucket named "test-bucket" exists
-    When I upload a file "test.txt" with content "Hello World" to bucket "test-bucket"
-    Then the object "test.txt" should exist in bucket "test-bucket"
-    And downloading "test.txt" from "test-bucket" should return content "Hello World"
 ```
 
 ## See Also

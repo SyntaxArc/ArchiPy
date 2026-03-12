@@ -1,3 +1,8 @@
+---
+title: Decorators
+description: API reference for ArchiPy helper decorators.
+---
+
 # Decorators
 
 The `helpers/decorators` subpackage provides function and class decorators for cross-cutting concerns including caching, retry logic, deprecation, timing, tracing, and transaction management.
@@ -8,7 +13,6 @@ Decorator for caching function return values to avoid redundant computation or I
 
 ::: archipy.helpers.decorators.cache
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -18,7 +22,6 @@ Decorator that automatically retries a failing function call with configurable b
 
 ::: archipy.helpers.decorators.retry
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -28,7 +31,6 @@ Decorator that enforces a maximum execution time on a function call.
 
 ::: archipy.helpers.decorators.timeout
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -38,7 +40,6 @@ Decorator that measures and records the execution time of a function.
 
 ::: archipy.helpers.decorators.timing
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -48,7 +49,6 @@ Decorator that adds distributed tracing instrumentation to a function.
 
 ::: archipy.helpers.decorators.tracing
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -58,7 +58,6 @@ Decorator that ensures a class is instantiated only once throughout the applicat
 
 ::: archipy.helpers.decorators.singleton
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -68,7 +67,6 @@ Decorator that wraps a function in a SQLAlchemy database transaction, rolling ba
 
 ::: archipy.helpers.decorators.sqlalchemy_atomic
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -78,7 +76,6 @@ Decorator that emits a deprecation warning when a decorated function or class is
 
 ::: archipy.helpers.decorators.deprecation_warnings
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -88,6 +85,5 @@ Decorator that raises an exception when a deprecated function or class is called
 
 ::: archipy.helpers.decorators.deprecation_exception
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3

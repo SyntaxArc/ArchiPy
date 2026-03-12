@@ -1,3 +1,8 @@
+---
+title: DTOs
+description: API reference for ArchiPy Data Transfer Objects.
+---
+
 # DTOs
 
 The `models/dtos` subpackage contains Pydantic `BaseModel` data transfer objects used for API request/response shapes, pagination, sorting, search, and email payloads.
@@ -8,7 +13,6 @@ Base DTO classes providing common fields and validators inherited by domain-spec
 
 ::: archipy.models.dtos.base_dtos
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -18,7 +22,6 @@ Base DTO class for Protobuf-backed data transfer objects, bridging gRPC and Pyda
 
 ::: archipy.models.dtos.base_protobuf_dto
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -28,7 +31,6 @@ DTOs for pagination input and output, including page number, page size, and tota
 
 ::: archipy.models.dtos.pagination_dto
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -38,7 +40,6 @@ DTOs for expressing sort order in list/search requests.
 
 ::: archipy.models.dtos.sort_dto
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -48,7 +49,6 @@ DTO for structured search input combining filter, sort, and pagination parameter
 
 ::: archipy.models.dtos.search_input_dto
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -58,7 +58,6 @@ DTOs for expressing numeric and date range filters in queries.
 
 ::: archipy.models.dtos.range_dtos
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -68,7 +67,6 @@ DTOs for composing email messages including recipients, subject, body, and attac
 
 ::: archipy.models.dtos.email_dtos
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -78,6 +76,5 @@ DTO representing the standardized error response body returned by FastAPI except
 
 ::: archipy.models.dtos.fastapi_exception_response_dto
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3

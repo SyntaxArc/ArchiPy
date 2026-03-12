@@ -1,3 +1,8 @@
+---
+title: ArchiPy Documentation
+description: Home page for ArchiPy - Architecture + Python, structured development simplified.
+---
+
 # ArchiPy Documentation
 
 ![ArchiPy Logo](assets/logo.jpg)

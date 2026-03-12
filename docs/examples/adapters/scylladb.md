@@ -1,4 +1,9 @@
-# ScyllaDB Adapter
+---
+title: ScyllaDB Adapter Guide
+description: Practical examples for using the ArchiPy ScyllaDB adapter.
+---
+
+# ScyllaDB Adapter Guide
 
 The ScyllaDB adapter provides a clean, Pythonic interface for interacting with ScyllaDB and Apache Cassandra databases. It supports both synchronous and asynchronous operations, prepared statements, batch operations, TTL (Time To Live), and connection pool monitoring.
 
@@ -10,7 +15,73 @@ The ScyllaDB adapter is included with ArchiPy. Ensure you have the required depe
 uv add "archipy[scylladb]"
 ```
 
-## Basic Setup
+!!! tip
+    The ScyllaDB adapter is an optional extra. Install it only when ScyllaDB or Cassandra support is required.
+
+## Configuration
+
+Configure the ScyllaDB adapter via environment variables or a `ScyllaDBConfig` object.
+
+### Environment Variables
+
+```bash
+SCYLLADB__CONTACT_POINTS='["node1.example.com", "node2.example.com"]'
+SCYLLADB__PORT=9042
+SCYLLADB__KEYSPACE=my_keyspace
+SCYLLADB__USERNAME=scylla_user
+SCYLLADB__PASSWORD=secure_password
+SCYLLADB__CONSISTENCY_LEVEL=QUORUM
+SCYLLADB__CONNECT_TIMEOUT=10
+SCYLLADB__REQUEST_TIMEOUT=10
+```
+
+### Direct Configuration
+
+```python
+from archipy.configs.config_template import ScyllaDBConfig
+from pydantic import SecretStr
+
+config = ScyllaDBConfig(
+    CONTACT_POINTS=["node1.example.com", "node2.example.com"],
+    PORT=9042,
+    KEYSPACE="production_keyspace",
+    USERNAME="scylla_user",
+    PASSWORD=SecretStr("secure_password"),
+    CONSISTENCY_LEVEL="QUORUM",
+    COMPRESSION=True,
+    CONNECT_TIMEOUT=10,
+    REQUEST_TIMEOUT=10,
+)
+```
+
+### Connection Pool Configuration
+
+```python
+config = ScyllaDBConfig(
+    CONTACT_POINTS=["localhost"],
+    PORT=9042,
+    # Connection pool settings (recommended: 1-3 connections per CPU core)
+    MAX_CONNECTIONS_PER_HOST=2,
+    MIN_CONNECTIONS_PER_HOST=1,
+    CORE_CONNECTIONS_PER_HOST=1,
+    MAX_REQUESTS_PER_CONNECTION=100,
+    ENABLE_CONNECTION_POOL_MONITORING=True,
+)
+```
+
+### Datacenter-Aware Configuration
+
+```python
+config = ScyllaDBConfig(
+    CONTACT_POINTS=["dc1-node1", "dc1-node2"],
+    PORT=9042,
+    LOCAL_DC="datacenter1",
+    REPLICATION_STRATEGY="NetworkTopologyStrategy",
+    REPLICATION_CONFIG={"datacenter1": 3, "datacenter2": 2},
+)
+```
+
+## Basic Usage
 
 ### Synchronous Adapter
 
@@ -72,54 +143,6 @@ async def main() -> None:
 
 # Run the async function
 asyncio.run(main())
-```
-
-## Configuration
-
-### Basic Configuration
-
-```python
-from archipy.configs.config_template import ScyllaDBConfig
-from pydantic import SecretStr
-
-config = ScyllaDBConfig(
-    CONTACT_POINTS=["node1.example.com", "node2.example.com"],
-    PORT=9042,
-    KEYSPACE="production_keyspace",
-    USERNAME="scylla_user",
-    PASSWORD=SecretStr("secure_password"),
-    CONSISTENCY_LEVEL="QUORUM",
-    COMPRESSION=True,
-    CONNECT_TIMEOUT=10,
-    REQUEST_TIMEOUT=10,
-)
-```
-
-### Connection Pool Configuration
-
-```python
-config = ScyllaDBConfig(
-    CONTACT_POINTS=["localhost"],
-    PORT=9042,
-    # Connection pool settings (recommended: 1-3 connections per CPU core)
-    MAX_CONNECTIONS_PER_HOST=2,
-    MIN_CONNECTIONS_PER_HOST=1,
-    CORE_CONNECTIONS_PER_HOST=1,
-    MAX_REQUESTS_PER_CONNECTION=100,
-    ENABLE_CONNECTION_POOL_MONITORING=True,
-)
-```
-
-### Datacenter-Aware Configuration
-
-```python
-config = ScyllaDBConfig(
-    CONTACT_POINTS=["dc1-node1", "dc1-node2"],
-    PORT=9042,
-    LOCAL_DC="datacenter1",
-    REPLICATION_STRATEGY="NetworkTopologyStrategy",
-    REPLICATION_CONFIG={"datacenter1": 3, "datacenter2": 2},
-)
 ```
 
 ## Basic CRUD Operations
@@ -793,15 +816,15 @@ health = adapter.health_check()
 logger.info(f"Health: {health['status']}, Latency: {health['latency_ms']:.2f}ms")
 ```
 
+## References
+
+- [ScyllaDB Documentation](https://docs.scylladb.com/)
+- [Cassandra Query Language (CQL)](https://cassandra.apache.org/doc/latest/cql/)
+- [ArchiPy Configuration Guide](../../usage.md)
+
 ## See Also
 
 - [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) - ScyllaDB configuration setup
 - [BDD Testing](../bdd_testing.md) - Testing ScyllaDB operations
 - [API Reference](../../api_reference/adapters/scylladb.md) - Full ScyllaDB adapter API documentation
-
-## References
-
-- [ScyllaDB Documentation](https://docs.scylladb.com/)
-- [Cassandra Query Language (CQL)](https://cassandra.apache.org/doc/latest/cql/)
-- [ArchiPy Configuration Guide](../../usage.md)

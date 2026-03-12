@@ -1,3 +1,8 @@
+---
+title: Examples
+description: Overview of all ArchiPy code examples and usage guides.
+---
+
 # Examples
 
 This section contains practical examples of using ArchiPy components with **Python 3.14 type hints**, **proper exception handling patterns**, and **comprehensive error chaining**.
@@ -62,3 +67,9 @@ Comprehensive error handling patterns:
 ---
 
 > **Note**: All code examples in this section have been updated to follow ArchiPy's architectural principles and Python 3.14 best practices. Each adapter example includes links to its corresponding BDD test scenarios and API reference documentation.
+
+
+## See Also
+
+- [API Reference](../api_reference/index.md) - Full API documentation
+- [Architecture](../architecture.md) - ArchiPy architectural patterns

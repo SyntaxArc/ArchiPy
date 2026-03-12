@@ -1,3 +1,8 @@
+---
+title: Configs
+description: API reference for ArchiPy configuration classes and settings.
+---
+
 # Configs
 
 ## Overview
@@ -41,7 +46,6 @@ access.
 
 ::: archipy.configs.base_config
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
       members_order: alphabetical
@@ -54,31 +58,26 @@ For practical examples, see the [Configuration Management Guide](../examples/con
 
 ::: archipy.configs.config_template.SQLAlchemyConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.PostgresSQLAlchemyConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.SQLiteSQLAlchemyConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.StarRocksSQLAlchemyConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.ScyllaDBConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -86,13 +85,11 @@ For practical examples, see the [Configuration Management Guide](../examples/con
 
 ::: archipy.configs.config_template.ElasticsearchConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.ElasticsearchAPMConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -100,31 +97,26 @@ For practical examples, see the [Configuration Management Guide](../examples/con
 
 ::: archipy.configs.config_template.RedisConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.KafkaConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.EmailConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.MinioConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.KeycloakConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -132,13 +124,11 @@ For practical examples, see the [Configuration Management Guide](../examples/con
 
 ::: archipy.configs.config_template.FastAPIConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.GrpcConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -146,13 +136,11 @@ For practical examples, see the [Configuration Management Guide](../examples/con
 
 ::: archipy.configs.config_template.SentryConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.PrometheusConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -160,7 +148,6 @@ For practical examples, see the [Configuration Management Guide](../examples/con
 
 ::: archipy.configs.config_template.ParsianShaparakConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -168,25 +155,21 @@ For practical examples, see the [Configuration Management Guide](../examples/con
 
 ::: archipy.configs.config_template.AuthConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.FileConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.DatetimeConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
 ::: archipy.configs.config_template.TemporalConfig
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
 
@@ -194,7 +177,6 @@ For practical examples, see the [Configuration Management Guide](../examples/con
 
 ::: archipy.configs.environment_type
     options:
-      show_source: true
       show_root_toc_entry: false
       heading_level: 3
       show_bases: true
