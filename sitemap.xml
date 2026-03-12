@@ -1,19 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/architecture/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
          <loc>https://syntaxarc.github.io/ArchiPy/changelog/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/contributing-docs/</loc>
+         <loc>https://syntaxarc.github.io/ArchiPy/concepts/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
@@ -21,7 +13,7 @@
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/installation/</loc>
+         <loc>https://syntaxarc.github.io/ArchiPy/get_started/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
