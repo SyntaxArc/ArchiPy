@@ -312,7 +312,7 @@ def send_notification_email(recipient: str, subject: str, body: str) -> bool:
 
 ## See Also
 
-- [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
-- [Configuration Management](../config_management.md) - Email configuration setup
-- [BDD Testing](../bdd_testing.md) - Testing email operations
-- [API Reference](../../api_reference/adapters/email.md) - Full Email adapter API documentation
+- [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
+- [Configuration Management](../config_management.md) — Email configuration setup
+- [BDD Testing](../testing_strategy.md) — Testing email operations
+- [API Reference](../../api_reference/adapters/email.md) — Full Email adapter API documentation

@@ -314,8 +314,8 @@ except CacheError as e:
 
 ## See Also
 
-- [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
-- [Configuration Management](../config_management.md) - Redis configuration setup
-- [BDD Testing](../bdd_testing.md) - Testing Redis operations
-- [Cache Decorator](../helpers/decorators.md#cache-decorator) - TTL cache decorator usage
-- [API Reference](../../api_reference/adapters/redis.md) - Full Redis adapter API documentation
+- [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
+- [Configuration Management](../config_management.md) — Redis configuration setup
+- [BDD Testing](../testing_strategy.md) — Testing Redis operations
+- [Cache Decorator](../helpers/decorators.md#cache-decorator) — TTL cache decorator usage
+- [API Reference](../../api_reference/adapters/redis.md) — Full Redis adapter API documentation

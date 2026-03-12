@@ -52,7 +52,8 @@ Type-safe configuration management:
 
 Behavior-Driven Development with Behave:
 
-- [BDD Testing](bdd_testing.md) - Writing Gherkin scenarios and step definitions with exception chaining
+- [BDD Testing](testing_strategy.md) — Gherkin features, mock adapters, testcontainers, and the Ports & Adapters testing
+  pattern
 
 ## Models
 
@@ -77,4 +78,4 @@ Comprehensive error handling patterns:
 ## See Also
 
 - [API Reference](../api_reference/index.md) - Full API documentation
-- [Concepts](../concepts.md) - ArchiPy architectural patterns
+- [Concepts](../getting-started/concepts.md) - ArchiPy architectural patterns

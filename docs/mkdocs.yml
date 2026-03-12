@@ -123,7 +123,10 @@ nav:
   - Get Started:
       - Overview: index.md
       - Installation: installation.md
-      - Concepts: concepts.md
+      - Quickstart: getting-started/quickstart.md
+      - Concepts: getting-started/concepts.md
+      - Project Structure: getting-started/project_structure.md
+      - Complete Example: getting-started/complete_user_example.md
   - Tutorials:
       - Overview: examples/index.md
       - Adapters:
@@ -147,8 +150,10 @@ nav:
           - Metaclasses: examples/helpers/metaclasses.md
           - Utils: examples/helpers/utils.md
       - Configuration: examples/config_management.md
-      - Testing: examples/bdd_testing.md
+      - BDD Testing: examples/testing_strategy.md
       - Error Handling: examples/error_handling.md
+      - Dependency Injection: examples/dependency_injection.md
+      - Observability: examples/observability.md
       - Models:
           - Protobuf DTOs: examples/models/protobuf_dtos.md
   - API Reference:
@@ -183,5 +188,8 @@ nav:
           - Types: api_reference/models/types.md
   - More:
       - Contributing: contributing.md
+      - Code of Conduct: CODE_OF_CONDUCT.md
+      - FAQ: faq.md
+      - Security: security.md
       - Changelog: changelog.md
       - License: license.md

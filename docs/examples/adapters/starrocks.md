@@ -451,9 +451,9 @@ async def get_age_distribution() -> dict[str, list[dict[str, int]]]:
 
 ## See Also
 
-- [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
-- [Configuration Management](../config_management.md) - StarRocks configuration setup
-- [BDD Testing](../bdd_testing.md) - Testing database operations
-- [PostgreSQL Adapter](postgres.md) - Similar patterns for PostgreSQL
-- [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) - Transaction decorator usage
-- [API Reference](../../api_reference/adapters/starrocks.md) - Full StarRocks adapter API documentation
+- [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
+- [Configuration Management](../config_management.md) — StarRocks configuration setup
+- [BDD Testing](../testing_strategy.md) — Testing database operations
+- [PostgreSQL Adapter](postgres.md) — Similar patterns for PostgreSQL
+- [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Transaction decorator usage
+- [API Reference](../../api_reference/adapters/starrocks.md) — Full StarRocks adapter API documentation

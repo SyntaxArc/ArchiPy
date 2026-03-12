@@ -81,16 +81,13 @@ make check
 
 ### Testing
 
-All contributions should include appropriate tests:
+All contributions must include appropriate BDD tests:
 
-- **Unit Tests**: For testing individual components
-- **Integration Tests**: For testing component interactions
-- **BDD Tests**: For behavior-driven development
+- **BDD Tests**: All tests are written as Gherkin scenarios in `features/`
 
 Run the tests to ensure your changes don't break existing functionality:
 
 ```bash
-make test
 make behave
 ```
 
@@ -131,13 +128,13 @@ Common types:
 
 1. **Update Your Branch**
 
-   Before submitting a pull request, make sure your branch is up to date with the main branch:
+   Before submitting a pull request, make sure your branch is up to date with the master branch:
 
    ```bash
-   git checkout main
-   git pull origin main
+   git checkout master
+   git pull origin master
    git checkout your-branch
-   git rebase main
+   git rebase master
    ```
 
 2. **Run All Checks**
@@ -146,7 +143,7 @@ Common types:
 
    ```bash
    make check
-   make test
+   make behave
    ```
 
 3. **Submit Your Pull Request**
@@ -163,7 +160,7 @@ Common types:
 
 5. **Merge**
 
-   Once your pull request is approved, it will be merged into the main branch.
+   Once your pull request is approved, it will be merged into the master branch.
 
 ## Bug Reports and Feature Requests
 
@@ -185,6 +182,56 @@ When submitting a feature request, please include:
 - A detailed description of the feature
 - Any relevant use cases
 - If possible, a sketch of how the feature might be implemented
+
+## How to Add a New Adapter
+
+New adapters follow a consistent checklist. Use this as your guide when contributing an integration:
+
+1. **Create the adapter package**
+
+   ```
+   archipy/adapters/<name>/
+   ├── __init__.py
+   ├── ports.py      # Abstract interface (plain class with @abstractmethod)
+   ├── adapters.py   # Concrete implementation
+   └── mocks.py      # In-memory test double
+   ```
+
+2. **Define the port** (`ports.py`)
+
+   Create a plain class with `@abstractmethod` methods that describes what the adapter can do. Your business logic and
+   repositories
+   must depend only on this interface.
+
+3. **Implement the adapter** (`adapters.py`)
+
+   Implement the port against the real external service. Lazy-import the third-party library inside
+   methods (not at module level) to avoid `ImportError` when the optional extra is not installed.
+
+4. **Write the mock** (`mocks.py`)
+
+   Implement the port using an in-memory data structure. The mock must behave consistently with the
+   real adapter for all methods exercised in tests.
+
+5. **Add the optional extra** to `pyproject.toml`
+
+   ```toml
+   [project.optional-dependencies]
+   myservice = ["myservice-client>=1.0"]
+   ```
+
+6. **Write tests** — BDD tests using the mock for fast scenarios, integration tests using `testcontainers` for
+   real-service scenarios.
+
+7. **Document the adapter** — create both:
+    - `docs/examples/adapters/<name>.md` — example guide (5 required sections)
+    - `docs/api_reference/adapters/<name>.md` — API reference with mkdocstrings
+
+8. **Update `mkdocs.yml`** — add both new pages under the appropriate `nav:` keys.
+
+!!! note "Issue templates"
+Use the [GitHub issue templates](https://github.com/SyntaxArc/ArchiPy/issues/new/choose) when
+reporting bugs, requesting features, or proposing new adapters.
 
 ## Code of Conduct
 

@@ -378,7 +378,7 @@ async def list_topics() -> dict[str, list[str]]:
 
 ## See Also
 
-- [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
-- [Configuration Management](../config_management.md) - Kafka configuration setup
-- [BDD Testing](../bdd_testing.md) - Testing Kafka operations
-- [API Reference](../../api_reference/adapters/kafka.md) - Full Kafka adapter API documentation
+- [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
+- [Configuration Management](../config_management.md) — Kafka configuration setup
+- [BDD Testing](../testing_strategy.md) — Testing Kafka operations
+- [API Reference](../../api_reference/adapters/kafka.md) — Full Kafka adapter API documentation

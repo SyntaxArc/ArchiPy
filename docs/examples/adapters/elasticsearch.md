@@ -83,60 +83,60 @@ else:
 
 ## Basic Usage
 
-### Synchronous Adapter
+=== "Sync"
 
-```python
-import logging
+    ```python
+    import logging
 
-from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
-from archipy.models.errors import InternalError
+    from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
+    from archipy.models.errors import InternalError
 
-logger = logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
 
-# Uses global config (BaseConfig.global_config().ELASTIC)
-try:
-    es = ElasticsearchAdapter()
-except Exception as e:
-    logger.error(f"Failed to create Elasticsearch adapter: {e}")
-    raise InternalError() from e
-else:
-    logger.info("Elasticsearch adapter initialised")
-```
-
-To use a custom config instead of the global one:
-
-```python
-from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
-from archipy.configs.config_template import ElasticsearchConfig
-
-custom_config = ElasticsearchConfig(HOSTS=["https://es.internal:9200"])
-es = ElasticsearchAdapter(elasticsearch_config=custom_config)
-```
-
-### Asynchronous Adapter
-
-```python
-import asyncio
-import logging
-
-from archipy.adapters.elasticsearch.adapters import AsyncElasticsearchAdapter
-from archipy.models.errors import InternalError
-
-logger = logging.getLogger(__name__)
-
-
-async def main() -> None:
+    # Uses global config (BaseConfig.global_config().ELASTIC)
     try:
-        es = AsyncElasticsearchAdapter()
-        pong = await es.ping()
-        logger.info(f"Cluster reachable: {pong}")
+        es = ElasticsearchAdapter()
     except Exception as e:
-        logger.error(f"Elasticsearch connection failed: {e}")
+        logger.error(f"Failed to create Elasticsearch adapter: {e}")
         raise InternalError() from e
+    else:
+        logger.info("Elasticsearch adapter initialised")
+    ```
+
+    To use a custom config instead of the global one:
+
+    ```python
+    from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
+    from archipy.configs.config_template import ElasticsearchConfig
+
+    custom_config = ElasticsearchConfig(HOSTS=["https://es.internal:9200"])
+    es = ElasticsearchAdapter(elasticsearch_config=custom_config)
+    ```
+
+=== "Async"
+
+    ```python
+    import asyncio
+    import logging
+
+    from archipy.adapters.elasticsearch.adapters import AsyncElasticsearchAdapter
+    from archipy.models.errors import InternalError
+
+    logger = logging.getLogger(__name__)
 
 
-asyncio.run(main())
-```
+    async def main() -> None:
+        try:
+            es = AsyncElasticsearchAdapter()
+            pong = await es.ping()
+            logger.info(f"Cluster reachable: {pong}")
+        except Exception as e:
+            logger.error(f"Elasticsearch connection failed: {e}")
+            raise InternalError() from e
+
+
+    asyncio.run(main())
+    ```
 
 ## Index Management
 

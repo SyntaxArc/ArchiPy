@@ -100,6 +100,10 @@ If issues arise, verify:
 3. Build tools are available (UV handles this automatically)
 4. Database-specific dependencies are installed if using database adapters
 
+!!! warning "Python 3.14+ Required"
+ArchiPy uses `X | Y` union syntax, lowercase generics (`list[str]`), and other modern features
+that require Python 3.14 or later. Using an older Python will result in `SyntaxError` at import time.
+
 !!! tip "IDE Integration"
 For the best development experience, use an IDE that supports Python type hints, such as PyCharm or VS Code with the
 Python extension. The project uses modern Python type hints and benefits from IDE support for type checking and
@@ -108,5 +112,5 @@ autocompletion.
 ## See Also
 
 - [Get Started](index.md) — overview of ArchiPy and a quick example
-- [Concepts](concepts.md) — Clean Architecture layers and design philosophy
+- [Concepts](getting-started/concepts.md) — Clean Architecture layers and design philosophy
 - [Tutorials](examples/index.md) — complete guides for every adapter and helper

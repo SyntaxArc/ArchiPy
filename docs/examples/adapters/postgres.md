@@ -134,14 +134,24 @@ class Post(DeletableEntity):
 ```python
 import logging
 
+from archipy.adapters.base.sqlalchemy.adapters import (
+    SQLAlchemyFilterMixin,
+    SQLAlchemyPaginationMixin,
+    SQLAlchemySortMixin,
+)
 from archipy.adapters.postgres.sqlalchemy.adapters import PostgresSQLAlchemyAdapter
 from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
 logger = logging.getLogger(__name__)
 
+
+class UserPostgresAdapter(PostgresSQLAlchemyAdapter, SQLAlchemyFilterMixin, SQLAlchemyPaginationMixin, SQLAlchemySortMixin):
+    """PostgreSQL adapter with filter, pagination, and sort query capabilities for the User domain."""
+
+
 # Uses global config (BaseConfig.global_config().POSTGRES_SQLALCHEMY)
 try:
-    adapter = PostgresSQLAlchemyAdapter()
+    adapter = UserPostgresAdapter()
 except (DatabaseConnectionError, DatabaseQueryError) as e:
     logger.error(f"Failed to create PostgreSQL adapter: {e}")
     raise
@@ -434,7 +444,8 @@ def create_user_with_post(username: str, email: str, post_title: str, post_conte
 
 ## Searching, Filtering, and Pagination
 
-Use `execute_search_query` with `_apply_filter`, `PaginationDTO`, and `SortDTO` for rich queries.
+Use `execute_search_query` with `PaginationDTO` and `SortDTO` for rich queries, building filter conditions directly with
+SQLAlchemy's `.where()`.
 
 ```python
 import logging
@@ -446,7 +457,7 @@ from archipy.adapters.postgres.sqlalchemy.adapters import PostgresSQLAlchemyAdap
 from archipy.models.dtos.pagination_dto import PaginationDTO
 from archipy.models.dtos.sort_dto import SortDTO
 from archipy.models.errors import DatabaseQueryError
-from archipy.models.types.base_types import FilterOperationType, SortOrderType
+from archipy.models.types.base_types import SortOrderType
 
 logger = logging.getLogger(__name__)
 
@@ -474,12 +485,7 @@ def search_users(
     base_query = select(User)
 
     if search_term:
-        base_query = adapter._apply_filter(
-            query=base_query,
-            field=User.full_name,
-            value=search_term,
-            operation=FilterOperationType.CONTAINS,
-        )
+        base_query = base_query.where(User.full_name.ilike(f"%{search_term}%"))
 
     pagination = PaginationDTO(page=page, page_size=page_size)
     sort_info = SortDTO(field=User.username, order=SortOrderType.ASCENDING)
@@ -558,6 +564,13 @@ def count_active_users() -> int:
 ```
 
 ## Async Usage
+
+!!! tip "Install the async extra"
+Async PostgreSQL support requires the `sqlalchemy-async` extra:
+
+```bash
+uv add "archipy[postgres,sqlalchemy-async]"
+```
 
 ### Asynchronous Adapter
 
@@ -708,7 +721,7 @@ from archipy.adapters.base.sqlalchemy.ports import SQLAlchemyPort
 from archipy.models.dtos.pagination_dto import PaginationDTO
 from archipy.models.dtos.sort_dto import SortDTO
 from archipy.models.errors import DatabaseQueryError, NotFoundError
-from archipy.models.types.base_types import FilterOperationType, SortOrderType
+from archipy.models.types.base_types import SortOrderType
 
 logger = logging.getLogger(__name__)
 
@@ -776,12 +789,7 @@ class UserRepository:
         Raises:
             DatabaseQueryError: If the database operation fails.
         """
-        query = self._adapter._apply_filter(
-            query=select(User),
-            field=User.username,
-            value=username,
-            operation=FilterOperationType.EQUAL,
-        )
+        query = select(User).where(User.username == username)
         try:
             result = self._adapter.scalars(query)
             return result.first()
@@ -900,6 +908,6 @@ worker_config = PostgresSQLAlchemyConfig(
 
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — PostgreSQL configuration setup
-- [BDD Testing](../bdd_testing.md) — Testing database operations
+- [BDD Testing](../testing_strategy.md) — Testing database operations
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Transaction decorator usage
 - [API Reference](../../api_reference/adapters/postgres.md) — Full PostgreSQL adapter API documentation

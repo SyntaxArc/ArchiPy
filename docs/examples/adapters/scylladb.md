@@ -829,7 +829,7 @@ logger.info(f"Health: {health['status']}, Latency: {health['latency_ms']:.2f}ms"
 
 ## See Also
 
-- [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
-- [Configuration Management](../config_management.md) - ScyllaDB configuration setup
-- [BDD Testing](../bdd_testing.md) - Testing ScyllaDB operations
-- [API Reference](../../api_reference/adapters/scylladb.md) - Full ScyllaDB adapter API documentation
+- [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
+- [Configuration Management](../config_management.md) — ScyllaDB configuration setup
+- [BDD Testing](../testing_strategy.md) — Testing ScyllaDB operations
+- [API Reference](../../api_reference/adapters/scylladb.md) — Full ScyllaDB adapter API documentation

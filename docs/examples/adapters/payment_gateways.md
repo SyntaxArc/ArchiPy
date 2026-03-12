@@ -390,7 +390,7 @@ async def payment_callback(token: int, request: Request) -> dict[str, str]:  # n
 
 ## See Also
 
-- [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
-- [Configuration Management](../config_management.md) - Payment gateway configuration setup
-- [BDD Testing](../bdd_testing.md) - Testing payment operations
-- [API Reference](../../api_reference/adapters/payment_gateways.md) - Full payment gateway API documentation
+- [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
+- [Configuration Management](../config_management.md) — Payment gateway configuration setup
+- [BDD Testing](../testing_strategy.md) — Testing payment operations
+- [API Reference](../../api_reference/adapters/payment_gateways.md) — Full payment gateway API documentation

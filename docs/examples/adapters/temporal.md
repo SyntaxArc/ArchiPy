@@ -173,7 +173,7 @@ class ConfigOverrideWorkflow(BaseWorkflow[dict, str]):
                 long_running_activity,
                 workflow_input,
                 start_to_close_timeout=timedelta(minutes=10),  # Override default 30 seconds
-                heartbeat_timeout=timedelta(seconds=30)        # Override default 10 seconds
+                heartbeat_timeout=timedelta(seconds=30)  # Override default 10 seconds
             )
         except Exception as e:
             logger.error(f"Long running activity failed: {e}")
@@ -185,8 +185,8 @@ class ConfigOverrideWorkflow(BaseWorkflow[dict, str]):
                 critical_activity,
                 workflow_input,
                 retry_policy=RetryPolicy(
-                    maximum_attempts=10,        # Override default 3 attempts
-                    backoff_coefficient=1.5,   # Override default 2.0
+                    maximum_attempts=10,  # Override default 3 attempts
+                    backoff_coefficient=1.5,  # Override default 2.0
                     maximum_interval=timedelta(seconds=30)  # Override default 60 seconds
                 )
             )
@@ -467,7 +467,7 @@ async def robust_workflow_execution() -> None:
             },
             workflow_id="user-onboarding-001",
             execution_timeout=300,  # 5 minutes
-            run_timeout=120         # 2 minutes per run
+            run_timeout=120  # 2 minutes per run
         )
     except WorkerConnectionError as e:
         logger.error(f"Worker connection failed: {e}")
@@ -586,8 +586,8 @@ logger = logging.getLogger(__name__)
 # Configure global Prometheus settings
 config = BaseConfig()
 config.PROMETHEUS = PrometheusConfig(
-    IS_ENABLED=True,      # Enable Prometheus globally
-    SERVER_PORT=8200      # Metrics endpoint port
+    IS_ENABLED=True,  # Enable Prometheus globally
+    SERVER_PORT=8200  # Metrics endpoint port
 )
 
 # Configure Temporal with metrics enabled
@@ -596,7 +596,7 @@ temporal_config = TemporalConfig(
     PORT=7233,
     NAMESPACE="default",
     TASK_QUEUE="my-task-queue",
-    ENABLE_METRICS=True   # Enable Temporal metrics
+    ENABLE_METRICS=True  # Enable Temporal metrics
 )
 
 # Create adapter - metrics will be automatically configured
@@ -688,27 +688,35 @@ Create a Grafana dashboard to visualize Temporal metrics:
     "panels": [
       {
         "title": "Workflow Execution Rate",
-        "targets": [{
-          "expr": "rate(temporal_workflow_task_execution_total[5m])"
-        }]
+        "targets": [
+          {
+            "expr": "rate(temporal_workflow_task_execution_total[5m])"
+          }
+        ]
       },
       {
         "title": "Active Workers",
-        "targets": [{
-          "expr": "temporal_worker_task_slots_used"
-        }]
+        "targets": [
+          {
+            "expr": "temporal_worker_task_slots_used"
+          }
+        ]
       },
       {
         "title": "Activity Success Rate",
-        "targets": [{
-          "expr": "rate(temporal_activity_task_execution_succeed_total[5m]) / rate(temporal_activity_task_execution_total[5m])"
-        }]
+        "targets": [
+          {
+            "expr": "rate(temporal_activity_task_execution_succeed_total[5m]) / rate(temporal_activity_task_execution_total[5m])"
+          }
+        ]
       },
       {
         "title": "Workflow Task Latency (P95)",
-        "targets": [{
-          "expr": "histogram_quantile(0.95, rate(temporal_workflow_task_execution_latency_bucket[5m]))"
-        }]
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(temporal_workflow_task_execution_latency_bucket[5m]))"
+          }
+        ]
       }
     ]
   }
@@ -743,6 +751,7 @@ temporal_config = TemporalConfig(
     ENABLE_METRICS=True
 )
 
+
 # Define workflow
 class MetricsWorkflow(BaseWorkflow[str, str]):
     """Workflow with metrics collection."""
@@ -760,12 +769,14 @@ class MetricsWorkflow(BaseWorkflow[str, str]):
         self._log_workflow_event("workflow_completed", {"result": result})
         return result
 
+
 @activity.defn
 async def greet_activity(name: str) -> str:
     """Activity with metrics tracking."""
     logger.info(f"Processing greeting for {name}")
     await asyncio.sleep(0.1)  # Simulate work
     return f"Hello, {name}!"
+
 
 async def main() -> None:
     """Run workflow with metrics collection."""
@@ -800,6 +811,7 @@ async def main() -> None:
         await worker_manager.shutdown_all_workers()
         await temporal_adapter.close()
 
+
 if __name__ == "__main__":
     asyncio.run(main())
 ```
@@ -829,8 +841,8 @@ pattern prevents multiple Runtime instances and guarantees thread-safe access.
 
 ## See Also
 
-- [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
-- [Configuration Management](../config_management.md) - Temporal configuration setup
-- [BDD Testing](../bdd_testing.md) - Testing workflow operations
-- [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) - Atomic transaction usage
-- [API Reference](../../api_reference/adapters/temporal.md) - Full Temporal adapter API documentation
+- [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
+- [Configuration Management](../config_management.md) — Temporal configuration setup
+- [BDD Testing](../testing_strategy.md) — Testing workflow operations
+- [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Atomic transaction usage
+- [API Reference](../../api_reference/adapters/temporal.md) — Full Temporal adapter API documentation

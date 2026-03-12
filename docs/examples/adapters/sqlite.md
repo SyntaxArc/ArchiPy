@@ -395,9 +395,9 @@ async def get_user(user_id: UUID) -> dict[str, str | UUID]:
 
 ## See Also
 
-- [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
-- [Configuration Management](../config_management.md) - SQLite configuration setup
-- [BDD Testing](../bdd_testing.md) - Testing database operations
-- [PostgreSQL Adapter](postgres.md) - Similar patterns for PostgreSQL
-- [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) - Transaction decorator usage
-- [API Reference](../../api_reference/adapters/sqlite.md) - Full SQLite adapter API documentation
+- [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
+- [Configuration Management](../config_management.md) — SQLite configuration setup
+- [BDD Testing](../testing_strategy.md) — Testing database operations
+- [PostgreSQL Adapter](postgres.md) — Similar patterns for PostgreSQL
+- [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Transaction decorator usage
+- [API Reference](../../api_reference/adapters/sqlite.md) — Full SQLite adapter API documentation
