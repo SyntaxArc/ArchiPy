@@ -202,7 +202,7 @@ This section outlines the standards and practices for ArchiPy documentation.
 
 - `mkdocs.yml` - Main configuration file for MkDocs
 - `docs/` - Markdown documentation files
-    - `get_started.md` - Get Started page
+    - `index.md` - Get Started page
     - `api_reference/` - API documentation
     - `examples/` - Usage examples
     - `assets/` - Images and other static assets
