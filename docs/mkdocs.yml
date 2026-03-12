@@ -120,8 +120,10 @@ plugins:
 
 # Navigation
 nav:
-  - Get Started: index.md
-  - Concepts: concepts.md
+  - Get Started:
+      - Overview: index.md
+      - Installation: installation.md
+      - Concepts: concepts.md
   - Tutorials:
       - Overview: examples/index.md
       - Adapters:
