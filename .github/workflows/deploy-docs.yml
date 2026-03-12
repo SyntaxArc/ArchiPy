@@ -7,6 +7,7 @@ on:
       - docs
     paths:
       - 'docs/**'
+      - 'archipy/**'
       - '.github/workflows/deploy-docs.yml'
 
 permissions:
