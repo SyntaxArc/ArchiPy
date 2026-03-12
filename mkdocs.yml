@@ -120,7 +120,7 @@ plugins:
 
 # Navigation
 nav:
-  - Get Started: get_started.md
+  - Get Started: index.md
   - Concepts: concepts.md
   - Tutorials:
       - Overview: examples/index.md
