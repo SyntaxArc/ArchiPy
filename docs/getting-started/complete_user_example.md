@@ -6,7 +6,7 @@ description: End-to-end ArchiPy application — entities, DTOs, adapters, reposi
 # Complete User Example
 
 This page walks through every layer of a real ArchiPy application for a **User** domain, from the database
-entity all the way to the FastAPI endpoint and `main.py`. Each section corresponds to one layer in the
+entity all the way to the FastAPI endpoint and `manage.py`. Each section corresponds to one layer in the
 [four-layer architecture](../getting-started/concepts.md).
 
 ---
@@ -14,30 +14,40 @@ entity all the way to the FastAPI endpoint and `main.py`. Each section correspon
 ## Project Layout
 
 ```
-my_app/
-├── configs/
-│   ├── app_config.py
-│   └── containers.py
-├── models/
-│   ├── dtos/
+project-root/
+├── my_app/
+│   ├── configs/
+│   │   ├── app_config.py
+│   │   └── containers.py
+│   ├── models/
+│   │   ├── dtos/
+│   │   │   └── user/
+│   │   │       ├── domain/v1/user_dtos.py      # versioned — cross service boundary
+│   │   │       └── repository/user_dtos.py     # internal — never versioned
+│   │   ├── entities/user.py
+│   │   └── errors/user_errors.py
+│   ├── repositories/
 │   │   └── user/
-│   │       ├── domain/v1/user_dtos.py      # versioned — cross service boundary
-│   │       └── repository/user_dtos.py     # internal — never versioned
-│   ├── entities/user.py
-│   └── errors/user_errors.py
-├── repositories/
-│   └── user/
-│       ├── adapters/
-│       │   ├── user_db_adapter.py
-│       │   └── user_cache_adapter.py
-│       └── user_repository.py
-├── logics/
-│   └── user/
-│       ├── user_registration_logic.py
-│       └── user_query_logic.py
-├── services/
-│   └── user/v1/user_service.py
-└── main.py
+│   │       ├── adapters/
+│   │       │   ├── user_db_adapter.py
+│   │       │   └── user_cache_adapter.py
+│   │       └── user_repository.py
+│   ├── logics/
+│   │   └── user/
+│   │       ├── user_registration_logic.py
+│   │       └── user_query_logic.py
+│   └── services/
+│       └── user/v1/user_service.py
+│
+├── features/                           # BDD acceptance tests (behave)
+│   ├── user_registration.feature
+│   ├── steps/
+│   │   └── user_steps.py
+│   ├── scenario_context.py
+│   ├── scenario_context_pool_manager.py
+│   └── environment.py
+│
+└── manage.py                           # CLI entry point — click commands
 ```
 
 ---
@@ -47,17 +57,23 @@ my_app/
 ```python
 # configs/app_config.py
 from archipy.configs.base_config import BaseConfig
+from archipy.configs.environment_type import EnvironmentType
 
 
 class AppConfig(BaseConfig):
     """Application-specific configuration.
 
     All ArchiPy sections (REDIS, POSTGRES, FASTAPI, …) are inherited from BaseConfig.
-    Add custom fields below.
+    Override `customize` to apply app-specific defaults after loading.
     """
 
-    APP_NAME: str = "my-service"
-    DEBUG: bool = False
+    def customize(self) -> None:
+        """Apply app-specific configuration overrides."""
+        super().customize()
+        self.FASTAPI.PROJECT_NAME = "my-service"
+        self.FASTAPI.SERVE_HOST = "0.0.0.0"  # noqa: S104
+        self.FASTAPI.SERVE_PORT = 8000
+        self.FASTAPI.RELOAD = self.ENVIRONMENT == EnvironmentType.LOCAL
 
 
 config = AppConfig()
@@ -653,27 +669,55 @@ def create_router(container: UserContainer) -> APIRouter:
 
 ---
 
-## Entry Point
+## Entry Point: `manage.py`
 
 ```python
-# main.py
-from archipy.helpers.utils.app_utils import AppUtils
+# manage.py
+import click
+import uvicorn
 
-import configs.app_config  # noqa: F401 — importing triggers BaseConfig.set_global
+import configs.app_config  # noqa: F401 — triggers BaseConfig.set_global
+from archipy.configs.base_config import BaseConfig
+from archipy.helpers.utils.app_utils import AppUtils
 from configs.containers import UserContainer
 from services.user.v1.user_service import create_router as create_user_v1_router
 
-user_container = UserContainer()
 
-app = AppUtils.create_fastapi_app()
-app.include_router(create_user_v1_router(user_container))
+def create_app():
+    """Create and configure the FastAPI application."""
+    user_container = UserContainer()
+    app = AppUtils.create_fastapi_app()
+    app.include_router(create_user_v1_router(user_container))
+    return app
+
+
+@click.group()
+def cli():
+    """Management commands for my_app."""
+
+
+@cli.command()
+@click.option("--host", default=None, show_default=True, help="Bind host (defaults to FAST_API.SERVE_HOST).")
+@click.option("--port", default=None, type=int, show_default=True, help="Bind port (defaults to FAST_API.SERVE_PORT).")
+@click.option("--reload/--no-reload", default=None, help="Enable auto-reload (defaults to FAST_API.RELOAD).")
+def run(host: str | None, port: int | None, reload: bool | None) -> None:
+    """Start the FastAPI development server."""
+    config = BaseConfig.global_config()
+    serve_host = host or config.FAST_API.SERVE_HOST
+    serve_port = port or config.FAST_API.SERVE_PORT
+    serve_reload = config.FAST_API.RELOAD if reload is None else reload
+    uvicorn.run("manage:create_app", factory=True, host=serve_host, port=serve_port, reload=serve_reload)
+
 
 if __name__ == "__main__":
-    import uvicorn
-    from archipy.configs.base_config import BaseConfig
+    cli()
+```
 
-    config = BaseConfig.global_config()
-    uvicorn.run(app, host="0.0.0.0", port=8000)  # noqa: S104
+Run the server with:
+
+```bash
+python manage.py run
+python manage.py run --port 9000 --reload
 ```
 
 ---

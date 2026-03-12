@@ -34,12 +34,14 @@ uv add "archipy[redis,cache]"
 
 ## Step 3 — Define the Configuration
 
-Create a configuration class that extends `BaseConfig`. Add only the fields your service needs:
+Create a configuration class that extends `BaseConfig`. Override `customize()` to apply service-specific defaults after all sources are loaded:
 
 ```python
 # configs/app_config.py
 import logging
+
 from archipy.configs.base_config import BaseConfig
+from archipy.configs.environment_type import EnvironmentType
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +50,14 @@ class AppConfig(BaseConfig):
     """Service-level configuration.
 
     All ArchiPy config sections (REDIS, FASTAPI, etc.) are inherited.
-    Add custom fields below.
+    Override `customize` to set service-specific defaults.
     """
 
-    APP_NAME: str = "my-service"
-    DEBUG: bool = False
+    def customize(self) -> None:
+        """Apply service-specific configuration overrides."""
+        super().customize()
+        self.FASTAPI.PROJECT_NAME = "my-service"
+        self.FASTAPI.RELOAD = self.ENVIRONMENT == EnvironmentType.LOCAL
 
 
 config = AppConfig()
@@ -111,21 +116,36 @@ name = get_user_name("42")
 ## Step 6 — Run the App
 
 ```python
-# main.py
+# manage.py
 import logging
+
+import click
+
 import configs.app_config  # noqa: F401 — triggers BaseConfig.set_global
 from logics.user_logic import get_user_name
 
 logging.basicConfig(level="INFO")
 logger = logging.getLogger(__name__)
 
-if __name__ == "__main__":
+
+@click.group()
+def cli():
+    """Management commands for my_service."""
+
+
+@cli.command()
+def run() -> None:
+    """Run a quick cache demonstration."""
     logger.info(get_user_name("42"))
     logger.info(get_user_name("42"))  # returns from cache
+
+
+if __name__ == "__main__":
+    cli()
 ```
 
 ```bash
-uv run main.py
+python manage.py run
 ```
 
 You should see:
