@@ -52,7 +52,7 @@ members_order: alphabetical
 
 ## Config Templates {#config-templates}
 
-For practical examples, see the [Configuration Management Guide](../examples/config_management.md).
+For practical examples, see the [Configuration Management Guide](../tutorials/config_management.md).
 
 ### Database Configs
 

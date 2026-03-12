@@ -216,6 +216,6 @@ python manage.py run --port 9000 --reload
 
 - [Quickstart](quickstart.md) — five-minute getting-started example
 - [Concepts](concepts.md) — four-layer architecture and import rules
-- [Dependency Injection](../examples/dependency_injection.md) — container wiring in detail
-- [Testing Strategy](../examples/testing_strategy.md) — BDD test layout with behave
-- [Configuration Management](../examples/config_management.md) — environment-specific configs
+- [Dependency Injection](../tutorials/dependency_injection.md) — container wiring in detail
+- [Testing Strategy](../tutorials/testing_strategy.md) — BDD test layout with behave
+- [Configuration Management](../tutorials/config_management.md) — environment-specific configs

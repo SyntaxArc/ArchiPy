@@ -726,7 +726,7 @@ python manage.py run --port 9000 --reload
 
 - [Concepts](concepts.md) — four-layer architecture and import rules
 - [Project Structure](project_structure.md) — reference folder layout
-- [Dependency Injection](../examples/dependency_injection.md) — DI container patterns in depth
-- [Configuration Management](../examples/config_management.md) — environment variables and `.env` files
-- [Error Handling](../examples/error_handling.md) — custom errors and HTTP mapping
-- [Testing Strategy](../examples/testing_strategy.md) — BDD testing with mock adapters
+- [Dependency Injection](../tutorials/dependency_injection.md) — DI container patterns in depth
+- [Configuration Management](../tutorials/config_management.md) — environment variables and `.env` files
+- [Error Handling](../tutorials/error_handling.md) — custom errors and HTTP mapping
+- [Testing Strategy](../tutorials/testing_strategy.md) — BDD testing with mock adapters

@@ -166,6 +166,6 @@ Now that the basics work, explore the full feature set:
 
 - [Concepts](concepts.md) — understand the four-layer architecture and import rules
 - [Project Structure](project_structure.md) — recommended folder layout for a full service
-- [Configuration Management](../examples/config_management.md) — environment variables, `.env` files, nested config
-- [Dependency Injection](../examples/dependency_injection.md) — wire adapters and logic with a DI container
-- [Tutorials](../examples/index.md) — guides for every adapter (PostgreSQL, Kafka, Keycloak, …)
+- [Configuration Management](../tutorials/config_management.md) — environment variables, `.env` files, nested config
+- [Dependency Injection](../tutorials/dependency_injection.md) — wire adapters and logic with a DI container
+- [Tutorials](../tutorials/index.md) — guides for every adapter (PostgreSQL, Kafka, Keycloak, …)

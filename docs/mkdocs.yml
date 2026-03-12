@@ -122,40 +122,40 @@ plugins:
 nav:
   - Get Started:
       - Overview: index.md
-      - Installation: installation.md
+      - Installation: getting-started/installation.md
       - Quickstart: getting-started/quickstart.md
       - Concepts: getting-started/concepts.md
       - Project Structure: getting-started/project_structure.md
       - Complete Example: getting-started/complete_user_example.md
   - Tutorials:
-      - Overview: examples/index.md
+      - Overview: tutorials/index.md
       - Adapters:
-          - Overview: examples/adapters/index.md
-          - Redis: examples/adapters/redis.md
-          - PostgreSQL: examples/adapters/postgres.md
-          - SQLite: examples/adapters/sqlite.md
-          - StarRocks: examples/adapters/starrocks.md
-          - Kafka: examples/adapters/kafka.md
-          - Keycloak: examples/adapters/keycloak.md
-          - MinIO: examples/adapters/minio.md
-          - ScyllaDB: examples/adapters/scylladb.md
-          - Elasticsearch: examples/adapters/elasticsearch.md
-          - Temporal: examples/adapters/temporal.md
-          - Email: examples/adapters/email.md
-          - Payment Gateways: examples/adapters/payment_gateways.md
+          - Overview: tutorials/adapters/index.md
+          - Redis: tutorials/adapters/redis.md
+          - PostgreSQL: tutorials/adapters/postgres.md
+          - SQLite: tutorials/adapters/sqlite.md
+          - StarRocks: tutorials/adapters/starrocks.md
+          - Kafka: tutorials/adapters/kafka.md
+          - Keycloak: tutorials/adapters/keycloak.md
+          - MinIO: tutorials/adapters/minio.md
+          - ScyllaDB: tutorials/adapters/scylladb.md
+          - Elasticsearch: tutorials/adapters/elasticsearch.md
+          - Temporal: tutorials/adapters/temporal.md
+          - Email: tutorials/adapters/email.md
+          - Payment Gateways: tutorials/adapters/payment_gateways.md
       - Helpers:
-          - Overview: examples/helpers/index.md
-          - Decorators: examples/helpers/decorators.md
-          - Interceptors: examples/helpers/interceptors.md
-          - Metaclasses: examples/helpers/metaclasses.md
-          - Utils: examples/helpers/utils.md
-      - Configuration: examples/config_management.md
-      - BDD Testing: examples/testing_strategy.md
-      - Error Handling: examples/error_handling.md
-      - Dependency Injection: examples/dependency_injection.md
-      - Observability: examples/observability.md
+          - Overview: tutorials/helpers/index.md
+          - Decorators: tutorials/helpers/decorators.md
+          - Interceptors: tutorials/helpers/interceptors.md
+          - Metaclasses: tutorials/helpers/metaclasses.md
+          - Utils: tutorials/helpers/utils.md
+      - Configuration: tutorials/config_management.md
+      - BDD Testing: tutorials/testing_strategy.md
+      - Error Handling: tutorials/error_handling.md
+      - Dependency Injection: tutorials/dependency_injection.md
+      - Observability: tutorials/observability.md
       - Models:
-          - Protobuf DTOs: examples/models/protobuf_dtos.md
+          - Protobuf DTOs: tutorials/models/protobuf_dtos.md
   - API Reference:
       - Overview: api_reference/index.md
       - Adapters:
@@ -186,10 +186,10 @@ nav:
           - Entities: api_reference/models/entities.md
           - Errors: api_reference/models/errors.md
           - Types: api_reference/models/types.md
-  - More:
-      - Contributing: contributing.md
-      - Code of Conduct: CODE_OF_CONDUCT.md
-      - FAQ: faq.md
-      - Security: security.md
-      - Changelog: changelog.md
-      - License: license.md
+  - Community:
+      - Contributing: community/contributing.md
+      - Code of Conduct: community/code_of_conduct.md
+      - FAQ: community/faq.md
+      - Security: community/security.md
+      - Changelog: community/changelog.md
+      - License: community/license.md

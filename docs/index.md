@@ -9,7 +9,7 @@ description: Introduction to ArchiPy and installation guide for the framework an
 
 [![PyPI version](https://img.shields.io/pypi/v/archipy)](https://pypi.org/project/archipy/)
 [![Python versions](https://img.shields.io/pypi/pyversions/archipy)](https://pypi.org/project/archipy/)
-[![License](https://img.shields.io/pypi/l/archipy)](license.md)
+[![License](https://img.shields.io/pypi/l/archipy)](community/license.md)
 [![Downloads](https://img.shields.io/pypi/dm/archipy)](https://pypi.org/project/archipy/)
 [![CI](https://github.com/SyntaxArc/ArchiPy/actions/workflows/ci.yml/badge.svg)](https://github.com/SyntaxArc/ArchiPy/actions)
 [![GitHub Stars](https://img.shields.io/github/stars/SyntaxArc/ArchiPy?style=social)](https://github.com/SyntaxArc/ArchiPy)
@@ -95,14 +95,14 @@ graph LR
 See [Concepts](getting-started/concepts.md) for the full architectural breakdown.
 
 !!! tip "Full examples"
-See the [Tutorials](examples/index.md) section for complete, runnable examples for every adapter and helper.
+See the [Tutorials](tutorials/index.md) section for complete, runnable examples for every adapter and helper.
 
 ## Next Steps
 
-- [Installation](installation.md) — prerequisites, install methods, and optional extras
+- [Installation](getting-started/installation.md) — prerequisites, install methods, and optional extras
 - [Concepts](getting-started/concepts.md) — understand the Clean Architecture layers and design philosophy
 - [Quickstart](getting-started/quickstart.md) — five-minute step-by-step guide
-- [Tutorials](examples/index.md) — step-by-step guides for every adapter, helper, and feature
+- [Tutorials](tutorials/index.md) — step-by-step guides for every adapter, helper, and feature
 - [API Reference](api_reference/index.md) — full reference for all public classes and functions
-- [FAQ](faq.md) — answers to common questions
-- [Contributing](contributing.md) — set up a dev environment and contribute to ArchiPy
+- [FAQ](community/faq.md) — answers to common questions
+- [Contributing](community/contributing.md) — set up a dev environment and contribute to ArchiPy

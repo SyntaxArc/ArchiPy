@@ -1,0 +1,403 @@
+---
+title: SQLite Adapter Tutorial
+description: Practical examples for using the ArchiPy SQLite adapter.
+---
+
+# SQLite Adapter Tutorial
+
+This example demonstrates how to use the SQLite adapter for database operations with proper exception handling and
+Python 3.14 type hints.
+
+## Installation
+
+```bash
+uv add "archipy[sqlite]"
+```
+
+## Configuration
+
+Configure the SQLite adapter via environment variables or a `SQLiteSQLAlchemyConfig` object.
+
+### Environment Variables
+
+```bash
+SQLITE_SQLALCHEMY__DATABASE=./app.db
+SQLITE_SQLALCHEMY__ECHO=false
+SQLITE_SQLALCHEMY__POOL_SIZE=20
+SQLITE_SQLALCHEMY__POOL_TIMEOUT=30
+```
+
+### Direct Configuration
+
+```python
+from archipy.configs.config_template import SQLiteSQLAlchemyConfig
+
+config = SQLiteSQLAlchemyConfig(
+    DATABASE="./my_app.db",
+    ECHO=False,
+)
+```
+
+## Basic Usage
+
+```python
+import logging
+
+from sqlalchemy import Column, String
+
+from archipy.adapters.sqlite.sqlalchemy.adapters import SQLiteSQLAlchemyAdapter
+from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
+from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+
+# Define a model
+class User(BaseEntity):
+    __tablename__ = "users"
+    username = Column(String(100), unique=True)
+    email = Column(String(255), unique=True)
+
+
+# Create adapter
+try:
+    adapter = SQLiteSQLAlchemyAdapter()
+except Exception as e:
+    logger.error(f"Failed to create adapter: {e}")
+    raise DatabaseConnectionError() from e
+else:
+    logger.info("SQLite adapter created successfully")
+
+# Create tables
+try:
+    BaseEntity.metadata.create_all(adapter.session_manager.engine)
+except Exception as e:
+    logger.error(f"Failed to create tables: {e}")
+    raise DatabaseQueryError() from e
+else:
+    logger.info("Database tables created")
+
+# Basic operations
+try:
+    with adapter.get_session() as session:
+        # Create
+        user = User(username="john_doe", email="john@example.com")
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
+        # Read
+        from sqlalchemy import select
+        stmt = select(User).where(User.username == "john_doe")
+        found_user = session.execute(stmt).scalar_one_or_none()
+        if found_user:
+            logger.info(f"User email: {found_user.email}")  # john@example.com
+
+            # Update
+            found_user.email = "john.doe@example.com"
+            session.commit()
+
+            # Delete
+            session.delete(found_user)
+            session.commit()
+except DatabaseQueryError as e:
+    logger.error(f"Database operation failed: {e}")
+    raise
+except DatabaseConnectionError as e:
+    logger.error(f"Database connection failed: {e}")
+    raise
+else:
+    logger.info("All database operations completed successfully")
+```
+
+## Using Transactions
+
+```python
+import logging
+
+from archipy.helpers.decorators.sqlalchemy_atomic import sqlite_sqlalchemy_atomic_decorator
+from archipy.models.errors import DatabaseQueryError
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+
+@sqlite_sqlalchemy_atomic_decorator
+def create_user_with_profile(username: str, email: str, profile_data: dict[str, str]) -> User:
+    """Create a user and profile in a single transaction.
+
+    Args:
+        username: User's username
+        email: User's email address
+        profile_data: Profile information dictionary
+
+    Returns:
+        Created user object
+
+    Raises:
+        DatabaseQueryError: If database operation fails
+    """
+    user = User(username=username, email=email)
+    adapter.create(user)
+
+    profile = Profile(user_id=user.uuid, **profile_data)  # type: ignore[name-defined]
+    adapter.create(profile)
+
+    logger.info(f"User and profile created: {username}")
+    return user
+```
+
+## Async Operations
+
+```python
+import asyncio
+import logging
+
+from archipy.adapters.sqlite.sqlalchemy.adapters import AsyncSQLiteSQLAlchemyAdapter
+from archipy.helpers.decorators.sqlalchemy_atomic import async_sqlite_sqlalchemy_atomic_decorator
+from archipy.models.errors import DatabaseQueryError, DatabaseConnectionError
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+
+async def main() -> None:
+    """Main async function demonstrating SQLite async operations."""
+    try:
+        adapter = AsyncSQLiteSQLAlchemyAdapter()
+    except Exception as e:
+        logger.error(f"Failed to create async adapter: {e}")
+        raise DatabaseConnectionError() from e
+    else:
+        logger.info("Async SQLite adapter created")
+
+    @async_sqlite_sqlalchemy_atomic_decorator
+    async def create_user_async(username: str, email: str) -> User:
+        """Create a user asynchronously.
+
+        Args:
+            username: User's username
+            email: User's email address
+
+        Returns:
+            Created user object
+
+        Raises:
+            DatabaseQueryError: If database operation fails
+        """
+        try:
+            user = User(username=username, email=email)
+            result = await adapter.create(user)
+        except Exception as e:
+            logger.error(f"Failed to create user: {e}")
+            raise DatabaseQueryError() from e
+        else:
+            logger.info(f"User created: {username}")
+            return result
+
+    try:
+        user = await create_user_async("jane_doe", "jane@example.com")
+    except (DatabaseQueryError, DatabaseConnectionError) as e:
+        logger.error(f"Async operation failed: {e}")
+        raise
+    else:
+        logger.info(f"Created user: {user.username}")  # jane_doe
+
+
+# Run async operations
+asyncio.run(main())
+```
+
+## Error Handling
+
+```python
+import logging
+from uuid import UUID
+
+from archipy.models.errors import (
+    AlreadyExistsError,
+    DatabaseConnectionError,
+    DatabaseQueryError,
+    NotFoundError,
+)
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+
+def get_user_by_id(user_id: UUID) -> User | None:
+    """Get a user by their UUID.
+
+    Args:
+        user_id: User's unique identifier
+
+    Returns:
+        User object if found, None otherwise
+
+    Raises:
+        NotFoundError: If user doesn't exist
+        DatabaseQueryError: If database query fails
+        DatabaseConnectionError: If database connection fails
+    """
+    try:
+        user = adapter.get_by_uuid(User, user_id)
+    except (DatabaseQueryError, DatabaseConnectionError) as e:
+        logger.error(f"Failed to get user: {e}")
+        raise
+    else:
+        if not user:
+            raise NotFoundError(
+                resource_type="user",
+                additional_data={"user_id": str(user_id)}
+            )
+        logger.info(f"User retrieved: {user.username}")
+        return user
+
+
+def create_user_safe(username: str, email: str) -> User:
+    """Create a user with comprehensive error handling.
+
+    Args:
+        username: User's username
+        email: User's email address
+
+    Returns:
+        Created user object
+
+    Raises:
+        AlreadyExistsError: If user already exists
+        DatabaseQueryError: If database operation fails
+    """
+    try:
+        user = User(username=username, email=email)
+        result = adapter.create(user)
+    except AlreadyExistsError as e:
+        logger.warning(f"User already exists: {username}")
+        raise
+    except DatabaseQueryError as e:
+        logger.error(f"Failed to create user: {e}")
+        raise
+    else:
+        logger.info(f"User created successfully: {username}")
+        return result
+```
+
+## Using with Context Manager
+
+```python
+import logging
+
+from archipy.adapters.sqlite.sqlalchemy.adapters import SQLiteSQLAlchemyAdapter
+from archipy.models.errors import DatabaseQueryError
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+adapter = SQLiteSQLAlchemyAdapter()
+
+try:
+    # Use context manager for automatic session management
+    with adapter.get_session() as session:
+        # Create multiple users
+        users = [
+            User(username="user1", email="user1@example.com"),
+            User(username="user2", email="user2@example.com"),
+            User(username="user3", email="user3@example.com"),
+        ]
+
+        for user in users:
+            session.add(user)
+
+        session.commit()
+
+        # Query users
+        from sqlalchemy import select, func
+        count = session.execute(select(func.count()).select_from(User)).scalar_one()
+        logger.info(f"Created {count} users")
+
+except DatabaseQueryError as e:
+    logger.error(f"Batch operation failed: {e}")
+    raise
+else:
+    logger.info("Batch operation completed successfully")
+```
+
+## Integration with FastAPI
+
+```python
+import logging
+from uuid import UUID
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, EmailStr
+
+from archipy.adapters.sqlite.sqlalchemy.adapters import SQLiteSQLAlchemyAdapter
+from archipy.models.errors import AlreadyExistsError, DatabaseQueryError, NotFoundError
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+app = FastAPI()
+adapter = SQLiteSQLAlchemyAdapter()
+
+
+class UserCreate(BaseModel):
+    username: str
+    email: EmailStr
+
+
+class UserResponse(BaseModel):
+    uuid: UUID
+    username: str
+    email: str
+
+
+@app.post("/users", response_model=UserResponse)
+async def create_user(user_data: UserCreate) -> dict[str, str | UUID]:
+    """Create a new user."""
+    try:
+        user = User(username=user_data.username, email=user_data.email)
+        created_user = adapter.create(user)
+    except AlreadyExistsError as e:
+        logger.warning(f"User already exists: {user_data.username}")
+        raise HTTPException(status_code=409, detail="User already exists") from e
+    except DatabaseQueryError as e:
+        logger.error(f"Failed to create user: {e}")
+        raise HTTPException(status_code=500, detail="Database error") from e
+    else:
+        logger.info(f"User created: {user_data.username}")
+        return {
+            "uuid": created_user.uuid,
+            "username": created_user.username,
+            "email": created_user.email
+        }
+
+
+@app.get("/users/{user_id}", response_model=UserResponse)
+async def get_user(user_id: UUID) -> dict[str, str | UUID]:
+    """Get a user by ID."""
+    try:
+        user = adapter.get_by_uuid(User, user_id)
+    except DatabaseQueryError as e:
+        logger.error(f"Database query failed: {e}")
+        raise HTTPException(status_code=500, detail="Database error") from e
+    else:
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        logger.info(f"User retrieved: {user.username}")
+        return {
+            "uuid": user.uuid,
+            "username": user.username,
+            "email": user.email
+        }
+```
+
+## See Also
+
+- [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
+- [Configuration Management](../config_management.md) — SQLite configuration setup
+- [BDD Testing](../testing_strategy.md) — Testing database operations
+- [PostgreSQL Adapter](postgres.md) — Similar patterns for PostgreSQL
+- [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Transaction decorator usage
+- [API Reference](../../api_reference/adapters/sqlite.md) — Full SQLite adapter API documentation

@@ -233,7 +233,7 @@ Teams maintain consistent practices while choosing the pattern that best fits th
 
 - [Quickstart](quickstart.md) — five-minute "hello world" example
 - [Project Structure](project_structure.md) — recommended folder layout
-- [Configuration Management](../examples/config_management.md) — loading from `.env` files
-- [Dependency Injection](../examples/dependency_injection.md) — wiring the full object graph
-- [Testing Strategy](../examples/testing_strategy.md) — unit and integration test patterns
+- [Configuration Management](../tutorials/config_management.md) — loading from `.env` files
+- [Dependency Injection](../tutorials/dependency_injection.md) — wiring the full object graph
+- [Testing Strategy](../tutorials/testing_strategy.md) — unit and integration test patterns
 - [API Reference](../api_reference/index.md) — full reference for all public classes

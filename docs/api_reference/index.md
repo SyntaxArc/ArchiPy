@@ -99,12 +99,12 @@ ArchiPy follows semantic versioning and marks API stability as follows:
 - 🟡 **Beta**: APIs that are stabilizing but may have breaking changes
 - 🔴 **Alpha**: Experimental APIs that may change significantly
 
-See the [Changelog](../changelog.md) for version history and breaking changes.
+See the [Changelog](../community/changelog.md) for version history and breaking changes.
 
 ## Contributing
 
 For information about contributing to ArchiPy's development, please see:
 
-- [Contributing Guide](../contributing.md)
-- [Development Guide](../contributing.md)
+- [Contributing Guide](../community/contributing.md)
+- [Development Guide](../community/contributing.md)
 - [Documentation Guide](../contributing-docs.md)
