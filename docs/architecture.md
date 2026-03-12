@@ -1,801 +1,954 @@
 ---
 title: ArchiPy Architecture
-description: Overview of ArchiPy's Clean Architecture design and layer responsibilities.
+description: Overview of ArchiPy's Clean Architecture design, layer responsibilities, and a complete worked example.
 ---
 
 # ArchiPy Architecture
 
 ## Overview
 
-ArchiPy is organized into four main modules, each serving a specific purpose in creating structured, maintainable Python
-applications:
+ArchiPy is organized into four modules, each serving a specific role in structured Python applications:
 
-1. **Adapters**: External service integrations
-2. **Configs**: Configuration management
-3. **Helpers**: Utility functions and support classes
-4. **Models**: Core data structures
+1. **Adapters** — External service integrations
+2. **Configs** — Configuration management
+3. **Helpers** — Utility functions and cross-cutting concerns
+4. **Models** — Core data structures
 
-This architecture follows clean architecture principles, separating concerns and ensuring that dependencies point inward
-toward the domain core.
+The design follows Clean Architecture principles: dependencies point inward toward the domain core, and each layer has a
+single responsibility.
 
 !!! note "Import Direction"
-    Imports flow in one direction only: `configs ← models ← helpers ← adapters`. Never import upward — for example, `models` must not import from `adapters` or `helpers`.
+Imports flow in one direction only: `configs ← models ← helpers ← adapters`. Never import upward — for example, `models`
+must not import from `adapters` or `helpers`.
+
+```mermaid
+graph LR
+    adapters -->|imports| helpers
+    adapters -->|imports| models
+    adapters -->|imports| configs
+    helpers -->|imports| models
+    helpers -->|imports| configs
+    models -->|imports| configs
+```
 
 ## Modules
 
 ### Adapters
 
-The `adapters` module provides implementations for external service integrations, following the Ports and Adapters
-pattern (Hexagonal Architecture). This module includes:
+The `adapters` module provides external service integrations following the **Ports and Adapters** pattern (Hexagonal
+Architecture). Every adapter directory contains a `ports.py` (abstract interface) and a `mocks.py` (test double).
 
-- **Base Adapters**: Core implementations and interfaces
-    - SQLAlchemy base components
-    - Common adapter patterns
-    - Base session management
-
-- **Database Adapters**: Database-specific implementations
-    - PostgreSQL
-    - SQLite
-    - StarRocks
-    - Each with their own SQLAlchemy integration
-
-- **Service Adapters**: External service integrations
-    - Email service adapters
-    - External API clients
-    - File storage adapters (MinIO)
-    - Message brokers (Kafka)
-    - Caching systems (Redis)
-
-Each adapter includes both concrete implementations and corresponding mocks for testing.
+- **Base Adapters** — SQLAlchemy base components and common session management
+- **Database Adapters** — PostgreSQL, SQLite, StarRocks (each with SQLAlchemy integration)
+- **Service Adapters** — Redis, Email, MinIO, Kafka, Keycloak, ScyllaDB, Temporal, Elasticsearch
 
 ### Configs
 
-The `configs` module manages configuration loading, validation, and injection. It provides:
+The `configs` module manages configuration loading, validation, and global access using Pydantic models:
 
-- Environment-based configuration
-- Type-safe configuration through Pydantic models
-- Centralized access to configuration values
-- Support for various configuration sources (environment variables, files, etc.)
+- Environment-based configuration with `.env` support
+- Type-safe validation via `pydantic_settings.BaseSettings`
+- Centralized global accessor (`BaseConfig.global_config()`)
 
 ### Helpers
 
-The `helpers` module contains utility functions and classes to simplify common development tasks. It includes several
-subgroups:
+The `helpers` module contains utilities that are free of direct external I/O:
 
-- **Utils**: General utility functions for dates, strings, errors, files, JWTs, passwords, TOTP, etc.
-- **Decorators**: Function and class decorators for atomic transactions, caching, logging, and more
-- **Interceptors**: Classes for cross-cutting concerns like logging, tracing, and validation
-- **Metaclasses**: Meta-programming utilities for advanced patterns
+- **Utils** — Date, string, JWT, password, TOTP, and file utilities
+- **Decorators** — Atomic transactions, TTL caching, retry, singleton
+- **Interceptors** — FastAPI rate limiting, gRPC tracing and monitoring
+- **Metaclasses** — Meta-programming utilities for advanced patterns
 
 ### Models
 
-The `models` module defines the core data structures used throughout the application:
+The `models` module defines the core data structures used across all layers:
 
-- **Entities**: Domain model objects
-- **DTOs**: Data Transfer Objects for API input/output
-- **Errors**: Custom exception classes
-- **Types**: Type definitions and enumerations
+- **Entities** — SQLAlchemy domain model objects
+- **DTOs** — Pydantic `BaseModel` data transfer objects
+- **Errors** — Custom exceptions extending `BaseError`
+- **Types** — Enumerations and type definitions
 
 ## Architectural Flow
 
-ArchiPy applications follow a clean architecture approach where:
-
-1. The Models module forms the core domain layer
-2. The Helpers module provides supporting functionality
-3. The Configs module manages application configuration
-4. The Adapters module interfaces with external systems
-
-This modular organization promotes separation of concerns, making ArchiPy applications easier to test, maintain, and
-extend over time.
+```mermaid
+flowchart TD
+    Client["Client (HTTP / gRPC / CLI)"]
+    Container["configs/containers.py (DI wiring)"]
+    Service["services/ (FastAPI endpoints)"]
+    Logic["logics/ (Business rules + Unit of Work)"]
+    Repository["repositories/ (Data access)"]
+    DomainAdapter["adapters/ (Domain-specific, delegates to ArchiPy)"]
+    ArchiPyAdapter["ArchiPy Adapters (DB, Cache, etc.)"]
+    Models["models/ (Entities, DTOs, Errors)"]
+    Configs["configs/app_config.py (BaseConfig)"]
+    Client --> Service
+    Container -->|injects| Service
+    Service --> Logic
+    Logic -->|may call| Logic
+    Logic --> Repository
+    Repository --> DomainAdapter
+    DomainAdapter --> ArchiPyAdapter
+    ArchiPyAdapter --> Models
+    ArchiPyAdapter --> Configs
+    Logic --> Models
+    Service --> Models
+```
 
 ## Design Philosophy
 
-ArchiPy is designed to standardize and simplify Python application development by providing a flexible set of building
-blocks that work across different architectural approaches. Rather than enforcing a single architectural pattern,
-ArchiPy offers components that can be applied to:
+ArchiPy provides standardized building blocks rather than enforcing a single pattern. The same components work across:
 
-* Layered Architecture
-* Hexagonal Architecture (Ports & Adapters)
-* Clean Architecture
-* Domain-Driven Design
-* Service-Oriented Architecture
-* And more...
+- Layered Architecture
+- Hexagonal Architecture (Ports & Adapters)
+- Clean Architecture
+- Domain-Driven Design
+- Service-Oriented Architecture
 
-These building blocks help maintain consistency, testability, and maintainability regardless of the specific
-architectural style chosen for your project.
+This lets teams maintain consistent practices while choosing the architectural style that fits their project.
 
 ## Core Building Blocks
 
 ### Configuration Management
 
-ArchiPy provides a standardized way to manage configuration across your application using Pydantic models:
-
 ```python
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import PostgresSQLAlchemyConfig
-from archipy.configs.environment_type import EnvironmentType
+
 
 class AppConfig(BaseConfig):
-    # Override default configurations as needed
-    ENVIRONMENT: EnvironmentType = EnvironmentType.PRODUCTION
-    DEBUG: bool = False
+    """Application-specific configuration. Add custom fields here."""
 
-    # BaseConfig provides pre-configured templates for:
-    # POSTGRES_SQLALCHEMY, REDIS, KAFKA, KEYCLOAK, MINIO, etc.
 
-# Set global configuration (accessible throughout your application)
 config = AppConfig()
 BaseConfig.set_global(config)
-
-# Access from anywhere
-from archipy.configs.base_config import BaseConfig
-current_config = BaseConfig.global_config()
 ```
 
-**📖 Learn more:** [Configuration Management Examples](examples/config_management.md)
+### Adapters and Ports
 
-### Adapters & Ports
-
-ArchiPy implements the ports and adapters pattern to isolate the application core from external dependencies:
+ArchiPy's **domain adapters** wrap ArchiPy base adapters via composition, owning all entity construction and query logic for a single aggregate:
 
 ```python
-# Port: defines an interface (contract)
-from typing import Protocol
-from uuid import UUID
-from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
+import logging
+from uuid import UUID, uuid4
 
-class UserRepositoryPort(Protocol):
-    def get_by_id(self, user_id: UUID) -> User | None: ...
-    def create(self, user: User) -> User: ...
-
-# Adapter: implements the interface for a specific technology
 from archipy.adapters.postgres.sqlalchemy.adapters import PostgresSQLAlchemyAdapter
 
-class SqlAlchemyUserRepository:
-    def __init__(self, db_adapter: PostgresSQLAlchemyAdapter):
-        self.db_adapter = db_adapter
+from models.dtos.user.repository.user_dtos import CreateUserCommandDTO, UserResponseDTO
+from models.entities.user import User
 
-    def get_by_id(self, user_id: UUID) -> User | None:
-        return self.db_adapter.get_by_uuid(User, user_id)
+logger = logging.getLogger(__name__)
 
-    def create(self, user: User) -> User:
-        return self.db_adapter.create(user)
 
-# Application core uses the port, not the adapter
-class UserService:
-    def __init__(self, repository: UserRepositoryPort):
-        self.repository = repository
+class UserDBAdapter:
+    """Domain-specific adapter — delegates persistence to PostgresSQLAlchemyAdapter."""
 
-    def get_user(self, user_id: UUID) -> User | None:
-        return self.repository.get_by_id(user_id)
+    def __init__(self, db: PostgresSQLAlchemyAdapter) -> None:
+        self._adapter = db
+
+    def create_user(self, command: CreateUserCommandDTO) -> UserResponseDTO:
+        """Build and persist a new User entity from a command DTO."""
+        user = User(user_uuid=uuid4(), username=command.username, email=command.email)
+        created = self._adapter.create(user)
+        return UserResponseDTO(id=str(created.user_uuid), username=created.username, email=created.email)
+
+    def get_user_by_uuid(self, user_id: UUID) -> UserResponseDTO | None:
+        """Retrieve a User by UUID and map to a response DTO."""
+        user = self._adapter.get_by_uuid(User, user_id)
+        if not user:
+            return None
+        return UserResponseDTO(id=str(user.user_uuid), username=user.username, email=user.email)
 ```
-
-**📖 Learn more:** [PostgreSQL Adapter Examples](examples/adapters/postgres.md)
 
 ### Entity Models
 
-Standardized entity models provide a consistent approach to domain modeling:
-
 ```python
-from sqlalchemy import Column, String
+import uuid
+
+from sqlalchemy import String
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Synonym, mapped_column
+
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
 
+
 class User(BaseEntity):
+    """User domain entity."""
+
     __tablename__ = "users"
 
-    name = Column(String(100))
-    email = Column(String(255), unique=True)
+    user_uuid = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    pk_uuid = Synonym("user_uuid")
+
+    username = mapped_column(String(100), unique=True, nullable=False)
+    email = mapped_column(String(255), unique=True, nullable=False)
 ```
 
-### Data Transfer Objects (DTOs)
+### Data Transfer Objects
 
-Define consistent data structures for transferring data between layers:
+DTOs are split into two groups depending on which boundary they cross:
+
+| Group          | DTO Type     | Name Pattern           | Location                        | Purpose                                   |
+|----------------|--------------|------------------------|---------------------------------|-------------------------------------------|
+| **Domain**     | Input        | `{Operation}InputDTO`  | `dtos/{domain}/domain/v{n}/`    | From client to service (versioned)        |
+| **Domain**     | Output       | `{Operation}OutputDTO` | `dtos/{domain}/domain/v{n}/`    | From logic to client (versioned)          |
+| **Repository** | Command      | `{Action}CommandDTO`   | `dtos/{domain}/repository/`     | Write operations (create, update, delete) |
+| **Repository** | Query        | `{Action}QueryDTO`     | `dtos/{domain}/repository/`     | Read operations (get, search, list)       |
+| **Repository** | Response     | `{Domain}ResponseDTO`  | `dtos/{domain}/repository/`     | Internal result from adapter/repository   |
+
+Domain DTOs cross the public service boundary and are versioned (`v1/`, `v2/`). Repository DTOs are internal and never versioned.
 
 ```python
-from datetime import datetime
-from pydantic import EmailStr
+# models/dtos/user/domain/v1/user_dtos.py — versioned, cross service boundary
 from archipy.models.dtos.base_dtos import BaseDTO
+from pydantic import EmailStr
 
-class UserCreateDTO(BaseDTO):
-    name: str
+
+class UserRegistrationInputDTO(BaseDTO):
+    """Incoming registration request from the client."""
+    username: str
     email: EmailStr
+
+
+class UserRegistrationOutputDTO(BaseDTO):
+    """Output DTO returned to the client after registration."""
+    id: str
+    username: str
+    email: EmailStr
+```
+
+```python
+# models/dtos/user/repository/user_dtos.py — internal, never versioned
+from uuid import UUID
+from archipy.models.dtos.base_dtos import BaseDTO
+from pydantic import EmailStr
+
+
+class CreateUserCommandDTO(BaseDTO):
+    """Command DTO for creating a new user."""
+    username: str
+    email: EmailStr
+
+
+class GetUserByIdQueryDTO(BaseDTO):
+    """Query DTO for retrieving a single user by ID."""
+    user_id: UUID
+
 
 class UserResponseDTO(BaseDTO):
+    """Internal response DTO from the repository layer."""
     id: str
-    name: str
+    username: str
     email: EmailStr
-    created_at: datetime
 ```
 
-**📖 Learn more:** [Error Handling Examples](examples/error_handling.md)
+## Recommended Project Structure
 
-## Example Architectures
-
-### Layered Architecture
-
-ArchiPy can be used with a traditional layered architecture approach:
-
-```
-┌───────────────────────┐
-│     Presentation      │  API, UI, CLI
-├───────────────────────┤
-│     Application       │  Services, Workflows
-├───────────────────────┤
-│       Domain          │  Business Logic, Entities
-├───────────────────────┤
-│    Infrastructure     │  Adapters, Repositories, External Services
-└───────────────────────┘
-```
-
-### Clean Architecture
-
-ArchiPy supports Clean Architecture principles:
-
-```
-┌─────────────────────────────────────────────┐
-│                  Entities                    │
-│     Domain models, business rules            │
-├─────────────────────────────────────────────┤
-│                  Use Cases                   │
-│     Application services, business workflows │
-├─────────────────────────────────────────────┤
-│                 Interfaces                   │
-│     Controllers, presenters, gateways        │
-├─────────────────────────────────────────────┤
-│                Frameworks                    │
-│     External libraries, UI, DB, devices      │
-└─────────────────────────────────────────────┘
-```
-
-### Hexagonal Architecture
-
-For projects using a Hexagonal (Ports & Adapters) approach:
-
-```
-┌───────────────────────────────────────────────────┐
-│                                                   │
-│                 Application Core                  │
-│                                                   │
-│  ┌─────────────────────────────────────────────┐  │
-│  │                                             │  │
-│  │           Domain Logic / Models             │  │
-│  │                                             │  │
-│  └─────────────────────────────────────────────┘  │
-│                                                   │
-│  ┌─────────────┐         ┌─────────────────────┐  │
-│  │             │         │                     │  │
-│  │  Input      │         │  Output Ports       │  │
-│  │  Ports      │         │                     │  │
-│  │             │         │                     │  │
-│  └─────────────┘         └─────────────────────┘  │
-│                                                   │
-└───────────────────────────────────────────────────┘
-        ▲                           ▲
-        │                           │
-        │                           │
-┌───────┴──────────┐      ┌────────┴────────────┐
-│                  │      │                     │
-│  Input Adapters  │      │  Output Adapters    │
-│  (Controllers)   │      │  (Repositories,     │
-│                  │      │   Clients, etc.)    │
-│                  │      │                     │
-└──────────────────┘      └─────────────────────┘
-```
-
-## Practical Implementation
-
-Let's see how a complete application might be structured using ArchiPy with domain-specific organization:
+Domain-driven organization keeps related code together and scales naturally as the project grows:
 
 ```
 my_app/
 ├── configs/
-│   └── app_config.py              # Application configuration
+│   ├── app_config.py               # Application configuration
+│   └── containers.py               # DI container — wires adapters, repos, logic
 ├── models/
-│   ├── dtos/                      # Data Transfer Objects
-│   │   ├── user_dtos.py
-│   │   └── order_dtos.py
-│   ├── entities/                  # Domain entities
+│   ├── dtos/
+│   │   ├── user/
+│   │   │   ├── domain/             # Versioned input/output DTOs (service boundary)
+│   │   │   │   ├── v1/
+│   │   │   │   │   └── user_dtos.py
+│   │   │   │   └── v2/             # Breaking domain DTO changes live here
+│   │   │   │       └── user_dtos.py
+│   │   │   └── repository/         # Internal command/query/response DTOs (no versioning)
+│   │   │       └── user_dtos.py
+│   │   └── order/
+│   │       ├── domain/
+│   │       │   └── v1/
+│   │       │       └── order_dtos.py
+│   │       └── repository/
+│   │           └── order_dtos.py
+│   ├── entities/                   # Domain entities
 │   │   ├── user.py
 │   │   └── order.py
-│   └── errors/                    # Custom exceptions
+│   └── errors/                     # Custom exceptions
 │       ├── user_errors.py
 │       └── order_errors.py
 ├── repositories/
-│   ├── user/                      # User domain
-│   │   ├── adapters/              # User-specific adapters
+│   ├── user/
+│   │   ├── adapters/               # User-specific adapters (hold domain knowledge)
 │   │   │   ├── user_db_adapter.py
 │   │   │   └── user_cache_adapter.py
 │   │   └── user_repository.py
-│   └── order/                     # Order domain
-│       ├── adapters/              # Order-specific adapters
+│   └── order/
+│       ├── adapters/
 │       │   ├── order_db_adapter.py
 │       │   └── order_payment_adapter.py
 │       └── order_repository.py
-├── logic/
-│   ├── user/                      # User domain business logic
+├── logics/
+│   ├── user/
 │   │   ├── user_registration_logic.py
 │   │   └── user_authentication_logic.py
-│   └── order/                     # Order domain business logic
+│   └── order/
 │       ├── order_creation_logic.py
 │       └── order_payment_logic.py
 ├── services/
-│   ├── user/                      # User domain services (FastAPI endpoints)
-│   │   ├── v1/                    # API version 1
+│   ├── user/
+│   │   ├── v1/
 │   │   │   └── user_service.py
-│   │   └── v2/                    # API version 2 (future)
+│   │   └── v2/                     # Future API version
 │   │       └── user_service.py
-│   └── order/                     # Order domain services (FastAPI endpoints)
-│       └── v1/                    # API version 1
+│   └── order/
+│       └── v1/
 │           └── order_service.py
-└── main.py                        # Application entry point (run app)
+└── main.py                         # Application entry point
 ```
 
-## Code Example
+Each layer has a clear, single responsibility:
 
-Here's how you might structure a FastAPI application using ArchiPy with domain-specific organization:
+- `main.py` — instantiates `UserContainer`, creates the FastAPI app, and passes the container into each `create_router` call
+- `configs/app_config.py` — defines `AppConfig`, instantiates it, and calls `BaseConfig.set_global`; importing this module is sufficient to bootstrap the global config
+- `configs/containers.py` — imports `app_config` to trigger config bootstrapping, then wires all adapters, repositories, and logic classes as thread-safe singletons
+- `services/{domain}/v{n}/` — versioned FastAPI endpoints; receives input DTOs from clients and returns output DTOs
+- `logics/` — pure business rules; accepts and returns DTOs; framework-agnostic and easily unit-tested; defines the **unit of work boundary**
+
+!!! note "Logic layer collaboration rules"
+    Logic classes **may call other logic classes** — for example, `OrderCreationLogic` may call `UserQueryLogic` to validate that the buyer exists. Because both are decorated with `@postgres_sqlalchemy_atomic_decorator`, the nested call reuses the same open session transparently.
+
+    Logic classes **must never import or call a repository from another domain directly**. Cross-domain data access must go through the other domain's logic class. This keeps domain boundaries intact and ensures all cross-domain reads go through the correct unit of work.
+
+    ```
+    ✅  OrderCreationLogic  →  UserQueryLogic  →  UserRepository
+    ❌  OrderCreationLogic  →  UserRepository  (bypasses domain boundary)
+    ```
+- `repositories/` — data access; delegates entity construction to the domain adapter and maps results to response DTOs
+- `adapters/` — domain-specific wrappers around ArchiPy base adapters; own entity-construction and query knowledge
+
+### Unit of Work
+
+The **logic layer** is the unit of work boundary. Every public method on a logic class is decorated with `@postgres_sqlalchemy_atomic_decorator`, which opens a session, commits on success, and rolls back on any exception — then closes and removes the session to prevent leakage.
+
+```
+Service  →  Logic (@atomic)  →  Repository  →  Adapter  →  DB
+                 ↑___________commit / rollback____________↑
+```
+
+This means:
+
+- A single logic method can call multiple repository operations; they all participate in one transaction.
+- If an inner call fails, the entire unit of work is rolled back automatically.
+- Nested calls to other `@atomic`-decorated methods reuse the same session (the decorator detects an already-open transaction via the `in_postgres_sqlalchemy_atomic_block` flag and skips opening a new one).
+- The session is never left open after a logic method returns — regardless of success or failure.
 
 ```python
-# models/entities/user.py
-from sqlalchemy import Column, String
-from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
+from archipy.helpers.decorators.sqlalchemy_atomic import postgres_sqlalchemy_atomic_decorator
+
+class UserRegistrationLogic:
+    @postgres_sqlalchemy_atomic_decorator
+    def register_user(self, input_dto: UserRegistrationInputDTO) -> UserRegistrationOutputDTO:
+        # search + create run inside one transaction
+        ...
+```
+
+## Complete Example
+
+The following files walk through a full User domain from entity to HTTP endpoint.
+
+### Config
+
+```python
+# configs/app_config.py
+from archipy.configs.base_config import BaseConfig
 
 
-class User(BaseEntity):
-    __tablename__ = "users"
+class AppConfig(BaseConfig):
+    """Application-specific configuration. Add custom fields here."""
+    ...
 
-    username = Column(String(100), unique=True)
-    email = Column(String(255), unique=True)
+config = AppConfig()
+BaseConfig.set_global(config)
+```
 
+### DTOs
 
-# models/dtos/user_dtos.py
+```python
+# models/dtos/user/repository/user_dtos.py
 from uuid import UUID
+
 from pydantic import EmailStr
+
 from archipy.models.dtos.base_dtos import BaseDTO
 
 
-# Input DTOs (from service layer)
-class UserRegistrationInputDTO(BaseDTO):
-    username: str
-    email: EmailStr
-
-
-# Command DTOs (for logic → repository: create, update, delete)
 class CreateUserCommandDTO(BaseDTO):
+    """Command DTO for creating a new user in the repository."""
+
     username: str
     email: EmailStr
 
 
-class UpdateUserCommandDTO(BaseDTO):
-    user_id: UUID
-    username: str | None = None
-    email: EmailStr | None = None
-
-
-class DeleteUserCommandDTO(BaseDTO):
-    user_id: UUID
-
-
-# Query DTOs (for logic → repository: get, search)
 class GetUserByIdQueryDTO(BaseDTO):
+    """Query DTO for retrieving a single user by ID."""
+
     user_id: UUID
 
 
 class SearchUsersQueryDTO(BaseDTO):
+    """Query DTO for searching users with optional filters."""
+
     username: str | None = None
     email: str | None = None
     limit: int = 10
     offset: int = 0
 
 
-# Response DTOs (from logic/repository)
 class UserResponseDTO(BaseDTO):
+    """Internal response DTO returned from the repository layer."""
+
     id: str
+    username: str
+    email: EmailStr
+```
+
+```python
+# models/dtos/user/domain/v1/user_dtos.py
+from uuid import UUID
+
+from pydantic import EmailStr
+
+from archipy.models.dtos.base_dtos import BaseDTO
+
+
+class UserRegistrationInputDTO(BaseDTO):
+    """Incoming registration request from the client."""
+
     username: str
     email: EmailStr
 
 
-# Output DTOs (to client)
 class UserRegistrationOutputDTO(BaseDTO):
+    """Output DTO returned to the client after registration."""
+
     id: str
     username: str
     email: EmailStr
+
+
+class UserGetInputDTO(BaseDTO):
+    """Input DTO for retrieving a user by ID."""
+
+    user_id: UUID
 
 
 class UserGetOutputDTO(BaseDTO):
+    """Output DTO returned to the client for a single user lookup."""
+
     id: str
     username: str
     email: EmailStr
 
 
+class UserSearchInputDTO(BaseDTO):
+    """Input DTO for searching users."""
+
+    username: str | None = None
+    limit: int = 10
+
+
+class UserSummaryOutputDTO(BaseDTO):
+    """Summary of a single user in a search result."""
+
+    id: str
+    username: str
+    email: EmailStr
+
+
+class UserSearchOutputDTO(BaseDTO):
+    """Output DTO wrapping a list of matched users."""
+
+    users: list[UserSummaryOutputDTO]
+```
+
+### Models
+
+```python
+# models/entities/user.py
+import uuid
+
+from sqlalchemy import String
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Synonym, mapped_column
+
+from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
+
+
+class User(BaseEntity):
+    """User domain entity."""
+
+    __tablename__ = "users"
+
+    user_uuid = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    pk_uuid = Synonym("user_uuid")
+
+    username = mapped_column(String(100), unique=True, nullable=False)
+    email = mapped_column(String(255), unique=True, nullable=False)
+```
+
+```python
 # models/errors/user_errors.py
 from archipy.models.errors import AlreadyExistsError
 
 
 class UserAlreadyExistsError(AlreadyExistsError):
     """Raised when attempting to create a user that already exists."""
-    pass
+```
 
+### Adapters
 
+```python
 # repositories/user/adapters/user_db_adapter.py
+import logging
+from uuid import UUID, uuid4
+
+from sqlalchemy import select
+
 from archipy.adapters.postgres.sqlalchemy.adapters import PostgresSQLAlchemyAdapter
 
-
-class UserDBAdapter(PostgresSQLAlchemyAdapter):
-    """Database adapter for User domain operations."""
-    pass
-
-
-# repositories/user/adapters/user_cache_adapter.py
-from archipy.adapters.redis.adapters import RedisAdapter
-
-
-class UserCacheAdapter(RedisAdapter):
-    """Cache adapter for User domain operations."""
-
-    def get_cache_key(self, user_id: str) -> str:
-        return f"user:{user_id}"
-
-
-# repositories/user/user_repository.py
-from uuid import uuid4
-from sqlalchemy import select
-from repositories.user.adapters.user_db_adapter import UserDBAdapter
-from repositories.user.adapters.user_cache_adapter import UserCacheAdapter
+from models.dtos.user.repository.user_dtos import CreateUserCommandDTO, SearchUsersQueryDTO, UserResponseDTO
 from models.entities.user import User
-from models.dtos.user_dtos import (
-    CreateUserCommandDTO,
-    GetUserByIdQueryDTO,
-    SearchUsersQueryDTO,
-    UserResponseDTO
-)
-import json
+
+logger = logging.getLogger(__name__)
 
 
-class UserRepository:
-    def __init__(
-        self,
-        db_adapter: UserDBAdapter,
-        cache_adapter: UserCacheAdapter | None = None
-    ):
-        self.db_adapter = db_adapter
-        self.cache_adapter = cache_adapter
+class UserDBAdapter:
+    """Domain-specific database adapter for the User aggregate.
+
+    Delegates all low-level persistence to a PostgresSQLAlchemyAdapter instance,
+    while owning entity construction, query building, and entity-to-DTO mapping.
+    """
+
+    def __init__(self, db: PostgresSQLAlchemyAdapter) -> None:
+        self._adapter = db
 
     def create_user(self, command: CreateUserCommandDTO) -> UserResponseDTO:
-        """Create user using Command DTO and return Response DTO."""
-        # Convert Command DTO to Entity
-        user = User(
-            test_uuid=uuid4(),
-            username=command.username,
-            email=command.email
-        )
+        """Build and persist a new User entity from a command DTO.
 
-        # Persist entity
-        created_user = self.db_adapter.create(user)
+        Args:
+            command: Data required to create the user.
 
-        # Invalidate cache after creation
-        if self.cache_adapter and created_user:
-            self.cache_adapter.delete(
-                self.cache_adapter.get_cache_key(str(created_user.test_uuid))
-            )
+        Returns:
+            A response DTO for the newly created user.
+        """
+        user = User(user_uuid=uuid4(), username=command.username, email=command.email)
+        created = self._adapter.create(user)
+        return UserResponseDTO(id=str(created.user_uuid), username=created.username, email=created.email)
 
-        # Convert Entity to Response DTO
-        return UserResponseDTO(
-            id=str(created_user.test_uuid),
-            username=created_user.username,
-            email=created_user.email
-        )
+    def get_user_by_uuid(self, user_id: UUID) -> UserResponseDTO | None:
+        """Retrieve a single User by UUID.
 
-    def get_user_by_id(self, query: GetUserByIdQueryDTO) -> UserResponseDTO | None:
-        """Get user using Query DTO and return Response DTO."""
-        # Try cache first if available
-        if self.cache_adapter:
-            cached = self.cache_adapter.get(
-                self.cache_adapter.get_cache_key(str(query.user_id))
-            )
-            if cached:
-                data = json.loads(cached)
-                return UserResponseDTO(**data)
+        Args:
+            user_id: The UUID of the user to retrieve.
 
-        # Fetch from database
-        user = self.db_adapter.get_by_uuid(User, query.user_id)
-
+        Returns:
+            A response DTO, or None if no matching user exists.
+        """
+        user = self._adapter.get_by_uuid(User, user_id)
         if not user:
             return None
-
-        # Cache the result
-        if self.cache_adapter:
-            response_data = {
-                "id": str(user.test_uuid),
-                "username": user.username,
-                "email": user.email
-            }
-            self.cache_adapter.set(
-                self.cache_adapter.get_cache_key(str(query.user_id)),
-                json.dumps(response_data),
-                ex=3600  # 1 hour expiration
-            )
-
-        # Convert Entity to Response DTO
-        return UserResponseDTO(
-            id=str(user.test_uuid),
-            username=user.username,
-            email=user.email
-        )
+        return UserResponseDTO(id=str(user.test_uuid), username=user.username, email=user.email)
 
     def search_users(self, query: SearchUsersQueryDTO) -> list[UserResponseDTO]:
-        """Search users using Query DTO and return list of Response DTOs."""
-        db_query = select(User)
+        """Search users by optional username or email filters.
 
+        Args:
+            query: Filter criteria and pagination parameters.
+
+        Returns:
+            A list of matching user response DTOs.
+        """
+        db_query = select(User)
         if query.username:
             db_query = db_query.where(User.username.ilike(f"%{query.username}%"))
         if query.email:
             db_query = db_query.where(User.email.ilike(f"%{query.email}%"))
-
         db_query = db_query.limit(query.limit).offset(query.offset)
+        users, _ = self._adapter.execute_search_query(User, db_query)
+        return [UserResponseDTO(id=str(u.test_uuid), username=u.username, email=u.email) for u in users]
+```
 
-        users, _ = self.db_adapter.execute_search_query(User, db_query)
+```python
+# repositories/user/adapters/user_cache_adapter.py
+from archipy.adapters.redis.adapters import RedisAdapter
 
-        # Convert list of Entities to list of Response DTOs
-        return [
-            UserResponseDTO(
-                id=str(user.test_uuid),
-                username=user.username,
-                email=user.email
+
+class UserCacheAdapter:
+    """Domain-specific cache adapter for the User aggregate.
+
+    Delegates all low-level cache operations to a RedisAdapter instance,
+    while owning User-specific key namespacing.
+    """
+
+    def __init__(self, cache: RedisAdapter) -> None:
+        self._cache = cache
+
+    def get_cache_key(self, user_id: str) -> str:
+        """Build a namespaced cache key for a user."""
+        return f"user:{user_id}"
+
+    def get(self, key: str) -> str | None:
+        """Retrieve a cached value by key."""
+        return self._cache.get(key)
+
+    def set(self, key: str, value: str, ex: int | None = None) -> None:
+        """Store a value in the cache with an optional TTL."""
+        self._cache.set(key, value, ex=ex)
+
+    def delete(self, key: str) -> None:
+        """Remove a cached value by key."""
+        self._cache.delete(key)
+```
+
+### Repository
+
+```python
+# repositories/user/user_repository.py
+import logging
+
+from models.dtos.user.repository.user_dtos import (
+    CreateUserCommandDTO,
+    GetUserByIdQueryDTO,
+    SearchUsersQueryDTO,
+    UserResponseDTO,
+)
+from repositories.user.adapters.user_cache_adapter import UserCacheAdapter
+from repositories.user.adapters.user_db_adapter import UserDBAdapter
+
+logger = logging.getLogger(__name__)
+
+
+class UserRepository:
+    """Handles all User persistence and cache operations."""
+
+    def __init__(
+            self,
+            db_adapter: UserDBAdapter,
+            cache_adapter: UserCacheAdapter | None = None,
+    ) -> None:
+        self.db_adapter = db_adapter
+        self.cache_adapter = cache_adapter
+
+    def create_user(self, command: CreateUserCommandDTO) -> UserResponseDTO:
+        """Persist a new user and invalidate any stale cache entry."""
+        created = self.db_adapter.create_user(command)
+        if self.cache_adapter:
+            self.cache_adapter.delete(self.cache_adapter.get_cache_key(created.id))
+        return created
+
+    def get_user_by_id(self, query: GetUserByIdQueryDTO) -> UserResponseDTO | None:
+        """Retrieve a user by ID, checking the cache first."""
+        if self.cache_adapter:
+            cached = self.cache_adapter.get(self.cache_adapter.get_cache_key(str(query.user_id)))
+            if cached:
+                return UserResponseDTO.model_validate_json(cached)
+
+        response = self.db_adapter.get_user_by_uuid(query.user_id)
+        if not response:
+            return None
+
+        if self.cache_adapter:
+            self.cache_adapter.set(
+                self.cache_adapter.get_cache_key(str(query.user_id)),
+                response.model_dump_json(),
+                ex=3600,
             )
-            for user in users
-        ]
+        return response
 
+    def search_users(self, query: SearchUsersQueryDTO) -> list[UserResponseDTO]:
+        """Search users by username or email and return response DTOs."""
+        return self.db_adapter.search_users(query)
+```
 
-# logic/user/user_registration_logic.py
-from uuid import UUID
-from models.dtos.user_dtos import CreateUserCommandDTO, SearchUsersQueryDTO, UserResponseDTO
+### Logics
+
+```python
+# logics/user/user_registration_logic.py
+import logging
+
+from archipy.helpers.decorators.sqlalchemy_atomic import postgres_sqlalchemy_atomic_decorator
+
+from models.dtos.user.domain.v1.user_dtos import UserRegistrationInputDTO, UserRegistrationOutputDTO
+from models.dtos.user.repository.user_dtos import CreateUserCommandDTO, SearchUsersQueryDTO
 from models.errors.user_errors import UserAlreadyExistsError
 from repositories.user.user_repository import UserRepository
+
+logger = logging.getLogger(__name__)
 
 
 class UserRegistrationLogic:
-    def __init__(self, user_repository: UserRepository):
+    """Business logic for registering new users."""
+
+    def __init__(self, user_repository: UserRepository) -> None:
         self.user_repository = user_repository
 
-    def register_user(self, username: str, email: str) -> UserResponseDTO:
-        """Business logic for user registration.
+    @postgres_sqlalchemy_atomic_decorator
+    def register_user(self, input_dto: UserRegistrationInputDTO) -> UserRegistrationOutputDTO:
+        """Validate uniqueness and create a new user.
 
-        This method contains the core business rules:
-        - Check if user already exists
-        - Create new user via Command DTO
-        - Return Response DTO
+        Args:
+            input_dto: Incoming registration data from the service layer.
+
+        Returns:
+            An output DTO for the newly created user.
+
+        Raises:
+            UserAlreadyExistsError: If a user with the given username already exists.
         """
-        # Business rule: Check if user already exists using Query DTO
-        search_query = SearchUsersQueryDTO(username=username, limit=1)
-        existing_users = self.user_repository.search_users(search_query)
-
-        if existing_users:
+        existing = self.user_repository.search_users(
+            SearchUsersQueryDTO(username=input_dto.username, limit=1),
+        )
+        if existing:
             raise UserAlreadyExistsError(
                 resource_type="user",
-                additional_data={"username": username}
+                additional_data={"username": input_dto.username},
             )
 
-        # Create new user using Command DTO
-        command = CreateUserCommandDTO(username=username, email=email)
-        return self.user_repository.create_user(command)
+        created = self.user_repository.create_user(
+            CreateUserCommandDTO(username=input_dto.username, email=input_dto.email),
+        )
+        return UserRegistrationOutputDTO(id=created.id, username=created.username, email=created.email)
+```
 
+```python
+# logics/user/user_query_logic.py
+import logging
 
-# logic/user/user_query_logic.py
-from uuid import UUID
-from models.dtos.user_dtos import GetUserByIdQueryDTO, SearchUsersQueryDTO, UserResponseDTO
-from repositories.user.user_repository import UserRepository
+from archipy.helpers.decorators.sqlalchemy_atomic import postgres_sqlalchemy_atomic_decorator
 from archipy.models.errors import NotFoundError
+
+from models.dtos.user.domain.v1.user_dtos import (
+    UserGetInputDTO,
+    UserGetOutputDTO,
+    UserSearchInputDTO,
+    UserSearchOutputDTO,
+    UserSummaryOutputDTO,
+)
+from models.dtos.user.repository.user_dtos import GetUserByIdQueryDTO, SearchUsersQueryDTO
+from repositories.user.user_repository import UserRepository
+
+logger = logging.getLogger(__name__)
 
 
 class UserQueryLogic:
-    def __init__(self, user_repository: UserRepository):
+    """Business logic for querying user data."""
+
+    def __init__(self, user_repository: UserRepository) -> None:
         self.user_repository = user_repository
 
-    def get_user_by_id(self, user_id: UUID) -> UserResponseDTO:
-        """Get user by ID with business validation using Query DTO."""
-        query = GetUserByIdQueryDTO(user_id=user_id)
-        user = self.user_repository.get_user_by_id(query)
+    @postgres_sqlalchemy_atomic_decorator
+    def get_user_by_id(self, input_dto: UserGetInputDTO) -> UserGetOutputDTO:
+        """Retrieve a user by ID, raising NotFoundError if absent.
 
+        Args:
+            input_dto: Contains the UUID of the user to retrieve.
+
+        Returns:
+            An output DTO for the matched user.
+
+        Raises:
+            NotFoundError: If no user with the given ID exists.
+        """
+        user = self.user_repository.get_user_by_id(GetUserByIdQueryDTO(user_id=input_dto.user_id))
         if not user:
-            raise NotFoundError(
-                resource_type="user",
-                additional_data={"user_id": str(user_id)}
-            )
+            raise NotFoundError(resource_type="user", additional_data={"user_id": str(input_dto.user_id)})
+        return UserGetOutputDTO(id=user.id, username=user.username, email=user.email)
 
-        return user
+    @postgres_sqlalchemy_atomic_decorator
+    def search_users(self, input_dto: UserSearchInputDTO) -> UserSearchOutputDTO:
+        """Search users by optional username filter.
 
-    def search_users(self, username: str | None = None) -> list[UserResponseDTO]:
-        """Search users using Query DTO - can call other logic if needed."""
-        query = SearchUsersQueryDTO(username=username, limit=10)
-        return self.user_repository.search_users(query)
+        Args:
+            input_dto: Search filters from the service layer.
 
-
-# services/user/v1/user_service.py
-from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
-from models.dtos.user_dtos import (
-    UserRegistrationInputDTO,
-    UserRegistrationOutputDTO,
-    UserGetOutputDTO
-)
-from models.errors.user_errors import UserAlreadyExistsError
-from archipy.models.errors import NotFoundError
-from logic.user.user_registration_logic import UserRegistrationLogic
-from logic.user.user_query_logic import UserQueryLogic
-from repositories.user.user_repository import UserRepository
-from repositories.user.adapters.user_db_adapter import UserDBAdapter
-from repositories.user.adapters.user_cache_adapter import UserCacheAdapter
-
-# Create router for user endpoints v1
-router = APIRouter(prefix="/api/v1/users", tags=["users-v1"])
-
-# Initialize domain-specific adapters (could be moved to dependency injection)
-user_db_adapter = UserDBAdapter()
-user_cache_adapter = UserCacheAdapter()
-
-
-# Dependency injection
-def get_user_repository() -> UserRepository:
-    """Factory for user repository."""
-    return UserRepository(
-        db_adapter=user_db_adapter,
-        cache_adapter=user_cache_adapter
-    )
-
-
-def get_registration_logic(
-    user_repository: UserRepository = Depends(get_user_repository)
-) -> UserRegistrationLogic:
-    """Factory for user registration logic."""
-    return UserRegistrationLogic(user_repository)
-
-
-def get_query_logic(
-    user_repository: UserRepository = Depends(get_user_repository)
-) -> UserQueryLogic:
-    """Factory for user query logic."""
-    return UserQueryLogic(user_repository)
-
-
-# Service layer endpoints - handle I/O and call logic
-@router.post("/", response_model=UserRegistrationOutputDTO, status_code=201)
-def register_user(
-    input_dto: UserRegistrationInputDTO,
-    registration_logic: UserRegistrationLogic = Depends(get_registration_logic)
-) -> UserRegistrationOutputDTO:
-    """Register a new user.
-
-    Flow: service (Input DTO) → logic (Response DTO) → repository (Command/Query DTO → Response DTO)
-    """
-    try:
-        # Service receives Input DTO, calls logic, gets Response DTO
-        response_dto = registration_logic.register_user(
-            input_dto.username,
-            input_dto.email
+        Returns:
+            An output DTO wrapping the list of matched users.
+        """
+        results = self.user_repository.search_users(
+            SearchUsersQueryDTO(username=input_dto.username, limit=input_dto.limit),
         )
-
-        # Convert Response DTO to Output DTO
-        return UserRegistrationOutputDTO(
-            id=response_dto.id,
-            username=response_dto.username,
-            email=response_dto.email
+        return UserSearchOutputDTO(
+            users=[UserSummaryOutputDTO(id=u.id, username=u.username, email=u.email) for u in results],
         )
-    except UserAlreadyExistsError as e:
-        raise HTTPException(status_code=409, detail=str(e))
-
-
-@router.get("/{user_id}", response_model=UserGetOutputDTO)
-def get_user(
-    user_id: str,
-    query_logic: UserQueryLogic = Depends(get_query_logic)
-) -> UserGetOutputDTO:
-    """Get user by ID.
-
-    Flow: service (Input) → logic (Response DTO) → repository (Query DTO → Response DTO)
-    """
-    try:
-        # Service calls logic with user_id, gets Response DTO
-        response_dto = query_logic.get_user_by_id(UUID(user_id))
-
-        # Convert Response DTO to Output DTO
-        return UserGetOutputDTO(
-            id=response_dto.id,
-            username=response_dto.username,
-            email=response_dto.email
-        )
-    except NotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid user ID format")
-
-
-# main.py
-from archipy.helpers.utils.app_utils import AppUtils
-from archipy.configs.base_config import BaseConfig
-from services.user.v1.user_service import router as user_v1_router
-# from services.user.v2.user_service import router as user_v2_router
-# from services.order.v1.order_service import router as order_v1_router
-
-# Initialize configuration
-config = BaseConfig()
-BaseConfig.set_global(config)
-
-# Create FastAPI app
-app = AppUtils.create_fastapi_app()
-
-# Include versioned routers from service layers
-app.include_router(user_v1_router)
-# app.include_router(user_v2_router)  # Future API version
-# app.include_router(order_v1_router)
-
-# Run the application
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
-**📖 Complete guide:** [Getting Started](usage.md)
+### DI Container
 
-This structure provides:
+```python
+# configs/containers.py
+import configs.app_config  # noqa: F401 — importing triggers BaseConfig.set_global
+from dependency_injector import containers, providers
 
-- **Clear layer separation**:
-  - `main.py` → Initializes app and includes routers (runs the project)
-  - `services/{domain}/v1/` → Contains versioned FastAPI endpoints (handles I/O, DTOs) and calls logic
-  - `logic/` → Contains pure business rules (can call other logic or repositories)
-  - `repositories/` → Data access and persistence
+from archipy.adapters.postgres.sqlalchemy.adapters import PostgresSQLAlchemyAdapter
+from archipy.adapters.redis.adapters import RedisAdapter
 
-- **API Versioning**:
-  - URL path includes version: `/api/v1/users`, `/api/v2/users`
-  - Service folders organized by version: `services/user/v1/`, `services/user/v2/`
-  - Easy to maintain multiple API versions simultaneously
-  - Smooth migration path for API changes
+from repositories.user.adapters.user_cache_adapter import UserCacheAdapter
+from repositories.user.adapters.user_db_adapter import UserDBAdapter
+from repositories.user.user_repository import UserRepository
+from logics.user.user_query_logic import UserQueryLogic
+from logics.user.user_registration_logic import UserRegistrationLogic
 
-- **Clear DTO Naming Conventions (CQRS-inspired)**:
-  - **Input DTOs**: `{Operation}InputDTO` - From client to service (e.g., `UserRegistrationInputDTO`)
-  - **Command DTOs**: `{Action}CommandDTO` - For write operations: create, update, delete (e.g., `CreateUserCommandDTO`)
-  - **Query DTOs**: `{Action}QueryDTO` - For read operations: get, search, list (e.g., `GetUserByIdQueryDTO`, `SearchUsersQueryDTO`)
-  - **Response DTOs**: `{Domain}ResponseDTO` - From repository/logic (e.g., `UserResponseDTO`)
-  - **Output DTOs**: `{Operation}OutputDTO` - From service to client (e.g., `UserRegistrationOutputDTO`, `UserGetOutputDTO`)
-  - Clear separation of concerns at each layer
-  - Self-documenting API interfaces with explicit operation context
 
-- **Service layer (FastAPI endpoints)**:
-  - Each service module has its own versioned APIRouter
-  - Handles HTTP I/O (request/response)
-  - Converts InputDTO → calls logic → receives ResponseDTO → converts to OutputDTO
-  - Calls logic layer for business operations
-  - Handles HTTP exceptions
+class UserContainer(containers.DeclarativeContainer):
+    """Wires the User domain dependency graph using thread-safe singletons."""
 
-- **Logic layer (Business rules)**:
-  - Pure business logic isolated from HTTP/I/O
-  - Creates Command/Query DTOs to call repositories
-  - Receives ResponseDTO from repositories
-  - Can call other logic classes or repositories
-  - Returns ResponseDTO to service layer
-  - Framework-agnostic (no FastAPI, no HTTP)
-  - Easy to unit test without mocking HTTP
-  - Reusable across different interfaces (REST, GraphQL, CLI, gRPC, etc.)
+    _postgres: providers.Provider[PostgresSQLAlchemyAdapter] = providers.ThreadSafeSingleton(
+        PostgresSQLAlchemyAdapter,
+    )
 
-- **Repository layer (Data access)**:
-  - Accepts CommandDTO (create, update, delete) or QueryDTO (get, search)
-  - Converts DTO → Entity for database operations
-  - Converts Entity → ResponseDTO before returning
-  - Always returns ResponseDTO (never raw entities)
-  - Clean separation between data layer and business layer
+    _redis: providers.Provider[RedisAdapter] = providers.ThreadSafeSingleton(
+        RedisAdapter,
+    )
 
-- **Main.py (Application runner)**:
-  - Initializes configuration
-  - Creates FastAPI app
-  - Includes all versioned service routers
-  - Runs the application
+    _db_adapter: providers.Provider[UserDBAdapter] = providers.ThreadSafeSingleton(
+        UserDBAdapter,
+        db=_postgres,
+    )
 
-- **Domain-driven organization**: User and Order domains have their own adapters, repositories, logic, and versioned service endpoints
-- **Domain-specific adapters**: Each domain has its own adapter layer (e.g., `UserDBAdapter`, `UserCacheAdapter`)
-- **Scalability**: Easy to add new domains, endpoints, API versions, or logic without affecting existing ones
-- **Testability**: Each layer can be tested independently (logic without HTTP, services with HTTP mocking)
-- **Maintainability**: Related code (adapters, logic, versioned endpoints) is grouped together by domain
-- **Flexibility**: Different domains can use different storage strategies, business rules, and API patterns
+    _cache_adapter: providers.Provider[UserCacheAdapter] = providers.ThreadSafeSingleton(
+        UserCacheAdapter,
+        cache=_redis,
+    )
 
-By providing standardized building blocks rather than enforcing a specific architecture, ArchiPy helps teams maintain
-consistent development practices while allowing flexibility to choose the architectural pattern that best fits their
-needs.
+    _repository: providers.Provider[UserRepository] = providers.ThreadSafeSingleton(
+        UserRepository,
+        db_adapter=_db_adapter,
+        cache_adapter=_cache_adapter,
+    )
+
+    registration_logic: providers.Provider[UserRegistrationLogic] = providers.ThreadSafeSingleton(
+        UserRegistrationLogic,
+        user_repository=_repository,
+    )
+
+    query_logic: providers.Provider[UserQueryLogic] = providers.ThreadSafeSingleton(
+        UserQueryLogic,
+        user_repository=_repository,
+    )
+```
+
+### Service (FastAPI Endpoints)
+
+```python
+# services/user/v1/user_service.py
+import logging
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+
+from archipy.models.errors import NotFoundError
+
+from configs.containers import UserContainer
+from logics.user.user_query_logic import UserQueryLogic
+from logics.user.user_registration_logic import UserRegistrationLogic
+from models.dtos.user.domain.v1.user_dtos import (
+    UserGetInputDTO,
+    UserGetOutputDTO,
+    UserRegistrationInputDTO,
+    UserRegistrationOutputDTO,
+)
+from models.errors.user_errors import UserAlreadyExistsError
+
+logger = logging.getLogger(__name__)
+
+
+def create_router(container: UserContainer) -> APIRouter:
+    """Build and return the versioned user router wired to the given container.
+
+    Args:
+        container: The DI container providing logic instances.
+
+    Returns:
+        A configured APIRouter for the User domain.
+    """
+    router = APIRouter(prefix="/api/v1/users", tags=["users-v1"])
+
+    @router.post("/", response_model=UserRegistrationOutputDTO, status_code=201)
+    def register_user(
+            input_dto: UserRegistrationInputDTO,
+            registration_logic: UserRegistrationLogic = Depends(container.registration_logic),
+    ) -> UserRegistrationOutputDTO:
+        """Register a new user.
+
+        Args:
+            input_dto: Registration payload from the client.
+            registration_logic: Injected registration logic.
+
+        Returns:
+            Output DTO for the newly created user.
+
+        Raises:
+            HTTPException: 409 if the username is already taken.
+        """
+        try:
+            return registration_logic.register_user(input_dto)
+        except UserAlreadyExistsError as e:
+            raise HTTPException(status_code=409, detail=str(e)) from e
+
+    @router.get("/{user_id}", response_model=UserGetOutputDTO)
+    def get_user(
+            user_id: str,
+            query_logic: UserQueryLogic = Depends(container.query_logic),
+    ) -> UserGetOutputDTO:
+        """Retrieve a user by ID.
+
+        Args:
+            user_id: String representation of the user's UUID.
+            query_logic: Injected query logic.
+
+        Returns:
+            Output DTO for the matched user.
+
+        Raises:
+            HTTPException: 404 if no user with the given ID exists.
+            HTTPException: 400 if the user_id is not a valid UUID.
+        """
+        try:
+            return query_logic.get_user_by_id(UserGetInputDTO(user_id=UUID(user_id)))
+        except NotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e)) from e
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail="Invalid user ID format") from e
+
+    return router
+```
+
+### Application Entry Point
+
+```python
+# main.py
+from archipy.helpers.utils.app_utils import AppUtils
+
+from configs.app_config import AppConfig  # noqa: F401 — triggers BaseConfig.set_global
+from configs.containers import UserContainer
+from services.user.v1.user_service import create_router as create_user_v1_router
+
+user_container = UserContainer()
+
+app = AppUtils.create_fastapi_app()
+app.include_router(create_user_v1_router(user_container))
+
+if __name__ == "__main__":
+    import uvicorn
+    from archipy.configs.base_config import BaseConfig
+
+    config = BaseConfig.global_config()
+    uvicorn.run(app, host=config.FASTAPI_HOST, port=config.FASTAPI_PORT)
+```
+
+By providing standardized building blocks rather than enforcing a single architecture, ArchiPy helps teams maintain
+consistent practices while retaining the flexibility to choose the pattern that best fits their needs.
+
+## See Also
+
+- [Installation](installation.md)
+- [Configuration Management](examples/config_management.md)
+- [Error Handling](examples/error_handling.md)
+- [PostgreSQL Adapter](examples/adapters/postgres.md)
+- [BDD Testing](examples/bdd_testing.md)
+- [API Reference](api_reference/index.md)

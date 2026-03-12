@@ -122,9 +122,6 @@ plugins:
 nav:
   - Home: index.md
   - Installation: installation.md
-  - Features: features.md
-  - Getting Started: usage.md
-  - Development: development.md
   - API Reference:
     - Overview: api_reference/index.md
     - Adapters:

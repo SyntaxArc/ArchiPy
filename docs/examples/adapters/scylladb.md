@@ -820,7 +820,7 @@ logger.info(f"Health: {health['status']}, Latency: {health['latency_ms']:.2f}ms"
 
 - [ScyllaDB Documentation](https://docs.scylladb.com/)
 - [Cassandra Query Language (CQL)](https://cassandra.apache.org/doc/latest/cql/)
-- [ArchiPy Configuration Guide](../../usage.md)
+- [ArchiPy Configuration Guide](../../examples/config_management.md)
 
 ## See Also
 

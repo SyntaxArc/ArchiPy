@@ -105,5 +105,5 @@ See the [Changelog](../changelog.md) for version history and breaking changes.
 For information about contributing to ArchiPy's development, please see:
 
 - [Contributing Guide](../contributing.md)
-- [Development Guide](../development.md)
+- [Development Guide](../contributing.md)
 - [Documentation Guide](../contributing-docs.md)
