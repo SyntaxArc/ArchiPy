@@ -11,77 +11,74 @@ entities, errors, adapters, repository, and logic classes. This scales naturally
 ## Reference Layout
 
 ```
-my_app/
-├── configs/
-│   ├── app_config.py               # AppConfig(BaseConfig) — set_global called here
-│   └── containers.py               # DI container — wires adapters, repos, logic
-│
-├── models/
-│   ├── dtos/
-│   │   ├── user/
-│   │   │   ├── domain/             # Versioned DTOs that cross the service boundary
-│   │   │   │   ├── v1/
-│   │   │   │   │   └── user_dtos.py
-│   │   │   │   └── v2/             # Breaking domain DTO changes live here
+project-root/
+├── my_app/                             # Application package
+│   ├── configs/
+│   │   ├── app_config.py               # AppConfig(BaseConfig) — set_global called here
+│   │   └── containers.py               # DI container — wires adapters, repos, logic
+│   │
+│   ├── models/
+│   │   ├── dtos/
+│   │   │   ├── user/
+│   │   │   │   ├── domain/             # Versioned DTOs that cross the service boundary
+│   │   │   │   │   ├── v1/
+│   │   │   │   │   │   └── user_dtos.py
+│   │   │   │   │   └── v2/             # Breaking domain DTO changes live here
+│   │   │   │   │       └── user_dtos.py
+│   │   │   │   └── repository/         # Internal DTOs — never versioned
 │   │   │   │       └── user_dtos.py
-│   │   │   └── repository/         # Internal DTOs — never versioned
-│   │   │       └── user_dtos.py
+│   │   │   └── order/
+│   │   │       ├── domain/
+│   │   │       │   └── v1/
+│   │   │       │       └── order_dtos.py
+│   │   │       └── repository/
+│   │   │           └── order_dtos.py
+│   │   ├── entities/
+│   │   │   ├── user.py                 # User(BaseEntity)
+│   │   │   └── order.py
+│   │   └── errors/
+│   │       ├── user_errors.py          # UserAlreadyExistsError(AlreadyExistsError)
+│   │       └── order_errors.py
+│   │
+│   ├── repositories/
+│   │   ├── user/
+│   │   │   ├── adapters/
+│   │   │   │   ├── user_db_adapter.py   # Wraps PostgresSQLAlchemyAdapter
+│   │   │   │   └── user_cache_adapter.py # Wraps RedisAdapter
+│   │   │   └── user_repository.py
 │   │   └── order/
-│   │       ├── domain/
-│   │       │   └── v1/
-│   │       │       └── order_dtos.py
-│   │       └── repository/
-│   │           └── order_dtos.py
-│   ├── entities/
-│   │   ├── user.py                 # User(BaseEntity)
-│   │   └── order.py
-│   └── errors/
-│       ├── user_errors.py          # UserAlreadyExistsError(AlreadyExistsError)
-│       └── order_errors.py
+│   │       ├── adapters/
+│   │       │   ├── order_db_adapter.py
+│   │       │   └── order_payment_adapter.py
+│   │       └── order_repository.py
+│   │
+│   ├── logics/
+│   │   ├── user/
+│   │   │   ├── user_registration_logic.py  # @atomic — unit of work boundary
+│   │   │   └── user_query_logic.py
+│   │   └── order/
+│   │       ├── order_creation_logic.py
+│   │       └── order_payment_logic.py
+│   │
+│   └── services/
+│       ├── user/
+│       │   ├── v1/
+│       │   │   └── user_service.py     # FastAPI router for API v1
+│       │   └── v2/                     # Breaking API changes go here
+│       │       └── user_service.py
+│       └── order/
+│           └── v1/
+│               └── order_service.py
 │
-├── repositories/
-│   ├── user/
-│   │   ├── adapters/
-│   │   │   ├── user_db_adapter.py   # Wraps PostgresSQLAlchemyAdapter
-│   │   │   └── user_cache_adapter.py # Wraps RedisAdapter
-│   │   └── user_repository.py
-│   └── order/
-│       ├── adapters/
-│       │   ├── order_db_adapter.py
-│       │   └── order_payment_adapter.py
-│       └── order_repository.py
+├── features/                           # BDD acceptance tests (behave)
+│   ├── user_registration.feature
+│   ├── steps/
+│   │   └── user_steps.py
+│   ├── scenario_context.py             # Per-scenario isolated storage (adapter, entities, etc.)
+│   ├── scenario_context_pool_manager.py # Singleton pool — maps scenario ID → ScenarioContext
+│   └── environment.py                  # behave hooks — container setup/teardown
 │
-├── logics/
-│   ├── user/
-│   │   ├── user_registration_logic.py  # @atomic — unit of work boundary
-│   │   └── user_query_logic.py
-│   └── order/
-│       ├── order_creation_logic.py
-│       └── order_payment_logic.py
-│
-├── services/
-│   ├── user/
-│   │   ├── v1/
-│   │   │   └── user_service.py     # FastAPI router for API v1
-│   │   └── v2/                     # Breaking API changes go here
-│   │       └── user_service.py
-│   └── order/
-│       └── v1/
-│           └── order_service.py
-│
-├── tests/
-│   ├── unit/                       # Uses mock adapters — no Docker
-│   │   ├── test_user_registration_logic.py
-│   │   └── test_order_creation_logic.py
-│   ├── integration/                # Uses testcontainers — requires Docker
-│   │   ├── test_postgres_adapter.py
-│   │   └── test_redis_adapter.py
-│   └── features/                   # BDD acceptance tests
-│       ├── user_registration.feature
-│       └── steps/
-│           └── user_steps.py
-│
-└── main.py                         # Bootstraps the container and creates the FastAPI app
+└── manage.py                           # CLI entry point — click commands (run, migrate, etc.)
 ```
 
 ---
@@ -142,43 +139,72 @@ Services are thin FastAPI routers that:
 
 API versioning lives in the folder structure (`v1/`, `v2/`), not in the business logic.
 
-### `tests/`
+### `features/`
 
-| Folder         | Tool                        | Scope                                     |
-|----------------|-----------------------------|-------------------------------------------|
-| `unit/`        | `pytest` + mock adapters    | Single logic class or utility — no Docker |
-| `integration/` | `pytest` + `testcontainers` | Adapter against a real service in Docker  |
-| `features/`    | `behave`                    | Full-stack acceptance scenarios           |
+BDD acceptance tests live at the **project root** in a `features/` directory, following the standard `behave` layout:
+
+| Path                                        | Purpose                                                         |
+|---------------------------------------------|-----------------------------------------------------------------|
+| `features/*.feature`                        | Gherkin scenarios — the source of truth for behaviour           |
+| `features/steps/`                           | Step definitions mapping Gherkin to Python                      |
+| `features/scenario_context.py`              | Per-scenario storage: adapter, async_adapter, entities, db_file |
+| `features/scenario_context_pool_manager.py` | Singleton pool mapping scenario ID → `ScenarioContext`          |
+| `features/environment.py`                   | `behave` hooks — container setup and teardown                   |
+
+`ScenarioContext` prevents cross-contamination between parallel scenarios by giving each one its own isolated storage.
+`ScenarioContextPoolManager` (a `Singleton`) creates or retrieves the context for a given scenario ID and disposes of it
+after the scenario completes.
 
 ---
 
-## Entry Point: `main.py`
+## Entry Point: `manage.py`
+
+`manage.py` lives at the **project root** and exposes CLI commands via `click`:
 
 ```python
-# main.py
-from archipy.helpers.utils.app_utils import AppUtils
+# manage.py
+import click
+import uvicorn
 
 import configs.app_config  # noqa: F401 — triggers BaseConfig.set_global
+from archipy.configs.base_config import BaseConfig
+from archipy.helpers.utils.app_utils import AppUtils
 from configs.containers import UserContainer
 from services.user.v1.user_service import create_router as create_user_v1_router
 
-user_container = UserContainer()
 
-app = AppUtils.create_fastapi_app()
-app.include_router(create_user_v1_router(user_container))
+def create_app():
+    """Create and configure the FastAPI application."""
+    user_container = UserContainer()
+    app = AppUtils.create_fastapi_app()
+    app.include_router(create_user_v1_router(user_container))
+    return app
+
+
+@click.group()
+def cli():
+    """Management commands for my_app."""
+
+
+@cli.command()
+@click.option("--host", default="0.0.0.0", show_default=True, help="Bind host.")  # noqa: S104
+@click.option("--port", default=8000, show_default=True, help="Bind port.")
+@click.option("--reload", is_flag=True, default=False, help="Enable auto-reload.")
+def run(host: str, port: int, reload: bool) -> None:
+    """Start the FastAPI development server."""
+    uvicorn.run("manage:create_app", factory=True, host=host, port=port, reload=reload)
+
 
 if __name__ == "__main__":
-    import uvicorn
-    from archipy.configs.base_config import BaseConfig
-
-    config = BaseConfig.global_config()
-    uvicorn.run(app, host="0.0.0.0", port=8000)  # noqa: S104
+    cli()
 ```
 
-!!! note "Container import side-effect"
-Importing `configs.app_config` is enough to call `BaseConfig.set_global`. The DI container in
-`containers.py` imports `app_config` at the top, so importing the container module is sufficient for
-a fully bootstrapped application.
+Run the server with:
+
+```bash
+python manage.py run
+python manage.py run --port 9000 --reload
+```
 
 ---
 
@@ -187,5 +213,5 @@ a fully bootstrapped application.
 - [Quickstart](quickstart.md) — five-minute getting-started example
 - [Concepts](concepts.md) — four-layer architecture and import rules
 - [Dependency Injection](../examples/dependency_injection.md) — container wiring in detail
-- [Testing Strategy](../examples/testing_strategy.md) — unit, integration, and BDD test layout
+- [Testing Strategy](../examples/testing_strategy.md) — BDD test layout with behave
 - [Configuration Management](../examples/config_management.md) — environment-specific configs
