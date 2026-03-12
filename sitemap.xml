@@ -9,34 +9,6 @@
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/CODE_OF_CONDUCT/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/changelog/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/contributing/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/faq/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/installation/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/license/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/security/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
@@ -141,103 +113,27 @@
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/</loc>
+         <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/config_management/</loc>
+         <loc>https://syntaxarc.github.io/ArchiPy/community/code_of_conduct/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/dependency_injection/</loc>
+         <loc>https://syntaxarc.github.io/ArchiPy/community/contributing/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/error_handling/</loc>
+         <loc>https://syntaxarc.github.io/ArchiPy/community/faq/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/observability/</loc>
+         <loc>https://syntaxarc.github.io/ArchiPy/community/license/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/testing_strategy/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/elasticsearch/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/email/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/kafka/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/keycloak/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/minio/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/payment_gateways/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/postgres/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/redis/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/scylladb/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/sqlite/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/starrocks/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/adapters/temporal/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/helpers/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/helpers/decorators/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/helpers/interceptors/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/helpers/metaclasses/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/helpers/utils/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/models/protobuf_dtos/</loc>
+         <loc>https://syntaxarc.github.io/ArchiPy/community/security/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
@@ -249,11 +145,115 @@
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/getting-started/installation/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
          <loc>https://syntaxarc.github.io/ArchiPy/getting-started/project_structure/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/getting-started/quickstart/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/config_management/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/dependency_injection/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/error_handling/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/observability/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/testing_strategy/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/elasticsearch/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/email/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/kafka/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/keycloak/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/minio/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/payment_gateways/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/postgres/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/redis/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/scylladb/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/sqlite/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/starrocks/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/temporal/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/helpers/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/helpers/decorators/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/helpers/interceptors/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/helpers/metaclasses/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/helpers/utils/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/models/protobuf_dtos/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
 </urlset>
