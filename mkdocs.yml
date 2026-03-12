@@ -191,5 +191,11 @@ nav:
       - Code of Conduct: community/code_of_conduct.md
       - FAQ: community/faq.md
       - Security: community/security.md
-      - Changelog: community/changelog.md
+      - Changelog:
+          - Overview: community/changelog/index.md
+          - "4.x": community/changelog/4/index.md
+          - "3.x": community/changelog/3/index.md
+          - "2.x": community/changelog/2/index.md
+          - "1.x": community/changelog/1/index.md
+          - "0.x": community/changelog/0/index.md
       - License: community/license.md
