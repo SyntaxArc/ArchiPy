@@ -5,15 +5,23 @@
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/404/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/CODE_OF_CONDUCT/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
          <loc>https://syntaxarc.github.io/ArchiPy/changelog/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/concepts/</loc>
+         <loc>https://syntaxarc.github.io/ArchiPy/contributing/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/contributing/</loc>
+         <loc>https://syntaxarc.github.io/ArchiPy/faq/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
@@ -22,6 +30,10 @@
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/license/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/security/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
@@ -133,15 +145,23 @@
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
-         <loc>https://syntaxarc.github.io/ArchiPy/examples/bdd_testing/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/config_management/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/examples/dependency_injection/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/error_handling/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/examples/observability/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/examples/testing_strategy/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
@@ -218,6 +238,22 @@
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/examples/models/protobuf_dtos/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/getting-started/complete_user_example/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/getting-started/concepts/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/getting-started/project_structure/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/getting-started/quickstart/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
 </urlset>

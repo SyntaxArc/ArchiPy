@@ -18,7 +18,7 @@
         <link rel="prev" href="..">
       
       
-        <link rel="next" href="../concepts/">
+        <link rel="next" href="../getting-started/quickstart/">
       
       
         
@@ -379,6 +379,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -573,7 +579,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../concepts/" class="md-nav__link">
+      <a href="../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/concepts/" class="md-nav__link">
         
   
   
@@ -581,6 +615,62 @@
     
   
     Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/project_structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/complete_user_example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Complete Example
   
 
     
@@ -612,6 +702,10 @@
       
         
           
+        
+      
+        
+      
         
       
         
@@ -1351,14 +1445,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/bdd_testing/" class="md-nav__link">
+      <a href="../examples/testing_strategy/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Testing
+    BDD Testing
   
 
     
@@ -1406,6 +1500,62 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../examples/dependency_injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1426,10 +1576,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_7" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_9" >
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_9" id="__nav_2_9_label" tabindex="0">
             
   
   
@@ -1447,8 +1597,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2489,6 +2639,12 @@
       
         
       
+        
+      
+        
+      
+        
+      
     
     
     
@@ -2551,6 +2707,90 @@
     
   
     Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CODE_OF_CONDUCT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code of Conduct
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
   
 
     
@@ -2935,6 +3175,11 @@
 <li>Build tools are available (UV handles this automatically)</li>
 <li>Database-specific dependencies are installed if using database adapters</li>
 </ol>
+<div class="admonition warning">
+<p class="admonition-title">Python 3.14+ Required</p>
+</div>
+<p>ArchiPy uses <code>X | Y</code> union syntax, lowercase generics (<code>list[str]</code>), and other modern features
+that require Python 3.14 or later. Using an older Python will result in <code>SyntaxError</code> at import time.</p>
 <div class="admonition tip">
 <p class="admonition-title">IDE Integration</p>
 </div>
@@ -2944,7 +3189,7 @@ autocompletion.</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../">Get Started</a> — overview of ArchiPy and a quick example</li>
-<li><a href="../concepts/">Concepts</a> — Clean Architecture layers and design philosophy</li>
+<li><a href="../getting-started/concepts/">Concepts</a> — Clean Architecture layers and design philosophy</li>
 <li><a href="../examples/">Tutorials</a> — complete guides for every adapter and helper</li>
 </ul>
 
