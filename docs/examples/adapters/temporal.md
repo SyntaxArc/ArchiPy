@@ -890,4 +890,4 @@ The Temporal Runtime with Prometheus is created lazily on first client connectio
 - [Configuration Management](../config_management.md) - Temporal configuration setup
 - [BDD Testing](../bdd_testing.md) - Testing workflow operations
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) - Atomic transaction usage
-- [API Reference](../../api_reference/adapters.md) - Full Temporal adapter API documentation
+- [API Reference](../../api_reference/adapters/temporal.md) - Full Temporal adapter API documentation

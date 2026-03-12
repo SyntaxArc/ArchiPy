@@ -11,7 +11,7 @@ plugins:
       default_handler: python
       handlers:
         python:
-          paths: [archipy]
+          paths: ["../archipy"]
           options:
             # Full documentation features
             show_source: true  # Show source code in production

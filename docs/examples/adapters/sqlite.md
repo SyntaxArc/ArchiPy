@@ -364,4 +364,4 @@ async def get_user(user_id: UUID) -> dict[str, str | UUID]:
 - [BDD Testing](../bdd_testing.md) - Testing database operations
 - [PostgreSQL Adapter](postgres.md) - Similar patterns for PostgreSQL
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) - Transaction decorator usage
-- [API Reference](../../api_reference/adapters.md) - Full SQLite adapter API documentation
+- [API Reference](../../api_reference/adapters/sqlite.md) - Full SQLite adapter API documentation

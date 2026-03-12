@@ -1,7 +1,6 @@
 # API Reference
 
-Welcome to the ArchiPy API reference documentation. This section provides detailed information about all modules,
-classes, and functions in ArchiPy.
+Welcome to the ArchiPy API reference documentation. This section provides detailed information about all modules, classes, and functions in ArchiPy.
 
 ## Core Modules
 
@@ -9,48 +8,46 @@ classes, and functions in ArchiPy.
 
 The adapters module provides standardized interfaces to external systems:
 
-- [Adapters Documentation](adapters.md)
-- [Database Adapters](adapters.md#database-adapters)
-    - [PostgreSQL](adapters.md#postgresql)
-    - [SQLite](adapters.md#sqlite)
-    - [StarRocks](adapters.md#starrocks)
-    - [ScyllaDB](adapters.md#scylladb)
-- [Redis Adapters](adapters.md#redis)
-- [Email Adapters](adapters.md#email)
-- [Keycloak Adapters](adapters.md#keycloak)
-- [MinIO Adapters](adapters.md#minio)
-- [Kafka Adapters](adapters.md#kafka)
-- [Temporal Adapters](adapters.md#temporal)
-- [Payment Gateway Adapters](adapters.md#payment-gateways)
-    - [Parsian Shaparak](adapters.md#parsian-shaparak)
+- [Adapters Overview](adapters/index.md)
+- [Base SQLAlchemy](adapters/base.md)
+- [Redis](adapters/redis.md)
+- [PostgreSQL](adapters/postgres.md)
+- [SQLite](adapters/sqlite.md)
+- [StarRocks](adapters/starrocks.md)
+- [Kafka](adapters/kafka.md)
+- [Keycloak](adapters/keycloak.md)
+- [MinIO](adapters/minio.md)
+- [ScyllaDB](adapters/scylladb.md)
+- [Elasticsearch](adapters/elasticsearch.md)
+- [Temporal](adapters/temporal.md)
+- [Email](adapters/email.md)
+- [Payment Gateways](adapters/payment_gateways.md)
 
 ### Configs
 
 Configuration management and injection tools:
 
 - [Configs Documentation](configs.md)
-- [Base Config](configs.md#base-config)
-- [Config Templates](configs.md#config-templates)
 
 ### Helpers
 
 Utility functions and support classes:
 
-- [Helpers Documentation](helpers.md)
-- [Decorators](../examples/helpers/decorators.md)
-- [Utils](../examples/helpers/utils.md)
-- [Metaclasses](../examples/helpers/metaclasses.md)
-- [Interceptors](../examples/helpers/interceptors.md)
+- [Helpers Overview](helpers/index.md)
+- [Decorators](helpers/decorators.md)
+- [Interceptors](helpers/interceptors.md)
+- [Metaclasses](helpers/metaclasses.md)
+- [Utils](helpers/utils.md)
 
 ### Models
 
 Core data structures and types:
 
-- [Models Documentation](models.md)
-- [Entities](models.md#entities)
-- [DTOs](models.md#dtos-data-transfer-objects)
-- [Errors](models.md#errors)
-- [Types](models.md#types)
+- [Models Overview](models/index.md)
+- [DTOs](models/dtos.md)
+- [Entities](models/entities.md)
+- [Errors](models/errors.md)
+- [Types](models/types.md)
 
 ## Source Code Organization
 
@@ -59,29 +56,24 @@ The ArchiPy source code is organized into the following structure:
 ```
 archipy/
 ├── adapters/           # External system integrations
-│   ├── base/          # Base adapter implementations
-│   │   └── sqlalchemy/  # Base SQLAlchemy components
-│   ├── email/         # Email service adapters
+│   ├── base/          # Base SQLAlchemy components
+│   ├── elasticsearch/ # Elasticsearch adapter
+│   ├── email/         # Email service adapter
 │   ├── internet_payment_gateways/ # Payment gateway adapters
-│   │   └── ir/        # Country-specific implementations
-│   │       └── parsian/  # Parsian Shaparak gateway adapter
-│   ├── keycloak/      # Keycloak authentication adapters
-│   ├── kafka/         # Kafka message streaming adapters
-│   ├── minio/         # MinIO object storage adapters
-│   ├── postgres/      # PostgreSQL database adapters
-│   │   └── sqlalchemy/  # PostgreSQL SQLAlchemy components
-│   ├── redis/         # Redis adapters
-│   ├── scylladb/      # ScyllaDB/Cassandra adapters
-│   ├── sqlite/        # SQLite database adapters
-│   │   └── sqlalchemy/  # SQLite SQLAlchemy components
-│   ├── starrocks/     # StarRocks database adapters
-│   │   └── sqlalchemy/  # StarRocks SQLAlchemy components
-│   └── temporal/      # Temporal workflow orchestration adapters
+│   ├── kafka/         # Kafka message streaming adapter
+│   ├── keycloak/      # Keycloak authentication adapter
+│   ├── minio/         # MinIO object storage adapter
+│   ├── postgres/      # PostgreSQL adapter
+│   ├── redis/         # Redis adapter
+│   ├── scylladb/      # ScyllaDB/Cassandra adapter
+│   ├── sqlite/        # SQLite adapter
+│   ├── starrocks/     # StarRocks adapter
+│   └── temporal/      # Temporal workflow adapter
 ├── configs/           # Configuration management
 │   ├── base_config.py
 │   ├── config_template.py
 │   └── environment_type.py
-├── helpers/           # Utility functions
+├── helpers/           # Utility functions and patterns
 │   ├── decorators/
 │   ├── interceptors/
 │   ├── metaclasses/

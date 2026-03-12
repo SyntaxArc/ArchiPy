@@ -399,4 +399,4 @@ class GoodSingleton(metaclass=Singleton):
 
 - [Decorators](decorators.md) - Other helper decorators
 - [Utils](utils.md) - Utility functions
-- [API Reference](../../api_reference/helpers.md) - Full metaclasses API documentation
+- [API Reference](../../api_reference/helpers/index.md) - Full metaclasses API documentation

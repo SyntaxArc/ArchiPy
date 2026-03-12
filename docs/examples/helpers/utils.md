@@ -209,7 +209,7 @@ logger.info("FastAPI app configured successfully")
 ## string_utils
 
 String manipulation utilities. `StringUtils` provides helpers for common string operations. See the
-[Utils API Reference](../../api_reference/utils.md#string_utils) for the full method list.
+[Utils API Reference](../../api_reference/helpers/utils.md#string_utils) for the full method list.
 
 ## keycloak_utils {#keycloak-utils}
 
@@ -271,10 +271,10 @@ uvicorn.run(app, host="0.0.0.0", port=8000)  # noqa: S104
 
 For more examples and detailed documentation:
 
-- [Helpers Overview](../../api_reference/helpers.md)
-- [Utils API Reference](../../api_reference/utils.md)
+- [Helpers Overview](../../api_reference/helpers/index.md)
+- [Utils API Reference](../../api_reference/helpers/utils.md)
 - [Configuration Examples](../config_management.md)
 - [Keycloak Adapter](../adapters/keycloak.md)
 
 > **Note**: This page contains examples of using ArchiPy's utility functions. For API details, see
-> the [Utils API Reference](../../api_reference/utils.md).
+> the [Utils API Reference](../../api_reference/helpers/utils.md).

@@ -450,4 +450,4 @@ async def get_age_distribution() -> dict[str, list[dict[str, int]]]:
 - [BDD Testing](../bdd_testing.md) - Testing database operations
 - [PostgreSQL Adapter](postgres.md) - Similar patterns for PostgreSQL
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) - Transaction decorator usage
-- [API Reference](../../api_reference/adapters.md) - Full StarRocks adapter API documentation
+- [API Reference](../../api_reference/adapters/starrocks.md) - Full StarRocks adapter API documentation

@@ -311,4 +311,4 @@ Feature: MinIO Operations Testing
 - [Error Handling](../error_handling.md) - Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) - MinIO configuration setup
 - [BDD Testing](../bdd_testing.md) - Testing MinIO operations
-- [API Reference](../../api_reference/adapters.md) - Full MinIO adapter API documentation
+- [API Reference](../../api_reference/adapters/minio.md) - Full MinIO adapter API documentation

@@ -942,4 +942,4 @@ worker_config = PostgresSQLAlchemyConfig(
 - [Configuration Management](../config_management.md) — PostgreSQL configuration setup
 - [BDD Testing](../bdd_testing.md) — Testing database operations
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Transaction decorator usage
-- [API Reference](../../api_reference/adapters.md#postgresql) — Full PostgreSQL adapter API documentation
+- [API Reference](../../api_reference/adapters/postgres.md) — Full PostgreSQL adapter API documentation

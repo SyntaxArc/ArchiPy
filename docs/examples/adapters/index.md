@@ -7,18 +7,18 @@ your business logic and external dependencies.
 
 | Adapter                   | Purpose                        | Example                                              | API Reference                                     |
 |---------------------------|--------------------------------|------------------------------------------------------|---------------------------------------------------|
-| [Email](email.md)         | Email sending interface        | Connect to SMTP servers for sending emails           | [API](../../api_reference/adapters.md#email)      |
-| [Keycloak](keycloak.md)   | Authentication & authorization | User management and access control with Keycloak     | [API](../../api_reference/adapters.md#keycloak)   |
-| [Kafka](kafka.md)         | Message streaming              | Event-driven architectures with Apache Kafka         | [API](../../api_reference/adapters.md#kafka)      |
-| [Minio](minio.md)         | Object storage                 | S3-compatible object storage for files and documents | [API](../../api_reference/adapters.md#minio)      |
-| [Parsian Payment](parsian_payment.md) | Payment gateway    | Process online payments with Parsian Shaparak        | [API](../../api_reference/adapters.md#payment-gateways) |
-| [PostgreSQL](postgres.md) | Database access                | SQLAlchemy integration for PostgreSQL                | [API](../../api_reference/adapters.md#postgresql) |
-| [SQLite](sqlite.md)       | Database access                | SQLAlchemy integration for SQLite                    | [API](../../api_reference/adapters.md#sqlite)     |
-| [StarRocks](starrocks.md) | Database access                | SQLAlchemy integration for StarRocks                 | [API](../../api_reference/adapters.md#starrocks)  |
-| [ScyllaDB](scylladb.md)   | NoSQL database                 | Wide-column store for ScyllaDB and Cassandra         | [API](../../api_reference/adapters.md#scylladb)   |
-| [Elasticsearch](elasticsearch.md) | Search & analytics  | Full-text search, document indexing, aggregations    | [API](../../api_reference/adapters.md#elasticsearch) |
-| [Redis](redis.md)         | Key-value store                | Caching, pub/sub, and data storage with Redis        | [API](../../api_reference/adapters.md#redis)      |
-| [Temporal](temporal.md)   | Workflow orchestration     | Durable workflow execution and activity coordination  | [API](../../api_reference/adapters.md#temporal)   |
+| [Email](email.md)         | Email sending interface        | Connect to SMTP servers for sending emails           | [API](../../api_reference/adapters/email.md)      |
+| [Keycloak](keycloak.md)   | Authentication & authorization | User management and access control with Keycloak     | [API](../../api_reference/adapters/keycloak.md)   |
+| [Kafka](kafka.md)         | Message streaming              | Event-driven architectures with Apache Kafka         | [API](../../api_reference/adapters/kafka.md)      |
+| [Minio](minio.md)         | Object storage                 | S3-compatible object storage for files and documents | [API](../../api_reference/adapters/minio.md)      |
+| [Parsian Payment](parsian_payment.md) | Payment gateway    | Process online payments with Parsian Shaparak        | [API](../../api_reference/adapters/payment_gateways.md) |
+| [PostgreSQL](postgres.md) | Database access                | SQLAlchemy integration for PostgreSQL                | [API](../../api_reference/adapters/postgres.md)   |
+| [SQLite](sqlite.md)       | Database access                | SQLAlchemy integration for SQLite                    | [API](../../api_reference/adapters/sqlite.md)     |
+| [StarRocks](starrocks.md) | Database access                | SQLAlchemy integration for StarRocks                 | [API](../../api_reference/adapters/starrocks.md)  |
+| [ScyllaDB](scylladb.md)   | NoSQL database                 | Wide-column store for ScyllaDB and Cassandra         | [API](../../api_reference/adapters/scylladb.md)   |
+| [Elasticsearch](elasticsearch.md) | Search & analytics  | Full-text search, document indexing, aggregations    | [API](../../api_reference/adapters/elasticsearch.md) |
+| [Redis](redis.md)         | Key-value store                | Caching, pub/sub, and data storage with Redis        | [API](../../api_reference/adapters/redis.md)      |
+| [Temporal](temporal.md)   | Workflow orchestration     | Durable workflow execution and activity coordination  | [API](../../api_reference/adapters/temporal.md)   |
 
 ## Adapter Architecture
 

@@ -447,4 +447,4 @@ except CacheError as e:
 - [Configuration Management](../config_management.md) - Redis configuration setup
 - [BDD Testing](../bdd_testing.md) - Testing Redis operations
 - [Cache Decorator](../helpers/decorators.md#cache-decorator) - TTL cache decorator usage
-- [API Reference](../../api_reference/adapters.md) - Full Redis adapter API documentation
+- [API Reference](../../api_reference/adapters/redis.md) - Full Redis adapter API documentation

@@ -1095,5 +1095,5 @@ if apm_cfg.IS_ENABLED:
 
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — Elasticsearch configuration setup
-- [API Reference](../../api_reference/adapters.md) — Full Elasticsearch adapter API documentation
+- [API Reference](../../api_reference/adapters/elasticsearch.md) — Full Elasticsearch adapter API documentation
 - [Elasticsearch Python Client docs](https://www.elastic.co/guide/en/elasticsearch/client/python-api/current/index.html)
