@@ -97,7 +97,7 @@ plugins:
           paths: ["../archipy"]
           options:
             # Performance optimizations
-            show_source: false  # Changed: Don't show source code by default (huge performance gain)
+            show_source: true  # Show source code in API reference pages
             show_root_toc_entry: true
             show_object_full_path: false  # Changed: Shorter paths = faster rendering
             heading_level: 2
@@ -123,7 +123,7 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Features: features.md
-  - Usage: usage.md
+  - Getting Started: usage.md
   - Development: development.md
   - API Reference:
     - Overview: api_reference/index.md
@@ -159,18 +159,18 @@ nav:
     - Overview: examples/index.md
     - Adapters:
       - Overview: examples/adapters/index.md
+      - Redis: examples/adapters/redis.md
       - PostgreSQL: examples/adapters/postgres.md
       - SQLite: examples/adapters/sqlite.md
       - StarRocks: examples/adapters/starrocks.md
-      - Redis: examples/adapters/redis.md
-      - Email: examples/adapters/email.md
+      - Kafka: examples/adapters/kafka.md
       - Keycloak: examples/adapters/keycloak.md
       - MinIO: examples/adapters/minio.md
-      - Kafka: examples/adapters/kafka.md
       - ScyllaDB: examples/adapters/scylladb.md
       - Elasticsearch: examples/adapters/elasticsearch.md
       - Temporal: examples/adapters/temporal.md
-      - Payment Gateways: examples/adapters/parsian_payment.md
+      - Email: examples/adapters/email.md
+      - Payment Gateways: examples/adapters/payment_gateways.md
     - Helpers:
       - Overview: examples/helpers/index.md
       - Decorators: examples/helpers/decorators.md
@@ -185,5 +185,5 @@ nav:
   - Changelog: changelog.md
   - Contributing: contributing.md
   - Architecture: architecture.md
-  - Contributing to Docs: contributing-docs.md
+  - Documentation Guidelines: contributing-docs.md
   - License: license.md

@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Architecture + Python – Structured Development Simplified">
+        <meta name="description" content="Installation guide for ArchiPy and its optional dependencies.">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
@@ -291,7 +291,7 @@
   
     
   
-  Usage
+  Getting Started
 
       </a>
     </li>
@@ -430,7 +430,7 @@
   
     
   
-  Contributing to Docs
+  Documentation Guidelines
 
       </a>
     </li>
@@ -781,7 +781,7 @@
   <span class="md-ellipsis">
     
   
-    Usage
+    Getting Started
   
 
     
@@ -1975,6 +1975,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../examples/adapters/redis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Redis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../examples/adapters/postgres/" class="md-nav__link">
         
   
@@ -2059,42 +2087,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/adapters/redis/" class="md-nav__link">
+      <a href="../examples/adapters/kafka/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Redis
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../examples/adapters/email/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Email
+    Kafka
   
 
     
@@ -2151,34 +2151,6 @@
     
   
     MinIO
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../examples/adapters/kafka/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Kafka
   
 
     
@@ -2283,7 +2255,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/adapters/parsian_payment/" class="md-nav__link">
+      <a href="../examples/adapters/email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/adapters/payment_gateways/" class="md-nav__link">
         
   
   
@@ -2789,7 +2789,7 @@
   <span class="md-ellipsis">
     
   
-    Contributing to Docs
+    Documentation Guidelines
   
 
     
@@ -3029,6 +3029,10 @@ python --version
 <li><strong>UV</strong> (for dependency management)</li>
 </ul>
 <p>UV is a fast Python package installer and resolver. Install it via the <a href="https://docs.astral.sh/uv/getting-started/installation/">official guide</a>.</p>
+<div class="admonition tip">
+<p class="admonition-title">Recommended Package Manager</p>
+<p>ArchiPy recommends using <strong><code>uv</code></strong> for dependency management. It is significantly faster than <code>pip</code> and provides better dependency resolution. See the <a href="https://docs.astral.sh/uv/getting-started/installation/">uv installation guide</a> to get started.</p>
+</div>
 <h2 id="installation-methods">Installation Methods<a class="headerlink" href="#installation-methods" title="Permanent link">&para;</a></h2>
 <h3 id="using-pip">Using pip<a class="headerlink" href="#using-pip" title="Permanent link">&para;</a></h3>
 <p>Install the core library:</p>
@@ -3194,6 +3198,9 @@ autocompletion.</p>
 
 
 
+
+  
+  
 
 
 

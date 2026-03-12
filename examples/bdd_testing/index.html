@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Architecture + Python – Structured Development Simplified">
+        <meta name="description" content="Guide and examples for writing BDD tests with ArchiPy.">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
@@ -29,7 +29,7 @@
     
     
       
-        <title>Testing - ArchiPy</title>
+        <title>BDD Testing with ArchiPy - ArchiPy</title>
       
     
     
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Testing
+              BDD Testing with ArchiPy
             
           </span>
         </div>
@@ -289,7 +289,7 @@
   
     
   
-  Usage
+  Getting Started
 
       </a>
     </li>
@@ -430,7 +430,7 @@
   
     
   
-  Contributing to Docs
+  Documentation Guidelines
 
       </a>
     </li>
@@ -601,7 +601,7 @@
   <span class="md-ellipsis">
     
   
-    Usage
+    Getting Started
   
 
     
@@ -1801,6 +1801,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../adapters/redis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Redis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../adapters/postgres/" class="md-nav__link">
         
   
@@ -1885,42 +1913,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../adapters/redis/" class="md-nav__link">
+      <a href="../adapters/kafka/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Redis
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../adapters/email/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Email
+    Kafka
   
 
     
@@ -1977,34 +1977,6 @@
     
   
     MinIO
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../adapters/kafka/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Kafka
   
 
     
@@ -2109,7 +2081,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../adapters/parsian_payment/" class="md-nav__link">
+      <a href="../adapters/email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adapters/payment_gateways/" class="md-nav__link">
         
   
   
@@ -2510,6 +2510,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2746,7 +2757,7 @@
   <span class="md-ellipsis">
     
   
-    Contributing to Docs
+    Documentation Guidelines
   
 
     
@@ -2887,6 +2898,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
   
 </li>
       
@@ -3039,12 +3061,20 @@
 </span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Created user: </span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Created </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">users</span><span class="p">)</span><span class="si">}</span><span class="s2"> users total&quot;</span><span class="p">)</span>
 </span></code></pre></div>
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../error_handling/">Error Handling</a> - Exception handling patterns with proper chaining</li>
+<li><a href="../">Examples Overview</a> - Overview of all examples</li>
+</ul>
 
 
 
 
 
 
+
+  
+  
 
 
 

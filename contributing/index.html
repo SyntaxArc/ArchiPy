@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Architecture + Python – Structured Development Simplified">
+        <meta name="description" content="Guidelines for contributing to ArchiPy development.">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
@@ -289,7 +289,7 @@
   
     
   
-  Usage
+  Getting Started
 
       </a>
     </li>
@@ -430,7 +430,7 @@
   
     
   
-  Contributing to Docs
+  Documentation Guidelines
 
       </a>
     </li>
@@ -601,7 +601,7 @@
   <span class="md-ellipsis">
     
   
-    Usage
+    Getting Started
   
 
     
@@ -1795,6 +1795,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../examples/adapters/redis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Redis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../examples/adapters/postgres/" class="md-nav__link">
         
   
@@ -1879,42 +1907,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/adapters/redis/" class="md-nav__link">
+      <a href="../examples/adapters/kafka/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Redis
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../examples/adapters/email/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Email
+    Kafka
   
 
     
@@ -1971,34 +1971,6 @@
     
   
     MinIO
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../examples/adapters/kafka/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Kafka
   
 
     
@@ -2103,7 +2075,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/adapters/parsian_payment/" class="md-nav__link">
+      <a href="../examples/adapters/email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Email
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/adapters/payment_gateways/" class="md-nav__link">
         
   
   
@@ -2772,7 +2772,7 @@
   <span class="md-ellipsis">
     
   
-    Contributing to Docs
+    Documentation Guidelines
   
 
     
@@ -3000,6 +3000,8 @@ contributing to ArchiPy.</p>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>make<span class="w"> </span>install
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>make<span class="w"> </span>install-dev
 </span></code></pre></div>
+<p>!!! tip "Pre-commit Hooks"
+       Running <code>make install-dev</code> sets up pre-commit hooks that automatically run linting, formatting, and type checking on every commit. Use <code>make pre-commit</code> to run all hooks manually before opening a pull request.</p>
 <ol>
 <li><strong>Create a Branch</strong></li>
 </ol>
@@ -3112,6 +3114,9 @@ the <a href="https://github.com/SyntaxArc/ArchiPy/issues">GitHub issues page</a>
 
 
 
+
+  
+  
 
 
 
