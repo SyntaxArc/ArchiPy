@@ -15,7 +15,8 @@ uv add "archipy[elasticsearch]"
 ```
 
 !!! tip
-    The Elasticsearch adapter is an optional extra. Only install it when you need Elasticsearch support to keep your environment lean.
+The Elasticsearch adapter is an optional extra. Only install it when you need Elasticsearch support to keep your
+environment lean.
 
 ## Configuration
 

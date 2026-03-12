@@ -1,6 +1,6 @@
 ---
 title: Contributing
-description: Guidelines for contributing to ArchiPy development.
+description: Guidelines for contributing to ArchiPy development and documentation.
 ---
 
 # Contributing
@@ -30,7 +30,8 @@ contributing to ArchiPy.
    ```
 
    !!! tip "Pre-commit Hooks"
-       Running `make install-dev` sets up pre-commit hooks that automatically run linting, formatting, and type checking on every commit. Use `make pre-commit` to run all hooks manually before opening a pull request.
+   Running `make install-dev` sets up pre-commit hooks that automatically run linting, formatting, and type checking on
+   every commit. Use `make pre-commit` to run all hooks manually before opening a pull request.
 
 4. **Create a Branch**
 
@@ -39,6 +40,29 @@ contributing to ArchiPy.
    ```bash
    git checkout -b feature/your-feature-name
    ```
+
+## Development Installation
+
+To set up a full local development environment from scratch:
+
+```bash
+# Clone the repository
+git clone https://github.com/SyntaxArc/ArchiPy.git
+cd ArchiPy
+
+# Set up the project (installs UV)
+make setup
+
+# Install dependencies
+make install
+
+# Install all development tools and optional dependencies
+make install-dev
+```
+
+!!! tip "Pre-commit Hooks"
+Running `make install-dev` sets up pre-commit hooks that automatically run linting, formatting, and type checking on
+every commit. Use `make pre-commit` to run all hooks manually before opening a pull request.
 
 ## Contribution Guidelines
 
@@ -169,3 +193,82 @@ Please note that ArchiPy has a code of conduct. By participating in this project
 ## Thank You
 
 Thank you for contributing to ArchiPy! Your efforts help make the project better for everyone.
+
+## Documentation Guidelines
+
+This section outlines the standards and practices for ArchiPy documentation.
+
+### Documentation Structure
+
+- `mkdocs.yml` - Main configuration file for MkDocs
+- `docs/` - Markdown documentation files
+    - `get_started.md` - Get Started page
+    - `api_reference/` - API documentation
+    - `examples/` - Usage examples
+    - `assets/` - Images and other static assets
+
+### Format and Style
+
+- Use Markdown syntax for all documentation files
+- Follow the Google Python style for code examples
+- Include type hints in code samples (using Python 3.14 syntax)
+- Include proper exception handling with `raise ... from e` pattern
+- Group related documentation in directories
+- Link between documentation pages using relative links
+
+### Code Examples
+
+When including code examples:
+
+1. Include proper type hints using Python 3.14 syntax (`x: list[str]` not `List[str]`)
+2. Demonstrate proper error handling with exception chaining
+3. Include docstrings with Args, Returns, and Raises sections
+4. Show realistic use cases that align with ArchiPy's patterns
+5. Keep examples concise but complete enough to understand usage
+
+### Admonitions
+
+Use Material for MkDocs admonitions to highlight important information:
+
+```markdown
+!!! note
+This is a note.
+
+!!! warning
+This is a warning.
+
+!!! tip
+This is a tip.
+```
+
+### Building and Previewing Documentation
+
+Preview the documentation locally:
+
+```bash
+make docs-serve
+```
+
+Build the documentation:
+
+```bash
+make docs-build
+```
+
+Deploy to GitHub Pages:
+
+```bash
+make docs-deploy
+```
+
+### Documentation Improvement Guidelines
+
+When improving documentation:
+
+1. Ensure clarity and conciseness
+2. Include practical, runnable examples
+3. Explain "why" not just "how"
+4. Maintain logical navigation
+5. Use diagrams for complex concepts
+6. Validate that examples match the current API
+7. Test code examples to ensure they work correctly

@@ -16,7 +16,6 @@ ArchiPy provides a variety of helper utilities to simplify common development ta
 | [Metaclasses](metaclasses.md)   | Custom class behavior            | Singletons, registries           |
 | [Utils](utils.md)               | General-purpose utilities        | Date/time, file, string handlers |
 
-
 ## See Also
 
 - [API Reference - Helpers](../../api_reference/helpers/index.md) - Full helpers API documentation

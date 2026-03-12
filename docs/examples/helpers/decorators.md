@@ -280,7 +280,6 @@ async def update_user_email(user_id: UUID, new_email: str) -> "User | None":  # 
     return user
 ```
 
-
 ## See Also
 
 - [API Reference - Decorators](../../api_reference/helpers/decorators.md) - Full decorators API documentation

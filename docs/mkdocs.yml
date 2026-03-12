@@ -1,7 +1,7 @@
 site_name: ArchiPy
 site_url: https://syntaxarc.github.io/ArchiPy/
 site_description: Architecture + Python – Structured Development Simplified
-site_author:  Hossein Nejati, Mehdi Einali
+site_author: Hossein Nejati, Mehdi Einali
 repo_url: https://github.com/SyntaxArc/ArchiPy
 repo_name: SyntaxArc/ArchiPy
 edit_uri: edit/master/docs/
@@ -85,16 +85,16 @@ markdown_extensions:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
-# Plugins
+      # Plugins
 plugins:
   - search
   - autorefs
   - mkdocstrings:
-      enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
+      enabled: !ENV [ ENABLE_MKDOCSTRINGS, true ]
       default_handler: python
       handlers:
         python:
-          paths: ["../archipy"]
+          paths: [ "../archipy" ]
           options:
             # Performance optimizations
             show_source: true  # Show source code in API reference pages
@@ -120,67 +120,66 @@ plugins:
 
 # Navigation
 nav:
-  - Home: index.md
-  - Installation: installation.md
+  - Get Started: get_started.md
+  - Concepts: concepts.md
+  - Tutorials:
+      - Overview: examples/index.md
+      - Adapters:
+          - Overview: examples/adapters/index.md
+          - Redis: examples/adapters/redis.md
+          - PostgreSQL: examples/adapters/postgres.md
+          - SQLite: examples/adapters/sqlite.md
+          - StarRocks: examples/adapters/starrocks.md
+          - Kafka: examples/adapters/kafka.md
+          - Keycloak: examples/adapters/keycloak.md
+          - MinIO: examples/adapters/minio.md
+          - ScyllaDB: examples/adapters/scylladb.md
+          - Elasticsearch: examples/adapters/elasticsearch.md
+          - Temporal: examples/adapters/temporal.md
+          - Email: examples/adapters/email.md
+          - Payment Gateways: examples/adapters/payment_gateways.md
+      - Helpers:
+          - Overview: examples/helpers/index.md
+          - Decorators: examples/helpers/decorators.md
+          - Interceptors: examples/helpers/interceptors.md
+          - Metaclasses: examples/helpers/metaclasses.md
+          - Utils: examples/helpers/utils.md
+      - Configuration: examples/config_management.md
+      - Testing: examples/bdd_testing.md
+      - Error Handling: examples/error_handling.md
+      - Models:
+          - Protobuf DTOs: examples/models/protobuf_dtos.md
   - API Reference:
-    - Overview: api_reference/index.md
-    - Adapters:
-      - Overview: api_reference/adapters/index.md
-      - Base SQLAlchemy: api_reference/adapters/base.md
-      - Redis: api_reference/adapters/redis.md
-      - PostgreSQL: api_reference/adapters/postgres.md
-      - SQLite: api_reference/adapters/sqlite.md
-      - StarRocks: api_reference/adapters/starrocks.md
-      - Kafka: api_reference/adapters/kafka.md
-      - Keycloak: api_reference/adapters/keycloak.md
-      - MinIO: api_reference/adapters/minio.md
-      - ScyllaDB: api_reference/adapters/scylladb.md
-      - Elasticsearch: api_reference/adapters/elasticsearch.md
-      - Temporal: api_reference/adapters/temporal.md
-      - Email: api_reference/adapters/email.md
-      - Payment Gateways: api_reference/adapters/payment_gateways.md
-    - Configs: api_reference/configs.md
-    - Helpers:
-      - Overview: api_reference/helpers/index.md
-      - Decorators: api_reference/helpers/decorators.md
-      - Interceptors: api_reference/helpers/interceptors.md
-      - Metaclasses: api_reference/helpers/metaclasses.md
-      - Utils: api_reference/helpers/utils.md
-    - Models:
-      - Overview: api_reference/models/index.md
-      - DTOs: api_reference/models/dtos.md
-      - Entities: api_reference/models/entities.md
-      - Errors: api_reference/models/errors.md
-      - Types: api_reference/models/types.md
-  - Examples:
-    - Overview: examples/index.md
-    - Adapters:
-      - Overview: examples/adapters/index.md
-      - Redis: examples/adapters/redis.md
-      - PostgreSQL: examples/adapters/postgres.md
-      - SQLite: examples/adapters/sqlite.md
-      - StarRocks: examples/adapters/starrocks.md
-      - Kafka: examples/adapters/kafka.md
-      - Keycloak: examples/adapters/keycloak.md
-      - MinIO: examples/adapters/minio.md
-      - ScyllaDB: examples/adapters/scylladb.md
-      - Elasticsearch: examples/adapters/elasticsearch.md
-      - Temporal: examples/adapters/temporal.md
-      - Email: examples/adapters/email.md
-      - Payment Gateways: examples/adapters/payment_gateways.md
-    - Helpers:
-      - Overview: examples/helpers/index.md
-      - Decorators: examples/helpers/decorators.md
-      - Interceptors: examples/helpers/interceptors.md
-      - Metaclasses: examples/helpers/metaclasses.md
-      - Utils: examples/helpers/utils.md
-    - Configuration: examples/config_management.md
-    - Testing: examples/bdd_testing.md
-    - Error Handling: examples/error_handling.md
-    - Models:
-      - Protobuf DTOs: examples/models/protobuf_dtos.md
-  - Changelog: changelog.md
-  - Contributing: contributing.md
-  - Architecture: architecture.md
-  - Documentation Guidelines: contributing-docs.md
-  - License: license.md
+      - Overview: api_reference/index.md
+      - Adapters:
+          - Overview: api_reference/adapters/index.md
+          - Base SQLAlchemy: api_reference/adapters/base.md
+          - Redis: api_reference/adapters/redis.md
+          - PostgreSQL: api_reference/adapters/postgres.md
+          - SQLite: api_reference/adapters/sqlite.md
+          - StarRocks: api_reference/adapters/starrocks.md
+          - Kafka: api_reference/adapters/kafka.md
+          - Keycloak: api_reference/adapters/keycloak.md
+          - MinIO: api_reference/adapters/minio.md
+          - ScyllaDB: api_reference/adapters/scylladb.md
+          - Elasticsearch: api_reference/adapters/elasticsearch.md
+          - Temporal: api_reference/adapters/temporal.md
+          - Email: api_reference/adapters/email.md
+          - Payment Gateways: api_reference/adapters/payment_gateways.md
+      - Configs: api_reference/configs.md
+      - Helpers:
+          - Overview: api_reference/helpers/index.md
+          - Decorators: api_reference/helpers/decorators.md
+          - Interceptors: api_reference/helpers/interceptors.md
+          - Metaclasses: api_reference/helpers/metaclasses.md
+          - Utils: api_reference/helpers/utils.md
+      - Models:
+          - Overview: api_reference/models/index.md
+          - DTOs: api_reference/models/dtos.md
+          - Entities: api_reference/models/entities.md
+          - Errors: api_reference/models/errors.md
+          - Types: api_reference/models/types.md
+  - More:
+      - Contributing: contributing.md
+      - Changelog: changelog.md
+      - License: license.md

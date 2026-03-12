@@ -5,7 +5,8 @@ description: Practical examples for using the ArchiPy Temporal adapter.
 
 # Temporal Adapter Guide
 
-This example demonstrates how to use the Temporal adapter for workflow orchestration and activity execution with proper error handling and Python 3.14 type hints.
+This example demonstrates how to use the Temporal adapter for workflow orchestration and activity execution with proper
+error handling and Python 3.14 type hints.
 
 ## Installation
 
@@ -563,11 +564,14 @@ class RobustUserActivity(AtomicActivity[dict, dict]):
 
 ## Prometheus Metrics Integration
 
-The Temporal adapter supports comprehensive metrics collection via Prometheus when enabled in configuration. The Temporal SDK automatically emits detailed metrics about workflow and activity execution, task queue operations, and worker performance.
+The Temporal adapter supports comprehensive metrics collection via Prometheus when enabled in configuration. The
+Temporal SDK automatically emits detailed metrics about workflow and activity execution, task queue operations, and
+worker performance.
 
 ### Configuration
 
-Enable Prometheus metrics for Temporal by setting both the global Prometheus flag and the Temporal-specific metrics flag:
+Enable Prometheus metrics for Temporal by setting both the global Prometheus flag and the Temporal-specific metrics
+flag:
 
 ```python
 import logging
@@ -620,7 +624,9 @@ logger.info("Temporal adapter created with Prometheus metrics enabled")
 
 ### Available Metrics
 
-When metrics are enabled, the Temporal SDK automatically exposes comprehensive metrics at `http://localhost:8200/metrics` (or your configured port). These metrics are shared with any existing FastAPI or gRPC metrics.
+When metrics are enabled, the Temporal SDK automatically exposes comprehensive metrics at
+`http://localhost:8200/metrics` (or your configured port). These metrics are shared with any existing FastAPI or gRPC
+metrics.
 
 #### Client-Side Metrics
 
@@ -817,7 +823,9 @@ If metrics are not appearing:
 4. Ensure the `temporalio` package is installed with metrics support
 5. Check logs for any Runtime initialization errors
 
-The Temporal Runtime with Prometheus is created lazily on first client connection using a singleton manager (`TemporalRuntimeManager`) that ensures consistent Runtime configuration across all clients and workers. The singleton pattern prevents multiple Runtime instances and guarantees thread-safe access.
+The Temporal Runtime with Prometheus is created lazily on first client connection using a singleton manager (
+`TemporalRuntimeManager`) that ensures consistent Runtime configuration across all clients and workers. The singleton
+pattern prevents multiple Runtime instances and guarantees thread-safe access.
 
 ## See Also
 

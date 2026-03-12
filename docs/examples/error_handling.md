@@ -501,7 +501,6 @@ def get_data(key: str) -> Any:
         return ErrorRecovery.handle_resource_exhaustion(e)
 ```
 
-
 ## See Also
 
 - [API Reference - Errors](../api_reference/models/errors.md) - Full error model API documentation

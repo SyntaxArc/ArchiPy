@@ -48,7 +48,8 @@ config = KeycloakConfig(
 
 ## Basic Usage
 
-The Keycloak adapter provides both synchronous and asynchronous implementations. Use the synchronous adapter for standard request-response flows and the asynchronous adapter with `async/await` patterns.
+The Keycloak adapter provides both synchronous and asynchronous implementations. Use the synchronous adapter for
+standard request-response flows and the asynchronous adapter with `async/await` patterns.
 
 ## Synchronous Adapter
 

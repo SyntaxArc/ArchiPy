@@ -15,7 +15,8 @@ uv add "archipy[postgres]"
 ```
 
 !!! tip
-    The PostgreSQL adapter is an optional extra. Install it alongside any ORM extras you need, for example `archipy[postgres]`.
+The PostgreSQL adapter is an optional extra. Install it alongside any ORM extras you need, for example
+`archipy[postgres]`.
 
 ## Configuration
 
@@ -500,23 +501,23 @@ def search_users(
 
 ### Available Filter Operations
 
-| Operation | Behaviour |
-|---|---|
-| `EQUAL` | `field = value` |
-| `NOT_EQUAL` | `field != value` |
-| `LESS_THAN` | `field < value` |
-| `LESS_THAN_OR_EQUAL` | `field <= value` |
-| `GREATER_THAN` | `field > value` |
-| `GREATER_THAN_OR_EQUAL` | `field >= value` |
-| `IN_LIST` | `field IN (...)` — value must be a list |
-| `NOT_IN_LIST` | `field NOT IN (...)` — value must be a list |
-| `LIKE` | `field LIKE %value%` (case-sensitive) |
-| `ILIKE` | `field ILIKE %value%` (case-insensitive) |
-| `STARTS_WITH` | `field LIKE value%` |
-| `ENDS_WITH` | `field LIKE %value` |
-| `CONTAINS` | Alias for `ILIKE` — `field ILIKE %value%` |
-| `IS_NULL` | `field IS NULL` |
-| `IS_NOT_NULL` | `field IS NOT NULL` |
+| Operation               | Behaviour                                   |
+|-------------------------|---------------------------------------------|
+| `EQUAL`                 | `field = value`                             |
+| `NOT_EQUAL`             | `field != value`                            |
+| `LESS_THAN`             | `field < value`                             |
+| `LESS_THAN_OR_EQUAL`    | `field <= value`                            |
+| `GREATER_THAN`          | `field > value`                             |
+| `GREATER_THAN_OR_EQUAL` | `field >= value`                            |
+| `IN_LIST`               | `field IN (...)` — value must be a list     |
+| `NOT_IN_LIST`           | `field NOT IN (...)` — value must be a list |
+| `LIKE`                  | `field LIKE %value%` (case-sensitive)       |
+| `ILIKE`                 | `field ILIKE %value%` (case-insensitive)    |
+| `STARTS_WITH`           | `field LIKE value%`                         |
+| `ENDS_WITH`             | `field LIKE %value`                         |
+| `CONTAINS`              | Alias for `ILIKE` — `field ILIKE %value%`   |
+| `IS_NULL`               | `field IS NULL`                             |
+| `IS_NOT_NULL`           | `field IS NOT NULL`                         |
 
 ## Raw SQL Execution
 
@@ -872,7 +873,8 @@ worker_config = PostgresSQLAlchemyConfig(
 
 ### `DatabaseTransactionError` — serialisation failures
 
-- Under high concurrency with `ISOLATION_LEVEL="SERIALIZABLE"`, serialisation failures are expected. Add a retry loop around your transaction.
+- Under high concurrency with `ISOLATION_LEVEL="SERIALIZABLE"`, serialisation failures are expected. Add a retry loop
+  around your transaction.
 - Downgrade to `"REPEATABLE READ"` (the ArchiPy default) if strong serialisation is not required.
 
 ### Pool exhaustion (`QueuePool limit exceeded`)
@@ -884,13 +886,15 @@ worker_config = PostgresSQLAlchemyConfig(
 ### Stale connections (`OperationalError: server closed the connection`)
 
 - Enable `POOL_PRE_PING=True` (the default) — SQLAlchemy will test each connection before issuing it.
-- Reduce `POOL_RECYCLE_SECONDS` below any server or firewall idle-connection timeout (e.g., set to `300` if your load balancer drops connections idle for more than 5 minutes).
+- Reduce `POOL_RECYCLE_SECONDS` below any server or firewall idle-connection timeout (e.g., set to `300` if your load
+  balancer drops connections idle for more than 5 minutes).
 
 ### Slow queries visible in logs
 
 - Set `ECHO=True` during development to log all SQL statements.
 - Set `HIDE_PARAMETERS=False` to see query parameter values.
-- Use `QUERY_CACHE_SIZE=0` to disable the SQLAlchemy compiled-query cache if you suspect it is serving incorrect cached queries.
+- Use `QUERY_CACHE_SIZE=0` to disable the SQLAlchemy compiled-query cache if you suspect it is serving incorrect cached
+  queries.
 
 ## See Also
 

@@ -5,7 +5,8 @@ description: Complete API reference for all ArchiPy modules and packages.
 
 # API Reference
 
-Welcome to the ArchiPy API reference documentation. This section provides detailed information about all modules, classes, and functions in ArchiPy.
+Welcome to the ArchiPy API reference documentation. This section provides detailed information about all modules,
+classes, and functions in ArchiPy.
 
 ## Core Modules
 

@@ -1,9 +1,9 @@
 ---
-title: ArchiPy Architecture
+title: Concepts
 description: Overview of ArchiPy's Clean Architecture design, layer responsibilities, and a complete worked example.
 ---
 
-# ArchiPy Architecture
+# Concepts
 
 ## Overview
 
@@ -124,7 +124,8 @@ BaseConfig.set_global(config)
 
 ### Adapters and Ports
 
-ArchiPy's **domain adapters** wrap ArchiPy base adapters via composition, owning all entity construction and query logic for a single aggregate:
+ArchiPy's **domain adapters** wrap ArchiPy base adapters via composition, owning all entity construction and query logic
+for a single aggregate:
 
 ```python
 import logging
@@ -186,15 +187,16 @@ class User(BaseEntity):
 
 DTOs are split into two groups depending on which boundary they cross:
 
-| Group          | DTO Type     | Name Pattern           | Location                        | Purpose                                   |
-|----------------|--------------|------------------------|---------------------------------|-------------------------------------------|
-| **Domain**     | Input        | `{Operation}InputDTO`  | `dtos/{domain}/domain/v{n}/`    | From client to service (versioned)        |
-| **Domain**     | Output       | `{Operation}OutputDTO` | `dtos/{domain}/domain/v{n}/`    | From logic to client (versioned)          |
-| **Repository** | Command      | `{Action}CommandDTO`   | `dtos/{domain}/repository/`     | Write operations (create, update, delete) |
-| **Repository** | Query        | `{Action}QueryDTO`     | `dtos/{domain}/repository/`     | Read operations (get, search, list)       |
-| **Repository** | Response     | `{Domain}ResponseDTO`  | `dtos/{domain}/repository/`     | Internal result from adapter/repository   |
+| Group          | DTO Type | Name Pattern           | Location                     | Purpose                                   |
+|----------------|----------|------------------------|------------------------------|-------------------------------------------|
+| **Domain**     | Input    | `{Operation}InputDTO`  | `dtos/{domain}/domain/v{n}/` | From client to service (versioned)        |
+| **Domain**     | Output   | `{Operation}OutputDTO` | `dtos/{domain}/domain/v{n}/` | From logic to client (versioned)          |
+| **Repository** | Command  | `{Action}CommandDTO`   | `dtos/{domain}/repository/`  | Write operations (create, update, delete) |
+| **Repository** | Query    | `{Action}QueryDTO`     | `dtos/{domain}/repository/`  | Read operations (get, search, list)       |
+| **Repository** | Response | `{Domain}ResponseDTO`  | `dtos/{domain}/repository/`  | Internal result from adapter/repository   |
 
-Domain DTOs cross the public service boundary and are versioned (`v1/`, `v2/`). Repository DTOs are internal and never versioned.
+Domain DTOs cross the public service boundary and are versioned (`v1/`, `v2/`). Repository DTOs are internal and never
+versioned.
 
 ```python
 # models/dtos/user/domain/v1/user_dtos.py — versioned, cross service boundary
@@ -303,14 +305,20 @@ my_app/
 
 Each layer has a clear, single responsibility:
 
-- `main.py` — instantiates `UserContainer`, creates the FastAPI app, and passes the container into each `create_router` call
-- `configs/app_config.py` — defines `AppConfig`, instantiates it, and calls `BaseConfig.set_global`; importing this module is sufficient to bootstrap the global config
-- `configs/containers.py` — imports `app_config` to trigger config bootstrapping, then wires all adapters, repositories, and logic classes as thread-safe singletons
+- `main.py` — instantiates `UserContainer`, creates the FastAPI app, and passes the container into each `create_router`
+  call
+- `configs/app_config.py` — defines `AppConfig`, instantiates it, and calls `BaseConfig.set_global`; importing this
+  module is sufficient to bootstrap the global config
+- `configs/containers.py` — imports `app_config` to trigger config bootstrapping, then wires all adapters, repositories,
+  and logic classes as thread-safe singletons
 - `services/{domain}/v{n}/` — versioned FastAPI endpoints; receives input DTOs from clients and returns output DTOs
-- `logics/` — pure business rules; accepts and returns DTOs; framework-agnostic and easily unit-tested; defines the **unit of work boundary**
+- `logics/` — pure business rules; accepts and returns DTOs; framework-agnostic and easily unit-tested; defines the *
+  *unit of work boundary**
 
 !!! note "Logic layer collaboration rules"
-    Logic classes **may call other logic classes** — for example, `OrderCreationLogic` may call `UserQueryLogic` to validate that the buyer exists. Because both are decorated with `@postgres_sqlalchemy_atomic_decorator`, the nested call reuses the same open session transparently.
+Logic classes **may call other logic classes** — for example, `OrderCreationLogic` may call `UserQueryLogic` to validate
+that the buyer exists. Because both are decorated with `@postgres_sqlalchemy_atomic_decorator`, the nested call reuses
+the same open session transparently.
 
     Logic classes **must never import or call a repository from another domain directly**. Cross-domain data access must go through the other domain's logic class. This keeps domain boundaries intact and ensures all cross-domain reads go through the correct unit of work.
 
@@ -318,12 +326,15 @@ Each layer has a clear, single responsibility:
     ✅  OrderCreationLogic  →  UserQueryLogic  →  UserRepository
     ❌  OrderCreationLogic  →  UserRepository  (bypasses domain boundary)
     ```
+
 - `repositories/` — data access; delegates entity construction to the domain adapter and maps results to response DTOs
 - `adapters/` — domain-specific wrappers around ArchiPy base adapters; own entity-construction and query knowledge
 
 ### Unit of Work
 
-The **logic layer** is the unit of work boundary. Every public method on a logic class is decorated with `@postgres_sqlalchemy_atomic_decorator`, which opens a session, commits on success, and rolls back on any exception — then closes and removes the session to prevent leakage.
+The **logic layer** is the unit of work boundary. Every public method on a logic class is decorated with
+`@postgres_sqlalchemy_atomic_decorator`, which opens a session, commits on success, and rolls back on any exception —
+then closes and removes the session to prevent leakage.
 
 ```
 Service  →  Logic (@atomic)  →  Repository  →  Adapter  →  DB
@@ -334,7 +345,8 @@ This means:
 
 - A single logic method can call multiple repository operations; they all participate in one transaction.
 - If an inner call fails, the entire unit of work is rolled back automatically.
-- Nested calls to other `@atomic`-decorated methods reuse the same session (the decorator detects an already-open transaction via the `in_postgres_sqlalchemy_atomic_block` flag and skips opening a new one).
+- Nested calls to other `@atomic`-decorated methods reuse the same session (the decorator detects an already-open
+  transaction via the `in_postgres_sqlalchemy_atomic_block` flag and skips opening a new one).
 - The session is never left open after a logic method returns — regardless of success or failure.
 
 ```python

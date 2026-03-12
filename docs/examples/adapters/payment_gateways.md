@@ -5,7 +5,8 @@ description: Practical examples for using the ArchiPy Parsian Shaparak payment g
 
 # Payment Gateways Adapter Guide
 
-This example demonstrates how to use the Parsian Shaparak payment gateway adapter to process online payments in Iran with proper error handling and Python 3.14 type hints.
+This example demonstrates how to use the Parsian Shaparak payment gateway adapter to process online payments in Iran
+with proper error handling and Python 3.14 type hints.
 
 ## Installation
 
@@ -14,7 +15,8 @@ uv add "archipy[parsian-ipg]"
 ```
 
 !!! tip
-    The Parsian Shaparak payment gateway is an optional extra. Install it only when integrating with Iranian payment services.
+The Parsian Shaparak payment gateway is an optional extra. Install it only when integrating with Iranian payment
+services.
 
 ## Configuration
 

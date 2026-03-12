@@ -17,7 +17,7 @@ uv add "archipy[redis]"
 ```
 
 !!! tip
-    The Redis adapter is an optional extra. Install only when Redis support is needed.
+The Redis adapter is an optional extra. Install only when Redis support is needed.
 
 ## Configuration
 

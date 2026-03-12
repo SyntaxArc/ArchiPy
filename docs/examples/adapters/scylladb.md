@@ -5,7 +5,9 @@ description: Practical examples for using the ArchiPy ScyllaDB adapter.
 
 # ScyllaDB Adapter Guide
 
-The ScyllaDB adapter provides a clean, Pythonic interface for interacting with ScyllaDB and Apache Cassandra databases. It supports both synchronous and asynchronous operations, prepared statements, batch operations, TTL (Time To Live), and connection pool monitoring.
+The ScyllaDB adapter provides a clean, Pythonic interface for interacting with ScyllaDB and Apache Cassandra databases.
+It supports both synchronous and asynchronous operations, prepared statements, batch operations, TTL (Time To Live), and
+connection pool monitoring.
 
 ## Installation
 
@@ -16,7 +18,7 @@ uv add "archipy[scylladb]"
 ```
 
 !!! tip
-    The ScyllaDB adapter is an optional extra. Install it only when ScyllaDB or Cassandra support is required.
+The ScyllaDB adapter is an optional extra. Install it only when ScyllaDB or Cassandra support is required.
 
 ## Configuration
 
@@ -291,7 +293,8 @@ active_users = adapter.count("users", conditions={"active": True})
 logger.info(f"Active users: {active_users}")
 ```
 
-**Note:** When using conditions with `count()`, the query automatically includes `ALLOW FILTERING` to support filtering on non-primary key columns. Be aware that this may impact performance on large tables.
+**Note:** When using conditions with `count()`, the query automatically includes `ALLOW FILTERING` to support filtering
+on non-primary key columns. Be aware that this may impact performance on large tables.
 
 ### Check if Row Exists
 
@@ -307,7 +310,8 @@ if adapter.exists("users", {"username": "alice", "active": True}):
     logger.info("Active user 'alice' exists")
 ```
 
-**Note:** The `exists()` method uses `ALLOW FILTERING` to support checking conditions on any column. For best performance, use primary key columns in the conditions when possible.
+**Note:** The `exists()` method uses `ALLOW FILTERING` to support checking conditions on any column. For best
+performance, use primary key columns in the conditions when possible.
 
 ## Prepared Statements
 
@@ -723,6 +727,7 @@ total_pages = (adapter.count("items") + page_size - 1) // page_size
 ```
 
 **Performance Tip:** When using `count()` or `exists()` with conditions on non-primary key columns, consider:
+
 - Creating a secondary index for frequently queried columns
 - Using materialized views for common query patterns
 - Limiting use on large tables in production

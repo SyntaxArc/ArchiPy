@@ -11,7 +11,7 @@ plugins:
       default_handler: python
       handlers:
         python:
-          paths: ["../archipy"]
+          paths: [ "../archipy" ]
           options:
             # Maximum performance for local dev
             show_source: false

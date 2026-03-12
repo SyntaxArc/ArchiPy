@@ -5,7 +5,8 @@ description: Practical examples for using the ArchiPy StarRocks adapter.
 
 # StarRocks Adapter Guide
 
-This example demonstrates how to use the StarRocks adapter for analytical database operations with proper exception handling and Python 3.14 type hints.
+This example demonstrates how to use the StarRocks adapter for analytical database operations with proper exception
+handling and Python 3.14 type hints.
 
 ## Installation
 
@@ -271,7 +272,8 @@ def get_user_by_id(user_id: UUID) -> User | None:
 
 ## Advanced Queries
 
-StarRocks is optimized for analytical queries. Use `get_session()` for direct SQLAlchemy session access to run complex queries:
+StarRocks is optimized for analytical queries. Use `get_session()` for direct SQLAlchemy session access to run complex
+queries:
 
 ```python
 import logging

@@ -5,7 +5,8 @@ description: Practical examples for using ArchiPy Protobuf Data Transfer Objects
 
 # Protobuf DTOs
 
-This guide demonstrates how to use the `BaseProtobufDTO` class to create Data Transfer Objects that can seamlessly convert between Pydantic models and Google Protocol Buffer messages.
+This guide demonstrates how to use the `BaseProtobufDTO` class to create Data Transfer Objects that can seamlessly
+convert between Pydantic models and Google Protocol Buffer messages.
 
 ## Overview
 
@@ -446,17 +447,17 @@ class TestUserProtobufDTO:
 ### Common Issues
 
 1. **ImportError: No module named 'google.protobuf'**
-   - Install the protobuf dependency: `uv add google-protobuf`
+    - Install the protobuf dependency: `uv add google-protobuf`
 
 2. **NotImplementedError: Class is not mapped to a proto class**
-   - Set the `_proto_class` attribute in your DTO
+    - Set the `_proto_class` attribute in your DTO
 
 3. **TypeError: ClassVar parameter cannot include type variables**
-   - Use concrete types instead of type variables in `ClassVar`
+    - Use concrete types instead of type variables in `ClassVar`
 
 4. **Validation errors during conversion**
-   - Ensure your protobuf message fields match your DTO fields
-   - Check field types and required/optional status
+    - Ensure your protobuf message fields match your DTO fields
+    - Check field types and required/optional status
 
 ### Debug Tips
 
@@ -476,7 +477,6 @@ logger.info(f"Protobuf available: {PROTOBUF_AVAILABLE}")
 user_dto = UserProtobufDTO(id="123", username="test")  # type: ignore[name-defined]
 logger.info(user_dto.model_dump())
 ```
-
 
 ## See Also
 

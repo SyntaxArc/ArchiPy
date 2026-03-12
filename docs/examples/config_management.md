@@ -273,7 +273,6 @@ redis_adapter = RedisAdapter()
 
 5. **Keep configurations centralized**: Avoid creating multiple configuration sources
 
-
 ## See Also
 
 - [API Reference - Configs](../api_reference/configs.md) - Full configuration API documentation

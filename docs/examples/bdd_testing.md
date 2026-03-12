@@ -156,7 +156,6 @@ def step_impl(context: Any) -> None:  # noqa: F811
     logger.info(f"Created {len(context.users)} users total")
 ```
 
-
 ## See Also
 
 - [Error Handling](error_handling.md) - Exception handling patterns with proper chaining
