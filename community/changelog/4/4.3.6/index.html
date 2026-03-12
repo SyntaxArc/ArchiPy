@@ -6,13 +6,13 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Release notes for ArchiPy 4.3.5">
+        <meta name="description" content="Release notes for ArchiPy 4.3.6">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.3.5/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.3.6/">
       
       
       
@@ -25,7 +25,7 @@
     
     
       
-        <title>Changelog 4.3.5 - ArchiPy</title>
+        <title>Changelog 4.3.6 - ArchiPy</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#435-2026-03-10" class="md-skip">
+        <a href="#436-2026-03-13" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Changelog 4.3.5
+              Changelog 4.3.6
             
           </span>
         </div>
@@ -2982,6 +2982,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Added">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#helpers-chore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helpers - Chore
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2994,21 +3022,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#adapters-kafka" class="md-nav__link">
+  <a href="#chore-ci" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adapters - Kafka
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#helpers-utils" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Helpers - Utils
+        Chore - CI
       
     </span>
   </a>
@@ -3033,32 +3050,38 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#adapters-testing" class="md-nav__link">
+  <a href="#adapters-sqlalchemy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adapters - Testing
+        Adapters - SQLAlchemy
       
     </span>
   </a>
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#tests-redis" class="md-nav__link">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chore" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tests - Redis
+        Chore
       
     </span>
   </a>
   
-</li>
+    <nav class="md-nav" aria-label="Chore">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#dependencies" class="md-nav__link">
+  <a href="#docs-documentation-overhaul" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Dependencies
+        Docs - Documentation Overhaul
       
     </span>
   </a>
@@ -3087,7 +3110,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/4/4.3.5.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/4/4.3.6.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3095,53 +3118,61 @@
   
 
 
-<h1 id="435-2026-03-10">4.3.5 — 2026-03-10<a class="headerlink" href="#435-2026-03-10" title="Permanent link">&para;</a></h1>
-<p><a href="../4.3.6/">← 4.3.6</a> | <a href="../4.3.4/">4.3.4 →</a> | <a href="../">↑ 4.x series</a></p>
-<h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
-<h3 id="adapters-kafka">Adapters - Kafka<a class="headerlink" href="#adapters-kafka" title="Permanent link">&para;</a></h3>
+<h1 id="436-2026-03-13">4.3.6 — 2026-03-13<a class="headerlink" href="#436-2026-03-13" title="Permanent link">&para;</a></h1>
+<p><a href="../4.3.5/">← 4.3.5</a> | <a href="../">↑ 4.x series</a></p>
+<h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
+<h3 id="helpers-chore">Helpers - Chore<a class="headerlink" href="#helpers-chore" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>SSL Config Typing</strong> - Improved type safety and optional-field handling for SSL configuration in all three Kafka
-  adapters (<code>KafkaAdminAdapter</code>, <code>KafkaConsumerAdapter</code>, <code>KafkaProducerAdapter</code>)<ul>
-<li>Replaced dict merge (<code>|=</code>) with explicit per-key assignment to satisfy the <code>dict[str, str | int | float]</code> type
-  annotation</li>
-<li>Optional SSL fields (<code>SASL_MECHANISM</code>, <code>SSL_CERT_FILE</code>, <code>SSL_KEY_FILE</code>) now fall back to <code>""</code> when <code>None</code>,
-  preventing type errors</li>
-<li>Config dicts are now explicitly typed as <code>dict[str, str | int | float]</code> across all three adapters</li>
+<li><strong>Documentation Cursor Rule</strong> - Added a dedicated Cursor rule for documentation standards under <code>docs/**/*.md</code>.<ul>
+<li>Enforces Google-style docstrings, <code>snake_case</code> filenames, required page structure, and code example conventions
+  across all documentation files</li>
 </ul>
 </li>
 </ul>
-<h3 id="helpers-utils">Helpers - Utils<a class="headerlink" href="#helpers-utils" title="Permanent link">&para;</a></h3>
+<h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
+<h3 id="chore-ci">Chore - CI<a class="headerlink" href="#chore-ci" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>gRPC Interceptors Type Annotation</strong> - Added explicit <code>list[grpc.ServerInterceptor]</code> type annotation to the
-  interceptors list in <code>AppUtils.create_async_grpc_app</code></li>
+<li><strong>Docs Deploy Trigger on Source Changes</strong> - Extended the <code>deploy-docs.yml</code> workflow to also trigger on changes to
+  <code>archipy/**</code> source files, not only <code>docs/**</code>.<ul>
+<li>Ensures the published documentation is rebuilt whenever adapter or helper code changes</li>
+</ul>
+</li>
+<li><strong>ReadTheDocs Build Configuration</strong> - Repaired the <code>.readthedocs.yaml</code> configuration to restore a functional
+  ReadTheDocs build.<ul>
+<li>Simplified configuration to match current ReadTheDocs requirements and removed stale options</li>
+</ul>
+</li>
 </ul>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
-<h3 id="adapters-testing">Adapters - Testing<a class="headerlink" href="#adapters-testing" title="Permanent link">&para;</a></h3>
+<h3 id="adapters-sqlalchemy">Adapters - SQLAlchemy<a class="headerlink" href="#adapters-sqlalchemy" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>ScyllaDB Test Container</strong> - Lowered minimum <code>aio-max-nr</code> requirement from <code>131072</code> to <code>65536</code><ul>
-<li>Reduces the kernel parameter requirement for running ScyllaDB in CI and local environments</li>
-<li>Reflects the actual minimum needed by the Seastar framework in containerised setups</li>
+<li><strong>Filter Value Type Union Expansion</strong> - Broadened the <code>value</code> parameter type union in
+  <code>SQLAlchemyFilterMixin._apply_filter</code> and <code>_validate_list_operation</code>.<ul>
+<li>Added <code>int</code>, <code>Decimal</code>, <code>datetime</code>, <code>date</code>, and <code>Enum</code> to the accepted type union alongside the existing
+  <code>str | float | bool | list | UUID | None</code></li>
+<li>Allows filtering on numeric, temporal, and enum-typed columns without requiring a cast at the call site</li>
 </ul>
 </li>
 </ul>
-<h3 id="tests-redis">Tests - Redis<a class="headerlink" href="#tests-redis" title="Permanent link">&para;</a></h3>
+<h2 id="chore">Chore<a class="headerlink" href="#chore" title="Permanent link">&para;</a></h2>
+<h3 id="docs-documentation-overhaul">Docs - Documentation Overhaul<a class="headerlink" href="#docs-documentation-overhaul" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Unified Redis BDD Tests</strong> - Consolidated Redis mock and container tests into a single feature file<ul>
-<li>Renamed <code>redis_mock.feature</code> → <code>redis_adapter.feature</code> and <code>redis_mock_steps.py</code> → <code>redis_adapter_steps.py</code></li>
-<li>Single feature now covers both mock (fakeredis) and real container scenarios</li>
+<li><strong>API Reference Restructure</strong> - Split the monolithic <code>api_reference.md</code> into per-module subdirectories (<code>adapters/</code>,
+  <code>helpers/</code>) with individual pages for each adapter and helper module.</li>
+<li><strong>Adapter Example Pages</strong> - Revamped all adapter example pages with complete runnable snippets and standardised
+  sections (Installation, Configuration, Basic Usage, See Also).<ul>
+<li>Added Elasticsearch example guide and expanded PostgreSQL and configs examples</li>
+<li>Consolidated payment gateway documentation into a single page</li>
 </ul>
 </li>
-</ul>
-<h3 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>cachetools</strong> bumped from <code>&gt;=7.0.1</code> to <code>&gt;=7.0.5</code> (affects <code>cache</code>, <code>keycloak</code>, <code>minio</code>, <code>scylladb</code> extras)</li>
-<li><strong>fakeredis</strong> bumped from <code>&gt;=2.34.0</code> to <code>&gt;=2.34.1</code></li>
-<li><strong>fastapi</strong> bumped from <code>&gt;=0.133.0</code> to <code>&gt;=0.135.1</code></li>
-<li><strong>grpcio</strong> / <strong>grpcio-health-checking</strong> floor lowered from <code>&gt;=1.78.1</code> to <code>&gt;=1.78.0</code></li>
-<li><strong>confluent-kafka</strong> bumped from <code>&gt;=2.13.0</code> to <code>&gt;=2.13.2</code></li>
-<li><strong>boto3</strong> (minio extra) bumped from <code>&gt;=1.42.55</code> to <code>&gt;=1.42.64</code></li>
-<li><strong>sqlalchemy</strong> / <strong>sqlalchemy[asyncio]</strong> bumped from <code>&gt;=2.0.46</code> to <code>&gt;=2.0.47</code></li>
-<li><strong>bandit</strong> (dev) bumped from <code>&gt;=1.9.3</code> to <code>&gt;=1.9.4</code></li>
+<li><strong>New Example Pages</strong> - Added <code>dependency_injection.md</code> and <code>error_handling.md</code> example guides.</li>
+<li><strong>Getting Started</strong> - Overhauled the quickstart guide and complete user example to reflect <code>manage.py</code> integration;
+  updated project structure documentation with enhanced <code>run</code> command options.</li>
+<li><strong>Navigation</strong> - Restructured and expanded <code>mkdocs.yml</code> navigation; added <code>404.md</code> and <code>CODE_OF_CONDUCT.md</code> pages.</li>
+<li><strong>Architecture &amp; Concepts</strong> - Updated architecture and concepts documentation; split the large <code>concepts.md</code> into
+  focused topic pages.</li>
+<li><strong>Installation Guide</strong> - Created a dedicated installation guide and streamlined the prerequisites section.</li>
+<li><strong>Changelog</strong> - Added Cursor rules for changelog standards and restructured changelog organisation and navigation.</li>
 </ul>
 
 
