@@ -13,9 +13,9 @@ Before starting, ensure you have:
 
   Check your version with:
 
-    ```bash
-    python --version
-    ```
+  ```bash
+  python --version
+  ```
 
   If needed, [download Python 3.14+](https://www.python.org/downloads/).
 
@@ -25,7 +25,7 @@ Before starting, ensure you have:
   the [official guide](https://docs.astral.sh/uv/getting-started/installation/).
 
 !!! tip "Recommended Package Manager"
-    ArchiPy recommends **`uv`** — it is significantly faster than `pip` and provides better dependency resolution.
+ArchiPy recommends **`uv`** — it is significantly faster than `pip` and provides better dependency resolution.
 
 ## Install ArchiPy
 
@@ -101,9 +101,9 @@ If issues arise, verify:
 4. Database-specific dependencies are installed if using database adapters
 
 !!! tip "IDE Integration"
-    For the best development experience, use an IDE that supports Python type hints, such as PyCharm or VS Code with the
-    Python extension. The project uses modern Python type hints and benefits from IDE support for type checking and
-    autocompletion.
+For the best development experience, use an IDE that supports Python type hints, such as PyCharm or VS Code with the
+Python extension. The project uses modern Python type hints and benefits from IDE support for type checking and
+autocompletion.
 
 ## See Also
 

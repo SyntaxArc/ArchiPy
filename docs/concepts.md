@@ -352,6 +352,7 @@ This means:
 ```python
 from archipy.helpers.decorators.sqlalchemy_atomic import postgres_sqlalchemy_atomic_decorator
 
+
 class UserRegistrationLogic:
     @postgres_sqlalchemy_atomic_decorator
     def register_user(self, input_dto: UserRegistrationInputDTO) -> UserRegistrationOutputDTO:
@@ -373,6 +374,7 @@ from archipy.configs.base_config import BaseConfig
 class AppConfig(BaseConfig):
     """Application-specific configuration. Add custom fields here."""
     ...
+
 
 config = AppConfig()
 BaseConfig.set_global(config)
