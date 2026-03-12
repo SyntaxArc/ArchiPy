@@ -6,37 +6,37 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Practical examples for using ArchiPy helper interceptors.">
+        <meta name="description" content="Prerequisites, installation methods, and optional extras for ArchiPy.">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/examples/helpers/interceptors/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/installation/">
       
       
-        <link rel="prev" href="../decorators/">
+        <link rel="prev" href="..">
       
       
-        <link rel="next" href="../metaclasses/">
+        <link rel="next" href="../concepts/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/logo.jpg">
+      <link rel="icon" href="../assets/logo.jpg">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
     
     
       
-        <title>Interceptor Examples - ArchiPy</title>
+        <title>Installation - ArchiPy</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -55,9 +55,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#interceptor-examples" class="md-skip">
+        <a href="#installation" class="md-skip">
           Skip to content
         </a>
       
@@ -102,9 +102,9 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="ArchiPy" class="md-header__button md-logo" aria-label="ArchiPy" data-md-component="logo">
+    <a href=".." title="ArchiPy" class="md-header__button md-logo" aria-label="ArchiPy" data-md-component="logo">
       
-  <img src="../../../assets/logo.jpg" alt="logo">
+  <img src="../assets/logo.jpg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Interceptor Examples
+              Installation
             
           </span>
         </div>
@@ -224,11 +224,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../.." class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href=".." class="md-tabs__link">
           
   
   
@@ -246,13 +248,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../examples/" class="md-tabs__link">
           
   
   
@@ -274,7 +274,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../api_reference/" class="md-tabs__link">
+        <a href="../api_reference/" class="md-tabs__link">
           
   
   
@@ -296,7 +296,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../contributing/" class="md-tabs__link">
+        <a href="../contributing/" class="md-tabs__link">
           
   
   
@@ -338,9 +338,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="ArchiPy" class="md-nav__button md-logo" aria-label="ArchiPy" data-md-component="logo">
+    <a href=".." title="ArchiPy" class="md-nav__button md-logo" aria-label="ArchiPy" data-md-component="logo">
       
-  <img src="../../../assets/logo.jpg" alt="logo">
+  <img src="../assets/logo.jpg" alt="logo">
 
     </a>
     ArchiPy
@@ -364,6 +364,8 @@
       
   
   
+    
+  
   
   
     
@@ -381,22 +383,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../.." class="md-nav__link ">
+            <a href=".." class="md-nav__link ">
               
   
   
@@ -414,13 +417,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_1">
             <span class="md-nav__icon md-icon"></span>
             
@@ -437,10 +440,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../installation/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -456,6 +486,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-archipy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install ArchiPy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -468,7 +573,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/" class="md-nav__link">
+      <a href="../concepts/" class="md-nav__link">
         
   
   
@@ -500,8 +605,6 @@
       
   
   
-    
-  
   
   
     
@@ -527,23 +630,22 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../" class="md-nav__link ">
+            <a href="../examples/" class="md-nav__link ">
               
   
   
@@ -561,13 +663,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -623,13 +725,10 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
@@ -639,7 +738,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../adapters/" class="md-nav__link ">
+            <a href="../examples/adapters/" class="md-nav__link ">
               
   
   
@@ -657,7 +756,7 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2_2" id="__nav_2_2_label" tabindex="">
+              <label class="md-nav__link " for="__nav_2_2" id="__nav_2_2_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
@@ -683,7 +782,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../adapters/redis/" class="md-nav__link">
+      <a href="../examples/adapters/redis/" class="md-nav__link">
         
   
   
@@ -711,7 +810,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../adapters/postgres/" class="md-nav__link">
+      <a href="../examples/adapters/postgres/" class="md-nav__link">
         
   
   
@@ -739,7 +838,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../adapters/sqlite/" class="md-nav__link">
+      <a href="../examples/adapters/sqlite/" class="md-nav__link">
         
   
   
@@ -767,7 +866,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../adapters/starrocks/" class="md-nav__link">
+      <a href="../examples/adapters/starrocks/" class="md-nav__link">
         
   
   
@@ -795,7 +894,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../adapters/kafka/" class="md-nav__link">
+      <a href="../examples/adapters/kafka/" class="md-nav__link">
         
   
   
@@ -823,7 +922,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../adapters/keycloak/" class="md-nav__link">
+      <a href="../examples/adapters/keycloak/" class="md-nav__link">
         
   
   
@@ -851,7 +950,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../adapters/minio/" class="md-nav__link">
+      <a href="../examples/adapters/minio/" class="md-nav__link">
         
   
   
@@ -879,7 +978,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../adapters/scylladb/" class="md-nav__link">
+      <a href="../examples/adapters/scylladb/" class="md-nav__link">
         
   
   
@@ -907,7 +1006,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../adapters/elasticsearch/" class="md-nav__link">
+      <a href="../examples/adapters/elasticsearch/" class="md-nav__link">
         
   
   
@@ -935,7 +1034,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../adapters/temporal/" class="md-nav__link">
+      <a href="../examples/adapters/temporal/" class="md-nav__link">
         
   
   
@@ -963,7 +1062,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../adapters/email/" class="md-nav__link">
+      <a href="../examples/adapters/email/" class="md-nav__link">
         
   
   
@@ -991,7 +1090,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../adapters/payment_gateways/" class="md-nav__link">
+      <a href="../examples/adapters/payment_gateways/" class="md-nav__link">
         
   
   
@@ -1024,8 +1123,6 @@
                 
   
   
-    
-  
   
   
     
@@ -1049,21 +1146,20 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_3" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../examples/helpers/" class="md-nav__link ">
               
   
   
@@ -1081,13 +1177,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2_3" id="__nav_2_3_label" tabindex="">
+              <label class="md-nav__link " for="__nav_2_3" id="__nav_2_3_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1107,7 +1203,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../decorators/" class="md-nav__link">
+      <a href="../examples/helpers/decorators/" class="md-nav__link">
         
   
   
@@ -1132,37 +1228,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Interceptors
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../examples/helpers/interceptors/" class="md-nav__link">
         
   
   
@@ -1178,115 +1247,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#grpc-interceptors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        gRPC Interceptors
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="gRPC Interceptors">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#tracing-interceptor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tracing Interceptor
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#metrics-interceptor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metrics Interceptor
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#fastapi-interceptors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        FastAPI Interceptors
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="FastAPI Interceptors">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#metrics-middleware" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metrics Middleware
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#using-multiple-interceptors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using Multiple Interceptors
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See Also
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1299,7 +1259,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../metaclasses/" class="md-nav__link">
+      <a href="../examples/helpers/metaclasses/" class="md-nav__link">
         
   
   
@@ -1327,7 +1287,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../utils/" class="md-nav__link">
+      <a href="../examples/helpers/utils/" class="md-nav__link">
         
   
   
@@ -1363,7 +1323,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../config_management/" class="md-nav__link">
+      <a href="../examples/config_management/" class="md-nav__link">
         
   
   
@@ -1391,7 +1351,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../bdd_testing/" class="md-nav__link">
+      <a href="../examples/bdd_testing/" class="md-nav__link">
         
   
   
@@ -1419,7 +1379,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../error_handling/" class="md-nav__link">
+      <a href="../examples/error_handling/" class="md-nav__link">
         
   
   
@@ -1457,13 +1417,10 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
@@ -1472,7 +1429,7 @@
         <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_7" >
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
             
   
   
@@ -1508,7 +1465,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../models/protobuf_dtos/" class="md-nav__link">
+      <a href="../examples/models/protobuf_dtos/" class="md-nav__link">
         
   
   
@@ -1584,7 +1541,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../api_reference/" class="md-nav__link ">
+            <a href="../api_reference/" class="md-nav__link ">
               
   
   
@@ -1679,7 +1636,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../api_reference/adapters/" class="md-nav__link ">
+            <a href="../api_reference/adapters/" class="md-nav__link ">
               
   
   
@@ -1723,7 +1680,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/adapters/base/" class="md-nav__link">
+      <a href="../api_reference/adapters/base/" class="md-nav__link">
         
   
   
@@ -1751,7 +1708,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/adapters/redis/" class="md-nav__link">
+      <a href="../api_reference/adapters/redis/" class="md-nav__link">
         
   
   
@@ -1779,7 +1736,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/adapters/postgres/" class="md-nav__link">
+      <a href="../api_reference/adapters/postgres/" class="md-nav__link">
         
   
   
@@ -1807,7 +1764,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/adapters/sqlite/" class="md-nav__link">
+      <a href="../api_reference/adapters/sqlite/" class="md-nav__link">
         
   
   
@@ -1835,7 +1792,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/adapters/starrocks/" class="md-nav__link">
+      <a href="../api_reference/adapters/starrocks/" class="md-nav__link">
         
   
   
@@ -1863,7 +1820,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/adapters/kafka/" class="md-nav__link">
+      <a href="../api_reference/adapters/kafka/" class="md-nav__link">
         
   
   
@@ -1891,7 +1848,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/adapters/keycloak/" class="md-nav__link">
+      <a href="../api_reference/adapters/keycloak/" class="md-nav__link">
         
   
   
@@ -1919,7 +1876,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/adapters/minio/" class="md-nav__link">
+      <a href="../api_reference/adapters/minio/" class="md-nav__link">
         
   
   
@@ -1947,7 +1904,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/adapters/scylladb/" class="md-nav__link">
+      <a href="../api_reference/adapters/scylladb/" class="md-nav__link">
         
   
   
@@ -1975,7 +1932,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/adapters/elasticsearch/" class="md-nav__link">
+      <a href="../api_reference/adapters/elasticsearch/" class="md-nav__link">
         
   
   
@@ -2003,7 +1960,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/adapters/temporal/" class="md-nav__link">
+      <a href="../api_reference/adapters/temporal/" class="md-nav__link">
         
   
   
@@ -2031,7 +1988,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/adapters/email/" class="md-nav__link">
+      <a href="../api_reference/adapters/email/" class="md-nav__link">
         
   
   
@@ -2059,7 +2016,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/adapters/payment_gateways/" class="md-nav__link">
+      <a href="../api_reference/adapters/payment_gateways/" class="md-nav__link">
         
   
   
@@ -2095,7 +2052,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/configs/" class="md-nav__link">
+      <a href="../api_reference/configs/" class="md-nav__link">
         
   
   
@@ -2156,7 +2113,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../api_reference/helpers/" class="md-nav__link ">
+            <a href="../api_reference/helpers/" class="md-nav__link ">
               
   
   
@@ -2200,7 +2157,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/helpers/decorators/" class="md-nav__link">
+      <a href="../api_reference/helpers/decorators/" class="md-nav__link">
         
   
   
@@ -2228,7 +2185,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/helpers/interceptors/" class="md-nav__link">
+      <a href="../api_reference/helpers/interceptors/" class="md-nav__link">
         
   
   
@@ -2256,7 +2213,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/helpers/metaclasses/" class="md-nav__link">
+      <a href="../api_reference/helpers/metaclasses/" class="md-nav__link">
         
   
   
@@ -2284,7 +2241,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/helpers/utils/" class="md-nav__link">
+      <a href="../api_reference/helpers/utils/" class="md-nav__link">
         
   
   
@@ -2353,7 +2310,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../api_reference/models/" class="md-nav__link ">
+            <a href="../api_reference/models/" class="md-nav__link ">
               
   
   
@@ -2397,7 +2354,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/models/dtos/" class="md-nav__link">
+      <a href="../api_reference/models/dtos/" class="md-nav__link">
         
   
   
@@ -2425,7 +2382,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/models/entities/" class="md-nav__link">
+      <a href="../api_reference/models/entities/" class="md-nav__link">
         
   
   
@@ -2453,7 +2410,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/models/errors/" class="md-nav__link">
+      <a href="../api_reference/models/errors/" class="md-nav__link">
         
   
   
@@ -2481,7 +2438,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../api_reference/models/types/" class="md-nav__link">
+      <a href="../api_reference/models/types/" class="md-nav__link">
         
   
   
@@ -2586,7 +2543,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../contributing/" class="md-nav__link">
+      <a href="../contributing/" class="md-nav__link">
         
   
   
@@ -2614,7 +2571,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../changelog/" class="md-nav__link">
+      <a href="../changelog/" class="md-nav__link">
         
   
   
@@ -2642,7 +2599,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../license/" class="md-nav__link">
+      <a href="../license/" class="md-nav__link">
         
   
   
@@ -2697,77 +2654,43 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#grpc-interceptors" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
-        gRPC Interceptors
+        Prerequisites
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="gRPC Interceptors">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#tracing-interceptor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tracing Interceptor
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#metrics-interceptor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metrics Interceptor
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#fastapi-interceptors" class="md-nav__link">
+  <a href="#install-archipy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        FastAPI Interceptors
+        Install ArchiPy
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="FastAPI Interceptors">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#metrics-middleware" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metrics Middleware
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#using-multiple-interceptors" class="md-nav__link">
+  <a href="#optional-dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Using Multiple Interceptors
+        Optional Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
       
     </span>
   </a>
@@ -2802,7 +2725,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/examples/helpers/interceptors.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/installation.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2810,129 +2733,221 @@
   
 
 
-<h1 id="interceptor-examples">Interceptor Examples<a class="headerlink" href="#interceptor-examples" title="Permanent link">&para;</a></h1>
-<p>This page demonstrates how to use ArchiPy's interceptors for cross-cutting concerns like tracing, metrics, and error
-handling.</p>
-<h2 id="grpc-interceptors">gRPC Interceptors<a class="headerlink" href="#grpc-interceptors" title="Permanent link">&para;</a></h2>
-<h3 id="tracing-interceptor">Tracing Interceptor<a class="headerlink" href="#tracing-interceptor" title="Permanent link">&para;</a></h3>
-<p>The tracing interceptor adds request/response tracking to gRPC services:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent</span><span class="w"> </span><span class="kn">import</span> <span class="n">futures</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.grpc.trace.server_interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">GrpcServerTraceInterceptor</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">InternalError</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># Create a gRPC server with tracing</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_grpc_server</span><span class="p">(</span><span class="n">max_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">grpc</span><span class="o">.</span><span class="n">Server</span><span class="p">:</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a gRPC server with tracing interceptor.</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="sd">        max_workers: Maximum worker threads for the server</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="sd">        Configured gRPC server instance</span>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>        <span class="c1"># Initialize the tracing interceptor</span>
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>        <span class="n">trace_interceptor</span> <span class="o">=</span> <span class="n">GrpcServerTraceInterceptor</span><span class="p">()</span>
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>        <span class="c1"># Create the server with the interceptor</span>
-</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>        <span class="n">server</span> <span class="o">=</span> <span class="n">grpc</span><span class="o">.</span><span class="n">server</span><span class="p">(</span>
-</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>            <span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">max_workers</span><span class="p">),</span>
-</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>            <span class="n">interceptors</span><span class="o">=</span><span class="p">[</span><span class="n">trace_interceptor</span><span class="p">],</span>
-</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>        <span class="p">)</span>
-</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>        <span class="k">return</span> <span class="n">server</span>
-</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>        <span class="k">raise</span> <span class="n">InternalError</span><span class="p">(</span><span class="n">additional_data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;detail&quot;</span><span class="p">:</span> <span class="s2">&quot;Failed to create gRPC server&quot;</span><span class="p">})</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
-</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>
-</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>
-</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="c1"># Usage</span>
-</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="n">server</span> <span class="o">=</span> <span class="n">create_grpc_server</span><span class="p">()</span>
-</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="c1"># Add your services to the server</span>
-</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="c1"># my_service.add_to_server(server)</span>
-</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="c1"># server.add_insecure_port(&#39;[::]:50051&#39;)</span>
-</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="c1"># server.start()</span>
+<h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<p>Before starting, ensure you have:</p>
+<ul>
+<li><strong>Python 3.14 or higher</strong></li>
+</ul>
+<p>Check your version with:</p>
+<div class="language-text highlight"><pre><span></span><code>```bash
+python --version
+```
+</code></pre></div>
+<p>If needed, <a href="https://www.python.org/downloads/">download Python 3.14+</a>.</p>
+<ul>
+<li><strong>uv</strong> (recommended package manager)</li>
+</ul>
+<p>uv is a fast Python package installer and resolver. Install it via
+  the <a href="https://docs.astral.sh/uv/getting-started/installation/">official guide</a>.</p>
+<div class="admonition tip">
+<p class="admonition-title">Recommended Package Manager</p>
+<p>ArchiPy recommends <strong><code>uv</code></strong> — it is significantly faster than <code>pip</code> and provides better dependency resolution.</p>
+</div>
+<h2 id="install-archipy">Install ArchiPy<a class="headerlink" href="#install-archipy" title="Permanent link">&para;</a></h2>
+<p>Install the core library:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">uv</label><label for="__tabbed_1_2">pip</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>add<span class="w"> </span>archipy
 </span></code></pre></div>
-<h3 id="metrics-interceptor">Metrics Interceptor<a class="headerlink" href="#metrics-interceptor" title="Permanent link">&para;</a></h3>
-<p>The metrics interceptor records gRPC call durations and counts for Prometheus:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent</span><span class="w"> </span><span class="kn">import</span> <span class="n">futures</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.grpc.metric.server_interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">GrpcServerMetricInterceptor</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.grpc.trace.server_interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">GrpcServerTraceInterceptor</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_grpc_server_with_metrics</span><span class="p">(</span><span class="n">max_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">grpc</span><span class="o">.</span><span class="n">Server</span><span class="p">:</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a gRPC server with both tracing and metrics interceptors.</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="sd">    Args:</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="sd">        max_workers: Maximum worker threads for the server</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="sd">    Returns:</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="sd">        Configured gRPC server instance</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="n">interceptors</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>        <span class="n">GrpcServerTraceInterceptor</span><span class="p">(),</span>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>        <span class="n">GrpcServerMetricInterceptor</span><span class="p">(),</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    <span class="p">]</span>
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="k">return</span> <span class="n">grpc</span><span class="o">.</span><span class="n">server</span><span class="p">(</span>
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>        <span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">max_workers</span><span class="p">),</span>
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>        <span class="n">interceptors</span><span class="o">=</span><span class="n">interceptors</span><span class="p">,</span>
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>    <span class="p">)</span>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>archipy
 </span></code></pre></div>
-<h2 id="fastapi-interceptors">FastAPI Interceptors<a class="headerlink" href="#fastapi-interceptors" title="Permanent link">&para;</a></h2>
-<h3 id="metrics-middleware">Metrics Middleware<a class="headerlink" href="#metrics-middleware" title="Permanent link">&para;</a></h3>
-<p><code>FastAPIMetricInterceptor</code> records request durations and counts for Prometheus:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.metric.interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPIMetricInterceptor</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># Create a FastAPI app</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># Add the metrics middleware</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span><span class="n">FastAPIMetricInterceptor</span><span class="p">)</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1"># Example endpoint — duration and status will be recorded automatically</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/process&quot;</span><span class="p">)</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">process_data</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span> <span class="s2">&quot;result&quot;</span><span class="p">:</span> <span class="s2">&quot;processed&quot;</span><span class="p">}</span>
+</div>
+</div>
+</div>
+<p>With optional extras (install only what you need):</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">uv</label><label for="__tabbed_2_2">pip</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[postgres,sqlalchemy,starrocks,redis,keycloak,minio,kafka]&quot;</span>
 </span></code></pre></div>
-<h2 id="using-multiple-interceptors">Using Multiple Interceptors<a class="headerlink" href="#using-multiple-interceptors" title="Permanent link">&para;</a></h2>
-<p>Combining gRPC and FastAPI interceptors in an application:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent</span><span class="w"> </span><span class="kn">import</span> <span class="n">futures</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.metric.interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPIMetricInterceptor</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.grpc.trace.server_interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">GrpcServerTraceInterceptor</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># Create a FastAPI app with metrics middleware</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_fastapi_app</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">FastAPI</span><span class="p">:</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="c1"># Add metrics middleware</span>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span><span class="n">FastAPIMetricInterceptor</span><span class="p">)</span>
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>
-</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>    <span class="k">return</span> <span class="n">app</span>
-</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>
-</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>
-</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="c1"># Create a gRPC server with the tracing interceptor</span>
-</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_grpc_server</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">grpc</span><span class="o">.</span><span class="n">Server</span><span class="p">:</span>
-</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    <span class="k">return</span> <span class="n">grpc</span><span class="o">.</span><span class="n">server</span><span class="p">(</span>
-</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>        <span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
-</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>        <span class="n">interceptors</span><span class="o">=</span><span class="p">[</span><span class="n">GrpcServerTraceInterceptor</span><span class="p">()],</span>
-</span><span id="__span-3-25"><a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>    <span class="p">)</span>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;archipy[postgres,sqlalchemy,starrocks,redis,keycloak,minio,kafka]&quot;</span>
 </span></code></pre></div>
+</div>
+</div>
+</div>
+<h2 id="optional-dependencies">Optional Dependencies<a class="headerlink" href="#optional-dependencies" title="Permanent link">&para;</a></h2>
+<p>ArchiPy supports modular features through optional extras — install only what you need:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Extra</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Database</td>
+<td><code>archipy[postgres]</code></td>
+<td>PostgreSQL adapter with SQLAlchemy integration</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><code>archipy[aiosqlite]</code></td>
+<td>SQLite async adapter with SQLAlchemy integration</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><code>archipy[starrocks]</code></td>
+<td>StarRocks adapter with SQLAlchemy integration</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><code>archipy[starrocks-async]</code></td>
+<td>StarRocks async adapter</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><code>archipy[sqlalchemy]</code></td>
+<td>SQLAlchemy core integration</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><code>archipy[sqlalchemy-async]</code></td>
+<td>SQLAlchemy async integration</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><code>archipy[elasticsearch]</code></td>
+<td>Elasticsearch integration</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><code>archipy[elasticsearch-async]</code></td>
+<td>Elasticsearch async integration</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><code>archipy[scylladb]</code></td>
+<td>ScyllaDB integration</td>
+</tr>
+<tr>
+<td>Service</td>
+<td><code>archipy[redis]</code></td>
+<td>Redis caching and key-value storage</td>
+</tr>
+<tr>
+<td>Service</td>
+<td><code>archipy[keycloak]</code></td>
+<td>Authentication and authorization services</td>
+</tr>
+<tr>
+<td>Service</td>
+<td><code>archipy[minio]</code></td>
+<td>S3-compatible object storage</td>
+</tr>
+<tr>
+<td>Service</td>
+<td><code>archipy[kafka]</code></td>
+<td>Message streaming and event processing</td>
+</tr>
+<tr>
+<td>Service</td>
+<td><code>archipy[temporalio]</code></td>
+<td>Temporal workflow engine</td>
+</tr>
+<tr>
+<td>Service</td>
+<td><code>archipy[parsian-ipg]</code></td>
+<td>Payment gateway (Parsian)</td>
+</tr>
+<tr>
+<td>Web</td>
+<td><code>archipy[fastapi]</code></td>
+<td>FastAPI integration with middleware and utilities</td>
+</tr>
+<tr>
+<td>Web</td>
+<td><code>archipy[grpc]</code></td>
+<td>gRPC integration with interceptors</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td><code>archipy[prometheus]</code></td>
+<td>Metrics and monitoring</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td><code>archipy[sentry]</code></td>
+<td>Error tracking and monitoring</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td><code>archipy[elastic-apm]</code></td>
+<td>Elastic APM tracing</td>
+</tr>
+<tr>
+<td>Utilities</td>
+<td><code>archipy[jwt]</code></td>
+<td>JSON Web Token utilities</td>
+</tr>
+<tr>
+<td>Utilities</td>
+<td><code>archipy[scheduler]</code></td>
+<td>Task scheduling utilities</td>
+</tr>
+<tr>
+<td>Utilities</td>
+<td><code>archipy[cache]</code></td>
+<td>TTL and async caching utilities</td>
+</tr>
+<tr>
+<td>Utilities</td>
+<td><code>archipy[dependency-injection]</code></td>
+<td>Dependency injector support</td>
+</tr>
+<tr>
+<td>Testing</td>
+<td><code>archipy[fakeredis]</code></td>
+<td>In-memory Redis mock for testing</td>
+</tr>
+<tr>
+<td>Testing</td>
+<td><code>archipy[testcontainers]</code></td>
+<td>Testcontainers integration</td>
+</tr>
+<tr>
+<td>Testing</td>
+<td><code>archipy[behave]</code></td>
+<td>BDD testing framework</td>
+</tr>
+</tbody>
+</table>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<p>If issues arise, verify:</p>
+<ol>
+<li>Python version is 3.14+</li>
+<li><code>uv</code> is updated (<code>uv self update</code>)</li>
+<li>Build tools are available (UV handles this automatically)</li>
+<li>Database-specific dependencies are installed if using database adapters</li>
+</ol>
+<div class="admonition tip">
+<p class="admonition-title">IDE Integration</p>
+<p>For the best development experience, use an IDE that supports Python type hints, such as PyCharm or VS Code with the
+Python extension. The project uses modern Python type hints and benefits from IDE support for type checking and
+autocompletion.</p>
+</div>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../../../api_reference/helpers/interceptors/">API Reference - Interceptors</a> - Full interceptors API documentation</li>
-<li><a href="../">Helper Examples</a> - Overview of all helper examples</li>
+<li><a href="../">Get Started</a> — overview of ArchiPy and a quick example</li>
+<li><a href="../concepts/">Concepts</a> — Clean Architecture layers and design philosophy</li>
+<li><a href="../examples/">Tutorials</a> — complete guides for every adapter and helper</li>
 </ul>
 
 
@@ -3010,10 +3025,10 @@ handling.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "content.code.copy", "content.tabs.link", "content.action.edit"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "content.code.copy", "content.tabs.link", "content.action.edit"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
