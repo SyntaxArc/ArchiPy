@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 4.x series"
 
 | Version           | Date       | Summary                                                                                         |
 |-------------------|------------|-------------------------------------------------------------------------------------------------|
+| [4.3.6](4.3.6.md) | 2026-03-13 | SQLAlchemy filter type expansion, docs overhaul, CI pipeline fixes                              |
 | [4.3.5](4.3.5.md) | 2026-03-10 | SSL Config Typing: Improved type safety and optional-field handling for SSL configuration in... |
 | [4.3.4](4.3.4.md) | 2026-02-24 | BaseError `__str__` Enhancement: Improved string representation to expose full error context    |
 | [4.3.3](4.3.3.md) | 2026-02-23 | Type-Safe Field References: Reverted the experimental type-safe field references feature        |
