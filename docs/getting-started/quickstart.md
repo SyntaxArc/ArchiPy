@@ -34,7 +34,8 @@ uv add "archipy[redis,cache]"
 
 ## Step 3 — Define the Configuration
 
-Create a configuration class that extends `BaseConfig`. Override `customize()` to apply service-specific defaults after all sources are loaded:
+Create a configuration class that extends `BaseConfig`. Override `customize()` to apply service-specific defaults after
+all sources are loaded:
 
 ```python
 # configs/app_config.py

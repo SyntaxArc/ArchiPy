@@ -18,6 +18,7 @@ Create a configuration class by inheriting from `BaseConfig`:
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.environment_type import EnvironmentType
 
+
 class AppConfig(BaseConfig):
     # Application settings
     APP_NAME: str = "MyService"
@@ -105,15 +106,18 @@ class BaseAppConfig(BaseConfig):
     DEBUG: bool = False
     # Common settings...
 
+
 class DevelopmentConfig(BaseAppConfig):
     DEBUG: bool = True
     ENVIRONMENT: EnvironmentType = EnvironmentType.DEV
     LOG_LEVEL: str = "DEBUG"
 
+
 class ProductionConfig(BaseAppConfig):
     DEBUG: bool = False
     ENVIRONMENT: EnvironmentType = EnvironmentType.PRODUCTION
     LOG_LEVEL: str = "WARNING"
+
 
 # Choose configuration based on environment
 env: str = os.getenv("ENVIRONMENT", "development").lower()
@@ -152,16 +156,19 @@ class DatabaseConfig(BaseModel):
     def connection_string(self) -> str:
         return f"postgresql://{self.USER}:{self.PASSWORD}@{self.HOST}:{self.PORT}/{self.NAME}"
 
+
 class RedisConfig(BaseModel):
     HOST: str = "localhost"
     PORT: int = 6379
     DB: int = 0
+
 
 class AppConfig(BaseConfig):
     APP_NAME: str = "MyService"
     DEBUG: bool = False
     DATABASE: DatabaseConfig = DatabaseConfig()
     REDIS: RedisConfig = RedisConfig()
+
 
 # Usage
 config = AppConfig()
@@ -188,6 +195,7 @@ class AppConfig(BaseConfig):
 
     # The BaseConfig provides default templates for common configurations like:
     # AUTH, DATETIME, ELASTIC, EMAIL, FASTAPI, KAFKA, REDIS, etc.
+
 
 config = AppConfig()
 logger.info(f"Environment: {config.ENVIRONMENT}")  # Default value from BaseConfig (EnvironmentType.LOCAL)
@@ -219,6 +227,7 @@ else:
 
 # Create a FastAPI app with configuration
 app = AppUtils.create_fastapi_app()  # Uses global config by default
+
 
 # Or provide a specific configuration
 # app = AppUtils.create_fastapi_app(config)

@@ -619,8 +619,8 @@ def create_router(container: UserContainer) -> APIRouter:
 
     @router.post("/", response_model=UserRegistrationOutputDTO, status_code=201)
     def register_user(
-        input_dto: UserRegistrationInputDTO,
-        registration_logic: UserRegistrationLogic = Depends(container.registration_logic),
+            input_dto: UserRegistrationInputDTO,
+            registration_logic: UserRegistrationLogic = Depends(container.registration_logic),
     ) -> UserRegistrationOutputDTO:
         """Register a new user.
 
@@ -641,8 +641,8 @@ def create_router(container: UserContainer) -> APIRouter:
 
     @router.get("/{user_id}", response_model=UserGetOutputDTO)
     def get_user(
-        user_id: str,
-        query_logic: UserQueryLogic = Depends(container.query_logic),
+            user_id: str,
+            query_logic: UserQueryLogic = Depends(container.query_logic),
     ) -> UserGetOutputDTO:
         """Retrieve a user by ID.
 
