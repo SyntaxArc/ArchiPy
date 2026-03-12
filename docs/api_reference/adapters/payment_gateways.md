@@ -10,5 +10,6 @@ Concrete Parsian Shaparak payment gateway adapter implementing payment initiatio
 
 ::: archipy.adapters.internet_payment_gateways.ir.parsian.adapters
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3

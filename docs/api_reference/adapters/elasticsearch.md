@@ -2,20 +2,22 @@
 
 The `elasticsearch` adapter provides integration with Elasticsearch for full-text search, document indexing, and analytics queries.
 
-## ports
+## Ports
 
 Abstract port interface defining the Elasticsearch adapter contract.
 
 ::: archipy.adapters.elasticsearch.ports
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
-## adapters
+## Adapters
 
 Concrete Elasticsearch adapter implementing index management, document CRUD, and search operations.
 
 ::: archipy.adapters.elasticsearch.adapters
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3

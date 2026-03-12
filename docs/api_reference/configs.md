@@ -41,8 +41,9 @@ access.
 
 ::: archipy.configs.base_config
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
       members_order: alphabetical
 
 ## Config Templates {#config-templates}
@@ -53,127 +54,149 @@ For practical examples, see the [Configuration Management Guide](../examples/con
 
 ::: archipy.configs.config_template.SQLAlchemyConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.PostgresSQLAlchemyConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.SQLiteSQLAlchemyConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.StarRocksSQLAlchemyConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.ScyllaDBConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ### Search & Analytics Configs
 
 ::: archipy.configs.config_template.ElasticsearchConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.ElasticsearchAPMConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ### Service Configs
 
 ::: archipy.configs.config_template.RedisConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.KafkaConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.EmailConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.MinioConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.KeycloakConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ### Web Framework Configs
 
 ::: archipy.configs.config_template.FastAPIConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.GrpcConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ### Observability Configs
 
 ::: archipy.configs.config_template.SentryConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.PrometheusConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ### Payment Configs
 
 ::: archipy.configs.config_template.ParsianShaparakConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ### Application Configs
 
 ::: archipy.configs.config_template.AuthConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.FileConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.DatetimeConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ::: archipy.configs.config_template.TemporalConfig
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
 ## Environment Type
 
 ::: archipy.configs.environment_type
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
       show_bases: true
 
 ## Source Code

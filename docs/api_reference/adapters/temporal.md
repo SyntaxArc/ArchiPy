@@ -2,47 +2,52 @@
 
 The `temporal` adapter provides integration with Temporal, a durable workflow orchestration platform, including workflow and activity definitions, worker management, and runtime configuration.
 
-## ports
+## Ports
 
 Abstract port interface defining the Temporal adapter contract.
 
 ::: archipy.adapters.temporal.ports
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
-## base
+## Base
 
 Base classes for Temporal workflow and activity implementations.
 
 ::: archipy.adapters.temporal.base
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
-## adapters
+## Adapters
 
 Concrete Temporal adapter implementing workflow and activity client operations.
 
 ::: archipy.adapters.temporal.adapters
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
-## runtime
+## Runtime
 
 Temporal runtime configuration and initialization utilities.
 
 ::: archipy.adapters.temporal.runtime
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3
 
-## worker
+## Worker
 
 Temporal worker setup for executing workflows and activities.
 
 ::: archipy.adapters.temporal.worker
     options:
-      show_root_heading: true
       show_source: true
+      show_root_toc_entry: false
+      heading_level: 3

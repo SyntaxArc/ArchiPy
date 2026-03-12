@@ -2,7 +2,7 @@
 
 Examples of ArchiPy's utility functions:
 
-## datetime_utils
+## Datetime Utils
 
 Work with dates and times consistently:
 
@@ -31,7 +31,7 @@ is_holiday = DatetimeUtils.is_holiday_in_iran(now)
 logger.info(f"Is holiday: {is_holiday}")
 ```
 
-## jwt_utils
+## JWT Utils
 
 Generate and verify JWT tokens:
 
@@ -70,7 +70,7 @@ logger.debug(f"Token expires at: {expiry}")
 user_uuid = JWTUtils.extract_user_uuid(payload)
 ```
 
-## password_utils
+## Password Utils
 
 Secure password handling:
 
@@ -116,7 +116,7 @@ else:
     logger.info("Password not previously used")
 ```
 
-## file_utils
+## File Utils
 
 Handle files securely:
 
@@ -148,7 +148,7 @@ else:
     logger.info(f"File is valid: {is_valid}")
 ```
 
-## base_utils
+## Base Utils
 
 Validate and sanitize data:
 
@@ -175,12 +175,12 @@ else:
     logger.info("National code is valid")
 ```
 
-## error_utils
+## Error Utils
 
 Utilities for standardized error introspection. See the [Error Handling examples](../error_handling.md) for
 comprehensive patterns using ArchiPy's domain-specific exceptions.
 
-## app_utils
+## App Utils
 
 FastAPI application utilities:
 
@@ -206,12 +206,12 @@ FastAPIUtils.setup_cors(app, BaseConfig.global_config())
 logger.info("FastAPI app configured successfully")
 ```
 
-## string_utils
+## String Utils
 
 String manipulation utilities. `StringUtils` provides helpers for common string operations. See the
-[Utils API Reference](../../api_reference/helpers/utils.md#string_utils) for the full method list.
+[Utils API Reference](../../api_reference/helpers/utils.md#string-utils) for the full method list.
 
-## keycloak_utils {#keycloak-utils}
+## Keycloak Utils {#keycloak-utils}
 
 Authentication and authorization utilities with Keycloak integration:
 

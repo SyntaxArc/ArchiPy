@@ -2,22 +2,6 @@
 
 The ScyllaDB adapter provides a clean, Pythonic interface for interacting with ScyllaDB and Apache Cassandra databases. It supports both synchronous and asynchronous operations, prepared statements, batch operations, TTL (Time To Live), and connection pool monitoring.
 
-## Table of Contents
-
-- [Installation](#installation)
-- [Basic Setup](#basic-setup)
-- [Configuration](#configuration)
-- [Basic CRUD Operations](#basic-crud-operations)
-- [Helper Methods](#helper-methods)
-- [Prepared Statements](#prepared-statements)
-- [Batch Operations](#batch-operations)
-- [TTL Support](#ttl-support)
-- [Async Operations](#async-operations)
-- [Connection Pool Monitoring](#connection-pool-monitoring)
-- [Advanced Configuration](#advanced-configuration)
-- [Error Handling](#error-handling)
-- [Best Practices](#best-practices)
-
 ## Installation
 
 The ScyllaDB adapter is included with ArchiPy. Ensure you have the required dependencies:
