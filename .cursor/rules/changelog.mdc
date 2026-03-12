@@ -1,0 +1,115 @@
+---
+description: Standards for writing and updating ArchiPy changelog files
+globs: docs/community/changelog/**
+alwaysApply: false
+---
+
+# Changelog Standards
+
+## File & Directory Structure
+
+- Major version folder: `docs/community/changelog/<MAJOR>/`
+- Per-release file: `docs/community/changelog/<MAJOR>/<version>.md`
+- Each major folder must have an `index.md` with a summary table
+- Root index: `docs/community/changelog/index.md` lists all series
+
+## Page Format (per-version file)
+
+### Frontmatter
+
+```yaml
+---
+title: "Changelog <version>"
+description: "Release notes for ArchiPy <version>"
+---
+```
+
+### H1 & Navigation
+
+```markdown
+# <version> — <YYYY-MM-DD>
+
+[← <newer>](<newer>.md) | [<older> →](<older>.md) | [↑ <MAJOR>.x series](index.md)
+```
+
+Navigation link rules:
+- Newest release in series: `[← <prev>](<prev>.md) | [↑ <MAJOR>.x series](index.md)`
+- Oldest release in series: `[<next> →](<next>.md) | [↑ <MAJOR>.x series](index.md)`
+- Middle releases: include both prev and next links
+
+## Sections
+
+Use only sections that apply. Always in this order:
+
+1. `## Added`
+2. `## Changed`
+3. `## Fixed`
+4. `## Removed`
+5. `## Tests`
+6. `## Chore`
+7. `## Dependencies`
+
+H3 sub-sections follow the pattern `### <Layer> - <Component>`:
+
+```markdown
+## Fixed
+
+### Adapters - Kafka
+
+- **SSL Config Typing** - Improved type safety and optional-field handling for SSL configuration.
+    - Replaced dict merge (`|=`) with explicit per-key assignment
+    - Optional SSL fields now fall back to `""` when `None`
+```
+
+Valid layer names: `Models`, `Adapters`, `Helpers`, `Configs`, `Tests`, `Chore`, `Dependencies`.
+
+## Writing Style
+
+- Entry format: `- **Bold Title** - Prose description.`
+- Sub-bullets use 4-space indent for implementation details
+- No trailing period on the bold title; use a sentence-ending period on the prose
+- No emoji; no bare `print()` calls; always double quotes
+
+```markdown
+# ✅ GOOD
+- **Organization Management** - Implemented comprehensive organization management functionality.
+    - Added `OrganizationAdapter` with CRUD operations
+    - Exposed `GET /organizations/{id}` endpoint
+
+# ❌ BAD
+- Organization Management: implemented org management  (missing bold, no period, lowercase verb)
+```
+
+## Index Updates
+
+After creating a new version file, update **three** files and edit **one existing version file**:
+
+### Previously newest version file
+
+The release that was the latest before your new one had no "newer" link. Add the back-link to it:
+
+```markdown
+# ❌ BEFORE (4.3.5 was the newest)
+[← 4.3.4](4.3.4.md) | [↑ 4.x series](index.md)
+
+# ✅ AFTER (4.3.6 is now newest; 4.3.5 becomes middle)
+[← 4.3.6](4.3.6.md) | [4.3.4 →](4.3.4.md) | [↑ 4.x series](index.md)
+```
+
+### `docs/community/changelog/<MAJOR>/index.md` (and root index)
+
+Prepend a row (newest first) to the table:
+
+```markdown
+| [<ver>](<ver>.md) | YYYY-MM-DD | <One-line summary of most notable change> |
+```
+
+### `docs/community/changelog/index.md`
+
+Update the release count and version range for the affected series:
+
+```markdown
+## [4.x Series](4/index.md)
+
+13 releases — from 4.0.0 to 4.3.6
+```
