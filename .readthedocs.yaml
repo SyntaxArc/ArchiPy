@@ -1,45 +1,35 @@
 # .readthedocs.yaml
-# Read the Docs configuration file optimized for thorough code extraction
+# Read the Docs configuration file
 # See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
 
 version: 2
 
-# Set the OS and Python version
 build:
   os: ubuntu-22.04
   tools:
-    python: "3.14"  # Using a stable Python version supported by ReadTheDocs
-  jobs:
-    post_create_environment:
-      # Install poetry and configure it
-      - pip install poetry
-      - poetry config virtualenvs.create false
-    post_install:
-      - poetry install --with docs
-
-# Use the latest version of build system
-python:
-  install:
-    - method: pip
-      path: .
-      extra_requirements:
-        - docs
-    - requirements: docs/source/requirements.txt
-
-# Build documentation with maximum extraction settings
-#sphinx:
-#  configuration: docs/source/conf.py
-#  fail_on_warning: false  # Set to true once your docs are stable
-#  builder: html
+    python: "3.13"
+  commands:
+    - pip install uv
+    - uv sync --group docs
+    - uv run mkdocs build -f docs/mkdocs.yml --site-dir $READTHEDOCS_OUTPUT/html
 
 mkdocs:
   configuration: docs/mkdocs.yml
   fail_on_warning: false
 
-# Search settings
 search:
   ranking:
-    # These paths will be ranked higher in search results
-    api_reference/*: 2
-    installation.md: 3
+    index.md: 5
+    installation.md: 5
+    usage.md: 4
+    features.md: 3
+    api_reference/index.md: 4
+    api_reference/**/*: 3
+    examples/index.md: 4
+    examples/**/*: 3
     architecture.md: 2
+    changelog.md: 2
+    development.md: 2
+    contributing.md: 1
+    contributing-docs.md: 1
+    license.md: -3
