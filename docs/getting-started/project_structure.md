@@ -187,12 +187,16 @@ def cli():
 
 
 @cli.command()
-@click.option("--host", default="0.0.0.0", show_default=True, help="Bind host.")  # noqa: S104
-@click.option("--port", default=8000, show_default=True, help="Bind port.")
-@click.option("--reload", is_flag=True, default=False, help="Enable auto-reload.")
-def run(host: str, port: int, reload: bool) -> None:
+@click.option("--host", default=None, show_default=True, help="Bind host (defaults to FAST_API.SERVE_HOST).")
+@click.option("--port", default=None, type=int, show_default=True, help="Bind port (defaults to FAST_API.SERVE_PORT).")
+@click.option("--reload/--no-reload", default=None, help="Enable auto-reload (defaults to FAST_API.RELOAD).")
+def run(host: str | None, port: int | None, reload: bool | None) -> None:
     """Start the FastAPI development server."""
-    uvicorn.run("manage:create_app", factory=True, host=host, port=port, reload=reload)
+    config = BaseConfig.global_config()
+    serve_host = host or config.FAST_API.SERVE_HOST
+    serve_port = port or config.FAST_API.SERVE_PORT
+    serve_reload = config.FAST_API.RELOAD if reload is None else reload
+    uvicorn.run("manage:create_app", factory=True, host=serve_host, port=serve_port, reload=serve_reload)
 
 
 if __name__ == "__main__":
