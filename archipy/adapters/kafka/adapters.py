@@ -4,8 +4,15 @@ from typing import NoReturn, override
 
 from confluent_kafka import Consumer, KafkaError, Message, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient, ClusterMetadata, NewTopic
+from confluent_kafka.aio import AIOConsumer, AIOProducer
 
-from archipy.adapters.kafka.ports import KafkaAdminPort, KafkaConsumerPort, KafkaProducerPort
+from archipy.adapters.kafka.ports import (
+    AsyncKafkaConsumerPort,
+    AsyncKafkaProducerPort,
+    KafkaAdminPort,
+    KafkaConsumerPort,
+    KafkaProducerPort,
+)
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import KafkaConfig
 from archipy.models.errors import (
@@ -401,6 +408,20 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
         except Exception as e:
             self._handle_kafka_exception(e, "assign")
 
+    @override
+    def close(self) -> None:
+        """Closes the consumer, leaving the consumer group and committing offsets.
+
+        Raises:
+            ServiceUnavailableError: If Kafka is unavailable during close.
+            InternalError: If there is an error closing the consumer.
+        """
+        try:
+            self._adapter.close()
+            logger.debug("Consumer closed")
+        except Exception as e:
+            self._handle_kafka_exception(e, "close")
+
 
 class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
     """Synchronous Kafka producer adapter.
@@ -587,3 +608,459 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             # result is ClusterMetadata from confluent_kafka, compatible with port return type
             typed_result: ClusterMetadata = result
             return typed_result
+
+    @override
+    def close(self) -> None:
+        """Closes the producer, flushing any remaining messages.
+
+        Raises:
+            ConnectionTimeoutError: If the flush times out.
+            ServiceUnavailableError: If Kafka is unavailable during close.
+            InternalError: If there is an error closing the producer.
+        """
+        try:
+            self._adapter.flush()
+            logger.debug("Producer flushed and closed")
+        except Exception as e:
+            self._handle_kafka_exception(e, "close")
+
+
+class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMixin):
+    """Async Kafka producer adapter.
+
+    This adapter provides async message production to Kafka topics using AIOProducer.
+    It implements the AsyncKafkaProducerPort interface.
+    """
+
+    def __init__(self, topic_name: str, kafka_configs: KafkaConfig | None = None) -> None:
+        """Initializes the async producer adapter with Kafka configuration.
+
+        Args:
+            topic_name (str): Default topic name to produce messages to.
+            kafka_configs (KafkaConfig | None, optional): Kafka configuration. If None,
+                uses global config. Defaults to None.
+
+        Raises:
+            ConfigurationError: If there is an error in the Kafka configuration.
+            InternalError: If there is an error initializing the producer.
+        """
+        self._topic_name = topic_name
+        configs: KafkaConfig = kafka_configs or BaseConfig.global_config().KAFKA
+        self._configs = configs
+        self._adapter: AIOProducer | None = None
+
+    def _build_producer_conf(self, configs: KafkaConfig) -> dict[str, str | int | float]:
+        """Builds the producer configuration dictionary.
+
+        Args:
+            configs (KafkaConfig): Kafka configuration.
+
+        Returns:
+            dict[str, str | int | float]: Producer configuration dictionary.
+        """
+        broker_list_csv = ",".join(configs.BROKERS_LIST)
+        config: dict[str, str | int | float] = {
+            "bootstrap.servers": broker_list_csv,
+            "linger.ms": configs.LINGER_MS,
+            "batch.size": configs.BATCH_SIZE,
+            "acks": configs.ACKS,
+            "request.timeout.ms": configs.REQUEST_TIMEOUT_MS,
+            "delivery.timeout.ms": configs.DELIVERY_TIMEOUT_MS,
+            "compression.type": configs.COMPRESSION_TYPE or "none",
+            "max.in.flight.requests.per.connection": configs.MAX_IN_FLIGHT_REQUESTS,
+            "retries": configs.RETRIES,
+            "enable.idempotence": configs.ENABLE_IDEMPOTENCE,
+            "queue.buffering.max.messages": configs.QUEUE_BUFFERING_MAX_MESSAGES,
+            "statistics.interval.ms": configs.STATISTICS_INTERVAL_MS,
+        }
+        if configs.TRANSACTIONAL_ID:
+            config["transactional.id"] = configs.TRANSACTIONAL_ID
+        if configs.USERNAME and configs.PASSWORD and configs.SSL_CA_FILE:
+            config["sasl.username"] = configs.USERNAME
+            config["sasl.password"] = configs.PASSWORD.get_secret_value()
+            config["security.protocol"] = configs.SECURITY_PROTOCOL
+            config["sasl.mechanism"] = configs.SASL_MECHANISM or ""
+            config["ssl.ca.location"] = configs.SSL_CA_FILE
+            config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
+            config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
+            config["ssl.endpoint.identification.algorithm"] = "none"
+        return config
+
+    async def _get_adapter(self) -> AIOProducer:
+        """Returns the AIOProducer, creating it lazily on first async call.
+
+        Returns:
+            AIOProducer: The configured async producer instance.
+
+        Raises:
+            ConfigurationError: If there is an error in the Kafka configuration.
+            InternalError: If there is an error creating the producer.
+        """
+        if self._adapter is None:
+            try:
+                config = self._build_producer_conf(self._configs)
+                self._adapter = AIOProducer(
+                    config,
+                    max_workers=self._configs.PRODUCER_MAX_WORKERS,
+                    batch_size=self._configs.PRODUCER_BATCH_SIZE,
+                    buffer_timeout=self._configs.PRODUCER_BUFFER_TIMEOUT,
+                )
+            except Exception as e:
+                self._handle_kafka_exception(e, "AsyncKafkaProducer_init")
+        return self._adapter
+
+    @staticmethod
+    def _pre_process_message(message: str | bytes) -> bytes:
+        """Pre-processes a message to ensure it's in the correct format.
+
+        Args:
+            message (str | bytes): The message to pre-process.
+
+        Returns:
+            bytes: The pre-processed message as bytes.
+        """
+        if isinstance(message, str):
+            return message.encode("utf-8")
+        return message
+
+    @override
+    async def produce(self, message: str | bytes, key: str | None = None) -> None:
+        """Produces a message to the configured topic asynchronously.
+
+        Args:
+            message (str | bytes): The message to produce.
+            key (str | None, optional): The key for the message. Defaults to None.
+
+        Raises:
+            NetworkError: If there is a network error producing the message.
+            ResourceExhaustedError: If the producer queue is full.
+            InternalError: If there is an error producing the message.
+        """
+        try:
+            adapter = await self._get_adapter()
+            processed_message = self._pre_process_message(message)
+            processed_key = self._pre_process_message(key) if key is not None else b""
+            await adapter.produce(
+                topic=self._topic_name,
+                value=processed_message,
+                key=processed_key,
+            )
+        except Exception as e:
+            self._handle_producer_exception(e, "produce")
+
+    @override
+    async def flush(self, timeout: int | None = None) -> None:  # noqa: ASYNC109
+        """Flushes the producer queue asynchronously.
+
+        Args:
+            timeout (int | None, optional): Timeout in seconds for the operation. Defaults to None.
+
+        Raises:
+            ConnectionTimeoutError: If the operation times out.
+            ServiceUnavailableError: If Kafka is unavailable.
+            InternalError: If there is an error flushing the queue.
+        """
+        try:
+            adapter = await self._get_adapter()
+            await adapter.flush()
+        except Exception as e:
+            self._handle_kafka_exception(e, "flush")
+
+    @override
+    async def validate_healthiness(self) -> None:
+        """Validates the health of the async Kafka producer connection.
+
+        Raises:
+            UnavailableError: If the Kafka service is unavailable.
+        """
+        try:
+            await self.list_topics(timeout=1)
+        except Exception as e:
+            raise UnavailableError(resource_type="Kafka") from e
+
+    @override
+    async def list_topics(self, topic: str | None = None, timeout: int = 1) -> ClusterMetadata:  # noqa: ASYNC109
+        """Lists Kafka topics asynchronously.
+
+        Args:
+            topic (str | None, optional): Specific topic to list. If None, lists all topics.
+                Defaults to None.
+            timeout (int, optional): Timeout in seconds for the operation. Defaults to 1.
+
+        Returns:
+            ClusterMetadata: Metadata about the Kafka cluster and topics.
+
+        Raises:
+            ConnectionTimeoutError: If the operation times out.
+            ServiceUnavailableError: If the Kafka service is unavailable.
+            UnavailableError: If there is an unknown issue accessing Kafka.
+        """
+        try:
+            adapter = await self._get_adapter()
+            result = await adapter.list_topics(topic=topic, timeout=timeout)
+        except Exception as e:
+            self._handle_kafka_exception(e, "list_topics")
+            raise
+        else:
+            typed_result: ClusterMetadata = result
+            return typed_result
+
+    @override
+    async def close(self) -> None:
+        """Closes the async producer, flushing any remaining messages.
+
+        Raises:
+            ConnectionTimeoutError: If the flush times out.
+            ServiceUnavailableError: If Kafka is unavailable during close.
+            InternalError: If there is an error closing the producer.
+        """
+        try:
+            if self._adapter is not None:
+                await self._adapter.close()
+                self._adapter = None
+                logger.debug("Async producer closed")
+        except Exception as e:
+            self._handle_kafka_exception(e, "close")
+
+
+class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMixin):
+    """Async Kafka consumer adapter.
+
+    This adapter provides async message consumption from Kafka topics using AIOConsumer.
+    It implements the AsyncKafkaConsumerPort interface.
+    """
+
+    def __init__(
+        self,
+        group_id: str,
+        topic_list: list[str] | None = None,
+        partition_list: list[TopicPartition] | None = None,
+        kafka_configs: KafkaConfig | None = None,
+    ) -> None:
+        """Initializes the async consumer adapter with Kafka configuration and subscription.
+
+        Args:
+            group_id (str): Consumer group ID.
+            topic_list (list[str] | None, optional): List of topics to subscribe to.
+                Defaults to None.
+            partition_list (list[TopicPartition] | None, optional): List of partitions
+                to assign. Defaults to None.
+            kafka_configs (KafkaConfig | None, optional): Kafka configuration. If None,
+                uses global config. Defaults to None.
+
+        Raises:
+            InvalidArgumentError: If both topic_list and partition_list are provided or
+                neither is provided.
+            InternalError: If there is an error initializing the consumer.
+        """
+        configs: KafkaConfig = kafka_configs or BaseConfig.global_config().KAFKA
+        self._configs = configs
+        self._group_id = group_id
+        self._topic_list = topic_list
+        self._partition_list = partition_list
+        self._adapter: AIOConsumer | None = None
+
+        if not (topic_list or partition_list) or (topic_list and partition_list):
+            logger.error("Invalid topic or partition list")
+            raise InvalidArgumentError(
+                argument_name="topic_list or partition_list",
+                additional_data={"reason": "Exactly one of topic_list or partition_list must be provided"},
+            )
+
+    def _build_consumer_conf(self, configs: KafkaConfig) -> dict[str, str | int | float]:
+        """Builds the consumer configuration dictionary.
+
+        Args:
+            configs (KafkaConfig): Kafka configuration.
+
+        Returns:
+            dict[str, str | int | float]: Consumer configuration dictionary.
+        """
+        broker_list_csv = ",".join(configs.BROKERS_LIST)
+        config: dict[str, str | int | float] = {
+            "bootstrap.servers": broker_list_csv,
+            "group.id": self._group_id,
+            "session.timeout.ms": configs.SESSION_TIMEOUT_MS,
+            "auto.offset.reset": configs.AUTO_OFFSET_RESET,
+            "enable.auto.commit": configs.ENABLE_AUTO_COMMIT,
+            "fetch.min.bytes": configs.FETCH_MIN_BYTES,
+            "heartbeat.interval.ms": configs.HEARTBEAT_INTERVAL_MS,
+            "isolation.level": configs.ISOLATION_LEVEL,
+            "max.poll.interval.ms": configs.MAX_POLL_INTERVAL_MS,
+            "partition.assignment.strategy": configs.PARTITION_ASSIGNMENT_STRATEGY,
+            "fetch.max.bytes": configs.FETCH_MAX_BYTES,
+            "max.partition.fetch.bytes": configs.MAX_PARTITION_FETCH_BYTES,
+        }
+        if configs.USERNAME and configs.PASSWORD and configs.SSL_CA_FILE:
+            config["sasl.username"] = configs.USERNAME
+            config["sasl.password"] = configs.PASSWORD.get_secret_value()
+            config["security.protocol"] = configs.SECURITY_PROTOCOL
+            config["sasl.mechanism"] = configs.SASL_MECHANISM or ""
+            config["ssl.ca.location"] = configs.SSL_CA_FILE
+            config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
+            config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
+            config["ssl.endpoint.identification.algorithm"] = "none"
+        return config
+
+    async def _get_adapter(self) -> AIOConsumer:
+        """Returns the AIOConsumer, creating and subscribing it lazily on first async call.
+
+        Returns:
+            AIOConsumer: The configured async consumer instance.
+
+        Raises:
+            ConfigurationError: If there is an error in the Kafka configuration.
+            InternalError: If there is an error creating the consumer.
+        """
+        if self._adapter is None:
+            try:
+                config = self._build_consumer_conf(self._configs)
+                self._adapter = AIOConsumer(config, max_workers=self._configs.CONSUMER_MAX_WORKERS)
+                if self._topic_list:
+                    await self._adapter.subscribe(self._topic_list)
+                elif self._partition_list:
+                    await self._adapter.assign(self._partition_list)
+            except Exception as e:
+                self._handle_kafka_exception(e, "AsyncKafkaConsumer_init")
+        return self._adapter
+
+    @override
+    async def batch_consume(self, messages_number: int = 500, timeout: int = 1) -> list[Message]:  # noqa: ASYNC109
+        """Consumes a batch of messages from subscribed topics asynchronously.
+
+        Args:
+            messages_number (int, optional): Maximum number of messages to consume.
+                Defaults to 500.
+            timeout (int, optional): Timeout in seconds for the operation. Defaults to 1.
+
+        Returns:
+            list[Message]: List of consumed messages.
+
+        Raises:
+            ConnectionTimeoutError: If the operation times out.
+            ServiceUnavailableError: If Kafka is unavailable.
+            InternalError: If there is an error consuming messages.
+        """
+        try:
+            adapter = await self._get_adapter()
+            result_list: list[Message] = []
+            messages: list[Message] = await adapter.consume(num_messages=messages_number, timeout=timeout)
+            for message in messages:
+                if message.error():
+                    logger.error("Async consumer error: %s", message.error())
+                    continue
+                logger.debug("Async message consumed: %s", message)
+                message.set_value(message.value())
+                result_list.append(message)
+        except Exception as e:
+            self._handle_kafka_exception(e, "batch_consume")
+            raise
+        else:
+            return result_list
+
+    @override
+    async def poll(self, timeout: int = 1) -> Message | None:  # noqa: ASYNC109
+        """Polls for a single message from subscribed topics asynchronously.
+
+        Args:
+            timeout (int, optional): Timeout in seconds for the operation. Defaults to 1.
+
+        Returns:
+            Message | None: The consumed message or None if no message was received.
+
+        Raises:
+            ConnectionTimeoutError: If the operation times out.
+            ServiceUnavailableError: If Kafka is unavailable.
+            InternalError: If there is an error polling for messages.
+        """
+        try:
+            adapter = await self._get_adapter()
+            message: Message | None = await adapter.poll(timeout)
+            if message is None:
+                logger.debug("No async message received")
+                return None
+            if message.error():
+                logger.error("Async consumer error: %s", message.error())
+                return None
+            logger.debug("Async message consumed: %s", message)
+            message.set_value(message.value())
+        except Exception as e:
+            self._handle_kafka_exception(e, "poll")
+        else:
+            return message
+
+    @override
+    async def commit(self, message: Message, asynchronous: bool = True) -> None | list[TopicPartition]:
+        """Commits the offset for a message asynchronously.
+
+        Args:
+            message (Message): The message to commit.
+            asynchronous (bool, optional): Whether to commit asynchronously. Defaults to True.
+
+        Returns:
+            None | list[TopicPartition]: None for async commits, list of TopicPartition for sync commits.
+
+        Raises:
+            InvalidArgumentError: If the message is invalid.
+            ServiceUnavailableError: If Kafka is unavailable.
+            InternalError: If there is an error committing the offset.
+        """
+        try:
+            adapter = await self._get_adapter()
+            result = await adapter.commit(message=message, asynchronous=asynchronous)
+        except Exception as e:
+            self._handle_kafka_exception(e, "commit")
+        else:
+            return result
+
+    @override
+    async def subscribe(self, topic_list: list[str]) -> None:
+        """Subscribes to a list of topics asynchronously.
+
+        Args:
+            topic_list (list[str]): List of topics to subscribe to.
+
+        Raises:
+            InvalidArgumentError: If the topic list is invalid.
+            ServiceUnavailableError: If Kafka is unavailable.
+            InternalError: If there is an error subscribing to topics.
+        """
+        try:
+            adapter = await self._get_adapter()
+            await adapter.subscribe(topic_list)
+        except Exception as e:
+            self._handle_kafka_exception(e, "subscribe")
+
+    @override
+    async def assign(self, partition_list: list[TopicPartition]) -> None:
+        """Assigns the async consumer to a list of topic partitions.
+
+        Args:
+            partition_list (list[TopicPartition]): List of partitions to assign.
+
+        Raises:
+            InvalidArgumentError: If the partition list is invalid.
+            ServiceUnavailableError: If Kafka is unavailable.
+            InternalError: If there is an error assigning partitions.
+        """
+        try:
+            adapter = await self._get_adapter()
+            await adapter.assign(partition_list)
+        except Exception as e:
+            self._handle_kafka_exception(e, "assign")
+
+    @override
+    async def close(self) -> None:
+        """Closes the async consumer, leaving the consumer group and committing offsets.
+
+        Raises:
+            ServiceUnavailableError: If Kafka is unavailable during close.
+            InternalError: If there is an error closing the consumer.
+        """
+        try:
+            if self._adapter is not None:
+                await self._adapter.close()
+                self._adapter = None
+                logger.debug("Async consumer closed")
+        except Exception as e:
+            self._handle_kafka_exception(e, "close")

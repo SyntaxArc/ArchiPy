@@ -132,6 +132,15 @@ class KafkaConsumerPort:
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def close(self) -> None:
+        """Closes the consumer, leaving the consumer group and committing offsets.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
 
 class KafkaProducerPort:
     """Interface for Kafka producer operations.
@@ -184,6 +193,170 @@ class KafkaProducerPort:
 
         Returns:
             ClusterMetadata: Metadata about the Kafka cluster and topics.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def close(self) -> None:
+        """Closes the producer, flushing any remaining messages.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+
+class AsyncKafkaConsumerPort:
+    """Async interface for Kafka consumer operations.
+
+    This interface defines the async contract for consuming messages from Kafka topics.
+    """
+
+    @abstractmethod
+    async def batch_consume(self, messages_number: int, timeout: int) -> list[Message]:  # noqa: ASYNC109
+        """Consumes a batch of messages from subscribed topics.
+
+        Args:
+            messages_number (int): Maximum number of messages to consume.
+            timeout (int): Timeout in seconds for the operation.
+
+        Returns:
+            list[Message]: List of consumed messages.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def poll(self, timeout: int) -> Message | None:  # noqa: ASYNC109
+        """Polls for a single message from subscribed topics.
+
+        Args:
+            timeout (int): Timeout in seconds for the operation.
+
+        Returns:
+            Message | None: The consumed message or None if no message was received.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def commit(self, message: Message, asynchronous: bool) -> None | list[TopicPartition]:
+        """Commits the offset of a consumed message.
+
+        Args:
+            message (Message): The message whose offset should be committed.
+            asynchronous (bool): Whether to commit asynchronously.
+
+        Returns:
+            None | list[TopicPartition]: None for synchronous commits, or list of committed
+                partitions for asynchronous commits.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def subscribe(self, topic_list: list[str]) -> None:
+        """Subscribes to a list of topics.
+
+        Args:
+            topic_list (list[str]): List of topic names to subscribe to.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def assign(self, partition_list: list[TopicPartition]) -> None:
+        """Assigns specific partitions to the consumer.
+
+        Args:
+            partition_list (list[TopicPartition]): List of partitions to assign.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def close(self) -> None:
+        """Closes the consumer, leaving the consumer group and committing offsets.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+
+class AsyncKafkaProducerPort:
+    """Async interface for Kafka producer operations.
+
+    This interface defines the async contract for producing messages to Kafka topics.
+    """
+
+    @abstractmethod
+    async def produce(self, message: str | bytes, key: str | None = None) -> None:
+        """Produces a message to the configured topic.
+
+        Args:
+            message (str | bytes): The message to produce.
+            key (str | None, optional): The key for the message. Defaults to None.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def flush(self, timeout: int | None) -> None:  # noqa: ASYNC109
+        """Flushes any pending messages to the broker.
+
+        Args:
+            timeout (int | None): Maximum time to wait for messages to be delivered.
+                If None, wait indefinitely.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def validate_healthiness(self) -> None:
+        """Validates the health of the producer connection.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_topics(self, topic: str | None, timeout: int) -> ClusterMetadata:  # noqa: ASYNC109
+        """Lists Kafka topics.
+
+        Args:
+            topic (str | None): Specific topic to list. If None, lists all topics.
+            timeout (int): Timeout in seconds for the operation.
+
+        Returns:
+            ClusterMetadata: Metadata about the Kafka cluster and topics.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def close(self) -> None:
+        """Closes the producer, flushing any remaining messages.
 
         Raises:
             NotImplementedError: If the method is not implemented by the concrete class.

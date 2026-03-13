@@ -295,6 +295,16 @@ class KafkaConfig(BaseModel):
         description="Frequency in milliseconds to send statistics data",
     )
 
+    # Async adapter settings (AIOProducer / AIOConsumer)
+    CONSUMER_MAX_WORKERS: int = Field(default=2, ge=1, description="Thread pool workers for AIOConsumer")
+    PRODUCER_BATCH_SIZE: int = Field(default=1000, ge=1, description="Max messages per AIOProducer batch")
+    PRODUCER_BUFFER_TIMEOUT: float = Field(
+        default=1.0,
+        ge=0.0,
+        description="Buffer flush timeout for AIOProducer (seconds)",
+    )
+    PRODUCER_MAX_WORKERS: int = Field(default=4, ge=1, description="Thread pool workers for AIOProducer")
+
     @model_validator(mode="after")
     def validate_security_settings(self) -> KafkaConfig:
         """Validate security-related settings for Kafka configuration.
