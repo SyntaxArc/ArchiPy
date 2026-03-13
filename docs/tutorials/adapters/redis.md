@@ -16,8 +16,7 @@ First, ensure you have the Redis dependencies installed:
 uv add "archipy[redis]"
 ```
 
-!!! tip
-The Redis adapter is an optional extra. Install only when Redis support is needed.
+> **Tip:** The Redis adapter is an optional extra. Install only when Redis support is needed.
 
 ## Configuration
 

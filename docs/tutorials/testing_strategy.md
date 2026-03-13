@@ -18,9 +18,8 @@ adapters and in-memory fakes — are written as Gherkin features with Behave ste
 | BDD (mock adapters) | `behave` + mocks            | Single adapter / helper behaviour | Fast  | No                      |
 | BDD (integration)   | `behave` + `testcontainers` | Adapter against real service      | Slow  | Yes (Docker)            |
 
-!!! tip "Selectively run scenarios"
-Features that require a running service are tagged with `@needs-*`. Skip infrastructure-heavy scenarios
-when Docker is not available:
+> **Tip:** Features that require a running service are tagged with `@needs-*`. Skip infrastructure-heavy scenarios when
+> Docker is not available:
 
 ```bash
 uv run behave --tags=~@needs-redis         # skip Redis scenarios
@@ -151,9 +150,8 @@ class InMemorySQLAlchemyMock(BaseSQLAlchemyAdapterPort):
         return self._store.get(str(entity_id))
 ```
 
-!!! note "Keep mocks minimal"
-Implement only the methods your tests actually call. An `NotImplementedError` on unused methods is
-better than a mock that silently returns wrong values.
+> **Note:** Implement only the methods your tests actually call. An `NotImplementedError` on unused methods is better
+> than a mock that silently returns wrong values.
 
 ---
 
@@ -321,15 +319,13 @@ def step_retrieve(context, key, expected):
     logger.info("Redis value for key '%s' matched expected '%s'", key, expected)
 ```
 
-!!! tip "Global config is patched automatically"
-Each `*TestContainer.start()` updates `BaseConfig.global_config()` with the live container host and
-port. Adapters constructed after container startup automatically connect to the right endpoint —
-no manual config wiring needed in step definitions.
+> **Tip:** Each `*TestContainer.start()` updates `BaseConfig.global_config()` with the live container host and port.
+> Adapters constructed after container startup automatically connect to the right endpoint — no manual config wiring
+> needed in step definitions.
 
-!!! warning "Integration scenarios are slow"
-Each container start adds several seconds. Containers are started per-feature and stopped after
-each feature — `ContainerManager` skips already-running containers so sharing across features
-within a run is handled automatically.
+> **Warning:** Each container start adds several seconds. Containers are started per-feature and stopped after
+> each feature — `ContainerManager` skips already-running containers so sharing across features
+> within a run is handled automatically.
 
 ### Skipping infrastructure-heavy scenarios
 

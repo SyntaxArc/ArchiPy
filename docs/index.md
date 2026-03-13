@@ -94,8 +94,7 @@ graph LR
 
 See [Concepts](getting-started/concepts.md) for the full architectural breakdown.
 
-!!! tip "Full examples"
-See the [Tutorials](tutorials/index.md) section for complete, runnable examples for every adapter and helper.
+> **Tip:** See the [Tutorials](tutorials/index.md) section for complete, runnable examples for every adapter and helper.
 
 ## Next Steps
 

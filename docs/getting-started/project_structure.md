@@ -101,13 +101,13 @@ project-root/
 | `entities/`                  | SQLAlchemy `BaseEntity` subclasses                              | Data structure only — no logic  |
 | `errors/`                    | Domain-specific exceptions extending ArchiPy base errors        | Raise with `raise ... from e`   |
 
-!!! tip "DTO naming conventions"
-
-- **Domain input**: `UserRegistrationInputDTO` — data arriving from the client
-- **Domain output**: `UserRegistrationOutputDTO` — data returned to the client
-- **Repository command**: `CreateUserCommandDTO` — a write operation
-- **Repository query**: `GetUserByIdQueryDTO` — a read operation
-- **Repository response**: `UserResponseDTO` — result from an adapter or repository
+> **Tip:** DTO naming conventions:
+>
+> - **Domain input**: `UserRegistrationInputDTO` — data arriving from the client
+> - **Domain output**: `UserRegistrationOutputDTO` — data returned to the client
+> - **Repository command**: `CreateUserCommandDTO` — a write operation
+> - **Repository query**: `GetUserByIdQueryDTO` — a read operation
+> - **Repository response**: `UserResponseDTO` — result from an adapter or repository
 
 ### `repositories/`
 

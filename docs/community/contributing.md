@@ -60,9 +60,8 @@ make install
 make install-dev
 ```
 
-!!! tip "Pre-commit Hooks"
-Running `make install-dev` sets up pre-commit hooks that automatically run linting, formatting, and type checking on
-every commit. Use `make pre-commit` to run all hooks manually before opening a pull request.
+> **Tip:** Running `make install-dev` sets up pre-commit hooks that automatically run linting, formatting, and type
+> checking on every commit. Use `make pre-commit` to run all hooks manually before opening a pull request.
 
 ## Contribution Guidelines
 
@@ -229,9 +228,8 @@ New adapters follow a consistent checklist. Use this as your guide when contribu
 
 8. **Update `mkdocs.yml`** — add both new pages under the appropriate `nav:` keys.
 
-!!! note "Issue templates"
-Use the [GitHub issue templates](https://github.com/SyntaxArc/ArchiPy/issues/new/choose) when
-reporting bugs, requesting features, or proposing new adapters.
+> **Note:** Use the [GitHub issue templates](https://github.com/SyntaxArc/ArchiPy/issues/new/choose) when reporting
+> bugs, requesting features, or proposing new adapters.
 
 ## Code of Conduct
 

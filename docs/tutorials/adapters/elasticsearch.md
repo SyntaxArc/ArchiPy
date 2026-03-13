@@ -14,9 +14,8 @@ management with proper error handling and Python 3.14+ type hints.
 uv add "archipy[elasticsearch]"
 ```
 
-!!! tip
-The Elasticsearch adapter is an optional extra. Only install it when you need Elasticsearch support to keep your
-environment lean.
+> **Tip:** The Elasticsearch adapter is an optional extra. Only install it when you need Elasticsearch support to keep
+> your environment lean.
 
 ## Configuration
 

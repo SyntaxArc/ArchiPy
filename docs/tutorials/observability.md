@@ -278,9 +278,8 @@ def create_grpc_server() -> grpc.Server:
     return server
 ```
 
-!!! note "FastAPI + APM"
-ArchiPy does not ship a FastAPI APM middleware. For FastAPI Elastic APM or Sentry integration,
-use the official SDKs directly (`elasticapm.contrib.starlette.ElasticAPM` or
+> **Note:** ArchiPy does not ship a FastAPI APM middleware. For FastAPI Elastic APM or Sentry integration, use the
+> official SDKs directly (`elasticapm.contrib.starlette.ElasticAPM` or
 `sentry_sdk.integrations.fastapi.FastApiIntegration`). ArchiPy's APM interceptors cover gRPC only.
 
 ---

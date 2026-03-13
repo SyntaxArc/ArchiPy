@@ -18,9 +18,8 @@ Copyright 2024 [SyntaxArc](https://github.com/SyntaxArc) — Hossein Nejati & Me
 | Sublicense and distribute under a different license               | Preserve all existing copyright, patent, and attribution notices           |
 | Use patents contributed by contributors royalty-free              | Patent rights terminate if you bring patent litigation against the project |
 
-!!! note "Trademark Restriction"
-The Apache 2.0 license does **not** grant permission to use the SyntaxArc trade names, trademarks, or service marks,
-except as required for customary description of the software's origin.
+> **Note:** The Apache 2.0 license does **not** grant permission to use the SyntaxArc trade names, trademarks, or
+> service marks, except as required for customary description of the software's origin.
 
 ## Full License Text
 

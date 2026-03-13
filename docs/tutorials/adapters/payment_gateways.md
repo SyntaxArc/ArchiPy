@@ -14,9 +14,8 @@ with proper error handling and Python 3.14 type hints.
 uv add "archipy[parsian-ipg]"
 ```
 
-!!! tip
-The Parsian Shaparak payment gateway is an optional extra. Install it only when integrating with Iranian payment
-services.
+> **Tip:** The Parsian Shaparak payment gateway is an optional extra. Install it only when integrating with Iranian
+> payment services.
 
 ## Configuration
 

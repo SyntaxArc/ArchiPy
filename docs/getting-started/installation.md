@@ -24,8 +24,8 @@ Before starting, ensure you have:
   uv is a fast Python package installer and resolver. Install it via
   the [official guide](https://docs.astral.sh/uv/getting-started/installation/).
 
-!!! tip "Recommended Package Manager"
-ArchiPy recommends **`uv`** — it is significantly faster than `pip` and provides better dependency resolution.
+> **Tip:** ArchiPy recommends **`uv`** — it is significantly faster than `pip` and provides better dependency
+> resolution.
 
 ## Install ArchiPy
 
@@ -100,14 +100,12 @@ If issues arise, verify:
 3. Build tools are available (UV handles this automatically)
 4. Database-specific dependencies are installed if using database adapters
 
-!!! warning "Python 3.14+ Required"
-ArchiPy uses `X | Y` union syntax, lowercase generics (`list[str]`), and other modern features
-that require Python 3.14 or later. Using an older Python will result in `SyntaxError` at import time.
+> **Warning:** ArchiPy uses `X | Y` union syntax, lowercase generics (`list[str]`), and other modern features that
+> require Python 3.14 or later. Using an older Python will result in `SyntaxError` at import time.
 
-!!! tip "IDE Integration"
-For the best development experience, use an IDE that supports Python type hints, such as PyCharm or VS Code with the
-Python extension. The project uses modern Python type hints and benefits from IDE support for type checking and
-autocompletion.
+> **Tip:** For the best development experience, use an IDE that supports Python type hints, such as PyCharm or VS Code
+> with the Python extension. The project uses modern Python type hints and benefits from IDE support for type checking and
+> autocompletion.
 
 ## See Also
 

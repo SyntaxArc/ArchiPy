@@ -17,8 +17,7 @@ The ScyllaDB adapter is included with ArchiPy. Ensure you have the required depe
 uv add "archipy[scylladb]"
 ```
 
-!!! tip
-The ScyllaDB adapter is an optional extra. Install it only when ScyllaDB or Cassandra support is required.
+> **Tip:** The ScyllaDB adapter is an optional extra. Install it only when ScyllaDB or Cassandra support is required.
 
 ## Configuration
 

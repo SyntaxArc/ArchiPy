@@ -201,8 +201,8 @@ REDIS__PORT=6379
 ENVIRONMENT=DEV
 ```
 
-!!! warning "Never commit `.env` to version control"
-Add `.env` to your `.gitignore`. Use `.env.example` to document the required variables without real values.
+> **Warning:** Add `.env` to your `.gitignore`. Use `.env.example` to document the required variables without real
+> values.
 
 ### Can I override configuration at runtime?
 

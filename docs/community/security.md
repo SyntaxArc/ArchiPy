@@ -25,9 +25,8 @@ Include as much detail as possible:
 
 You will receive an acknowledgment within **48 hours** and a status update within **7 days**.
 
-!!! warning "Coordinated Disclosure"
-Please allow the maintainers reasonable time (typically 90 days) to prepare and release a fix before
-disclosing the vulnerability publicly.
+> **Warning:** Please allow the maintainers reasonable time (typically 90 days) to prepare and release a fix before
+> disclosing the vulnerability publicly.
 
 ---
 

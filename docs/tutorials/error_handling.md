@@ -7,13 +7,11 @@ description: Practical tutorials for error handling patterns in ArchiPy.
 
 This document provides examples of how to use the error handling system in different scenarios.
 
-!!! note "Always use specific exception types"
-ArchiPy errors extend `BaseError` and map to standard HTTP status codes automatically when used
-with the FastAPI integration. Never catch or raise bare `Exception` — use the most specific type available.
+> **Note:** ArchiPy errors extend `BaseError` and map to standard HTTP status codes automatically when used with the
+> FastAPI integration. Never catch or raise bare `Exception` — use the most specific type available.
 
-!!! danger "Never swallow exceptions silently"
-Always either re-raise (with `raise ... from e`) or log and raise. Swallowing exceptions hides
-bugs and makes debugging nearly impossible in production.
+> **Danger:** Always either re-raise (with `raise ... from e`) or log and raise. Swallowing exceptions hides bugs and
+> makes debugging nearly impossible in production.
 
 ## Basic Error Handling
 

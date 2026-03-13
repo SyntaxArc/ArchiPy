@@ -13,11 +13,11 @@ with a typed config, a Redis adapter, and a TTL cache decorator in under five mi
 - Python 3.14 or later
 - `uv` package manager ([installation guide](https://docs.astral.sh/uv/getting-started/installation/))
 
-!!! tip "Check your Python version"
-
-```bash
-python --version  # must be 3.14+
-```
+> **Tip:** Check your Python version:
+>
+> ```bash
+> python --version  # must be 3.14+
+> ```
 
 ## Step 1 — Create the Project
 

@@ -27,9 +27,8 @@ graph LR
 | **Helpers**  | `helpers/`  | Pure utilities: decorators, interceptors, JWT, password, datetime               |
 | **Adapters** | `adapters/` | External service integrations: databases, caches, queues, APIs                  |
 
-!!! warning "One-way import rule"
-Imports flow inward only — `configs ← models ← helpers ← adapters`. Inner layers never import
-from outer layers. Violating this rule breaks testability and creates circular dependencies.
+> **Warning:** Imports flow inward only — `configs ← models ← helpers ← adapters`. Inner layers never import from outer
+> layers. Violating this rule breaks testability and creates circular dependencies.
 
 ---
 
@@ -201,16 +200,16 @@ class UserRegistrationLogic:
         ...
 ```
 
-!!! note "Logic layer collaboration rules"
-
-- Logic classes **may call other logic classes** — nested `@atomic` calls reuse the open session.
-- Logic classes **must never import or call a repository from another domain directly**.
-  Cross-domain reads must go through the other domain's logic class.
-
-    ```
-    ✅  OrderCreationLogic  →  UserQueryLogic  →  UserRepository
-    ❌  OrderCreationLogic  →  UserRepository  (bypasses domain boundary)
-    ```
+> **Note:** Logic layer collaboration rules:
+>
+> - Logic classes **may call other logic classes** — nested `@atomic` calls reuse the open session.
+> - Logic classes **must never import or call a repository from another domain directly**.
+    > Cross-domain reads must go through the other domain's logic class.
+    >
+    >     ```
+>     ✅  OrderCreationLogic  →  UserQueryLogic  →  UserRepository
+>     ❌  OrderCreationLogic  →  UserRepository  (bypasses domain boundary)
+>     ```
 
 ---
 

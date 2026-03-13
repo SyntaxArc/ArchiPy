@@ -78,7 +78,10 @@ def get_item(key: str) -> str | None:
 
 ## Writing Style
 
-- **Admonitions**: use `!!! note`, `!!! tip`, `!!! warning`. `note` supports an optional inline title: `!!! note "Title"`.
+- **Admonitions**: use block quote callouts instead of MkDocs `!!!` admonitions, as PyCharm's markdown formatter strips the required indentation. Format: `> **Type:** message text` where Type is one of `Tip`, `Note`, `Warning`, `Danger`.
+  - Single-line: `> **Tip:** Install the extra before use.`
+  - Multi-line: prefix every line with `>`, use `>` on blank lines to keep the block together.
+  - With nested code block: open with `> **Tip:** intro text`, then `>`, then `> \`\`\`lang ... \`\`\``
 - **Cross-links**: always relative paths (e.g., `[Error Handling](../error_handling.md)`).
 - **Emphasis**: bold (`**term**`) for key terms on first mention. No emoji outside `index.md` and overview pages.
 - **Tables**: use for structured comparison data (extras matrix, config options).

@@ -14,8 +14,7 @@ configuration, CRUD, transactions, filtering, pagination, async patterns, and te
 uv add "archipy[postgres]"
 ```
 
-!!! tip
-The PostgreSQL adapter is an optional extra. Install it alongside any ORM extras you need, for example
+> **Tip:** The PostgreSQL adapter is an optional extra. Install it alongside any ORM extras you need, for example
 `archipy[postgres]`.
 
 ## Configuration
@@ -145,7 +144,8 @@ from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 logger = logging.getLogger(__name__)
 
 
-class UserPostgresAdapter(PostgresSQLAlchemyAdapter, SQLAlchemyFilterMixin, SQLAlchemyPaginationMixin, SQLAlchemySortMixin):
+class UserPostgresAdapter(PostgresSQLAlchemyAdapter, SQLAlchemyFilterMixin, SQLAlchemyPaginationMixin,
+                          SQLAlchemySortMixin):
     """PostgreSQL adapter with filter, pagination, and sort query capabilities for the User domain."""
 
 
@@ -465,9 +465,9 @@ adapter = PostgresSQLAlchemyAdapter()
 
 
 def search_users(
-    search_term: str | None = None,
-    page: int = 1,
-    page_size: int = 20,
+        search_term: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
 ) -> tuple[list[User], int]:
     """Search users with optional full-name filter, pagination, and sorting.
 
@@ -565,8 +565,7 @@ def count_active_users() -> int:
 
 ## Async Usage
 
-!!! tip "Install the async extra"
-Async PostgreSQL support requires the `sqlalchemy-async` extra:
+> **Tip:** Async PostgreSQL support requires the `sqlalchemy-async` extra:
 
 ```bash
 uv add "archipy[postgres,sqlalchemy-async]"
@@ -849,12 +848,12 @@ api_config = PostgresSQLAlchemyConfig(
     DATABASE="mydb",
     USERNAME="myuser",
     PASSWORD="secret",
-    POOL_SIZE=20,           # Keep 20 persistent connections open
-    POOL_MAX_OVERFLOW=10,   # Allow up to 10 additional overflow connections
-    POOL_TIMEOUT=5,         # Fail fast if pool is exhausted (5 s)
+    POOL_SIZE=20,  # Keep 20 persistent connections open
+    POOL_MAX_OVERFLOW=10,  # Allow up to 10 additional overflow connections
+    POOL_TIMEOUT=5,  # Fail fast if pool is exhausted (5 s)
     POOL_RECYCLE_SECONDS=300,  # Recycle connections every 5 min (avoids stale TCP)
-    POOL_PRE_PING=True,     # Validate connections before use
-    POOL_USE_LIFO=True,     # LIFO: reuse warm connections, keep cold ones idle
+    POOL_PRE_PING=True,  # Validate connections before use
+    POOL_USE_LIFO=True,  # LIFO: reuse warm connections, keep cold ones idle
 )
 
 # Batch/worker process — smaller pool
