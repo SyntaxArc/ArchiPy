@@ -6,29 +6,25 @@ alwaysApply: false
 
 # Testing with BDD (Behave)
 
-ArchiPy uses the **Behave** BDD framework. Tests are written as Gherkin scenarios.
+ArchiPy uses the **Behave** BDD framework (v1.3.3). Tests are written as Gherkin scenarios.
 
 ## Directory Structure
 
 ```
 features/
-├── *.feature          # Gherkin scenario files
+├── *.feature                    # Gherkin scenario files
+├── environment.py               # Global setup/teardown hooks
+├── scenario_context.py          # Per-scenario state container
+├── test_helpers.py              # Shared async/sync utilities
 └── steps/
-    └── *.py           # Step implementations (Given/When/Then)
+    └── *.py                     # Step implementations (Given/When/Then)
 ```
 
 ## Running Tests
 
 ```bash
-# All tests
 make behave
-# or:
-uv run --extra behave behave
-
-# Single feature file
 uv run --extra behave behave features/file_name.feature
-
-# Specific scenario (by line number)
 uv run --extra behave behave features/file_name.feature:42
 ```
 
@@ -36,7 +32,6 @@ uv run --extra behave behave features/file_name.feature:42
 
 - Keep `.feature` files **declarative** — describe behavior, not implementation.
 - Use `@tags` to categorize scenarios for selective runs.
-- Avoid logic in `.feature` files; all logic belongs in `features/steps/`.
 
 ```gherkin
 # ✅ GOOD
@@ -52,29 +47,32 @@ Feature: Cache adapter
 
 - Step functions are exempt from: `ANN001`, `ANN201`, `ARG001`, `PLR0913`, `F811`.
 - Step redefinition (`F811`) is allowed — Behave reuses steps across features.
-- Use `context` to share state between steps within a scenario.
+- Use `get_current_scenario_context(context)` to share state between steps.
+
+## Async Steps
+
+Behave 1.3.3 supports `async def` step functions **natively** — no `asyncio.run()` or `@async_run_until_complete` wrapper needed. Always declare async steps with `async def` and use `await` directly.
 
 ```python
-# ✅ GOOD
-from behave import given, then, when
+# ❌ BAD — never use asyncio.run() inside a step
+@when("something async happens")
+def step_impl(context):
+    result = asyncio.run(some_async_call())
 
-@given("a running Redis instance")
-def step_redis_running(context):
-    context.redis = FakeRedisAdapter()
-
-@when('I store "{value}" under key "{key}"')
-def step_store_value(context, value, key):
-    context.redis.set(key, value)
-
-@then('I can retrieve "{value}" from key "{key}"')
-def step_retrieve_value(context, value, key):
-    assert context.redis.get(key) == value
+# ✅ GOOD — declare the step as async def and await directly
+@when("something async happens")
+async def step_impl(context):
+    result = await some_async_call()
 ```
+
+Sync operations work fine inside `async def` steps, so steps with mixed sync/async branches (e.g. if/elif over frameworks) should be converted to `async def` entirely.
+
+The only place `asyncio.run()` is acceptable is in **non-step** callbacks (e.g. `scenario_context.py` cleanup methods) that may be called from outside an event loop.
 
 ## Parallel Execution
 
-Behave is configured to run with **8 parallel workers** (multiprocessing). Ensure steps do not share mutable global state across scenarios.
+Behave is configured to run with **8 parallel workers** (multiprocessing). Steps must not share mutable global state across scenarios.
 
 ## Linting Exclusions
 
-`features/` and `scripts/` directories are excluded from Ruff linting (`exclude` in `pyproject.toml`). Do not add type annotations to step functions.
+`features/` and `scripts/` are excluded from Ruff linting. Do not add type annotations to step functions.

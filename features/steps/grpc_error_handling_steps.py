@@ -1,7 +1,5 @@
 """Step definitions for gRPC error handling tests."""
 
-import asyncio
-
 from behave import given, then, when
 
 from archipy.models.errors import (
@@ -116,7 +114,7 @@ def step_when_sync_grpc_raises_error(context, error_type: str):
 
 
 @when('an async gRPC method raises "{error_type}" error')
-def step_when_async_grpc_raises_error(context, error_type: str):
+async def step_when_async_grpc_raises_error(context, error_type: str):
     """Test an async gRPC method that raises a specific error using real gRPC calls."""
     scenario_context = get_current_scenario_context(context)
 
@@ -149,7 +147,7 @@ def step_when_async_grpc_raises_error(context, error_type: str):
 
         return grpc_error
 
-    grpc_error = asyncio.run(make_call())
+    grpc_error = await make_call()
 
     scenario_context.store("grpc_error", error_instance)
     scenario_context.store("grpc_rpc_error", grpc_error)
@@ -195,7 +193,7 @@ def step_when_sync_grpc_invalid_request(context):
 
 
 @when("an async gRPC method receives invalid request")
-def step_when_async_grpc_invalid_request(context):
+async def step_when_async_grpc_invalid_request(context):
     """Test an async gRPC method that receives invalid request using real gRPC calls."""
     scenario_context = get_current_scenario_context(context)
 
@@ -220,7 +218,7 @@ def step_when_async_grpc_invalid_request(context):
 
         return grpc_error
 
-    grpc_error = asyncio.run(make_call())
+    grpc_error = await make_call()
 
     # The interceptor converts ValidationError to InvalidArgumentError
     from archipy.models.errors import InvalidArgumentError
@@ -277,7 +275,7 @@ def step_when_sync_grpc_unexpected_error(context):
 
 
 @when("an async gRPC method raises an unexpected exception")
-def step_when_async_grpc_unexpected_error(context):
+async def step_when_async_grpc_unexpected_error(context):
     """Test an async gRPC method that raises an unexpected exception using real gRPC calls."""
     scenario_context = get_current_scenario_context(context)
 
@@ -303,7 +301,7 @@ def step_when_async_grpc_unexpected_error(context):
 
         return grpc_error
 
-    grpc_error = asyncio.run(make_call())
+    grpc_error = await make_call()
 
     # The interceptor converts unexpected errors to InternalError
     from archipy.models.errors import InternalError
@@ -521,7 +519,7 @@ def step_when_sync_grpc_raises_validation_error_with_lang(context, error_type: s
 
 
 @when('an async gRPC method raises "{error_type}" validation error with value "{invalid_value}" in language "{lang}"')
-def step_when_async_grpc_raises_validation_error_with_lang(context, error_type: str, invalid_value: str, lang: str):
+async def step_when_async_grpc_raises_validation_error_with_lang(context, error_type: str, invalid_value: str, lang: str):
     """Test an async gRPC method that raises a validation error with a specific value and language."""
     scenario_context = get_current_scenario_context(context)
 
@@ -564,7 +562,7 @@ def step_when_async_grpc_raises_validation_error_with_lang(context, error_type: 
 
         return grpc_error
 
-    grpc_error = asyncio.run(make_call())
+    grpc_error = await make_call()
 
     scenario_context.store("grpc_error", error_instance)
     scenario_context.store("grpc_rpc_error", grpc_error)

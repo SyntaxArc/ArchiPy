@@ -167,7 +167,7 @@ def step_when_metric_interceptor_setup(context, framework):
 
 
 @when("a {framework} request is made")
-def step_when_request_made(context, framework):
+async def step_when_request_made(context, framework):
     scenario_context = get_current_scenario_context(context)
 
     if framework == "FastAPI":
@@ -226,8 +226,6 @@ def step_when_request_made(context, framework):
         scenario_context.store("final_active_requests", final_active)
 
     elif framework == "AsyncgRPC":
-        import asyncio
-
         interceptors = scenario_context.get("interceptors")
 
         if not interceptors or not isinstance(interceptors[0], AsyncGrpcServerMetricInterceptor):
@@ -255,7 +253,7 @@ def step_when_request_made(context, framework):
         )
 
         # Run the async interceptor
-        result = asyncio.run(interceptor.intercept(mock_method, {}, mock_context, method_name_model))
+        result = await interceptor.intercept(mock_method, {}, mock_context, method_name_model)
         scenario_context.store("result", result)
 
         final_metrics = _get_metric_samples("grpc_async_response_time_seconds")

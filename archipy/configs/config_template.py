@@ -49,7 +49,7 @@ class ElasticsearchConfig(BaseModel):
     RETRY_ON_TIMEOUT: bool = Field(default=True, description="Retry on connection timeouts")
     RETRY_ON_STATUS: tuple[int, ...] = Field(default=(429, 502, 503, 504), description="HTTP status codes to retry on")
     IGNORE_STATUS: tuple[int, ...] = Field(default=(), description="HTTP status codes to ignore as errors")
-    SNIFF_ON_START: bool = Field(default=True, description="Sniff nodes on client instantiation")
+    SNIFF_ON_START: bool = Field(default=False, description="Sniff nodes on client instantiation")
     SNIFF_BEFORE_REQUESTS: bool = Field(default=False, description="Sniff nodes before requests")
     SNIFF_ON_NODE_FAILURE: bool = Field(default=True, description="Sniff nodes on node failure")
     MIN_DELAY_BETWEEN_SNIFFING: float = Field(

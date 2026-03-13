@@ -1,4 +1,3 @@
-import asyncio
 from http import HTTPStatus
 from unittest.mock import patch
 
@@ -78,7 +77,7 @@ def step_given_fastapi_error(context, error_type):
 
 
 @when("an async FastAPI error is handled")
-def step_when_fastapi_error_is_handled(context):
+async def step_when_fastapi_error_is_handled(context):
     scenario_context = get_current_scenario_context(context)
     fastapi_error = scenario_context.get("fastapi_error")
 
@@ -90,7 +89,7 @@ def step_when_fastapi_error_is_handled(context):
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             content={"detail": "Error occurred"},
         )
-        http_status = asyncio.run(handle_error()).status_code
+        http_status = (await handle_error()).status_code
         scenario_context.store("http_status", http_status)
 
 

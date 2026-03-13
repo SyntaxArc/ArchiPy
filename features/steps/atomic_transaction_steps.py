@@ -4,7 +4,6 @@ This module contains step definitions for both synchronous and asynchronous
 atomic transaction scenarios.
 """
 
-import asyncio
 import logging
 import os
 import tempfile
@@ -141,7 +140,7 @@ def _get_adapter_classes(db_type: str):
 
 
 @given("the application database is initialized for {db_type}")
-def step_given_database_initialized(context, db_type: str):
+async def step_given_database_initialized(context, db_type: str):
     """Initialize the database for testing with the specified database type.
 
     Args:
@@ -189,7 +188,7 @@ def step_given_database_initialized(context, db_type: str):
 
                 # Create schema with async adapter
                 logger.info("Creating database schema with async PostgreSQL adapter")
-                asyncio.run(async_schema_setup(async_adapter))
+                await async_schema_setup(async_adapter)
 
                 logger.info("Async PostgreSQL adapter and schema setup completed")
             except Exception as e:
@@ -251,7 +250,7 @@ def step_given_database_initialized(context, db_type: str):
 
                 # Create schema with async adapter
                 logger.info("Creating database schema with async SQLite adapter")
-                asyncio.run(async_schema_setup(async_adapter))
+                await async_schema_setup(async_adapter)
 
                 logger.info("Async SQLite adapter and schema setup completed")
             except Exception as e:

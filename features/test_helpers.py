@@ -1,8 +1,4 @@
-"""This module provides utilities to help with async testing in behave.
-
-It focuses on solving the problem of SQLAlchemy async scoped sessions
-using current_task() for scoping, which can cause issues in behave tests.
-"""
+"""Shared utilities for Behave BDD step implementations."""
 
 from archipy.models.entities import BaseEntity
 
@@ -56,74 +52,6 @@ def get_async_adapter(context):
         raise AttributeError("No async adapter found in scenario context. Make sure the database is initialized.")
 
     return async_adapter
-
-
-def safe_has_attr(obj, attr):
-    """A truly safe way to check if an attribute exists on an object.
-
-    This uses the __dict__ directly rather than hasattr() which can
-    trigger __getattr__ and raise exceptions.
-
-    Args:
-        obj: The object to check
-        attr: The attribute name to check for
-
-    Returns:
-        bool: True if the attribute exists, False otherwise
-    """
-    # For Context objects in behave, check the dictionary directly
-    if hasattr(obj, "__dict__"):
-        return attr in obj.__dict__
-
-    # Fallback to normal hasattr for other objects
-    try:
-        return hasattr(obj, attr)
-    except:
-        return False
-
-
-def safe_get_attr(obj, attr, default=None):
-    """A truly safe way to get an attribute from an object.
-
-    This uses the __dict__ directly rather than getattr() which can
-    trigger __getattr__ and raise exceptions.
-
-    Args:
-        obj: The object to get the attribute from
-        attr: The attribute name to get
-        default: The default value to return if the attribute doesn't exist
-
-    Returns:
-        The attribute value, or the default if it doesn't exist
-    """
-    # For Context objects in behave, check the dictionary directly
-    if hasattr(obj, "__dict__"):
-        return obj.__dict__.get(attr, default)
-
-    # Fallback to normal getattr for other objects
-    try:
-        return getattr(obj, attr, default)
-    except:
-        return default
-
-
-def safe_set_attr(obj, attr, value):
-    """A truly safe way to set an attribute on an object.
-
-    This uses the __dict__ directly rather than setattr() which can
-    trigger __getattr__ and raise exceptions.
-
-    Args:
-        obj: The object to set the attribute on
-        attr: The attribute name to set
-        value: The value to set
-    """
-    # For Context objects in behave, set the dictionary directly
-    if hasattr(obj, "__dict__"):
-        obj.__dict__[attr] = value
-    else:
-        # Fallback to normal setattr for other objects
-        setattr(obj, attr, value)
 
 
 async def async_schema_setup(async_adapter):
