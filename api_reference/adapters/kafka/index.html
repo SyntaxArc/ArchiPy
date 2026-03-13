@@ -4666,10 +4666,48 @@
 
 
 <h1 id="kafka">Kafka<a class="headerlink" href="#kafka" title="Permanent link">&para;</a></h1>
-<p>The <code>kafka</code> adapter provides integration with Apache Kafka for producing and consuming messages in event-driven
-architectures.</p>
+<p>The <code>kafka</code> adapter provides integration with Apache Kafka for producing and consuming messages in
+event-driven architectures. It ships <strong>five</strong> adapter classes — one for admin operations and two
+sync/async pairs for producing and consuming.</p>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Mode</th>
+<th>Port</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>KafkaAdminAdapter</code></td>
+<td>sync</td>
+<td><code>KafkaAdminPort</code></td>
+</tr>
+<tr>
+<td><code>KafkaProducerAdapter</code></td>
+<td>sync</td>
+<td><code>KafkaProducerPort</code></td>
+</tr>
+<tr>
+<td><code>KafkaConsumerAdapter</code></td>
+<td>sync</td>
+<td><code>KafkaConsumerPort</code></td>
+</tr>
+<tr>
+<td><code>AsyncKafkaProducerAdapter</code></td>
+<td>async</td>
+<td><code>AsyncKafkaProducerPort</code></td>
+</tr>
+<tr>
+<td><code>AsyncKafkaConsumerAdapter</code></td>
+<td>async</td>
+<td><code>AsyncKafkaConsumerPort</code></td>
+</tr>
+</tbody>
+</table>
 <h2 id="ports">Ports<a class="headerlink" href="#ports" title="Permanent link">&para;</a></h2>
-<p>Abstract port interface defining the Kafka adapter contract for message production and consumption.</p>
+<p>Abstract port interfaces defining the Kafka adapter contracts for sync and async message
+production and consumption.</p>
 
 
 <div class="doc doc-object doc-module">
@@ -8519,7 +8557,8 @@ If None, wait indefinitely.</p>
 show_root_toc_entry: false
 heading_level: 3</p>
 <h2 id="adapters">Adapters<a class="headerlink" href="#adapters" title="Permanent link">&para;</a></h2>
-<p>Concrete Kafka adapter implementing producer and consumer patterns with ArchiPy conventions.</p>
+<p>Concrete Kafka adapter implementations for both sync and async producer/consumer patterns,
+built on <code>confluent_kafka</code> and <code>confluent_kafka.aio</code>.</p>
 
 
 <div class="doc doc-object doc-module">
