@@ -3831,11 +3831,10 @@ configuration, CRUD, transactions, filtering, pagination, async patterns, and te
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[postgres]&quot;</span>
 </span></code></pre></div>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-</div>
-<p>The PostgreSQL adapter is an optional extra. Install it alongside any ORM extras you need, for example
+<blockquote>
+<p><strong>Tip:</strong> The PostgreSQL adapter is an optional extra. Install it alongside any ORM extras you need, for example
 <code>archipy[postgres]</code>.</p>
+</blockquote>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>Configure the adapter via environment variables or a <code>PostgresSQLAlchemyConfig</code> object.</p>
 <h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
@@ -3946,18 +3945,19 @@ configuration, CRUD, transactions, filtering, pagination, async patterns, and te
 </span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 </span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
 </span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="k">class</span><span class="w"> </span><span class="nc">UserPostgresAdapter</span><span class="p">(</span><span class="n">PostgresSQLAlchemyAdapter</span><span class="p">,</span> <span class="n">SQLAlchemyFilterMixin</span><span class="p">,</span> <span class="n">SQLAlchemyPaginationMixin</span><span class="p">,</span> <span class="n">SQLAlchemySortMixin</span><span class="p">):</span>
-</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;PostgreSQL adapter with filter, pagination, and sort query capabilities for the User domain.&quot;&quot;&quot;</span>
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="k">class</span><span class="w"> </span><span class="nc">UserPostgresAdapter</span><span class="p">(</span><span class="n">PostgresSQLAlchemyAdapter</span><span class="p">,</span> <span class="n">SQLAlchemyFilterMixin</span><span class="p">,</span> <span class="n">SQLAlchemyPaginationMixin</span><span class="p">,</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>                          <span class="n">SQLAlchemySortMixin</span><span class="p">):</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;PostgreSQL adapter with filter, pagination, and sort query capabilities for the User domain.&quot;&quot;&quot;</span>
 </span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>
-</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="c1"># Uses global config (BaseConfig.global_config().POSTGRES_SQLALCHEMY)</span>
-</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="k">try</span><span class="p">:</span>
-</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>    <span class="n">adapter</span> <span class="o">=</span> <span class="n">UserPostgresAdapter</span><span class="p">()</span>
-</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="k">except</span> <span class="p">(</span><span class="n">DatabaseConnectionError</span><span class="p">,</span> <span class="n">DatabaseQueryError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to create PostgreSQL adapter: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>    <span class="k">raise</span>
-</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="k">else</span><span class="p">:</span>
-</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;PostgreSQL adapter initialised&quot;</span><span class="p">)</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="c1"># Uses global config (BaseConfig.global_config().POSTGRES_SQLALCHEMY)</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="k">try</span><span class="p">:</span>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>    <span class="n">adapter</span> <span class="o">=</span> <span class="n">UserPostgresAdapter</span><span class="p">()</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="k">except</span> <span class="p">(</span><span class="n">DatabaseConnectionError</span><span class="p">,</span> <span class="n">DatabaseQueryError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to create PostgreSQL adapter: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>    <span class="k">raise</span>
+</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="k">else</span><span class="p">:</span>
+</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;PostgreSQL adapter initialised&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>To use a custom config instead of the global one:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.postgres.sqlalchemy.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">PostgresSQLAlchemyAdapter</span>
@@ -4235,9 +4235,9 @@ SQLAlchemy's <code>.where()</code>.</p>
 </span><span id="__span-14-15"><a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a>
 </span><span id="__span-14-16"><a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>
 </span><span id="__span-14-17"><a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a><span class="k">def</span><span class="w"> </span><span class="nf">search_users</span><span class="p">(</span>
-</span><span id="__span-14-18"><a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a>    <span class="n">search_term</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-14-19"><a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a>    <span class="n">page</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-</span><span id="__span-14-20"><a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a>    <span class="n">page_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+</span><span id="__span-14-18"><a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a>        <span class="n">search_term</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-14-19"><a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a>        <span class="n">page</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-14-20"><a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a>        <span class="n">page_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
 </span><span id="__span-14-21"><a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">User</span><span class="p">],</span> <span class="nb">int</span><span class="p">]:</span>
 </span><span id="__span-14-22"><a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Search users with optional full-name filter, pagination, and sorting.</span>
 </span><span id="__span-14-23"><a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a>
@@ -4380,10 +4380,9 @@ SQLAlchemy's <code>.where()</code>.</p>
 </span><span id="__span-15-31"><a id="__codelineno-15-31" name="__codelineno-15-31" href="#__codelineno-15-31"></a>    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">count</span><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="async-usage">Async Usage<a class="headerlink" href="#async-usage" title="Permanent link">&para;</a></h2>
-<div class="admonition tip">
-<p class="admonition-title">Install the async extra</p>
-</div>
-<p>Async PostgreSQL support requires the <code>sqlalchemy-async</code> extra:</p>
+<blockquote>
+<p><strong>Tip:</strong> Async PostgreSQL support requires the <code>sqlalchemy-async</code> extra:</p>
+</blockquote>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[postgres,sqlalchemy-async]&quot;</span>
 </span></code></pre></div>
 <h3 id="asynchronous-adapter">Asynchronous Adapter<a class="headerlink" href="#asynchronous-adapter" title="Permanent link">&para;</a></h3>
@@ -4647,12 +4646,12 @@ SQLAlchemy's <code>.where()</code>.</p>
 </span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>    <span class="n">DATABASE</span><span class="o">=</span><span class="s2">&quot;mydb&quot;</span><span class="p">,</span>
 </span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>    <span class="n">USERNAME</span><span class="o">=</span><span class="s2">&quot;myuser&quot;</span><span class="p">,</span>
 </span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>    <span class="n">PASSWORD</span><span class="o">=</span><span class="s2">&quot;secret&quot;</span><span class="p">,</span>
-</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>    <span class="n">POOL_SIZE</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>           <span class="c1"># Keep 20 persistent connections open</span>
-</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a>    <span class="n">POOL_MAX_OVERFLOW</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>   <span class="c1"># Allow up to 10 additional overflow connections</span>
-</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a>    <span class="n">POOL_TIMEOUT</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>         <span class="c1"># Fail fast if pool is exhausted (5 s)</span>
+</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>    <span class="n">POOL_SIZE</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>  <span class="c1"># Keep 20 persistent connections open</span>
+</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a>    <span class="n">POOL_MAX_OVERFLOW</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>  <span class="c1"># Allow up to 10 additional overflow connections</span>
+</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a>    <span class="n">POOL_TIMEOUT</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>  <span class="c1"># Fail fast if pool is exhausted (5 s)</span>
 </span><span id="__span-21-13"><a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a>    <span class="n">POOL_RECYCLE_SECONDS</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>  <span class="c1"># Recycle connections every 5 min (avoids stale TCP)</span>
-</span><span id="__span-21-14"><a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a>    <span class="n">POOL_PRE_PING</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>     <span class="c1"># Validate connections before use</span>
-</span><span id="__span-21-15"><a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a>    <span class="n">POOL_USE_LIFO</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>     <span class="c1"># LIFO: reuse warm connections, keep cold ones idle</span>
+</span><span id="__span-21-14"><a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a>    <span class="n">POOL_PRE_PING</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Validate connections before use</span>
+</span><span id="__span-21-15"><a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a>    <span class="n">POOL_USE_LIFO</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># LIFO: reuse warm connections, keep cold ones idle</span>
 </span><span id="__span-21-16"><a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a><span class="p">)</span>
 </span><span id="__span-21-17"><a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a>
 </span><span id="__span-21-18"><a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a><span class="c1"># Batch/worker process — smaller pool</span>

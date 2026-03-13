@@ -3636,11 +3636,10 @@ adapters and in-memory fakes — are written as Gherkin features with Behave ste
 </tr>
 </tbody>
 </table>
-<div class="admonition tip">
-<p class="admonition-title">Selectively run scenarios</p>
-</div>
-<p>Features that require a running service are tagged with <code>@needs-*</code>. Skip infrastructure-heavy scenarios
-when Docker is not available:</p>
+<blockquote>
+<p><strong>Tip:</strong> Features that require a running service are tagged with <code>@needs-*</code>. Skip infrastructure-heavy scenarios when
+Docker is not available:</p>
+</blockquote>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>run<span class="w"> </span>behave<span class="w"> </span>--tags<span class="o">=</span>~@needs-redis<span class="w">         </span><span class="c1"># skip Redis scenarios</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>uv<span class="w"> </span>run<span class="w"> </span>behave<span class="w"> </span>--tags<span class="o">=</span>@needs-postgres<span class="w">       </span><span class="c1"># run only Postgres scenarios</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>uv<span class="w"> </span>run<span class="w"> </span>behave<span class="w"> </span>--tags<span class="o">=</span>~@needs-redis,~@needs-postgres,~@needs-kafka<span class="w">  </span><span class="c1"># skip all infra tags</span>
@@ -3748,11 +3747,10 @@ in Behave step definitions:</p>
 </span><span id="__span-5-30"><a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve entity by id.&quot;&quot;&quot;</span>
 </span><span id="__span-5-31"><a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_store</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">entity_id</span><span class="p">))</span>
 </span></code></pre></div>
-<div class="admonition note">
-<p class="admonition-title">Keep mocks minimal</p>
-</div>
-<p>Implement only the methods your tests actually call. An <code>NotImplementedError</code> on unused methods is
-better than a mock that silently returns wrong values.</p>
+<blockquote>
+<p><strong>Note:</strong> Implement only the methods your tests actually call. An <code>NotImplementedError</code> on unused methods is better
+than a mock that silently returns wrong values.</p>
+</blockquote>
 <hr />
 <h2 id="integration-testing-with-testcontainers">Integration Testing with <code>testcontainers</code><a class="headerlink" href="#integration-testing-with-testcontainers" title="Permanent link">&para;</a></h2>
 <p>Integration scenarios verify that adapters work correctly against real services. ArchiPy manages all
@@ -3898,18 +3896,14 @@ before any scenario in that feature runs:</p>
 </span><span id="__span-10-28"><a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>    <span class="k">assert</span> <span class="n">result</span> <span class="o">==</span> <span class="n">expected</span>
 </span><span id="__span-10-29"><a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Redis value for key &#39;</span><span class="si">%s</span><span class="s2">&#39; matched expected &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">expected</span><span class="p">)</span>
 </span></code></pre></div>
-<div class="admonition tip">
-<p class="admonition-title">Global config is patched automatically</p>
-</div>
-<p>Each <code>*TestContainer.start()</code> updates <code>BaseConfig.global_config()</code> with the live container host and
-port. Adapters constructed after container startup automatically connect to the right endpoint —
-no manual config wiring needed in step definitions.</p>
-<div class="admonition warning">
-<p class="admonition-title">Integration scenarios are slow</p>
-</div>
-<p>Each container start adds several seconds. Containers are started per-feature and stopped after
+<blockquote>
+<p><strong>Tip:</strong> Each <code>*TestContainer.start()</code> updates <code>BaseConfig.global_config()</code> with the live container host and port.
+Adapters constructed after container startup automatically connect to the right endpoint — no manual config wiring
+needed in step definitions.</p>
+<p><strong>Warning:</strong> Each container start adds several seconds. Containers are started per-feature and stopped after
 each feature — <code>ContainerManager</code> skips already-running containers so sharing across features
 within a run is handled automatically.</p>
+</blockquote>
 <h3 id="skipping-infrastructure-heavy-scenarios">Skipping infrastructure-heavy scenarios<a class="headerlink" href="#skipping-infrastructure-heavy-scenarios" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>uv<span class="w"> </span>run<span class="w"> </span>behave<span class="w"> </span>--tags<span class="o">=</span>~@needs-redis<span class="w">          </span><span class="c1"># skip Redis scenarios</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>uv<span class="w"> </span>run<span class="w"> </span>behave<span class="w"> </span>--tags<span class="o">=</span>@needs-postgres<span class="w">        </span><span class="c1"># run only Postgres scenarios</span>

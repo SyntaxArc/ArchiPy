@@ -3420,9 +3420,8 @@ entities, errors, adapters, repository, and logic classes. This scales naturally
 </tr>
 </tbody>
 </table>
-<div class="admonition tip">
-<p class="admonition-title">DTO naming conventions</p>
-</div>
+<blockquote>
+<p><strong>Tip:</strong> DTO naming conventions:</p>
 <ul>
 <li><strong>Domain input</strong>: <code>UserRegistrationInputDTO</code> — data arriving from the client</li>
 <li><strong>Domain output</strong>: <code>UserRegistrationOutputDTO</code> — data returned to the client</li>
@@ -3430,6 +3429,7 @@ entities, errors, adapters, repository, and logic classes. This scales naturally
 <li><strong>Repository query</strong>: <code>GetUserByIdQueryDTO</code> — a read operation</li>
 <li><strong>Repository response</strong>: <code>UserResponseDTO</code> — result from an adapter or repository</li>
 </ul>
+</blockquote>
 <h3 id="repositories"><code>repositories/</code><a class="headerlink" href="#repositories" title="Permanent link">&para;</a></h3>
 <p>Each domain repository owns its data access logic:</p>
 <ul>

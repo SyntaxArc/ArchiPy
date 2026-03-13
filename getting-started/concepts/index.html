@@ -3359,11 +3359,10 @@ import rules — is the foundation for writing maintainable, testable services.<
 </tr>
 </tbody>
 </table>
-<div class="admonition warning">
-<p class="admonition-title">One-way import rule</p>
-</div>
-<p>Imports flow inward only — <code>configs ← models ← helpers ← adapters</code>. Inner layers never import
-from outer layers. Violating this rule breaks testability and creates circular dependencies.</p>
+<blockquote>
+<p><strong>Warning:</strong> Imports flow inward only — <code>configs ← models ← helpers ← adapters</code>. Inner layers never import from outer
+layers. Violating this rule breaks testability and creates circular dependencies.</p>
+</blockquote>
 <hr />
 <h2 id="layer-details">Layer Details<a class="headerlink" href="#layer-details" title="Permanent link">&para;</a></h2>
 <h3 id="configs">Configs<a class="headerlink" href="#configs" title="Permanent link">&para;</a></h3>
@@ -3541,19 +3540,23 @@ on any exception:</p>
 </span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="sd">        &quot;&quot;&quot;</span>
 </span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>        <span class="o">...</span>
 </span></code></pre></div>
-<div class="admonition note">
-<p class="admonition-title">Logic layer collaboration rules</p>
-</div>
+<blockquote>
+<p><strong>Note:</strong> Logic layer collaboration rules:</p>
 <ul>
 <li>Logic classes <strong>may call other logic classes</strong> — nested <code>@atomic</code> calls reuse the open session.</li>
 <li>
 <p>Logic classes <strong>must never import or call a repository from another domain directly</strong>.
-  Cross-domain reads must go through the other domain's logic class.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>✅  OrderCreationLogic  →  UserQueryLogic  →  UserRepository
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>❌  OrderCreationLogic  →  UserRepository  (bypasses domain boundary)
-</span></code></pre></div>
+    &gt; Cross-domain reads must go through the other domain's logic class.</p>
+<blockquote>
+<div class="language-text highlight"><pre><span></span><code>```
+</code></pre></div>
+<p>✅  OrderCreationLogic  →  UserQueryLogic  →  UserRepository
+❌  OrderCreationLogic  →  UserRepository  (bypasses domain boundary)
+```</p>
+</blockquote>
 </li>
 </ul>
+</blockquote>
 <hr />
 <h2 id="design-philosophy">Design Philosophy<a class="headerlink" href="#design-philosophy" title="Permanent link">&para;</a></h2>
 <p>ArchiPy provides standardised building blocks rather than enforcing a single architectural style. The same

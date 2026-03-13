@@ -3744,12 +3744,11 @@ Elastic APM automatically:</p>
 </span><span id="__span-11-28"><a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;gRPC server ready with metrics + tracing interceptors&quot;</span><span class="p">)</span>
 </span><span id="__span-11-29"><a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a>    <span class="k">return</span> <span class="n">server</span>
 </span></code></pre></div>
-<div class="admonition note">
-<p class="admonition-title">FastAPI + APM</p>
-</div>
-<p>ArchiPy does not ship a FastAPI APM middleware. For FastAPI Elastic APM or Sentry integration,
-use the official SDKs directly (<code>elasticapm.contrib.starlette.ElasticAPM</code> or
+<blockquote>
+<p><strong>Note:</strong> ArchiPy does not ship a FastAPI APM middleware. For FastAPI Elastic APM or Sentry integration, use the
+official SDKs directly (<code>elasticapm.contrib.starlette.ElasticAPM</code> or
 <code>sentry_sdk.integrations.fastapi.FastApiIntegration</code>). ArchiPy's APM interceptors cover gRPC only.</p>
+</blockquote>
 <hr />
 <h2 id="tracing-decorators-pure-python">Tracing Decorators (Pure Python)<a class="headerlink" href="#tracing-decorators-pure-python" title="Permanent link">&para;</a></h2>
 <p>For code that runs outside gRPC or FastAPI — background workers, scheduled tasks, business logic classes —

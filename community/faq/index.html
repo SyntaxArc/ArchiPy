@@ -3771,10 +3771,10 @@ working directory (or from environment variables). No extra setup is needed:</p>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nv">REDIS__PORT</span><span class="o">=</span><span class="m">6379</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nv">ENVIRONMENT</span><span class="o">=</span>DEV
 </span></code></pre></div>
-<div class="admonition warning">
-<p class="admonition-title">Never commit <code>.env</code> to version control</p>
-</div>
-<p>Add <code>.env</code> to your <code>.gitignore</code>. Use <code>.env.example</code> to document the required variables without real values.</p>
+<blockquote>
+<p><strong>Warning:</strong> Add <code>.env</code> to your <code>.gitignore</code>. Use <code>.env.example</code> to document the required variables without real
+values.</p>
+</blockquote>
 <h3 id="can-i-override-configuration-at-runtime">Can I override configuration at runtime?<a class="headerlink" href="#can-i-override-configuration-at-runtime" title="Permanent link">&para;</a></h3>
 <p>Yes. Call <code>BaseConfig.set_global(config_instance)</code> at application start-up. Any code that calls
 <code>BaseConfig.global_config()</code> afterwards will see the new values:</p>

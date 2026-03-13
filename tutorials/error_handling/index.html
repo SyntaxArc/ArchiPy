@@ -3249,16 +3249,12 @@
 
 <h1 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h1>
 <p>This document provides examples of how to use the error handling system in different scenarios.</p>
-<div class="admonition note">
-<p class="admonition-title">Always use specific exception types</p>
-</div>
-<p>ArchiPy errors extend <code>BaseError</code> and map to standard HTTP status codes automatically when used
-with the FastAPI integration. Never catch or raise bare <code>Exception</code> — use the most specific type available.</p>
-<div class="admonition danger">
-<p class="admonition-title">Never swallow exceptions silently</p>
-</div>
-<p>Always either re-raise (with <code>raise ... from e</code>) or log and raise. Swallowing exceptions hides
-bugs and makes debugging nearly impossible in production.</p>
+<blockquote>
+<p><strong>Note:</strong> ArchiPy errors extend <code>BaseError</code> and map to standard HTTP status codes automatically when used with the
+FastAPI integration. Never catch or raise bare <code>Exception</code> — use the most specific type available.</p>
+<p><strong>Danger:</strong> Always either re-raise (with <code>raise ... from e</code>) or log and raise. Swallowing exceptions hides bugs and
+makes debugging nearly impossible in production.</p>
+</blockquote>
 <h2 id="basic-error-handling">Basic Error Handling<a class="headerlink" href="#basic-error-handling" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
