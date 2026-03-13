@@ -1,12 +1,12 @@
 ---
 title: Quickstart
-description: Get an ArchiPy application running in under five minutes with a config, a Redis adapter, and a caching decorator.
+description: Get an ArchiPy application running in under five minutes with a config, a Redis adapter, and a TTL cache backed by Redis.
 ---
 
 # Quickstart
 
 This guide walks you through creating a minimal ArchiPy application from scratch. You will have a running service
-with a typed config, a Redis adapter, and a TTL cache decorator in under five minutes.
+with a typed config, a Redis adapter, and a TTL cache backed by Redis in under five minutes.
 
 ## Prerequisites
 
@@ -29,7 +29,7 @@ uv init
 ## Step 2 — Install ArchiPy
 
 ```bash
-uv add "archipy[redis,cache]"
+uv add "archipy[redis]"
 ```
 
 ## Step 3 — Define the Configuration
@@ -81,21 +81,23 @@ redis = RedisAdapter()  # reads config.REDIS automatically
 logger.info("Redis adapter ready")
 ```
 
-## Step 5 — Add a Caching Decorator
+## Step 5 — Add a Caching Layer with Redis
 
-Use `@ttl_cache` to cache any function result in Redis:
+Use `RedisAdapter` to cache function results in Redis with a TTL:
 
 ```python
 # logics/user_logic.py
 import logging
-from archipy.helpers.decorators.cache import ttl_cache
+
+from adapters.cache_adapter import redis
 
 logger = logging.getLogger(__name__)
 
+_CACHE_TTL = 60  # seconds
 
-@ttl_cache(ttl=60)
+
 def get_user_name(user_id: str) -> str:
-    """Fetch a user name from the database (simulated).
+    """Fetch a user name, served from Redis cache when available.
 
     Args:
         user_id: Unique user identifier.
@@ -103,14 +105,21 @@ def get_user_name(user_id: str) -> str:
     Returns:
         The user's display name.
     """
+    cache_key = f"user:name:{user_id}"
+    cached = redis.get(cache_key)
+    if cached is not None:
+        return str(cached)
+
     logger.info("Cache miss — fetching user %s from database", user_id)
-    return f"User-{user_id}"  # replace with a real DB call
+    name = f"User-{user_id}"  # replace with a real DB call
+    redis.set(cache_key, name, ex=_CACHE_TTL)
+    return name
 
 
-# First call: cache miss — hits the database
+# First call: cache miss — hits the database and stores in Redis
 name = get_user_name("42")
 
-# Second call within 60 seconds: cache hit — returns instantly
+# Second call within 60 seconds: cache hit — returns from Redis instantly
 name = get_user_name("42")
 ```
 
@@ -152,9 +161,9 @@ python manage.py run
 You should see:
 
 ```
-INFO  Cache miss — fetching user 42 from database
-INFO  User-42
-INFO  User-42
+INFO:logics.user_logic:Cache miss — fetching user 42 from database
+INFO:__main__:User-42
+INFO:__main__:User-42
 ```
 
 The second call is served from Redis without hitting the database.
