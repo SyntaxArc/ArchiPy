@@ -45,7 +45,7 @@ class BaseRangeDTO[R](BaseDTO):
             # Use comparison with proper type handling
             # The protocol ensures both values support comparison
             try:
-                if self.from_ > self.to:  # type: ignore[operator]
+                if self.from_ > self.to:  # ty: ignore[unsupported-operator]
                     raise OutOfRangeError(field_name="from_")
             except TypeError:
                 # If comparison fails, skip validation (shouldn't happen with proper types)

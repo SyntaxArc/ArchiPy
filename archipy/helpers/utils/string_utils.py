@@ -323,11 +323,13 @@ class StringUtils(StringUtilsConstants):
             str: The text with numbers masked.
         """
         mask = mask or "MASK_NUMBERS"
-        numbers = re.findall("[0-9]+", text)
-        result: str = text
-        for number in sorted(numbers, key=len, reverse=True):
-            result = result.replace(number, f" {mask} ")  # type: ignore[arg-type]
-        return result
+        work_text = str(text)
+        numbers: list[str] = re.findall("[0-9]+", work_text)
+        replacement = f" {mask} "
+        for raw_number in sorted(numbers, key=len, reverse=True):
+            number = str(raw_number)
+            work_text = re.sub(re.escape(number), replacement, work_text)
+        return work_text
 
     @classmethod
     def is_string_none_or_empty(cls, text: str) -> bool:

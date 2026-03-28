@@ -1,7 +1,7 @@
 import asyncio
 import time
 from collections.abc import Callable
-from typing import Any, ClassVar, cast
+from typing import ClassVar
 
 import grpc
 
@@ -90,8 +90,8 @@ class GrpcServerMetricInterceptor(BaseGrpcServerInterceptor):
             result = method(request, context)
 
             if hasattr(context, "code") and callable(context.code):
-                code_method = cast("Callable[[], Any]", context.code)
-                code_obj = code_method()
+                code_method = context.code
+                code_obj = code_method()  # ty: ignore[call-top-callable]
                 if code_obj is not None:
                     code_name = getattr(code_obj, "name", None)
                     if code_name is not None:
@@ -198,8 +198,8 @@ class AsyncGrpcServerMetricInterceptor(BaseAsyncGrpcServerInterceptor):
                         if code_name is not None:
                             status_code = code_name
                 elif hasattr(e, "code") and callable(e.code):
-                    code_method = cast("Callable[[], Any]", e.code)
-                    code_obj = code_method()
+                    code_method = e.code
+                    code_obj = code_method()  # ty: ignore[call-top-callable]
                     if code_obj is not None:
                         code_name = getattr(code_obj, "name", None)
                         if code_name is not None:

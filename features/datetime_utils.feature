@@ -74,7 +74,7 @@ Feature: Datetime Utilities
     Then the result should be cached with historical TTL
 
   Scenario: Verify current dates use standard cache TTL
-#    Test that current/future dates get cached with standard CACHE_TTL
-    Given a current Gregorian date "2026-03-21"
+#    Test that strictly future calendar dates get standard CACHE_TTL (today/past use historical TTL).
+    Given a Gregorian date strictly after today
     When we check if the date is a holiday in Iran with cache verification
     Then the result should be cached with standard TTL

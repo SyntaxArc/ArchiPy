@@ -110,9 +110,9 @@ class CachedFunction[**P, R]:
 
 
 def ttl_cache_decorator[**P, R](
-    ttl_seconds: int = 300,
+    ttl_seconds: int | Callable[[], int] = 300,
     maxsize: int = 100,
-) -> Callable[[Callable[P, R]], CachedFunction[P, R]]:
+) -> Any:
     """Decorator that provides a TTL cache for functions and methods.
 
     The cache is shared across all instances when decorating instance methods.
@@ -120,13 +120,15 @@ def ttl_cache_decorator[**P, R](
     depend only on the method arguments, not the instance state.
 
     Args:
-        ttl_seconds: Time to live in seconds (default: 5 minutes).
+        ttl_seconds: Time to live in seconds (default: 5 minutes), or a zero-argument
+            callable that returns the TTL (evaluated once when the decorator is applied).
             After this time, cached entries expire and the function is re-executed.
         maxsize: Maximum size of the cache (default: 100).
             When the cache is full, the least recently used entry is evicted.
 
     Returns:
-        Decorated function with TTL caching and a clear_cache() method.
+        Decorated function with TTL caching and a clear_cache() method (typed as :class:`~typing.Any`
+        at compile time so ParamSpec-style decorator typing stays sound).
 
     Example:
         ```python
@@ -157,9 +159,13 @@ def ttl_cache_decorator[**P, R](
     """
     from cachetools import TTLCache
 
-    cache: TTLCache = TTLCache(maxsize=maxsize, ttl=ttl_seconds)
+    if isinstance(ttl_seconds, int):
+        resolved_ttl = int(ttl_seconds)
+    else:
+        resolved_ttl = int(ttl_seconds())
+    cache: TTLCache = TTLCache(maxsize=maxsize, ttl=resolved_ttl)
 
     def decorator(func: Callable[P, R]) -> CachedFunction[P, R]:
         return CachedFunction(func, cache, instance=None)
 
-    return decorator  # type: ignore[return-value]
+    return decorator

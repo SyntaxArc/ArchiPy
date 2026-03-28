@@ -2,7 +2,7 @@ import functools
 import logging
 from collections.abc import Callable
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from grpc import ServicerContext
@@ -45,6 +45,24 @@ security = HTTPBearer(scheme_name="OAuth2", description="OAuth2 Access Token", a
 DEFAULT_LANG = LanguageType.FA
 
 logger = logging.getLogger(__name__)
+
+
+def _abort_grpc_sync_if_servicer_context(error: BaseError, context: object) -> None:
+    """Invoke ``error.abort_grpc_sync`` when ``context`` is a sync gRPC servicer context."""
+    if not GRPC_AVAILABLE or not hasattr(error, "abort_grpc_sync"):
+        return
+    if isinstance(context, ServicerContext):
+        servicer_ctx = context
+        error.abort_grpc_sync(servicer_ctx)  # ty: ignore[invalid-argument-type]
+
+
+async def _abort_grpc_async_if_servicer_context(error: BaseError, context: object) -> None:
+    """Invoke ``error.abort_grpc_async`` when ``context`` is an async gRPC servicer context."""
+    if not GRPC_AVAILABLE or not hasattr(error, "abort_grpc_async"):
+        return
+    if isinstance(context, AsyncServicerContext):
+        aio_ctx = context
+        await error.abort_grpc_async(aio_ctx)  # ty: ignore[invalid-argument-type]
 
 
 class AuthContext(BaseModel):
@@ -312,10 +330,10 @@ class KeycloakUtils:
     @staticmethod
     def _extract_token_from_metadata(context: object) -> str | None:
         """Extract Bearer token from gRPC metadata."""
-        if not hasattr(context, "invocation_metadata") or not callable(context.invocation_metadata):
+        get_metadata = getattr(context, "invocation_metadata", None)
+        if get_metadata is None or not callable(get_metadata):
             return None
-        invocation_metadata_method = cast("Callable[[], Any]", context.invocation_metadata)
-        invocation_metadata_result = invocation_metadata_method()
+        invocation_metadata_result = get_metadata()
         if invocation_metadata_result is None:
             return None
         # Convert metadata tuples to dict, handling both str and bytes keys
@@ -478,10 +496,8 @@ class KeycloakUtils:
                     return func(self, request, context)
 
                 except Exception as e:
-                    if isinstance(e, BaseError) and hasattr(e, "abort_grpc_sync") and GRPC_AVAILABLE:
-                        # Only call abort if context is actually a ServicerContext
-                        if hasattr(context, "abort"):
-                            e.abort_grpc_sync(context)  # type: ignore[arg-type]
+                    if isinstance(e, BaseError):
+                        _abort_grpc_sync_if_servicer_context(e, context)
                     raise InternalError(
                         lang=lang,
                         additional_data={"original_error": str(e), "error_type": type(e).__name__},
@@ -623,19 +639,18 @@ class KeycloakUtils:
                     return await func(self, request, context)
 
                 except Exception as e:
-                    if context is None:
+                    grpc_ctx = context
+                    if grpc_ctx is None:
                         raise
-                    if isinstance(e, BaseError) and GRPC_AVAILABLE:
-                        if isinstance(context, AsyncServicerContext):
-                            await e.abort_grpc_async(context)  # type: ignore[arg-type]
-                            return None  # abort_grpc_async will terminate, but satisfy type checker
-                    if GRPC_AVAILABLE and isinstance(context, AsyncServicerContext):
-                        # False positive: isinstance narrows type at runtime
+                    if isinstance(e, BaseError) and GRPC_AVAILABLE and isinstance(grpc_ctx, AsyncServicerContext):
+                        await _abort_grpc_async_if_servicer_context(e, grpc_ctx)
+                        return None  # abort_grpc_async will terminate, but satisfy type checker
+                    if GRPC_AVAILABLE and isinstance(grpc_ctx, AsyncServicerContext):
                         error_instance = InternalError(
                             lang=lang,
                             additional_data={"original_error": str(e), "error_type": type(e).__name__},
                         )
-                        await error_instance.abort_grpc_async(context)  # type: ignore[arg-type]
+                        await _abort_grpc_async_if_servicer_context(error_instance, grpc_ctx)
                         return None  # abort_grpc_async will terminate, but satisfy type checker
                     raise
 
