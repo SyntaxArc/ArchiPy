@@ -6,13 +6,13 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Release notes for ArchiPy 4.4.0">
+        <meta name="description" content="Release notes for ArchiPy 4.4.1">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.4.0/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.4.1/">
       
       
       
@@ -25,7 +25,7 @@
     
     
       
-        <title>Changelog 4.4.0 - ArchiPy</title>
+        <title>Changelog 4.4.1 - ArchiPy</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#440-2026-03-13" class="md-skip">
+        <a href="#441-2026-04-06" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Changelog 4.4.0
+              Changelog 4.4.1
             
           </span>
         </div>
@@ -2982,56 +2982,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Added
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Added">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#adapters-kafka" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adapters - Kafka
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#configs-kafka" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configs - Kafka
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tests-kafka" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tests - Kafka
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3044,10 +2994,49 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tests-bdd" class="md-nav__link">
+  <a href="#adapters-keycloak" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tests - BDD
+        Adapters - Keycloak
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#helpers-decorators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helpers - Decorators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Dependencies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dependencies-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies - Project
       
     </span>
   </a>
@@ -3072,10 +3061,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#docs-kafka" class="md-nav__link">
+  <a href="#tests-containers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Docs - Kafka
+        Tests - Containers
       
     </span>
   </a>
@@ -3104,7 +3093,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/4/4.4.0.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/4/4.4.1.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3112,85 +3101,32 @@
   
 
 
-<h1 id="440-2026-03-13">4.4.0 — 2026-03-13<a class="headerlink" href="#440-2026-03-13" title="Permanent link">&para;</a></h1>
-<p><a href="../4.4.1/">← 4.4.1</a> | <a href="../4.3.6/">4.3.6 →</a> | <a href="../">↑ 4.x series</a></p>
-<h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
-<h3 id="adapters-kafka">Adapters - Kafka<a class="headerlink" href="#adapters-kafka" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Async Kafka Producer Adapter</strong> - Introduced <code>AsyncKafkaProducerAdapter</code> for non-blocking message production using
-  <code>confluent-kafka</code>'s thread-based async delivery model.<ul>
-<li>Implements the new <code>AsyncKafkaProducerPort</code> interface with <code>async produce</code>, <code>async flush</code>, and <code>async close</code>
-  methods</li>
-<li>Lazy-initialises the underlying <code>confluent-kafka</code> <code>Producer</code> on first use to avoid blocking the event loop at
-  construction time</li>
-<li>Supports configurable worker threads (<code>kafka_async_worker_threads</code>) and buffer flush timeout
-  (<code>kafka_async_buffer_timeout_seconds</code>) via <code>KafkaConfig</code></li>
-</ul>
-</li>
-<li><strong>Async Kafka Consumer Adapter</strong> - Introduced <code>AsyncKafkaConsumerAdapter</code> for non-blocking message consumption.<ul>
-<li>Implements the new <code>AsyncKafkaConsumerPort</code> interface with <code>async consume</code>, <code>async subscribe</code>, <code>async commit</code>,
-  and <code>async close</code> methods</li>
-<li>Offloads blocking <code>confluent-kafka</code> <code>Consumer</code> calls to a thread pool executor to keep the event loop free</li>
-</ul>
-</li>
-<li><strong>Async Kafka Ports</strong> - Added <code>AsyncKafkaProducerPort</code> and <code>AsyncKafkaConsumerPort</code> abstract base classes to
-  <code>archipy/adapters/kafka/ports.py</code>.<ul>
-<li>Defines the async contract that all async Kafka adapter implementations must satisfy</li>
-</ul>
-</li>
-<li><strong>Close Methods on Sync Adapters</strong> - Added explicit <code>close()</code> methods to <code>KafkaConsumerAdapter</code> and
-  <code>KafkaProducerAdapter</code> for deterministic resource cleanup.</li>
-</ul>
-<h3 id="configs-kafka">Configs - Kafka<a class="headerlink" href="#configs-kafka" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Async Kafka Config Fields</strong> - Extended <code>KafkaConfig</code> with two new settings for the async adapters.<ul>
-<li><code>kafka_async_worker_threads: int</code> — number of threads in the async executor pool (default <code>4</code>)</li>
-<li><code>kafka_async_buffer_timeout_seconds: float</code> — maximum seconds to wait when flushing the producer buffer on close
-  (default <code>5.0</code>)</li>
-</ul>
-</li>
-</ul>
-<h3 id="tests-kafka">Tests - Kafka<a class="headerlink" href="#tests-kafka" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Async BDD Scenarios</strong> - Expanded <code>features/kafka_adapters.feature</code> with end-to-end scenarios for
-  <code>AsyncKafkaProducerAdapter</code> and <code>AsyncKafkaConsumerAdapter</code>.<ul>
-<li>Covers produce, consume, subscribe, commit, flush, and close lifecycle</li>
-<li>Step implementations in <code>features/steps/kafka_adapter_steps.py</code> use <code>await</code> throughout instead of
-  <code>asyncio.run()</code></li>
-</ul>
-</li>
-</ul>
+<h1 id="441-2026-04-06">4.4.1 — 2026-04-06<a class="headerlink" href="#441-2026-04-06" title="Permanent link">&para;</a></h1>
+<p><a href="../4.4.0/">4.4.0 →</a> | <a href="../">↑ 4.x series</a></p>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
-<h3 id="tests-bdd">Tests - BDD<a class="headerlink" href="#tests-bdd" title="Permanent link">&para;</a></h3>
+<h3 id="adapters-keycloak">Adapters - Keycloak<a class="headerlink" href="#adapters-keycloak" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Async Step Implementations</strong> - Refactored all async Behave step functions across multiple feature files to use
-  <code>await</code> instead of <code>asyncio.run()</code>.<ul>
-<li>Affected files: <code>atomic_transaction_steps.py</code>, <code>error_utils_steps.py</code>, <code>grpc_error_handling_steps.py</code>,
-  <code>metric_interceptor_steps.py</code></li>
-<li>Eliminates nested event-loop errors when steps run inside an already-running loop</li>
+<li><strong>Userinfo Cache Typing</strong> - Tightened typing for Keycloak userinfo caching by replacing <code>type: ignore</code> return
+  annotations with explicit <code>cast()</code> to <code>KeycloakUserType</code>.</li>
+</ul>
+<h3 id="helpers-decorators">Helpers - Decorators<a class="headerlink" href="#helpers-decorators" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Atomic Decorator Overloads</strong> - Refined <code>sqlalchemy_atomic_decorator</code> overloads to better distinguish sync vs async
+  call sites.<ul>
+<li>Uses <code>Literal[True]</code> / <code>Literal[False]</code> overloads for <code>is_async</code></li>
+<li>Adds explicit <code>cast()</code> when selecting the async/sync decorator branch</li>
 </ul>
 </li>
-<li><strong><code>test_helpers.py</code> Cleanup</strong> - Removed deprecated utility functions from <code>features/test_helpers.py</code> that were
-  superseded by the async step refactor.</li>
+</ul>
+<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
+<h3 id="dependencies-project">Dependencies - Project<a class="headerlink" href="#dependencies-project" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Dependency Refresh</strong> - Updated runtime and dev dependencies and regenerated <code>uv.lock</code>.</li>
 </ul>
 <h2 id="chore">Chore<a class="headerlink" href="#chore" title="Permanent link">&para;</a></h2>
-<h3 id="docs-kafka">Docs - Kafka<a class="headerlink" href="#docs-kafka" title="Permanent link">&para;</a></h3>
+<h3 id="tests-containers">Tests - Containers<a class="headerlink" href="#tests-containers" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Kafka Tutorial Expansion</strong> - Substantially expanded <code>docs/tutorials/adapters/kafka.md</code> to document all five
-  adapter classes (<code>KafkaAdminAdapter</code>, <code>KafkaConsumerAdapter</code>, <code>KafkaProducerAdapter</code>,
-  <code>AsyncKafkaConsumerAdapter</code>, <code>AsyncKafkaProducerAdapter</code>).<ul>
-<li>Added dedicated sections for async adapters, lazy initialisation behaviour, and usage in non-async contexts</li>
-<li>Improved logging examples for consistency with documentation standards</li>
-</ul>
-</li>
-<li><strong>Kafka API Reference Update</strong> - Updated <code>docs/api_reference/adapters/kafka.md</code> to list all five adapter classes
-  and their async configuration options.</li>
-<li><strong>Documentation Admonition Style</strong> - Migrated all admonitions across 19 documentation files from MkDocs <code>!!!</code>
-  directives to block-quote callouts (<code>&gt; **Type:** ...</code>) to prevent formatting issues in PyCharm.</li>
-<li><strong>Quickstart Redis Update</strong> - Updated <code>docs/getting-started/quickstart.md</code> to reflect the current Redis caching
-  implementation.</li>
-<li><strong>BDD Testing Rule Update</strong> - Clarified Behave version (1.3.3) and async step conventions in
-  <code>.cursor/rules/testing-bdd.mdc</code>.</li>
+<li><strong>Test Container Images</strong> - Refreshed container image settings used by <code>.env.test</code>.</li>
 </ul>
 
 
