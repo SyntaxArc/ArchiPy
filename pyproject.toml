@@ -11,7 +11,7 @@ requires-python = ">=3.14,<4"
 dependencies = [
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
-    "requests>=2.33.0",
+    "requests>=2.33.1",
     "jdatetime>=5.2.0",
 ]
 license = { file = "LICENSE" }
@@ -26,21 +26,21 @@ elastic-apm = ["elastic-apm>=6.25.0"]
 elasticsearch = ["elasticsearch>=9.3.0"]
 elasticsearch-async = ["elasticsearch[async]>=9.3.0"]
 fakeredis = ["fakeredis>=2.34.1"]
-fastapi = ["fastapi[all]>=0.135.2"]
-grpc = ["grpcio>=1.78.0", "grpcio-health-checking>=1.78.0", "protobuf>=6.33.6"]
+fastapi = ["fastapi[all]>=0.135.3"]
+grpc = ["grpcio>=1.80.0", "grpcio-health-checking>=1.80.0", "protobuf>=6.33.6"]
 jwt = ["pyjwt>=2.12.1"]
-kafka = ["confluent-kafka>=2.13.2"]
+kafka = ["confluent-kafka>=2.14.0"]
 keycloak = ["python-keycloak>=7.1.1", "cachetools>=7.0.5", "async-lru>=2.3.0"]
-minio = ["boto3>=1.42.78", "cachetools>=7.0.5", "async-lru>=2.3.0"]
-parsian-ipg = ["zeep>=4.3.2", "requests[socks]>=2.33.0"]
+minio = ["boto3>=1.42.83", "cachetools>=7.0.5", "async-lru>=2.3.0"]
+parsian-ipg = ["zeep>=4.3.2", "requests[socks]>=2.33.1"]
 postgres = ["psycopg[binary,pool]>=3.3.3"]
 prometheus = ["prometheus-client>=0.24.1"]
 redis = ["redis[hiredis]>=7.4.0"]
 scheduler = ["apscheduler>=3.11.2"]
 scylladb = ["scylla-driver>=3.29.9", "lz4>=4.4.5", "cachetools>=7.0.5", "async-lru>=2.3.0"]
-sentry = ["sentry-sdk>=2.56.0"]
-sqlalchemy = ["sqlalchemy>=2.0.48"]
-sqlalchemy-async = ["sqlalchemy[asyncio]>=2.0.48"]
+sentry = ["sentry-sdk>=2.57.0"]
+sqlalchemy = ["sqlalchemy>=2.0.49"]
+sqlalchemy-async = ["sqlalchemy[asyncio]>=2.0.49"]
 starrocks = ["starrocks>=1.3.3", "pymysql>=1.1.2"]
 starrocks-async = ["starrocks>=1.3.3", "aiomysql>=0.3.2", "asyncmy>=0.2.11"]
 temporalio = ["temporalio>=1.24.0"]
@@ -67,16 +67,16 @@ dev = [
     "add-trailing-comma>=4.0.0",
     "bandit>=1.9.4",
     "codespell>=2.4.2",
-    "ty>=0.0.26",
+    "ty>=0.0.29",
     "pre-commit-hooks>=6.0.0",
     "pre-commit>=4.5.1",
-    "ruff>=0.15.8",
+    "ruff>=0.15.9",
     "types-cachetools>=6.2.0.20260317",
     "types-grpcio>=1.0.0.20251009",
-    "types-protobuf>=6.32.1.20260221",
+    "types-protobuf>=7.34.1.20260403",
     "types-pymysql>=1.1.0.20251220",
-    "types-regex>=2026.2.28.20260301",
-    "types-requests>=2.33.0.20260327",
+    "types-regex>=2026.4.4.20260405",
+    "types-requests>=2.33.0.20260402",
     "validate-pyproject>=0.25",
 ]
 
@@ -86,7 +86,7 @@ docs = [
     "mkdocs>=1.6.1",
     "mkdocstrings-python>=2.0.3",
     "mkdocstrings>=1.0.3",
-    "pymdown-extensions>=10.21",
+    "pymdown-extensions>=10.21.2",
 ]
 
 
@@ -313,7 +313,6 @@ exclude = ["features", "scripts"]
 [tool.ty.rules]
 # Enable strict type checking rules (similar to mypy strict mode)
 # Error-level rules (default)
-byte-string-type-annotation = "error"
 call-non-callable = "error"
 conflicting-argument-forms = "error"
 conflicting-declarations = "error"
@@ -323,7 +322,6 @@ cyclic-type-alias-definition = "error"
 duplicate-base = "error"
 duplicate-kw-only = "error"
 escape-character-in-forward-annotation = "error"
-fstring-type-annotation = "error"
 implicit-concatenated-string-type-annotation = "error"
 inconsistent-mro = "error"
 index-out-of-bounds = "error"

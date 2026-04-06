@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-from typing import Any, NoReturn, override
+from typing import Any, NoReturn, cast, override
 
 from async_lru import alru_cache
 from keycloak import KeycloakAdmin, KeycloakOpenID
@@ -550,7 +550,7 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
 
     @ttl_cache_decorator(ttl_seconds=30, maxsize=100)  # Cache for 30 seconds
     def _get_userinfo_cached(self, token: str) -> KeycloakUserType:
-        return self._openid_adapter.userinfo(token)  # type: ignore[return-value]
+        return cast("KeycloakUserType", self._openid_adapter.userinfo(token))
 
     @override
     @ttl_cache_decorator(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
@@ -1961,7 +1961,7 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
 
     @alru_cache(ttl=30, maxsize=100)  # Cache for 30 seconds
     async def _get_userinfo_cached(self, token: str) -> KeycloakUserType:
-        return await self.openid_adapter.a_userinfo(token)  # type: ignore[return-value]
+        return cast("KeycloakUserType", await self.openid_adapter.a_userinfo(token))
 
     @override
     @alru_cache(ttl=300, maxsize=100)  # Cache for 5 minutes

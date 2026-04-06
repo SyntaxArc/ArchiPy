@@ -7,7 +7,7 @@ and support for different database types (PostgreSQL, SQLite, StarRocks).
 import logging
 from collections.abc import Awaitable, Callable
 from functools import partial, wraps
-from typing import Any, NoReturn, TypeVar, overload
+from typing import Any, Literal, NoReturn, TypeVar, cast, overload
 
 from sqlalchemy.exc import (
     IntegrityError,
@@ -120,9 +120,17 @@ def _handle_db_exception(exception: BaseException, db_type: str, func_name: str)
 @overload
 def sqlalchemy_atomic_decorator[R](
     db_type: str,
-    is_async: bool = False,
+    is_async: Literal[False] = False,
     function: Callable[..., R] = ...,
 ) -> Callable[..., R]: ...
+
+
+@overload
+def sqlalchemy_atomic_decorator[R](
+    db_type: str,
+    is_async: Literal[True],
+    function: Callable[..., Awaitable[R]] = ...,
+) -> Callable[..., Awaitable[R]]: ...
 
 
 @overload
@@ -136,8 +144,8 @@ def sqlalchemy_atomic_decorator(
 def sqlalchemy_atomic_decorator[R](
     db_type: str,
     is_async: bool = False,
-    function: Callable[..., R] | None = None,
-) -> Callable[..., R] | partial[Callable[..., Any]]:
+    function: Callable[..., R] | Callable[..., Awaitable[R]] | None = None,
+) -> Callable[..., R] | Callable[..., Awaitable[R]] | partial[Callable[..., Any]]:
     """Factory for creating SQLAlchemy atomic transaction decorators.
 
     This decorator ensures that a function runs within a database transaction for the specified
@@ -257,7 +265,7 @@ def sqlalchemy_atomic_decorator[R](
             return async_wrapper
 
         if function is not None:
-            return async_decorator(function)  # type: ignore[arg-type, return-value]
+            return async_decorator(cast("Callable[..., Awaitable[R]]", function))
         return partial(sqlalchemy_atomic_decorator, db_type=db_type, is_async=is_async)
 
     else:
@@ -305,7 +313,7 @@ def sqlalchemy_atomic_decorator[R](
             return sync_wrapper
 
         if function is not None:
-            return sync_decorator(function)
+            return sync_decorator(cast("Callable[..., R]", function))
         return partial(sqlalchemy_atomic_decorator, db_type=db_type, is_async=is_async)
 
 
