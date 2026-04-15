@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 4.x series"
 
 | Version           | Date       | Summary                                                                                         |
 |-------------------|------------|-------------------------------------------------------------------------------------------------|
+| [4.4.2](4.4.2.md) | 2026-04-15 | asyncmy to asyncmy2 migration, dev dependency refresh, and test container image updates         |
 | [4.4.1](4.4.1.md) | 2026-04-06 | Dependency refresh, regenerated lockfile, and typing cleanups for Keycloak and atomic decorator |
 | [4.4.0](4.4.0.md) | 2026-03-13 | Async Kafka producer and consumer adapters, async BDD step refactor                             |
 | [4.3.6](4.3.6.md) | 2026-03-13 | SQLAlchemy filter type expansion, docs overhaul, CI pipeline fixes                              |
