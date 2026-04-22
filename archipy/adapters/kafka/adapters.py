@@ -749,7 +749,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
             self._handle_producer_exception(e, "produce")
 
     @override
-    async def flush(self, timeout: int | None = None) -> None:  # noqa: ASYNC109
+    async def flush(self, timeout: int | None = None) -> None:
         """Flushes the producer queue asynchronously.
 
         Args:
@@ -779,7 +779,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
             raise UnavailableError(resource_type="Kafka") from e
 
     @override
-    async def list_topics(self, topic: str | None = None, timeout: int = 1) -> ClusterMetadata:  # noqa: ASYNC109
+    async def list_topics(self, topic: str | None = None, timeout: int = 1) -> ClusterMetadata:
         """Lists Kafka topics asynchronously.
 
         Args:
@@ -925,7 +925,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
         return self._adapter
 
     @override
-    async def batch_consume(self, messages_number: int = 500, timeout: int = 1) -> list[Message]:  # noqa: ASYNC109
+    async def batch_consume(self, messages_number: int = 500, timeout: int = 1) -> list[Message]:
         """Consumes a batch of messages from subscribed topics asynchronously.
 
         Args:
@@ -959,7 +959,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             return result_list
 
     @override
-    async def poll(self, timeout: int = 1) -> Message | None:  # noqa: ASYNC109
+    async def poll(self, timeout: int = 1) -> Message | None:
         """Polls for a single message from subscribed topics asynchronously.
 
         Args:

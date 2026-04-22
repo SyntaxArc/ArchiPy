@@ -1,7 +1,7 @@
 import time
 from collections.abc import Generator
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, ClassVar
 
 import jdatetime
 import requests
@@ -9,20 +9,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from archipy.configs.base_config import BaseConfig
-from archipy.helpers.decorators.cache import ttl_cache_decorator
 from archipy.models.errors import UnknownError
-
-_HOLIDAY_CACHE_MAXSIZE = 2048
-
-
-def _iran_holiday_historical_cache_ttl_seconds() -> int:
-    """Return DATETIME.HISTORICAL_CACHE_TTL from the global config (evaluated at decorate time)."""
-    return BaseConfig.global_config().DATETIME.HISTORICAL_CACHE_TTL
-
-
-def _iran_holiday_standard_cache_ttl_seconds() -> int:
-    """Return DATETIME.CACHE_TTL from the global config (evaluated at decorate time)."""
-    return BaseConfig.global_config().DATETIME.CACHE_TTL
 
 
 class DatetimeUtils:
@@ -31,6 +18,9 @@ class DatetimeUtils:
     This class provides methods for working with both Gregorian and Jalali (Persian) calendars, as well as
     utility functions for timezone-aware datetime objects, date ranges, and string formatting.
     """
+
+    """A class-level cache for storing holiday statuses to avoid redundant API calls."""
+    _holiday_cache: ClassVar[dict[str, tuple[bool, datetime]]] = {}
 
     @staticmethod
     def convert_to_jalali(target_date: date) -> jdatetime.date:
@@ -56,42 +46,83 @@ class DatetimeUtils:
         Returns:
             bool: True if the date is a holiday, False otherwise.
         """
+        # Convert to Jalali date first
+        jalali_date = cls.convert_to_jalali(target_date)
         date_str = target_date.strftime("%Y-%m-%d")
-        utc_today = cls.get_datetime_utc_now().date()
-        is_historical = target_date <= utc_today
-        if is_historical:
-            return cls._fetch_holiday_in_iran_historical(date_str)
-        return cls._fetch_holiday_in_iran_standard(date_str)
+        current_time = cls.get_datetime_utc_now()
 
-    @staticmethod
-    @ttl_cache_decorator(
-        ttl_seconds=_iran_holiday_historical_cache_ttl_seconds,
-        maxsize=_HOLIDAY_CACHE_MAXSIZE,
-    )
-    def _fetch_holiday_in_iran_historical(date_str: str) -> bool:
-        """Resolve holiday flag for a date on or before UTC today; cached with historical TTL."""
-        target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        jalali_date = DatetimeUtils.convert_to_jalali(target_date)
+        # Check cache first
+        is_cached, is_holiday = cls._check_cache(date_str, current_time)
+        if is_cached:
+            return is_holiday
+
+        # Fetch holiday status and cache it
+        return cls._fetch_and_cache_holiday_status(jalali_date, date_str, current_time)
+
+    @classmethod
+    def _check_cache(cls, date_str: str, current_time: datetime) -> tuple[bool, bool]:
+        """Checks the cache for holiday status to avoid redundant API calls.
+
+        Args:
+            date_str (str): The date string to check in the cache.
+            current_time (datetime): The current time to compare against cache expiration.
+
+        Returns:
+            tuple[bool, bool]: A tuple where the first element indicates if the cache was hit,
+                               and the second element is the cached holiday status.
+        """
+        cached_data = cls._holiday_cache.get(date_str)
+        if cached_data:
+            is_holiday, expiry_time = cached_data
+            if current_time < expiry_time:
+                return True, is_holiday
+
+            # Remove expired cache entry
+            del cls._holiday_cache[date_str]
+
+        return False, False
+
+    @classmethod
+    def _fetch_and_cache_holiday_status(
+        cls,
+        jalali_date: jdatetime.date,
+        date_str: str,
+        current_time: datetime,
+    ) -> bool:
+        """Fetches holiday status from the API and caches the result.
+
+        This method calls an external API to determine if the given Jalali date is a holiday.
+        If the API call is successful, the result is cached with an expiration time to avoid
+        redundant API calls. If the API call fails, an `UnknownError` is raised.
+
+        Args:
+            jalali_date (jdatetime.date): The Jalali date to check for holiday status.
+            date_str (str): The date string to use as a cache key.
+            current_time (datetime): The current time to set cache expiration.
+
+        Returns:
+            bool: True if the date is a holiday, False otherwise.
+
+        Raises:
+            UnknownError: If the API request fails due to a network issue or other request-related errors.
+        """
         try:
-            response = DatetimeUtils._call_holiday_api(jalali_date)
+            config: Any = BaseConfig.global_config()
+            response = cls._call_holiday_api(jalali_date)
+            is_holiday = cls._parse_holiday_response(response, jalali_date)
+
+            # Determine cache TTL based on whether the date is historical
+            target_date = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=UTC).date()
+            is_historical = target_date <= current_time.date()
+            cache_ttl = config.DATETIME.HISTORICAL_CACHE_TTL if is_historical else config.DATETIME.CACHE_TTL
+
+            # Cache the result with appropriate expiration
+            expiry_time = current_time + timedelta(seconds=cache_ttl)
+            cls._holiday_cache[date_str] = (is_holiday, expiry_time)
         except requests.RequestException as exception:
             raise UnknownError from exception
-        return DatetimeUtils._parse_holiday_response(response, jalali_date)
 
-    @staticmethod
-    @ttl_cache_decorator(
-        ttl_seconds=_iran_holiday_standard_cache_ttl_seconds,
-        maxsize=_HOLIDAY_CACHE_MAXSIZE,
-    )
-    def _fetch_holiday_in_iran_standard(date_str: str) -> bool:
-        """Resolve holiday flag for a strictly future calendar date; cached with standard TTL."""
-        target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        jalali_date = DatetimeUtils.convert_to_jalali(target_date)
-        try:
-            response = DatetimeUtils._call_holiday_api(jalali_date)
-        except requests.RequestException as exception:
-            raise UnknownError from exception
-        return DatetimeUtils._parse_holiday_response(response, jalali_date)
+        return is_holiday
 
     @staticmethod
     def _call_holiday_api(jalali_date: jdatetime.date) -> dict[str, Any]:

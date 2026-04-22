@@ -77,7 +77,7 @@ format: ## Format code using ruff
 lint: ## Run all linters
 	@echo "${BLUE}Running linters...${NC}"
 	$(PYTHON) ruff check --config pyproject.toml  $(PYTHON_FILES)
-	$(PYTHON) ty check $(PYTHON_FILES)
+	$(PYTHON) ty check --fix $(PYTHON_FILES)
 
 .PHONY: security
 security: ## Run security scan with Bandit

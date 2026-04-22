@@ -11,7 +11,7 @@ from enum import StrEnum
 from typing import Literal, Self
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field, PostgresDsn, SecretStr, field_validator, model_validator
+from pydantic import BaseModel, Field, HttpUrl, PostgresDsn, SecretStr, field_validator, model_validator
 
 from archipy.models.errors import FailedPreconditionError, InvalidArgumentError
 
@@ -800,6 +800,25 @@ class ParsianShaparakConfig(BaseModel):
         default=None,
         description="Optional HTTP/HTTPS proxy configuration dictionary",
     )
+
+
+class SamanShaparakConfig(BaseModel):
+    """Configuration for Saman Shaparak (SEP) Payment Gateway."""
+
+    TERMINAL_ID: str | None = Field(default=None, description="Merchant terminal id for authentication")
+    PAYMENT_URL: HttpUrl = Field(
+        default=HttpUrl("https://sep.shaparak.ir/onlinepg/onlinepg"),
+        description="Token request endpoint",
+    )
+    VERIFY_URL: HttpUrl = Field(
+        default=HttpUrl("https://sep.shaparak.ir/verifyTxnRandomSessionkey/ipg/VerifyTransaction"),
+        description="Verify endpoint",
+    )
+    REVERSE_URL: HttpUrl = Field(
+        default=HttpUrl("https://sep.shaparak.ir/verifyTxnRandomSessionkey/ipg/ReverseTransaction"),
+        description="Reverse endpoint",
+    )
+    PROXIES: dict[str, str] | None = Field(default=None, description="Proxy settings")
 
 
 class TemporalConfig(BaseModel):

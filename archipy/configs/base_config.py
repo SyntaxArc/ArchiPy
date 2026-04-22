@@ -24,6 +24,7 @@ from archipy.configs.config_template import (
     PostgresSQLAlchemyConfig,
     PrometheusConfig,
     RedisConfig,
+    SamanShaparakConfig,
     ScyllaDBConfig,
     SentryConfig,
     SQLAlchemyConfig,
@@ -163,6 +164,7 @@ class BaseConfig[R](BaseSettings):
     KEYCLOAK: KeycloakConfig = KeycloakConfig()
     MINIO: MinioConfig = MinioConfig()
     PARSIAN_SHAPARAK: ParsianShaparakConfig = ParsianShaparakConfig()
+    SAMAN_SHAPARAK: SamanShaparakConfig = SamanShaparakConfig()
     PROMETHEUS: PrometheusConfig = PrometheusConfig()
     REDIS: RedisConfig = RedisConfig()
     SCYLLADB: ScyllaDBConfig = ScyllaDBConfig()
