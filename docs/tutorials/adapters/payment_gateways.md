@@ -10,11 +10,13 @@ with proper error handling and Python 3.14 type hints.
 
 ## Supported Gateways
 
-| Gateway          | Adapter Class                          | Protocol |
-|-----------------|----------------------------------------|----------|
-| Parsian Shaparak | `ParsianShaparakPaymentAdapter`        | SOAP/WSDL |
-| Saman Shaparak   | `SamanShaparakPaymentAdapter`          | REST/JSON |
-| Saman Neo-PG     | `SamanNeoPgShaparakPaymentAdapter`     | REST/JSON (dynamic URL) |
+| Gateway              | Adapter Class                          | Protocol |
+|---------------------|----------------------------------------|----------|
+| Parsian Shaparak    | `ParsianShaparakPaymentAdapter`        | SOAP/WSDL |
+| Saman Shaparak      | `SamanShaparakPaymentAdapter`          | REST/JSON |
+| Saman Neo-PG        | `SamanNeoPgShaparakPaymentAdapter`     | REST/JSON (dynamic URL) |
+| Async Saman Shaparak | `AsyncSamanShaparakPaymentAdapter`   | REST/JSON (async) |
+| Async Saman Neo-PG  | `AsyncSamanNeoPgShaparakPaymentAdapter`| REST/JSON (async, dynamic URL) |
 
 ## Installation
 
@@ -180,10 +182,12 @@ else:
 
 ## Saman Shaparak
 
-Saman uses a REST/JSON protocol with two adapter variants:
+Saman uses a REST/JSON protocol with four adapter variants:
 
 - **`SamanShaparakPaymentAdapter`** — Classic SEP adapter, redirects to fixed payment URL
 - **`SamanNeoPgShaparakPaymentAdapter`** — Neo-PG adapter, receives dynamic payment URL from response header
+- **`AsyncSamanShaparakPaymentAdapter`** — Async version of classic SEP adapter
+- **`AsyncSamanNeoPgShaparakPaymentAdapter`** — Async version of Neo-PG adapter
 
 ### Configuration
 
@@ -209,9 +213,11 @@ config = SamanShaparakConfig(
 ```python
 import logging
 
-from archipy.adapters.internet_payment_gateways.ir.saman.adapters import (
+from archipy.adapters.internet_payment_gateways.ir.saman import (
     SamanShaparakPaymentAdapter,
     SamanNeoPgShaparakPaymentAdapter,
+    AsyncSamanShaparakPaymentAdapter,
+    AsyncSamanNeoPgShaparakPaymentAdapter,
 )
 from archipy.models.errors import FailedPreconditionError
 
@@ -220,6 +226,8 @@ logger = logging.getLogger(__name__)
 try:
     payment_adapter = SamanShaparakPaymentAdapter()
     neo_adapter = SamanNeoPgShaparakPaymentAdapter()
+    async_adapter = AsyncSamanShaparakPaymentAdapter()
+    async_neo_adapter = AsyncSamanNeoPgShaparakPaymentAdapter()
 except FailedPreconditionError as e:
     logger.error(f"Failed to initialize payment adapter: {e}")
     raise
@@ -230,7 +238,7 @@ else:
 ### Initiating a Payment
 
 ```python
-from archipy.adapters.internet_payment_gateways.ir.saman.adapters import PaymentRequestDTO
+from archipy.adapters.internet_payment_gateways.ir.saman import PaymentRequestDTO
 from archipy.models.errors import UnavailableError, InternalError
 
 payment_request = PaymentRequestDTO(
@@ -277,7 +285,7 @@ else:
 ### Verifying a Payment
 
 ```python
-from archipy.adapters.internet_payment_gateways.ir.saman.adapters import VerifyRequestDTO
+from archipy.adapters.internet_payment_gateways.ir.saman import VerifyRequestDTO
 from archipy.models.errors import UnavailableError, InternalError
 
 verify_request = VerifyRequestDTO(reference_number="reference-number-from-callback")
@@ -303,7 +311,7 @@ else:
 ### Reversing a Payment
 
 ```python
-from archipy.adapters.internet_payment_gateways.ir.saman.adapters import ReverseRequestDTO
+from archipy.adapters.internet_payment_gateways.ir.saman import ReverseRequestDTO
 from archipy.models.errors import UnavailableError, InternalError
 
 reverse_request = ReverseRequestDTO(reference_number="reference-number")
@@ -339,7 +347,8 @@ from archipy.adapters.internet_payment_gateways.ir.parsian.adapters import (
     ParsianShaparakPaymentAdapter,
     PaymentRequestDTO,
 )
-from archipy.adapters.internet_payment_gateways.ir.saman.adapters import (
+from archipy.adapters.internet_payment_gateways.ir.saman import (
+    AsyncSamanShaparakPaymentAdapter,
     SamanShaparakPaymentAdapter,
     PaymentRequestDTO as SamanPaymentRequestDTO,
     VerifyRequestDTO,
