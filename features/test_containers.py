@@ -5,7 +5,6 @@ from pathlib import Path
 
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
-from testcontainers.kafka import KafkaContainer
 from testcontainers.keycloak import KeycloakContainer
 from testcontainers.postgres import PostgresContainer
 from testcontainers.redis import RedisContainer
@@ -494,34 +493,75 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
         self.image = image or BaseConfig.global_config().KAFKA__IMAGE
         self._is_running: bool = False
 
-        # Container Properties
         self.host: str | None = None
         self.port: int | None = None
         self.bootstrap_servers: str | None = None
+        self._container: DockerContainer | None = None
 
-        # Set up the container with KRaft mode (required for cp-kafka 7.4+, mandatory for 8.0+)
-        self._container = KafkaContainer(image=self.image).with_kraft()
-
-    def start(self) -> KafkaContainer:
+    def start(self) -> DockerContainer:
         """Start the Kafka container."""
         if self._is_running:
             return self._container
 
-        # Recreate container if it was stopped
-        if self._container is None:
-            self._container = KafkaContainer(image=self.image).with_kraft()
+        temp_container = (
+            DockerContainer(image=self.image)
+            .with_exposed_ports(9092, 9093)
+            .with_env("KAFKA_NODE_ID", "1")
+            .with_env("KAFKA_PROCESS_ROLES", "broker,controller")
+            .with_env("KAFKA_LISTENERS", "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093")
+            .with_env("KAFKA_CONTROLLER_LISTENER_NAMES", "CONTROLLER")
+            .with_env(
+                "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP",
+                "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT",
+            )
+            .with_env("KAFKA_CONTROLLER_QUORUM_VOTERS", "1@localhost:9093")
+            .with_env("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", "1")
+            .with_env("KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR", "1")
+            .with_env("KAFKA_TRANSACTION_STATE_LOG_MIN_ISR", "1")
+            .with_env("KAFKA_LOG_DIRS", "/var/lib/kafka/data")
+            .with_env("KAFKA_ENABLE_KRAFT", "true")
+            .with_env("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "true")
+        )
+
+        temp_container.start()
+        mapped_port = int(temp_container.get_exposed_port(9092))
+        temp_container.stop()
+        temp_container = None
+
+        self._container = (
+            DockerContainer(image=self.image)
+            .with_bind_ports(9092, mapped_port)
+            .with_bind_ports(9093, mapped_port + 1)
+            .with_env("KAFKA_NODE_ID", "1")
+            .with_env("KAFKA_PROCESS_ROLES", "broker,controller")
+            .with_env("KAFKA_LISTENERS", "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093")
+            .with_env(
+                "KAFKA_ADVERTISED_LISTENERS",
+                f"PLAINTEXT://localhost:{mapped_port}",
+            )
+            .with_env("KAFKA_CONTROLLER_LISTENER_NAMES", "CONTROLLER")
+            .with_env(
+                "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP",
+                "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT",
+            )
+            .with_env("KAFKA_CONTROLLER_QUORUM_VOTERS", "1@localhost:9093")
+            .with_env("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", "1")
+            .with_env("KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR", "1")
+            .with_env("KAFKA_TRANSACTION_STATE_LOG_MIN_ISR", "1")
+            .with_env("KAFKA_LOG_DIRS", "/var/lib/kafka/data")
+            .with_env("KAFKA_ENABLE_KRAFT", "true")
+            .with_env("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "true")
+        )
 
         self._container.start()
         self._is_running = True
 
-        # Get dynamic host, port, and bootstrap servers from running container
-        self.host = self._container.get_container_host_ip()
-        self.bootstrap_servers = self._container.get_bootstrap_server()
-        # Extract port from bootstrap_servers (format: "host:port")
-        _, port_str = self.bootstrap_servers.split(":")
-        self.port = int(port_str)
+        wait_for_logs(self._container, "Kafka Server started", timeout=120)
 
-        # Update global config with actual container endpoint
+        self.host = self._container.get_container_host_ip()
+        self.port = mapped_port
+        self.bootstrap_servers = f"localhost:{self.port}"
+
         global_config = BaseConfig.global_config()
         global_config.KAFKA.BROKERS_LIST = [self.bootstrap_servers]
 
@@ -541,7 +581,6 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
         self._container = None
         self._is_running = False
 
-        # Reset container properties
         self.host = None
         self.port = None
         self.bootstrap_servers = None
