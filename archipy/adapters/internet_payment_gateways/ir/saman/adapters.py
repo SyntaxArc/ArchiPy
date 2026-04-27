@@ -44,10 +44,14 @@ class PaymentResponseDTO(BaseDTO):
 
 
 class VerifyRequestDTO(BaseDTO):
+    """Request for verifying a payment."""
+
     reference_number: str = Field(..., description="رسید دیجیتالی (RefNum)")
 
 
 class VerifyResponseDTO(BaseDTO):
+    """Response from payment verification."""
+
     success: bool
     result_code: int
     result_description: str
@@ -61,10 +65,14 @@ class VerifyResponseDTO(BaseDTO):
 
 
 class ReverseRequestDTO(BaseDTO):
+    """Request for reversing a payment."""
+
     reference_number: str = Field(...)
 
 
 class ReverseResponseDTO(BaseDTO):
+    """Response from payment reversal."""
+
     success: bool
     result_code: int
     result_description: str
