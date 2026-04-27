@@ -30,7 +30,7 @@ Learn how to use ArchiPy's database, cache, messaging, and storage adapters with
 - [MinIO](adapters/minio.md) - Object storage operations with presigned URLs
 - [Kafka](adapters/kafka.md) - Message streaming with producer/consumer patterns
 - [Temporal](adapters/temporal.md) - Workflow orchestration
-- [Payment Gateways](adapters/parsian_payment.md) - Iranian payment gateway integration
+- [Payment Gateways](adapters/payment_gateways.md) - Iranian payment gateway integration (Parsian, Saman)
 
 ## Helpers
 

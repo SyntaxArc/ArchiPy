@@ -25,7 +25,7 @@ implementation).
 | [Elasticsearch](elasticsearch.md)       | Elasticsearch search engine adapter                        |
 | [Temporal](temporal.md)                 | Temporal workflow orchestration adapter                    |
 | [Email](email.md)                       | Email service adapter                                      |
-| [Payment Gateways](payment_gateways.md) | Internet payment gateway adapters (Parsian Shaparak)       |
+| [Payment Gateways](payment_gateways.md) | Internet payment gateway adapters (Parsian Shaparak, Saman Shaparak) |
 
 ## Source Code
 

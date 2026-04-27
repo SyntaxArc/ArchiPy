@@ -246,6 +246,9 @@ prometheus = [
 redis = [
     { name = "redis", extra = ["hiredis"] },
 ]
+saman-ipg = [
+    { name = "requests", extra = ["socks"] },
+]
 scheduler = [
     { name = "apscheduler" },
 ]
@@ -344,6 +347,7 @@ requires-dist = [
     { name = "redis", extras = ["hiredis"], marker = "extra == 'redis'", specifier = ">=7.4.0" },
     { name = "requests", specifier = ">=2.33.1" },
     { name = "requests", extras = ["socks"], marker = "extra == 'parsian-ipg'", specifier = ">=2.33.1" },
+    { name = "requests", extras = ["socks"], marker = "extra == 'saman-ipg'", specifier = ">=2.33.1" },
     { name = "scylla-driver", marker = "extra == 'scylladb'", specifier = ">=3.29.9" },
     { name = "sentry-sdk", marker = "extra == 'sentry'", specifier = ">=2.58.0" },
     { name = "sqlalchemy", marker = "extra == 'sqlalchemy'", specifier = ">=2.0.49" },
@@ -354,7 +358,7 @@ requires-dist = [
     { name = "testcontainers", marker = "extra == 'testcontainers'", specifier = ">=4.14.2" },
     { name = "zeep", marker = "extra == 'parsian-ipg'", specifier = ">=4.3.2" },
 ]
-provides-extras = ["aiosqlite", "behave", "cache", "dependency-injection", "elastic-apm", "elasticsearch", "elasticsearch-async", "fakeredis", "fastapi", "grpc", "jwt", "kafka", "keycloak", "minio", "parsian-ipg", "postgres", "prometheus", "redis", "scheduler", "scylladb", "sentry", "sqlalchemy", "sqlalchemy-async", "starrocks", "starrocks-async", "temporalio", "testcontainers"]
+provides-extras = ["aiosqlite", "behave", "cache", "dependency-injection", "elastic-apm", "elasticsearch", "elasticsearch-async", "fakeredis", "fastapi", "grpc", "jwt", "kafka", "keycloak", "minio", "parsian-ipg", "postgres", "prometheus", "redis", "saman-ipg", "scheduler", "scylladb", "sentry", "sqlalchemy", "sqlalchemy-async", "starrocks", "starrocks-async", "temporalio", "testcontainers"]
 
 [package.metadata.requires-dev]
 dev = [

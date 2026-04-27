@@ -78,6 +78,7 @@ ArchiPy supports modular features through optional extras — install only what 
 | Service       | `archipy[kafka]`                | Message streaming and event processing            |
 | Service       | `archipy[temporalio]`           | Temporal workflow engine                          |
 | Service       | `archipy[parsian-ipg]`          | Payment gateway (Parsian)                         |
+| Service       | `archipy[saman-ipg]`            | Payment gateway (Saman)                           |
 | Web           | `archipy[fastapi]`              | FastAPI integration with middleware and utilities |
 | Web           | `archipy[grpc]`                 | gRPC integration with interceptors                |
 | Observability | `archipy[prometheus]`           | Metrics and monitoring                            |
