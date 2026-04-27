@@ -12,6 +12,15 @@ Parsian (SOAP/WSDL) and Saman (REST/JSON) protocols.
 
 Parsian Shaparak adapter using the SOAP protocol with WSDL service definitions.
 
+### Ports
+
+Abstract port interface defining the Parsian Shaparak adapter contract.
+
+::: archipy.adapters.internet_payment_gateways.ir.parsian.ports
+options:
+show_root_toc_entry: false
+heading_level: 3
+
 ### Adapters
 
 ::: archipy.adapters.internet_payment_gateways.ir.parsian.adapters

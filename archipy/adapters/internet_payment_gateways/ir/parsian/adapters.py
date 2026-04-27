@@ -2,85 +2,28 @@ import logging
 
 import requests
 import zeep
-from pydantic import Field, HttpUrl
 from zeep.exceptions import Fault
 from zeep.transports import Transport
 
+from archipy.adapters.internet_payment_gateways.ir.parsian.ports import (
+    ConfirmRequestDTO,
+    ConfirmResponseDTO,
+    ConfirmWithAmountRequestDTO,
+    ConfirmWithAmountResponseDTO,
+    ParsianShaparakPaymentPort,
+    PaymentRequestDTO,
+    PaymentResponseDTO,
+    ReverseRequestDTO,
+    ReverseResponseDTO,
+)
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import ParsianShaparakConfig
-from archipy.models.dtos.base_dtos import BaseDTO
 from archipy.models.errors import InternalError, UnavailableError
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
 
-# DTOs for ParsianShaparakPaymentAdapter
-class PaymentRequestDTO(BaseDTO):
-    """DTO for initiating a payment request."""
-
-    amount: int = Field(..., gt=0, description="Transaction amount in IRR")
-    order_id: int = Field(..., gt=0, description="Unique order identifier")
-    callback_url: HttpUrl = Field(..., description="URL to redirect after payment")
-    additional_data: str | None = Field(None, description="Additional transaction data")
-    originator: str | None = Field(None, description="Transaction originator")
-
-
-class PaymentResponseDTO(BaseDTO):
-    """DTO for payment response."""
-
-    token: int | None = Field(None, description="Transaction token")
-    status: int | None = Field(None, description="Transaction status code")
-    message: str | None = Field(None, description="Status message or error description")
-
-
-class ConfirmRequestDTO(BaseDTO):
-    """DTO for confirming a payment."""
-
-    token: int = Field(..., gt=0, description="Transaction token")
-
-
-class ConfirmResponseDTO(BaseDTO):
-    """DTO for confirm payment response."""
-
-    status: int | None = Field(None, description="Transaction status code")
-    rrn: int | None = Field(None, description="Retrieval Reference Number")
-    card_number_masked: str | None = Field(None, description="Masked card number")
-    token: int | None = Field(None, description="Transaction token")
-
-
-class ConfirmWithAmountRequestDTO(BaseDTO):
-    """DTO for confirming a payment with amount and order verification."""
-
-    token: int = Field(..., gt=0, description="Transaction token")
-    order_id: int = Field(..., gt=0, description="Unique order identifier")
-    amount: int = Field(..., gt=0, description="Transaction amount in IRR")
-
-
-class ConfirmWithAmountResponseDTO(BaseDTO):
-    """DTO for confirm payment with amount response."""
-
-    status: int | None = Field(None, description="Transaction status code")
-    rrn: int | None = Field(None, description="Retrieval Reference Number")
-    card_number_masked: str | None = Field(None, description="Masked card number")
-    token: int | None = Field(None, description="Transaction token")
-
-
-class ReverseRequestDTO(BaseDTO):
-    """DTO for reversing a payment."""
-
-    token: int = Field(..., gt=0, description="Transaction token")
-
-
-class ReverseResponseDTO(BaseDTO):
-    """DTO for reverse payment response."""
-
-    status: int | None = Field(None, description="Transaction status code")
-    message: str | None = Field(None, description="Status message or error description")
-    token: int | None = Field(None, description="Transaction token")
-
-
-class ParsianShaparakPaymentAdapter:
+class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
     """Adapter for interacting with Parsian Shaparak payment gateway services.
 
     Provides methods for initiating payments, confirming transactions, and reversing
@@ -110,16 +53,15 @@ class ParsianShaparakPaymentAdapter:
             session.proxies = configs.PROXIES
             transport = Transport(session=session)
 
-        # Initialize SOAP clients
         self.sale_client = zeep.Client(wsdl=configs.PAYMENT_WSDL_URL, transport=transport)
         self.confirm_client = zeep.Client(wsdl=configs.CONFIRM_WSDL_URL, transport=transport)
         self.reversal_client = zeep.Client(wsdl=configs.REVERSAL_WSDL_URL, transport=transport)
 
     def initiate_payment(self, request: PaymentRequestDTO) -> PaymentResponseDTO:
-        """Initiate a payment request.
+        """Step 1: Request payment token.
 
         Args:
-            request (PaymentRequestDTO): Payment request data.
+            request: Payment request data.
 
         Returns:
             PaymentResponseDTO: Response containing token, status, and message.
@@ -154,10 +96,10 @@ class ParsianShaparakPaymentAdapter:
             return result
 
     def confirm_payment(self, request: ConfirmRequestDTO) -> ConfirmResponseDTO:
-        """Confirm a payment transaction.
+        """Step 3: Confirm transaction.
 
         Args:
-            request (ConfirmRequestDTO): Confirm request data.
+            request: Confirm request data.
 
         Returns:
             ConfirmResponseDTO: Response containing status, RRN, card number, and token.
@@ -186,10 +128,10 @@ class ParsianShaparakPaymentAdapter:
             return result
 
     def confirm_payment_with_amount(self, request: ConfirmWithAmountRequestDTO) -> ConfirmWithAmountResponseDTO:
-        """Confirm a payment transaction with amount and order verification.
+        """Confirm transaction with amount and order verification.
 
         Args:
-            request (ConfirmWithAmountRequestDTO): Confirm with amount request data.
+            request: Confirm with amount request data.
 
         Returns:
             ConfirmWithAmountResponseDTO: Response containing status, RRN, card number, and token.
@@ -223,10 +165,10 @@ class ParsianShaparakPaymentAdapter:
             return result
 
     def reverse_payment(self, request: ReverseRequestDTO) -> ReverseResponseDTO:
-        """Request a reversal of a confirmed transaction.
+        """Reverse a transaction.
 
         Args:
-            request (ReverseRequestDTO): Reverse request data.
+            request: Reverse request data.
 
         Returns:
             ReverseResponseDTO: Response containing status, message, and token.

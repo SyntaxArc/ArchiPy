@@ -57,9 +57,7 @@ config = ParsianShaparakConfig(
 ```python
 import logging
 
-from archipy.adapters.internet_payment_gateways.ir.parsian.adapters import (
-    ParsianShaparakPaymentAdapter,
-)
+from archipy.adapters.internet_payment_gateways.ir.parsian import ParsianShaparakPaymentAdapter
 from archipy.models.errors import ConfigurationError
 
 logger = logging.getLogger(__name__)
@@ -76,7 +74,7 @@ else:
 ### Initiating a Payment
 
 ```python
-from archipy.adapters.internet_payment_gateways.ir.parsian.adapters import PaymentRequestDTO
+from archipy.adapters.internet_payment_gateways.ir.parsian import PaymentRequestDTO
 from archipy.models.errors import UnavailableError, InvalidArgumentError
 
 payment_request = PaymentRequestDTO(
@@ -104,7 +102,7 @@ else:
 ### Confirming a Payment
 
 ```python
-from archipy.adapters.internet_payment_gateways.ir.parsian.adapters import ConfirmRequestDTO
+from archipy.adapters.internet_payment_gateways.ir.parsian import ConfirmRequestDTO
 from archipy.models.errors import UnavailableError, InternalError
 
 token = 123456789
@@ -128,7 +126,7 @@ else:
 ### Confirming with Amount Verification
 
 ```python
-from archipy.adapters.internet_payment_gateways.ir.parsian.adapters import ConfirmWithAmountRequestDTO
+from archipy.adapters.internet_payment_gateways.ir.parsian import ConfirmWithAmountRequestDTO
 from archipy.models.errors import UnavailableError, InternalError, InvalidArgumentError
 
 confirm_with_amount_request = ConfirmWithAmountRequestDTO(
@@ -158,7 +156,7 @@ else:
 ### Reversing a Payment
 
 ```python
-from archipy.adapters.internet_payment_gateways.ir.parsian.adapters import ReverseRequestDTO
+from archipy.adapters.internet_payment_gateways.ir.parsian import ReverseRequestDTO
 from archipy.models.errors import UnavailableError, InternalError
 
 reverse_request = ReverseRequestDTO(token=123456789)
@@ -342,7 +340,7 @@ from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
-from archipy.adapters.internet_payment_gateways.ir.parsian.adapters import (
+from archipy.adapters.internet_payment_gateways.ir.parsian import (
     ConfirmRequestDTO,
     ParsianShaparakPaymentAdapter,
     PaymentRequestDTO,
