@@ -46,7 +46,7 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
     def _get_proxy(proxies: dict[str, str] | None) -> str | None:
         if proxies is None:
             return None
-        return proxies.get("https") or proxies.get("http")
+        return proxies.get("https") or proxies.get("http") or proxies.get("socks5") or proxies.get("socks5h")
 
     def initiate_payment(self, request: PaymentRequestDTO) -> PaymentResponseDTO:
         """Step 1: Request payment token.
@@ -240,7 +240,7 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
     def _get_proxy(proxies: dict[str, str] | None) -> str | None:
         if proxies is None:
             return None
-        return proxies.get("https") or proxies.get("http")
+        return proxies.get("https") or proxies.get("http") or proxies.get("socks5") or proxies.get("socks5h")
 
     async def initiate_payment(self, request: PaymentRequestDTO) -> PaymentResponseDTO:
         """Step 1: Request payment token (async).

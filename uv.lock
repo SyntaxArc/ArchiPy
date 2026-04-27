@@ -237,6 +237,10 @@ parsian-ipg = [
     { name = "requests", extra = ["socks"] },
     { name = "zeep" },
 ]
+parsian-ipg-async = [
+    { name = "httpx", extra = ["socks"] },
+    { name = "zeep", extra = ["async"] },
+]
 postgres = [
     { name = "psycopg", extra = ["binary", "pool"] },
 ]
@@ -335,6 +339,7 @@ requires-dist = [
     { name = "fastapi", extras = ["all"], marker = "extra == 'fastapi'", specifier = ">=0.136.1" },
     { name = "grpcio", marker = "extra == 'grpc'", specifier = ">=1.80.0" },
     { name = "grpcio-health-checking", marker = "extra == 'grpc'", specifier = ">=1.80.0" },
+    { name = "httpx", extras = ["socks"], marker = "extra == 'parsian-ipg-async'", specifier = ">=0.28.1" },
     { name = "httpx", extras = ["socks"], marker = "extra == 'saman-ipg'", specifier = ">=0.28.1" },
     { name = "jdatetime", specifier = ">=5.2.0" },
     { name = "lz4", marker = "extra == 'scylladb'", specifier = ">=4.4.5" },
@@ -358,8 +363,9 @@ requires-dist = [
     { name = "temporalio", marker = "extra == 'temporalio'", specifier = ">=1.24.0" },
     { name = "testcontainers", marker = "extra == 'testcontainers'", specifier = ">=4.14.2" },
     { name = "zeep", marker = "extra == 'parsian-ipg'", specifier = ">=4.3.2" },
+    { name = "zeep", extras = ["async"], marker = "extra == 'parsian-ipg-async'", specifier = ">=4.3.2" },
 ]
-provides-extras = ["aiosqlite", "behave", "cache", "dependency-injection", "elastic-apm", "elasticsearch", "elasticsearch-async", "fakeredis", "fastapi", "grpc", "jwt", "kafka", "keycloak", "minio", "parsian-ipg", "postgres", "prometheus", "redis", "saman-ipg", "scheduler", "scylladb", "sentry", "sqlalchemy", "sqlalchemy-async", "starrocks", "starrocks-async", "temporalio", "testcontainers"]
+provides-extras = ["aiosqlite", "behave", "cache", "dependency-injection", "elastic-apm", "elasticsearch", "elasticsearch-async", "fakeredis", "fastapi", "grpc", "jwt", "kafka", "keycloak", "minio", "parsian-ipg", "parsian-ipg-async", "postgres", "prometheus", "redis", "saman-ipg", "scheduler", "scylladb", "sentry", "sqlalchemy", "sqlalchemy-async", "starrocks", "starrocks-async", "temporalio", "testcontainers"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -2905,4 +2911,10 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e8/06/4f1d3ff61e930163565fb73616c6251e412a4d2fc7ed18214e1c2107258d/zeep-4.3.2.tar.gz", hash = "sha256:1a23a667ce9d73a0dbfdf15745bfa2b7ab0b6402135c0cd5067574838398e0e6", size = 166687, upload-time = "2025-09-15T10:26:03.4Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cd/78/f43f3feb70d67cbe260ec5b682ecc3c1850c8f437f1df707495126e51817/zeep-4.3.2-py3-none-any.whl", hash = "sha256:ed08c3179709172bfaaa9b76a6a545f8a57043ec6218e64e9deb81ff1e0ff79b", size = 101853, upload-time = "2025-09-15T10:26:02.12Z" },
+]
+
+[package.optional-dependencies]
+async = [
+    { name = "httpx" },
+    { name = "packaging" },
 ]
