@@ -36,7 +36,7 @@ parsian-ipg = ["zeep>=4.3.2", "requests[socks]>=2.33.1"]
 postgres = ["psycopg[binary,pool]>=3.3.3"]
 prometheus = ["prometheus-client>=0.25.0"]
 redis = ["redis[hiredis]>=7.4.0"]
-saman-ipg = ["requests[socks]>=2.33.1"]
+saman-ipg = ["httpx[socks]>=0.28.1"]
 scheduler = ["apscheduler>=3.11.2"]
 scylladb = ["scylla-driver>=3.29.9", "lz4>=4.4.5", "cachetools>=7.0.6", "async-lru>=2.3.0"]
 sentry = ["sentry-sdk>=2.58.0"]
@@ -67,11 +67,12 @@ build-backend = "hatchling.build"
 dev = [
     "add-trailing-comma>=4.0.0",
     "bandit>=1.9.4",
+    "boto3-stubs>=1.42.96",
     "codespell>=2.4.2",
-    "ty>=0.0.32",
     "pre-commit-hooks>=6.0.0",
     "pre-commit>=4.6.0",
     "ruff>=0.15.12",
+    "ty>=0.0.32",
     "types-cachetools>=6.2.0.20260408",
     "types-grpcio>=1.0.0.20260408",
     "types-protobuf>=7.34.1.20260408",
