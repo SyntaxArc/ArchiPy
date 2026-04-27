@@ -273,43 +273,49 @@ def step_when_check_holiday_with_cache_verification(context: Context) -> None:
         date_str = target_date.strftime("%Y-%m-%d")
         utc_today = DatetimeUtils.get_datetime_utc_now().date()
         is_historical = target_date <= utc_today
-        cache_wrapper = (
-            DatetimeUtils._fetch_holiday_in_iran_historical
-            if is_historical
-            else DatetimeUtils._fetch_holiday_in_iran_standard
-        )
-        ttl_cache = cache_wrapper._cache
-        func_name = "_fetch_holiday_in_iran_historical" if is_historical else "_fetch_holiday_in_iran_standard"
-        cache_key = f"{func_name}:str:{date_str!r}"
-        scenario_context.store("holiday_ttl_cache", ttl_cache)
-        scenario_context.store("holiday_cache_key", cache_key)
+        cache_entry = DatetimeUtils._holiday_cache.get(date_str)
+        scenario_context.store("cache_entry", cache_entry)
 
 
 @then("the result should be cached with historical TTL")
 def step_then_cached_with_historical_ttl(context: Context) -> None:
+    from datetime import timedelta
+
     scenario_context = get_current_scenario_context(context)
-    ttl_cache = scenario_context.get("holiday_ttl_cache")
-    cache_key = scenario_context.get("holiday_cache_key")
+    cache_entry = scenario_context.get("cache_entry")
     test_config = BaseConfig.global_config()
 
-    assert ttl_cache is not None, "TTL cache should be available"
+    assert cache_entry is not None, "Cache entry should exist"
     assert test_config is not None, "Test config should be available"
-    assert cache_key in ttl_cache, "Holiday lookup should be present in the historical TTL cache"
-    assert ttl_cache.ttl == test_config.DATETIME.HISTORICAL_CACHE_TTL, (
-        f"Cache TTL should match HISTORICAL_CACHE_TTL ({test_config.DATETIME.HISTORICAL_CACHE_TTL}s)"
-    )
+
+    is_holiday, expiry_time = cache_entry
+    current_time = DatetimeUtils.get_datetime_utc_now()
+
+    expected_expiry_range_start = current_time + timedelta(seconds=test_config.DATETIME.HISTORICAL_CACHE_TTL - 5)
+    expected_expiry_range_end = current_time + timedelta(seconds=test_config.DATETIME.HISTORICAL_CACHE_TTL + 5)
+
+    assert (
+        expected_expiry_range_start <= expiry_time <= expected_expiry_range_end
+    ), f"Cache expiry time should be around {test_config.DATETIME.HISTORICAL_CACHE_TTL} seconds from now"
 
 
 @then("the result should be cached with standard TTL")
 def step_then_cached_with_standard_ttl(context: Context) -> None:
+    from datetime import timedelta
+
     scenario_context = get_current_scenario_context(context)
-    ttl_cache = scenario_context.get("holiday_ttl_cache")
-    cache_key = scenario_context.get("holiday_cache_key")
+    cache_entry = scenario_context.get("cache_entry")
     test_config = BaseConfig.global_config()
 
-    assert ttl_cache is not None, "TTL cache should be available"
+    assert cache_entry is not None, "Cache entry should exist"
     assert test_config is not None, "Test config should be available"
-    assert cache_key in ttl_cache, "Holiday lookup should be present in the standard TTL cache"
-    assert ttl_cache.ttl == test_config.DATETIME.CACHE_TTL, (
-        f"Cache TTL should match CACHE_TTL ({test_config.DATETIME.CACHE_TTL}s)"
-    )
+
+    is_holiday, expiry_time = cache_entry
+    current_time = DatetimeUtils.get_datetime_utc_now()
+
+    expected_expiry_range_start = current_time + timedelta(seconds=test_config.DATETIME.CACHE_TTL - 5)
+    expected_expiry_range_end = current_time + timedelta(seconds=test_config.DATETIME.CACHE_TTL + 5)
+
+    assert (
+        expected_expiry_range_start <= expiry_time <= expected_expiry_range_end
+    ), f"Cache expiry time should be around {test_config.DATETIME.CACHE_TTL} seconds from now"
