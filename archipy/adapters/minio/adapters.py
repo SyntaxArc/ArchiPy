@@ -756,3 +756,58 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             # Convert policy to MinioPolicyType format
             policy_dict: MinioPolicyType = {"policy": policy}
             return policy_dict
+
+    @override
+    def copy_object(
+        self,
+        src_bucket_name: str,
+        src_object_name: str,
+        dest_bucket_name: str,
+        dest_object_name: str,
+    ) -> None:
+        """Copy an object within or between buckets.
+
+        Args:
+            src_bucket_name: Source bucket name.
+            src_object_name: Source object name.
+            dest_bucket_name: Destination bucket name.
+            dest_object_name: Destination object name.
+
+        Raises:
+            InvalidArgumentError: If any required parameter is empty.
+            NotFoundError: If the source bucket or object does not exist.
+            PermissionDeniedError: If permission to copy is denied.
+            ServiceUnavailableError: If the S3 service is unavailable.
+            StorageError: If there's a storage-related error.
+        """
+        try:
+            if not src_bucket_name or not src_object_name or not dest_bucket_name or not dest_object_name:
+                raise InvalidArgumentError(
+                    argument_name=(
+                        "src_bucket_name, src_object_name, dest_bucket_name or dest_object_name"
+                        if not all([src_bucket_name, src_object_name, dest_bucket_name, dest_object_name])
+                        else "src_bucket_name"
+                        if not src_bucket_name
+                        else "src_object_name"
+                        if not src_object_name
+                        else "dest_bucket_name"
+                        if not dest_bucket_name
+                        else "dest_object_name"
+                    ),
+                )
+            self._client.copy_object(
+                Bucket=dest_bucket_name,
+                CopySource=f"{src_bucket_name}/{src_object_name}",
+                Key=dest_object_name,
+            )
+            if hasattr(self.list_objects, "clear_cache"):
+                self.list_objects.clear_cache()
+        except InvalidArgumentError:
+            # Pass through our custom errors
+            raise
+        except ClientError as e:
+            self._handle_client_exception(e, "copy_object")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "copy_object")
+        except Exception as e:
+            self._handle_general_exception(e, "copy_object")
