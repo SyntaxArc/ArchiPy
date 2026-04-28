@@ -38,3 +38,10 @@ Feature: MinIO Operations Testing
     And I delete bucket "test-bucket"
     Then the object "test.txt" should not exist in bucket "test-bucket"
     And the bucket "test-bucket" should not exist
+
+  Scenario: Copy object within same bucket
+    Given a bucket named "test-bucket" exists
+    And an object "test.txt" exists with content "Hello World" in bucket "test-bucket"
+    When I copy object "test.txt" from bucket "test-bucket" to "test-copy.txt" in the same bucket
+    Then the object "test-copy.txt" should exist in bucket "test-bucket"
+    And downloading "test-copy.txt" from "test-bucket" should return content "Hello World"

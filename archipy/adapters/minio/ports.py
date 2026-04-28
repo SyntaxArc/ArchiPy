@@ -99,3 +99,14 @@ class MinioPort:
     def get_bucket_policy(self, bucket_name: str) -> MinioPolicyType:
         """Get bucket policy."""
         raise NotImplementedError
+
+    @abstractmethod
+    def copy_object(
+        self,
+        src_bucket_name: str,
+        src_object_name: str,
+        dest_bucket_name: str,
+        dest_object_name: str,
+    ) -> None:
+        """Copy an object within or between buckets."""
+        raise NotImplementedError

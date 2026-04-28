@@ -121,6 +121,18 @@ def step_delete_bucket(context, bucket_name):
     context.logger.info(f"Deleted bucket '{bucket_name}'")
 
 
+@when('I copy object "{src_object}" from bucket "{src_bucket}" to "{dest_object}" in the same bucket')
+def step_copy_object_same_bucket(context, src_object, src_bucket, dest_object):
+    adapter = get_minio_adapter(context)
+    adapter.copy_object(
+        src_bucket_name=src_bucket,
+        src_object_name=src_object,
+        dest_bucket_name=src_bucket,
+        dest_object_name=dest_object,
+    )
+    context.logger.info(f"Copied '{src_object}' to '{dest_object}' in '{src_bucket}'")
+
+
 # Then steps
 @then('the bucket "{bucket_name}" should exist')
 def step_bucket_should_exist(context, bucket_name):
