@@ -179,6 +179,9 @@ class FastAPIUtils:
             allow_credentials=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_CREDENTIALS,
             allow_methods=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_METHODS,
             allow_headers=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_HEADERS,
+            allow_origin_regex=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_ORIGIN_REGEX,
+            expose_headers=config.FASTAPI.CORS_MIDDLEWARE_EXPOSE_HEADERS,
+            max_age=config.FASTAPI.CORS_MIDDLEWARE_MAX_AGE,
         )
 
     @staticmethod

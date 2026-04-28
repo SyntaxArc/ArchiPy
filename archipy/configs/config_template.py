@@ -137,7 +137,13 @@ class FastAPIConfig(BaseModel):
     CORS_MIDDLEWARE_ALLOW_CREDENTIALS: bool = Field(default=True, description="Whether to allow credentials in CORS")
     CORS_MIDDLEWARE_ALLOW_HEADERS: list[str] = Field(default=["*"], description="Allowed CORS headers")
     CORS_MIDDLEWARE_ALLOW_METHODS: list[str] = Field(default=["*"], description="Allowed CORS methods")
+    CORS_MIDDLEWARE_ALLOW_ORIGIN_REGEX: str | None = Field(
+        default=None,
+        description="Regex pattern for allowed origins",
+    )
     CORS_MIDDLEWARE_ALLOW_ORIGINS: list[str] = Field(default=["*"], description="Allowed CORS origins")
+    CORS_MIDDLEWARE_EXPOSE_HEADERS: list[str] = Field(default=[], description="Exposed CORS headers")
+    CORS_MIDDLEWARE_MAX_AGE: int = Field(default=600, description="Preflight cache duration in seconds")
     PROXY_HEADERS: bool = Field(default=True, description="Whether to trust proxy headers")
     RELOAD: bool = Field(default=False, description="Whether to enable auto-reload")
     SERVER_HEADER: bool = Field(default=True, description="Whether to include server header")
