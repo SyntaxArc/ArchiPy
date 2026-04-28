@@ -1,9 +1,11 @@
+@unit @grpc
 Feature: Error Handling
 
   Background:
     Given a FastAPI test application
     And a gRPC test server
 
+  @unit
   Scenario Outline: Verify error message type details
     Given an error type "<error_enum>"
     Then the error code should be "<expected_code>"
@@ -16,6 +18,7 @@ Feature: Error Handling
       | NOT_FOUND     | NOT_FOUND     | Requested resource not found: resource_type | منبع درخواستی یافت نشد: resource_type           |
       | TOKEN_EXPIRED | TOKEN_EXPIRED | Authentication token has expired            | توکن احراز هویت منقضی شده است.                  |
 
+  @unit
   Scenario Outline: Verify HTTP and gRPC status codes in error messages
     Given an error type "<error_enum>"
     Then the HTTP status should be <http_status>
@@ -27,16 +30,21 @@ Feature: Error Handling
       | NOT_FOUND     | 404         | 5           |
       | TOKEN_EXPIRED | 401         | 16          |
 
+  @unit
   Scenario: Create an error detail
     Given an error with code "ERR001", English message "Invalid data", and Persian message "داده نامعتبر"
     When an error detail is created
     Then the response should contain code "ERR001"
 
+  @unit
   Scenario: Capture an error
     Given a raised error "ValueError" with message "Something went wrong"
     When the error is captured
     Then it should be logged
 
+  # === FastAPI Error Handling ===
+
+  @fastapi
   Scenario Outline: FastAPI handles custom BaseError exceptions
     When an endpoint raises "<error_type>" error
     Then the response should have HTTP status code <http_status>
@@ -51,6 +59,7 @@ Feature: Error Handling
       | UnauthenticatedError | 401         | UNAUTHENTICATED  | not authorized                 |
       | InternalError        | 500         | INTERNAL_ERROR   | Internal system error occurred |
 
+  @fastapi
   Scenario Outline: FastAPI handles validation errors from Pydantic
     When an endpoint receives invalid request data "<invalid_data_description>"
     Then the response should have HTTP status code 422
@@ -63,11 +72,13 @@ Feature: Error Handling
       | invalid field type       |
       | out of range value       |
 
+  @fastapi
   Scenario: FastAPI handles unexpected exceptions
     When an endpoint raises an unexpected exception
     Then the response should have HTTP status code 500
     And the response should contain error code "UNKNOWN_ERROR"
 
+  @fastapi
   Scenario Outline: FastAPI error response format verification
     When an endpoint raises "<error_type>" error
     Then the response JSON should have "error" key with value "<error_code>"
@@ -81,6 +92,7 @@ Feature: Error Handling
       | NotFoundError        | NOT_FOUND        | 404         |
       | InvalidArgumentError | INVALID_ARGUMENT | 400         |
 
+  @fastapi
   Scenario Outline: FastAPI error message localization
     When an endpoint raises "<error_type>" error with language "<lang>"
     Then the response message should be in "<lang>" language
@@ -93,10 +105,12 @@ Feature: Error Handling
       | InvalidArgumentError | EN   |
       | InvalidArgumentError | FA   |
 
+  @fastapi
   Scenario: FastAPI error with additional data
     When an endpoint raises an error with additional data
     Then the response detail should contain the additional data fields
 
+  @fastapi @validation
   Scenario Outline: FastAPI handles validation errors for phone number, email, and national code
     When an endpoint raises "<error_type>" validation error with value "<invalid_value>" in language "<lang>"
     Then the response should have HTTP status code 400
@@ -112,6 +126,9 @@ Feature: Error Handling
       | InvalidNationalCodeError | 1234567890    | INVALID_NATIONAL_CODE | Invalid national code | EN   |
       | InvalidNationalCodeError | 1234567890    | INVALID_NATIONAL_CODE | کد ملی                | FA   |
 
+  # === gRPC Error Handling ===
+
+  @grpc
   Scenario Outline: Sync gRPC handles custom BaseError exceptions
     When a sync gRPC method raises "<error_type>" error
     Then the gRPC call should fail with status code <grpc_status>
@@ -125,7 +142,7 @@ Feature: Error Handling
       | UnauthenticatedError | 16          | UNAUTHENTICATED  | not authorized                 |
       | InternalError        | 13          | INTERNAL_ERROR   | Internal system error occurred |
 
-  @async
+  @grpc @async
   Scenario Outline: Async gRPC handles custom BaseError exceptions
     When an async gRPC method raises "<error_type>" error
     Then the gRPC call should fail with status code <grpc_status>
@@ -139,28 +156,33 @@ Feature: Error Handling
       | UnauthenticatedError | 16          | UNAUTHENTICATED  | not authorized                 |
       | InternalError        | 13          | INTERNAL_ERROR   | Internal system error occurred |
 
+  @grpc
   Scenario: Sync gRPC handles validation errors
     When a sync gRPC method receives invalid request
     Then the gRPC call should fail with status code 3
     And the gRPC error code should be "INVALID_ARGUMENT"
     And the error should contain validation error details
 
+  @grpc @async
   Scenario: Async gRPC handles validation errors
     When an async gRPC method receives invalid request
     Then the gRPC call should fail with status code 3
     And the gRPC error code should be "INVALID_ARGUMENT"
     And the error should contain validation error details
 
+  @grpc
   Scenario: Sync gRPC handles unexpected exceptions
     When a sync gRPC method raises an unexpected exception
     Then the gRPC call should fail with status code 13
     And the gRPC error code should be "INTERNAL_ERROR"
 
+  @grpc @async
   Scenario: Async gRPC handles unexpected exceptions
     When an async gRPC method raises an unexpected exception
     Then the gRPC call should fail with status code 13
     And the gRPC error code should be "INTERNAL_ERROR"
 
+  @grpc
   Scenario Outline: gRPC error trailing metadata
     When a gRPC method raises "<error_type>" error with additional data
     Then the gRPC call should fail
@@ -172,6 +194,7 @@ Feature: Error Handling
       | NotFoundError        |
       | InvalidArgumentError |
 
+  @grpc
   Scenario Outline: gRPC error message verification
     When a gRPC method raises "<error_type>" error
     Then the error message should match the error's get_message() result
@@ -182,6 +205,7 @@ Feature: Error Handling
       | InvalidArgumentError |
       | UnauthenticatedError |
 
+  @grpc @validation
   Scenario Outline: Sync gRPC handles validation errors for phone number, email, and national code
     When a sync gRPC method raises "<error_type>" validation error with value "<invalid_value>" in language "<lang>"
     Then the gRPC call should fail with status code 3
@@ -197,7 +221,7 @@ Feature: Error Handling
       | InvalidNationalCodeError | 1234567890    | INVALID_NATIONAL_CODE | Invalid national code | EN   |
       | InvalidNationalCodeError | 1234567890    | INVALID_NATIONAL_CODE | کد ملی                | FA   |
 
-  @async
+  @grpc @async @validation
   Scenario Outline: Async gRPC handles validation errors for phone number, email, and national code
     When an async gRPC method raises "<error_type>" validation error with value "<invalid_value>" in language "<lang>"
     Then the gRPC call should fail with status code 3
@@ -207,7 +231,7 @@ Feature: Error Handling
     Examples:
       | error_type               | invalid_value | error_code            | expected_message_part | lang |
       | InvalidPhoneNumberError  | 08123456789   | INVALID_PHONE         | Invalid Iranian phone | EN   |
-      | InvalidPhoneNumberError  | 08123456789   | INVALID_PHONE         | شماره تلفن همراه     | FA   |
+      | InvalidPhoneNumberError  | 08123456789   | INVALID_PHONE         | شماره تلفن همراه      | FA   |
       | InvalidEmailError        | invalid-email | INVALID_EMAIL         | Invalid email format  | EN   |
       | InvalidEmailError        | invalid-email | INVALID_EMAIL         | فرمت ایمیل            | FA   |
       | InvalidNationalCodeError | 1234567890    | INVALID_NATIONAL_CODE | Invalid national code | EN   |
