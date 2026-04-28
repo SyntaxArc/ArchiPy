@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 4.x series"
 
 | Version           | Date       | Summary                                                                                         |
 |-------------------|------------|-------------------------------------------------------------------------------------------------|
+| [4.7.0](4.7.0.md) | 2026-04-28 | MinIO copy_object method, advanced CORS configuration, and comprehensive tests               |
 | [4.6.0](4.6.0.md) | 2026-04-27 | Parsian and Saman IPG async adapters, port interface extraction, and dependency updates     |
 | [4.5.0](4.5.0.md) | 2026-04-27 | Saman Shaparak adapter, DatetimeUtils caching refactor, and dependency updates                 |
 | [4.4.2](4.4.2.md) | 2026-04-15 | asyncmy to asyncmy2 migration, dev dependency refresh, and test container image updates         |
