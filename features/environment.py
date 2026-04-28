@@ -94,7 +94,7 @@ def before_feature(context: Context, feature: Feature) -> None:
         feature_filename = str(feature.filename) if feature.filename else ""
     feature_name = getattr(feature, "name", "") or ""
 
-    if "grpc_error_handling" in feature_filename or "grpc_error" in feature_name.lower():
+    if "grpc_error_handling" in feature_filename or "error_handling" in feature_filename or "grpc_error" in feature_name.lower():
         try:
             from features.test_servers import (
                 create_test_async_grpc_server,
