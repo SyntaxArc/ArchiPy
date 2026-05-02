@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import elasticapm
 import grpc
@@ -64,7 +64,10 @@ class GrpcClientTraceInterceptor(BaseGrpcClientInterceptor):
                 logger.exception("Failed to create Sentry span for gRPC client call")
 
         # Handle Elastic APM trace propagation
-        metadata = list(call_details.metadata or [])
+        metadata: list[tuple[str, str | bytes]] = cast(
+            "list[tuple[str, str | bytes]]",
+            list(call_details.metadata or []),
+        )
         if config.ELASTIC_APM.IS_ENABLED:
             trace_parent_id = elasticapm.get_trace_parent_header()
             if trace_parent_id:
@@ -155,7 +158,10 @@ class AsyncGrpcClientTraceInterceptor(BaseAsyncGrpcClientInterceptor):
                 logger.exception("Failed to create Sentry span for async gRPC client call")
 
         # Handle Elastic APM trace propagation
-        metadata = list(call_details.metadata or [])
+        metadata: list[tuple[str, str | bytes]] = cast(
+            "list[tuple[str, str | bytes]]",
+            list(call_details.metadata or []),
+        )
         if config.ELASTIC_APM.IS_ENABLED:
             trace_parent_id = elasticapm.get_trace_parent_header()
             if trace_parent_id:

@@ -48,10 +48,10 @@ def capture_transaction[F: Callable[..., Any]](
 
     def decorator(func: F) -> Callable[..., Any]:
         transaction_name = name or func.__name__
+        config: Any = BaseConfig.global_config()
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            config: Any = BaseConfig.global_config()
 
             # Initialize and track with Sentry if enabled
             sentry_transaction = None
@@ -60,8 +60,7 @@ def capture_transaction[F: Callable[..., Any]](
                     import sentry_sdk
 
                     # Initialize Sentry if not already done
-                    current_hub = sentry_sdk.Hub.current
-                    if not getattr(current_hub, "client", None):
+                    if not sentry_sdk.is_initialized():
                         sentry_sdk.init(
                             dsn=config.SENTRY.DSN,
                             debug=config.SENTRY.DEBUG,
@@ -91,6 +90,8 @@ def capture_transaction[F: Callable[..., Any]](
                     elastic_client = elasticapm.get_client()
                     if not elastic_client:
                         elastic_client = elasticapm.Client(config.ELASTIC_APM.model_dump())
+                        elasticapm.instrument()
+
                     elastic_client.begin_transaction(transaction_type="function")
                 except ImportError:
                     logger.debug("elasticapm is not installed, skipping Elastic APM transaction capture.")
@@ -183,10 +184,10 @@ def capture_span[F: Callable[..., Any]](
 
     def decorator(func: F) -> Callable[..., Any]:
         span_name = name or func.__name__
+        config: Any = BaseConfig.global_config()
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            config: Any = BaseConfig.global_config()
 
             # Track with Sentry if enabled
             sentry_span = None
@@ -228,9 +229,6 @@ def capture_span[F: Callable[..., Any]](
                 # Mark span as failed and capture the exception
                 if sentry_span:
                     sentry_span.set_status("internal_error")
-
-                # Add exception context to spans
-                if sentry_span:
                     sentry_span.set_tag("error", True)
                     sentry_span.set_data("exception", str(e))
 
@@ -248,7 +246,9 @@ def capture_span[F: Callable[..., Any]](
                 # Clean up spans
                 if elastic_span and elastic_client:
                     try:
-                        elastic_client.end_span()
+                        end_span_method = getattr(elastic_client, "end_span", None)
+                        if end_span_method is not None:
+                            end_span_method()
                     except Exception:
                         logger.exception("Error closing Elastic APM span")
 

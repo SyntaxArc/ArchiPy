@@ -72,8 +72,7 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
                     import sentry_sdk
 
                     # Initialize Sentry if not already done
-                    current_hub = sentry_sdk.Hub.current
-                    if not getattr(current_hub, "client", None):
+                    if not sentry_sdk.is_initialized():
                         sentry_sdk.init(
                             dsn=config.SENTRY.DSN,
                             debug=config.SENTRY.DEBUG,
@@ -102,6 +101,8 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
                     elastic_client = elasticapm.get_client()
                     if not elastic_client:
                         elastic_client = elasticapm.Client(config.ELASTIC_APM.model_dump())
+                        elasticapm.instrument()
+
                     # Check if a trace parent header is present in the metadata
                     if parent := elasticapm.trace_parent_from_headers(metadata_dict):
                         # Start a transaction linked to the distributed trace
@@ -203,8 +204,7 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
                     import sentry_sdk
 
                     # Initialize Sentry if not already done
-                    current_hub = sentry_sdk.Hub.current
-                    if not getattr(current_hub, "client", None):
+                    if not sentry_sdk.is_initialized():
                         sentry_sdk.init(
                             dsn=config.SENTRY.DSN,
                             debug=config.SENTRY.DEBUG,
@@ -233,6 +233,7 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
                     elastic_client = elasticapm.get_client()
                     if not elastic_client:
                         elastic_client = elasticapm.Client(config.ELASTIC_APM.model_dump())
+                        elasticapm.instrument()
 
                     # Check if a trace parent header is present in the metadata
                     if parent := elasticapm.trace_parent_from_headers(metadata_dict):
