@@ -182,7 +182,11 @@ class BaseConfig[R](BaseSettings):
         This method can be overridden in subclasses to perform
         custom configuration modifications after loading settings.
         """
-        self.ELASTIC_APM.ENVIRONMENT = self.ENVIRONMENT
+        if self.ELASTIC_APM.ENVIRONMENT is None:
+            self.ELASTIC_APM.ENVIRONMENT = self.ENVIRONMENT
+
+        if self.SENTRY.ENVIRONMENT is None:
+            self.SENTRY.ENVIRONMENT = self.ENVIRONMENT
 
     @classmethod
     def global_config(cls) -> BaseConfig:

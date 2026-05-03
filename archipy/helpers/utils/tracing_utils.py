@@ -53,6 +53,8 @@ class TracingUtils:
     SENTRY_TRACE_HEADER = "sentry-trace"
     BAGGAGE_HEADER = "baggage"
     _lock = threading.Lock()
+    _sentry_initialized: bool = False
+    _elastic_apm_initialized: bool = False
 
     @staticmethod
     def is_tracing_enabled(config: BaseConfig) -> bool:
@@ -76,8 +78,13 @@ class TracingUtils:
         Args:
             config: Application configuration.
         """
+        sentry_needed = config.SENTRY.IS_ENABLED and not TracingUtils._sentry_initialized
+        elastic_needed = config.ELASTIC_APM.IS_ENABLED and not TracingUtils._elastic_apm_initialized
+        if not sentry_needed and not elastic_needed:
+            return
+
         with TracingUtils._lock:
-            if config.SENTRY.IS_ENABLED:
+            if config.SENTRY.IS_ENABLED and not TracingUtils._sentry_initialized:
                 try:
                     import sentry_sdk
 
@@ -100,19 +107,23 @@ class TracingUtils:
                             shutdown_timeout=config.SENTRY.SHUTDOWN_TIMEOUT,
                             default_integrations=config.SENTRY.DEFAULT_INTEGRATIONS,
                         )
+                    TracingUtils._sentry_initialized = True
                 except ImportError:
+                    TracingUtils._sentry_initialized = True  # package absent — no point retrying
                     logger.debug("sentry_sdk is not installed, skipping Sentry initialization.")
                 except Exception:
                     logger.exception("Failed to initialize Sentry")
 
-            if config.ELASTIC_APM.IS_ENABLED:
+            if config.ELASTIC_APM.IS_ENABLED and not TracingUtils._elastic_apm_initialized:
                 try:
                     import elasticapm
 
                     if elasticapm.get_client() is None:
-                        elasticapm.Client(config.ELASTIC_APM.model_dump())
+                        _ = elasticapm.Client(config.ELASTIC_APM.model_dump())
                         elasticapm.instrument()
+                    TracingUtils._elastic_apm_initialized = True
                 except ImportError:
+                    TracingUtils._elastic_apm_initialized = True  # package absent — no point retrying
                     logger.debug("elasticapm is not installed, skipping Elastic APM initialization.")
                 except Exception:
                     logger.exception("Failed to initialize Elastic APM client")
@@ -133,7 +144,7 @@ class TracingUtils:
         from elasticapm.conf.constants import OUTCOME
 
         outcome = _grpc_status_outcome_map().get(status_code, OUTCOME.SUCCESS)
-        return outcome is OUTCOME.SUCCESS
+        return outcome == OUTCOME.SUCCESS
 
     @staticmethod
     def _metadata_key_set(metadata: Sequence[tuple[str, str | bytes]]) -> set[str]:
@@ -178,22 +189,23 @@ class TracingUtils:
                 if transaction is not None:
                     trace_parent = transaction.trace_parent.copy_from(span_id=apm_span.id)
                     meta.append((constants.TRACEPARENT_HEADER_NAME, trace_parent.to_string()))
+                    keys.add(constants.TRACEPARENT_HEADER_NAME.lower())
                     tracestate = trace_parent.tracestate
                     if tracestate and constants.TRACESTATE_HEADER_NAME.lower() not in keys:
                         meta.append((constants.TRACESTATE_HEADER_NAME, tracestate))
-                    keys = TracingUtils._metadata_key_set(meta)
+                        keys.add(constants.TRACESTATE_HEADER_NAME.lower())
 
         if include_sentry:
             try:
                 import sentry_sdk
 
                 if sentry_sdk.is_initialized():
-                    if TracingUtils.SENTRY_TRACE_HEADER.lower() not in keys:
+                    if TracingUtils.SENTRY_TRACE_HEADER not in keys:
                         traceparent = sentry_sdk.get_traceparent()
                         if traceparent:
                             meta.append((TracingUtils.SENTRY_TRACE_HEADER, traceparent))
-                            keys = TracingUtils._metadata_key_set(meta)
-                    if TracingUtils.BAGGAGE_HEADER.lower() not in keys:
+                            keys.add(TracingUtils.SENTRY_TRACE_HEADER)
+                    if TracingUtils.BAGGAGE_HEADER not in keys:
                         baggage = sentry_sdk.get_baggage()
                         if baggage:
                             meta.append((TracingUtils.BAGGAGE_HEADER, baggage))
@@ -225,9 +237,30 @@ class TracingUtils:
         sentry_headers: dict[str, str] = {}
         for key, value in metadata_dict.items():
             lk = key.lower()
-            if lk == TracingUtils.SENTRY_TRACE_HEADER.lower():
+            if lk == TracingUtils.SENTRY_TRACE_HEADER:
                 sentry_headers[TracingUtils.SENTRY_TRACE_HEADER] = value
-            elif lk == TracingUtils.BAGGAGE_HEADER.lower():
+            elif lk == TracingUtils.BAGGAGE_HEADER:
                 sentry_headers[TracingUtils.BAGGAGE_HEADER] = value
 
         return parent, sentry_headers
+
+    @staticmethod
+    def outcome_for_exception(exception: BaseException) -> str:
+        """Return the APM OUTCOME string appropriate for an exception.
+
+        Args:
+            exception: The exception that was raised during the transaction.
+
+        Returns:
+            OUTCOME.SUCCESS when ``exc`` is a BaseError whose ``http_status``
+            is below 500 (client errors — the server handled the request
+            correctly).  OUTCOME.FAILURE in all other cases (5xx BaseErrors
+            or unexpected non-BaseError exceptions).
+        """
+        from elasticapm.conf.constants import OUTCOME
+
+        from archipy.models.errors.base_error import BaseError
+
+        if isinstance(exception, BaseError) and exception.http_status < 500:
+            return OUTCOME.SUCCESS
+        return OUTCOME.FAILURE

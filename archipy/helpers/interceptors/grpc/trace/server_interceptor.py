@@ -53,17 +53,14 @@ class _ServicerContextWrapper:
         """Forward to the real context after updating Elastic and Sentry outcomes."""
         try:
             import elasticapm
-        except ImportError:
-            transaction = None
-        else:
-            get_tx = getattr(elasticapm, "get_transaction", None)
-            transaction = get_tx() if callable(get_tx) else None
+            from elasticapm.conf.constants import OUTCOME
 
-        if transaction is not None:
             if TracingUtils.grpc_status_indicates_success(code):
-                transaction.set_success()
+                elasticapm.set_transaction_outcome(OUTCOME.SUCCESS)
             else:
-                transaction.set_failure()
+                elasticapm.set_transaction_outcome(OUTCOME.FAILURE)
+        except ImportError:
+            pass
         if self._sentry_transaction is not None:
             self._sentry_transaction.set_status(
                 "ok" if TracingUtils.grpc_status_indicates_success(code) else "internal_error",
@@ -74,17 +71,37 @@ class _ServicerContextWrapper:
         """Forward to the real context after marking failure."""
         try:
             import elasticapm
-        except ImportError:
-            transaction = None
-        else:
-            get_tx = getattr(elasticapm, "get_transaction", None)
-            transaction = get_tx() if callable(get_tx) else None
+            from elasticapm.conf.constants import OUTCOME
 
-        if transaction is not None:
-            transaction.set_failure()
+            elasticapm.set_transaction_outcome(OUTCOME.FAILURE)
+        except ImportError:
+            pass
         if self._sentry_transaction is not None:
             self._sentry_transaction.set_status("internal_error")
         return self._wrapped.abort(code, details)
+
+
+class _AsyncServicerContextWrapper(_ServicerContextWrapper):
+    """Async variant of ``_ServicerContextWrapper``.
+
+    ``grpc.aio.ServicerContext.abort`` is a coroutine; calling it without
+    ``await`` silently drops the abort in the async server case.  This
+    subclass overrides ``abort`` as an ``async def`` so callers inside
+    async servicer methods can properly await it.
+    """
+
+    async def abort(self, code: grpc.StatusCode, details: str) -> None:  # type: ignore[override]  # ty: ignore[invalid-method-override]
+        """Await the real async context ``abort`` after marking failure."""
+        try:
+            import elasticapm
+            from elasticapm.conf.constants import OUTCOME
+
+            elasticapm.set_transaction_outcome(OUTCOME.FAILURE)
+        except ImportError:
+            pass
+        if self._sentry_transaction is not None:
+            self._sentry_transaction.set_status("internal_error")
+        await self._wrapped.abort(code, details)
 
 
 class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
@@ -171,21 +188,25 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
         exc_info: tuple[type[BaseException] | None, BaseException | None, Any] = (None, None, None)
         try:
             result = method(request, wrapped_ctx)
-        except Exception as exc:
-            exc_info = (type(exc), exc, exc.__traceback__)
+        except Exception as exception:
+            exc_info = (type(exception), exception, exception.__traceback__)
             if sentry_transaction is not None:
                 sentry_transaction.set_status("internal_error")
             if elastic_client is not None:
+                try:
+                    import elasticapm
+
+                    elasticapm.set_transaction_outcome(TracingUtils.outcome_for_exception(exception))
+                except ImportError:
+                    pass
                 elastic_client.end_transaction(name=method_name_model.full_name, result="failure")
             raise
         else:
             try:
                 import elasticapm
+                from elasticapm.conf.constants import OUTCOME
 
-                get_tx = getattr(elasticapm, "get_transaction", None)
-                transaction = get_tx() if callable(get_tx) else None
-                if transaction is not None and not transaction.outcome:
-                    transaction.set_success()
+                elasticapm.set_transaction_outcome(OUTCOME.SUCCESS, override=False)
             except ImportError:
                 pass
             if sentry_transaction is not None and sentry_transaction.status is None:
@@ -285,28 +306,32 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
                 logger.exception("Failed to begin Elastic APM transaction for async gRPC server call")
                 elastic_client = None
 
-        wrapped_ctx = _ServicerContextWrapper(context, sentry_transaction)
+        wrapped_ctx = _AsyncServicerContextWrapper(context, sentry_transaction)
 
         exc_info: tuple[type[BaseException] | None, BaseException | None, Any] = (None, None, None)
         try:
             result = method(request, wrapped_ctx)
             if inspect.isawaitable(result):
                 result = await result
-        except Exception as exc:
-            exc_info = (type(exc), exc, exc.__traceback__)
+        except Exception as exception:
+            exc_info = (type(exception), exception, exception.__traceback__)
             if sentry_transaction is not None:
                 sentry_transaction.set_status("internal_error")
             if elastic_client is not None:
+                try:
+                    import elasticapm
+
+                    elasticapm.set_transaction_outcome(TracingUtils.outcome_for_exception(exception))
+                except ImportError:
+                    pass
                 elastic_client.end_transaction(name=method_name_model.full_name, result="failure")
             raise
         else:
             try:
                 import elasticapm
+                from elasticapm.conf.constants import OUTCOME
 
-                get_tx = getattr(elasticapm, "get_transaction", None)
-                transaction = get_tx() if callable(get_tx) else None
-                if transaction is not None and not transaction.outcome:
-                    transaction.set_success()
+                elasticapm.set_transaction_outcome(OUTCOME.SUCCESS, override=False)
             except ImportError:
                 pass
             if sentry_transaction is not None and sentry_transaction.status is None:

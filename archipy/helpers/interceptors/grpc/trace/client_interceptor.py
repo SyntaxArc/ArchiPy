@@ -24,7 +24,10 @@ _TRequest = TypeVar("_TRequest")
 
 
 def _metadata_has_traceparent_key(metadata: list[tuple[str, str | bytes]]) -> bool:
-    from elasticapm.conf import constants
+    try:
+        from elasticapm.conf import constants
+    except ImportError:
+        return False
 
     name = constants.TRACEPARENT_HEADER_NAME.lower()
     return any(bool(item) and str(item[0]).lower() == name for item in metadata)
@@ -35,12 +38,11 @@ def _streaming_client_metadata(
     config: BaseConfig,
 ) -> list[tuple[str, str | bytes]]:
     """Headers for streaming RPCs: transaction-level traceparent + Sentry headers (no span)."""
-    from elasticapm.conf import constants
-
     meta: list[tuple[str, str | bytes]] = list(cast("Any", call_details.metadata or []))
     if config.ELASTIC_APM.IS_ENABLED and not _metadata_has_traceparent_key(meta):
         try:
             import elasticapm
+            from elasticapm.conf import constants
 
             trace_parent_id = elasticapm.get_trace_parent_header()
             if trace_parent_id:
@@ -210,7 +212,7 @@ class AsyncGrpcClientTraceInterceptor(BaseAsyncGrpcClientInterceptor):
             return await self._intercept_sentry_headers_only_async(method, request_or_iterator, call_details, config)
 
         extra = _destination_extra(call_details.method)
-        with elasticapm.capture_span(
+        async with elasticapm.async_capture_span(
             call_details.method,
             span_type="external",
             span_subtype="grpc",

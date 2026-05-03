@@ -190,15 +190,15 @@ class AsyncGrpcServerMetricInterceptor(BaseAsyncGrpcServerInterceptor):
 
                 if hasattr(context, "code") and context.code():
                     status_code = context.code().name
-            except Exception as e:
-                if isinstance(e, grpc.aio.AioRpcError):
-                    code_obj = e.code()
+            except Exception as exception:
+                if isinstance(exception, grpc.aio.AioRpcError):
+                    code_obj = exception.code()
                     if code_obj is not None:
                         code_name = getattr(code_obj, "name", None)
                         if code_name is not None:
                             status_code = code_name
-                elif hasattr(e, "code") and callable(e.code):
-                    code_method = e.code
+                elif hasattr(exception, "code") and callable(exception.code):
+                    code_method = exception.code
                     code_obj = code_method()  # ty: ignore[call-top-callable]
                     if code_obj is not None:
                         code_name = getattr(code_obj, "name", None)

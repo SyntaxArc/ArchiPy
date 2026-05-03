@@ -426,6 +426,9 @@ class AppUtils:
         AsyncGrpcAPIUtils.setup_trace_interceptor(config, async_interceptors)
         AsyncGrpcAPIUtils.setup_metric_interceptor(config, async_interceptors)
 
+        if customized_interceptors:
+            async_interceptors.extend(customized_interceptors)
+
         if create_grpc_server is None:
             raise ImportError("grpc.aio is not available")
         app = create_grpc_server(
@@ -435,8 +438,6 @@ class AppUtils:
             options=config.GRPC.SERVER_OPTIONS_CONFIG_LIST,
             maximum_concurrent_rpcs=config.GRPC.MAX_CONCURRENT_RPCS,
         )
-        if customized_interceptors:
-            async_interceptors.extend(customized_interceptors)
         return app
 
     @classmethod
@@ -446,7 +447,7 @@ class AppUtils:
         customized_interceptors: set[Any] | None = None,
         compression: grpc.Compression | None = None,
     ) -> grpc.Server:
-        """Create and configure an async gRPC application."""
+        """Create and configure a synchronous gRPC server."""
         from archipy.helpers.interceptors.grpc.exception import GrpcServerExceptionInterceptor
 
         interceptors: list[grpc.ServerInterceptor] = [GrpcServerExceptionInterceptor()]

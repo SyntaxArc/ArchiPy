@@ -699,6 +699,7 @@ class SentryConfig(BaseModel):
         default=True,
         description="Whether to enable Sentry default integrations automatically",
     )
+    ENVIRONMENT: str | None = Field(default=None, description="Sentry environment name")
 
 
 class AuthConfig(BaseModel):
