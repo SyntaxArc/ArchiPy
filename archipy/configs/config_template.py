@@ -658,7 +658,8 @@ class RedisConfig(BaseModel):
 class SentryConfig(BaseModel):
     """Configuration settings for Sentry error tracking integration.
 
-    Controls Sentry client behavior, including DSN, sampling rates, and debug settings.
+    Controls Sentry client behavior, including DSN, sampling rates, PII, breadcrumbs,
+    stack traces, profiling, and integration defaults.
     """
 
     IS_ENABLED: bool = Field(default=False, description="Whether Sentry is enabled")
@@ -667,6 +668,37 @@ class SentryConfig(BaseModel):
     RELEASE: str = Field(default="", description="Application release version")
     SAMPLE_RATE: float = Field(default=1.0, description="Error sampling rate (0.0 to 1.0)")
     TRACES_SAMPLE_RATE: float = Field(default=0.0, description="Performance monitoring sampling rate (0.0 to 1.0)")
+    SEND_DEFAULT_PII: bool = Field(
+        default=False,
+        description="Whether to send personally identifiable information (e.g. IP, user) to Sentry",
+    )
+    MAX_BREADCRUMBS: int = Field(default=100, description="Maximum number of breadcrumbs per event")
+    ATTACH_STACKTRACE: bool = Field(
+        default=False,
+        description="Whether to attach a stack trace to all messages (not only exceptions)",
+    )
+    SERVER_NAME: str | None = Field(default=None, description="Override the reported server hostname")
+    IN_APP_INCLUDE: list[str] = Field(
+        default_factory=list,
+        description="Module path prefixes to mark as in-app in stack traces",
+    )
+    IN_APP_EXCLUDE: list[str] = Field(
+        default_factory=list,
+        description="Module path prefixes to exclude from in-app marking",
+    )
+    PROFILES_SAMPLE_RATE: float = Field(
+        default=0.0,
+        description="Continuous profiling sample rate (0.0 to 1.0)",
+    )
+    IGNORE_ERRORS: list[str] = Field(
+        default_factory=list,
+        description="Exception type names (fully qualified or short) to ignore",
+    )
+    SHUTDOWN_TIMEOUT: int = Field(default=2, description="Seconds to wait for pending events on client shutdown")
+    DEFAULT_INTEGRATIONS: bool = Field(
+        default=True,
+        description="Whether to enable Sentry default integrations automatically",
+    )
 
 
 class AuthConfig(BaseModel):

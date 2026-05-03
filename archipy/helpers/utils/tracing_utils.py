@@ -86,9 +86,19 @@ class TracingUtils:
                             dsn=config.SENTRY.DSN,
                             debug=config.SENTRY.DEBUG,
                             release=config.SENTRY.RELEASE,
+                            environment=config.ENVIRONMENT,
                             sample_rate=config.SENTRY.SAMPLE_RATE,
                             traces_sample_rate=config.SENTRY.TRACES_SAMPLE_RATE,
-                            environment=config.ENVIRONMENT,
+                            profiles_sample_rate=config.SENTRY.PROFILES_SAMPLE_RATE,
+                            send_default_pii=config.SENTRY.SEND_DEFAULT_PII,
+                            max_breadcrumbs=config.SENTRY.MAX_BREADCRUMBS,
+                            attach_stacktrace=config.SENTRY.ATTACH_STACKTRACE,
+                            server_name=config.SENTRY.SERVER_NAME,
+                            in_app_include=list(config.SENTRY.IN_APP_INCLUDE),
+                            in_app_exclude=list(config.SENTRY.IN_APP_EXCLUDE),
+                            ignore_errors=list(config.SENTRY.IGNORE_ERRORS),
+                            shutdown_timeout=config.SENTRY.SHUTDOWN_TIMEOUT,
+                            default_integrations=config.SENTRY.DEFAULT_INTEGRATIONS,
                         )
                 except ImportError:
                     logger.debug("sentry_sdk is not installed, skipping Sentry initialization.")
