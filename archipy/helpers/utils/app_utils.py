@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers.utils.base_utils import BaseUtils
 from archipy.helpers.utils.prometheus_utils import is_prometheus_server_running
+from archipy.helpers.utils.tracing_utils import TracingUtils
 from archipy.models.errors import (
     BaseError,
     InvalidArgumentError,
@@ -140,27 +141,15 @@ class FastAPIUtils:
 
     @staticmethod
     def setup_sentry(config: BaseConfig) -> None:
-        """Initializes Sentry configuration if enabled.
+        """No-op placeholder: Sentry is initialized in ``create_fastapi_app`` with ``TracingUtils``.
+
+        Kept so callers can extend FastAPI startup with Sentry-only hooks without changing call sites.
 
         Args:
             config (BaseConfig): The configuration object containing Sentry settings.
         """
         if not config.SENTRY.IS_ENABLED:
             return
-
-        try:
-            import sentry_sdk
-
-            sentry_sdk.init(
-                dsn=config.SENTRY.DSN,
-                debug=config.SENTRY.DEBUG,
-                release=config.SENTRY.RELEASE,
-                sample_rate=config.SENTRY.SAMPLE_RATE,
-                traces_sample_rate=config.SENTRY.TRACES_SAMPLE_RATE,
-                environment=config.ENVIRONMENT,
-            )
-        except Exception:
-            logger.exception("Failed to initialize Sentry")
 
     @staticmethod
     def setup_cors(app: FastAPI, config: BaseConfig) -> None:
@@ -196,11 +185,12 @@ class FastAPIUtils:
             return
 
         try:
+            import elasticapm
             from elasticapm.contrib.starlette import ElasticAPM, make_apm_client
 
-            apm_client = make_apm_client(config.ELASTIC_APM.model_dump())
-            # Use app.add_middleware with ElasticAPM directly
-            # ElasticAPM is compatible with FastAPI's middleware system at runtime
+            apm_client = elasticapm.get_client()
+            if apm_client is None:
+                apm_client = make_apm_client(config.ELASTIC_APM.model_dump())
             app.add_middleware(ElasticAPM, client=apm_client)  # type: ignore[arg-type]
         except Exception:
             logger.exception("Failed to initialize Elastic APM")
@@ -388,6 +378,9 @@ class AppUtils:
             FastAPI: The configured FastAPI application instance.
         """
         config = config or BaseConfig.global_config()
+
+        if TracingUtils.is_tracing_enabled(config):
+            TracingUtils.init_tracing_if_needed(config)
 
         # Define common responses for all endpoints
         common_responses = BaseUtils.get_fastapi_exception_responses(

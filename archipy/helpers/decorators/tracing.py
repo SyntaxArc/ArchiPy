@@ -4,12 +4,16 @@ This module provides decorators to instrument code with APM tracing when not usi
 gRPC or FastAPI frameworks. Supports both Sentry and Elastic APM based on configuration.
 """
 
+from __future__ import annotations
+
 import functools
 import logging
+import warnings
 from collections.abc import Callable
 from typing import Any
 
 from archipy.configs.base_config import BaseConfig
+from archipy.helpers.utils.tracing_utils import TracingUtils
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +32,7 @@ def capture_transaction[F: Callable[..., Any]](
     Args:
         name: Name of the transaction. If None, uses the function name.
         op: Operation type/category for the transaction. Defaults to "function".
-        description: Optional description of the transaction.
+        description: Deprecated; ignored. Kept for backward compatibility.
 
     Returns:
         The decorated function with transaction tracing capabilities.
@@ -45,88 +49,78 @@ def capture_transaction[F: Callable[..., Any]](
         result = process_user_data(123)
         ```
     """
+    if description is not None:
+        warnings.warn(
+            "The 'description' parameter is deprecated and will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     def decorator(func: F) -> Callable[..., Any]:
         transaction_name = name or func.__name__
-        config: Any = BaseConfig.global_config()
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
+            config = BaseConfig.global_config()
+            if not TracingUtils.is_tracing_enabled(config):
+                return func(*args, **kwargs)
 
-            # Initialize and track with Sentry if enabled
+            TracingUtils.init_tracing_if_needed(config)
+
             sentry_transaction = None
             if config.SENTRY.IS_ENABLED:
                 try:
                     import sentry_sdk
 
-                    # Initialize Sentry if not already done
-                    if not sentry_sdk.is_initialized():
-                        sentry_sdk.init(
-                            dsn=config.SENTRY.DSN,
-                            debug=config.SENTRY.DEBUG,
-                            release=config.SENTRY.RELEASE,
-                            sample_rate=config.SENTRY.SAMPLE_RATE,
-                            traces_sample_rate=config.SENTRY.TRACES_SAMPLE_RATE,
-                            environment=getattr(config, "ENVIRONMENT", None),
-                        )
                     sentry_transaction = sentry_sdk.start_transaction(
                         name=transaction_name,
                         op=op,
-                        description=description or transaction_name,
                     )
                     sentry_transaction.__enter__()
                 except ImportError:
                     logger.debug("sentry_sdk is not installed, skipping Sentry transaction capture.")
                 except Exception:
-                    logger.exception("Failed to initialize Sentry or start transaction")
+                    logger.exception("Failed to start Sentry transaction")
 
-            # Initialize and track with Elastic APM if enabled
             elastic_client: Any = None
             if config.ELASTIC_APM.IS_ENABLED:
                 try:
                     import elasticapm
 
-                    # Initialize Elastic APM client with config
                     elastic_client = elasticapm.get_client()
-                    if not elastic_client:
-                        elastic_client = elasticapm.Client(config.ELASTIC_APM.model_dump())
-                        elasticapm.instrument()
-
-                    elastic_client.begin_transaction(transaction_type="function")
+                    if elastic_client is None:
+                        logger.warning("Elastic APM client is not initialized; skipping APM transaction.")
+                    else:
+                        elastic_client.begin_transaction(transaction_type="function")
                 except ImportError:
                     logger.debug("elasticapm is not installed, skipping Elastic APM transaction capture.")
                 except Exception:
-                    logger.exception("Failed to initialize Elastic APM or start transaction")
+                    logger.exception("Failed to begin Elastic APM transaction")
                     elastic_client = None
 
+            exc_info: tuple[type[BaseException] | None, BaseException | None, Any] = (None, None, None)
             try:
-                # Execute the function
                 result = func(*args, **kwargs)
-            except Exception:
-                # Mark transaction as failed and capture the exception
-                if sentry_transaction:
+            except Exception as exc:
+                exc_info = (type(exc), exc, exc.__traceback__)
+                if sentry_transaction is not None:
                     sentry_transaction.set_status("internal_error")
                 if elastic_client is not None:
-                    elastic_client.end_transaction(name=transaction_name, result="error")
-
-                # Re-raise the exception
+                    elastic_client.end_transaction(name=transaction_name, result="failure")
                 raise
             else:
-                # Mark transaction as successful
-                if sentry_transaction:
+                if sentry_transaction is not None and sentry_transaction.status is None:
                     sentry_transaction.set_status("ok")
                 if elastic_client is not None:
                     elastic_client.end_transaction(name=transaction_name, result="success")
                 return result
             finally:
-                # Clean up Sentry transaction
-                if sentry_transaction:
+                if sentry_transaction is not None:
                     try:
-                        sentry_transaction.__exit__(None, None, None)
+                        sentry_transaction.__exit__(exc_info[0], exc_info[1], exc_info[2])
                     except Exception:
                         logger.exception("Error closing Sentry transaction")
 
-        # @wraps preserves the function signature, making wrapper compatible with F
         wrapper.__wrapped__ = func
         return wrapper
 
@@ -148,7 +142,7 @@ def capture_span[F: Callable[..., Any]](
     Args:
         name: Name of the span. If None, uses the function name.
         op: Operation type/category for the span. Defaults to "function".
-        description: Optional description of the span.
+        description: Deprecated; ignored. Kept for backward compatibility.
 
     Returns:
         The decorated function with span tracing capabilities.
@@ -181,15 +175,24 @@ def capture_span[F: Callable[..., Any]](
             pass
         ```
     """
+    if description is not None:
+        warnings.warn(
+            "The 'description' parameter is deprecated and will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     def decorator(func: F) -> Callable[..., Any]:
         span_name = name or func.__name__
-        config: Any = BaseConfig.global_config()
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
+            config = BaseConfig.global_config()
+            if not TracingUtils.is_tracing_enabled(config):
+                return func(*args, **kwargs)
 
-            # Track with Sentry if enabled
+            TracingUtils.init_tracing_if_needed(config)
+
             sentry_span = None
             if config.SENTRY.IS_ENABLED:
                 try:
@@ -197,68 +200,64 @@ def capture_span[F: Callable[..., Any]](
 
                     sentry_span = sentry_sdk.start_span(
                         op=op,
-                        description=span_name,
+                        name=span_name,
                     )
                     sentry_span.__enter__()
                 except ImportError:
                     logger.debug("sentry_sdk is not installed, skipping Sentry span capture.")
+                except Exception:
+                    logger.exception("Failed to start Sentry span")
 
-            # Track with Elastic APM if enabled
-            elastic_client: Any = None
-            elastic_span: Any = None
-            if config.ELASTIC_APM.IS_ENABLED:
-                try:
-                    import elasticapm
-
-                    elastic_client = elasticapm.get_client()
-                    if elastic_client:
-                        # begin_span is a valid method on elasticapm.Client
-                        begin_span_method = getattr(elastic_client, "begin_span", None)
-                        if begin_span_method is not None:
-                            elastic_span = begin_span_method(
-                                name=span_name,
-                                span_type=op,
-                            )
-                except ImportError:
-                    logger.debug("elasticapm is not installed, skipping Elastic APM span capture.")
-
+            exc_info: tuple[type[BaseException] | None, BaseException | None, Any] = (None, None, None)
             try:
-                # Execute the function
-                result = func(*args, **kwargs)
-            except Exception as e:
-                # Mark span as failed and capture the exception
-                if sentry_span:
-                    sentry_span.set_status("internal_error")
-                    sentry_span.set_tag("error", True)
-                    sentry_span.set_data("exception", str(e))
-
-                if elastic_span and elastic_client:
-                    elastic_client.capture_exception()
-
-                # Re-raise the exception
-                raise
-            else:
-                # Mark span as successful
-                if sentry_span:
-                    sentry_span.set_status("ok")
-                return result
+                if config.ELASTIC_APM.IS_ENABLED:
+                    try:
+                        import elasticapm
+                    except ImportError:
+                        logger.debug("elasticapm is not installed, skipping Elastic APM span capture.")
+                        try:
+                            result = func(*args, **kwargs)
+                        except Exception as exc:
+                            exc_info = (type(exc), exc, exc.__traceback__)
+                            if sentry_span is not None:
+                                sentry_span.set_status("internal_error")
+                            raise
+                        else:
+                            if sentry_span is not None and sentry_span.status is None:
+                                sentry_span.set_status("ok")
+                            return result
+                    else:
+                        with elasticapm.capture_span(span_name, span_type=op):
+                            try:
+                                result = func(*args, **kwargs)
+                            except Exception as exc:
+                                exc_info = (type(exc), exc, exc.__traceback__)
+                                if sentry_span is not None:
+                                    sentry_span.set_status("internal_error")
+                                raise
+                            else:
+                                if sentry_span is not None and sentry_span.status is None:
+                                    sentry_span.set_status("ok")
+                                return result
+                else:
+                    try:
+                        result = func(*args, **kwargs)
+                    except Exception as exc:
+                        exc_info = (type(exc), exc, exc.__traceback__)
+                        if sentry_span is not None:
+                            sentry_span.set_status("internal_error")
+                        raise
+                    else:
+                        if sentry_span is not None and sentry_span.status is None:
+                            sentry_span.set_status("ok")
+                        return result
             finally:
-                # Clean up spans
-                if elastic_span and elastic_client:
+                if sentry_span is not None:
                     try:
-                        end_span_method = getattr(elastic_client, "end_span", None)
-                        if end_span_method is not None:
-                            end_span_method()
-                    except Exception:
-                        logger.exception("Error closing Elastic APM span")
-
-                if sentry_span:
-                    try:
-                        sentry_span.__exit__(None, None, None)
+                        sentry_span.__exit__(exc_info[0], exc_info[1], exc_info[2])
                     except Exception:
                         logger.exception("Error closing Sentry span")
 
-        # @wraps preserves the function signature, making wrapper compatible with F
         wrapper.__wrapped__ = func
         return wrapper
 
