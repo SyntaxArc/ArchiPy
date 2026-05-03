@@ -3140,7 +3140,7 @@
 <h3 id="helpers-tracing">Helpers - Tracing<a class="headerlink" href="#helpers-tracing" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong><code>TracingUtils</code> Class</strong> - Introduced a new <code>TracingUtils</code> utility class in <code>archipy/helpers/utils/tracing_utils.py</code> to centralise all tracing initialisation and gRPC metadata helpers.<ul>
-<li><code>is_tracing_enabled(config)</code> — checks whether any tracing backend (Sentry, Elastic APM, or OpenTelemetry) is active</li>
+<li><code>is_tracing_enabled(config)</code> — checks whether any tracing backend (Sentry or Elastic APM) is active</li>
 <li><code>init_tracing_if_needed(config)</code> — lazily initialises the appropriate tracing backend once per process</li>
 <li><code>grpc_status_indicates_success(status_code)</code> — maps gRPC status codes to a boolean success/failure outcome</li>
 <li><code>inject_outbound_metadata(metadata, carrier)</code> — propagates W3C trace context into outbound gRPC metadata</li>
