@@ -5,7 +5,9 @@ from pathlib import Path
 
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
+from testcontainers.elasticsearch import ElasticSearchContainer
 from testcontainers.keycloak import KeycloakContainer
+from testcontainers.minio import MinioContainer
 from testcontainers.postgres import PostgresContainer
 from testcontainers.redis import RedisContainer
 
@@ -410,56 +412,25 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         self.image = image or BaseConfig.global_config().ELASTIC__IMAGE
         self._is_running: bool = False
 
-        # Container properties
         self.host: str | None = None
         self.port: int | None = None
         self.username: str | None = self.config.HTTP_USER_NAME
         self.password: str | None = self.config.HTTP_PASSWORD.get_secret_value() if self.config.HTTP_PASSWORD else None
         self.cluster_name: str = "test-cluster"
 
-        # Set up the container
-        self._container = DockerContainer(self.image)
-        self._container.with_env("discovery.type", "single-node")
-        self._container.with_env("xpack.security.enabled", "true")
-        if self.password:
-            self._container.with_env("ELASTIC_PASSWORD", self.password)
-        self._container.with_env("cluster.name", self.cluster_name)
-        # Limit memory to prevent OOM kills (ES_JAVA_OPTS sets JVM heap size)
-        self._container.with_env("ES_JAVA_OPTS", "-Xms512m -Xmx512m")
-        self._container.with_env("bootstrap.memory_lock", "false")
-        self._container.with_exposed_ports(9200)
+        self._container = ElasticSearchContainer(image=self.image)
 
-    def start(self) -> DockerContainer:
+    def start(self) -> ElasticSearchContainer:
         """Start the Elasticsearch container."""
         if self._is_running:
             return self._container
 
-        # Recreate container if it was stopped
-        if self._container is None:
-            self._container = DockerContainer(self.image)
-            self._container.with_env("discovery.type", "single-node")
-            self._container.with_env("xpack.security.enabled", "true")
-            if self.password:
-                self._container.with_env("ELASTIC_PASSWORD", self.password)
-            self._container.with_env("cluster.name", self.cluster_name)
-            # Limit memory to prevent OOM kills (ES_JAVA_OPTS sets JVM heap size)
-            self._container.with_env("ES_JAVA_OPTS", "-Xms512m -Xmx512m")
-            self._container.with_env("bootstrap.memory_lock", "false")
-            self._container.with_exposed_ports(9200)
-
-        # Start the container
         self._container.start()
-
-        # Wait for Elasticsearch to be ready
-        wait_for_logs(self._container, "started", timeout=60)
-
         self._is_running = True
 
-        # Get dynamic host and port
         self.host = self._container.get_container_host_ip()
         self.port = int(self._container.get_exposed_port(9200))
 
-        # Update global config with actual container endpoint
         global_config = BaseConfig.global_config()
         global_config.ELASTIC.HOSTS = [f"http://{self.host}:{self.port}"]
 
@@ -478,7 +449,6 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         self._container = None
         self._is_running = False
 
-        # Reset container properties
         self.host = None
         self.port = None
 
@@ -590,73 +560,51 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
 
 @ContainerManager.register("minio")
 class MinioTestContainer(metaclass=Singleton, thread_safe=True):
-    """Custom MinIO test container using DockerContainer directly."""
-
     def __init__(self, config: MinioConfig | None = None, image: str | None = None) -> None:
         self.name = "minio"
         self.config = config or BaseConfig.global_config().MINIO
         self.image = image or BaseConfig.global_config().MINIO__IMAGE
-        self._container: DockerContainer | None = None
+        self._container: MinioContainer | None = None
         self._is_running: bool = False
 
-        # Container properties
         self.host: str | None = None
         self.port: int | None = None
         self.access_key = self.config.ACCESS_KEY or "minioadmin"
         self.secret_key = self.config.SECRET_KEY or "minioadmin"
 
-        # Set up the container
-        self._container = (
-            DockerContainer(image=self.image)
-            .with_env("MINIO_ROOT_USER", self.access_key)
-            .with_env("MINIO_ROOT_PASSWORD", self.secret_key)
-            .with_command("server /data --console-address :9001")
-            .with_exposed_ports(9000, 9001)
+        self._container = MinioContainer(
+            image=self.image,
+            access_key=self.access_key,
+            secret_key=self.secret_key,
         )
 
-    def start(self) -> DockerContainer:
-        """Start the MinIO container."""
+    def start(self) -> MinioContainer:
         if self._is_running:
             return self._container
 
-        # Recreate container if it was stopped
         if self._container is None:
-            self._container = (
-                DockerContainer(image=self.image)
-                .with_env("MINIO_ROOT_USER", self.access_key)
-                .with_env("MINIO_ROOT_PASSWORD", self.secret_key)
-                .with_command("server /data --console-address :9001")
-                .with_exposed_ports(9000, 9001)
+            self._container = MinioContainer(
+                image=self.image,
+                access_key=self.access_key,
+                secret_key=self.secret_key,
             )
 
-        try:
-            self._container.start()
+        self._container.start()
+        self._is_running = True
 
-            # Wait for MinIO to be ready
-            wait_for_logs(self._container, "API:.*http://")
+        self.host = self._container.get_container_host_ip()
+        self.port = int(self._container.get_exposed_port(9000))
 
-            self._is_running = True
+        global_config = BaseConfig.global_config()
+        global_config.MINIO.ENDPOINT = f"{self.host}:{self.port}"
+        global_config.MINIO.ACCESS_KEY = self.access_key
+        global_config.MINIO.SECRET_KEY = self.secret_key
+        global_config.MINIO.SECURE = False
 
-            # Get dynamic host and port
-            self.host = self._container.get_container_host_ip()
-            self.port = int(self._container.get_exposed_port(9000))
-
-            # Update global config with actual container endpoint
-            global_config = BaseConfig.global_config()
-            global_config.MINIO.ENDPOINT = f"{self.host}:{self.port}"
-            global_config.MINIO.ACCESS_KEY = self.access_key
-            global_config.MINIO.SECRET_KEY = self.secret_key
-            global_config.MINIO.SECURE = False
-
-            logger.info("MinIO container started on %s:%s", self.host, self.port)
-            return self._container
-
-        except Exception as e:
-            logger.error(f"Failed to start MinIO container: {e}")
-            raise
+        logger.info("MinIO container started on %s:%s", self.host, self.port)
+        return self._container
 
     def stop(self) -> None:
-        """Stop the MinIO container."""
         if not self._is_running:
             return
 
@@ -665,8 +613,6 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
 
         self._container = None
         self._is_running = False
-
-        # Reset container properties
         self.host = None
         self.port = None
 
