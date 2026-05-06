@@ -3371,6 +3371,9 @@ resolution.</p>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p><strong>Note:</strong> Importing <strong>metric interceptors</strong> (for example <code>FastAPIMetricInterceptor</code> under <code>archipy.helpers.interceptors.fastapi.metric</code>, or gRPC metric server interceptors) requires <code>archipy[prometheus]</code> because they use <code>prometheus_client</code> at import time. Calling <code>PrometheusUtils.start_prometheus_server_if_needed</code> also requires that extra.</p>
+</blockquote>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <p>If issues arise, verify:</p>
 <ol>
