@@ -2,718 +2,718 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/404/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/configs/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/base/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/elasticsearch/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/email/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/kafka/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/keycloak/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/minio/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/payment_gateways/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/postgres/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/redis/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/scylladb/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/sqlite/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/starrocks/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/temporal/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/helpers/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/helpers/decorators/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/helpers/interceptors/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/helpers/metaclasses/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/helpers/utils/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/models/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/models/dtos/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/models/entities/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/models/errors/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/models/types/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/code_of_conduct/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/contributing/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/faq/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/license/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/security/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.1.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.10.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.10.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.10.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.11.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.11.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.11.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.12.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.13.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.13.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.13.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.13.3/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.13.4/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.13.5/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.14.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.14.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.14.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.14.3/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.2.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.3.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.4.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.5.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.5.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.6.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.6.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.7.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.7.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.7.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.8.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/0/0.9.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/1/1.0.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/1/1.0.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/1/1.0.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/1/1.0.3/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/2/2.0.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/2/2.0.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.0.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.0.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.1.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.1.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.10.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.11.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.11.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.12.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.13.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.13.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.13.10/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.13.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.13.3/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.13.4/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.13.5/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.13.6/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.13.7/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.13.8/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.13.9/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.14.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.14.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.14.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.14.3/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.14.4/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.15.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.15.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.15.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.15.3/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.2.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.2.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.2.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.2.3/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.2.4/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.2.5/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.2.6/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.2.7/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.3.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.3.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.4.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.4.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.4.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.4.3/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.4.4/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.4.5/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.5.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.5.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.5.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.6.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.6.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.7.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.8.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.8.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.9.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.0.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.0.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.0.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.0.3/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.0.4/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.1.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.2.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.3.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.3.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.3.3/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.3.4/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.3.5/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.3.6/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.4.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.4.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.4.2/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.5.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.6.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.7.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.7.1/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.8.0/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/getting-started/complete_user_example/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/getting-started/concepts/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/getting-started/installation/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/getting-started/project_structure/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/getting-started/quickstart/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/config_management/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/dependency_injection/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/error_handling/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/observability/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/testing_strategy/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/elasticsearch/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/email/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/kafka/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/keycloak/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/minio/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/payment_gateways/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/postgres/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/redis/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/scylladb/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/sqlite/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/starrocks/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/temporal/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/helpers/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/helpers/decorators/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/helpers/interceptors/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/helpers/metaclasses/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/helpers/utils/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/models/protobuf_dtos/</loc>
-         <lastmod>2026-05-03</lastmod>
+         <lastmod>2026-05-06</lastmod>
     </url>
 </urlset>
