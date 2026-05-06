@@ -11,7 +11,7 @@ from pydantic import ValidationError
 
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers.utils.base_utils import BaseUtils
-from archipy.helpers.utils.prometheus_utils import is_prometheus_server_running
+from archipy.helpers.utils.prometheus_utils import PrometheusUtils
 from archipy.helpers.utils.tracing_utils import TracingUtils
 from archipy.models.errors import (
     BaseError,
@@ -52,10 +52,6 @@ try:
     FASTAPI_APP = True
 except ImportError:
     FASTAPI_APP = False
-
-
-# Backward compatibility alias
-_is_prometheus_server_running = is_prometheus_server_running
 
 
 class FastAPIExceptionHandler:
@@ -208,9 +204,8 @@ class FastAPIUtils:
 
         try:
             from archipy.helpers.interceptors.fastapi.metric.interceptor import FastAPIMetricInterceptor
-            from archipy.helpers.utils.prometheus_utils import start_prometheus_server_if_needed
 
-            start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
+            PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
 
             app.add_middleware(FastAPIMetricInterceptor)  # type: ignore[arg-type]
         except Exception:
@@ -298,9 +293,8 @@ class AsyncGrpcAPIUtils:
 
         try:
             from archipy.helpers.interceptors.grpc.metric.server_interceptor import AsyncGrpcServerMetricInterceptor
-            from archipy.helpers.utils.prometheus_utils import start_prometheus_server_if_needed
 
-            start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
+            PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
 
             interceptors.append(AsyncGrpcServerMetricInterceptor())
 
@@ -342,9 +336,8 @@ class GrpcAPIUtils:
 
         try:
             from archipy.helpers.interceptors.grpc.metric.server_interceptor import GrpcServerMetricInterceptor
-            from archipy.helpers.utils.prometheus_utils import start_prometheus_server_if_needed
 
-            start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
+            PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
 
             interceptors.append(GrpcServerMetricInterceptor())
 

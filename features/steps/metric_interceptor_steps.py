@@ -17,8 +17,8 @@ from archipy.helpers.utils.app_utils import (
     AsyncGrpcAPIUtils,
     FastAPIUtils,
     GrpcAPIUtils,
-    _is_prometheus_server_running,
 )
+from archipy.helpers.utils.prometheus_utils import PrometheusUtils
 
 
 # Import for Temporal steps
@@ -353,7 +353,7 @@ def step_when_multiple_apps_created(context, framework):
     scenario_context = get_current_scenario_context(context)
     config = scenario_context.get("config")
 
-    server_was_running = _is_prometheus_server_running(config.PROMETHEUS.SERVER_PORT)
+    server_was_running = PrometheusUtils.is_prometheus_server_running(config.PROMETHEUS.SERVER_PORT)
     scenario_context.store("server_was_running", server_was_running)
 
     if framework == "FastAPI":
@@ -528,7 +528,7 @@ def step_then_prometheus_starts_once(context):
     scenario_context = get_current_scenario_context(context)
     config = scenario_context.get("config")
 
-    is_running = _is_prometheus_server_running(config.PROMETHEUS.SERVER_PORT)
+    is_running = PrometheusUtils.is_prometheus_server_running(config.PROMETHEUS.SERVER_PORT)
     assert is_running, "Prometheus server is not running"
 
 
@@ -853,8 +853,9 @@ def step_when_execute_multiple_workflows(context, count, workflow_name):
 @then("Temporal workflow execution count metrics should show at least {min_count:d} executions")
 def step_then_workflow_execution_count(context, min_count):
     """Verify that workflow execution count meets minimum threshold."""
-    import httpx
     import re
+
+    import httpx
 
     scenario_context = get_current_scenario_context(context)
     temporal_config = scenario_context.get("temporal_config")

@@ -7,62 +7,76 @@ can be shared across FastAPI, gRPC, and Temporal adapters.
 import logging
 import socket
 
-from prometheus_client import start_http_server
-
 logger = logging.getLogger(__name__)
 
 
-def is_prometheus_server_running(port: int) -> bool:
-    """Check if Prometheus server is already running on the specified port.
+class PrometheusUtils:
+    """Utilities for Prometheus server lifecycle operations."""
 
-    Args:
-        port (int): The port number to check.
+    _PROMETHEUS_INSTALL_HINT = (
+        'Prometheus metrics require the optional dependency. Install with: uv add "archipy[prometheus]"'
+    )
 
-    Returns:
-        bool: True if server is running, False otherwise.
+    @staticmethod
+    def is_prometheus_server_running(port: int) -> bool:
+        """Check if Prometheus server is already running on the specified port.
 
-    Example:
-        ```python
-        from archipy.helpers.utils.prometheus_utils import is_prometheus_server_running
+        Args:
+            port (int): The port number to check.
 
-        if not is_prometheus_server_running(8200):
-            from prometheus_client import start_http_server
+        Returns:
+            bool: True if server is running, False otherwise.
 
-            start_http_server(8200)
-        ```
-    """
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    result = sock.connect_ex(("localhost", port))
-    sock.close()
-    return result == 0
+        Example:
+            ```python
+            from archipy.helpers.utils.prometheus_utils import PrometheusUtils
 
+            if not PrometheusUtils.is_prometheus_server_running(8200):
+                PrometheusUtils.start_prometheus_server_if_needed(8200)
+            ```
+        """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex(("localhost", port))
+        sock.close()
+        return result == 0
 
-def start_prometheus_server_if_needed(port: int) -> None:
-    """Start Prometheus HTTP server if not already running on the specified port.
+    @classmethod
+    def start_prometheus_server_if_needed(cls, port: int) -> None:
+        """Start Prometheus HTTP server if not already running on the specified port.
 
-    Args:
-        port (int): The port number for the Prometheus metrics endpoint.
+        Requires the ``prometheus`` extra (``prometheus-client``). Port checks via
+        ``is_prometheus_server_running`` do not.
 
-    Example:
-        ```python
-        from archipy.helpers.utils.prometheus_utils import start_prometheus_server_if_needed
+        Args:
+            port (int): The port number for the Prometheus metrics endpoint.
 
-        # This will start the server only if it's not already running
-        start_prometheus_server_if_needed(8200)
-        ```
-    """
-    if not is_prometheus_server_running(port):
-        try:
-            start_http_server(port)
-            logger.info(f"Started Prometheus HTTP server on port {port}")
-        except Exception as error:
-            logger.exception(
-                "Failed to start Prometheus HTTP server",
-                extra={
-                    "port": port,
-                    "error": str(error),
-                },
-            )
-            raise
-    else:
-        logger.debug(f"Prometheus HTTP server already running on port {port}")
+        Raises:
+            ImportError: If ``prometheus-client`` is not installed.
+
+        Example:
+            ```python
+            from archipy.helpers.utils.prometheus_utils import PrometheusUtils
+
+            # This will start the server only if it's not already running
+            PrometheusUtils.start_prometheus_server_if_needed(8200)
+            ```
+        """
+        if not cls.is_prometheus_server_running(port):
+            try:
+                from prometheus_client import start_http_server  # noqa: PLC0415
+            except ModuleNotFoundError as exc:
+                raise ImportError(cls._PROMETHEUS_INSTALL_HINT) from exc
+            try:
+                start_http_server(port)
+                logger.info("Started Prometheus HTTP server on port %d", port)
+            except Exception as error:
+                logger.exception(
+                    "Failed to start Prometheus HTTP server",
+                    extra={
+                        "port": port,
+                        "error": str(error),
+                    },
+                )
+                raise
+        else:
+            logger.debug("Prometheus HTTP server already running on port %d", port)

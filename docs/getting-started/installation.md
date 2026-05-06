@@ -92,6 +92,8 @@ ArchiPy supports modular features through optional extras — install only what 
 | Testing       | `archipy[testcontainers]`       | Testcontainers integration                        |
 | Testing       | `archipy[behave]`               | BDD testing framework                             |
 
+> **Note:** Importing **metric interceptors** (for example `FastAPIMetricInterceptor` under `archipy.helpers.interceptors.fastapi.metric`, or gRPC metric server interceptors) requires `archipy[prometheus]` because they use `prometheus_client` at import time. Calling `PrometheusUtils.start_prometheus_server_if_needed` also requires that extra.
+
 ## Troubleshooting
 
 If issues arise, verify:

@@ -38,6 +38,8 @@ or APM client wiring required. Enable the relevant extras and flip the config fl
 
 ## Prometheus
 
+> **Note:** Metric interceptors (`FastAPIMetricInterceptor`, gRPC metric interceptors) import `prometheus_client` when their modules load — install `archipy[prometheus]` before importing them. `start_prometheus_server_if_needed` requires the same extra when you call it; `is_prometheus_server_running` does not.
+
 ### Configuration
 
 Enable Prometheus via `BaseConfig`:
@@ -62,19 +64,19 @@ BaseConfig.set_global(config)
 
 ### Starting the Metrics Server
 
-Use `start_prometheus_server_if_needed` to start the Prometheus HTTP scrape endpoint once at application
+Use `PrometheusUtils.start_prometheus_server_if_needed` to start the Prometheus HTTP scrape endpoint once at application
 startup — it is safe to call multiple times (no-op if already running):
 
 ```python
 import logging
-from archipy.helpers.utils.prometheus_utils import start_prometheus_server_if_needed
+from archipy.helpers.utils.prometheus_utils import PrometheusUtils
 from archipy.configs.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
 
 config = BaseConfig.global_config()
 if config.PROMETHEUS.IS_ENABLED:
-    start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
+    PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
     logger.info("Prometheus metrics available on port %d", config.PROMETHEUS.SERVER_PORT)
 ```
 
@@ -88,7 +90,7 @@ import logging
 from fastapi import FastAPI
 from archipy.helpers.interceptors.fastapi.metric.interceptor import FastAPIMetricInterceptor
 from archipy.helpers.utils.app_utils import AppUtils
-from archipy.helpers.utils.prometheus_utils import start_prometheus_server_if_needed
+from archipy.helpers.utils.prometheus_utils import PrometheusUtils
 from archipy.configs.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
@@ -98,7 +100,7 @@ app = AppUtils.create_fastapi_app()
 
 if config.PROMETHEUS.IS_ENABLED:
     app.add_middleware(FastAPIMetricInterceptor)
-    start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
+    PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
     logger.info("Prometheus middleware registered")
 ```
 
@@ -125,7 +127,7 @@ from archipy.helpers.interceptors.grpc.metric.server_interceptor import (
     GrpcServerMetricInterceptor,
     AsyncGrpcServerMetricInterceptor,
 )
-from archipy.helpers.utils.prometheus_utils import start_prometheus_server_if_needed
+from archipy.helpers.utils.prometheus_utils import PrometheusUtils
 from archipy.configs.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
@@ -139,7 +141,7 @@ def create_sync_grpc_server() -> grpc.Server:
     """
     config = BaseConfig.global_config()
     if config.PROMETHEUS.IS_ENABLED:
-        start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
+        PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
 
     server = grpc.server(
         thread_pool=None,
@@ -157,7 +159,7 @@ async def create_async_grpc_server() -> grpc.aio.Server:
     """
     config = BaseConfig.global_config()
     if config.PROMETHEUS.IS_ENABLED:
-        start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
+        PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
 
     server = grpc.aio.server(interceptors=[AsyncGrpcServerMetricInterceptor()])
     logger.info("Async gRPC server created with Prometheus metrics interceptor")
@@ -251,7 +253,7 @@ import logging
 import grpc
 from archipy.helpers.interceptors.grpc.metric.server_interceptor import GrpcServerMetricInterceptor
 from archipy.helpers.interceptors.grpc.trace.server_interceptor import GrpcServerTraceInterceptor
-from archipy.helpers.utils.prometheus_utils import start_prometheus_server_if_needed
+from archipy.helpers.utils.prometheus_utils import PrometheusUtils
 from archipy.configs.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
@@ -265,7 +267,7 @@ def create_grpc_server() -> grpc.Server:
     """
     config = BaseConfig.global_config()
     if config.PROMETHEUS.IS_ENABLED:
-        start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
+        PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
 
     server = grpc.server(
         thread_pool=None,
