@@ -148,9 +148,9 @@ class FastAPIConfig(BaseModel):
     RELOAD: bool = Field(default=False, description="Whether to enable auto-reload")
     SERVER_HEADER: bool = Field(default=True, description="Whether to include server header")
     SERVE_HOST: str = Field(
-        default="0.0.0.0",
-        description="Host to serve the application on",
-    )  # Deliberate binding to all interfaces for containerized deployments
+        default="127.0.0.1",
+        description="Host to serve the application on (set to 0.0.0.0 for container/public binding)",
+    )
     SERVE_PORT: int = Field(default=8100, description="Port to serve the application on")
     TIMEOUT_GRACEFUL_SHUTDOWN: int | None = Field(default=None, description="Graceful shutdown timeout")
     TIMEOUT_KEEP_ALIVE: int = Field(default=5, description="Keep-alive timeout")

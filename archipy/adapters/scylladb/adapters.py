@@ -6,6 +6,7 @@ supporting both synchronous and asynchronous database operations.
 
 import asyncio
 import logging
+import re
 import time
 from typing import Any, NoReturn, override
 
@@ -40,6 +41,7 @@ from archipy.models.errors import (
 )
 
 logger = logging.getLogger(__name__)
+_CQL_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 class _FixedAddressTranslator(AddressTranslator):
@@ -118,6 +120,45 @@ class ScyllaDBExceptionHandlerMixin:
         if "connection" in operation.lower() or "connect" in operation.lower():
             raise DatabaseConnectionError(database="scylladb") from exception
         raise DatabaseQueryError(database="scylladb") from exception
+
+    @staticmethod
+    def _validate_cql_identifier(identifier: str, field_name: str) -> str:
+        """Validate CQL identifier input used in dynamic query construction.
+
+        Args:
+            identifier: Identifier value such as table, keyspace, or column name.
+            field_name: Field name for error context.
+
+        Returns:
+            The validated identifier.
+
+        Raises:
+            InvalidArgumentError: If identifier is empty or contains unsafe characters.
+        """
+        if not identifier or not _CQL_IDENTIFIER_PATTERN.fullmatch(identifier):
+            raise InvalidArgumentError(
+                argument_name=field_name,
+                additional_data={"error": "Identifier contains invalid characters"},
+            )
+        return identifier
+
+    @classmethod
+    def _validate_cql_identifiers(cls, identifiers: list[str], field_name: str) -> list[str]:
+        """Validate multiple CQL identifiers.
+
+        Args:
+            identifiers: Identifiers to validate.
+            field_name: Field name for error context.
+
+        Returns:
+            Validated identifiers.
+
+        Raises:
+            InvalidArgumentError: If list is empty or any identifier is invalid.
+        """
+        if not identifiers:
+            raise InvalidArgumentError(argument_name=field_name)
+        return [cls._validate_cql_identifier(identifier, field_name) for identifier in identifiers]
 
 
 class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
@@ -351,12 +392,14 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             keyspace (str): The name of the keyspace to create.
             replication_factor (int): The replication factor. Defaults to 1.
         """
+        keyspace = self._validate_cql_identifier(keyspace, "keyspace")
         # Use configured replication strategy
         if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
             # Build replication config for NetworkTopologyStrategy
             replication_parts = ["'class': 'NetworkTopologyStrategy'"]
             for dc, rf in self.config.REPLICATION_CONFIG.items():
-                replication_parts.append(f"'{dc}': {rf}")
+                validated_dc = self._validate_cql_identifier(dc, "replication_datacenter")
+                replication_parts.append(f"'{validated_dc}': {rf}")
             replication_str = ", ".join(replication_parts)
             query = f"""
                 CREATE KEYSPACE IF NOT EXISTS {keyspace}
@@ -381,6 +424,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Args:
             keyspace (str): The name of the keyspace to drop.
         """
+        keyspace = self._validate_cql_identifier(keyspace, "keyspace")
         query = f"DROP KEYSPACE IF EXISTS {keyspace}"
         try:
             self.execute(query)
@@ -397,6 +441,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         session = self.get_session()
         try:
+            keyspace = self._validate_cql_identifier(keyspace, "keyspace")
             session.set_keyspace(keyspace)
         except Exception as e:
             self._handle_scylladb_exception(e, "use_keyspace")
@@ -422,6 +467,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Args:
             table (str): The name of the table to drop.
         """
+        table = self._validate_cql_identifier(table, "table")
         query = f"DROP TABLE IF EXISTS {table}"
         try:
             self.execute(query)
@@ -440,9 +486,11 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             if_not_exists (bool): If True, use lightweight transaction (INSERT ... IF NOT EXISTS).
                               This prevents errors on duplicate primary keys but is slow
         """
-        columns = ", ".join(data.keys())
+        table = self._validate_cql_identifier(table, "table")
+        validated_columns = self._validate_cql_identifiers(list(data.keys()), "columns")
+        columns = ", ".join(validated_columns)
         placeholders = ", ".join(["%s" for _ in data])
-        query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
+        query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"  # nosec B608
 
         if if_not_exists:
             query += " IF NOT EXISTS"
@@ -473,12 +521,14 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             list[Any]: List of result rows.
         """
-        cols = ", ".join(columns) if columns else "*"
-        query = f"SELECT {cols} FROM {table}"
+        table = self._validate_cql_identifier(table, "table")
+        cols = ", ".join(self._validate_cql_identifiers(columns, "columns")) if columns else "*"
+        query = f"SELECT {cols} FROM {table}"  # nosec B608
 
         params = None
         if conditions:
-            where_clause = " AND ".join([f"{key} = %s" for key in conditions])
+            condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
+            where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
             query += f" WHERE {where_clause}"
             params = tuple(conditions.values())
 
@@ -499,8 +549,11 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
             ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
         """
-        set_clause = ", ".join([f"{key} = %s" for key in data])
-        where_clause = " AND ".join([f"{key} = %s" for key in conditions])
+        table = self._validate_cql_identifier(table, "table")
+        set_keys = self._validate_cql_identifiers(list(data.keys()), "data")
+        condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
+        set_clause = ", ".join([f"{key} = %s" for key in set_keys])
+        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
         query = f"UPDATE {table}"
 
         if ttl is not None:
@@ -525,8 +578,10 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             table (str): The name of the table.
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
         """
-        where_clause = " AND ".join([f"{key} = %s" for key in conditions])
-        query = f"DELETE FROM {table} WHERE {where_clause}"
+        table = self._validate_cql_identifier(table, "table")
+        condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
+        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
+        query = f"DELETE FROM {table} WHERE {where_clause}"  # nosec B608
 
         try:
             self.execute(query, tuple(conditions.values()))
@@ -642,11 +697,13 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             int: The number of rows matching the conditions.
         """
-        query = f"SELECT COUNT(*) FROM {table}"
+        table = self._validate_cql_identifier(table, "table")
+        query = f"SELECT COUNT(*) FROM {table}"  # nosec B608
 
         params = None
         if conditions:
-            where_clause = " AND ".join([f"{key} = %s" for key in conditions])
+            condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
+            where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
             query += f" WHERE {where_clause} ALLOW FILTERING"
             params = tuple(conditions.values())
 
@@ -670,8 +727,10 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             bool: True if at least one row exists, False otherwise.
         """
-        where_clause = " AND ".join([f"{key} = %s" for key in conditions])
-        query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"
+        table = self._validate_cql_identifier(table, "table")
+        condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
+        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
+        query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
 
         try:
             result = self.execute(query, tuple(conditions.values()))
@@ -969,12 +1028,14 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             keyspace (str): The name of the keyspace to create.
             replication_factor (int): The replication factor. Defaults to 1.
         """
+        keyspace = self._validate_cql_identifier(keyspace, "keyspace")
         # Use configured replication strategy
         if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
             # Build replication config for NetworkTopologyStrategy
             replication_parts = ["'class': 'NetworkTopologyStrategy'"]
             for dc, rf in self.config.REPLICATION_CONFIG.items():
-                replication_parts.append(f"'{dc}': {rf}")
+                validated_dc = self._validate_cql_identifier(dc, "replication_datacenter")
+                replication_parts.append(f"'{validated_dc}': {rf}")
             replication_str = ", ".join(replication_parts)
             query = f"""
                 CREATE KEYSPACE IF NOT EXISTS {keyspace}
@@ -999,6 +1060,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Args:
             keyspace (str): The name of the keyspace to drop.
         """
+        keyspace = self._validate_cql_identifier(keyspace, "keyspace")
         query = f"DROP KEYSPACE IF EXISTS {keyspace}"
         try:
             await self.execute(query)
@@ -1015,6 +1077,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         session = await self.get_session()
         try:
+            keyspace = self._validate_cql_identifier(keyspace, "keyspace")
             session.set_keyspace(keyspace)
         except Exception as e:
             self._handle_scylladb_exception(e, "use_keyspace")
@@ -1040,6 +1103,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Args:
             table (str): The name of the table to drop.
         """
+        table = self._validate_cql_identifier(table, "table")
         query = f"DROP TABLE IF EXISTS {table}"
         try:
             await self.execute(query)
@@ -1064,9 +1128,11 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             if_not_exists (bool): If True, use lightweight transaction (INSERT ... IF NOT EXISTS).
                               This prevents errors on duplicate primary keys but is slow
         """
-        columns = ", ".join(data.keys())
+        table = self._validate_cql_identifier(table, "table")
+        validated_columns = self._validate_cql_identifiers(list(data.keys()), "columns")
+        columns = ", ".join(validated_columns)
         placeholders = ", ".join(["%s" for _ in data])
-        query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
+        query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"  # nosec B608
 
         if if_not_exists:
             query += " IF NOT EXISTS"
@@ -1097,12 +1163,14 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             list[Any]: List of result rows.
         """
-        cols = ", ".join(columns) if columns else "*"
-        query = f"SELECT {cols} FROM {table}"
+        table = self._validate_cql_identifier(table, "table")
+        cols = ", ".join(self._validate_cql_identifiers(columns, "columns")) if columns else "*"
+        query = f"SELECT {cols} FROM {table}"  # nosec B608
 
         params = None
         if conditions:
-            where_clause = " AND ".join([f"{key} = %s" for key in conditions])
+            condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
+            where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
             query += f" WHERE {where_clause}"
             params = tuple(conditions.values())
 
@@ -1129,8 +1197,11 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
             ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
         """
-        set_clause = ", ".join([f"{key} = %s" for key in data])
-        where_clause = " AND ".join([f"{key} = %s" for key in conditions])
+        table = self._validate_cql_identifier(table, "table")
+        set_keys = self._validate_cql_identifiers(list(data.keys()), "data")
+        condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
+        set_clause = ", ".join([f"{key} = %s" for key in set_keys])
+        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
         query = f"UPDATE {table}"
 
         if ttl is not None:
@@ -1155,8 +1226,10 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             table (str): The name of the table.
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
         """
-        where_clause = " AND ".join([f"{key} = %s" for key in conditions])
-        query = f"DELETE FROM {table} WHERE {where_clause}"
+        table = self._validate_cql_identifier(table, "table")
+        condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
+        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
+        query = f"DELETE FROM {table} WHERE {where_clause}"  # nosec B608
 
         try:
             await self.execute(query, tuple(conditions.values()))
@@ -1278,11 +1351,13 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             int: The number of rows matching the conditions.
         """
-        query = f"SELECT COUNT(*) FROM {table}"
+        table = self._validate_cql_identifier(table, "table")
+        query = f"SELECT COUNT(*) FROM {table}"  # nosec B608
 
         params = None
         if conditions:
-            where_clause = " AND ".join([f"{key} = %s" for key in conditions])
+            condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
+            where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
             query += f" WHERE {where_clause} ALLOW FILTERING"
             params = tuple(conditions.values())
 
@@ -1306,8 +1381,10 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             bool: True if at least one row exists, False otherwise.
         """
-        where_clause = " AND ".join([f"{key} = %s" for key in conditions])
-        query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"
+        table = self._validate_cql_identifier(table, "table")
+        condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
+        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
+        query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
 
         try:
             result = await self.execute(query, tuple(conditions.values()))

@@ -31,8 +31,8 @@ class FileUtils:
         if secret is None:
             raise InvalidArgumentError(argument_name="SECRET_KEY")
         _input = f"{expires_at}{path} {secret}"
-        # nginx secure_link requires MD5; keep for compatibility (not used for cryptographic security)
-        hash_object = hashlib.md5(_input.encode("utf8"))
+        # nginx secure_link requires MD5; this hash is for protocol compatibility, not cryptographic security.
+        hash_object = hashlib.md5(_input.encode("utf8"), usedforsecurity=False)
         return base64.urlsafe_b64encode(hash_object.digest()).decode("utf-8").rstrip("=")
 
     @classmethod
