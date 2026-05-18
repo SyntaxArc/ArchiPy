@@ -3139,7 +3139,8 @@
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <h3 id="helpers-tracing">Helpers - Tracing<a class="headerlink" href="#helpers-tracing" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong><code>TracingUtils</code> Class</strong> - Introduced a new <code>TracingUtils</code> utility class in <code>archipy/helpers/utils/tracing_utils.py</code> to centralise all tracing initialisation and gRPC metadata helpers.<ul>
+<li><strong><code>TracingUtils</code> Class</strong> - Introduced a new <code>TracingUtils</code> utility class in <code>archipy/helpers/utils/tracing_utils.py</code>
+  to centralise all tracing initialisation and gRPC metadata helpers.<ul>
 <li><code>is_tracing_enabled(config)</code> — checks whether any tracing backend (Sentry or Elastic APM) is active</li>
 <li><code>init_tracing_if_needed(config)</code> — lazily initialises the appropriate tracing backend once per process</li>
 <li><code>grpc_status_indicates_success(status_code)</code> — maps gRPC status codes to a boolean success/failure outcome</li>
@@ -3150,10 +3151,13 @@
 </ul>
 <h3 id="configs-sentry">Configs - Sentry<a class="headerlink" href="#configs-sentry" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Extended <code>SentryConfig</code></strong> - Added nine new optional fields to <code>SentryConfig</code> in <code>ConfigTemplate</code> for fine-grained Sentry SDK control.<ul>
-<li><code>SEND_DEFAULT_PII</code> (<code>bool</code>, default <code>False</code>) — controls whether personally identifiable information (IP address, user) is sent</li>
+<li><strong>Extended <code>SentryConfig</code></strong> - Added nine new optional fields to <code>SentryConfig</code> in <code>ConfigTemplate</code> for fine-grained
+  Sentry SDK control.<ul>
+<li><code>SEND_DEFAULT_PII</code> (<code>bool</code>, default <code>False</code>) — controls whether personally identifiable information (IP address,
+  user) is sent</li>
 <li><code>MAX_BREADCRUMBS</code> (<code>int</code>, default <code>100</code>) — limits the number of breadcrumbs stored per event</li>
-<li><code>ATTACH_STACKTRACE</code> (<code>bool</code>, default <code>False</code>) — attaches a stack trace to every captured message, not only exceptions</li>
+<li><code>ATTACH_STACKTRACE</code> (<code>bool</code>, default <code>False</code>) — attaches a stack trace to every captured message, not only
+  exceptions</li>
 <li><code>SERVER_NAME</code> (<code>str | None</code>, default <code>None</code>) — overrides the hostname reported to Sentry</li>
 <li><code>IN_APP_INCLUDE</code> (<code>list[str]</code>) — module path prefixes that Sentry marks as in-app in stack traces</li>
 <li><code>IN_APP_EXCLUDE</code> (<code>list[str]</code>) — module path prefixes excluded from in-app marking</li>
@@ -3167,25 +3171,36 @@
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="helpers-tracing_1">Helpers - Tracing<a class="headerlink" href="#helpers-tracing_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>gRPC Client Interceptor Refactor</strong> - Rewrote <code>archipy/helpers/interceptors/grpc/trace/client_interceptor.py</code> to delegate tracing setup and metadata injection to <code>TracingUtils</code>, removing ~200 lines of inline logic.</li>
-<li><strong>gRPC Server Interceptor Refactor</strong> - Rewrote <code>archipy/helpers/interceptors/grpc/trace/server_interceptor.py</code> to use <code>TracingUtils.extract_inbound_trace</code> and <code>TracingUtils.grpc_status_indicates_success</code> for consistent span outcome reporting.</li>
-<li><strong>Tracing Decorator Refactor</strong> - Updated <code>archipy/helpers/decorators/tracing.py</code> to call <code>TracingUtils.init_tracing_if_needed</code> instead of duplicating Sentry and Elastic APM bootstrap logic inline.</li>
+<li><strong>gRPC Client Interceptor Refactor</strong> - Rewrote <code>archipy/helpers/interceptors/grpc/trace/client_interceptor.py</code> to
+  delegate tracing setup and metadata injection to <code>TracingUtils</code>, removing ~200 lines of inline logic.</li>
+<li><strong>gRPC Server Interceptor Refactor</strong> - Rewrote <code>archipy/helpers/interceptors/grpc/trace/server_interceptor.py</code> to use
+  <code>TracingUtils.extract_inbound_trace</code> and <code>TracingUtils.grpc_status_indicates_success</code> for consistent span outcome
+  reporting.</li>
+<li><strong>Tracing Decorator Refactor</strong> - Updated <code>archipy/helpers/decorators/tracing.py</code> to call
+  <code>TracingUtils.init_tracing_if_needed</code> instead of duplicating Sentry and Elastic APM bootstrap logic inline.</li>
 </ul>
 <h3 id="helpers-app-utils">Helpers - App Utils<a class="headerlink" href="#helpers-app-utils" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Sentry Initialisation Delegated</strong> - <code>AppUtils.init_sentry</code> is now a no-op placeholder; Sentry initialisation is performed exclusively via <code>TracingUtils</code> inside <code>create_fastapi_app</code>, preventing double-initialisation.</li>
-<li><strong>Elastic APM Client Reuse</strong> - <code>AppUtils.init_elastic_apm</code> now calls <code>elasticapm.get_client()</code> first and only creates a new client when none exists, avoiding duplicate APM client instances.</li>
+<li><strong>Sentry Initialisation Delegated</strong> - <code>AppUtils.init_sentry</code> is now a no-op placeholder; Sentry initialisation is
+  performed exclusively via <code>TracingUtils</code> inside <code>create_fastapi_app</code>, preventing double-initialisation.</li>
+<li><strong>Elastic APM Client Reuse</strong> - <code>AppUtils.init_elastic_apm</code> now calls <code>elasticapm.get_client()</code> first and only creates
+  a new client when none exists, avoiding duplicate APM client instances.</li>
 </ul>
 <h3 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong><code>.env.example</code> Extended</strong> - Documented the ten new <code>SENTRY_*</code> environment variables introduced by the expanded <code>SentryConfig</code>.</li>
+<li><strong><code>.env.example</code> Extended</strong> - Documented the ten new <code>SENTRY_*</code> environment variables introduced by the expanded
+  <code>SentryConfig</code>.</li>
 </ul>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="tests-error-handling">Tests - Error Handling<a class="headerlink" href="#tests-error-handling" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Consolidated Error Handling Feature</strong> - Merged four separate BDD feature files (<code>custom_errors.feature</code>, <code>error_utils.feature</code>, <code>fastapi_error_handling.feature</code>, <code>grpc_error_handling.feature</code>) into a single <code>error_handling.feature</code> for easier maintenance and execution.<ul>
-<li>Removed <code>features/custom_errors.feature</code>, <code>features/error_utils.feature</code>, <code>features/fastapi_error_handling.feature</code>, and <code>features/grpc_error_handling.feature</code></li>
-<li>Removed matching step modules <code>steps/custom_errors_steps.py</code>, <code>steps/error_utils_steps.py</code>, <code>steps/fastapi_error_handling_steps.py</code>, and <code>steps/grpc_error_handling_steps.py</code></li>
+<li><strong>Consolidated Error Handling Feature</strong> - Merged four separate BDD feature files (<code>custom_errors.feature</code>,
+  <code>error_utils.feature</code>, <code>fastapi_error_handling.feature</code>, <code>grpc_error_handling.feature</code>) into a single
+  <code>error_handling.feature</code> for easier maintenance and execution.<ul>
+<li>Removed <code>features/custom_errors.feature</code>, <code>features/error_utils.feature</code>,
+  <code>features/fastapi_error_handling.feature</code>, and <code>features/grpc_error_handling.feature</code></li>
+<li>Removed matching step modules <code>steps/custom_errors_steps.py</code>, <code>steps/error_utils_steps.py</code>,
+  <code>steps/fastapi_error_handling_steps.py</code>, and <code>steps/grpc_error_handling_steps.py</code></li>
 <li>Created unified <code>features/error_handling.feature</code> with all 238 scenario lines</li>
 <li>Created unified <code>features/steps/error_handling_steps.py</code> consolidating all step definitions</li>
 </ul>
@@ -3194,7 +3209,8 @@
 </ul>
 <h2 id="chore">Chore<a class="headerlink" href="#chore" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Elasticsearch Test Image</strong> - Updated the Elasticsearch container image version in <code>.env.test</code> to align with CI test dependencies.</li>
+<li><strong>Elasticsearch Test Image</strong> - Updated the Elasticsearch container image version in <code>.env.test</code> to align with CI test
+  dependencies.</li>
 </ul>
 
 

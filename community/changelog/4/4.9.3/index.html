@@ -3074,13 +3074,15 @@
 
 
 <h1 id="493-2026-05-13">4.9.3 — 2026-05-13<a class="headerlink" href="#493-2026-05-13" title="Permanent link">&para;</a></h1>
-<p><a href="../4.9.2/">← 4.9.2</a> | <a href="../">↑ 4.x series</a></p>
+<p><a href="../4.10.0/">← 4.10.0</a> | <a href="../4.9.2/">4.9.2 →</a> | <a href="../">↑ 4.x series</a></p>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="helpers-rate-limit">Helpers - Rate Limit<a class="headerlink" href="#helpers-rate-limit" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Lazy Redis client initialization</strong> - The <code>FastAPIRestRateLimitHandler</code> now lazily initializes its Redis client to avoid import cycles and enable <code>TYPE_CHECKING</code> imports.<ul>
+<li><strong>Lazy Redis client initialization</strong> - The <code>FastAPIRestRateLimitHandler</code> now lazily initializes its Redis client to
+  avoid import cycles and enable <code>TYPE_CHECKING</code> imports.<ul>
 <li>Added <code>_create_redis_client()</code> static method that imports <code>AsyncRedisAdapter</code> at call time with <code># noqa: PLC0415</code>.</li>
-<li>Changed from eager <code>self.redis_client = AsyncRedisAdapter()</code> in <code>__init__</code> to lazy <code>self._redis_client</code> assignment.</li>
+<li>Changed from eager <code>self.redis_client = AsyncRedisAdapter()</code> in <code>__init__</code> to lazy <code>self._redis_client</code>
+  assignment.</li>
 <li>Renamed <code>redis_client</code> to <code>_redis_client</code> to indicate private API.</li>
 </ul>
 </li>
@@ -3112,7 +3114,8 @@
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="test-configuration">Test Configuration<a class="headerlink" href="#test-configuration" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Elasticsearch test container version</strong> - Updated <code>ELASTIC__IMAGE</code> from <code>elastic/elasticsearch:9.4.0</code> to <code>elastic/elasticsearch:9.4.1</code> in <code>.env.test</code>.</li>
+<li><strong>Elasticsearch test container version</strong> - Updated <code>ELASTIC__IMAGE</code> from <code>elastic/elasticsearch:9.4.0</code> to
+  <code>elastic/elasticsearch:9.4.1</code> in <code>.env.test</code>.</li>
 </ul>
 
 

@@ -3089,7 +3089,8 @@
 <h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-scylladb">Adapters - ScyllaDB<a class="headerlink" href="#adapters-scylladb" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Async Callback Fix</strong> - Fixed async error handling in ScyllaDB adapter by replacing <code>run_in_executor</code> with callback-based approach.<ul>
+<li><strong>Async Callback Fix</strong> - Fixed async error handling in ScyllaDB adapter by replacing <code>run_in_executor</code> with
+  callback-based approach.<ul>
 <li>Uses <code>add_callbacks</code> to bridge cassandra-driver's ResponseFuture to asyncio.Future</li>
 <li>Avoids ThreadPoolExecutor bottleneck under high concurrency</li>
 <li>Properly constructs ResultSet from raw rows in the success callback</li>

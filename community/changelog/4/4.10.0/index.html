@@ -6,13 +6,13 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Release notes for ArchiPy 4.9.2">
+        <meta name="description" content="Release notes for ArchiPy 4.10.0">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.9.2/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.10.0/">
       
       
       
@@ -25,7 +25,7 @@
     
     
       
-        <title>Changelog 4.9.2 - ArchiPy</title>
+        <title>Changelog 4.10.0 - ArchiPy</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#492-2026-05-12" class="md-skip">
+        <a href="#4100-2026-05-18" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Changelog 4.9.2
+              Changelog 4.10.0
             
           </span>
         </div>
@@ -2982,22 +2982,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#added" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Changed
+        Added
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Changed">
+    <nav class="md-nav" aria-label="Added">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#configs-grpcconfig" class="md-nav__link">
+  <a href="#adapters-keycloak" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configs - GrpcConfig
+        Adapters - Keycloak
       
     </span>
   </a>
@@ -3010,22 +3010,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fixed
+        Changed
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Fixed">
+    <nav class="md-nav" aria-label="Changed">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#adapters-saman-shaparak-payment" class="md-nav__link">
+  <a href="#adapters-keycloak_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adapters - Saman Shaparak Payment
+        Adapters - Keycloak
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#helpers-keycloak-utils" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helpers - Keycloak Utils
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#helpers-decorators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helpers - Decorators
       
     </span>
   </a>
@@ -3054,7 +3076,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/4/4.9.2.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/4/4.10.0.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3062,36 +3084,60 @@
   
 
 
-<h1 id="492-2026-05-12">4.9.2 — 2026-05-12<a class="headerlink" href="#492-2026-05-12" title="Permanent link">&para;</a></h1>
-<p><a href="../4.9.3/">← 4.9.3</a> | <a href="../4.9.1/">4.9.1 →</a> | <a href="../">↑ 4.x series</a></p>
+<h1 id="4100-2026-05-18">4.10.0 — 2026-05-18<a class="headerlink" href="#4100-2026-05-18" title="Permanent link">&para;</a></h1>
+<p><a href="../4.9.3/">4.9.3 →</a> | <a href="../">↑ 4.x series</a></p>
+<h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
+<h3 id="adapters-keycloak">Adapters - Keycloak<a class="headerlink" href="#adapters-keycloak" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Batch UMA Permission Checks</strong> - Added <code>check_permissions_batch</code> to <code>KeycloakPort</code> and <code>AsyncKeycloakPort</code> (and their
+  adapter implementations) for evaluating multiple <code>(resource, scope)</code> pairs in a single UMA call.<ul>
+<li>Returns a <code>frozenset[tuple[str, str]]</code> containing only the granted pairs from the requested set.</li>
+<li>Sync implementation wraps <code>KeycloakOpenID.uma_permissions</code>; async implementation wraps <code>a_uma_permissions</code>.</li>
+<li>Cached with <code>ttl_cache_decorator(ttl_seconds=30, maxsize=200)</code> (sync) and <code>alru_cache(ttl=30, maxsize=200)</code> (
+  async) to avoid redundant Keycloak round-trips.</li>
+<li>Existing <code>check_permissions</code> now documents <code>check_permissions_batch</code> as the preferred entry point when multiple
+  pairs must be checked per request.</li>
+</ul>
+</li>
+</ul>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
-<h3 id="configs-grpcconfig">Configs - GrpcConfig<a class="headerlink" href="#configs-grpcconfig" title="Permanent link">&para;</a></h3>
+<h3 id="adapters-keycloak_1">Adapters - Keycloak<a class="headerlink" href="#adapters-keycloak_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Thread worker count resolution</strong> - When <code>THREAD_WORKER_COUNT</code> is omitted, it is now assigned during model validation
-  by the after-model <code>resolve_thread_worker_count</code> validator to <code>THREAD_PER_CPU_CORE * (os.cpu_count() or 1)</code>.<ul>
-<li>Removed the unused <code>resolved_thread_worker_count</code> property.</li>
-<li>gRPC server helpers now pass a concrete <code>max_workers</code> into <code>ThreadPoolExecutor</code> instead of <code>None</code>.</li>
-</ul>
-</li>
-<li><strong>Default server and stub channel options</strong> - Refreshed <code>SERVER_OPTIONS_CONFIG_LIST</code> and <code>STUB_OPTIONS_CONFIG_LIST</code>
-  defaults for clearer limits, keepalive alignment, and client resilience.<ul>
-<li><code>grpc.max_metadata_size</code> default 16KB on both server and stub presets.</li>
-<li>Server keepalive and HTTP/2 ping intervals aligned with client expectations to reduce <code>ENHANCE_YOUR_CALM</code> / GOAWAY
-  issues; connection idle (10m) and max age (30m) with a short grace drain.</li>
-<li>Stub keepalive at 5 minutes with a 20s timeout; <code>grpc.service_config</code> default timeout 10s, wait-for-ready, retry
-  policy, and a <code>retryThrottling</code> block.</li>
+<li><strong><code>get_userinfo</code> Trusts UserInfo Endpoint</strong> - Removed the local <code>validate_token</code> precheck from both sync and async
+  <code>get_userinfo</code> implementations.<ul>
+<li>The Keycloak UserInfo endpoint already validates the token server-side, so the extra local validation was
+  redundant and an unnecessary network round-trip.</li>
+<li>Dropped the now-unused <code>InvalidTokenError</code> import from <code>archipy/adapters/keycloak/adapters.py</code>.</li>
+<li>Docstrings updated to call out that UserInfo handles validation.</li>
 </ul>
 </li>
 </ul>
-<h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
-<h3 id="adapters-saman-shaparak-payment">Adapters - Saman Shaparak Payment<a class="headerlink" href="#adapters-saman-shaparak-payment" title="Permanent link">&para;</a></h3>
+<h3 id="helpers-keycloak-utils">Helpers - Keycloak Utils<a class="headerlink" href="#helpers-keycloak-utils" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Missing TransactionDetail Handling</strong> - Fixed graceful handling of missing TransactionDetail in Saman payment
-  adapters.<ul>
-<li>Changed from <code>.get("TransactionDetail", {})</code> to <code>.get("TransactionDetail") or {}</code></li>
-<li>Prevents TypeError when API returns null instead of missing key</li>
+<li><strong>Shared Adapter Instances</strong> - <code>KeycloakUtils._get_keycloak_adapter</code> and <code>_get_async_keycloak_adapter</code> now delegate to
+  process-wide <code>@cache</code>d factories (<code>_shared_sync_adapter</code>, <code>_shared_async_adapter</code>) instead of constructing a new
+  adapter per decorator invocation.</li>
+<li><strong>Authorization Pipeline Consolidation</strong> - Extracted the gRPC auth-decorator authorization flow into reusable helpers
+  and used the new batch permission API throughout.<ul>
+<li>Added <code>_authorize_sync</code> / <code>_authorize_async</code> helpers that validate the token, fetch token info, retrieve UserInfo,
+  perform optional resource-ownership checks, enforce role requirements, and run batch permission checks.</li>
+<li>Added <code>_extract_roles</code>, <code>_check_resource_access</code>, and <code>_build_auth_context</code> helpers to centralize role
+  aggregation (realm + client), ownership/admin checks, and <code>AuthContext</code> construction.</li>
+<li>Role enforcement now uses local <code>set</code> operations against UserInfo claims (<code>issuperset</code> / <code>isdisjoint</code>) rather than
+  issuing separate <code>has_all_roles</code> / <code>has_any_of_roles</code> calls.</li>
+<li>Permission enforcement uses <code>check_permissions_batch</code> and surfaces missing pairs via the <code>missing_permissions</code>
+  field in <code>PermissionDeniedError.additional_data</code>.</li>
+<li><code>BaseError</code> instances raised inside async wrappers are re-raised after the optional gRPC abort, preventing them
+  from being wrapped into <code>InternalError</code>.</li>
 </ul>
 </li>
+</ul>
+<h3 id="helpers-decorators">Helpers - Decorators<a class="headerlink" href="#helpers-decorators" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Sharper Tracing Decorator Generics</strong> - <code>capture_transaction</code>, <code>capture_span</code>, <code>async_capture_transaction</code>, and
+  <code>async_capture_span</code> now bind their generic <code>F</code> to local <code>_Function</code> / <code>_AsyncFunction</code> <code>Protocol</code> classes that
+  require a <code>__name__</code> attribute, replacing the looser <code>Callable[..., Any]</code> bound and giving callers better type
+  narrowing on decorated functions.</li>
 </ul>
 
 

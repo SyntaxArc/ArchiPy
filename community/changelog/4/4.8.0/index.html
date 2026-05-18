@@ -3140,7 +3140,8 @@
 <h3 id="helpers-tracing">Helpers - Tracing<a class="headerlink" href="#helpers-tracing" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p><strong><code>async_capture_transaction</code> Decorator</strong> — New async-only transaction tracing decorator that enforces coroutine functions at decoration time, providing early failure detection for misuse.</p>
+<p><strong><code>async_capture_transaction</code> Decorator</strong> — New async-only transaction tracing decorator that enforces coroutine
+  functions at decoration time, providing early failure detection for misuse.</p>
 <ul>
 <li>Validates that decorated function is a coroutine using <code>inspect.iscoroutinefunction</code></li>
 <li>Raises <code>TypeError</code> immediately at import time if a sync function is passed</li>
@@ -3148,7 +3149,8 @@
 </ul>
 </li>
 <li>
-<p><strong><code>async_capture_span</code> Decorator</strong> — New async-only span tracing decorator for capturing child operations within async transactions.</p>
+<p><strong><code>async_capture_span</code> Decorator</strong> — New async-only span tracing decorator for capturing child operations within async
+  transactions.</p>
 <ul>
 <li>Enforces coroutine functions at decoration time</li>
 <li>Works with both Sentry and Elastic APM backends</li>
@@ -3156,7 +3158,8 @@
 </ul>
 </li>
 <li>
-<p><strong><code>TracingUtils.outcome_for_exception</code> Method</strong> — Added static method to determine the appropriate APM outcome string for exceptions.</p>
+<p><strong><code>TracingUtils.outcome_for_exception</code> Method</strong> — Added static method to determine the appropriate APM outcome string
+  for exceptions.</p>
 <ul>
 <li>Returns <code>OUTCOME.SUCCESS</code> for <code>BaseError</code> exceptions with HTTP status below 500 (client errors)</li>
 <li>Returns <code>OUTCOME.FAILURE</code> for 5xx errors or unexpected exceptions</li>
@@ -3166,32 +3169,41 @@
 </ul>
 <h3 id="configs-sentry">Configs - Sentry<a class="headerlink" href="#configs-sentry" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong><code>SentryConfig.ENVIRONMENT</code> Field</strong> — Added optional <code>ENVIRONMENT</code> field (<code>str | None</code>, default <code>None</code>) to explicitly set the Sentry environment name.</li>
+<li><strong><code>SentryConfig.ENVIRONMENT</code> Field</strong> — Added optional <code>ENVIRONMENT</code> field (<code>str | None</code>, default <code>None</code>) to explicitly
+  set the Sentry environment name.</li>
 </ul>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="configs-base-config">Configs - Base Config<a class="headerlink" href="#configs-base-config" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Conditional Environment Assignment</strong> — Updated <code>BaseConfig._post_init</code> to only set <code>ELASTIC_APM.ENVIRONMENT</code> and <code>SENTRY.ENVIRONMENT</code> when they are <code>None</code>, preserving explicitly configured values.</li>
+<li><strong>Conditional Environment Assignment</strong> — Updated <code>BaseConfig._post_init</code> to only set <code>ELASTIC_APM.ENVIRONMENT</code> and
+  <code>SENTRY.ENVIRONMENT</code> when they are <code>None</code>, preserving explicitly configured values.</li>
 </ul>
 <h3 id="helpers-tracing-utils">Helpers - Tracing Utils<a class="headerlink" href="#helpers-tracing-utils" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Initialization Tracking</strong> — Added <code>_sentry_initialized</code> and <code>_elastic_apm_initialized</code> class variables to prevent duplicate initialization attempts.</li>
-<li><strong>Lazy Initialization Enhancement</strong> — <code>init_tracing_if_needed</code> now checks initialization state before attempting to initialise each backend.</li>
+<li><strong>Initialization Tracking</strong> — Added <code>_sentry_initialized</code> and <code>_elastic_apm_initialized</code> class variables to prevent
+  duplicate initialization attempts.</li>
+<li><strong>Lazy Initialization Enhancement</strong> — <code>init_tracing_if_needed</code> now checks initialization state before attempting to
+  initialise each backend.</li>
 </ul>
 <h3 id="helpers-grpc-interceptors">Helpers - gRPC Interceptors<a class="headerlink" href="#helpers-grpc-interceptors" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Async gRPC Client Trace Interceptor</strong> — Changed from <code>elasticapm.capture_span</code> to <code>elasticapm.async_capture_span</code> for proper async span handling.</li>
-<li><strong>gRPC Server Trace Interceptor</strong> — Refactored to use <code>elasticapm.set_transaction_outcome</code> with <code>OUTCOME</code> constants instead of deprecated <code>transaction.set_success()</code> / <code>transaction.set_failure()</code> methods.</li>
-<li><strong>Async Servicer Context Wrapper</strong> — Added <code>_AsyncServicerContextWrapper</code> class to handle async gRPC server context, ensuring <code>abort()</code> is properly awaited in async servicer methods.</li>
+<li><strong>Async gRPC Client Trace Interceptor</strong> — Changed from <code>elasticapm.capture_span</code> to <code>elasticapm.async_capture_span</code>
+  for proper async span handling.</li>
+<li><strong>gRPC Server Trace Interceptor</strong> — Refactored to use <code>elasticapm.set_transaction_outcome</code> with <code>OUTCOME</code> constants
+  instead of deprecated <code>transaction.set_success()</code> / <code>transaction.set_failure()</code> methods.</li>
+<li><strong>Async Servicer Context Wrapper</strong> — Added <code>_AsyncServicerContextWrapper</code> class to handle async gRPC server context,
+  ensuring <code>abort()</code> is properly awaited in async servicer methods.</li>
 </ul>
 <h3 id="helpers-app-utils">Helpers - App Utils<a class="headerlink" href="#helpers-app-utils" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Interceptor Ordering Fix</strong> — Fixed <code>AppUtils.create_async_grpc_app</code> to add customized interceptors before creating the gRPC server, ensuring interceptors are properly registered.</li>
+<li><strong>Interceptor Ordering Fix</strong> — Fixed <code>AppUtils.create_async_grpc_app</code> to add customized interceptors before creating
+  the gRPC server, ensuring interceptors are properly registered.</li>
 </ul>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="tests-tracing">Tests - Tracing<a class="headerlink" href="#tests-tracing" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Async Decorator Tests</strong> — Added comprehensive BDD test scenarios for <code>async_capture_transaction</code> and <code>async_capture_span</code> decorators to verify proper transaction and span capture for async functions.</li>
+<li><strong>Async Decorator Tests</strong> — Added comprehensive BDD test scenarios for <code>async_capture_transaction</code> and
+  <code>async_capture_span</code> decorators to verify proper transaction and span capture for async functions.</li>
 </ul>
 
 
