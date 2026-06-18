@@ -6,13 +6,13 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Release notes for ArchiPy 4.11.0">
+        <meta name="description" content="Release notes for ArchiPy 4.11.1">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.11.0/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.11.1/">
       
       
       
@@ -25,7 +25,7 @@
     
     
       
-        <title>Changelog 4.11.0 - ArchiPy</title>
+        <title>Changelog 4.11.1 - ArchiPy</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#4110-2026-06-18" class="md-skip">
+        <a href="#4111-2026-06-18" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Changelog 4.11.0
+              Changelog 4.11.1
             
           </span>
         </div>
@@ -2982,33 +2982,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Added
+        Fixed
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Added">
+    <nav class="md-nav" aria-label="Fixed">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#adapters-minio" class="md-nav__link">
+  <a href="#dependencies-fastapi-compatibility" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adapters - MinIO
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#models-internet-payment-gateways" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Models - Internet Payment Gateways
+        Dependencies - FastAPI Compatibility
       
     </span>
   </a>
@@ -3021,33 +3010,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#refactored" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Changed
+        Refactored
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Changed">
+    <nav class="md-nav" aria-label="Refactored">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#adapters-internet-payment-gateways" class="md-nav__link">
+  <a href="#tooling-testing-execution-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adapters - Internet Payment Gateways
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#chore-tooling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Chore - Tooling
+        Tooling - Testing Execution Model
       
     </span>
   </a>
@@ -3056,84 +3034,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tests" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tests
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Tests">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#tests-minio-adapter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tests - MinIO Adapter
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tests-fastapi-minio-upload" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tests - FastAPI MinIO Upload
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#chore" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Chore
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Chore">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#test-containers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Test Containers
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#dependencies" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Dependencies
-      
-    </span>
-  </a>
   
 </li>
       
@@ -3154,7 +3054,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/4/4.11.0.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/4/4.11.1.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3162,83 +3062,22 @@
   
 
 
-<h1 id="4110-2026-06-18">4.11.0 — 2026-06-18<a class="headerlink" href="#4110-2026-06-18" title="Permanent link">&para;</a></h1>
-<p><a href="../4.11.1/">← 4.11.1</a> | <a href="../4.10.2/">4.10.2 →</a> | <a href="../">↑ 4.x series</a></p>
-<h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
-<h3 id="adapters-minio">Adapters - MinIO<a class="headerlink" href="#adapters-minio" title="Permanent link">&para;</a></h3>
+<h1 id="4111-2026-06-18">4.11.1 — 2026-06-18<a class="headerlink" href="#4111-2026-06-18" title="Permanent link">&para;</a></h1>
+<p><a href="../4.11.0/">← 4.11.0</a> | <a href="../">↑ 4.x series</a></p>
+<h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
+<h3 id="dependencies-fastapi-compatibility">Dependencies - FastAPI Compatibility<a class="headerlink" href="#dependencies-fastapi-compatibility" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Stream Upload and Download</strong> - Added <code>put_object_stream</code> and <code>get_object_stream</code> to <code>MinioPort</code> and
-  <code>MinioAdapter</code> for in-memory and binary-stream object I/O without temporary files.<ul>
-<li><code>put_object_stream</code> accepts <code>bytes | BinaryIO</code>, optional <code>length</code>, and <code>content_type</code>, and clears the
-  <code>list_objects</code> cache after upload.</li>
-<li><code>get_object_stream</code> returns the full object body as <code>bytes</code>.</li>
+<li><strong>FastAPI Upper Bound</strong> — Pinned <code>fastapi</code> to <code>&gt;=0.136,&lt;0.137</code> to prevent breakage from FastAPI 0.137+
+  which introduced incompatible changes with the current codebase.</li>
 </ul>
-</li>
-</ul>
-<h3 id="models-internet-payment-gateways">Models - Internet Payment Gateways<a class="headerlink" href="#models-internet-payment-gateways" title="Permanent link">&para;</a></h3>
+<h2 id="refactored">Refactored<a class="headerlink" href="#refactored" title="Permanent link">&para;</a></h2>
+<h3 id="tooling-testing-execution-model">Tooling - Testing Execution Model<a class="headerlink" href="#tooling-testing-execution-model" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Parsian and Saman IPG DTOs</strong> - Extracted payment gateway request/response models into the domain layer.<ul>
-<li>Added <code>archipy/models/dtos/parsian_ipg_dtos.py</code> with payment, confirm, confirm-with-amount, and reverse DTOs.</li>
-<li>Added <code>archipy/models/dtos/saman_ipg_dtos.py</code> with payment, verify, and reverse DTOs (including
-  <code>PaymentResponseDTO</code> status validation).</li>
-</ul>
-</li>
-</ul>
-<h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
-<h3 id="adapters-internet-payment-gateways">Adapters - Internet Payment Gateways<a class="headerlink" href="#adapters-internet-payment-gateways" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>DTO Import Refactor</strong> - Parsian and Saman Shaparak ports, adapters, and package <code>__init__</code> modules now import
-  DTOs from <code>archipy.models.dtos</code> instead of defining them inline in <code>ports.py</code>.</li>
-</ul>
-<h3 id="chore-tooling">Chore - Tooling<a class="headerlink" href="#chore-tooling" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Ruff Source Paths</strong> - Removed unused <code>[tool.pytest.ini_options]</code> from <code>pyproject.toml</code>, narrowed Ruff <code>src</code> to
-  <code>archipy</code> and <code>features</code>, and updated per-file ignores for the <code>base/sqlalchemy</code> adapter path.</li>
-<li><strong>CI Lint Scope</strong> - Ruff check and format workflows now include <code>features/steps</code> and <code>scripts</code> alongside <code>archipy</code>.</li>
-</ul>
-<h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
-<h3 id="tests-minio-adapter">Tests - MinIO Adapter<a class="headerlink" href="#tests-minio-adapter" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Stream Upload Scenarios</strong> - Extended <code>features/minio_adapter.feature</code> with outline scenarios for bytes and
-  <code>BinaryIO</code> uploads followed by streaming download verification.</li>
-<li><strong>Flexible Upload Steps</strong> - Refactored MinIO step definitions to support stream-based uploads via
-  <code>put_object_stream</code>.</li>
-</ul>
-<h3 id="tests-fastapi-minio-upload">Tests - FastAPI MinIO Upload<a class="headerlink" href="#tests-fastapi-minio-upload" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Large File End-to-End Uploads</strong> - Added <code>features/fastapi_minio_upload.feature</code> and step implementations covering
-  50 MB, 75 MB, and 100 MB multipart uploads through a FastAPI endpoint backed by <code>put_object_stream</code>.</li>
-</ul>
-<h2 id="chore">Chore<a class="headerlink" href="#chore" title="Permanent link">&para;</a></h2>
-<h3 id="test-containers">Test Containers<a class="headerlink" href="#test-containers" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Image Pin Updates</strong> - Bumped test container images in <code>.env.test</code>.<ul>
-<li>Temporal: <code>temporalio/temporal:1.5.1</code> → <code>temporalio/temporal:1.7.2</code></li>
-<li>Redis: <code>redis:8.6.3-alpine</code> → <code>redis:8.6.4-alpine</code></li>
-<li>Keycloak: <code>keycloak/keycloak:26.6.2</code> → <code>keycloak/keycloak:26.6.3</code></li>
-<li>ScyllaDB: <code>scylladb/scylla:2026.1.2</code> → <code>scylladb/scylla:2026.1.5</code></li>
-</ul>
-</li>
-</ul>
-<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Optional extras</strong> - Updated optional adapter and dev dependencies.<ul>
-<li><code>fakeredis</code>: <code>fakeredis&gt;=2.36.1</code> → <code>fakeredis&gt;=2.36.2</code></li>
-<li><code>fastapi</code>: <code>fastapi[all]&gt;=0.137.0</code> → <code>fastapi[all]&gt;=0.137.2</code></li>
-<li><code>minio</code>: <code>boto3&gt;=1.43.29</code> → <code>boto3&gt;=1.43.32</code></li>
-<li><code>scylladb</code>: <code>scylla-driver&gt;=3.29.10</code> → <code>scylla-driver&gt;=3.29.11</code></li>
-<li><code>sentry</code>: <code>sentry-sdk&gt;=2.62.0</code> → <code>sentry-sdk&gt;=2.63.0</code></li>
-<li><code>sqlalchemy</code> / <code>sqlalchemy-async</code>: <code>sqlalchemy&gt;=2.0.50</code> → <code>sqlalchemy&gt;=2.0.51</code></li>
-</ul>
-</li>
-<li><strong>Dev group</strong> - Updated development tooling pins.<ul>
-<li><code>boto3-stubs</code>: <code>boto3-stubs&gt;=1.43.14</code> → <code>boto3-stubs&gt;=1.43.32</code></li>
-<li><code>ruff</code>: <code>ruff&gt;=0.15.14</code> → <code>ruff&gt;=0.15.17</code></li>
-<li><code>ty</code>: <code>ty&gt;=0.0.39</code> → <code>ty&gt;=0.0.50</code></li>
-<li><code>types-grpcio</code>: <code>types-grpcio&gt;=1.0.0.20260518</code> → <code>types-grpcio&gt;=1.0.0.20260614</code></li>
-<li><code>mkdocstrings-python</code>: <code>mkdocstrings-python&gt;=2.0.3</code> → <code>mkdocstrings-python&gt;=2.0.4</code></li>
-</ul>
-</li>
+<li><strong>Removed Parallel Behave Settings</strong> — Deleted <code>parallel = 8</code> and <code>parallel_scheme = "multiprocessing"</code> from
+  <code>[tool.behave]</code> in <code>pyproject.toml</code>. Tests now run sequentially by default, aligning with the BDD convention
+  of isolated scenarios.</li>
+<li><strong>Updated AGENTS.md</strong> — Refreshed quick commands and dev setup instructions.</li>
+<li><strong>Documentation Alignment</strong> — Brought <code>docs/getting-started/project_structure.md</code> in sync with current layout.</li>
 </ul>
 
 
