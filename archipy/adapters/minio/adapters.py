@@ -1,4 +1,5 @@
 import logging
+import urllib.parse
 from collections.abc import Callable
 from typing import Any, BinaryIO, NoReturn, TypeVar, override
 
@@ -6,7 +7,13 @@ import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError, ConnectionError as BotocoreConnectionError, EndpointConnectionError
 
-from archipy.adapters.minio.ports import MinioBucketType, MinioObjectType, MinioPolicyType, MinioPort
+from archipy.adapters.minio.ports import (
+    MinioBucketType,
+    MinioLifecycleRuleType,
+    MinioObjectType,
+    MinioPolicyType,
+    MinioPort,
+)
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import MinioConfig
 from archipy.helpers.decorators import ttl_cache_decorator
@@ -340,13 +347,21 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             return bucket_list
 
     @override
-    def put_object(self, bucket_name: str, object_name: str, file_path: str) -> None:
+    def put_object(
+        self,
+        bucket_name: str,
+        object_name: str,
+        file_path: str,
+        tags: dict[str, str] | None = None,
+    ) -> None:
         """Upload a file to a bucket.
 
         Args:
             bucket_name: Destination bucket name.
             object_name: Object name in the bucket.
             file_path: Local file path to upload.
+            tags: Optional key-value tags to attach to the object. Tags can be used
+                with bucket lifecycle rules to implement per-object TTL expiration.
 
         Raises:
             InvalidArgumentError: If any required parameter is empty.
@@ -369,7 +384,10 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                         else "file_path"
                     ),
                 )
-            self._client.upload_file(file_path, bucket_name, object_name)
+            extra_args: dict[str, Any] = {}
+            if tags:
+                extra_args["Tagging"] = urllib.parse.urlencode(tags)
+            self._client.upload_file(file_path, bucket_name, object_name, ExtraArgs=extra_args or None)
             if hasattr(self.list_objects, "clear_cache"):
                 self.list_objects.clear_cache()
         except InvalidArgumentError:
@@ -820,6 +838,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         data: bytes | BinaryIO,
         length: int = -1,
         content_type: str = "application/octet-stream",
+        tags: dict[str, str] | None = None,
     ) -> None:
         """Upload data from a bytes buffer or binary stream to a bucket.
 
@@ -833,6 +852,8 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             length: Content length in bytes. If -1, computed automatically for bytes;
                 for streams, providing the exact length avoids buffering overhead.
             content_type: MIME type of the content. Defaults to "application/octet-stream".
+            tags: Optional key-value tags to attach to the object. Tags can be used
+                with bucket lifecycle rules to implement per-object TTL expiration.
 
         Raises:
             InvalidArgumentError: If bucket_name, object_name, or data is invalid.
@@ -865,6 +886,9 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 kwargs["ContentLength"] = len(data) if length < 0 else length
             elif length >= 0:
                 kwargs["ContentLength"] = length
+
+            if tags:
+                kwargs["Tagging"] = urllib.parse.urlencode(tags)
 
             self._client.put_object(**kwargs)
             if hasattr(self.list_objects, "clear_cache"):
@@ -925,3 +949,210 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         else:
             content: bytes = response["Body"].read()
             return content
+
+    @override
+    def set_object_tags(self, bucket_name: str, object_name: str, tags: dict[str, str]) -> None:
+        """Set tags on an existing object, replacing any existing tags.
+
+        Tags are key-value pairs that can be used with bucket lifecycle rules to
+        implement TTL-based expiration. For example, tag an object with
+        ``{"ttl-days": "7"}`` and create a matching lifecycle rule to auto-delete
+        it after 7 days.
+
+        Args:
+            bucket_name: Bucket containing the object.
+            object_name: Object name to tag.
+            tags: Key-value mapping of tag names to values.
+
+        Raises:
+            InvalidArgumentError: If any required parameter is empty.
+            NotFoundError: If the bucket or object does not exist.
+            PermissionDeniedError: If permission to set tags is denied.
+            StorageError: If there's a storage-related error.
+        """
+        try:
+            if not bucket_name or not object_name:
+                raise InvalidArgumentError(
+                    argument_name=(
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
+                )
+            tag_set = [{"Key": k, "Value": v} for k, v in tags.items()]
+            self._client.put_object_tagging(
+                Bucket=bucket_name,
+                Key=object_name,
+                Tagging={"TagSet": tag_set},
+            )
+        except InvalidArgumentError:
+            raise
+        except ClientError as e:
+            self._handle_client_exception(e, "set_object_tags")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "set_object_tags")
+        except Exception as e:
+            self._handle_general_exception(e, "set_object_tags")
+
+    @override
+    def get_object_tags(self, bucket_name: str, object_name: str) -> dict[str, str]:
+        """Return the tags attached to an object.
+
+        Args:
+            bucket_name: Bucket containing the object.
+            object_name: Object name whose tags to retrieve.
+
+        Returns:
+            dict[str, str]: Mapping of tag key to tag value. Empty dict if no tags.
+
+        Raises:
+            InvalidArgumentError: If any required parameter is empty.
+            NotFoundError: If the bucket or object does not exist.
+            PermissionDeniedError: If permission to get tags is denied.
+            StorageError: If there's a storage-related error.
+        """
+        try:
+            if not bucket_name or not object_name:
+                raise InvalidArgumentError(
+                    argument_name=(
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
+                )
+            response = self._client.get_object_tagging(Bucket=bucket_name, Key=object_name)
+        except InvalidArgumentError:
+            raise
+        except ClientError as e:
+            self._handle_client_exception(e, "get_object_tags")
+            raise
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "get_object_tags")
+            raise
+        except Exception as e:
+            self._handle_general_exception(e, "get_object_tags")
+            raise
+        else:
+            return {tag["Key"]: tag["Value"] for tag in response.get("TagSet", [])}
+
+    @override
+    def set_bucket_lifecycle(self, bucket_name: str, rules: list[MinioLifecycleRuleType]) -> None:
+        """Set the lifecycle configuration for a bucket.
+
+        Lifecycle rules control automatic expiration (TTL) of objects. Each rule is a
+        dict that maps to the S3 ``LifecycleRule`` structure. A minimal expiration rule::
+
+            {
+                "ID": "expire-after-7-days",
+                "Status": "Enabled",
+                "Filter": {"Prefix": "uploads/"},
+                "Expiration": {"Days": 7},
+            }
+
+        To expire only objects with a specific tag::
+
+            {
+                "ID": "expire-tagged-7days",
+                "Status": "Enabled",
+                "Filter": {"Tag": {"Key": "ttl-days", "Value": "7"}},
+                "Expiration": {"Days": 7},
+            }
+
+        Args:
+            bucket_name: Target bucket name.
+            rules: List of lifecycle rule dicts (S3 ``LifecycleRule`` format).
+
+        Raises:
+            InvalidArgumentError: If bucket_name is empty or rules is empty.
+            NotFoundError: If the bucket does not exist.
+            PermissionDeniedError: If permission to set lifecycle is denied.
+            StorageError: If there's a storage-related error.
+        """
+        try:
+            if not bucket_name:
+                raise InvalidArgumentError(argument_name="bucket_name")
+            if not rules:
+                raise InvalidArgumentError(argument_name="rules")
+            self._client.put_bucket_lifecycle_configuration(
+                Bucket=bucket_name,
+                LifecycleConfiguration={"Rules": rules},
+            )
+        except InvalidArgumentError:
+            raise
+        except ClientError as e:
+            self._handle_client_exception(e, "set_bucket_lifecycle")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "set_bucket_lifecycle")
+        except Exception as e:
+            self._handle_general_exception(e, "set_bucket_lifecycle")
+
+    @override
+    def get_bucket_lifecycle(self, bucket_name: str) -> list[MinioLifecycleRuleType]:
+        """Return the lifecycle rules configured for a bucket.
+
+        Args:
+            bucket_name: Bucket name.
+
+        Returns:
+            list[MinioLifecycleRuleType]: List of lifecycle rule dicts, or an empty
+                list if no lifecycle configuration is set.
+
+        Raises:
+            InvalidArgumentError: If bucket_name is empty.
+            NotFoundError: If the bucket does not exist.
+            PermissionDeniedError: If permission to get lifecycle is denied.
+            StorageError: If there's a storage-related error.
+        """
+        try:
+            if not bucket_name:
+                raise InvalidArgumentError(argument_name="bucket_name")
+            response = self._client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
+        except InvalidArgumentError:
+            raise
+        except ClientError as e:
+            if e.response.get("Error", {}).get("Code", "") == "NoSuchLifecycleConfiguration":
+                return []
+            self._handle_client_exception(e, "get_bucket_lifecycle")
+            raise
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "get_bucket_lifecycle")
+            raise
+        except Exception as e:
+            self._handle_general_exception(e, "get_bucket_lifecycle")
+            raise
+        else:
+            rules: list[MinioLifecycleRuleType] = response.get("Rules", [])
+            return rules
+
+    @override
+    def delete_bucket_lifecycle(self, bucket_name: str) -> None:
+        """Delete the lifecycle configuration from a bucket.
+
+        After this call the bucket has no lifecycle rules and objects will not be
+        automatically expired.
+
+        Args:
+            bucket_name: Bucket name.
+
+        Raises:
+            InvalidArgumentError: If bucket_name is empty.
+            NotFoundError: If the bucket does not exist.
+            PermissionDeniedError: If permission to delete lifecycle is denied.
+            StorageError: If there's a storage-related error.
+        """
+        try:
+            if not bucket_name:
+                raise InvalidArgumentError(argument_name="bucket_name")
+            self._client.delete_bucket_lifecycle(Bucket=bucket_name)
+        except InvalidArgumentError:
+            raise
+        except ClientError as e:
+            self._handle_client_exception(e, "delete_bucket_lifecycle")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "delete_bucket_lifecycle")
+        except Exception as e:
+            self._handle_general_exception(e, "delete_bucket_lifecycle")

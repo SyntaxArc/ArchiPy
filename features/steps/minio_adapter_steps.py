@@ -241,3 +241,71 @@ def step_stream_download_verify(context, object_name, bucket_name, expected_cont
     content = content_bytes.decode("utf-8")
     assert content == expected_content, f"Content mismatch: expected '{expected_content}', got '{content}'"
     context.logger.info(f"Verified streaming download content of '{object_name}'")
+
+
+@when('I upload a file "{object_name}" with content "{content}" and tags "{tags_str}" to bucket "{bucket_name}"')
+def step_upload_file_with_tags(context, object_name, content, tags_str, bucket_name):
+    adapter = get_minio_adapter(context)
+    tags = dict(pair.split("=", 1) for pair in tags_str.split(","))
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+    try:
+        adapter.put_object(bucket_name, object_name, tmp_path, tags=tags)
+    finally:
+        os.unlink(tmp_path)
+    context.logger.info(f"Uploaded '{object_name}' with tags {tags} to '{bucket_name}'")
+
+
+@when('I set tags "{tags_str}" on object "{object_name}" in bucket "{bucket_name}"')
+def step_set_object_tags(context, tags_str, object_name, bucket_name):
+    adapter = get_minio_adapter(context)
+    tags = dict(pair.split("=", 1) for pair in tags_str.split(","))
+    adapter.set_object_tags(bucket_name, object_name, tags)
+    context.logger.info(f"Set tags {tags} on '{object_name}' in '{bucket_name}'")
+
+
+@then('the tags on object "{object_name}" in bucket "{bucket_name}" should include "{key}" with value "{value}"')
+def step_verify_object_tag(context, object_name, bucket_name, key, value):
+    adapter = get_minio_adapter(context)
+    tags = adapter.get_object_tags(bucket_name, object_name)
+    assert key in tags, f"Tag '{key}' not found on '{object_name}'; got {tags}"
+    assert tags[key] == value, f"Tag '{key}' expected '{value}', got '{tags[key]}'"
+    context.logger.info(f"Verified tag '{key}={value}' on '{object_name}'")
+
+
+@when('I set a lifecycle rule on "{bucket_name}" with id "{rule_id}" expiring after {days:d} days with prefix "{prefix}"')
+def step_set_lifecycle_rule(context, bucket_name, rule_id, days, prefix):
+    adapter = get_minio_adapter(context)
+    rule = {
+        "ID": rule_id,
+        "Status": "Enabled",
+        "Filter": {"Prefix": prefix},
+        "Expiration": {"Days": days},
+    }
+    adapter.set_bucket_lifecycle(bucket_name, [rule])
+    context.logger.info(f"Set lifecycle rule '{rule_id}' on '{bucket_name}' (expires after {days}d, prefix='{prefix}')")
+
+
+@then('the lifecycle for "{bucket_name}" should have a rule with id "{rule_id}"')
+def step_verify_lifecycle_rule(context, bucket_name, rule_id):
+    adapter = get_minio_adapter(context)
+    rules = adapter.get_bucket_lifecycle(bucket_name)
+    rule_ids = [r.get("ID") for r in rules]
+    assert rule_id in rule_ids, f"Rule '{rule_id}' not found in lifecycle; got {rule_ids}"
+    context.logger.info(f"Verified lifecycle rule '{rule_id}' exists on '{bucket_name}'")
+
+
+@when('I delete the lifecycle configuration from "{bucket_name}"')
+def step_delete_lifecycle(context, bucket_name):
+    adapter = get_minio_adapter(context)
+    adapter.delete_bucket_lifecycle(bucket_name)
+    context.logger.info(f"Deleted lifecycle configuration from '{bucket_name}'")
+
+
+@then('the lifecycle for "{bucket_name}" should be empty')
+def step_verify_lifecycle_empty(context, bucket_name):
+    adapter = get_minio_adapter(context)
+    rules = adapter.get_bucket_lifecycle(bucket_name)
+    assert rules == [], f"Expected empty lifecycle for '{bucket_name}', got {rules}"
+    context.logger.info(f"Verified lifecycle is empty for '{bucket_name}'")

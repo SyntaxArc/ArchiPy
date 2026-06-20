@@ -56,3 +56,22 @@ Feature: MinIO Operations Testing
       | input_kind      | content               | object           |
       | the bytes       | Hello Streaming World | stream-bytes.txt |
       | a binary stream | Binary Stream Data    | stream-bio.txt   |
+
+  Scenario: Upload file with tags and verify tags
+    Given a bucket named "test-bucket" exists
+    When I upload a file "tagged.txt" with content "Tagged Content" and tags "ttl-days=7,env=test" to bucket "test-bucket"
+    Then the object "tagged.txt" should exist in bucket "test-bucket"
+    And the tags on object "tagged.txt" in bucket "test-bucket" should include "ttl-days" with value "7"
+
+  Scenario: Set tags on existing object
+    Given a bucket named "test-bucket" exists
+    And an object "existing.txt" exists with content "Some Content" in bucket "test-bucket"
+    When I set tags "ttl-days=30,tier=archive" on object "existing.txt" in bucket "test-bucket"
+    Then the tags on object "existing.txt" in bucket "test-bucket" should include "ttl-days" with value "30"
+
+  Scenario: Set and get bucket lifecycle rules
+    Given a bucket named "lifecycle-bucket" exists
+    When I set a lifecycle rule on "lifecycle-bucket" with id "expire-7d" expiring after 7 days with prefix "tmp/"
+    Then the lifecycle for "lifecycle-bucket" should have a rule with id "expire-7d"
+    When I delete the lifecycle configuration from "lifecycle-bucket"
+    Then the lifecycle for "lifecycle-bucket" should be empty
