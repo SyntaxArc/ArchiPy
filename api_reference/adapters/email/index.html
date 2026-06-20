@@ -4417,7 +4417,7 @@ heading_level: 3</p>
   </span>
 
 <a href="#archipy.adapters.email.adapters.logger" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -4904,7 +4904,7 @@ heading_level: 3</p>
 
 <a href="#archipy.adapters.email.adapters.EmailConnectionPool.pool" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">pool</span><span class="p">:</span> <span class="n">Queue</span><span class="p">[</span><span class="n">EmailConnectionManager</span><span class="p">]</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">maxsize</span><span class="o">=</span><span class="n">POOL_SIZE</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">maxsize</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">POOL_SIZE</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
 </span></code></pre></div>
 
@@ -5711,7 +5711,7 @@ heading_level: 3</p>
   </span>
 
 <a href="#archipy.adapters.email.adapters.EmailAdapter.config" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">config</span> <span class="o">=</span> <span class="n">config</span> <span class="ow">or</span> <span class="n">EMAIL</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">config</span> <span class="o">=</span> <span class="n">config</span> <span class="ow">or</span> <span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">()</span><span class="o">.</span><span class="n">EMAIL</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -5733,7 +5733,7 @@ heading_level: 3</p>
   </span>
 
 <a href="#archipy.adapters.email.adapters.EmailAdapter.connection_pool" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">connection_pool</span> <span class="o">=</span> <span class="n">EmailConnectionPool</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">connection_pool</span> <span class="o">=</span> <span class="n">EmailConnectionPool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">

@@ -14781,7 +14781,7 @@ heading_level: 3</p>
   </span>
 
 <a href="#archipy.adapters.keycloak.adapters.logger" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -18285,7 +18285,7 @@ while ensuring cache entries expire after a configured time to prevent stale dat
 
 <a href="#archipy.adapters.keycloak.adapters.KeycloakAdapter.configs" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">configs</span><span class="p">:</span> <span class="n">KeycloakConfig</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">KEYCLOAK</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">()</span><span class="o">.</span><span class="n">KEYCLOAK</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="k">if</span> <span class="n">keycloak_configs</span> <span class="ow">is</span> <span class="kc">None</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="k">else</span> <span class="n">keycloak_configs</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)</span>
@@ -28823,7 +28823,7 @@ while ensuring cache entries expire after a configured time to prevent stale dat
 
 <a href="#archipy.adapters.keycloak.adapters.AsyncKeycloakAdapter.configs" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">configs</span><span class="p">:</span> <span class="n">KeycloakConfig</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">KEYCLOAK</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">()</span><span class="o">.</span><span class="n">KEYCLOAK</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="k">if</span> <span class="n">keycloak_configs</span> <span class="ow">is</span> <span class="kc">None</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="k">else</span> <span class="n">keycloak_configs</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)</span>
@@ -28848,7 +28848,7 @@ while ensuring cache entries expire after a configured time to prevent stale dat
   </span>
 
 <a href="#archipy.adapters.keycloak.adapters.AsyncKeycloakAdapter.openid_adapter" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">openid_adapter</span> <span class="o">=</span> <span class="n">_get_openid_client</span><span class="p">(</span><span class="n">configs</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">openid_adapter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_openid_client</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">configs</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">

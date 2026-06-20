@@ -9443,7 +9443,7 @@ from this class and implement database-specific engine creation.</p>
   </span>
 
 <a href="#archipy.adapters.base.sqlalchemy.session_managers.BaseSQLAlchemySessionManager.engine" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">_create_engine</span><span class="p">(</span><span class="n">orm_config</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">engine</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_engine</span><span class="p">(</span><span class="n">orm_config</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10133,7 +10133,7 @@ from this class and implement database-specific async engine creation.</p>
   </span>
 
 <a href="#archipy.adapters.base.sqlalchemy.session_managers.AsyncBaseSQLAlchemySessionManager.engine" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">_create_async_engine</span><span class="p">(</span><span class="n">orm_config</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">engine</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_async_engine</span><span class="p">(</span><span class="n">orm_config</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -11731,7 +11731,7 @@ Specific database adapters should inherit from this class and provide their own 
 
 <a href="#archipy.adapters.base.sqlalchemy.adapters.BaseSQLAlchemyAdapter.session_manager" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">session_manager</span><span class="p">:</span> <span class="n">BaseSQLAlchemySessionManager</span><span class="p">[</span><span class="n">ConfigT</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">_create_session_manager</span><span class="p">(</span><span class="n">configs</span><span class="p">)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_create_session_manager</span><span class="p">(</span><span class="n">configs</span><span class="p">)</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
 </span></code></pre></div>
 
@@ -14408,7 +14408,7 @@ Specific database adapters should inherit from this class and provide their own 
 <a href="#archipy.adapters.base.sqlalchemy.adapters.AsyncBaseSQLAlchemyAdapter.session_manager" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">session_manager</span><span class="p">:</span> <span class="n">AsyncBaseSQLAlchemySessionManager</span><span class="p">[</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">ConfigT</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">]</span> <span class="o">=</span> <span class="n">_create_async_session_manager</span><span class="p">(</span><span class="n">configs</span><span class="p">)</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_async_session_manager</span><span class="p">(</span><span class="n">configs</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">

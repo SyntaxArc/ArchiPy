@@ -14217,7 +14217,7 @@ can be set once and accessed throughout the application.</p>
   </span>
 
 <a href="#archipy.configs.base_config.BaseConfig.ENVIRONMENT" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">ENVIRONMENT</span><span class="p">:</span> <span class="n">EnvironmentType</span> <span class="o">=</span> <span class="n">LOCAL</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">ENVIRONMENT</span><span class="p">:</span> <span class="n">EnvironmentType</span> <span class="o">=</span> <span class="n">EnvironmentType</span><span class="o">.</span><span class="n">LOCAL</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -14639,7 +14639,7 @@ can be set once and accessed throughout the application.</p>
   </span>
 
 <a href="#archipy.configs.base_config.BaseConfig.LANGUAGE" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">LANGUAGE</span><span class="p">:</span> <span class="n">LanguageType</span> <span class="o">=</span> <span class="n">FA</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">LANGUAGE</span><span class="p">:</span> <span class="n">LanguageType</span> <span class="o">=</span> <span class="n">LanguageType</span><span class="o">.</span><span class="n">FA</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -21096,8 +21096,9 @@ heading_level: 3</p>
 
 <a href="#archipy.configs.config_template.RedisConfig.MODE" class="headerlink" title="Permanent link">&para;</a></h2>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">MODE</span><span class="p">:</span> <span class="n">RedisMode</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">default</span><span class="o">=</span><span class="n">STANDALONE</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Redis deployment mode&quot;</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">default</span><span class="o">=</span><span class="n">RedisMode</span><span class="o">.</span><span class="n">STANDALONE</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Redis deployment mode&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">

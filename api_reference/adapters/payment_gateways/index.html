@@ -6702,7 +6702,7 @@ heading_level: 3</p>
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.parsian.adapters.logger" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -7111,7 +7111,7 @@ proxy configuration for environments where direct connections are not possible.<
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.parsian.adapters.ParsianShaparakPaymentAdapter.login_account" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">login_account</span> <span class="o">=</span> <span class="n">LOGIN_ACCOUNT</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">login_account</span> <span class="o">=</span> <span class="n">configs</span><span class="o">.</span><span class="n">LOGIN_ACCOUNT</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -7133,8 +7133,8 @@ proxy configuration for environments where direct connections are not possible.<
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.parsian.adapters.ParsianShaparakPaymentAdapter.sale_client" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">sale_client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">wsdl</span><span class="o">=</span><span class="n">PAYMENT_WSDL_URL</span><span class="p">,</span> <span class="n">transport</span><span class="o">=</span><span class="n">sync_transport</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">sale_client</span> <span class="o">=</span> <span class="n">zeep</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">wsdl</span><span class="o">=</span><span class="n">configs</span><span class="o">.</span><span class="n">PAYMENT_WSDL_URL</span><span class="p">,</span> <span class="n">transport</span><span class="o">=</span><span class="n">sync_transport</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
 </span></code></pre></div>
 
@@ -7157,8 +7157,8 @@ proxy configuration for environments where direct connections are not possible.<
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.parsian.adapters.ParsianShaparakPaymentAdapter.confirm_client" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">confirm_client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">wsdl</span><span class="o">=</span><span class="n">CONFIRM_WSDL_URL</span><span class="p">,</span> <span class="n">transport</span><span class="o">=</span><span class="n">sync_transport</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">confirm_client</span> <span class="o">=</span> <span class="n">zeep</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">wsdl</span><span class="o">=</span><span class="n">configs</span><span class="o">.</span><span class="n">CONFIRM_WSDL_URL</span><span class="p">,</span> <span class="n">transport</span><span class="o">=</span><span class="n">sync_transport</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
 </span></code></pre></div>
 
@@ -7181,8 +7181,8 @@ proxy configuration for environments where direct connections are not possible.<
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.parsian.adapters.ParsianShaparakPaymentAdapter.reversal_client" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">reversal_client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">wsdl</span><span class="o">=</span><span class="n">REVERSAL_WSDL_URL</span><span class="p">,</span> <span class="n">transport</span><span class="o">=</span><span class="n">sync_transport</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">reversal_client</span> <span class="o">=</span> <span class="n">zeep</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">wsdl</span><span class="o">=</span><span class="n">configs</span><span class="o">.</span><span class="n">REVERSAL_WSDL_URL</span><span class="p">,</span> <span class="n">transport</span><span class="o">=</span><span class="n">sync_transport</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
 </span></code></pre></div>
 
@@ -8332,7 +8332,7 @@ not possible.</p>
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.parsian.adapters.AsyncParsianShaparakPaymentAdapter.login_account" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">login_account</span> <span class="o">=</span> <span class="n">LOGIN_ACCOUNT</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">login_account</span> <span class="o">=</span> <span class="n">configs</span><span class="o">.</span><span class="n">LOGIN_ACCOUNT</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -8355,7 +8355,7 @@ not possible.</p>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.parsian.adapters.AsyncParsianShaparakPaymentAdapter.sale_client" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">sale_client</span> <span class="o">=</span> <span class="n">AsyncClient</span><span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">wsdl</span><span class="o">=</span><span class="n">PAYMENT_WSDL_URL</span><span class="p">,</span> <span class="n">transport</span><span class="o">=</span><span class="n">async_transport</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">wsdl</span><span class="o">=</span><span class="n">configs</span><span class="o">.</span><span class="n">PAYMENT_WSDL_URL</span><span class="p">,</span> <span class="n">transport</span><span class="o">=</span><span class="n">async_transport</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
 </span></code></pre></div>
 
@@ -8379,7 +8379,7 @@ not possible.</p>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.parsian.adapters.AsyncParsianShaparakPaymentAdapter.confirm_client" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">confirm_client</span> <span class="o">=</span> <span class="n">AsyncClient</span><span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">wsdl</span><span class="o">=</span><span class="n">CONFIRM_WSDL_URL</span><span class="p">,</span> <span class="n">transport</span><span class="o">=</span><span class="n">async_transport</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">wsdl</span><span class="o">=</span><span class="n">configs</span><span class="o">.</span><span class="n">CONFIRM_WSDL_URL</span><span class="p">,</span> <span class="n">transport</span><span class="o">=</span><span class="n">async_transport</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
 </span></code></pre></div>
 
@@ -8403,8 +8403,9 @@ not possible.</p>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.parsian.adapters.AsyncParsianShaparakPaymentAdapter.reversal_client" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">reversal_client</span> <span class="o">=</span> <span class="n">AsyncClient</span><span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">wsdl</span><span class="o">=</span><span class="n">REVERSAL_WSDL_URL</span><span class="p">,</span> <span class="n">transport</span><span class="o">=</span><span class="n">async_transport</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">wsdl</span><span class="o">=</span><span class="n">configs</span><span class="o">.</span><span class="n">REVERSAL_WSDL_URL</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">transport</span><span class="o">=</span><span class="n">async_transport</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -9665,7 +9666,7 @@ heading_level: 3</p>
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.logger" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10007,7 +10008,7 @@ Provides methods for initiating payments, verifying transactions, and reversing 
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.SamanShaparakPaymentAdapter.terminal_id" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">terminal_id</span> <span class="o">=</span> <span class="n">TERMINAL_ID</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">terminal_id</span> <span class="o">=</span> <span class="n">configs</span><span class="o">.</span><span class="n">TERMINAL_ID</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10029,7 +10030,7 @@ Provides methods for initiating payments, verifying transactions, and reversing 
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.SamanShaparakPaymentAdapter.payment_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">payment_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">PAYMENT_URL</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">payment_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">PAYMENT_URL</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10051,7 +10052,7 @@ Provides methods for initiating payments, verifying transactions, and reversing 
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.SamanShaparakPaymentAdapter.verify_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">verify_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">VERIFY_URL</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">verify_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">VERIFY_URL</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10073,7 +10074,7 @@ Provides methods for initiating payments, verifying transactions, and reversing 
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.SamanShaparakPaymentAdapter.reverse_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">reverse_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">REVERSE_URL</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">reverse_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">REVERSE_URL</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10095,7 +10096,7 @@ Provides methods for initiating payments, verifying transactions, and reversing 
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.SamanShaparakPaymentAdapter.client" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">proxy</span><span class="o">=</span><span class="n">proxy</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">client</span> <span class="o">=</span> <span class="n">httpx2</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="n">proxy</span><span class="o">=</span><span class="n">proxy</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10822,7 +10823,7 @@ from the X-IPG-Url header in the token response.</p>
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.SamanNeoPgShaparakPaymentAdapter.terminal_id" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">terminal_id</span> <span class="o">=</span> <span class="n">TERMINAL_ID</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">terminal_id</span> <span class="o">=</span> <span class="n">configs</span><span class="o">.</span><span class="n">TERMINAL_ID</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10844,7 +10845,7 @@ from the X-IPG-Url header in the token response.</p>
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.SamanNeoPgShaparakPaymentAdapter.payment_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">payment_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">PAYMENT_URL</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">payment_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">PAYMENT_URL</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10866,7 +10867,7 @@ from the X-IPG-Url header in the token response.</p>
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.SamanNeoPgShaparakPaymentAdapter.verify_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">verify_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">VERIFY_URL</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">verify_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">VERIFY_URL</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10888,7 +10889,7 @@ from the X-IPG-Url header in the token response.</p>
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.SamanNeoPgShaparakPaymentAdapter.reverse_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">reverse_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">REVERSE_URL</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">reverse_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">REVERSE_URL</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10910,7 +10911,7 @@ from the X-IPG-Url header in the token response.</p>
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.SamanNeoPgShaparakPaymentAdapter.client" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">proxy</span><span class="o">=</span><span class="n">proxy</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">client</span> <span class="o">=</span> <span class="n">httpx2</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="n">proxy</span><span class="o">=</span><span class="n">proxy</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -11818,7 +11819,7 @@ and reversing payments.</p>
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.AsyncSamanShaparakPaymentAdapter.terminal_id" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">terminal_id</span> <span class="o">=</span> <span class="n">TERMINAL_ID</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">terminal_id</span> <span class="o">=</span> <span class="n">configs</span><span class="o">.</span><span class="n">TERMINAL_ID</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -11840,7 +11841,7 @@ and reversing payments.</p>
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.AsyncSamanShaparakPaymentAdapter.payment_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">payment_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">PAYMENT_URL</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">payment_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">PAYMENT_URL</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -11862,7 +11863,7 @@ and reversing payments.</p>
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.AsyncSamanShaparakPaymentAdapter.verify_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">verify_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">VERIFY_URL</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">verify_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">VERIFY_URL</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -11884,7 +11885,7 @@ and reversing payments.</p>
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.AsyncSamanShaparakPaymentAdapter.reverse_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">reverse_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">REVERSE_URL</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">reverse_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">REVERSE_URL</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -11906,7 +11907,7 @@ and reversing payments.</p>
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.AsyncSamanShaparakPaymentAdapter.client" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">client</span> <span class="o">=</span> <span class="n">AsyncClient</span><span class="p">(</span><span class="n">proxy</span><span class="o">=</span><span class="n">proxy</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">client</span> <span class="o">=</span> <span class="n">httpx2</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">proxy</span><span class="o">=</span><span class="n">proxy</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -12645,7 +12646,7 @@ the dynamic payment page URL from the X-IPG-Url header in the token response.</p
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.AsyncSamanNeoPgShaparakPaymentAdapter.terminal_id" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">terminal_id</span> <span class="o">=</span> <span class="n">TERMINAL_ID</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">terminal_id</span> <span class="o">=</span> <span class="n">configs</span><span class="o">.</span><span class="n">TERMINAL_ID</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -12667,7 +12668,7 @@ the dynamic payment page URL from the X-IPG-Url header in the token response.</p
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.AsyncSamanNeoPgShaparakPaymentAdapter.payment_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">payment_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">PAYMENT_URL</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">payment_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">PAYMENT_URL</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -12689,7 +12690,7 @@ the dynamic payment page URL from the X-IPG-Url header in the token response.</p
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.AsyncSamanNeoPgShaparakPaymentAdapter.verify_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">verify_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">VERIFY_URL</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">verify_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">VERIFY_URL</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -12711,7 +12712,7 @@ the dynamic payment page URL from the X-IPG-Url header in the token response.</p
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.AsyncSamanNeoPgShaparakPaymentAdapter.reverse_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">reverse_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">REVERSE_URL</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">reverse_url</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">REVERSE_URL</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -12733,7 +12734,7 @@ the dynamic payment page URL from the X-IPG-Url header in the token response.</p
   </span>
 
 <a href="#archipy.adapters.internet_payment_gateways.ir.saman.adapters.AsyncSamanNeoPgShaparakPaymentAdapter.client" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">client</span> <span class="o">=</span> <span class="n">AsyncClient</span><span class="p">(</span><span class="n">proxy</span><span class="o">=</span><span class="n">proxy</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">client</span> <span class="o">=</span> <span class="n">httpx2</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">proxy</span><span class="o">=</span><span class="n">proxy</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
