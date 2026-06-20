@@ -243,7 +243,7 @@ def step_stream_download_verify(context, object_name, bucket_name, expected_cont
     context.logger.info(f"Verified streaming download content of '{object_name}'")
 
 
-@when('I upload a file "{object_name}" with content "{content}" and tags "{tags_str}" to bucket "{bucket_name}"')
+@when('I upload a tagged file "{object_name}" with content "{content}" and tags "{tags_str}" to bucket "{bucket_name}"')
 def step_upload_file_with_tags(context, object_name, content, tags_str, bucket_name):
     adapter = get_minio_adapter(context)
     tags = dict(pair.split("=", 1) for pair in tags_str.split(","))
@@ -309,3 +309,90 @@ def step_verify_lifecycle_empty(context, bucket_name):
     rules = adapter.get_bucket_lifecycle(bucket_name)
     assert rules == [], f"Expected empty lifecycle for '{bucket_name}', got {rules}"
     context.logger.info(f"Verified lifecycle is empty for '{bucket_name}'")
+
+
+@then('object "{object_name}" should exist in bucket "{bucket_name}"')
+def step_object_should_exist(context, object_name, bucket_name):
+    adapter = get_minio_adapter(context)
+    assert adapter.object_exists(bucket_name, object_name), f"Object '{object_name}' does not exist in '{bucket_name}'"
+    context.logger.info(f"Verified object '{object_name}' exists in '{bucket_name}' via object_exists")
+
+
+@then('object "{object_name}" should not exist in bucket "{bucket_name}"')
+def step_object_should_not_exist(context, object_name, bucket_name):
+    adapter = get_minio_adapter(context)
+    assert not adapter.object_exists(bucket_name, object_name), (
+        f"Object '{object_name}' still exists in '{bucket_name}'"
+    )
+    context.logger.info(f"Verified object '{object_name}' does not exist in '{bucket_name}' via object_exists")
+
+
+@when('I remove all tags from object "{object_name}" in bucket "{bucket_name}"')
+def step_remove_object_tags(context, object_name, bucket_name):
+    adapter = get_minio_adapter(context)
+    adapter.remove_object_tags(bucket_name, object_name)
+    context.logger.info(f"Removed all tags from '{object_name}' in '{bucket_name}'")
+
+
+@then('object "{object_name}" in bucket "{bucket_name}" should have no tags')
+def step_verify_no_object_tags(context, object_name, bucket_name):
+    adapter = get_minio_adapter(context)
+    tags = adapter.get_object_tags(bucket_name, object_name)
+    assert tags == {}, f"Expected no tags on '{object_name}', got {tags}"
+    context.logger.info(f"Verified '{object_name}' has no tags in '{bucket_name}'")
+
+
+@when('I batch delete objects "{object_names}" from bucket "{bucket_name}"')
+def step_batch_delete_objects(context, object_names, bucket_name):
+    adapter = get_minio_adapter(context)
+    names = [name.strip() for name in object_names.split(",")]
+    adapter.remove_objects(bucket_name, names)
+    context.logger.info(f"Batch deleted {names} from '{bucket_name}'")
+
+
+@when('I enable versioning on bucket "{bucket_name}"')
+def step_enable_versioning(context, bucket_name):
+    adapter = get_minio_adapter(context)
+    adapter.set_bucket_versioning(bucket_name, enabled=True)
+    context.logger.info(f"Enabled versioning on '{bucket_name}'")
+
+
+@then('versioning on bucket "{bucket_name}" should be enabled')
+def step_verify_versioning_enabled(context, bucket_name):
+    adapter = get_minio_adapter(context)
+    status = adapter.get_bucket_versioning(bucket_name)
+    assert status == "Enabled", f"Expected versioning Enabled on '{bucket_name}', got '{status}'"
+    context.logger.info(f"Verified versioning is enabled on '{bucket_name}'")
+
+
+@then('bucket "{bucket_name}" should have at least {count:d} versions of object "{object_name}"')
+def step_verify_object_version_count(context, bucket_name, count, object_name):
+    adapter = get_minio_adapter(context)
+    versions = adapter.list_object_versions(bucket_name, prefix=object_name)
+    object_versions = [
+        v for v in versions if v["object_name"] == object_name and not v.get("is_delete_marker", False)
+    ]
+    assert len(object_versions) >= count, (
+        f"Expected at least {count} versions of '{object_name}', got {len(object_versions)}"
+    )
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("object_versions", object_versions)
+    context.logger.info(f"Verified at least {count} versions of '{object_name}' in '{bucket_name}'")
+
+
+@when('I permanently delete the oldest version of "{object_name}" in bucket "{bucket_name}"')
+def step_delete_oldest_version(context, object_name, bucket_name):
+    adapter = get_minio_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    versions = scenario_context.get("object_versions")
+    if not versions:
+        versions = [
+            v
+            for v in adapter.list_object_versions(bucket_name, prefix=object_name)
+            if v["object_name"] == object_name and not v.get("is_delete_marker", False)
+        ]
+    oldest = min(versions, key=lambda v: v["last_modified"])
+    adapter.remove_object_version(bucket_name, object_name, oldest["version_id"])
+    context.logger.info(
+        f"Deleted oldest version {oldest['version_id']} of '{object_name}' in '{bucket_name}'",
+    )

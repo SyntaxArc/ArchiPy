@@ -19,7 +19,7 @@ heading_level: 3
 
 ## Adapters
 
-Concrete MinIO adapter wrapping the MinIO Python SDK with ArchiPy conventions for object storage operations.
+Concrete MinIO adapter wrapping **boto3** with ArchiPy conventions for S3-compatible object storage operations.
 
 ::: archipy.adapters.minio.adapters
 options:

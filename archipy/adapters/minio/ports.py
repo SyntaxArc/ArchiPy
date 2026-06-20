@@ -8,6 +8,7 @@ MinioObjectType = dict[str, Any]
 MinioBucketType = dict[str, Any]
 MinioPolicyType = dict[str, Any]
 MinioLifecycleRuleType = dict[str, Any]
+MinioObjectVersionType = dict[str, Any]
 
 
 class MinioPort:
@@ -66,6 +67,40 @@ class MinioPort:
     @abstractmethod
     def remove_object(self, bucket_name: str, object_name: str) -> None:
         """Remove an object from a bucket."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def remove_objects(self, bucket_name: str, object_names: list[str]) -> None:
+        """Remove multiple objects from a bucket in a single request.
+
+        Args:
+            bucket_name: Bucket name.
+            object_names: Object keys to delete.
+
+        Raises:
+            InvalidArgumentError: If bucket_name is empty or object_names is empty.
+            NotFoundError: If the bucket does not exist.
+            PermissionDeniedError: If permission to remove objects is denied.
+            StorageError: If there's a storage-related error.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def object_exists(self, bucket_name: str, object_name: str) -> bool:
+        """Check if an object exists in a bucket.
+
+        Args:
+            bucket_name: Bucket name.
+            object_name: Object key to check.
+
+        Returns:
+            bool: True if the object exists, False otherwise.
+
+        Raises:
+            InvalidArgumentError: If any required parameter is empty.
+            PermissionDeniedError: If permission to check the object is denied.
+            StorageError: If there's a storage-related error.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -193,6 +228,22 @@ class MinioPort:
         raise NotImplementedError
 
     @abstractmethod
+    def remove_object_tags(self, bucket_name: str, object_name: str) -> None:
+        """Remove all tags from an object.
+
+        Args:
+            bucket_name: Bucket containing the object.
+            object_name: Object name whose tags to remove.
+
+        Raises:
+            InvalidArgumentError: If any required parameter is empty.
+            NotFoundError: If the bucket or object does not exist.
+            PermissionDeniedError: If permission to remove tags is denied.
+            StorageError: If there's a storage-related error.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def get_object_tags(self, bucket_name: str, object_name: str) -> dict[str, str]:
         """Return the tags attached to an object.
 
@@ -280,6 +331,81 @@ class MinioPort:
             InvalidArgumentError: If bucket_name is empty.
             NotFoundError: If the bucket does not exist.
             PermissionDeniedError: If permission to delete lifecycle is denied.
+            StorageError: If there's a storage-related error.
+        """
+        raise NotImplementedError
+
+    # Versioning Operations
+    @abstractmethod
+    def set_bucket_versioning(self, bucket_name: str, *, enabled: bool) -> None:
+        """Enable or suspend versioning on a bucket.
+
+        Args:
+            bucket_name: Bucket name.
+            enabled: If True, enable versioning; if False, suspend it.
+
+        Raises:
+            InvalidArgumentError: If bucket_name is empty.
+            NotFoundError: If the bucket does not exist.
+            PermissionDeniedError: If permission to set versioning is denied.
+            StorageError: If there's a storage-related error.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_bucket_versioning(self, bucket_name: str) -> str:
+        """Return the versioning status of a bucket.
+
+        Args:
+            bucket_name: Bucket name.
+
+        Returns:
+            str: Versioning status — ``Enabled``, ``Suspended``, or empty string if never configured.
+
+        Raises:
+            InvalidArgumentError: If bucket_name is empty.
+            NotFoundError: If the bucket does not exist.
+            PermissionDeniedError: If permission to get versioning is denied.
+            StorageError: If there's a storage-related error.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def list_object_versions(
+        self,
+        bucket_name: str,
+        prefix: str = "",
+    ) -> list[MinioObjectVersionType]:
+        """List all versions and delete markers for objects in a bucket.
+
+        Args:
+            bucket_name: Bucket name.
+            prefix: Optional prefix to filter objects by.
+
+        Returns:
+            list[MinioObjectVersionType]: Version entries with keys, version IDs, and metadata.
+
+        Raises:
+            InvalidArgumentError: If bucket_name is empty.
+            NotFoundError: If the bucket does not exist.
+            PermissionDeniedError: If permission to list versions is denied.
+            StorageError: If there's a storage-related error.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def remove_object_version(self, bucket_name: str, object_name: str, version_id: str) -> None:
+        """Permanently delete a specific object version.
+
+        Args:
+            bucket_name: Bucket name.
+            object_name: Object key.
+            version_id: Version ID to delete permanently.
+
+        Raises:
+            InvalidArgumentError: If any required parameter is empty.
+            NotFoundError: If the bucket, object, or version does not exist.
+            PermissionDeniedError: If permission to delete the version is denied.
             StorageError: If there's a storage-related error.
         """
         raise NotImplementedError

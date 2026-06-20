@@ -30,7 +30,7 @@ def _patch_starrocks_uuid_mapping() -> None:
         return "VARCHAR(36)"
 
     # Patch the type compiler class
-    StarRocksTypeCompiler.visit_UUID = visit_UUID  # type: ignore[invalid-assignment]
+    StarRocksTypeCompiler.visit_UUID = visit_UUID  # ty: ignore[invalid-assignment]
 
 
 def _patch_starrocks_now_function() -> None:
@@ -54,7 +54,7 @@ def _patch_starrocks_now_function() -> None:
         return f"{func_.name}()"
 
     # Patch the SQL compiler class
-    StarRocksSQLCompiler.visit_function = visit_function  # type: ignore[invalid-assignment]
+    StarRocksSQLCompiler.visit_function = visit_function  # ty: ignore[invalid-assignment]
 
 
 # Apply the patches when the module is imported

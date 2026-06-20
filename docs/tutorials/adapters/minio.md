@@ -127,6 +127,13 @@ logger.info(f"Last modified: {metadata['last_modified']}")
 
 # Remove an object
 minio.remove_object("my-bucket", "document.pdf")
+
+# Check if an object exists (cached for 5 minutes)
+if minio.object_exists("my-bucket", "document.pdf"):
+    logger.info("Object is present")
+
+# Batch delete multiple objects
+minio.remove_objects("my-bucket", ["doc1.pdf", "doc2.pdf", "doc3.pdf"])
 ```
 
 ### Generating Presigned URLs
@@ -144,6 +151,47 @@ logger.info(f"Download URL: {download_url}")
 # Generate a presigned URL for uploading (with custom expiry time in seconds)
 upload_url = minio.presigned_put_object("my-bucket", "new-document.pdf", expires=7200)  # 2 hours
 logger.info(f"Upload URL: {upload_url}")
+```
+
+### Object Tags
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+tags = {"ttl-days": "7", "env": "production"}
+minio.set_object_tags("my-bucket", "document.pdf", tags)
+
+current_tags = minio.get_object_tags("my-bucket", "document.pdf")
+logger.info(f"Tags: {current_tags}")
+
+minio.remove_object_tags("my-bucket", "document.pdf")
+```
+
+### Object Versioning
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+minio.set_bucket_versioning("my-bucket", enabled=True)
+status = minio.get_bucket_versioning("my-bucket")
+logger.info(f"Versioning status: {status}")
+
+minio.put_object("my-bucket", "report.pdf", "/path/to/report-v1.pdf")
+minio.put_object("my-bucket", "report.pdf", "/path/to/report-v2.pdf")
+
+versions = minio.list_object_versions("my-bucket", prefix="report.pdf")
+for version in versions:
+    logger.info(
+        f"Key={version['object_name']} version_id={version['version_id']} "
+        f"latest={version['is_latest']}",
+    )
+
+# Permanently delete a specific version (not a delete marker)
+minio.remove_object_version("my-bucket", "report.pdf", versions[0]["version_id"])
 ```
 
 ### Managing Bucket Policies

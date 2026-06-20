@@ -11,6 +11,7 @@ from archipy.adapters.minio.ports import (
     MinioBucketType,
     MinioLifecycleRuleType,
     MinioObjectType,
+    MinioObjectVersionType,
     MinioPolicyType,
     MinioPort,
 )
@@ -208,6 +209,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             if hasattr(attr, "clear_cache"):
                 attr.clear_cache()
 
+    def _clear_object_caches(self) -> None:
+        """Clear caches for object listing and existence checks."""
+        if hasattr(self.list_objects, "clear_cache"):
+            self.list_objects.clear_cache()
+        if hasattr(self.object_exists, "clear_cache"):
+            self.object_exists.clear_cache()
+
     @override
     @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
     def bucket_exists(self, bucket_name: str) -> bool:
@@ -388,8 +396,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             if tags:
                 extra_args["Tagging"] = urllib.parse.urlencode(tags)
             self._client.upload_file(file_path, bucket_name, object_name, ExtraArgs=extra_args or None)
-            if hasattr(self.list_objects, "clear_cache"):
-                self.list_objects.clear_cache()
+            self._clear_object_caches()
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
@@ -467,8 +474,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                     ),
                 )
             self._client.delete_object(Bucket=bucket_name, Key=object_name)
-            if hasattr(self.list_objects, "clear_cache"):
-                self.list_objects.clear_cache()
+            self._clear_object_caches()
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
@@ -478,6 +484,84 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_connection_exception(e, "remove_object")
         except Exception as e:
             self._handle_general_exception(e, "remove_object")
+
+    @override
+    def remove_objects(self, bucket_name: str, object_names: list[str]) -> None:
+        """Remove multiple objects from a bucket in a single request.
+
+        Args:
+            bucket_name: Bucket name.
+            object_names: Object keys to delete.
+
+        Raises:
+            InvalidArgumentError: If bucket_name is empty or object_names is empty.
+            NotFoundError: If the bucket does not exist.
+            PermissionDeniedError: If permission to remove objects is denied.
+            StorageError: If there's a storage-related error.
+        """
+        try:
+            if not bucket_name:
+                raise InvalidArgumentError(argument_name="bucket_name")
+            if not object_names:
+                raise InvalidArgumentError(argument_name="object_names")
+
+            delete_payload = {"Objects": [{"Key": name} for name in object_names], "Quiet": True}
+            self._client.delete_objects(Bucket=bucket_name, Delete=delete_payload)
+            self._clear_object_caches()
+        except InvalidArgumentError:
+            raise
+        except ClientError as e:
+            self._handle_client_exception(e, "remove_objects")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "remove_objects")
+        except Exception as e:
+            self._handle_general_exception(e, "remove_objects")
+
+    @override
+    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    def object_exists(self, bucket_name: str, object_name: str) -> bool:
+        """Check if an object exists in a bucket.
+
+        Args:
+            bucket_name: Bucket name.
+            object_name: Object key to check.
+
+        Returns:
+            bool: True if the object exists, False otherwise.
+
+        Raises:
+            InvalidArgumentError: If any required parameter is empty.
+            PermissionDeniedError: If permission to check the object is denied.
+            StorageError: If there's a storage-related error.
+        """
+        try:
+            if not bucket_name or not object_name:
+                raise InvalidArgumentError(
+                    argument_name=(
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
+                )
+            self._client.head_object(Bucket=bucket_name, Key=object_name)
+        except InvalidArgumentError:
+            raise
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code", "")
+            if error_code in ("NoSuchKey", "NoSuchObject", "404"):
+                return False
+            self._handle_client_exception(e, "object_exists")
+            raise
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "object_exists")
+            raise
+        except Exception as e:
+            self._handle_general_exception(e, "object_exists")
+            raise
+        else:
+            return True
 
     @override
     @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
@@ -818,8 +902,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 CopySource=f"{src_bucket_name}/{src_object_name}",
                 Key=dest_object_name,
             )
-            if hasattr(self.list_objects, "clear_cache"):
-                self.list_objects.clear_cache()
+            self._clear_object_caches()
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
@@ -891,8 +974,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 kwargs["Tagging"] = urllib.parse.urlencode(tags)
 
             self._client.put_object(**kwargs)
-            if hasattr(self.list_objects, "clear_cache"):
-                self.list_objects.clear_cache()
+            self._clear_object_caches()
         except InvalidArgumentError:
             raise
         except ClientError as e:
@@ -995,6 +1077,41 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_connection_exception(e, "set_object_tags")
         except Exception as e:
             self._handle_general_exception(e, "set_object_tags")
+
+    @override
+    def remove_object_tags(self, bucket_name: str, object_name: str) -> None:
+        """Remove all tags from an object.
+
+        Args:
+            bucket_name: Bucket containing the object.
+            object_name: Object name whose tags to remove.
+
+        Raises:
+            InvalidArgumentError: If any required parameter is empty.
+            NotFoundError: If the bucket or object does not exist.
+            PermissionDeniedError: If permission to remove tags is denied.
+            StorageError: If there's a storage-related error.
+        """
+        try:
+            if not bucket_name or not object_name:
+                raise InvalidArgumentError(
+                    argument_name=(
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
+                )
+            self._client.delete_object_tagging(Bucket=bucket_name, Key=object_name)
+        except InvalidArgumentError:
+            raise
+        except ClientError as e:
+            self._handle_client_exception(e, "remove_object_tags")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "remove_object_tags")
+        except Exception as e:
+            self._handle_general_exception(e, "remove_object_tags")
 
     @override
     def get_object_tags(self, bucket_name: str, object_name: str) -> dict[str, str]:
@@ -1156,3 +1273,178 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_connection_exception(e, "delete_bucket_lifecycle")
         except Exception as e:
             self._handle_general_exception(e, "delete_bucket_lifecycle")
+
+    @override
+    def set_bucket_versioning(self, bucket_name: str, *, enabled: bool) -> None:
+        """Enable or suspend versioning on a bucket.
+
+        Args:
+            bucket_name: Bucket name.
+            enabled: If True, enable versioning; if False, suspend it.
+
+        Raises:
+            InvalidArgumentError: If bucket_name is empty.
+            NotFoundError: If the bucket does not exist.
+            PermissionDeniedError: If permission to set versioning is denied.
+            StorageError: If there's a storage-related error.
+        """
+        try:
+            if not bucket_name:
+                raise InvalidArgumentError(argument_name="bucket_name")
+            status = "Enabled" if enabled else "Suspended"
+            self._client.put_bucket_versioning(
+                Bucket=bucket_name,
+                VersioningConfiguration={"Status": status},
+            )
+        except InvalidArgumentError:
+            raise
+        except ClientError as e:
+            self._handle_client_exception(e, "set_bucket_versioning")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "set_bucket_versioning")
+        except Exception as e:
+            self._handle_general_exception(e, "set_bucket_versioning")
+
+    @override
+    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    def get_bucket_versioning(self, bucket_name: str) -> str:
+        """Return the versioning status of a bucket.
+
+        Args:
+            bucket_name: Bucket name.
+
+        Returns:
+            str: Versioning status — ``Enabled``, ``Suspended``, or empty string if never configured.
+
+        Raises:
+            InvalidArgumentError: If bucket_name is empty.
+            NotFoundError: If the bucket does not exist.
+            PermissionDeniedError: If permission to get versioning is denied.
+            StorageError: If there's a storage-related error.
+        """
+        try:
+            if not bucket_name:
+                raise InvalidArgumentError(argument_name="bucket_name")
+            response = self._client.get_bucket_versioning(Bucket=bucket_name)
+        except InvalidArgumentError:
+            raise
+        except ClientError as e:
+            self._handle_client_exception(e, "get_bucket_versioning")
+            raise
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "get_bucket_versioning")
+            raise
+        except Exception as e:
+            self._handle_general_exception(e, "get_bucket_versioning")
+            raise
+        else:
+            status: str = response.get("Status", "")
+            return status
+
+    @override
+    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    def list_object_versions(
+        self,
+        bucket_name: str,
+        prefix: str = "",
+    ) -> list[MinioObjectVersionType]:
+        """List all versions and delete markers for objects in a bucket.
+
+        Args:
+            bucket_name: Bucket name.
+            prefix: Optional prefix to filter objects by.
+
+        Returns:
+            list[MinioObjectVersionType]: Version entries with keys, version IDs, and metadata.
+
+        Raises:
+            InvalidArgumentError: If bucket_name is empty.
+            NotFoundError: If the bucket does not exist.
+            PermissionDeniedError: If permission to list versions is denied.
+            StorageError: If there's a storage-related error.
+        """
+        try:
+            if not bucket_name:
+                raise InvalidArgumentError(argument_name="bucket_name")
+
+            params: dict[str, str] = {"Bucket": bucket_name}
+            if prefix:
+                params["Prefix"] = prefix
+
+            version_list: list[MinioObjectVersionType] = []
+            paginator = self._client.get_paginator("list_object_versions")
+            for page in paginator.paginate(**params):
+                version_list.extend(
+                    {
+                        "object_name": version["Key"],
+                        "version_id": version["VersionId"],
+                        "is_latest": version.get("IsLatest", False),
+                        "is_delete_marker": False,
+                        "size": version.get("Size", 0),
+                        "last_modified": version.get("LastModified"),
+                    }
+                    for version in page.get("Versions", [])
+                )
+                version_list.extend(
+                    {
+                        "object_name": marker["Key"],
+                        "version_id": marker["VersionId"],
+                        "is_latest": marker.get("IsLatest", False),
+                        "is_delete_marker": True,
+                        "size": 0,
+                        "last_modified": marker.get("LastModified"),
+                    }
+                    for marker in page.get("DeleteMarkers", [])
+                )
+        except InvalidArgumentError:
+            raise
+        except ClientError as e:
+            self._handle_client_exception(e, "list_object_versions")
+            raise
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "list_object_versions")
+            raise
+        except Exception as e:
+            self._handle_general_exception(e, "list_object_versions")
+            raise
+        else:
+            return version_list
+
+    @override
+    def remove_object_version(self, bucket_name: str, object_name: str, version_id: str) -> None:
+        """Permanently delete a specific object version.
+
+        Args:
+            bucket_name: Bucket name.
+            object_name: Object key.
+            version_id: Version ID to delete permanently.
+
+        Raises:
+            InvalidArgumentError: If any required parameter is empty.
+            NotFoundError: If the bucket, object, or version does not exist.
+            PermissionDeniedError: If permission to delete the version is denied.
+            StorageError: If there's a storage-related error.
+        """
+        try:
+            if not bucket_name or not object_name or not version_id:
+                raise InvalidArgumentError(
+                    argument_name=(
+                        "bucket_name, object_name or version_id"
+                        if not all([bucket_name, object_name, version_id])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                        if not object_name
+                        else "version_id"
+                    ),
+                )
+            self._client.delete_object(Bucket=bucket_name, Key=object_name, VersionId=version_id)
+            self._clear_object_caches()
+        except InvalidArgumentError:
+            raise
+        except ClientError as e:
+            self._handle_client_exception(e, "remove_object_version")
+        except (ConnectionError, EndpointConnectionError) as e:
+            self._handle_connection_exception(e, "remove_object_version")
+        except Exception as e:
+            self._handle_general_exception(e, "remove_object_version")
