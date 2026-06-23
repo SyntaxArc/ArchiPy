@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 4.x series"
 
 | Version             | Date       | Summary                                                                                         |
 |---------------------|------------|-------------------------------------------------------------------------------------------------|
+| [4.12.1](4.12.1.md) | 2026-06-23 | FastAPI 0.138+ compatibility, Caveman agent skills, and dependency pin updates                |
 | [4.12.0](4.12.0.md) | 2026-06-20 | MinIO TTL/lifecycle, object tags, batch deletion, existence checks, and versioning support      |
 | [4.11.1](4.11.1.md) | 2026-06-18 | FastAPI compatibility pin to <0.137, removed parallel behave settings, docs alignment           |
 | [4.11.0](4.11.0.md) | 2026-06-18 | MinIO stream upload/download APIs, IPG DTO extraction, and FastAPI large-file upload tests      |

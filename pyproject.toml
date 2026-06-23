@@ -172,6 +172,7 @@ src = ["archipy", "features"]
 exclude = [
     "features/*",
     "scripts/*",
+    ".agents/*",
 ]
 
 # Set line length for Ruff formatter
@@ -299,7 +300,7 @@ python-version = "3.14"
 # Include source directories
 include = ["archipy"]
 # Exclude directories from type checking
-exclude = ["features", "scripts"]
+exclude = ["features", "scripts", ".agents"]
 
 [tool.ty.rules]
 # Enable strict type checking rules (similar to mypy strict mode)

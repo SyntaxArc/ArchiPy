@@ -63,13 +63,13 @@ repos:
         entry: uv run ruff format --config pyproject.toml
         files: \.(py|pyi)$
         language: system
-        exclude: ^(features|scripts)/
+        exclude: ^(features|scripts|\.agents)/
       - id: ruff
         name: ruff
         entry: uv run ruff check --config pyproject.toml --fix
         files: \.(py|pyi)$
         language: system
-        exclude: ^(features|scripts)/
+        exclude: ^(features|scripts|\.agents)/
       - id: add-trailing-comma
         name: add-trailing-comma
         entry: uv run add-trailing-comma
@@ -85,4 +85,4 @@ repos:
         entry: uv run ty check
         files: \.(py|pyi)$
         language: system
-        exclude: ^(features|scripts)/
+        exclude: ^(features|scripts|\.agents)/
