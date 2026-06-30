@@ -1123,6 +1123,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#direct-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3347,6 +3358,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#direct-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3607,7 +3629,7 @@
 <p>This example demonstrates how to use the Temporal adapter for workflow orchestration and activity execution with proper
 error handling and Python 3.14 type hints.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[temporal]&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[temporalio]&quot;</span>
 </span></code></pre></div>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>Configure the Temporal adapter via environment variables or a <code>TemporalConfig</code> object.</p>
@@ -3616,16 +3638,106 @@ error handling and Python 3.14 type hints.</p>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">TEMPORAL__PORT</span><span class="o">=</span><span class="m">7233</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nv">TEMPORAL__NAMESPACE</span><span class="o">=</span>default
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">TEMPORAL__TASK_QUEUE</span><span class="o">=</span>my-task-queue
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nv">TEMPORAL__TLS_CA_CERT</span><span class="o">=</span>/path/to/ca.crt
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nv">TEMPORAL__TLS_CLIENT_CERT</span><span class="o">=</span>/path/to/client.crt
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nv">TEMPORAL__TLS_CLIENT_KEY</span><span class="o">=</span>/path/to/client.key
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nv">TEMPORAL__WORKFLOW_EXECUTION_TIMEOUT</span><span class="o">=</span><span class="m">300</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nv">TEMPORAL__WORKFLOW_RUN_TIMEOUT</span><span class="o">=</span><span class="m">60</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nv">TEMPORAL__ACTIVITY_START_TO_CLOSE_TIMEOUT</span><span class="o">=</span><span class="m">30</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="nv">TEMPORAL__RETRY_MAXIMUM_ATTEMPTS</span><span class="o">=</span><span class="m">3</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="nv">TEMPORAL__RETRY_BACKOFF_COEFFICIENT</span><span class="o">=</span><span class="m">2</span>.0
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nv">TEMPORAL__RETRY_MAXIMUM_INTERVAL</span><span class="o">=</span><span class="m">60</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nv">TEMPORAL__ENABLE_METRICS</span><span class="o">=</span><span class="nb">false</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nv">TEMPORAL__METRICS_PORT</span><span class="o">=</span><span class="m">8201</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nv">TEMPORAL__CLIENT_IDENTITY</span><span class="o">=</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nv">TEMPORAL__API_KEY</span><span class="o">=</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nv">TEMPORAL__LAZY_CONNECT</span><span class="o">=</span><span class="nb">false</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nv">TEMPORAL__KEEP_ALIVE_INTERVAL_MS</span><span class="o">=</span><span class="m">30000</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="nv">TEMPORAL__KEEP_ALIVE_TIMEOUT_MS</span><span class="o">=</span><span class="m">15000</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="nv">TEMPORAL__CLIENT_RPC_RETRY_MAX_RETRIES</span><span class="o">=</span><span class="m">10</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nv">TEMPORAL__CLIENT_RPC_RETRY_INITIAL_INTERVAL_MS</span><span class="o">=</span><span class="m">100</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="nv">TEMPORAL__CLIENT_RPC_RETRY_MAX_INTERVAL_MS</span><span class="o">=</span><span class="m">5000</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="nv">TEMPORAL__WORKER_GRACEFUL_SHUTDOWN_SECONDS</span><span class="o">=</span><span class="m">30</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="nv">TEMPORAL__WORKER_MAX_CACHED_WORKFLOWS</span><span class="o">=</span><span class="m">1000</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="nv">TEMPORAL__WORKER_DEBUG_MODE</span><span class="o">=</span><span class="nb">false</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="nv">TEMPORAL__WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION</span><span class="o">=</span><span class="nb">false</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="nv">TEMPORAL__TLS_CA_CERT</span><span class="o">=</span>/path/to/ca.crt
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="nv">TEMPORAL__TLS_CLIENT_CERT</span><span class="o">=</span>/path/to/client.crt
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="nv">TEMPORAL__TLS_CLIENT_KEY</span><span class="o">=</span>/path/to/client.key
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="nv">TEMPORAL__WORKFLOW_EXECUTION_TIMEOUT</span><span class="o">=</span><span class="m">300</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="nv">TEMPORAL__WORKFLOW_RUN_TIMEOUT</span><span class="o">=</span><span class="m">60</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="nv">TEMPORAL__ACTIVITY_START_TO_CLOSE_TIMEOUT</span><span class="o">=</span><span class="m">30</span>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="nv">TEMPORAL__RETRY_MAXIMUM_ATTEMPTS</span><span class="o">=</span><span class="m">3</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="nv">TEMPORAL__RETRY_BACKOFF_COEFFICIENT</span><span class="o">=</span><span class="m">2</span>.0
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="nv">TEMPORAL__RETRY_MAXIMUM_INTERVAL</span><span class="o">=</span><span class="m">60</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="nv">TEMPORAL__RETRY_INITIAL_INTERVAL</span><span class="o">=</span><span class="m">1</span>
 </span></code></pre></div>
+<blockquote>
+<p><strong>Note:</strong> <code>TEMPORAL__API_KEY</code> is for Temporal Cloud authentication. Local dev servers ignore it.</p>
+</blockquote>
+<h3 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Purpose</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CLIENT_IDENTITY</code></td>
+<td>Client identity visible on the Temporal server</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td><code>API_KEY</code></td>
+<td>Temporal Cloud API key</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td><code>LAZY_CONNECT</code></td>
+<td>Defer connection until first client use</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>KEEP_ALIVE_INTERVAL_MS</code></td>
+<td>gRPC keep-alive ping interval</td>
+<td><code>30000</code></td>
+</tr>
+<tr>
+<td><code>KEEP_ALIVE_TIMEOUT_MS</code></td>
+<td>gRPC keep-alive timeout</td>
+<td><code>15000</code></td>
+</tr>
+<tr>
+<td><code>CLIENT_RPC_RETRY_*</code></td>
+<td>Client-side RPC retry backoff</td>
+<td>SDK defaults</td>
+</tr>
+<tr>
+<td><code>WORKER_GRACEFUL_SHUTDOWN_SECONDS</code></td>
+<td>Worker shutdown grace period</td>
+<td><code>30</code></td>
+</tr>
+<tr>
+<td><code>WORKER_MAX_CACHED_WORKFLOWS</code></td>
+<td>In-memory workflow cache size</td>
+<td><code>1000</code></td>
+</tr>
+<tr>
+<td><code>WORKER_DEBUG_MODE</code></td>
+<td>Enable workflow sandbox debug mode</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION</code></td>
+<td>Disable eager activity execution</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>RETRY_INITIAL_INTERVAL</code></td>
+<td>Initial workflow/activity retry delay (seconds)</td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td><code>RETRY_NON_RETRYABLE_ERROR_TYPES</code></td>
+<td>Error types excluded from retries</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
 <h3 id="direct-configuration">Direct Configuration<a class="headerlink" href="#direct-configuration" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.config_template</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporalConfig</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
@@ -3640,7 +3752,10 @@ error handling and Python 3.14 type hints.</p>
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="n">RETRY_MAXIMUM_ATTEMPTS</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="n">RETRY_BACKOFF_COEFFICIENT</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    <span class="n">RETRY_MAXIMUM_INTERVAL</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="p">)</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="n">RETRY_INITIAL_INTERVAL</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="n">CLIENT_IDENTITY</span><span class="o">=</span><span class="s2">&quot;my-service-client&quot;</span><span class="p">,</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="n">WORKER_DEBUG_MODE</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
