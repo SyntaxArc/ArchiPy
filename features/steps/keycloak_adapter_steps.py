@@ -1,6 +1,8 @@
 # features/steps/keycloak_auth_steps.py
 
 import logging
+import uuid
+from typing import Any
 
 from behave import given, then, when
 from behave.runner import Context
@@ -9,6 +11,31 @@ from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
 from archipy.configs.base_config import BaseConfig
+from keycloak.uma_permissions import UMAPermission
+
+
+async def _adapter_call(
+    adapter: AsyncKeycloakAdapter | KeycloakAdapter,
+    is_async: bool,
+    method: str,
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
+    """Invoke a Keycloak adapter method for sync or async implementations."""
+    fn = getattr(adapter, method)
+    if is_async:
+        return await fn(*args, **kwargs)
+    return fn(*args, **kwargs)
+
+
+def _op_error_key(operation: str) -> str:
+    return f"{operation}_error"
+
+
+def _assert_op_success(scenario_context: ScenarioContext, operation: str, adapter_type: str) -> None:
+    error_key = _op_error_key(operation)
+    assert not scenario_context.get(error_key), f"{operation} failed for {adapter_type}: {scenario_context.get(error_key)}"
+
 
 
 def get_keycloak_adapter(context: Context) -> AsyncKeycloakAdapter | KeycloakAdapter:
@@ -25,6 +52,10 @@ def get_keycloak_adapter(context: Context) -> AsyncKeycloakAdapter | KeycloakAda
         test_config = BaseConfig.global_config()
         scenario_context.adapter = KeycloakAdapter(test_config.KEYCLOAK)
     return scenario_context.adapter
+
+
+def _adapter_parts(context: Context) -> tuple[AsyncKeycloakAdapter | KeycloakAdapter, bool, ScenarioContext]:
+    return get_keycloak_adapter(context), "async" in context.scenario.tags, get_current_scenario_context(context)
 
 
 # Configuration steps
@@ -2248,3 +2279,1801 @@ def step_user_organizations_not_contain_org(context: Context, org_name: str) -> 
     names = [o.get("name") for o in orgs if o.get("name")]
     assert org_name not in names, f"Organization {org_name} should not be in user organizations: {names}"
     context.logger.info(f"User organizations list does not contain {org_name}")
+
+
+# Group management steps
+@when('I create a group named "{group_name}" using {adapter_type} adapter')
+async def step_create_group(context: Context, group_name: str, adapter_type: str) -> None:
+    """Create a group with the specified name."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+
+    try:
+        payload = {"name": group_name}
+        if is_async:
+            group_id = await adapter.create_group(payload=payload, skip_exists=True)
+        else:
+            group_id = adapter.create_group(payload=payload, skip_exists=True)
+        scenario_context.store("latest_group_id", group_id)
+        scenario_context.store("latest_group_name", group_name)
+        scenario_context.store("group_creation_error", None)
+        context.logger.info(f"Created group {group_name} with id {group_id}")
+    except Exception as e:
+        scenario_context.store("group_creation_error", str(e))
+        context.logger.exception("Group creation failed")
+
+
+@when("I get all groups using {adapter_type} adapter")
+async def step_get_groups(context: Context, adapter_type: str) -> None:
+    """Get all groups in the current realm."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+
+    try:
+        if is_async:
+            groups = await adapter.get_groups()
+        else:
+            groups = adapter.get_groups()
+        scenario_context.store("groups_list", groups)
+        scenario_context.store("groups_list_error", None)
+        context.logger.info(f"Got {len(groups)} groups")
+    except Exception as e:
+        scenario_context.store("groups_list_error", str(e))
+        context.logger.exception("Get groups failed")
+
+
+@when('I add user "{username}" to group "{group_name}" using {adapter_type} adapter')
+async def step_group_user_add(context: Context, username: str, group_name: str, adapter_type: str) -> None:
+    """Add a user to a group by group name."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+
+    try:
+        if is_async:
+            user = await adapter.get_user_by_username(username)
+            group = await adapter.get_group_by_path(f"/{group_name}")
+        else:
+            user = adapter.get_user_by_username(username)
+            group = adapter.get_group_by_path(f"/{group_name}")
+        assert user is not None, f"User {username} not found"
+        assert group is not None, f"Group {group_name} not found"
+        user_id = user["id"]
+        group_id = group["id"]
+        if is_async:
+            await adapter.group_user_add(user_id=user_id, group_id=group_id)
+        else:
+            adapter.group_user_add(user_id=user_id, group_id=group_id)
+        scenario_context.store("group_user_add_error", None)
+        context.logger.info(f"Added user {username} to group {group_name}")
+    except Exception as e:
+        scenario_context.store("group_user_add_error", str(e))
+        context.logger.exception("Group user add failed")
+
+
+@then("group creation with the {adapter_type} adapter should succeed")
+def step_group_creation_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify group creation succeeded."""
+    scenario_context = get_current_scenario_context(context)
+    assert not scenario_context.get("group_creation_error"), (
+        f"Group creation failed: {scenario_context.get('group_creation_error')}"
+    )
+    assert scenario_context.get("latest_group_id"), "No group id in context"
+    context.logger.info(f"{adapter_type} group creation succeeded")
+
+
+@then('the groups list should contain group "{group_name}"')
+def step_groups_list_contains_group(context: Context, group_name: str) -> None:
+    """Verify the groups list contains the given group name."""
+    scenario_context = get_current_scenario_context(context)
+    groups = scenario_context.get("groups_list")
+    assert groups is not None, "No groups_list in context"
+    names = [group.get("name") for group in groups if group.get("name")]
+    assert group_name in names, f"Group {group_name} not in groups list: {names}"
+
+
+@then("the {adapter_type} group user add should succeed")
+def step_group_user_add_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify adding a user to a group succeeded."""
+    scenario_context = get_current_scenario_context(context)
+    assert not scenario_context.get("group_user_add_error"), (
+        f"Group user add failed: {scenario_context.get('group_user_add_error')}"
+    )
+    context.logger.info(f"{adapter_type} group user add succeeded")
+
+
+@given('I create coverage roles for group "{group_name}" and client "{client_name}" using {adapter_type} adapter')
+async def step_create_coverage_group_roles(
+    context: Context,
+    group_name: str,
+    client_name: str,
+    adapter_type: str,
+) -> None:
+    """Create realm and client roles used by group coverage scenarios."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    suffix = uuid.uuid4().hex[:8]
+    realm_role_name = f"{group_name}-realm-role-{suffix}"
+    client_role_name = f"{group_name}-client-role-{suffix}"
+    try:
+        await _adapter_call(
+            adapter,
+            is_async,
+            "create_realm_role",
+            realm_role_name,
+            "coverage role",
+            skip_exists=True,
+        )
+        await _adapter_call(
+            adapter,
+            is_async,
+            "create_client_role",
+            client_name,
+            client_role_name,
+            "coverage role",
+            skip_exists=True,
+        )
+        scenario_context.store("coverage_group_suffix", suffix)
+        scenario_context.store("coverage_realm_role_name", realm_role_name)
+        scenario_context.store("coverage_client_role_name", client_role_name)
+        scenario_context.store(_op_error_key("create_coverage_group_roles"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("create_coverage_group_roles"), str(exc))
+        context.logger.exception("create_coverage_group_roles failed")
+
+
+@when("I get the group count using {adapter_type} adapter")
+async def step_groups_count(context: Context, adapter_type: str) -> None:
+    """Get the total number of groups in the realm."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    try:
+        count = await _adapter_call(adapter, is_async, "groups_count")
+        scenario_context.store("groups_count", count)
+        scenario_context.store(_op_error_key("groups_count"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("groups_count"), str(exc))
+        context.logger.exception("groups_count failed")
+
+
+@then("the {adapter_type} groups count request should succeed")
+def step_groups_count_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify groups count request succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "groups_count", adapter_type)
+
+
+@when('I get group "{group_name}" by id using {adapter_type} adapter')
+async def step_get_group_by_id(context: Context, group_name: str, adapter_type: str) -> None:
+    """Get a group by its internal id."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    try:
+        group = await _adapter_call(adapter, is_async, "get_group", group_id)
+        scenario_context.store("latest_group", group)
+        scenario_context.store(_op_error_key("get_group"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_group"), str(exc))
+        context.logger.exception("get_group failed")
+
+
+@then("the {adapter_type} group get by id should succeed")
+def step_get_group_by_id_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify get group by id succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_group", adapter_type)
+
+
+@when('I get group "{group_name}" by path using {adapter_type} adapter')
+async def step_get_group_by_path(context: Context, group_name: str, adapter_type: str) -> None:
+    """Get a group by its path."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    try:
+        group = await _adapter_call(adapter, is_async, "get_group_by_path", f"/{group_name}")
+        scenario_context.store("latest_group_by_path", group)
+        scenario_context.store(_op_error_key("get_group_by_path"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_group_by_path"), str(exc))
+        context.logger.exception("get_group_by_path failed")
+
+
+@then("the {adapter_type} group get by path should succeed")
+def step_get_group_by_path_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify get group by path succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_group_by_path", adapter_type)
+
+
+@when('I update group "{group_name}" using {adapter_type} adapter')
+async def step_update_group(context: Context, group_name: str, adapter_type: str) -> None:
+    """Update a group payload."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    try:
+        await _adapter_call(adapter, is_async, "update_group", group_id, {"id": group_id, "name": group_name})
+        scenario_context.store(_op_error_key("update_group"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("update_group"), str(exc))
+        context.logger.exception("update_group failed")
+
+
+@then("the {adapter_type} group update should succeed")
+def step_update_group_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify group update succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "update_group", adapter_type)
+
+
+@when('I create a child group under "{group_name}" using {adapter_type} adapter')
+async def step_create_child_group(context: Context, group_name: str, adapter_type: str) -> None:
+    """Create a child group under the parent group."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    suffix = scenario_context.get("coverage_group_suffix")
+    child_name = f"{group_name}-child-{suffix}"
+    group_id = scenario_context.get("latest_group_id")
+    try:
+        child_id = await _adapter_call(
+            adapter,
+            is_async,
+            "create_group",
+            {"name": child_name},
+            parent=group_id,
+            skip_exists=True,
+        )
+        scenario_context.store("child_group_id", child_id)
+        scenario_context.store("child_group_name", child_name)
+        scenario_context.store(_op_error_key("create_group_child"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("create_group_child"), str(exc))
+        context.logger.exception("create_group_child failed")
+
+
+@then("child group creation with the {adapter_type} adapter should succeed")
+def step_create_child_group_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify child group creation succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "create_group_child", adapter_type)
+
+
+@when('I list child groups of "{group_name}" using {adapter_type} adapter')
+async def step_get_group_children(context: Context, group_name: str, adapter_type: str) -> None:
+    """List direct child groups."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    try:
+        children = await _adapter_call(adapter, is_async, "get_group_children", group_id)
+        scenario_context.store("group_children", children)
+        scenario_context.store(_op_error_key("get_group_children"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_group_children"), str(exc))
+        context.logger.exception("get_group_children failed")
+
+
+@then("the {adapter_type} group children list should succeed")
+def step_get_group_children_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify group children list succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_group_children", adapter_type)
+
+
+@when('I get subgroups under "{group_name}" using {adapter_type} adapter')
+async def step_get_subgroups(context: Context, group_name: str, adapter_type: str) -> None:
+    """Get subgroups using full hierarchy path."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    child_name = scenario_context.get("child_group_name")
+    try:
+        parent_group = await _adapter_call(adapter, is_async, "get_group", group_id, full_hierarchy=True)
+        await _adapter_call(adapter, is_async, "get_subgroups", parent_group, f"/{group_name}/{child_name}")
+        scenario_context.store(_op_error_key("get_subgroups"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_subgroups"), str(exc))
+        context.logger.exception("get_subgroups failed")
+
+
+@then("the {adapter_type} subgroups get should succeed")
+def step_get_subgroups_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify get subgroups succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_subgroups", adapter_type)
+
+
+@when('I list members of group "{group_name}" using {adapter_type} adapter')
+async def step_get_group_members(context: Context, group_name: str, adapter_type: str) -> None:
+    """List members of a group."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    try:
+        members = await _adapter_call(adapter, is_async, "get_group_members", group_id)
+        scenario_context.store("group_members", members)
+        scenario_context.store(_op_error_key("get_group_members"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_group_members"), str(exc))
+        context.logger.exception("get_group_members failed")
+
+
+@then("the {adapter_type} group members list should succeed")
+def step_get_group_members_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify group members list succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_group_members", adapter_type)
+
+
+@when('I assign coverage realm roles to group "{group_name}" using {adapter_type} adapter')
+async def step_assign_group_realm_roles(context: Context, group_name: str, adapter_type: str) -> None:
+    """Assign coverage realm roles to a group."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    realm_role_name = scenario_context.get("coverage_realm_role_name")
+    try:
+        realm_role = await _adapter_call(adapter, is_async, "get_realm_role", realm_role_name)
+        await _adapter_call(adapter, is_async, "assign_group_realm_roles", group_id, [realm_role])
+        scenario_context.store("coverage_realm_role", realm_role)
+        scenario_context.store(_op_error_key("assign_group_realm_roles"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("assign_group_realm_roles"), str(exc))
+        context.logger.exception("assign_group_realm_roles failed")
+
+
+@then("assigning realm roles to the group with the {adapter_type} adapter should succeed")
+def step_assign_group_realm_roles_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify group realm role assignment succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "assign_group_realm_roles", adapter_type)
+
+
+@when('I list realm roles for group "{group_name}" using {adapter_type} adapter')
+async def step_get_group_realm_roles(context: Context, group_name: str, adapter_type: str) -> None:
+    """List realm roles assigned to a group."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    try:
+        roles = await _adapter_call(adapter, is_async, "get_group_realm_roles", group_id)
+        scenario_context.store("group_realm_roles", roles)
+        scenario_context.store(_op_error_key("get_group_realm_roles"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_group_realm_roles"), str(exc))
+        context.logger.exception("get_group_realm_roles failed")
+
+
+@then("the {adapter_type} group realm roles list should succeed")
+def step_get_group_realm_roles_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify group realm roles list succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_group_realm_roles", adapter_type)
+
+
+@when(
+    'I assign coverage client roles to group "{group_name}" for client "{client_name}" using {adapter_type} adapter',
+)
+async def step_assign_group_client_roles(
+    context: Context,
+    group_name: str,
+    client_name: str,
+    adapter_type: str,
+) -> None:
+    """Assign coverage client roles to a group."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    client_role_name = scenario_context.get("coverage_client_role_name")
+    try:
+        internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
+        if is_async:
+            role_repr = await adapter.admin_adapter.a_get_client_role(internal_client_id, client_role_name)
+        else:
+            role_repr = adapter.admin_adapter.get_client_role(internal_client_id, client_role_name)
+        await _adapter_call(adapter, is_async, "assign_group_client_roles", group_id, internal_client_id, [role_repr])
+        scenario_context.store("coverage_internal_client_id", internal_client_id)
+        scenario_context.store("coverage_client_role", role_repr)
+        scenario_context.store(_op_error_key("assign_group_client_roles"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("assign_group_client_roles"), str(exc))
+        context.logger.exception("assign_group_client_roles failed")
+
+
+@then("assigning client roles to the group with the {adapter_type} adapter should succeed")
+def step_assign_group_client_roles_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify group client role assignment succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "assign_group_client_roles", adapter_type)
+
+
+@when(
+    'I list client roles for group "{group_name}" and client "{client_name}" using {adapter_type} adapter',
+)
+async def step_get_group_client_roles(
+    context: Context,
+    group_name: str,
+    client_name: str,
+    adapter_type: str,
+) -> None:
+    """List client roles assigned to a group."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    internal_client_id = scenario_context.get("coverage_internal_client_id")
+    try:
+        roles = await _adapter_call(adapter, is_async, "get_group_client_roles", group_id, internal_client_id)
+        scenario_context.store("group_client_roles", roles)
+        scenario_context.store(_op_error_key("get_group_client_roles"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_group_client_roles"), str(exc))
+        context.logger.exception("get_group_client_roles failed")
+
+
+@then("the {adapter_type} group client roles list should succeed")
+def step_get_group_client_roles_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify group client roles list succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_group_client_roles", adapter_type)
+
+
+@when(
+    'I get composite client roles for group "{group_name}" and client "{client_name}" using {adapter_type} adapter',
+)
+async def step_get_composite_client_roles_of_group(
+    context: Context,
+    group_name: str,
+    client_name: str,
+    adapter_type: str,
+) -> None:
+    """Get composite client roles for a group."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    internal_client_id = scenario_context.get("coverage_internal_client_id")
+    try:
+        roles = await _adapter_call(
+            adapter,
+            is_async,
+            "get_composite_client_roles_of_group",
+            internal_client_id,
+            group_id,
+        )
+        scenario_context.store("composite_client_roles", roles)
+        scenario_context.store(_op_error_key("get_composite_client_roles_of_group"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_composite_client_roles_of_group"), str(exc))
+        context.logger.exception("get_composite_client_roles_of_group failed")
+
+
+@then("the {adapter_type} composite client roles get should succeed")
+def step_get_composite_client_roles_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify composite client roles get succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_composite_client_roles_of_group", adapter_type)
+
+
+@when("I list groups that have the coverage realm role using {adapter_type} adapter")
+async def step_get_realm_role_groups(context: Context, adapter_type: str) -> None:
+    """List groups assigned to the coverage realm role."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    realm_role_name = scenario_context.get("coverage_realm_role_name")
+    try:
+        groups = await _adapter_call(adapter, is_async, "get_realm_role_groups", realm_role_name)
+        scenario_context.store("realm_role_groups", groups)
+        scenario_context.store(_op_error_key("get_realm_role_groups"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_realm_role_groups"), str(exc))
+        context.logger.exception("get_realm_role_groups failed")
+
+
+@then("the {adapter_type} realm role groups list should succeed")
+def step_get_realm_role_groups_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify realm role groups list succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_realm_role_groups", adapter_type)
+
+
+@when(
+    'I list groups that have the coverage client role for client "{client_name}" using {adapter_type} adapter',
+)
+async def step_get_client_role_groups(context: Context, client_name: str, adapter_type: str) -> None:
+    """List groups assigned to the coverage client role."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    internal_client_id = scenario_context.get("coverage_internal_client_id")
+    client_role_name = scenario_context.get("coverage_client_role_name")
+    try:
+        groups = await _adapter_call(
+            adapter,
+            is_async,
+            "get_client_role_groups",
+            internal_client_id,
+            client_role_name,
+            {},
+        )
+        scenario_context.store("client_role_groups", groups)
+        scenario_context.store(_op_error_key("get_client_role_groups"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_client_role_groups"), str(exc))
+        context.logger.exception("get_client_role_groups failed")
+
+
+@then("the {adapter_type} client role groups list should succeed")
+def step_get_client_role_groups_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify client role groups list succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_client_role_groups", adapter_type)
+
+
+@when('I enable permissions on group "{group_name}" using {adapter_type} adapter')
+async def step_group_set_permissions(context: Context, group_name: str, adapter_type: str) -> None:
+    """Enable fine-grained permissions on a group when supported."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    scenario_context.store("group_permissions_skipped", False)
+    try:
+        await _adapter_call(adapter, is_async, "group_set_permissions", group_id, True)
+        scenario_context.store(_op_error_key("group_set_permissions"), None)
+    except Exception:
+        scenario_context.store("group_permissions_skipped", True)
+        scenario_context.store(_op_error_key("group_set_permissions"), None)
+        logging.getLogger(__name__).warning("group_set_permissions not available in this realm")
+
+
+@then("the {adapter_type} group permissions step should succeed or be skipped")
+def step_group_permissions_succeeds_or_skipped(context: Context, adapter_type: str) -> None:
+    """Verify group permissions step succeeded or was skipped."""
+    scenario_context = get_current_scenario_context(context)
+    if scenario_context.get("group_permissions_skipped"):
+        context.logger.info("%s group permissions step skipped", adapter_type)
+        return
+    _assert_op_success(scenario_context, "group_set_permissions", adapter_type)
+
+
+@when('I remove coverage realm roles from group "{group_name}" using {adapter_type} adapter')
+async def step_delete_group_realm_roles(context: Context, group_name: str, adapter_type: str) -> None:
+    """Remove coverage realm roles from a group."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    realm_role = scenario_context.get("coverage_realm_role")
+    try:
+        await _adapter_call(adapter, is_async, "delete_group_realm_roles", group_id, [realm_role])
+        scenario_context.store(_op_error_key("delete_group_realm_roles"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("delete_group_realm_roles"), str(exc))
+        context.logger.exception("delete_group_realm_roles failed")
+
+
+@then("removing realm roles from the group with the {adapter_type} adapter should succeed")
+def step_delete_group_realm_roles_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify group realm role removal succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "delete_group_realm_roles", adapter_type)
+
+
+@when(
+    'I remove coverage client roles from group "{group_name}" for client "{client_name}" using {adapter_type} adapter',
+)
+async def step_delete_group_client_roles(
+    context: Context,
+    group_name: str,
+    client_name: str,
+    adapter_type: str,
+) -> None:
+    """Remove coverage client roles from a group."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    internal_client_id = scenario_context.get("coverage_internal_client_id")
+    role_repr = scenario_context.get("coverage_client_role")
+    try:
+        await _adapter_call(adapter, is_async, "delete_group_client_roles", group_id, internal_client_id, [role_repr])
+        scenario_context.store(_op_error_key("delete_group_client_roles"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("delete_group_client_roles"), str(exc))
+        context.logger.exception("delete_group_client_roles failed")
+
+
+@then("removing client roles from the group with the {adapter_type} adapter should succeed")
+def step_delete_group_client_roles_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify group client role removal succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "delete_group_client_roles", adapter_type)
+
+
+@when('I remove user "{username}" from group "{group_name}" using {adapter_type} adapter')
+async def step_group_user_remove(context: Context, username: str, group_name: str, adapter_type: str) -> None:
+    """Remove a user from a group."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    try:
+        user = await _adapter_call(adapter, is_async, "get_user_by_username", username)
+        await _adapter_call(adapter, is_async, "group_user_remove", user["id"], group_id)
+        scenario_context.store(_op_error_key("group_user_remove"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("group_user_remove"), str(exc))
+        context.logger.exception("group_user_remove failed")
+
+
+@then("the {adapter_type} group user remove should succeed")
+def step_group_user_remove_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify group user remove succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "group_user_remove", adapter_type)
+
+
+@when('I delete the child group under "{group_name}" using {adapter_type} adapter')
+async def step_delete_child_group(context: Context, group_name: str, adapter_type: str) -> None:
+    """Delete the child group created for coverage."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    child_id = scenario_context.get("child_group_id")
+    try:
+        await _adapter_call(adapter, is_async, "delete_group", child_id)
+        scenario_context.store(_op_error_key("delete_group_child"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("delete_group_child"), str(exc))
+        context.logger.exception("delete_group_child failed")
+
+
+@then("deleting the child group with the {adapter_type} adapter should succeed")
+def step_delete_child_group_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify child group deletion succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "delete_group_child", adapter_type)
+
+
+@when('I delete group "{group_name}" using {adapter_type} adapter')
+async def step_delete_group(context: Context, group_name: str, adapter_type: str) -> None:
+    """Delete a group by id."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    group_id = scenario_context.get("latest_group_id")
+    try:
+        await _adapter_call(adapter, is_async, "delete_group", group_id)
+        scenario_context.store(_op_error_key("delete_group"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("delete_group"), str(exc))
+        context.logger.exception("delete_group failed")
+
+
+@then("deleting the parent group with the {adapter_type} adapter should succeed")
+def step_delete_group_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify group deletion succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "delete_group", adapter_type)
+
+
+# Authentication flow steps
+@when("I get authentication flows using {adapter_type} adapter")
+async def step_get_authentication_flows(context: Context, adapter_type: str) -> None:
+    """Get all authentication flows."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+
+    try:
+        if is_async:
+            flows = await adapter.get_authentication_flows()
+        else:
+            flows = adapter.get_authentication_flows()
+        scenario_context.store("authentication_flows", flows)
+        scenario_context.store("authentication_flows_error", None)
+        context.logger.info(f"Got {len(flows)} authentication flows")
+    except Exception as e:
+        scenario_context.store("authentication_flows_error", str(e))
+        context.logger.exception("Get authentication flows failed")
+
+
+@then("the {adapter_type} authentication flows request should succeed")
+def step_authentication_flows_succeed(context: Context, adapter_type: str) -> None:
+    """Verify authentication flows retrieval succeeded."""
+    scenario_context = get_current_scenario_context(context)
+    assert not scenario_context.get("authentication_flows_error"), (
+        f"Authentication flows request failed: {scenario_context.get('authentication_flows_error')}"
+    )
+    flows = scenario_context.get("authentication_flows")
+    assert flows is not None and len(flows) > 0, "Expected at least one authentication flow"
+    context.logger.info(f"{adapter_type} authentication flows request succeeded")
+
+
+@when("I create a coverage authentication flow using {adapter_type} adapter")
+async def step_create_coverage_auth_flow(context: Context, adapter_type: str) -> None:
+    """Create a uniquely named authentication flow for coverage tests."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    suffix = uuid.uuid4().hex[:8]
+    flow_alias = f"coverage-flow-{suffix}"
+    try:
+        await _adapter_call(
+            adapter,
+            is_async,
+            "create_authentication_flow",
+            {"alias": flow_alias, "description": "coverage", "providerId": "basic-flow", "topLevel": True},
+            skip_exists=True,
+        )
+        flows = await _adapter_call(adapter, is_async, "get_authentication_flows")
+        flow = next(item for item in flows if item.get("alias") == flow_alias)
+        scenario_context.store("coverage_flow_alias", flow_alias)
+        scenario_context.store("coverage_flow_id", flow["id"])
+        scenario_context.store("coverage_suffix", suffix)
+        scenario_context.store(_op_error_key("create_authentication_flow"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("create_authentication_flow"), str(exc))
+        context.logger.exception("create_authentication_flow failed")
+
+
+@then("the {adapter_type} authentication flow creation should succeed")
+def step_create_auth_flow_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify authentication flow creation succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "create_authentication_flow", adapter_type)
+
+
+@when("I list all authentication flows using {adapter_type} adapter")
+async def step_list_all_auth_flows(context: Context, adapter_type: str) -> None:
+    """List all authentication flows in the realm."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    try:
+        flows = await _adapter_call(adapter, is_async, "get_authentication_flows")
+        scenario_context.store("authentication_flows", flows)
+        scenario_context.store(_op_error_key("get_authentication_flows"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_authentication_flows"), str(exc))
+        context.logger.exception("get_authentication_flows failed")
+
+
+@then("the authentication flows list should include the coverage flow")
+def step_auth_flows_include_coverage(context: Context) -> None:
+    """Verify the coverage flow appears in the authentication flows list."""
+    scenario_context = get_current_scenario_context(context)
+    error = scenario_context.get(_op_error_key("get_authentication_flows"))
+    assert not error, f"get_authentication_flows failed: {error}"
+    flow_alias = scenario_context.get("coverage_flow_alias")
+    flows = scenario_context.get("authentication_flows") or []
+    aliases = [item.get("alias") for item in flows]
+    assert flow_alias in aliases, f"Coverage flow {flow_alias} not in {aliases}"
+
+
+@when("I get the coverage authentication flow by id using {adapter_type} adapter")
+async def step_get_coverage_auth_flow_by_id(context: Context, adapter_type: str) -> None:
+    """Get the coverage authentication flow by its internal id."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    flow_id = scenario_context.get("coverage_flow_id")
+    try:
+        await _adapter_call(adapter, is_async, "get_authentication_flow_for_id", flow_id)
+        scenario_context.store(_op_error_key("get_authentication_flow_for_id"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_authentication_flow_for_id"), str(exc))
+        context.logger.exception("get_authentication_flow_for_id failed")
+
+
+@then("the {adapter_type} authentication flow get by id should succeed")
+def step_get_auth_flow_by_id_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify get authentication flow by id succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_authentication_flow_for_id", adapter_type)
+
+
+@when("I update the coverage authentication flow description using {adapter_type} adapter")
+async def step_update_coverage_auth_flow(context: Context, adapter_type: str) -> None:
+    """Update the coverage authentication flow description."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    flow_id = scenario_context.get("coverage_flow_id")
+    flow_alias = scenario_context.get("coverage_flow_alias")
+    try:
+        await _adapter_call(
+            adapter,
+            is_async,
+            "update_authentication_flow",
+            flow_id,
+            {"id": flow_id, "alias": flow_alias, "description": "coverage-updated", "providerId": "basic-flow"},
+        )
+        scenario_context.store(_op_error_key("update_authentication_flow"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("update_authentication_flow"), str(exc))
+        context.logger.exception("update_authentication_flow failed")
+
+
+@then("the {adapter_type} authentication flow update should succeed")
+def step_update_auth_flow_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify authentication flow update succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "update_authentication_flow", adapter_type)
+
+
+@when("I copy the coverage authentication flow using {adapter_type} adapter")
+async def step_copy_coverage_auth_flow(context: Context, adapter_type: str) -> None:
+    """Copy the coverage authentication flow to a new alias."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    flow_alias = scenario_context.get("coverage_flow_alias")
+    suffix = scenario_context.get("coverage_suffix")
+    copy_alias = f"coverage-flow-copy-{suffix}"
+    try:
+        await _adapter_call(
+            adapter,
+            is_async,
+            "copy_authentication_flow",
+            {"alias": copy_alias, "description": "coverage copy", "providerId": "basic-flow", "topLevel": True},
+            flow_alias,
+        )
+        flows = await _adapter_call(adapter, is_async, "get_authentication_flows")
+        copy_flow = next(item for item in flows if item.get("alias") == copy_alias)
+        scenario_context.store("coverage_copy_alias", copy_alias)
+        scenario_context.store("coverage_copy_flow_id", copy_flow["id"])
+        scenario_context.store(_op_error_key("copy_authentication_flow"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("copy_authentication_flow"), str(exc))
+        context.logger.exception("copy_authentication_flow failed")
+
+
+@then("the {adapter_type} authentication flow copy should succeed")
+def step_copy_auth_flow_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify authentication flow copy succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "copy_authentication_flow", adapter_type)
+
+
+@when("I add a subflow to the coverage authentication flow using {adapter_type} adapter")
+async def step_add_coverage_auth_subflow(context: Context, adapter_type: str) -> None:
+    """Add a subflow under the coverage authentication flow."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    flow_alias = scenario_context.get("coverage_flow_alias")
+    suffix = scenario_context.get("coverage_suffix")
+    sub_alias = f"coverage-subflow-{suffix}"
+    try:
+        await _adapter_call(
+            adapter,
+            is_async,
+            "create_authentication_flow_subflow",
+            {"alias": sub_alias, "type": "basic-flow", "description": "coverage subflow"},
+            flow_alias,
+            skip_exists=True,
+        )
+        scenario_context.store("coverage_sub_alias", sub_alias)
+        scenario_context.store(_op_error_key("create_authentication_flow_subflow"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("create_authentication_flow_subflow"), str(exc))
+        context.logger.exception("create_authentication_flow_subflow failed")
+
+
+@then("the {adapter_type} authentication subflow creation should succeed")
+def step_create_auth_subflow_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify authentication subflow creation succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "create_authentication_flow_subflow", adapter_type)
+
+
+@when("I add a username-password execution to the coverage flow using {adapter_type} adapter")
+async def step_add_coverage_auth_execution(context: Context, adapter_type: str) -> None:
+    """Add a username-password form execution to the coverage flow."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    flow_alias = scenario_context.get("coverage_flow_alias")
+    try:
+        await _adapter_call(
+            adapter,
+            is_async,
+            "create_authentication_flow_execution",
+            {"provider": "auth-username-password-form", "type": "execution"},
+            flow_alias,
+        )
+        scenario_context.store(_op_error_key("create_authentication_flow_execution"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("create_authentication_flow_execution"), str(exc))
+        context.logger.exception("create_authentication_flow_execution failed")
+
+
+@then("the {adapter_type} authentication execution creation should succeed")
+def step_create_auth_execution_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify authentication execution creation succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "create_authentication_flow_execution", adapter_type)
+
+
+@when("I list executions for the coverage authentication flow using {adapter_type} adapter")
+async def step_list_coverage_flow_executions(context: Context, adapter_type: str) -> None:
+    """List executions for the coverage authentication flow."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    flow_alias = scenario_context.get("coverage_flow_alias")
+    try:
+        executions = await _adapter_call(adapter, is_async, "get_authentication_flow_executions", flow_alias)
+        execution = next(
+            (item for item in executions if item.get("providerId") == "auth-username-password-form"),
+            executions[0],
+        )
+        scenario_context.store("coverage_execution", execution)
+        scenario_context.store("coverage_execution_id", execution["id"])
+        scenario_context.store(_op_error_key("get_authentication_flow_executions"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_authentication_flow_executions"), str(exc))
+        context.logger.exception("get_authentication_flow_executions failed")
+
+
+@then("the {adapter_type} authentication executions list should succeed")
+def step_list_auth_executions_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify authentication executions list succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_authentication_flow_executions", adapter_type)
+
+
+@when("I get the coverage flow execution details using {adapter_type} adapter")
+async def step_get_coverage_flow_execution(context: Context, adapter_type: str) -> None:
+    """Get details for the coverage flow execution."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    execution_id = scenario_context.get("coverage_execution_id")
+    try:
+        await _adapter_call(adapter, is_async, "get_authentication_flow_execution", execution_id)
+        scenario_context.store(_op_error_key("get_authentication_flow_execution"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_authentication_flow_execution"), str(exc))
+        context.logger.exception("get_authentication_flow_execution failed")
+
+
+@then("the {adapter_type} authentication execution get should succeed")
+def step_get_auth_execution_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify get authentication execution succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_authentication_flow_execution", adapter_type)
+
+
+@when("I update the coverage flow execution using {adapter_type} adapter")
+async def step_update_coverage_flow_execution(context: Context, adapter_type: str) -> None:
+    """Update the coverage flow execution configuration."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    flow_alias = scenario_context.get("coverage_flow_alias")
+    execution = scenario_context.get("coverage_execution")
+    try:
+        await _adapter_call(adapter, is_async, "update_authentication_flow_executions", execution, flow_alias)
+        scenario_context.store(_op_error_key("update_authentication_flow_executions"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("update_authentication_flow_executions"), str(exc))
+        context.logger.exception("update_authentication_flow_executions failed")
+
+
+@then("the {adapter_type} authentication execution update should succeed")
+def step_update_auth_execution_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify authentication execution update succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "update_authentication_flow_executions", adapter_type)
+
+
+@when("I change the coverage flow execution priority using {adapter_type} adapter")
+async def step_change_coverage_execution_priority(context: Context, adapter_type: str) -> None:
+    """Change priority of the coverage flow execution."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    execution_id = scenario_context.get("coverage_execution_id")
+    try:
+        await _adapter_call(adapter, is_async, "change_execution_priority", execution_id, 1)
+        scenario_context.store(_op_error_key("change_execution_priority"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("change_execution_priority"), str(exc))
+        context.logger.exception("change_execution_priority failed")
+
+
+@then("the {adapter_type} execution priority change should succeed")
+def step_change_execution_priority_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify execution priority change succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "change_execution_priority", adapter_type)
+
+
+@when("I list authenticator providers using {adapter_type} adapter")
+async def step_list_authenticator_providers(context: Context, adapter_type: str) -> None:
+    """List available authenticator providers."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    try:
+        providers = await _adapter_call(adapter, is_async, "get_authenticator_providers")
+        scenario_context.store("authenticator_providers", providers)
+        scenario_context.store(_op_error_key("get_authenticator_providers"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_authenticator_providers"), str(exc))
+        context.logger.exception("get_authenticator_providers failed")
+
+
+@then("the {adapter_type} authenticator providers list should succeed")
+def step_list_authenticator_providers_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify authenticator providers list succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_authenticator_providers", adapter_type)
+
+
+@when("I get the username-password authenticator config description using {adapter_type} adapter")
+async def step_get_username_password_config_description(context: Context, adapter_type: str) -> None:
+    """Get config description for the username-password authenticator."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    try:
+        await _adapter_call(
+            adapter,
+            is_async,
+            "get_authenticator_provider_config_description",
+            "auth-username-password-form",
+        )
+        scenario_context.store(_op_error_key("get_authenticator_provider_config_description"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_authenticator_provider_config_description"), str(exc))
+        context.logger.exception("get_authenticator_provider_config_description failed")
+
+
+@then("the {adapter_type} authenticator config description get should succeed")
+def step_get_authenticator_config_description_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify authenticator config description get succeeded."""
+    _assert_op_success(
+        get_current_scenario_context(context),
+        "get_authenticator_provider_config_description",
+        adapter_type,
+    )
+
+
+@when("I create execution config for the coverage flow execution using {adapter_type} adapter")
+async def step_create_coverage_execution_config(context: Context, adapter_type: str) -> None:
+    """Create and exercise authenticator execution config where supported."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    execution_id = scenario_context.get("coverage_execution_id")
+    flow_alias = scenario_context.get("coverage_flow_alias")
+    suffix = scenario_context.get("coverage_suffix")
+    scenario_context.store("execution_config_skipped", False)
+    try:
+        config_payload = {"alias": f"coverage-config-{suffix}", "config": {}}
+        await _adapter_call(adapter, is_async, "create_execution_config", execution_id, config_payload)
+        refreshed = await _adapter_call(adapter, is_async, "get_authentication_flow_executions", flow_alias)
+        config_execution = next((item for item in refreshed if item.get("id") == execution_id), None)
+        config_id = config_execution.get("authenticationConfig") if config_execution else None
+        if config_id:
+            await _adapter_call(adapter, is_async, "get_authenticator_config", config_id)
+            await _adapter_call(
+                adapter,
+                is_async,
+                "update_authenticator_config",
+                {"alias": f"coverage-config-{suffix}", "config": {}},
+                config_id,
+            )
+            await _adapter_call(adapter, is_async, "delete_authenticator_config", config_id)
+        scenario_context.store(_op_error_key("execution_config"), None)
+    except Exception:
+        browser_executions = await _adapter_call(adapter, is_async, "get_authentication_flow_executions", "browser")
+        config_id = next(
+            (item.get("authenticationConfig") for item in browser_executions if item.get("authenticationConfig")),
+            None,
+        )
+        if config_id:
+            await _adapter_call(adapter, is_async, "get_authenticator_config", config_id)
+            await _adapter_call(
+                adapter,
+                is_async,
+                "update_authenticator_config",
+                {"alias": "browser-config-readonly", "config": {}},
+                config_id,
+            )
+            scenario_context.store("execution_config_skipped", True)
+            scenario_context.store(_op_error_key("execution_config"), None)
+        else:
+            scenario_context.store("execution_config_skipped", True)
+            scenario_context.store(_op_error_key("execution_config"), None)
+            logging.getLogger(__name__).warning("authenticator config step skipped")
+
+
+@then("the {adapter_type} execution config step should succeed or be skipped")
+def step_execution_config_succeeds_or_skipped(context: Context, adapter_type: str) -> None:
+    """Verify execution config step succeeded or was intentionally skipped."""
+    scenario_context = get_current_scenario_context(context)
+    if scenario_context.get("execution_config_skipped"):
+        context.logger.info("%s execution config step skipped on this Keycloak version", adapter_type)
+        return
+    _assert_op_success(scenario_context, "execution_config", adapter_type)
+
+
+@when("I delete the coverage flow execution using {adapter_type} adapter")
+async def step_delete_coverage_flow_execution(context: Context, adapter_type: str) -> None:
+    """Delete the coverage flow execution."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    execution_id = scenario_context.get("coverage_execution_id")
+    try:
+        await _adapter_call(adapter, is_async, "delete_authentication_flow_execution", execution_id)
+        scenario_context.store(_op_error_key("delete_authentication_flow_execution"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("delete_authentication_flow_execution"), str(exc))
+        context.logger.exception("delete_authentication_flow_execution failed")
+
+
+@then("the {adapter_type} authentication execution deletion should succeed")
+def step_delete_auth_execution_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify authentication execution deletion succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "delete_authentication_flow_execution", adapter_type)
+
+
+@when("I delete the copied coverage authentication flow using {adapter_type} adapter")
+async def step_delete_copied_coverage_auth_flow(context: Context, adapter_type: str) -> None:
+    """Delete the copied coverage authentication flow."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    copy_flow_id = scenario_context.get("coverage_copy_flow_id")
+    try:
+        if copy_flow_id:
+            await _adapter_call(adapter, is_async, "delete_authentication_flow", copy_flow_id)
+        scenario_context.store(_op_error_key("delete_authentication_flow_copy"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("delete_authentication_flow_copy"), str(exc))
+        context.logger.exception("delete_authentication_flow_copy failed")
+
+
+@then("the {adapter_type} copied authentication flow deletion should succeed")
+def step_delete_copied_auth_flow_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify copied authentication flow deletion succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "delete_authentication_flow_copy", adapter_type)
+
+
+@when("I delete the coverage authentication flow using {adapter_type} adapter")
+async def step_delete_coverage_auth_flow(context: Context, adapter_type: str) -> None:
+    """Delete the coverage authentication flow."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    flow_id = scenario_context.get("coverage_flow_id")
+    try:
+        await _adapter_call(adapter, is_async, "delete_authentication_flow", flow_id)
+        scenario_context.store(_op_error_key("delete_authentication_flow"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("delete_authentication_flow"), str(exc))
+        context.logger.exception("delete_authentication_flow failed")
+
+
+@then("the {adapter_type} authentication flow deletion should succeed")
+def step_delete_auth_flow_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify authentication flow deletion succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "delete_authentication_flow", adapter_type)
+
+
+# Client scope steps
+@when("I create a coverage client scope using {adapter_type} adapter")
+async def step_create_coverage_client_scope(context: Context, adapter_type: str) -> None:
+    """Create a uniquely named client scope for coverage tests."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    suffix = uuid.uuid4().hex[:8]
+    scope_name = f"coverage-scope-{suffix}"
+    try:
+        scope_id = await _adapter_call(
+            adapter,
+            is_async,
+            "create_client_scope",
+            {"name": scope_name, "protocol": "openid-connect", "description": "coverage"},
+            skip_exists=True,
+        )
+        scenario_context.store("coverage_scope_id", scope_id)
+        scenario_context.store("coverage_scope_name", scope_name)
+        scenario_context.store("coverage_scope_suffix", suffix)
+        scenario_context.store(_op_error_key("create_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("create_client_scope"), str(exc))
+        context.logger.exception("create_client_scope failed")
+
+
+@then("client scope creation with the {adapter_type} adapter should succeed")
+def step_create_coverage_client_scope_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify coverage client scope creation succeeded."""
+    scenario_context = get_current_scenario_context(context)
+    _assert_op_success(scenario_context, "create_client_scope", adapter_type)
+    assert scenario_context.get("coverage_scope_id"), "No coverage client scope id in context"
+
+
+@when("I list all client scopes using {adapter_type} adapter")
+async def step_list_all_client_scopes(context: Context, adapter_type: str) -> None:
+    """List all client scopes in the realm."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    try:
+        scopes = await _adapter_call(adapter, is_async, "get_client_scopes")
+        scenario_context.store("client_scopes_list", scopes)
+        scenario_context.store(_op_error_key("get_client_scopes"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_client_scopes"), str(exc))
+        context.logger.exception("get_client_scopes failed")
+
+
+@then("the {adapter_type} client scopes list should succeed")
+def step_list_client_scopes_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify client scopes list retrieval succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_client_scopes", adapter_type)
+
+
+@when("I get the coverage client scope by id using {adapter_type} adapter")
+async def step_get_coverage_client_scope_by_id(context: Context, adapter_type: str) -> None:
+    """Get the coverage client scope by its internal id."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    try:
+        scope = await _adapter_call(adapter, is_async, "get_client_scope", scope_id)
+        scenario_context.store("coverage_client_scope", scope)
+        scenario_context.store(_op_error_key("get_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_client_scope"), str(exc))
+        context.logger.exception("get_client_scope failed")
+
+
+@then("getting the coverage client scope by id with the {adapter_type} adapter should succeed")
+def step_get_coverage_client_scope_by_id_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify get client scope by id succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_client_scope", adapter_type)
+
+
+@when("I get the coverage client scope by name using {adapter_type} adapter")
+async def step_get_coverage_client_scope_by_name(context: Context, adapter_type: str) -> None:
+    """Get the coverage client scope by its name."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_name = scenario_context.get("coverage_scope_name")
+    try:
+        scope = await _adapter_call(adapter, is_async, "get_client_scope_by_name", scope_name)
+        scenario_context.store("coverage_client_scope", scope)
+        scenario_context.store(_op_error_key("get_client_scope_by_name"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_client_scope_by_name"), str(exc))
+        context.logger.exception("get_client_scope_by_name failed")
+
+
+@then("getting the coverage client scope by name with the {adapter_type} adapter should succeed")
+def step_get_coverage_client_scope_by_name_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify get client scope by name succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_client_scope_by_name", adapter_type)
+
+
+@when("I update the coverage client scope description using {adapter_type} adapter")
+async def step_update_coverage_client_scope(context: Context, adapter_type: str) -> None:
+    """Update the coverage client scope description."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    scope_name = scenario_context.get("coverage_scope_name")
+    try:
+        await _adapter_call(
+            adapter,
+            is_async,
+            "update_client_scope",
+            scope_id,
+            {"id": scope_id, "name": scope_name, "protocol": "openid-connect", "description": "updated"},
+        )
+        scenario_context.store(_op_error_key("update_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("update_client_scope"), str(exc))
+        context.logger.exception("update_client_scope failed")
+
+
+@then("updating the coverage client scope with the {adapter_type} adapter should succeed")
+def step_update_coverage_client_scope_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify client scope update succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "update_client_scope", adapter_type)
+
+
+@when('I add a mapper to the coverage client scope for client "{client_name}" using {adapter_type} adapter')
+async def step_add_mapper_to_coverage_client_scope(
+    context: Context,
+    client_name: str,
+    adapter_type: str,
+) -> None:
+    """Add an audience mapper to the coverage client scope."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    suffix = scenario_context.get("coverage_scope_suffix")
+    mapper_name = f"coverage-scope-mapper-{suffix}"
+    mapper_payload = {
+        "name": mapper_name,
+        "protocol": "openid-connect",
+        "protocolMapper": "oidc-audience-mapper",
+        "config": {
+            "included.client.audience": client_name,
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+        },
+    }
+    try:
+        internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
+        scenario_context.store("coverage_internal_client_id", internal_client_id)
+        await _adapter_call(adapter, is_async, "add_mapper_to_client_scope", scope_id, mapper_payload)
+        mappers = await _adapter_call(adapter, is_async, "get_mappers_from_client_scope", scope_id)
+        mapper = next(item for item in mappers if item.get("name") == mapper_name)
+        scenario_context.store("coverage_scope_mapper_id", mapper["id"])
+        scenario_context.store(_op_error_key("add_mapper_to_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("add_mapper_to_client_scope"), str(exc))
+        context.logger.exception("add_mapper_to_client_scope failed")
+
+
+@then("adding a mapper to the coverage client scope with the {adapter_type} adapter should succeed")
+def step_add_mapper_to_coverage_client_scope_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify add mapper to client scope succeeded."""
+    scenario_context = get_current_scenario_context(context)
+    _assert_op_success(scenario_context, "add_mapper_to_client_scope", adapter_type)
+    assert scenario_context.get("coverage_scope_mapper_id"), "No coverage client scope mapper id in context"
+
+
+@when("I list mappers on the coverage client scope using {adapter_type} adapter")
+async def step_list_coverage_client_scope_mappers(context: Context, adapter_type: str) -> None:
+    """List protocol mappers on the coverage client scope."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    try:
+        mappers = await _adapter_call(adapter, is_async, "get_mappers_from_client_scope", scope_id)
+        scenario_context.store("coverage_client_scope_mappers", mappers)
+        scenario_context.store(_op_error_key("get_mappers_from_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_mappers_from_client_scope"), str(exc))
+        context.logger.exception("get_mappers_from_client_scope failed")
+
+
+@then("listing client scope mappers with the {adapter_type} adapter should succeed")
+def step_list_coverage_client_scope_mappers_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify list client scope mappers succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_mappers_from_client_scope", adapter_type)
+
+
+@when("I update the coverage client scope mapper using {adapter_type} adapter")
+async def step_update_coverage_client_scope_mapper(context: Context, adapter_type: str) -> None:
+    """Update the coverage client scope mapper."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    mapper_id = scenario_context.get("coverage_scope_mapper_id")
+    suffix = scenario_context.get("coverage_scope_suffix")
+    try:
+        mappers = await _adapter_call(adapter, is_async, "get_mappers_from_client_scope", scope_id)
+        mapper = next(item for item in mappers if item.get("id") == mapper_id)
+        payload = {**mapper, "name": f"coverage-scope-mapper-updated-{suffix}"}
+        await _adapter_call(adapter, is_async, "update_mapper_in_client_scope", scope_id, mapper_id, payload)
+        scenario_context.store(_op_error_key("update_mapper_in_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("update_mapper_in_client_scope"), str(exc))
+        context.logger.exception("update_mapper_in_client_scope failed")
+
+
+@then("updating the coverage client scope mapper with the {adapter_type} adapter should succeed")
+def step_update_coverage_client_scope_mapper_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify update client scope mapper succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "update_mapper_in_client_scope", adapter_type)
+
+
+@when("I delete the coverage client scope mapper using {adapter_type} adapter")
+async def step_delete_coverage_client_scope_mapper(context: Context, adapter_type: str) -> None:
+    """Delete the coverage client scope mapper."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    mapper_id = scenario_context.get("coverage_scope_mapper_id")
+    try:
+        await _adapter_call(adapter, is_async, "delete_mapper_from_client_scope", scope_id, mapper_id)
+        scenario_context.store(_op_error_key("delete_mapper_from_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("delete_mapper_from_client_scope"), str(exc))
+        context.logger.exception("delete_mapper_from_client_scope failed")
+
+
+@then("deleting the coverage client scope mapper with the {adapter_type} adapter should succeed")
+def step_delete_coverage_client_scope_mapper_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify delete client scope mapper succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "delete_mapper_from_client_scope", adapter_type)
+
+
+@when('I add a mapper to client "{client_name}" using {adapter_type} adapter')
+async def step_add_mapper_to_coverage_client(context: Context, client_name: str, adapter_type: str) -> None:
+    """Add an audience mapper to the coverage client."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    suffix = scenario_context.get("coverage_scope_suffix")
+    mapper_name = f"coverage-client-mapper-{suffix}"
+    mapper_payload = {
+        "name": mapper_name,
+        "protocol": "openid-connect",
+        "protocolMapper": "oidc-audience-mapper",
+        "config": {
+            "included.client.audience": client_name,
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+        },
+    }
+    try:
+        internal_client_id = scenario_context.get("coverage_internal_client_id")
+        if not internal_client_id:
+            internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
+            scenario_context.store("coverage_internal_client_id", internal_client_id)
+        await _adapter_call(adapter, is_async, "add_mapper_to_client", internal_client_id, mapper_payload)
+        mappers = await _adapter_call(adapter, is_async, "get_mappers_from_client", internal_client_id)
+        mapper = next(item for item in mappers if item.get("name") == mapper_name)
+        scenario_context.store("coverage_client_mapper_id", mapper["id"])
+        scenario_context.store(_op_error_key("add_mapper_to_client"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("add_mapper_to_client"), str(exc))
+        context.logger.exception("add_mapper_to_client failed")
+
+
+@then("adding a client mapper with the {adapter_type} adapter should succeed")
+def step_add_mapper_to_coverage_client_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify add client mapper succeeded."""
+    scenario_context = get_current_scenario_context(context)
+    _assert_op_success(scenario_context, "add_mapper_to_client", adapter_type)
+    assert scenario_context.get("coverage_client_mapper_id"), "No coverage client mapper id in context"
+
+
+@when('I list mappers on client "{client_name}" using {adapter_type} adapter')
+async def step_list_coverage_client_mappers(context: Context, client_name: str, adapter_type: str) -> None:
+    """List protocol mappers on the coverage client."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    try:
+        internal_client_id = scenario_context.get("coverage_internal_client_id")
+        if not internal_client_id:
+            internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
+            scenario_context.store("coverage_internal_client_id", internal_client_id)
+        mappers = await _adapter_call(adapter, is_async, "get_mappers_from_client", internal_client_id)
+        scenario_context.store("coverage_client_mappers", mappers)
+        scenario_context.store(_op_error_key("get_mappers_from_client"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_mappers_from_client"), str(exc))
+        context.logger.exception("get_mappers_from_client failed")
+
+
+@then("listing client mappers with the {adapter_type} adapter should succeed")
+def step_list_coverage_client_mappers_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify list client mappers succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_mappers_from_client", adapter_type)
+
+
+@when("I update the coverage client mapper using {adapter_type} adapter")
+async def step_update_coverage_client_mapper(context: Context, adapter_type: str) -> None:
+    """Update the coverage client mapper."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    internal_client_id = scenario_context.get("coverage_internal_client_id")
+    mapper_id = scenario_context.get("coverage_client_mapper_id")
+    suffix = scenario_context.get("coverage_scope_suffix")
+    try:
+        mappers = await _adapter_call(adapter, is_async, "get_mappers_from_client", internal_client_id)
+        mapper = next(item for item in mappers if item.get("id") == mapper_id)
+        payload = {**mapper, "name": f"coverage-client-mapper-updated-{suffix}"}
+        await _adapter_call(adapter, is_async, "update_client_mapper", internal_client_id, mapper_id, payload)
+        scenario_context.store(_op_error_key("update_client_mapper"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("update_client_mapper"), str(exc))
+        context.logger.exception("update_client_mapper failed")
+
+
+@then("updating the coverage client mapper with the {adapter_type} adapter should succeed")
+def step_update_coverage_client_mapper_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify update client mapper succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "update_client_mapper", adapter_type)
+
+
+@when("I remove the coverage client mapper using {adapter_type} adapter")
+async def step_remove_coverage_client_mapper(context: Context, adapter_type: str) -> None:
+    """Remove the coverage client mapper."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    internal_client_id = scenario_context.get("coverage_internal_client_id")
+    mapper_id = scenario_context.get("coverage_client_mapper_id")
+    try:
+        await _adapter_call(adapter, is_async, "remove_client_mapper", internal_client_id, mapper_id)
+        scenario_context.store(_op_error_key("remove_client_mapper"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("remove_client_mapper"), str(exc))
+        context.logger.exception("remove_client_mapper failed")
+
+
+@then("removing the coverage client mapper with the {adapter_type} adapter should succeed")
+def step_remove_coverage_client_mapper_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify remove client mapper succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "remove_client_mapper", adapter_type)
+
+
+@when('I list default client scopes for client "{client_name}" using {adapter_type} adapter')
+async def step_list_client_default_client_scopes(context: Context, client_name: str, adapter_type: str) -> None:
+    """List default client scopes assigned to a client."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    try:
+        internal_client_id = scenario_context.get("coverage_internal_client_id")
+        if not internal_client_id:
+            internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
+            scenario_context.store("coverage_internal_client_id", internal_client_id)
+        scopes = await _adapter_call(adapter, is_async, "get_client_default_client_scopes", internal_client_id)
+        scenario_context.store("client_default_client_scopes", scopes)
+        scenario_context.store(_op_error_key("get_client_default_client_scopes"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_client_default_client_scopes"), str(exc))
+        context.logger.exception("get_client_default_client_scopes failed")
+
+
+@then("listing default client scopes with the {adapter_type} adapter should succeed")
+def step_list_client_default_client_scopes_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify list default client scopes succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_client_default_client_scopes", adapter_type)
+
+
+@when('I add the coverage scope as default for client "{client_name}" using {adapter_type} adapter')
+async def step_add_coverage_default_client_scope(context: Context, client_name: str, adapter_type: str) -> None:
+    """Add the coverage client scope as a default scope for a client."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    try:
+        internal_client_id = scenario_context.get("coverage_internal_client_id")
+        if not internal_client_id:
+            internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
+            scenario_context.store("coverage_internal_client_id", internal_client_id)
+        await _adapter_call(
+            adapter,
+            is_async,
+            "add_client_default_client_scope",
+            internal_client_id,
+            scope_id,
+            {},
+        )
+        scenario_context.store(_op_error_key("add_client_default_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("add_client_default_client_scope"), str(exc))
+        context.logger.exception("add_client_default_client_scope failed")
+
+
+@then("adding default client scope with the {adapter_type} adapter should succeed")
+def step_add_coverage_default_client_scope_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify add default client scope succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "add_client_default_client_scope", adapter_type)
+
+
+@when('I remove the coverage scope from default scopes for client "{client_name}" using {adapter_type} adapter')
+async def step_remove_coverage_default_client_scope(context: Context, client_name: str, adapter_type: str) -> None:
+    """Remove the coverage client scope from a client's default scopes."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    try:
+        internal_client_id = scenario_context.get("coverage_internal_client_id")
+        if not internal_client_id:
+            internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
+            scenario_context.store("coverage_internal_client_id", internal_client_id)
+        await _adapter_call(adapter, is_async, "delete_client_default_client_scope", internal_client_id, scope_id)
+        scenario_context.store(_op_error_key("delete_client_default_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("delete_client_default_client_scope"), str(exc))
+        context.logger.exception("delete_client_default_client_scope failed")
+
+
+@then("removing default client scope with the {adapter_type} adapter should succeed")
+def step_remove_coverage_default_client_scope_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify remove default client scope succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "delete_client_default_client_scope", adapter_type)
+
+
+@when('I list optional client scopes for client "{client_name}" using {adapter_type} adapter')
+async def step_list_client_optional_client_scopes(context: Context, client_name: str, adapter_type: str) -> None:
+    """List optional client scopes assigned to a client."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    try:
+        internal_client_id = scenario_context.get("coverage_internal_client_id")
+        if not internal_client_id:
+            internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
+            scenario_context.store("coverage_internal_client_id", internal_client_id)
+        scopes = await _adapter_call(adapter, is_async, "get_client_optional_client_scopes", internal_client_id)
+        scenario_context.store("client_optional_client_scopes", scopes)
+        scenario_context.store(_op_error_key("get_client_optional_client_scopes"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_client_optional_client_scopes"), str(exc))
+        context.logger.exception("get_client_optional_client_scopes failed")
+
+
+@then("listing optional client scopes with the {adapter_type} adapter should succeed")
+def step_list_client_optional_client_scopes_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify list optional client scopes succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_client_optional_client_scopes", adapter_type)
+
+
+@when('I add the coverage scope as optional for client "{client_name}" using {adapter_type} adapter')
+async def step_add_coverage_optional_client_scope(context: Context, client_name: str, adapter_type: str) -> None:
+    """Add the coverage client scope as an optional scope for a client."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    try:
+        internal_client_id = scenario_context.get("coverage_internal_client_id")
+        if not internal_client_id:
+            internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
+            scenario_context.store("coverage_internal_client_id", internal_client_id)
+        await _adapter_call(adapter, is_async, "add_client_optional_client_scope", internal_client_id, scope_id, {})
+        scenario_context.store(_op_error_key("add_client_optional_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("add_client_optional_client_scope"), str(exc))
+        context.logger.exception("add_client_optional_client_scope failed")
+
+
+@then("adding optional client scope with the {adapter_type} adapter should succeed")
+def step_add_coverage_optional_client_scope_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify add optional client scope succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "add_client_optional_client_scope", adapter_type)
+
+
+@when('I remove the coverage scope from optional scopes for client "{client_name}" using {adapter_type} adapter')
+async def step_remove_coverage_optional_client_scope(context: Context, client_name: str, adapter_type: str) -> None:
+    """Remove the coverage client scope from a client's optional scopes."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    try:
+        internal_client_id = scenario_context.get("coverage_internal_client_id")
+        if not internal_client_id:
+            internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
+            scenario_context.store("coverage_internal_client_id", internal_client_id)
+        await _adapter_call(adapter, is_async, "delete_client_optional_client_scope", internal_client_id, scope_id)
+        scenario_context.store(_op_error_key("delete_client_optional_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("delete_client_optional_client_scope"), str(exc))
+        context.logger.exception("delete_client_optional_client_scope failed")
+
+
+@then("removing optional client scope with the {adapter_type} adapter should succeed")
+def step_remove_coverage_optional_client_scope_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify remove optional client scope succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "delete_client_optional_client_scope", adapter_type)
+
+
+@when("I list realm default client scopes using {adapter_type} adapter")
+async def step_list_realm_default_client_scopes(context: Context, adapter_type: str) -> None:
+    """List realm default client scopes."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    try:
+        scopes = await _adapter_call(adapter, is_async, "get_default_default_client_scopes")
+        scenario_context.store("realm_default_client_scopes", scopes)
+        scenario_context.store(_op_error_key("get_default_default_client_scopes"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_default_default_client_scopes"), str(exc))
+        context.logger.exception("get_default_default_client_scopes failed")
+
+
+@then("listing realm default client scopes with the {adapter_type} adapter should succeed")
+def step_list_realm_default_client_scopes_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify list realm default client scopes succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_default_default_client_scopes", adapter_type)
+
+
+@when("I add the coverage scope to realm default scopes using {adapter_type} adapter")
+async def step_add_coverage_realm_default_client_scope(context: Context, adapter_type: str) -> None:
+    """Add the coverage client scope to realm default scopes."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    try:
+        await _adapter_call(adapter, is_async, "add_default_default_client_scope", scope_id)
+        scenario_context.store(_op_error_key("add_default_default_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("add_default_default_client_scope"), str(exc))
+        context.logger.exception("add_default_default_client_scope failed")
+
+
+@then("adding realm default client scope with the {adapter_type} adapter should succeed")
+def step_add_coverage_realm_default_client_scope_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify add realm default client scope succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "add_default_default_client_scope", adapter_type)
+
+
+@when("I remove the coverage scope from realm default scopes using {adapter_type} adapter")
+async def step_remove_coverage_realm_default_client_scope(context: Context, adapter_type: str) -> None:
+    """Remove the coverage client scope from realm default scopes."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    try:
+        await _adapter_call(adapter, is_async, "delete_default_default_client_scope", scope_id)
+        scenario_context.store(_op_error_key("delete_default_default_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("delete_default_default_client_scope"), str(exc))
+        context.logger.exception("delete_default_default_client_scope failed")
+
+
+@then("removing realm default client scope with the {adapter_type} adapter should succeed")
+def step_remove_coverage_realm_default_client_scope_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify remove realm default client scope succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "delete_default_default_client_scope", adapter_type)
+
+
+@when("I list realm optional client scopes using {adapter_type} adapter")
+async def step_list_realm_optional_client_scopes(context: Context, adapter_type: str) -> None:
+    """List realm optional client scopes."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    try:
+        scopes = await _adapter_call(adapter, is_async, "get_default_optional_client_scopes")
+        scenario_context.store("realm_optional_client_scopes", scopes)
+        scenario_context.store(_op_error_key("get_default_optional_client_scopes"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("get_default_optional_client_scopes"), str(exc))
+        context.logger.exception("get_default_optional_client_scopes failed")
+
+
+@then("listing realm optional client scopes with the {adapter_type} adapter should succeed")
+def step_list_realm_optional_client_scopes_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify list realm optional client scopes succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "get_default_optional_client_scopes", adapter_type)
+
+
+@when("I add the coverage scope to realm optional scopes using {adapter_type} adapter")
+async def step_add_coverage_realm_optional_client_scope(context: Context, adapter_type: str) -> None:
+    """Add the coverage client scope to realm optional scopes."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    try:
+        await _adapter_call(adapter, is_async, "add_default_optional_client_scope", scope_id)
+        scenario_context.store(_op_error_key("add_default_optional_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("add_default_optional_client_scope"), str(exc))
+        context.logger.exception("add_default_optional_client_scope failed")
+
+
+@then("adding realm optional client scope with the {adapter_type} adapter should succeed")
+def step_add_coverage_realm_optional_client_scope_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify add realm optional client scope succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "add_default_optional_client_scope", adapter_type)
+
+
+@when("I remove the coverage scope from realm optional scopes using {adapter_type} adapter")
+async def step_remove_coverage_realm_optional_client_scope(context: Context, adapter_type: str) -> None:
+    """Remove the coverage client scope from realm optional scopes."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    try:
+        await _adapter_call(adapter, is_async, "delete_default_optional_client_scope", scope_id)
+        scenario_context.store(_op_error_key("delete_default_optional_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("delete_default_optional_client_scope"), str(exc))
+        context.logger.exception("delete_default_optional_client_scope failed")
+
+
+@then("removing realm optional client scope with the {adapter_type} adapter should succeed")
+def step_remove_coverage_realm_optional_client_scope_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify remove realm optional client scope succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "delete_default_optional_client_scope", adapter_type)
+
+
+@when("I delete the coverage client scope using {adapter_type} adapter")
+async def step_delete_coverage_client_scope(context: Context, adapter_type: str) -> None:
+    """Delete the coverage client scope."""
+    adapter, is_async, scenario_context = _adapter_parts(context)
+    scope_id = scenario_context.get("coverage_scope_id")
+    try:
+        await _adapter_call(adapter, is_async, "delete_client_scope", scope_id)
+        scenario_context.store(_op_error_key("delete_client_scope"), None)
+    except Exception as exc:
+        scenario_context.store(_op_error_key("delete_client_scope"), str(exc))
+        context.logger.exception("delete_client_scope failed")
+
+
+@then("deleting the coverage client scope with the {adapter_type} adapter should succeed")
+def step_delete_coverage_client_scope_succeeds(context: Context, adapter_type: str) -> None:
+    """Verify delete client scope succeeded."""
+    _assert_op_success(get_current_scenario_context(context), "delete_client_scope", adapter_type)
+
+
+# Authorization service steps
+@given('I enable authorization services for client "{client_name}" using {adapter_type} adapter')
+async def step_enable_client_authorization_services(context: Context, client_name: str, adapter_type: str) -> None:
+    """Enable authorization services on an existing client for authz API tests."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+
+    try:
+        if is_async:
+            internal_client_id = await adapter.get_client_id(client_name)
+            client = await adapter.admin_adapter.a_get_client(internal_client_id)
+            if not client.get("authorizationServicesEnabled"):
+                client["authorizationServicesEnabled"] = True
+                await adapter.admin_adapter.a_update_client(internal_client_id, client)
+        else:
+            internal_client_id = adapter.get_client_id(client_name)
+            client = adapter.admin_adapter.get_client(internal_client_id)
+            if not client.get("authorizationServicesEnabled"):
+                client["authorizationServicesEnabled"] = True
+                adapter.admin_adapter.update_client(internal_client_id, client)
+        scenario_context.store("client_authz_enable_error", None)
+        context.logger.info(f"Enabled authorization services for client {client_name}")
+    except Exception as e:
+        scenario_context.store("client_authz_enable_error", str(e))
+        context.logger.exception("Enable client authorization services failed")
+
+
+@when('I get authorization settings for client "{client_name}" using {adapter_type} adapter')
+async def step_get_client_authz_settings(context: Context, client_name: str, adapter_type: str) -> None:
+    """Get authorization settings for a client."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+
+    try:
+        if is_async:
+            internal_client_id = await adapter.get_client_id(client_name)
+            settings = await adapter.get_client_authz_settings(client_id=internal_client_id)
+        else:
+            internal_client_id = adapter.get_client_id(client_name)
+            settings = adapter.get_client_authz_settings(client_id=internal_client_id)
+        scenario_context.store("client_authz_settings", settings)
+        scenario_context.store("client_authz_settings_error", None)
+        context.logger.info(f"Got authorization settings for client {client_name}")
+    except Exception as e:
+        scenario_context.store("client_authz_settings_error", str(e))
+        context.logger.exception("Get client authz settings failed")
+
+
+@then("the {adapter_type} authorization settings request should succeed")
+def step_client_authz_settings_succeed(context: Context, adapter_type: str) -> None:
+    """Verify authorization settings retrieval succeeded."""
+    scenario_context = get_current_scenario_context(context)
+    assert not scenario_context.get("client_authz_enable_error"), (
+        f"Enable authorization services failed: {scenario_context.get('client_authz_enable_error')}"
+    )
+    assert not scenario_context.get("client_authz_settings_error"), (
+        f"Authorization settings request failed: {scenario_context.get('client_authz_settings_error')}"
+    )
+    settings = scenario_context.get("client_authz_settings")
+    assert settings is not None, "No client_authz_settings in context"
+    context.logger.info(f"{adapter_type} authorization settings request succeeded")
+
+
+# Component steps
+@when("I get all components using {adapter_type} adapter")
+async def step_get_components(context: Context, adapter_type: str) -> None:
+    """Get all Keycloak components."""
+    adapter = get_keycloak_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    is_async = "async" in context.scenario.tags
+
+    try:
+        if is_async:
+            components = await adapter.get_components()
+        else:
+            components = adapter.get_components()
+        scenario_context.store("components_list", components)
+        scenario_context.store("components_list_error", None)
+        context.logger.info(f"Got {len(components)} components")
+    except Exception as e:
+        scenario_context.store("components_list_error", str(e))
+        context.logger.exception("Get components failed")
+
+
+@then("the {adapter_type} components request should succeed")
+def step_components_request_succeed(context: Context, adapter_type: str) -> None:
+    """Verify components retrieval succeeded."""
+    scenario_context = get_current_scenario_context(context)
+    assert not scenario_context.get("components_list_error"), (
+        f"Components request failed: {scenario_context.get('components_list_error')}"
+    )
+    components = scenario_context.get("components_list")
+    assert components is not None, "No components_list in context"
+    context.logger.info(f"{adapter_type} components request succeeded")

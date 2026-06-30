@@ -1,16 +1,19 @@
 import json
 import logging
 import time
+from collections.abc import Iterable
 from typing import Any, NoReturn, cast, override
 
 from async_lru import alru_cache
-from keycloak import KeycloakAdmin, KeycloakOpenID
+from keycloak import KeycloakAdmin, KeycloakOpenID, KeycloakUMA
 from keycloak.exceptions import (
     KeycloakAuthenticationError,
     KeycloakConnectionError,
     KeycloakError,
     KeycloakGetError,
 )
+from keycloak.openid_connection import KeycloakOpenIDConnection
+from keycloak.uma_permissions import UMAPermission
 
 from archipy.adapters.keycloak.ports import (
     AsyncKeycloakPort,
@@ -298,6 +301,7 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
         # Cache for admin client to avoid unnecessary re-authentication
         self._admin_adapter: KeycloakAdmin | None = None
         self._admin_token_expiry: float = 0.0
+        self._uma_adapter: KeycloakUMA | None = None
 
         # Initialize admin client if admin mode is enabled and credentials are provided
         if self.configs.IS_ADMIN_MODE_ENABLED and (
@@ -419,6 +423,42 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
             raise UnavailableError("Keycloak admin client is not available")
 
         return self._admin_adapter
+
+    @staticmethod
+    def _get_uma_client(configs: KeycloakConfig) -> KeycloakUMA:
+        """Create and configure a KeycloakUMA instance.
+
+        Args:
+            configs: Keycloak configuration
+
+        Returns:
+            Configured KeycloakUMA client
+        """
+        server_url = configs.SERVER_URL
+        client_id = configs.CLIENT_ID
+        if not server_url or not client_id:
+            raise ValueError("SERVER_URL and CLIENT_ID must be provided")
+        return KeycloakUMA(
+            KeycloakOpenIDConnection(
+                server_url=server_url,
+                realm_name=configs.REALM_NAME,
+                client_id=client_id,
+                client_secret_key=configs.CLIENT_SECRET_KEY,
+                verify=configs.VERIFY_SSL,
+                timeout=configs.TIMEOUT,
+            ),
+        )
+
+    @property
+    def uma_adapter(self) -> KeycloakUMA:
+        """Get the UMA adapter, creating it on first access.
+
+        Returns:
+            KeycloakUMA instance
+        """
+        if self._uma_adapter is None:
+            self._uma_adapter = self._get_uma_client(self.configs)
+        return self._uma_adapter
 
     @override
     @ttl_cache_decorator(ttl_seconds=3600, maxsize=1)  # Cache for 1 hour, public key rarely changes
@@ -1742,6 +1782,1027 @@ class KeycloakAdapter(KeycloakPort, KeycloakExceptionHandlerMixin):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "organization_user_remove")
 
+    # Group Operations
+    @override
+    def create_group(self, payload: dict, parent: str | None = None, skip_exists: bool = False) -> str | None:
+        """Create a new group."""
+        try:
+            return self.admin_adapter.create_group(payload=payload, parent=parent, skip_exists=skip_exists)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_group")
+
+    @override
+    def update_group(self, group_id: str, payload: dict) -> dict[str, Any]:
+        """Update a group."""
+        try:
+            return self.admin_adapter.update_group(group_id=group_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_group")
+
+    @override
+    def delete_group(self, group_id: str) -> dict[str, Any]:
+        """Delete a group."""
+        try:
+            return self.admin_adapter.delete_group(group_id=group_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_group")
+
+    @override
+    def get_group(self, group_id: str, full_hierarchy: bool = False, query: dict | None = None) -> dict[str, Any]:
+        """Get group representation by ID."""
+        try:
+            return self.admin_adapter.get_group(group_id=group_id, full_hierarchy=full_hierarchy, query=query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_group")
+
+    @override
+    def get_group_by_path(self, path: str) -> dict[str, Any]:
+        """Get group representation by path."""
+        try:
+            return self.admin_adapter.get_group_by_path(path=path)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_group_by_path")
+
+    @override
+    def get_group_children(
+        self,
+        group_id: str,
+        query: dict | None = None,
+        full_hierarchy: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Get child groups of a group."""
+        try:
+            return self.admin_adapter.get_group_children(group_id=group_id, query=query, full_hierarchy=full_hierarchy)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_group_children")
+
+    @override
+    def get_groups(self, query: dict | None = None, full_hierarchy: bool = False) -> list[dict[str, Any]]:
+        """Get all groups, optionally filtered by query."""
+        try:
+            return self.admin_adapter.get_groups(query=query, full_hierarchy=full_hierarchy)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_groups")
+
+    @override
+    def get_subgroups(self, group: dict, path: str) -> dict[str, Any] | None:
+        """Get subgroups for a group at the given path."""
+        try:
+            return self.admin_adapter.get_subgroups(group=group, path=path)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_subgroups")
+
+    @override
+    def groups_count(self, query: dict | None = None) -> dict[str, Any]:
+        """Get the number of groups matching the query."""
+        try:
+            return self.admin_adapter.groups_count(query=query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "groups_count")
+
+    @override
+    def group_user_add(self, user_id: str, group_id: str) -> dict[str, Any]:
+        """Add a user to a group."""
+        try:
+            return self.admin_adapter.group_user_add(user_id=user_id, group_id=group_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "group_user_add")
+
+    @override
+    def group_user_remove(self, user_id: str, group_id: str) -> dict[str, Any]:
+        """Remove a user from a group."""
+        try:
+            return self.admin_adapter.group_user_remove(user_id=user_id, group_id=group_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "group_user_remove")
+
+    @override
+    def group_set_permissions(self, group_id: str, enabled: bool = True) -> dict[str, Any]:
+        """Enable or disable fine-grained permissions for a group."""
+        try:
+            return self.admin_adapter.group_set_permissions(group_id=group_id, enabled=enabled)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "group_set_permissions")
+
+    @override
+    def get_group_members(self, group_id: str, query: dict | None = None) -> list[dict[str, Any]]:
+        """Get members of a group."""
+        try:
+            return self.admin_adapter.get_group_members(group_id=group_id, query=query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_group_members")
+
+    @override
+    def get_group_client_roles(self, group_id: str, client_id: str) -> list[dict[str, Any]]:
+        """Get client roles assigned to a group."""
+        try:
+            return self.admin_adapter.get_group_client_roles(group_id=group_id, client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_group_client_roles")
+
+    @override
+    def get_group_realm_roles(self, group_id: str, brief_representation: bool = True) -> list[dict[str, Any]]:
+        """Get realm roles assigned to a group."""
+        try:
+            return self.admin_adapter.get_group_realm_roles(
+                group_id=group_id,
+                brief_representation=brief_representation,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_group_realm_roles")
+
+    @override
+    def assign_group_client_roles(self, group_id: str, client_id: str, roles: str | list) -> dict[str, Any]:
+        """Assign client roles to a group."""
+        try:
+            return self.admin_adapter.assign_group_client_roles(group_id=group_id, client_id=client_id, roles=roles)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "assign_group_client_roles")
+
+    @override
+    def assign_group_realm_roles(self, group_id: str, roles: str | list) -> dict[str, Any]:
+        """Assign realm roles to a group."""
+        try:
+            return self.admin_adapter.assign_group_realm_roles(group_id=group_id, roles=roles)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "assign_group_realm_roles")
+
+    @override
+    def delete_group_client_roles(self, group_id: str, client_id: str, roles: str | list) -> dict[str, Any]:
+        """Remove client roles from a group."""
+        try:
+            return self.admin_adapter.delete_group_client_roles(group_id=group_id, client_id=client_id, roles=roles)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_group_client_roles")
+
+    @override
+    def delete_group_realm_roles(self, group_id: str, roles: str | list) -> dict[str, Any]:
+        """Remove realm roles from a group."""
+        try:
+            return self.admin_adapter.delete_group_realm_roles(group_id=group_id, roles=roles)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_group_realm_roles")
+
+    @override
+    def get_composite_client_roles_of_group(
+        self,
+        client_id: str,
+        group_id: str,
+        brief_representation: bool = True,
+    ) -> list[dict[str, Any]]:
+        """Get composite client roles of a group."""
+        try:
+            return self.admin_adapter.get_composite_client_roles_of_group(
+                client_id=client_id,
+                group_id=group_id,
+                brief_representation=brief_representation,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_composite_client_roles_of_group")
+
+    @override
+    def get_client_role_groups(self, client_id: str, role_name: str, query: Any) -> list[dict[str, Any]]:
+        """Get groups that have a specific client role."""
+        try:
+            return self.admin_adapter.get_client_role_groups(client_id=client_id, role_name=role_name, **query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_role_groups")
+
+    @override
+    def get_realm_role_groups(
+        self,
+        role_name: str,
+        query: dict | None = None,
+        brief_representation: bool = True,
+    ) -> list[dict[str, Any]]:
+        """Get groups that have a specific realm role."""
+        try:
+            return self.admin_adapter.get_realm_role_groups(
+                role_name=role_name,
+                query=query,
+                brief_representation=brief_representation,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_realm_role_groups")
+
+    # Authentication Flow Operations
+    @override
+    def create_authentication_flow(self, payload: dict, skip_exists: bool = False) -> bytes:
+        """Create a new authentication flow."""
+        try:
+            return self.admin_adapter.create_authentication_flow(payload=payload, skip_exists=skip_exists)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_authentication_flow")
+
+    @override
+    def copy_authentication_flow(self, payload: dict, flow_alias: str) -> bytes:
+        """Copy an existing authentication flow."""
+        try:
+            return self.admin_adapter.copy_authentication_flow(payload=payload, flow_alias=flow_alias)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "copy_authentication_flow")
+
+    @override
+    def get_authentication_flows(
+        self,
+    ) -> list[dict[str, Any]]:
+        """Get all authentication flows."""
+        try:
+            return self.admin_adapter.get_authentication_flows()
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authentication_flows")
+
+    @override
+    def get_authentication_flow_for_id(self, flow_id: str) -> dict[str, Any]:
+        """Get authentication flow by ID."""
+        try:
+            return self.admin_adapter.get_authentication_flow_for_id(flow_id=flow_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authentication_flow_for_id")
+
+    @override
+    def delete_authentication_flow(self, flow_id: str) -> dict[str, Any]:
+        """Delete an authentication flow."""
+        try:
+            return self.admin_adapter.delete_authentication_flow(flow_id=flow_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_authentication_flow")
+
+    @override
+    def get_authentication_flow_executions(self, flow_alias: str) -> list[dict[str, Any]]:
+        """Get executions for an authentication flow."""
+        try:
+            return self.admin_adapter.get_authentication_flow_executions(flow_alias=flow_alias)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authentication_flow_executions")
+
+    @override
+    def get_authentication_flow_execution(self, execution_id: str) -> dict[str, Any]:
+        """Get a single authentication flow execution."""
+        try:
+            return self.admin_adapter.get_authentication_flow_execution(execution_id=execution_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authentication_flow_execution")
+
+    @override
+    def create_authentication_flow_execution(self, payload: dict, flow_alias: str) -> bytes:
+        """Create an execution in an authentication flow."""
+        try:
+            return self.admin_adapter.create_authentication_flow_execution(payload=payload, flow_alias=flow_alias)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_authentication_flow_execution")
+
+    @override
+    def update_authentication_flow_executions(self, payload: dict, flow_alias: str) -> dict[str, Any]:
+        """Update executions in an authentication flow."""
+        try:
+            return self.admin_adapter.update_authentication_flow_executions(payload=payload, flow_alias=flow_alias)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_authentication_flow_executions")
+
+    @override
+    def create_authentication_flow_subflow(self, payload: dict, flow_alias: str, skip_exists: bool = False) -> bytes:
+        """Create a subflow in an authentication flow."""
+        try:
+            return self.admin_adapter.create_authentication_flow_subflow(
+                payload=payload,
+                flow_alias=flow_alias,
+                skip_exists=skip_exists,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_authentication_flow_subflow")
+
+    @override
+    def delete_authentication_flow_execution(self, execution_id: str) -> dict[str, Any]:
+        """Delete an authentication flow execution."""
+        try:
+            return self.admin_adapter.delete_authentication_flow_execution(execution_id=execution_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_authentication_flow_execution")
+
+    @override
+    def change_execution_priority(self, execution_id: str, diff: int) -> None:
+        """Change priority of an authentication flow execution."""
+        try:
+            return self.admin_adapter.change_execution_priority(execution_id=execution_id, diff=diff)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "change_execution_priority")
+
+    @override
+    def update_authentication_flow(self, flow_id: str, payload: dict) -> dict[str, Any]:
+        """Update an authentication flow."""
+        try:
+            return self.admin_adapter.update_authentication_flow(flow_id=flow_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_authentication_flow")
+
+    @override
+    def get_authenticator_providers(
+        self,
+    ) -> list[dict[str, Any]]:
+        """Get available authenticator providers."""
+        try:
+            return self.admin_adapter.get_authenticator_providers()
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authenticator_providers")
+
+    @override
+    def get_authenticator_provider_config_description(self, provider_id: str) -> dict[str, Any]:
+        """Get config description for an authenticator provider."""
+        try:
+            return self.admin_adapter.get_authenticator_provider_config_description(provider_id=provider_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authenticator_provider_config_description")
+
+    @override
+    def get_authenticator_config(self, config_id: str) -> dict[str, Any]:
+        """Get authenticator configuration by ID."""
+        try:
+            return self.admin_adapter.get_authenticator_config(config_id=config_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authenticator_config")
+
+    @override
+    def update_authenticator_config(self, payload: dict, config_id: str) -> dict[str, Any]:
+        """Update authenticator configuration."""
+        try:
+            return self.admin_adapter.update_authenticator_config(payload=payload, config_id=config_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_authenticator_config")
+
+    @override
+    def delete_authenticator_config(self, config_id: str) -> dict[str, Any]:
+        """Delete authenticator configuration."""
+        try:
+            return self.admin_adapter.delete_authenticator_config(config_id=config_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_authenticator_config")
+
+    @override
+    def create_execution_config(self, execution_id: str, payload: dict) -> bytes:
+        """Create configuration for an authentication flow execution."""
+        try:
+            return self.admin_adapter.create_execution_config(execution_id=execution_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_execution_config")
+
+    # Client Scope Operations
+    @override
+    def get_client_scopes(
+        self,
+    ) -> list[dict[str, Any]]:
+        """Get all client scopes."""
+        try:
+            return self.admin_adapter.get_client_scopes()
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_scopes")
+
+    @override
+    def get_client_scope(self, client_scope_id: str) -> dict[str, Any]:
+        """Get a client scope by ID."""
+        try:
+            return self.admin_adapter.get_client_scope(client_scope_id=client_scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_scope")
+
+    @override
+    def get_client_scope_by_name(self, client_scope_name: str) -> dict[str, Any] | None:
+        """Get a client scope by name."""
+        try:
+            return self.admin_adapter.get_client_scope_by_name(client_scope_name=client_scope_name)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_scope_by_name")
+
+    @override
+    def create_client_scope(self, payload: dict, skip_exists: bool = False) -> str:
+        """Create a new client scope."""
+        try:
+            return self.admin_adapter.create_client_scope(payload=payload, skip_exists=skip_exists)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_scope")
+
+    @override
+    def update_client_scope(self, client_scope_id: str, payload: dict) -> dict[str, Any]:
+        """Update a client scope."""
+        try:
+            return self.admin_adapter.update_client_scope(client_scope_id=client_scope_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_client_scope")
+
+    @override
+    def delete_client_scope(self, client_scope_id: str) -> dict[str, Any]:
+        """Delete a client scope."""
+        try:
+            return self.admin_adapter.delete_client_scope(client_scope_id=client_scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_client_scope")
+
+    @override
+    def add_mapper_to_client_scope(self, client_scope_id: str, payload: dict) -> bytes:
+        """Add a protocol mapper to a client scope."""
+        try:
+            return self.admin_adapter.add_mapper_to_client_scope(client_scope_id=client_scope_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "add_mapper_to_client_scope")
+
+    @override
+    def get_mappers_from_client_scope(self, client_scope_id: str) -> list[dict[str, Any]]:
+        """Get protocol mappers for a client scope."""
+        try:
+            return self.admin_adapter.get_mappers_from_client_scope(client_scope_id=client_scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_mappers_from_client_scope")
+
+    @override
+    def update_mapper_in_client_scope(
+        self,
+        client_scope_id: str,
+        protocol_mapper_id: str,
+        payload: dict,
+    ) -> dict[str, Any]:
+        """Update a protocol mapper in a client scope."""
+        try:
+            return self.admin_adapter.update_mapper_in_client_scope(
+                client_scope_id=client_scope_id,
+                protocol_mapper_id=protocol_mapper_id,
+                payload=payload,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_mapper_in_client_scope")
+
+    @override
+    def delete_mapper_from_client_scope(self, client_scope_id: str, protocol_mapper_id: str) -> dict[str, Any]:
+        """Delete a protocol mapper from a client scope."""
+        try:
+            return self.admin_adapter.delete_mapper_from_client_scope(
+                client_scope_id=client_scope_id,
+                protocol_mapper_id=protocol_mapper_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_mapper_from_client_scope")
+
+    @override
+    def add_mapper_to_client(self, client_id: str, payload: dict) -> bytes:
+        """Add a protocol mapper to a client."""
+        try:
+            return self.admin_adapter.add_mapper_to_client(client_id=client_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "add_mapper_to_client")
+
+    @override
+    def get_mappers_from_client(self, client_id: str) -> list[dict[str, Any]]:
+        """Get protocol mappers for a client."""
+        try:
+            return self.admin_adapter.get_mappers_from_client(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_mappers_from_client")
+
+    @override
+    def update_client_mapper(self, client_id: str, mapper_id: str, payload: dict) -> dict[str, Any]:
+        """Update a protocol mapper on a client."""
+        try:
+            return self.admin_adapter.update_client_mapper(client_id=client_id, mapper_id=mapper_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_client_mapper")
+
+    @override
+    def remove_client_mapper(self, client_id: str, client_mapper_id: str) -> dict[str, Any]:
+        """Remove a protocol mapper from a client."""
+        try:
+            return self.admin_adapter.remove_client_mapper(client_id=client_id, client_mapper_id=client_mapper_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "remove_client_mapper")
+
+    @override
+    def get_client_default_client_scopes(self, client_id: str) -> list[dict[str, Any]]:
+        """Get default client scopes for a client."""
+        try:
+            return self.admin_adapter.get_client_default_client_scopes(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_default_client_scopes")
+
+    @override
+    def add_client_default_client_scope(self, client_id: str, client_scope_id: str, payload: dict) -> dict[str, Any]:
+        """Add a default client scope to a client."""
+        try:
+            return self.admin_adapter.add_client_default_client_scope(
+                client_id=client_id,
+                client_scope_id=client_scope_id,
+                payload=payload,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "add_client_default_client_scope")
+
+    @override
+    def delete_client_default_client_scope(self, client_id: str, client_scope_id: str) -> dict[str, Any]:
+        """Remove a default client scope from a client."""
+        try:
+            return self.admin_adapter.delete_client_default_client_scope(
+                client_id=client_id,
+                client_scope_id=client_scope_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_client_default_client_scope")
+
+    @override
+    def get_client_optional_client_scopes(self, client_id: str) -> list[dict[str, Any]]:
+        """Get optional client scopes for a client."""
+        try:
+            return self.admin_adapter.get_client_optional_client_scopes(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_optional_client_scopes")
+
+    @override
+    def add_client_optional_client_scope(self, client_id: str, client_scope_id: str, payload: dict) -> dict[str, Any]:
+        """Add an optional client scope to a client."""
+        try:
+            return self.admin_adapter.add_client_optional_client_scope(
+                client_id=client_id,
+                client_scope_id=client_scope_id,
+                payload=payload,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "add_client_optional_client_scope")
+
+    @override
+    def delete_client_optional_client_scope(self, client_id: str, client_scope_id: str) -> dict[str, Any]:
+        """Remove an optional client scope from a client."""
+        try:
+            return self.admin_adapter.delete_client_optional_client_scope(
+                client_id=client_id,
+                client_scope_id=client_scope_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_client_optional_client_scope")
+
+    @override
+    def get_default_default_client_scopes(
+        self,
+    ) -> list[dict[str, Any]]:
+        """Get realm default client scopes."""
+        try:
+            return self.admin_adapter.get_default_default_client_scopes()
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_default_default_client_scopes")
+
+    @override
+    def add_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
+        """Add a realm default client scope."""
+        try:
+            return self.admin_adapter.add_default_default_client_scope(scope_id=scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "add_default_default_client_scope")
+
+    @override
+    def delete_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
+        """Remove a realm default client scope."""
+        try:
+            return self.admin_adapter.delete_default_default_client_scope(scope_id=scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_default_default_client_scope")
+
+    @override
+    def get_default_optional_client_scopes(
+        self,
+    ) -> list[dict[str, Any]]:
+        """Get realm optional default client scopes."""
+        try:
+            return self.admin_adapter.get_default_optional_client_scopes()
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_default_optional_client_scopes")
+
+    @override
+    def add_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:
+        """Add a realm optional default client scope."""
+        try:
+            return self.admin_adapter.add_default_optional_client_scope(scope_id=scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "add_default_optional_client_scope")
+
+    @override
+    def delete_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:
+        """Remove a realm optional default client scope."""
+        try:
+            return self.admin_adapter.delete_default_optional_client_scope(scope_id=scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_default_optional_client_scope")
+
+    # Authorization Service Operations
+    @override
+    def create_client_authz_resource(self, client_id: str, payload: dict, skip_exists: bool = False) -> dict[str, Any]:
+        """Create an authorization resource for a client."""
+        try:
+            return self.admin_adapter.create_client_authz_resource(
+                client_id=client_id,
+                payload=payload,
+                skip_exists=skip_exists,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_resource")
+
+    @override
+    def get_client_authz_resources(self, client_id: str) -> list[dict[str, Any]]:
+        """Get authorization resources for a client."""
+        try:
+            return self.admin_adapter.get_client_authz_resources(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_resources")
+
+    @override
+    def get_client_authz_resource(self, client_id: str, resource_id: str) -> dict[str, Any]:
+        """Get a single authorization resource."""
+        try:
+            return self.admin_adapter.get_client_authz_resource(client_id=client_id, resource_id=resource_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_resource")
+
+    @override
+    def update_client_authz_resource(self, client_id: str, resource_id: str, payload: dict) -> dict[str, Any]:
+        """Update an authorization resource."""
+        try:
+            return self.admin_adapter.update_client_authz_resource(
+                client_id=client_id,
+                resource_id=resource_id,
+                payload=payload,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_client_authz_resource")
+
+    @override
+    def delete_client_authz_resource(self, client_id: str, resource_id: str) -> dict[str, Any]:
+        """Delete an authorization resource."""
+        try:
+            return self.admin_adapter.delete_client_authz_resource(client_id=client_id, resource_id=resource_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_client_authz_resource")
+
+    @override
+    def create_client_authz_scopes(self, client_id: str, payload: dict) -> dict[str, Any]:
+        """Create authorization scopes for a client."""
+        try:
+            return self.admin_adapter.create_client_authz_scopes(client_id=client_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_scopes")
+
+    @override
+    def get_client_authz_scopes(self, client_id: str) -> list[dict[str, Any]]:
+        """Get authorization scopes for a client."""
+        try:
+            return self.admin_adapter.get_client_authz_scopes(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_scopes")
+
+    @override
+    def create_client_authz_role_based_policy(
+        self,
+        client_id: str,
+        payload: dict,
+        skip_exists: bool = False,
+    ) -> dict[str, Any]:
+        """Create a role-based authorization policy."""
+        try:
+            return self.admin_adapter.create_client_authz_role_based_policy(
+                client_id=client_id,
+                payload=payload,
+                skip_exists=skip_exists,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_role_based_policy")
+
+    @override
+    def create_client_authz_client_policy(self, payload: dict, client_id: str) -> dict[str, Any]:
+        """Create a client-based authorization policy."""
+        try:
+            return self.admin_adapter.create_client_authz_client_policy(payload=payload, client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_client_policy")
+
+    @override
+    def create_client_authz_policy(self, client_id: str, payload: dict, skip_exists: bool = False) -> dict[str, Any]:
+        """Create an authorization policy."""
+        try:
+            return self.admin_adapter.create_client_authz_policy(
+                client_id=client_id,
+                payload=payload,
+                skip_exists=skip_exists,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_policy")
+
+    @override
+    def get_client_authz_policies(self, client_id: str) -> list[dict[str, Any]]:
+        """Get authorization policies for a client."""
+        try:
+            return self.admin_adapter.get_client_authz_policies(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_policies")
+
+    @override
+    def get_client_authz_policy(self, client_id: str, policy_id: str) -> dict[str, Any]:
+        """Get a single authorization policy."""
+        try:
+            return self.admin_adapter.get_client_authz_policy(client_id=client_id, policy_id=policy_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_policy")
+
+    @override
+    def delete_client_authz_policy(self, client_id: str, policy_id: str) -> dict[str, Any]:
+        """Delete an authorization policy."""
+        try:
+            return self.admin_adapter.delete_client_authz_policy(client_id=client_id, policy_id=policy_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_client_authz_policy")
+
+    @override
+    def create_client_authz_resource_based_permission(
+        self,
+        client_id: str,
+        payload: dict,
+        skip_exists: bool = False,
+    ) -> dict[str, Any]:
+        """Create a resource-based permission."""
+        try:
+            return self.admin_adapter.create_client_authz_resource_based_permission(
+                client_id=client_id,
+                payload=payload,
+                skip_exists=skip_exists,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_resource_based_permission")
+
+    @override
+    def create_client_authz_scope_permission(self, payload: dict, client_id: str) -> dict[str, Any]:
+        """Create a scope-based permission."""
+        try:
+            return self.admin_adapter.create_client_authz_scope_permission(payload=payload, client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_scope_permission")
+
+    @override
+    def get_client_authz_permissions(self, client_id: str) -> list[dict[str, Any]]:
+        """Get authorization permissions for a client."""
+        try:
+            return self.admin_adapter.get_client_authz_permissions(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_permissions")
+
+    @override
+    def get_client_authz_scope_permission(self, client_id: str, scope_id: str) -> dict[str, Any]:
+        """Get a scope-based permission."""
+        try:
+            return self.admin_adapter.get_client_authz_scope_permission(client_id=client_id, scope_id=scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_scope_permission")
+
+    @override
+    def update_client_authz_scope_permission(self, payload: dict, client_id: str, scope_id: str) -> bytes:
+        """Update a scope-based permission."""
+        try:
+            return self.admin_adapter.update_client_authz_scope_permission(
+                payload=payload,
+                client_id=client_id,
+                scope_id=scope_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_client_authz_scope_permission")
+
+    @override
+    def update_client_authz_resource_permission(self, payload: dict, client_id: str, resource_id: str) -> bytes:
+        """Update a resource-based permission."""
+        try:
+            return self.admin_adapter.update_client_authz_resource_permission(
+                payload=payload,
+                client_id=client_id,
+                resource_id=resource_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_client_authz_resource_permission")
+
+    @override
+    def get_client_authz_permission_associated_policies(self, client_id: str, policy_id: str) -> list[dict[str, Any]]:
+        """Get policies associated with a permission."""
+        try:
+            return self.admin_adapter.get_client_authz_permission_associated_policies(
+                client_id=client_id,
+                policy_id=policy_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_permission_associated_policies")
+
+    @override
+    def get_client_authz_settings(self, client_id: str) -> dict[str, Any]:
+        """Get authorization settings for a client."""
+        try:
+            return self.admin_adapter.get_client_authz_settings(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_settings")
+
+    @override
+    def get_client_authz_client_policies(self, client_id: str) -> list[dict[str, Any]]:
+        """Get client policies for authorization."""
+        try:
+            return self.admin_adapter.get_client_authz_client_policies(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_client_policies")
+
+    @override
+    def get_client_authz_policy_resources(self, client_id: str, policy_id: str) -> list[dict[str, Any]]:
+        """Get resources associated with a policy."""
+        try:
+            return self.admin_adapter.get_client_authz_policy_resources(client_id=client_id, policy_id=policy_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_policy_resources")
+
+    @override
+    def get_client_authz_policy_scopes(self, client_id: str, policy_id: str) -> list[dict[str, Any]]:
+        """Get scopes associated with a policy."""
+        try:
+            return self.admin_adapter.get_client_authz_policy_scopes(client_id=client_id, policy_id=policy_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_policy_scopes")
+
+    @override
+    def import_client_authz_config(self, client_id: str, payload: dict) -> dict[str, Any]:
+        """Import authorization configuration for a client."""
+        try:
+            return self.admin_adapter.import_client_authz_config(client_id=client_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "import_client_authz_config")
+
+    # UMA Operations
+    @override
+    def resource_set_create(self, payload: dict) -> dict[str, Any]:
+        """Create a UMA resource set."""
+        try:
+            return self.uma_adapter.resource_set_create(payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "resource_set_create")
+
+    @override
+    def resource_set_read(self, resource_id: str) -> dict[str, Any]:
+        """Read a UMA resource set."""
+        try:
+            return self.uma_adapter.resource_set_read(resource_id=resource_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "resource_set_read")
+
+    @override
+    def resource_set_update(self, resource_id: str, payload: dict) -> dict[str, Any]:
+        """Update a UMA resource set."""
+        try:
+            return self.uma_adapter.resource_set_update(resource_id=resource_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "resource_set_update")
+
+    @override
+    def resource_set_delete(self, resource_id: str) -> dict[str, Any]:
+        """Delete a UMA resource set."""
+        try:
+            return self.uma_adapter.resource_set_delete(resource_id=resource_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "resource_set_delete")
+
+    @override
+    def resource_set_list(
+        self,
+    ) -> list[dict[str, Any]]:
+        """List all UMA resource sets."""
+        try:
+            return list(self.uma_adapter.resource_set_list())
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "resource_set_list")
+
+    @override
+    def resource_set_list_ids(
+        self,
+        name: str = "",
+        exact_name: bool = False,
+        uri: str = "",
+        owner: str = "",
+        resource_type: str = "",
+        scope: str = "",
+        matchingUri: bool = False,
+        first: int = 0,
+        maximum: int = -1,
+    ) -> list[dict[str, Any]]:
+        """List UMA resource set IDs with optional filters."""
+        try:
+            return self.uma_adapter.resource_set_list_ids(
+                name=name,
+                exact_name=exact_name,
+                uri=uri,
+                owner=owner,
+                resource_type=resource_type,
+                scope=scope,
+                matchingUri=matchingUri,
+                first=first,
+                maximum=maximum,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "resource_set_list_ids")
+
+    @override
+    def policy_resource_create(self, resource_id: str, payload: dict) -> dict[str, Any]:
+        """Create a UMA policy for a resource."""
+        try:
+            return self.uma_adapter.policy_resource_create(resource_id=resource_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "policy_resource_create")
+
+    @override
+    def policy_update(self, policy_id: str, payload: dict) -> bytes:
+        """Update a UMA policy."""
+        try:
+            return self.uma_adapter.policy_update(policy_id=policy_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "policy_update")
+
+    @override
+    def policy_delete(self, policy_id: str) -> dict[str, Any]:
+        """Delete a UMA policy."""
+        try:
+            return self.uma_adapter.policy_delete(policy_id=policy_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "policy_delete")
+
+    @override
+    def policy_query(
+        self,
+        resource: str = "",
+        name: str = "",
+        scope: str = "",
+        first: int = 0,
+        maximum: int = -1,
+    ) -> list[dict[str, Any]]:
+        """Query UMA policies."""
+        try:
+            return self.uma_adapter.policy_query(
+                resource=resource,
+                name=name,
+                scope=scope,
+                first=first,
+                maximum=maximum,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "policy_query")
+
+    @override
+    def permission_ticket_create(self, permissions: Iterable[UMAPermission]) -> dict[str, Any]:
+        """Create a UMA permission ticket."""
+        try:
+            return self.uma_adapter.permission_ticket_create(permissions=permissions)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "permission_ticket_create")
+
+    @override
+    def permissions_check(self, token: str, permissions: Iterable[UMAPermission], **extra_payload: Any) -> bool:
+        """Check UMA permissions for a token."""
+        try:
+            return self.uma_adapter.permissions_check(token=token, permissions=permissions, **extra_payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "permissions_check")
+
+    # Component Operations
+    @override
+    def create_component(self, payload: dict) -> str:
+        """Create a Keycloak component."""
+        try:
+            return self.admin_adapter.create_component(payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_component")
+
+    @override
+    def get_component(self, component_id: str) -> dict[str, Any]:
+        """Get a component by ID."""
+        try:
+            return self.admin_adapter.get_component(component_id=component_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_component")
+
+    @override
+    def get_components(self, query: dict | None = None) -> list[dict[str, Any]]:
+        """Get components, optionally filtered by query."""
+        try:
+            return self.admin_adapter.get_components(query=query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_components")
+
+    @override
+    def update_component(self, component_id: str, payload: dict) -> dict[str, Any]:
+        """Update a component."""
+        try:
+            return self.admin_adapter.update_component(component_id=component_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_component")
+
+    @override
+    def delete_component(self, component_id: str) -> dict[str, Any]:
+        """Delete a component."""
+        try:
+            return self.admin_adapter.delete_component(component_id=component_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_component")
+
 
 class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
     """Concrete implementation of the KeycloakPort interface using python-keycloak library.
@@ -1766,6 +2827,7 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
         # Cache for admin client to avoid unnecessary re-authentication
         self._admin_adapter: KeycloakAdmin | None = None
         self._admin_token_expiry: float = 0.0
+        self._uma_adapter: KeycloakUMA | None = None
 
         # Initialize admin client if admin mode is enabled and credentials are provided
         if self.configs.IS_ADMIN_MODE_ENABLED and (
@@ -1886,6 +2948,17 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
             raise UnavailableError("Keycloak admin client is not available")
 
         return self._admin_adapter
+
+    @property
+    def uma_adapter(self) -> KeycloakUMA:
+        """Get the UMA adapter, creating it on first access.
+
+        Returns:
+            KeycloakUMA instance
+        """
+        if self._uma_adapter is None:
+            self._uma_adapter = KeycloakAdapter._get_uma_client(self.configs)
+        return self._uma_adapter
 
     @override
     @alru_cache(ttl=3600, maxsize=1)  # Cache for 1 hour, public key rarely changes
@@ -3211,3 +4284,1084 @@ class AsyncKeycloakAdapter(AsyncKeycloakPort, KeycloakExceptionHandlerMixin):
             return await self.admin_adapter.a_organization_user_remove(user_id=user_id, organization_id=organization_id)
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "organization_user_remove")
+
+    # Group Operations
+    @override
+    async def create_group(self, payload: dict, parent: str | None = None, skip_exists: bool = False) -> str | None:
+        """Create a new group."""
+        try:
+            return await self.admin_adapter.a_create_group(payload=payload, parent=parent, skip_exists=skip_exists)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_group")
+
+    @override
+    async def update_group(self, group_id: str, payload: dict) -> dict[str, Any]:
+        """Update a group."""
+        try:
+            return await self.admin_adapter.a_update_group(group_id=group_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_group")
+
+    @override
+    async def delete_group(self, group_id: str) -> dict[str, Any]:
+        """Delete a group."""
+        try:
+            return await self.admin_adapter.a_delete_group(group_id=group_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_group")
+
+    @override
+    async def get_group(self, group_id: str, full_hierarchy: bool = False, query: dict | None = None) -> dict[str, Any]:
+        """Get group representation by ID."""
+        try:
+            return await self.admin_adapter.a_get_group(group_id=group_id, full_hierarchy=full_hierarchy, query=query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_group")
+
+    @override
+    async def get_group_by_path(self, path: str) -> dict[str, Any]:
+        """Get group representation by path."""
+        try:
+            return await self.admin_adapter.a_get_group_by_path(path=path)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_group_by_path")
+
+    @override
+    async def get_group_children(
+        self,
+        group_id: str,
+        query: dict | None = None,
+        full_hierarchy: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Get child groups of a group."""
+        try:
+            return await self.admin_adapter.a_get_group_children(
+                group_id=group_id,
+                query=query,
+                full_hierarchy=full_hierarchy,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_group_children")
+
+    @override
+    async def get_groups(self, query: dict | None = None, full_hierarchy: bool = False) -> list[dict[str, Any]]:
+        """Get all groups, optionally filtered by query."""
+        try:
+            return await self.admin_adapter.a_get_groups(query=query, full_hierarchy=full_hierarchy)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_groups")
+
+    @override
+    async def get_subgroups(self, group: dict, path: str) -> dict[str, Any] | None:
+        """Get subgroups for a group at the given path."""
+        try:
+            return await self.admin_adapter.a_get_subgroups(group=group, path=path)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_subgroups")
+
+    @override
+    async def groups_count(self, query: dict | None = None) -> dict[str, Any]:
+        """Get the number of groups matching the query."""
+        try:
+            return await self.admin_adapter.a_groups_count(query=query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "groups_count")
+
+    @override
+    async def group_user_add(self, user_id: str, group_id: str) -> dict[str, Any]:
+        """Add a user to a group."""
+        try:
+            return await self.admin_adapter.a_group_user_add(user_id=user_id, group_id=group_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "group_user_add")
+
+    @override
+    async def group_user_remove(self, user_id: str, group_id: str) -> dict[str, Any]:
+        """Remove a user from a group."""
+        try:
+            return await self.admin_adapter.a_group_user_remove(user_id=user_id, group_id=group_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "group_user_remove")
+
+    @override
+    async def group_set_permissions(self, group_id: str, enabled: bool = True) -> dict[str, Any]:
+        """Enable or disable fine-grained permissions for a group."""
+        try:
+            return await self.admin_adapter.a_group_set_permissions(group_id=group_id, enabled=enabled)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "group_set_permissions")
+
+    @override
+    async def get_group_members(self, group_id: str, query: dict | None = None) -> list[dict[str, Any]]:
+        """Get members of a group."""
+        try:
+            return await self.admin_adapter.a_get_group_members(group_id=group_id, query=query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_group_members")
+
+    @override
+    async def get_group_client_roles(self, group_id: str, client_id: str) -> list[dict[str, Any]]:
+        """Get client roles assigned to a group."""
+        try:
+            return await self.admin_adapter.a_get_group_client_roles(group_id=group_id, client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_group_client_roles")
+
+    @override
+    async def get_group_realm_roles(self, group_id: str, brief_representation: bool = True) -> list[dict[str, Any]]:
+        """Get realm roles assigned to a group."""
+        try:
+            return await self.admin_adapter.a_get_group_realm_roles(
+                group_id=group_id,
+                brief_representation=brief_representation,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_group_realm_roles")
+
+    @override
+    async def assign_group_client_roles(self, group_id: str, client_id: str, roles: str | list) -> dict[str, Any]:
+        """Assign client roles to a group."""
+        try:
+            return await self.admin_adapter.a_assign_group_client_roles(
+                group_id=group_id,
+                client_id=client_id,
+                roles=roles,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "assign_group_client_roles")
+
+    @override
+    async def assign_group_realm_roles(self, group_id: str, roles: str | list) -> dict[str, Any]:
+        """Assign realm roles to a group."""
+        try:
+            return await self.admin_adapter.a_assign_group_realm_roles(group_id=group_id, roles=roles)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "assign_group_realm_roles")
+
+    @override
+    async def delete_group_client_roles(self, group_id: str, client_id: str, roles: str | list) -> dict[str, Any]:
+        """Remove client roles from a group."""
+        try:
+            return await self.admin_adapter.a_delete_group_client_roles(
+                group_id=group_id,
+                client_id=client_id,
+                roles=roles,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_group_client_roles")
+
+    @override
+    async def delete_group_realm_roles(self, group_id: str, roles: str | list) -> dict[str, Any]:
+        """Remove realm roles from a group."""
+        try:
+            return await self.admin_adapter.a_delete_group_realm_roles(group_id=group_id, roles=roles)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_group_realm_roles")
+
+    @override
+    async def get_composite_client_roles_of_group(
+        self,
+        client_id: str,
+        group_id: str,
+        brief_representation: bool = True,
+    ) -> list[dict[str, Any]]:
+        """Get composite client roles of a group."""
+        try:
+            return await self.admin_adapter.a_get_composite_client_roles_of_group(
+                client_id=client_id,
+                group_id=group_id,
+                brief_representation=brief_representation,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_composite_client_roles_of_group")
+
+    @override
+    async def get_client_role_groups(self, client_id: str, role_name: str, query: Any) -> list[dict[str, Any]]:
+        """Get groups that have a specific client role."""
+        try:
+            return await self.admin_adapter.a_get_client_role_groups(client_id=client_id, role_name=role_name, **query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_role_groups")
+
+    @override
+    async def get_realm_role_groups(
+        self,
+        role_name: str,
+        query: dict | None = None,
+        brief_representation: bool = True,
+    ) -> list[dict[str, Any]]:
+        """Get groups that have a specific realm role."""
+        try:
+            return await self.admin_adapter.a_get_realm_role_groups(
+                role_name=role_name,
+                query=query,
+                brief_representation=brief_representation,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_realm_role_groups")
+
+    # Authentication Flow Operations
+    @override
+    async def create_authentication_flow(self, payload: dict, skip_exists: bool = False) -> bytes:
+        """Create a new authentication flow."""
+        try:
+            return await self.admin_adapter.a_create_authentication_flow(payload=payload, skip_exists=skip_exists)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_authentication_flow")
+
+    @override
+    async def copy_authentication_flow(self, payload: dict, flow_alias: str) -> bytes:
+        """Copy an existing authentication flow."""
+        try:
+            return await self.admin_adapter.a_copy_authentication_flow(payload=payload, flow_alias=flow_alias)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "copy_authentication_flow")
+
+    @override
+    async def get_authentication_flows(
+        self,
+    ) -> list[dict[str, Any]]:
+        """Get all authentication flows."""
+        try:
+            return await self.admin_adapter.a_get_authentication_flows()
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authentication_flows")
+
+    @override
+    async def get_authentication_flow_for_id(self, flow_id: str) -> dict[str, Any]:
+        """Get authentication flow by ID."""
+        try:
+            return await self.admin_adapter.a_get_authentication_flow_for_id(flow_id=flow_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authentication_flow_for_id")
+
+    @override
+    async def delete_authentication_flow(self, flow_id: str) -> dict[str, Any]:
+        """Delete an authentication flow."""
+        try:
+            return await self.admin_adapter.a_delete_authentication_flow(flow_id=flow_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_authentication_flow")
+
+    @override
+    async def get_authentication_flow_executions(self, flow_alias: str) -> list[dict[str, Any]]:
+        """Get executions for an authentication flow."""
+        try:
+            return await self.admin_adapter.a_get_authentication_flow_executions(flow_alias=flow_alias)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authentication_flow_executions")
+
+    @override
+    async def get_authentication_flow_execution(self, execution_id: str) -> dict[str, Any]:
+        """Get a single authentication flow execution."""
+        try:
+            return await self.admin_adapter.a_get_authentication_flow_execution(execution_id=execution_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authentication_flow_execution")
+
+    @override
+    async def create_authentication_flow_execution(self, payload: dict, flow_alias: str) -> bytes:
+        """Create an execution in an authentication flow."""
+        try:
+            return await self.admin_adapter.a_create_authentication_flow_execution(
+                payload=payload,
+                flow_alias=flow_alias,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_authentication_flow_execution")
+
+    @override
+    async def update_authentication_flow_executions(self, payload: dict, flow_alias: str) -> dict[str, Any]:
+        """Update executions in an authentication flow."""
+        try:
+            return await self.admin_adapter.a_update_authentication_flow_executions(
+                payload=payload,
+                flow_alias=flow_alias,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_authentication_flow_executions")
+
+    @override
+    async def create_authentication_flow_subflow(
+        self,
+        payload: dict,
+        flow_alias: str,
+        skip_exists: bool = False,
+    ) -> bytes:
+        """Create a subflow in an authentication flow."""
+        try:
+            return await self.admin_adapter.a_create_authentication_flow_subflow(
+                payload=payload,
+                flow_alias=flow_alias,
+                skip_exists=skip_exists,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_authentication_flow_subflow")
+
+    @override
+    async def delete_authentication_flow_execution(self, execution_id: str) -> dict[str, Any]:
+        """Delete an authentication flow execution."""
+        try:
+            return await self.admin_adapter.a_delete_authentication_flow_execution(execution_id=execution_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_authentication_flow_execution")
+
+    @override
+    async def change_execution_priority(self, execution_id: str, diff: int) -> None:
+        """Change priority of an authentication flow execution."""
+        try:
+            return await self.admin_adapter.a_change_execution_priority(execution_id=execution_id, diff=diff)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "change_execution_priority")
+
+    @override
+    async def update_authentication_flow(self, flow_id: str, payload: dict) -> dict[str, Any]:
+        """Update an authentication flow."""
+        try:
+            return await self.admin_adapter.a_update_authentication_flow(flow_id=flow_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_authentication_flow")
+
+    @override
+    async def get_authenticator_providers(
+        self,
+    ) -> list[dict[str, Any]]:
+        """Get available authenticator providers."""
+        try:
+            return await self.admin_adapter.a_get_authenticator_providers()
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authenticator_providers")
+
+    @override
+    async def get_authenticator_provider_config_description(self, provider_id: str) -> dict[str, Any]:
+        """Get config description for an authenticator provider."""
+        try:
+            return await self.admin_adapter.a_get_authenticator_provider_config_description(provider_id=provider_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authenticator_provider_config_description")
+
+    @override
+    async def get_authenticator_config(self, config_id: str) -> dict[str, Any]:
+        """Get authenticator configuration by ID."""
+        try:
+            return await self.admin_adapter.a_get_authenticator_config(config_id=config_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_authenticator_config")
+
+    @override
+    async def update_authenticator_config(self, payload: dict, config_id: str) -> dict[str, Any]:
+        """Update authenticator configuration."""
+        try:
+            return await self.admin_adapter.a_update_authenticator_config(payload=payload, config_id=config_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_authenticator_config")
+
+    @override
+    async def delete_authenticator_config(self, config_id: str) -> dict[str, Any]:
+        """Delete authenticator configuration."""
+        try:
+            return await self.admin_adapter.a_delete_authenticator_config(config_id=config_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_authenticator_config")
+
+    @override
+    async def create_execution_config(self, execution_id: str, payload: dict) -> bytes:
+        """Create configuration for an authentication flow execution."""
+        try:
+            return await self.admin_adapter.a_create_execution_config(execution_id=execution_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_execution_config")
+
+    # Client Scope Operations
+    @override
+    async def get_client_scopes(
+        self,
+    ) -> list[dict[str, Any]]:
+        """Get all client scopes."""
+        try:
+            return await self.admin_adapter.a_get_client_scopes()
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_scopes")
+
+    @override
+    async def get_client_scope(self, client_scope_id: str) -> dict[str, Any]:
+        """Get a client scope by ID."""
+        try:
+            return await self.admin_adapter.a_get_client_scope(client_scope_id=client_scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_scope")
+
+    @override
+    async def get_client_scope_by_name(self, client_scope_name: str) -> dict[str, Any] | None:
+        """Get a client scope by name."""
+        try:
+            return await self.admin_adapter.a_get_client_scope_by_name(client_scope_name=client_scope_name)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_scope_by_name")
+
+    @override
+    async def create_client_scope(self, payload: dict, skip_exists: bool = False) -> str:
+        """Create a new client scope."""
+        try:
+            return await self.admin_adapter.a_create_client_scope(payload=payload, skip_exists=skip_exists)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_scope")
+
+    @override
+    async def update_client_scope(self, client_scope_id: str, payload: dict) -> dict[str, Any]:
+        """Update a client scope."""
+        try:
+            return await self.admin_adapter.a_update_client_scope(client_scope_id=client_scope_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_client_scope")
+
+    @override
+    async def delete_client_scope(self, client_scope_id: str) -> dict[str, Any]:
+        """Delete a client scope."""
+        try:
+            return await self.admin_adapter.a_delete_client_scope(client_scope_id=client_scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_client_scope")
+
+    @override
+    async def add_mapper_to_client_scope(self, client_scope_id: str, payload: dict) -> bytes:
+        """Add a protocol mapper to a client scope."""
+        try:
+            return await self.admin_adapter.a_add_mapper_to_client_scope(
+                client_scope_id=client_scope_id,
+                payload=payload,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "add_mapper_to_client_scope")
+
+    @override
+    async def get_mappers_from_client_scope(self, client_scope_id: str) -> list[dict[str, Any]]:
+        """Get protocol mappers for a client scope."""
+        try:
+            return await self.admin_adapter.a_get_mappers_from_client_scope(client_scope_id=client_scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_mappers_from_client_scope")
+
+    @override
+    async def update_mapper_in_client_scope(
+        self,
+        client_scope_id: str,
+        protocol_mapper_id: str,
+        payload: dict,
+    ) -> dict[str, Any]:
+        """Update a protocol mapper in a client scope."""
+        try:
+            return await self.admin_adapter.a_update_mapper_in_client_scope(
+                client_scope_id=client_scope_id,
+                protocol_mapper_id=protocol_mapper_id,
+                payload=payload,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_mapper_in_client_scope")
+
+    @override
+    async def delete_mapper_from_client_scope(self, client_scope_id: str, protocol_mapper_id: str) -> dict[str, Any]:
+        """Delete a protocol mapper from a client scope."""
+        try:
+            return await self.admin_adapter.a_delete_mapper_from_client_scope(
+                client_scope_id=client_scope_id,
+                protocol_mapper_id=protocol_mapper_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_mapper_from_client_scope")
+
+    @override
+    async def add_mapper_to_client(self, client_id: str, payload: dict) -> bytes:
+        """Add a protocol mapper to a client."""
+        try:
+            return await self.admin_adapter.a_add_mapper_to_client(client_id=client_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "add_mapper_to_client")
+
+    @override
+    async def get_mappers_from_client(self, client_id: str) -> list[dict[str, Any]]:
+        """Get protocol mappers for a client."""
+        try:
+            return await self.admin_adapter.a_get_mappers_from_client(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_mappers_from_client")
+
+    @override
+    async def update_client_mapper(self, client_id: str, mapper_id: str, payload: dict) -> dict[str, Any]:
+        """Update a protocol mapper on a client."""
+        try:
+            return await self.admin_adapter.a_update_client_mapper(
+                client_id=client_id,
+                mapper_id=mapper_id,
+                payload=payload,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_client_mapper")
+
+    @override
+    async def remove_client_mapper(self, client_id: str, client_mapper_id: str) -> dict[str, Any]:
+        """Remove a protocol mapper from a client."""
+        try:
+            return await self.admin_adapter.a_remove_client_mapper(
+                client_id=client_id,
+                client_mapper_id=client_mapper_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "remove_client_mapper")
+
+    @override
+    async def get_client_default_client_scopes(self, client_id: str) -> list[dict[str, Any]]:
+        """Get default client scopes for a client."""
+        try:
+            return await self.admin_adapter.a_get_client_default_client_scopes(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_default_client_scopes")
+
+    @override
+    async def add_client_default_client_scope(
+        self,
+        client_id: str,
+        client_scope_id: str,
+        payload: dict,
+    ) -> dict[str, Any]:
+        """Add a default client scope to a client."""
+        try:
+            return await self.admin_adapter.a_add_client_default_client_scope(
+                client_id=client_id,
+                client_scope_id=client_scope_id,
+                payload=payload,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "add_client_default_client_scope")
+
+    @override
+    async def delete_client_default_client_scope(self, client_id: str, client_scope_id: str) -> dict[str, Any]:
+        """Remove a default client scope from a client."""
+        try:
+            return await self.admin_adapter.a_delete_client_default_client_scope(
+                client_id=client_id,
+                client_scope_id=client_scope_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_client_default_client_scope")
+
+    @override
+    async def get_client_optional_client_scopes(self, client_id: str) -> list[dict[str, Any]]:
+        """Get optional client scopes for a client."""
+        try:
+            return await self.admin_adapter.a_get_client_optional_client_scopes(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_optional_client_scopes")
+
+    @override
+    async def add_client_optional_client_scope(
+        self,
+        client_id: str,
+        client_scope_id: str,
+        payload: dict,
+    ) -> dict[str, Any]:
+        """Add an optional client scope to a client."""
+        try:
+            return await self.admin_adapter.a_add_client_optional_client_scope(
+                client_id=client_id,
+                client_scope_id=client_scope_id,
+                payload=payload,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "add_client_optional_client_scope")
+
+    @override
+    async def delete_client_optional_client_scope(self, client_id: str, client_scope_id: str) -> dict[str, Any]:
+        """Remove an optional client scope from a client."""
+        try:
+            return await self.admin_adapter.a_delete_client_optional_client_scope(
+                client_id=client_id,
+                client_scope_id=client_scope_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_client_optional_client_scope")
+
+    @override
+    async def get_default_default_client_scopes(
+        self,
+    ) -> list[dict[str, Any]]:
+        """Get realm default client scopes."""
+        try:
+            return await self.admin_adapter.a_get_default_default_client_scopes()
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_default_default_client_scopes")
+
+    @override
+    async def add_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
+        """Add a realm default client scope."""
+        try:
+            return await self.admin_adapter.a_add_default_default_client_scope(scope_id=scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "add_default_default_client_scope")
+
+    @override
+    async def delete_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
+        """Remove a realm default client scope."""
+        try:
+            return await self.admin_adapter.a_delete_default_default_client_scope(scope_id=scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_default_default_client_scope")
+
+    @override
+    async def get_default_optional_client_scopes(
+        self,
+    ) -> list[dict[str, Any]]:
+        """Get realm optional default client scopes."""
+        try:
+            return await self.admin_adapter.a_get_default_optional_client_scopes()
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_default_optional_client_scopes")
+
+    @override
+    async def add_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:
+        """Add a realm optional default client scope."""
+        try:
+            return await self.admin_adapter.a_add_default_optional_client_scope(scope_id=scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "add_default_optional_client_scope")
+
+    @override
+    async def delete_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:
+        """Remove a realm optional default client scope."""
+        try:
+            return await self.admin_adapter.a_delete_default_optional_client_scope(scope_id=scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_default_optional_client_scope")
+
+    # Authorization Service Operations
+    @override
+    async def create_client_authz_resource(
+        self,
+        client_id: str,
+        payload: dict,
+        skip_exists: bool = False,
+    ) -> dict[str, Any]:
+        """Create an authorization resource for a client."""
+        try:
+            return await self.admin_adapter.a_create_client_authz_resource(
+                client_id=client_id,
+                payload=payload,
+                skip_exists=skip_exists,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_resource")
+
+    @override
+    async def get_client_authz_resources(self, client_id: str) -> list[dict[str, Any]]:
+        """Get authorization resources for a client."""
+        try:
+            return await self.admin_adapter.a_get_client_authz_resources(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_resources")
+
+    @override
+    async def get_client_authz_resource(self, client_id: str, resource_id: str) -> dict[str, Any]:
+        """Get a single authorization resource."""
+        try:
+            return await self.admin_adapter.a_get_client_authz_resource(client_id=client_id, resource_id=resource_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_resource")
+
+    @override
+    async def update_client_authz_resource(self, client_id: str, resource_id: str, payload: dict) -> dict[str, Any]:
+        """Update an authorization resource."""
+        try:
+            return await self.admin_adapter.a_update_client_authz_resource(
+                client_id=client_id,
+                resource_id=resource_id,
+                payload=payload,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_client_authz_resource")
+
+    @override
+    async def delete_client_authz_resource(self, client_id: str, resource_id: str) -> dict[str, Any]:
+        """Delete an authorization resource."""
+        try:
+            return await self.admin_adapter.a_delete_client_authz_resource(client_id=client_id, resource_id=resource_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_client_authz_resource")
+
+    @override
+    async def create_client_authz_scopes(self, client_id: str, payload: dict) -> dict[str, Any]:
+        """Create authorization scopes for a client."""
+        try:
+            return await self.admin_adapter.a_create_client_authz_scopes(client_id=client_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_scopes")
+
+    @override
+    async def get_client_authz_scopes(self, client_id: str) -> list[dict[str, Any]]:
+        """Get authorization scopes for a client."""
+        try:
+            return await self.admin_adapter.a_get_client_authz_scopes(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_scopes")
+
+    @override
+    async def create_client_authz_role_based_policy(
+        self,
+        client_id: str,
+        payload: dict,
+        skip_exists: bool = False,
+    ) -> dict[str, Any]:
+        """Create a role-based authorization policy."""
+        try:
+            return await self.admin_adapter.a_create_client_authz_role_based_policy(
+                client_id=client_id,
+                payload=payload,
+                skip_exists=skip_exists,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_role_based_policy")
+
+    @override
+    async def create_client_authz_client_policy(self, payload: dict, client_id: str) -> dict[str, Any]:
+        """Create a client-based authorization policy."""
+        try:
+            return await self.admin_adapter.a_create_client_authz_client_policy(payload=payload, client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_client_policy")
+
+    @override
+    async def create_client_authz_policy(
+        self,
+        client_id: str,
+        payload: dict,
+        skip_exists: bool = False,
+    ) -> dict[str, Any]:
+        """Create an authorization policy."""
+        try:
+            return await self.admin_adapter.a_create_client_authz_policy(
+                client_id=client_id,
+                payload=payload,
+                skip_exists=skip_exists,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_policy")
+
+    @override
+    async def get_client_authz_policies(self, client_id: str) -> list[dict[str, Any]]:
+        """Get authorization policies for a client."""
+        try:
+            return await self.admin_adapter.a_get_client_authz_policies(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_policies")
+
+    @override
+    async def get_client_authz_policy(self, client_id: str, policy_id: str) -> dict[str, Any]:
+        """Get a single authorization policy."""
+        try:
+            return await self.admin_adapter.a_get_client_authz_policy(client_id=client_id, policy_id=policy_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_policy")
+
+    @override
+    async def delete_client_authz_policy(self, client_id: str, policy_id: str) -> dict[str, Any]:
+        """Delete an authorization policy."""
+        try:
+            return await self.admin_adapter.a_delete_client_authz_policy(client_id=client_id, policy_id=policy_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_client_authz_policy")
+
+    @override
+    async def create_client_authz_resource_based_permission(
+        self,
+        client_id: str,
+        payload: dict,
+        skip_exists: bool = False,
+    ) -> dict[str, Any]:
+        """Create a resource-based permission."""
+        try:
+            return await self.admin_adapter.a_create_client_authz_resource_based_permission(
+                client_id=client_id,
+                payload=payload,
+                skip_exists=skip_exists,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_resource_based_permission")
+
+    @override
+    async def create_client_authz_scope_permission(self, payload: dict, client_id: str) -> dict[str, Any]:
+        """Create a scope-based permission."""
+        try:
+            return await self.admin_adapter.a_create_client_authz_scope_permission(payload=payload, client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_client_authz_scope_permission")
+
+    @override
+    async def get_client_authz_permissions(self, client_id: str) -> list[dict[str, Any]]:
+        """Get authorization permissions for a client."""
+        try:
+            return await self.admin_adapter.a_get_client_authz_permissions(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_permissions")
+
+    @override
+    async def get_client_authz_scope_permission(self, client_id: str, scope_id: str) -> dict[str, Any]:
+        """Get a scope-based permission."""
+        try:
+            return await self.admin_adapter.a_get_client_authz_scope_permission(client_id=client_id, scope_id=scope_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_scope_permission")
+
+    @override
+    async def update_client_authz_scope_permission(self, payload: dict, client_id: str, scope_id: str) -> bytes:
+        """Update a scope-based permission."""
+        try:
+            return await self.admin_adapter.a_update_client_authz_scope_permission(
+                payload=payload,
+                client_id=client_id,
+                scope_id=scope_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_client_authz_scope_permission")
+
+    @override
+    async def update_client_authz_resource_permission(self, payload: dict, client_id: str, resource_id: str) -> bytes:
+        """Update a resource-based permission."""
+        try:
+            return await self.admin_adapter.a_update_client_authz_resource_permission(
+                payload=payload,
+                client_id=client_id,
+                resource_id=resource_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_client_authz_resource_permission")
+
+    @override
+    async def get_client_authz_permission_associated_policies(
+        self,
+        client_id: str,
+        policy_id: str,
+    ) -> list[dict[str, Any]]:
+        """Get policies associated with a permission."""
+        try:
+            return await self.admin_adapter.a_get_client_authz_permission_associated_policies(
+                client_id=client_id,
+                policy_id=policy_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_permission_associated_policies")
+
+    @override
+    async def get_client_authz_settings(self, client_id: str) -> dict[str, Any]:
+        """Get authorization settings for a client."""
+        try:
+            return await self.admin_adapter.a_get_client_authz_settings(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_settings")
+
+    @override
+    async def get_client_authz_client_policies(self, client_id: str) -> list[dict[str, Any]]:
+        """Get client policies for authorization."""
+        try:
+            return await self.admin_adapter.a_get_client_authz_client_policies(client_id=client_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_client_policies")
+
+    @override
+    async def get_client_authz_policy_resources(self, client_id: str, policy_id: str) -> list[dict[str, Any]]:
+        """Get resources associated with a policy."""
+        try:
+            return await self.admin_adapter.a_get_client_authz_policy_resources(
+                client_id=client_id,
+                policy_id=policy_id,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_policy_resources")
+
+    @override
+    async def get_client_authz_policy_scopes(self, client_id: str, policy_id: str) -> list[dict[str, Any]]:
+        """Get scopes associated with a policy."""
+        try:
+            return await self.admin_adapter.a_get_client_authz_policy_scopes(client_id=client_id, policy_id=policy_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_client_authz_policy_scopes")
+
+    @override
+    async def import_client_authz_config(self, client_id: str, payload: dict) -> dict[str, Any]:
+        """Import authorization configuration for a client."""
+        try:
+            return await self.admin_adapter.a_import_client_authz_config(client_id=client_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "import_client_authz_config")
+
+    # UMA Operations
+    @override
+    async def resource_set_create(self, payload: dict) -> dict[str, Any]:
+        """Create a UMA resource set."""
+        try:
+            return await self.uma_adapter.a_resource_set_create(payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "resource_set_create")
+
+    @override
+    async def resource_set_read(self, resource_id: str) -> dict[str, Any]:
+        """Read a UMA resource set."""
+        try:
+            return await self.uma_adapter.a_resource_set_read(resource_id=resource_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "resource_set_read")
+
+    @override
+    async def resource_set_update(self, resource_id: str, payload: dict) -> dict[str, Any]:
+        """Update a UMA resource set."""
+        try:
+            return await self.uma_adapter.a_resource_set_update(resource_id=resource_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "resource_set_update")
+
+    @override
+    async def resource_set_delete(self, resource_id: str) -> dict[str, Any]:
+        """Delete a UMA resource set."""
+        try:
+            return await self.uma_adapter.a_resource_set_delete(resource_id=resource_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "resource_set_delete")
+
+    @override
+    async def resource_set_list(
+        self,
+    ) -> list[dict[str, Any]]:
+        """List all UMA resource sets."""
+        try:
+            return [item async for item in self.uma_adapter.a_resource_set_list()]
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "resource_set_list")
+
+    @override
+    async def resource_set_list_ids(
+        self,
+        name: str = "",
+        exact_name: bool = False,
+        uri: str = "",
+        owner: str = "",
+        resource_type: str = "",
+        scope: str = "",
+        matchingUri: bool = False,
+        first: int = 0,
+        maximum: int = -1,
+    ) -> list[dict[str, Any]]:
+        """List UMA resource set IDs with optional filters."""
+        try:
+            return await self.uma_adapter.a_resource_set_list_ids(
+                name=name,
+                exact_name=exact_name,
+                uri=uri,
+                owner=owner,
+                resource_type=resource_type,
+                scope=scope,
+                matchingUri=matchingUri,
+                first=first,
+                maximum=maximum,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "resource_set_list_ids")
+
+    @override
+    async def policy_resource_create(self, resource_id: str, payload: dict) -> dict[str, Any]:
+        """Create a UMA policy for a resource."""
+        try:
+            return await self.uma_adapter.a_policy_resource_create(resource_id=resource_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "policy_resource_create")
+
+    @override
+    async def policy_update(self, policy_id: str, payload: dict) -> bytes:
+        """Update a UMA policy."""
+        try:
+            return await self.uma_adapter.a_policy_update(policy_id=policy_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "policy_update")
+
+    @override
+    async def policy_delete(self, policy_id: str) -> dict[str, Any]:
+        """Delete a UMA policy."""
+        try:
+            return await self.uma_adapter.a_policy_delete(policy_id=policy_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "policy_delete")
+
+    @override
+    async def policy_query(
+        self,
+        resource: str = "",
+        name: str = "",
+        scope: str = "",
+        first: int = 0,
+        maximum: int = -1,
+    ) -> list[dict[str, Any]]:
+        """Query UMA policies."""
+        try:
+            return await self.uma_adapter.a_policy_query(
+                resource=resource,
+                name=name,
+                scope=scope,
+                first=first,
+                maximum=maximum,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "policy_query")
+
+    @override
+    async def permission_ticket_create(self, permissions: Iterable[UMAPermission]) -> dict[str, Any]:
+        """Create a UMA permission ticket."""
+        try:
+            return await self.uma_adapter.a_permission_ticket_create(permissions=permissions)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "permission_ticket_create")
+
+    @override
+    async def permissions_check(self, token: str, permissions: Iterable[UMAPermission], **extra_payload: Any) -> bool:
+        """Check UMA permissions for a token."""
+        try:
+            return await self.uma_adapter.a_permissions_check(token=token, permissions=permissions, **extra_payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "permissions_check")
+
+    # Component Operations
+    @override
+    async def create_component(self, payload: dict) -> str:
+        """Create a Keycloak component."""
+        try:
+            return await self.admin_adapter.a_create_component(payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "create_component")
+
+    @override
+    async def get_component(self, component_id: str) -> dict[str, Any]:
+        """Get a component by ID."""
+        try:
+            return await self.admin_adapter.a_get_component(component_id=component_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_component")
+
+    @override
+    async def get_components(self, query: dict | None = None) -> list[dict[str, Any]]:
+        """Get components, optionally filtered by query."""
+        try:
+            return await self.admin_adapter.a_get_components(query=query)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "get_components")
+
+    @override
+    async def update_component(self, component_id: str, payload: dict) -> dict[str, Any]:
+        """Update a component."""
+        try:
+            return await self.admin_adapter.a_update_component(component_id=component_id, payload=payload)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "update_component")
+
+    @override
+    async def delete_component(self, component_id: str) -> dict[str, Any]:
+        """Delete a component."""
+        try:
+            return await self.admin_adapter.a_delete_component(component_id=component_id)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "delete_component")

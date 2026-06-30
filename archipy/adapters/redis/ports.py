@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Callable, Iterable, Iterator, Mapping
+from collections.abc import AsyncIterator, Callable, Iterable, Iterator, Mapping
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -1572,7 +1572,7 @@ class AsyncRedisPort:
         count: int | None = None,
         _type: str | None = None,
         **kwargs: Any,
-    ) -> Iterator[bytes | str]:
+    ) -> AsyncIterator[bytes | str]:
         """Provides an iterator over keys in the database asynchronously.
 
         Args:
@@ -1619,7 +1619,7 @@ class AsyncRedisPort:
         name: bytes | str,
         match: bytes | str | None = None,
         count: int | None = None,
-    ) -> Iterator[bytes | str]:
+    ) -> AsyncIterator[bytes | str]:
         """Provides an iterator over members of a set asynchronously.
 
         Args:

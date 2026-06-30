@@ -1,6 +1,6 @@
 ---
 title: Keycloak
-description: API reference for the Keycloak adapter ports, adapters, and mocks.
+description: API reference for the Keycloak adapter ports and adapters.
 ---
 
 # Keycloak

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Awaitable, Iterable, Iterator, Mapping
+from collections.abc import AsyncIterator, Awaitable, Iterable, Iterator, Mapping
 from datetime import datetime, timedelta
 from typing import Any, override
 
@@ -18,6 +18,38 @@ from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import RedisConfig, RedisMode
 
 _set = set
+
+
+def _redis_connection_kwargs(configs: RedisConfig) -> dict[str, Any]:
+    """Build common Redis client connection kwargs from config."""
+    return {
+        "password": configs.PASSWORD,
+        "decode_responses": configs.DECODE_RESPONSES,
+        "health_check_interval": configs.HEALTH_CHECK_INTERVAL,
+        "max_connections": configs.MAX_CONNECTIONS,
+        "socket_connect_timeout": configs.SOCKET_CONNECT_TIMEOUT,
+        "socket_timeout": configs.SOCKET_TIMEOUT,
+        "protocol": configs.PROTOCOL,
+    }
+
+
+def _sentinel_redis_kwargs(configs: RedisConfig) -> dict[str, Any]:
+    """Build Redis kwargs for sentinel master_for/slave_for connections."""
+    return {
+        "socket_timeout": configs.SOCKET_TIMEOUT,
+        "socket_connect_timeout": configs.SOCKET_CONNECT_TIMEOUT,
+        "max_connections": configs.MAX_CONNECTIONS,
+        "password": configs.PASSWORD,
+        "decode_responses": configs.DECODE_RESPONSES,
+        "protocol": configs.PROTOCOL,
+    }
+
+
+def _sentinel_kwargs(configs: RedisConfig) -> dict[str, str] | None:
+    """Build sentinel-node auth kwargs when SENTINEL_PASSWORD is set."""
+    if configs.SENTINEL_PASSWORD:
+        return {"password": configs.SENTINEL_PASSWORD}
+    return None
 
 
 class RedisAdapter(RedisPort):
@@ -81,7 +113,7 @@ class RedisAdapter(RedisPort):
         Args:
             configs (RedisConfig): Configuration settings for Redis cluster.
         """
-        from redis.cluster import ClusterNode
+        from redis.cluster import ClusterNode, LoadBalancingStrategy
 
         startup_nodes = []
         for node in configs.CLUSTER_NODES:
@@ -91,6 +123,10 @@ class RedisAdapter(RedisPort):
             else:
                 startup_nodes.append(ClusterNode(node, configs.PORT))
 
+        cluster_kwargs: dict[str, Any] = {}
+        if configs.CLUSTER_READ_FROM_REPLICAS:
+            cluster_kwargs["load_balancing_strategy"] = LoadBalancingStrategy.ROUND_ROBIN
+
         cluster_client = RedisCluster(
             startup_nodes=startup_nodes,
             password=configs.PASSWORD,
@@ -99,8 +135,9 @@ class RedisAdapter(RedisPort):
             socket_connect_timeout=configs.SOCKET_CONNECT_TIMEOUT,
             socket_timeout=configs.SOCKET_TIMEOUT,
             health_check_interval=configs.HEALTH_CHECK_INTERVAL,
-            read_from_replicas=configs.CLUSTER_READ_FROM_REPLICAS,
             require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
+            protocol=configs.PROTOCOL,
+            **cluster_kwargs,
         )
 
         # In cluster mode, both clients point to the cluster
@@ -122,20 +159,17 @@ class RedisAdapter(RedisPort):
             sentinel_nodes,
             socket_timeout=configs.SENTINEL_SOCKET_TIMEOUT,
             password=configs.PASSWORD,
+            sentinel_kwargs=_sentinel_kwargs(configs),
         )
 
         self.client = sentinel.master_for(
             sentinel_service_name,
-            socket_timeout=configs.SOCKET_TIMEOUT,
-            password=configs.PASSWORD,
-            decode_responses=configs.DECODE_RESPONSES,
+            **_sentinel_redis_kwargs(configs),
         )
 
         self.read_only_client = sentinel.slave_for(
             sentinel_service_name,
-            socket_timeout=configs.SOCKET_TIMEOUT,
-            password=configs.PASSWORD,
-            decode_responses=configs.DECODE_RESPONSES,
+            **_sentinel_redis_kwargs(configs),
         )
 
     # Override cluster methods to work when in cluster mode
@@ -196,9 +230,7 @@ class RedisAdapter(RedisPort):
             host=host,
             port=configs.PORT,
             db=configs.DATABASE,
-            password=configs.PASSWORD,
-            decode_responses=configs.DECODE_RESPONSES,
-            health_check_interval=configs.HEALTH_CHECK_INTERVAL,
+            **_redis_connection_kwargs(configs),
         )
 
     @staticmethod
@@ -979,7 +1011,7 @@ class RedisAdapter(RedisPort):
             str | None: Value of the field or None.
         """
         result = self.read_only_client.hget(name, key)
-        return str(result) if result is not None else None
+        return result
 
     @override
     def hgetall(self, name: str) -> dict[bytes | str, bytes | str]:
@@ -1224,7 +1256,7 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Args:
             configs (RedisConfig): Configuration settings for Redis cluster.
         """
-        from redis.asyncio.cluster import ClusterNode
+        from redis.asyncio.cluster import ClusterNode, LoadBalancingStrategy
 
         startup_nodes = []
         for node in configs.CLUSTER_NODES:
@@ -1234,6 +1266,10 @@ class AsyncRedisAdapter(AsyncRedisPort):
             else:
                 startup_nodes.append(ClusterNode(node, configs.PORT))
 
+        cluster_kwargs: dict[str, Any] = {}
+        if configs.CLUSTER_READ_FROM_REPLICAS:
+            cluster_kwargs["load_balancing_strategy"] = LoadBalancingStrategy.ROUND_ROBIN
+
         cluster_client = AsyncRedisCluster(
             startup_nodes=startup_nodes,
             password=configs.PASSWORD,
@@ -1242,8 +1278,9 @@ class AsyncRedisAdapter(AsyncRedisPort):
             socket_connect_timeout=configs.SOCKET_CONNECT_TIMEOUT,
             socket_timeout=configs.SOCKET_TIMEOUT,
             health_check_interval=configs.HEALTH_CHECK_INTERVAL,
-            read_from_replicas=configs.CLUSTER_READ_FROM_REPLICAS,
             require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
+            protocol=configs.PROTOCOL,
+            **cluster_kwargs,
         )
 
         # In cluster mode, both clients point to the cluster
@@ -1265,20 +1302,17 @@ class AsyncRedisAdapter(AsyncRedisPort):
             sentinel_nodes,
             socket_timeout=configs.SENTINEL_SOCKET_TIMEOUT,
             password=configs.PASSWORD,
+            sentinel_kwargs=_sentinel_kwargs(configs),
         )
 
         self.client = sentinel.master_for(
             sentinel_service_name,
-            socket_timeout=configs.SOCKET_TIMEOUT,
-            password=configs.PASSWORD,
-            decode_responses=configs.DECODE_RESPONSES,
+            **_sentinel_redis_kwargs(configs),
         )
 
         self.read_only_client = sentinel.slave_for(
             sentinel_service_name,
-            socket_timeout=configs.SOCKET_TIMEOUT,
-            password=configs.PASSWORD,
-            decode_responses=configs.DECODE_RESPONSES,
+            **_sentinel_redis_kwargs(configs),
         )
 
     # Override cluster methods to work when in cluster mode
@@ -1339,9 +1373,7 @@ class AsyncRedisAdapter(AsyncRedisPort):
             host=host,
             port=configs.PORT,
             db=configs.DATABASE,
-            password=configs.PASSWORD,
-            decode_responses=configs.DECODE_RESPONSES,
-            health_check_interval=configs.HEALTH_CHECK_INTERVAL,
+            **_redis_connection_kwargs(configs),
         )
 
     @staticmethod
@@ -1762,7 +1794,7 @@ class AsyncRedisAdapter(AsyncRedisPort):
         count: int | None = None,
         _type: str | None = None,
         **kwargs: Any,
-    ) -> Iterator[Any]:
+    ) -> AsyncIterator[bytes | str]:
         """Iterate over keys in database asynchronously.
 
         Args:
@@ -1774,13 +1806,7 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             Iterator[Any]: Iterator over matching keys.
         """
-        result = self.read_only_client.scan_iter(match, count, _type, **kwargs)
-        if isinstance(result, Awaitable):
-            raise TypeError("Unexpected awaitable from sync Redis client")
-        # Type narrowing: result is an Iterator
-        if not isinstance(result, Iterator):
-            raise TypeError(f"Expected Iterator, got {type(result)}")
-        return result
+        return self.read_only_client.scan_iter(match, count, _type, **kwargs)
 
     @override
     async def sscan(
@@ -1813,7 +1839,7 @@ class AsyncRedisAdapter(AsyncRedisPort):
         name: bytes | str,
         match: bytes | str | None = None,
         count: int | None = None,
-    ) -> Iterator[Any]:
+    ) -> AsyncIterator[bytes | str]:
         """Iterate over set members asynchronously.
 
         Args:
@@ -1824,16 +1850,7 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             Iterator[Any]: Iterator over set members.
         """
-        result = self.read_only_client.sscan_iter(name, match, count)
-        if isinstance(result, Awaitable):
-            awaited_result = await result
-            if not isinstance(awaited_result, Iterator):
-                raise TypeError(f"Expected Iterator, got {type(awaited_result)}")
-            return awaited_result
-        # Type narrowing: result is an Iterator
-        if not isinstance(result, Iterator):
-            raise TypeError(f"Expected Iterator, got {type(result)}")
-        return result
+        return self.read_only_client.sscan_iter(name, match, count)
 
     @override
     async def sadd(self, name: str, *values: bytes | str | float) -> int:
@@ -2364,14 +2381,7 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisResponseType: Number of subscribers received message.
         """
-        # AsyncRedis client has publish method, type stubs may be incomplete
-        publish_method = getattr(self.client, "publish", None)
-        if publish_method and callable(publish_method):
-            result = publish_method(channel, message, **kwargs)
-            if isinstance(result, Awaitable):
-                return await result
-            return result
-        raise AttributeError("publish method not available on Redis client")
+        return await self.client.publish(channel, message, **kwargs)
 
     @override
     async def pubsub_channels(self, pattern: bytes | str = "*", **kwargs: Any) -> list[bytes | str]:
@@ -2384,14 +2394,7 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             RedisResponseType: List of channel names.
         """
-        # AsyncRedis client has pubsub_channels method, type stubs may be incomplete
-        pubsub_channels_method = getattr(self.client, "pubsub_channels", None)
-        if pubsub_channels_method and callable(pubsub_channels_method):
-            result = pubsub_channels_method(pattern, **kwargs)
-            if isinstance(result, Awaitable):
-                return await result
-            return result
-        raise AttributeError("pubsub_channels method not available on Redis client")
+        return await self.client.pubsub_channels(pattern, **kwargs)
 
     @override
     async def zincrby(self, name: bytes | str, amount: float, value: bytes | str | float) -> float | None:
@@ -2417,11 +2420,7 @@ class AsyncRedisAdapter(AsyncRedisPort):
         Returns:
             AsyncPubSub: PubSub object.
         """
-        # Redis client has pubsub method, type stubs may be incomplete
-        pubsub_method = getattr(self.client, "pubsub", None)
-        if pubsub_method and callable(pubsub_method):
-            return pubsub_method(**kwargs)
-        raise AttributeError("pubsub method not available on Redis client")
+        return self.client.pubsub(**kwargs)
 
     @override
     async def get_pipeline(self, transaction: Any = True, shard_hint: Any = None) -> AsyncPipeline:

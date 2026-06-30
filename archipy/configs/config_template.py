@@ -664,13 +664,14 @@ class RedisConfig(BaseModel):
     SENTINEL_NODES: list[str] = Field(default=[], description="List of sentinel addresses (host:port)")
     SENTINEL_SERVICE_NAME: str | None = Field(default=None, description="Master service name for sentinel")
     SENTINEL_SOCKET_TIMEOUT: float = Field(default=0.1, description="Sentinel socket timeout")
+    SENTINEL_PASSWORD: str | None = Field(default=None, description="Password for sentinel nodes (if distinct)")
 
     # Common settings
     PORT: int = Field(default=6379, description="Default Redis server port")
     DATABASE: int = Field(default=0, description="Redis database number (not used in cluster)")
     PASSWORD: str | None = Field(default=None, description="Redis password")
     DECODE_RESPONSES: Literal[True] = Field(default=True, description="Whether to decode responses")
-    VERSION: int = Field(default=7, description="Redis protocol version")
+    PROTOCOL: Literal[2, 3] = Field(default=3, description="RESP protocol version (2 or 3)")
     HEALTH_CHECK_INTERVAL: int = Field(default=10, description="Health check interval in seconds")
 
     # Connection pooling

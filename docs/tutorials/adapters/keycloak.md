@@ -404,6 +404,75 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
+## Groups
+
+```python
+import logging
+
+from archipy.adapters.keycloak.adapters import KeycloakAdapter
+
+logger = logging.getLogger(__name__)
+keycloak = KeycloakAdapter()
+
+group_id = keycloak.create_group(payload={"name": "engineering"}, skip_exists=True)
+groups = keycloak.get_groups()
+logger.info("Group %s created; realm has %d groups", group_id, len(groups))
+```
+
+## Authentication Flows
+
+```python
+flows = keycloak.get_authentication_flows()
+browser_flow = next(flow for flow in flows if flow.get("alias") == "browser")
+logger.info("Browser flow id: %s", browser_flow.get("id"))
+```
+
+## Client Scopes
+
+```python
+scopes = keycloak.get_client_scopes()
+scope_id = keycloak.create_client_scope(
+    payload={"name": "custom-audience", "protocol": "openid-connect"},
+    skip_exists=True,
+)
+default_scopes = keycloak.get_default_default_client_scopes()
+logger.info("Created scope %s; realm has %d default scopes", scope_id, len(default_scopes))
+```
+
+## Authorization Services
+
+```python
+client_id = keycloak.get_client_id("my-client")
+settings = keycloak.get_client_authz_settings(client_id=client_id)
+resource = keycloak.create_client_authz_resource(
+    client_id=client_id,
+    payload={"name": "Account", "displayName": "Account", "uris": ["/account/*"]},
+    skip_exists=True,
+)
+policies = keycloak.get_client_authz_policies(client_id=client_id)
+logger.info("Authz enabled=%s; created resource %s", settings.get("allowRemoteResourceManagement"), resource.get("id"))
+```
+
+## UMA Resource Sets
+
+```python
+resource = keycloak.resource_set_create(
+    payload={"name": "Protected API", "resource_scopes": ["read", "write"], "type": "api"},
+)
+resource_sets = keycloak.resource_set_list()
+logger.info("UMA resource %s; total sets=%d", resource.get("_id"), len(resource_sets))
+```
+
+## Components
+
+```python
+components = keycloak.get_components(query={"type": "org.keycloak.storage.UserStorageProvider"})
+component_id = keycloak.create_component(
+    payload={"name": "ldap", "providerId": "ldap", "providerType": "org.keycloak.storage.UserStorageProvider"},
+)
+logger.info("Listed %d components; created component %s", len(components), component_id)
+```
+
 ## Caching
 
 Both adapters use TTL (Time-To-Live) caching for appropriate operations to improve performance. Cache durations are
