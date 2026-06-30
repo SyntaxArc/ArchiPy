@@ -34,6 +34,21 @@ class RedisPort:
         raise NotImplementedError
 
     @abstractmethod
+    def flushdb(self, asynchronous: bool = False) -> bool:
+        """Delete all keys in the current database.
+
+        Args:
+            asynchronous: Whether Redis should flush asynchronously. Defaults to False.
+
+        Returns:
+            bool: True if successful.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def pttl(self, name: bytes | str) -> int:
         """Gets the remaining time to live of a key in milliseconds.
 
@@ -1163,6 +1178,21 @@ class AsyncRedisPort:
 
         Returns:
             RedisResponseType: The response from the server, typically "PONG".
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def flushdb(self, asynchronous: bool = False) -> bool:
+        """Delete all keys in the current database asynchronously.
+
+        Args:
+            asynchronous: Whether Redis should flush asynchronously. Defaults to False.
+
+        Returns:
+            bool: True if successful.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.

@@ -7,6 +7,7 @@ from typing import Any, override
 from redis import RedisCluster, Sentinel
 from redis.asyncio import RedisCluster as AsyncRedisCluster, Sentinel as AsyncSentinel
 from redis.asyncio.client import Pipeline as AsyncPipeline, PubSub as AsyncPubSub, Redis as AsyncRedis
+from redis.asyncio.cluster import ClusterPipeline as AsyncClusterPipeline
 from redis.client import Pipeline, PubSub, Redis
 
 from archipy.adapters.redis.ports import (
@@ -1193,6 +1194,18 @@ class RedisAdapter(RedisPort):
             RedisResponseType: 'PONG' if successful.
         """
         return self.client.ping()
+
+    @override
+    def flushdb(self, asynchronous: bool = False) -> bool:
+        """Delete all keys in the current database.
+
+        Args:
+            asynchronous: Whether Redis should flush asynchronously. Defaults to False.
+
+        Returns:
+            bool: True if successful.
+        """
+        return self.client.flushdb(asynchronous=asynchronous)
 
 
 class AsyncRedisAdapter(AsyncRedisPort):
@@ -2423,7 +2436,11 @@ class AsyncRedisAdapter(AsyncRedisPort):
         return self.client.pubsub(**kwargs)
 
     @override
-    async def get_pipeline(self, transaction: Any = True, shard_hint: Any = None) -> AsyncPipeline:
+    async def get_pipeline(
+        self,
+        transaction: Any = True,
+        shard_hint: Any = None,
+    ) -> AsyncPipeline | AsyncClusterPipeline:
         """Get pipeline for multiple commands asynchronously.
 
         Args:
@@ -2431,11 +2448,10 @@ class AsyncRedisAdapter(AsyncRedisPort):
             shard_hint (Any): Sharding hint. Defaults to None.
 
         Returns:
-            AsyncPipeline: Pipeline object.
+            AsyncPipeline | AsyncClusterPipeline: Pipeline object.
         """
         result = self.client.pipeline(transaction, shard_hint)
-        # Type narrowing: result is an AsyncPipeline
-        if not isinstance(result, AsyncPipeline):
+        if not isinstance(result, (AsyncPipeline, AsyncClusterPipeline)):
             raise TypeError(f"Expected AsyncPipeline, got {type(result)}")
         return result
 
@@ -2447,6 +2463,21 @@ class AsyncRedisAdapter(AsyncRedisPort):
             RedisResponseType: 'PONG' if successful.
         """
         result = self.client.ping()
+        if isinstance(result, Awaitable):
+            return await result
+        return result
+
+    @override
+    async def flushdb(self, asynchronous: bool = False) -> bool:
+        """Delete all keys in the current database asynchronously.
+
+        Args:
+            asynchronous: Whether Redis should flush asynchronously. Defaults to False.
+
+        Returns:
+            bool: True if successful.
+        """
+        result = self.client.flushdb(asynchronous=asynchronous)
         if isinstance(result, Awaitable):
             return await result
         return result

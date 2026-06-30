@@ -257,3 +257,548 @@ Feature: Redis Testing
       | key        | value   |
       | {user}:1   | alice   |
       | {order}:99 | shipped |
+
+  Scenario Outline: Store key with expiry and verify TTL
+    Given a configured <adapter_type>
+    When I store the key "bdd-s-ttl-key" with value "expires" and expiry 60 seconds in <adapter_type>
+    Then the sync store with expiry should succeed
+    When I check the TTL for key "bdd-s-ttl-key" in <adapter_type>
+    Then the sync TTL should be between 1 and 60
+    When I check the PTTL for key "bdd-s-ttl-key" in <adapter_type>
+    Then the sync PTTL should be positive
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: GetSet returns old value
+    Given a configured <adapter_type>
+    When I store the key "bdd-s-gs-key" with value "old" in <adapter_type>
+    And I getset key "bdd-s-gs-key" to value "new" in <adapter_type>
+    Then the sync getset old value should be "old"
+    When I retrieve the value for key "bdd-s-gs-key" from <adapter_type>
+    Then the sync retrieved value should be "new"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: GetDel returns value and removes key
+    Given a configured <adapter_type>
+    When I store the key "bdd-s-gd-key" with value "gone" in <adapter_type>
+    And I getdel key "bdd-s-gd-key" in <adapter_type>
+    Then the sync getdel value should be "gone"
+    When I check if "bdd-s-gd-key" exists in <adapter_type>
+    Then the sync key should not exist
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Append extends string value
+    Given a configured <adapter_type>
+    When I store the key "bdd-s-app-key" with value "hello" in <adapter_type>
+    And I append " world" to key "bdd-s-app-key" in <adapter_type>
+    Then the sync append length should be 11
+    When I retrieve the value for key "bdd-s-app-key" from <adapter_type>
+    Then the sync retrieved value should be "hello world"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Report key type
+    Given a configured <adapter_type>
+    When I create a <redis_type> key "bdd-s-<redis_type>-key" in <adapter_type>
+    And I check the type of key "bdd-s-<redis_type>-key" in <adapter_type>
+    Then the sync key type should be "<redis_type>"
+
+    Examples: Key types
+      | adapter_type | redis_type |
+      | mock         | string     |
+      | mock         | list       |
+      | mock         | hash       |
+      | mock         | set        |
+      | mock         | zset       |
+      | container    | string     |
+      | container    | list       |
+      | container    | hash       |
+      | container    | set        |
+      | container    | zset       |
+      | cluster      | string     |
+      | cluster      | list       |
+      | cluster      | hash       |
+      | cluster      | set        |
+      | cluster      | zset       |
+
+  Scenario Outline: Increment and decrement counter
+    Given a configured <adapter_type>
+    When I increment key "bdd-s-counter" by 5 in <adapter_type>
+    Then the sync counter value should be 5
+    When I increment key "bdd-s-counter" by -2 in <adapter_type>
+    Then the sync counter value should be 3
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Mset and mget multiple keys
+    Given a configured <adapter_type>
+    When I mset "{bdd-s-m}:1" to "val1" and "{bdd-s-m}:2" to "val2" in <adapter_type>
+    And I mget keys "{bdd-s-m}:1" and "{bdd-s-m}:2" from <adapter_type>
+    Then the sync mget values should be "val1,val2"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Find keys by pattern and scan
+    Given a configured <adapter_type>
+    When I mset "{bdd-s-scan}:1" to "a" and "{bdd-s-scan}:2" to "b" in <adapter_type>
+    And I find keys matching "{bdd-s-scan}:*" in <adapter_type>
+    Then the found keys should include "{bdd-s-scan}:1" and "{bdd-s-scan}:2"
+    When I scan keys matching "{bdd-s-scan}:*" in <adapter_type>
+    Then the scanned keys should include "{bdd-s-scan}:1" and "{bdd-s-scan}:2"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Lpush and lpop preserve order
+    Given a configured <adapter_type>
+    When I lpush "first, second" to list "bdd-s-mylist" in <adapter_type>
+    Then the sync list "bdd-s-mylist" should have 2 items
+    When I lpop from list "bdd-s-mylist" in <adapter_type>
+    Then the sync popped value should be "second"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Rpop and lrem modify list
+    Given a configured <adapter_type>
+    When I add "a, b, a, c" to the list "bdd-s-rlist" in <adapter_type>
+    When I rpop from list "bdd-s-rlist" in <adapter_type>
+    Then the sync popped value should be "c"
+    When I lrem 1 "a" from list "bdd-s-rlist" in <adapter_type>
+    Then the sync list "bdd-s-rlist" should have 2 items
+    When I lset index 0 to "x" in list "bdd-s-rlist" in <adapter_type>
+    And I fetch all items from the list "bdd-s-rlist" in <adapter_type>
+    Then the sync list "bdd-s-rlist" should contain "x, a"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Set membership and removal
+    Given a configured <adapter_type>
+    When I add "alpha, beta" to the set "bdd-s-myset" in <adapter_type>
+    When I check if "alpha" is a member of set "bdd-s-myset" in <adapter_type>
+    Then the sync set membership should be true
+    When I check if "gamma" is a member of set "bdd-s-myset" in <adapter_type>
+    Then the sync set membership should be false
+    When I remove "alpha" from set "bdd-s-myset" in <adapter_type>
+    Then the sync set "bdd-s-myset" should have 1 members
+    When I spop from set "bdd-s-myset" in <adapter_type>
+    Then the sync set "bdd-s-myset" should have 0 members
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Set union across hash-tagged sets
+    Given a configured <adapter_type>
+    When I add "a, b" to the set "{bdd-s-su}:1" in <adapter_type>
+    And I add "b, c" to the set "{bdd-s-su}:2" in <adapter_type>
+    When I union sets "{bdd-s-su}:1" and "{bdd-s-su}:2" in <adapter_type>
+    Then the sync set union should contain "a, b, c"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Manage sorted set members
+    Given a configured <adapter_type>
+    When I zadd members "alice=10,bob=20" to sorted set "bdd-s-leaderboard" in <adapter_type>
+    Then the sync sorted set "bdd-s-leaderboard" should have 2 members
+    When I get zscore of "alice" in sorted set "bdd-s-leaderboard" in <adapter_type>
+    Then the sync zscore should be 10.0
+    When I get zrank of "bob" in sorted set "bdd-s-leaderboard" in <adapter_type>
+    Then the sync zrank should be 1
+    When I zrange sorted set "bdd-s-leaderboard" from 0 to -1 in <adapter_type>
+    Then the sync zrange members should be "alice, bob"
+    When I zrevrange sorted set "bdd-s-leaderboard" from 0 to -1 in <adapter_type>
+    Then the sync zrange members should be "bob, alice"
+    When I zrangebyscore sorted set "bdd-s-leaderboard" from 10 to 20 in <adapter_type>
+    Then the sync zrange members should be "alice, bob"
+    When I zcount sorted set "bdd-s-leaderboard" from 10 to 15 in <adapter_type>
+    Then the sync zcount should be 1
+    When I zincrby 5 "alice" in sorted set "bdd-s-leaderboard" in <adapter_type>
+    Then the sync zscore should be 15.0
+    When I zrem "bob" from sorted set "bdd-s-leaderboard" in <adapter_type>
+    Then the sync sorted set "bdd-s-leaderboard" should have 1 members
+    When I zpopmax from sorted set "bdd-s-leaderboard" in <adapter_type>
+    Then the sync zpop result should be "alice"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Hash field operations
+    Given a configured <adapter_type>
+    When I hset mapping "name=Alice,email=alice@test.com" in hash "bdd-s-user" in <adapter_type>
+    Then the sync hash "bdd-s-user" should have 2 fields
+    When I check if field "name" exists in hash "bdd-s-user" in <adapter_type>
+    Then the sync hash field exists should be true
+    When I hmget fields "name,email" from hash "bdd-s-user" in <adapter_type>
+    Then the sync hmget values should be "Alice,alice@test.com"
+    When I fetch all fields from hash "bdd-s-user" in <adapter_type>
+    Then the sync hash keys should be "email, name"
+    And the sync hash values should be "alice@test.com, Alice"
+    When I delete field "email" from hash "bdd-s-user" in <adapter_type>
+    Then the sync hash "bdd-s-user" should have 1 fields
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Publish message to channel
+    Given a configured <adapter_type>
+    When I publish "hello" to channel "bdd-s-test-channel" in <adapter_type>
+    Then the sync publish count should be at least 0
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Subscribe and receive published message
+    Given a configured <adapter_type>
+    When I subscribe to channel "bdd-s-pubsub-<adapter_type>-channel" in <adapter_type>
+    And I publish "greeting" to channel "bdd-s-pubsub-<adapter_type>-channel" in <adapter_type>
+    Then the sync subscribed message should be "greeting"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+
+  Scenario Outline: Pipeline executes commands atomically
+    Given a configured <adapter_type>
+    When I run pipeline setting "{<pipe_tag>}:k" to "v" and incrementing "{<pipe_tag>}:cnt" by 1 in <adapter_type>
+    Then the sync pipeline results should be "True, 1, v"
+    When I retrieve the value for key "{<pipe_tag>}:k" from <adapter_type>
+    Then the sync retrieved value should be "v"
+
+    Examples: Pipeline keys
+      | adapter_type | pipe_tag      |
+      | mock         | bdd-s-p-mock  |
+      | container    | bdd-s-p-cont  |
+      | cluster      | bdd-s-p-clust |
+
+  @async
+  Scenario Outline: Store key with expiry and verify TTL asynchronously
+    Given a configured async <adapter_type>
+    When I store the key "bdd-a-ttl-key" with value "expires" and expiry 60 seconds in async <adapter_type>
+    Then the async store with expiry should succeed
+    When I check the TTL for key "bdd-a-ttl-key" in async <adapter_type>
+    Then the async TTL should be between 1 and 60
+    When I check the PTTL for key "bdd-a-ttl-key" in async <adapter_type>
+    Then the async PTTL should be positive
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: GetSet returns old value asynchronously
+    Given a configured async <adapter_type>
+    When I store the key "bdd-a-gs-key" with value "old" in async <adapter_type>
+    And I getset key "bdd-a-gs-key" to value "new" in async <adapter_type>
+    Then the async getset old value should be "old"
+    When I retrieve the value for key "bdd-a-gs-key" from async <adapter_type>
+    Then the async retrieved value should be "new"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: GetDel returns value and removes key asynchronously
+    Given a configured async <adapter_type>
+    When I store the key "bdd-a-gd-key" with value "gone" in async <adapter_type>
+    And I getdel key "bdd-a-gd-key" in async <adapter_type>
+    Then the async getdel value should be "gone"
+    When I check if "bdd-a-gd-key" exists in async <adapter_type>
+    Then the async key should not exist
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Append extends string value asynchronously
+    Given a configured async <adapter_type>
+    When I store the key "bdd-a-app-key" with value "hello" in async <adapter_type>
+    And I append " world" to key "bdd-a-app-key" in async <adapter_type>
+    Then the async append length should be 11
+    When I retrieve the value for key "bdd-a-app-key" from async <adapter_type>
+    Then the async retrieved value should be "hello world"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Report key type asynchronously
+    Given a configured async <adapter_type>
+    When I create a <redis_type> key "bdd-a-<redis_type>-key" in async <adapter_type>
+    And I check the type of key "bdd-a-<redis_type>-key" in async <adapter_type>
+    Then the async key type should be "<redis_type>"
+
+    Examples: Key types
+      | adapter_type | redis_type |
+      | mock         | string     |
+      | mock         | list       |
+      | mock         | hash       |
+      | mock         | set        |
+      | mock         | zset       |
+      | container    | string     |
+      | container    | list       |
+      | container    | hash       |
+      | container    | set        |
+      | container    | zset       |
+      | cluster      | string     |
+      | cluster      | list       |
+      | cluster      | hash       |
+      | cluster      | set        |
+      | cluster      | zset       |
+
+  @async
+  Scenario Outline: Increment and decrement counter asynchronously
+    Given a configured async <adapter_type>
+    When I increment key "bdd-a-counter" by 5 in async <adapter_type>
+    Then the async counter value should be 5
+    When I increment key "bdd-a-counter" by -2 in async <adapter_type>
+    Then the async counter value should be 3
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Mset and mget multiple keys asynchronously
+    Given a configured async <adapter_type>
+    When I mset "{bdd-a-m}:1" to "val1" and "{bdd-a-m}:2" to "val2" in async <adapter_type>
+    And I mget keys "{bdd-a-m}:1" and "{bdd-a-m}:2" from async <adapter_type>
+    Then the async mget values should be "val1,val2"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Find keys by pattern and scan asynchronously
+    Given a configured async <adapter_type>
+    When I mset "{bdd-a-scan}:1" to "a" and "{bdd-a-scan}:2" to "b" in async <adapter_type>
+    And I find keys matching "{bdd-a-scan}:*" in async <adapter_type>
+    Then the found keys should include "{bdd-a-scan}:1" and "{bdd-a-scan}:2"
+    When I scan keys matching "{bdd-a-scan}:*" in async <adapter_type>
+    Then the scanned keys should include "{bdd-a-scan}:1" and "{bdd-a-scan}:2"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Lpush and lpop preserve order asynchronously
+    Given a configured async <adapter_type>
+    When I lpush "first, second" to list "bdd-a-mylist" in async <adapter_type>
+    Then the async list "bdd-a-mylist" should have 2 items
+    When I lpop from list "bdd-a-mylist" in async <adapter_type>
+    Then the async popped value should be "second"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Rpop and lrem modify list asynchronously
+    Given a configured async <adapter_type>
+    When I add "a, b, a, c" to the list "bdd-a-rlist" in async <adapter_type>
+    When I rpop from list "bdd-a-rlist" in async <adapter_type>
+    Then the async popped value should be "c"
+    When I lrem 1 "a" from list "bdd-a-rlist" in async <adapter_type>
+    Then the async list "bdd-a-rlist" should have 2 items
+    When I lset index 0 to "x" in list "bdd-a-rlist" in async <adapter_type>
+    And I fetch all items from the list "bdd-a-rlist" in async <adapter_type>
+    Then the async list "bdd-a-rlist" should contain "x, a"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Set membership and removal asynchronously
+    Given a configured async <adapter_type>
+    When I add "alpha, beta" to the set "bdd-a-myset" in async <adapter_type>
+    When I check if "alpha" is a member of set "bdd-a-myset" in async <adapter_type>
+    Then the async set membership should be true
+    When I check if "gamma" is a member of set "bdd-a-myset" in async <adapter_type>
+    Then the async set membership should be false
+    When I remove "alpha" from set "bdd-a-myset" in async <adapter_type>
+    Then the async set "bdd-a-myset" should have 1 members
+    When I spop from set "bdd-a-myset" in async <adapter_type>
+    Then the async set "bdd-a-myset" should have 0 members
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Set union across hash-tagged sets asynchronously
+    Given a configured async <adapter_type>
+    When I add "a, b" to the set "{bdd-a-su}:1" in async <adapter_type>
+    And I add "b, c" to the set "{bdd-a-su}:2" in async <adapter_type>
+    When I union sets "{bdd-a-su}:1" and "{bdd-a-su}:2" in async <adapter_type>
+    Then the async set union should contain "a, b, c"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Manage sorted set members asynchronously
+    Given a configured async <adapter_type>
+    When I zadd members "alice=10,bob=20" to sorted set "bdd-a-leaderboard" in async <adapter_type>
+    Then the async sorted set "bdd-a-leaderboard" should have 2 members
+    When I get zscore of "alice" in sorted set "bdd-a-leaderboard" in async <adapter_type>
+    Then the async zscore should be 10.0
+    When I get zrank of "bob" in sorted set "bdd-a-leaderboard" in async <adapter_type>
+    Then the async zrank should be 1
+    When I zrange sorted set "bdd-a-leaderboard" from 0 to -1 in async <adapter_type>
+    Then the async zrange members should be "alice, bob"
+    When I zrevrange sorted set "bdd-a-leaderboard" from 0 to -1 in async <adapter_type>
+    Then the async zrange members should be "bob, alice"
+    When I zrangebyscore sorted set "bdd-a-leaderboard" from 10 to 20 in async <adapter_type>
+    Then the async zrange members should be "alice, bob"
+    When I zcount sorted set "bdd-a-leaderboard" from 10 to 15 in async <adapter_type>
+    Then the async zcount should be 1
+    When I zincrby 5 "alice" in sorted set "bdd-a-leaderboard" in async <adapter_type>
+    Then the async zscore should be 15.0
+    When I zrem "bob" from sorted set "bdd-a-leaderboard" in async <adapter_type>
+    Then the async sorted set "bdd-a-leaderboard" should have 1 members
+    When I zpopmax from sorted set "bdd-a-leaderboard" in async <adapter_type>
+    Then the async zpop result should be "alice"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Hash field operations asynchronously
+    Given a configured async <adapter_type>
+    When I hset mapping "name=Alice,email=alice@test.com" in hash "bdd-a-user" in async <adapter_type>
+    Then the async hash "bdd-a-user" should have 2 fields
+    When I check if field "name" exists in hash "bdd-a-user" in async <adapter_type>
+    Then the async hash field exists should be true
+    When I hmget fields "name,email" from hash "bdd-a-user" in async <adapter_type>
+    Then the async hmget values should be "Alice,alice@test.com"
+    When I fetch all fields from hash "bdd-a-user" in async <adapter_type>
+    Then the async hash keys should be "email, name"
+    And the async hash values should be "alice@test.com, Alice"
+    When I delete field "email" from hash "bdd-a-user" in async <adapter_type>
+    Then the async hash "bdd-a-user" should have 1 fields
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Publish message to channel asynchronously
+    Given a configured async <adapter_type>
+    When I publish "hello" to channel "bdd-a-test-channel" in async <adapter_type>
+    Then the async publish count should be at least 0
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Subscribe and receive published message asynchronously
+    Given a configured async <adapter_type>
+    When I subscribe to channel "bdd-a-pubsub-container-channel" in async <adapter_type>
+    And I publish "greeting" to channel "bdd-a-pubsub-container-channel" in async <adapter_type>
+    Then the async subscribed message should be "greeting"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | container    |
+
+  @async
+  Scenario Outline: Pipeline executes commands asynchronously
+    Given a configured async <adapter_type>
+    When I run pipeline setting "{<pipe_tag>}:k" to "v" and incrementing "{<pipe_tag>}:cnt" by 1 in async <adapter_type>
+    Then the async pipeline results should be "True, 1, v"
+    When I retrieve the value for key "{<pipe_tag>}:k" from async <adapter_type>
+    Then the async retrieved value should be "v"
+
+    Examples: Pipeline keys
+      | adapter_type | pipe_tag       |
+      | container    | bdd-a-p-cont   |
+      | cluster      | bdd-a-p-clust  |
