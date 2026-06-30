@@ -928,6 +928,74 @@ class TemporalConfig(BaseModel):
         description="Port for Temporal Prometheus metrics endpoint (separate from main Prometheus port)",
     )
 
+    # Client Connection Configuration
+    CLIENT_IDENTITY: str | None = Field(
+        default=None,
+        description="Client identity string for Temporal server visibility",
+    )
+    API_KEY: str | None = Field(
+        default=None,
+        description="API key for Temporal Cloud authentication (ignored by local dev server)",
+    )
+    LAZY_CONNECT: bool = Field(
+        default=False,
+        description="Defer establishing the Temporal client connection until first use",
+    )
+    KEEP_ALIVE_INTERVAL_MS: int = Field(
+        default=30000,
+        ge=1,
+        description="gRPC keep-alive ping interval in milliseconds",
+    )
+    KEEP_ALIVE_TIMEOUT_MS: int = Field(
+        default=15000,
+        ge=1,
+        description="gRPC keep-alive timeout in milliseconds",
+    )
+    RPC_METADATA: dict[str, str] | None = Field(
+        default=None,
+        description="Custom RPC metadata headers sent with every client request",
+    )
+    CLIENT_RPC_RETRY_MAX_RETRIES: int = Field(
+        default=10,
+        ge=0,
+        description="Maximum client-side RPC retry attempts",
+    )
+    CLIENT_RPC_RETRY_INITIAL_INTERVAL_MS: int = Field(
+        default=100,
+        ge=1,
+        description="Initial backoff interval for client-side RPC retries in milliseconds",
+    )
+    CLIENT_RPC_RETRY_MAX_INTERVAL_MS: int = Field(
+        default=5000,
+        ge=1,
+        description="Maximum backoff interval for client-side RPC retries in milliseconds",
+    )
+
+    # Worker Configuration
+    WORKER_GRACEFUL_SHUTDOWN_SECONDS: int = Field(
+        default=30,
+        ge=0,
+        description="Maximum time in seconds to wait for graceful worker shutdown",
+    )
+    WORKER_MAX_CACHED_WORKFLOWS: int = Field(
+        default=1000,
+        ge=0,
+        description="Maximum number of workflow instances cached in worker memory",
+    )
+    WORKER_DEBUG_MODE: bool = Field(
+        default=False,
+        description="Enable worker debug mode (e.g. breakpoint support in workflow sandbox)",
+    )
+    WORKER_MAX_CONCURRENT_LOCAL_ACTIVITIES: int | None = Field(
+        default=None,
+        ge=1,
+        description="Maximum concurrent local activities (None uses server default)",
+    )
+    WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION: bool = Field(
+        default=False,
+        description="Disable eager activity execution on the worker",
+    )
+
     # TLS Configuration
     TLS_CA_CERT: str | None = Field(default=None, description="Path to TLS CA certificate")
     TLS_CLIENT_CERT: str | None = Field(default=None, description="Path to TLS client certificate")
@@ -978,6 +1046,15 @@ class TemporalConfig(BaseModel):
         ge=1,
         description="Maximum retry interval in seconds",
     )
+    RETRY_INITIAL_INTERVAL: int = Field(
+        default=1,
+        ge=1,
+        description="Initial retry interval in seconds for workflow and activity retry policies",
+    )
+    RETRY_NON_RETRYABLE_ERROR_TYPES: list[str] | None = Field(
+        default=None,
+        description="Error type names that should not be retried by workflow/activity retry policies",
+    )
 
     @model_validator(mode="after")
     def validate_tls_configuration(self) -> Self:
@@ -998,6 +1075,26 @@ class TemporalConfig(BaseModel):
 
         if self.WORKFLOW_TASK_TIMEOUT >= self.WORKFLOW_RUN_TIMEOUT:
             raise InvalidArgumentError()
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_keep_alive_configuration(self) -> Self:
+        """Validate keep-alive timeout is less than the keep-alive interval."""
+        if self.KEEP_ALIVE_TIMEOUT_MS >= self.KEEP_ALIVE_INTERVAL_MS:
+            raise InvalidArgumentError()
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_rpc_metadata(self) -> Self:
+        """Validate RPC metadata keys and values are non-empty strings."""
+        if self.RPC_METADATA is None:
+            return self
+
+        for key, value in self.RPC_METADATA.items():
+            if not key or not value:
+                raise InvalidArgumentError()
 
         return self
 

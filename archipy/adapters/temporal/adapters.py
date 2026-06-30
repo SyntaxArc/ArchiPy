@@ -13,6 +13,7 @@ from uuid import uuid4
 
 from temporalio.client import (
     Client,
+    KeepAliveConfig,
     Schedule,
     ScheduleActionStartWorkflow,
     ScheduleOverlapPolicy,
@@ -22,6 +23,7 @@ from temporalio.client import (
     WorkflowHandle,
 )
 from temporalio.common import RetryPolicy
+from temporalio.service import RetryConfig
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import TemporalConfig
@@ -82,7 +84,23 @@ class TemporalAdapter(TemporalPort):
                 # Build connection kwargs, only including tls if configured
                 connect_kwargs: dict[str, Any] = {
                     "namespace": self.config.NAMESPACE,
+                    "lazy": self.config.LAZY_CONNECT,
+                    "keep_alive_config": KeepAliveConfig(
+                        interval_millis=self.config.KEEP_ALIVE_INTERVAL_MS,
+                        timeout_millis=self.config.KEEP_ALIVE_TIMEOUT_MS,
+                    ),
+                    "retry_config": RetryConfig(
+                        initial_interval_millis=self.config.CLIENT_RPC_RETRY_INITIAL_INTERVAL_MS,
+                        max_interval_millis=self.config.CLIENT_RPC_RETRY_MAX_INTERVAL_MS,
+                        max_retries=self.config.CLIENT_RPC_RETRY_MAX_RETRIES,
+                    ),
                 }
+                if self.config.CLIENT_IDENTITY is not None:
+                    connect_kwargs["identity"] = self.config.CLIENT_IDENTITY
+                if self.config.API_KEY is not None:
+                    connect_kwargs["api_key"] = self.config.API_KEY
+                if self.config.RPC_METADATA:
+                    connect_kwargs["rpc_metadata"] = self.config.RPC_METADATA
                 if self._has_tls_config():
                     tls_config = self._build_tls_config()
                     connect_kwargs["tls"] = tls_config
@@ -176,9 +194,11 @@ class TemporalAdapter(TemporalPort):
             RetryPolicy: The configured retry policy.
         """
         return RetryPolicy(
+            initial_interval=timedelta(seconds=self.config.RETRY_INITIAL_INTERVAL),
             maximum_attempts=self.config.RETRY_MAXIMUM_ATTEMPTS,
             backoff_coefficient=self.config.RETRY_BACKOFF_COEFFICIENT,
             maximum_interval=timedelta(seconds=self.config.RETRY_MAXIMUM_INTERVAL),
+            non_retryable_error_types=self.config.RETRY_NON_RETRYABLE_ERROR_TYPES,
         )
 
     @override

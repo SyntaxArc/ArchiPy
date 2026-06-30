@@ -250,3 +250,12 @@ Feature: Temporal Adapter Operations
       | city  | NYC   |
     Then the workflow result should contain processed data
     And the processed data should have item count 3
+
+  Scenario: Connect with extended SDK client configuration
+    Given Temporal adapter is configured with client identity "archipy-bdd-client"
+    And a Temporal worker manager is configured with worker debug mode enabled
+    And a worker is started for task queue "test-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "ConfigTest"
+    Then the workflow result should be "Hello, ConfigTest!"
+    And the temporal adapter config should have client identity "archipy-bdd-client"
+    And the temporal worker manager config should have debug mode enabled

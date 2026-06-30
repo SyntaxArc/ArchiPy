@@ -45,7 +45,7 @@ sqlalchemy = ["sqlalchemy>=2.0.51"]
 sqlalchemy-async = ["sqlalchemy[asyncio]>=2.0.51"]
 starrocks = ["starrocks>=1.3.3", "pymysql>=1.2.0"]
 starrocks-async = ["starrocks>=1.3.3", "aiomysql>=0.3.2", "asyncmy2>=0.2.20"]
-temporalio = ["temporalio>=1.24.0"]
+temporalio = ["temporalio>=1.29.0"]
 testcontainers = ["testcontainers[elasticsearch, minio]>=4.14.2"]
 
 [build-system]
@@ -64,7 +64,7 @@ dev = [
     "ty>=0.0.52",
     "types-cachetools>=7.0.0.20260518",
     "types-grpcio>=1.0.0.20260614",
-    "types-protobuf>=7.34.1.20260518",
+    "types-protobuf",
     "types-pymysql>=1.1.0.20260518",
     "types-regex>=2026.5.9.20260518",
     "types-requests>=2.33.0.20260518",

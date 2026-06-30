@@ -11,7 +11,7 @@ error handling and Python 3.14 type hints.
 ## Installation
 
 ```bash
-uv add "archipy[temporal]"
+uv add "archipy[temporalio]"
 ```
 
 ## Configuration
@@ -25,6 +25,20 @@ TEMPORAL__HOST=localhost
 TEMPORAL__PORT=7233
 TEMPORAL__NAMESPACE=default
 TEMPORAL__TASK_QUEUE=my-task-queue
+TEMPORAL__ENABLE_METRICS=false
+TEMPORAL__METRICS_PORT=8201
+TEMPORAL__CLIENT_IDENTITY=
+TEMPORAL__API_KEY=
+TEMPORAL__LAZY_CONNECT=false
+TEMPORAL__KEEP_ALIVE_INTERVAL_MS=30000
+TEMPORAL__KEEP_ALIVE_TIMEOUT_MS=15000
+TEMPORAL__CLIENT_RPC_RETRY_MAX_RETRIES=10
+TEMPORAL__CLIENT_RPC_RETRY_INITIAL_INTERVAL_MS=100
+TEMPORAL__CLIENT_RPC_RETRY_MAX_INTERVAL_MS=5000
+TEMPORAL__WORKER_GRACEFUL_SHUTDOWN_SECONDS=30
+TEMPORAL__WORKER_MAX_CACHED_WORKFLOWS=1000
+TEMPORAL__WORKER_DEBUG_MODE=false
+TEMPORAL__WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION=false
 TEMPORAL__TLS_CA_CERT=/path/to/ca.crt
 TEMPORAL__TLS_CLIENT_CERT=/path/to/client.crt
 TEMPORAL__TLS_CLIENT_KEY=/path/to/client.key
@@ -34,7 +48,27 @@ TEMPORAL__ACTIVITY_START_TO_CLOSE_TIMEOUT=30
 TEMPORAL__RETRY_MAXIMUM_ATTEMPTS=3
 TEMPORAL__RETRY_BACKOFF_COEFFICIENT=2.0
 TEMPORAL__RETRY_MAXIMUM_INTERVAL=60
+TEMPORAL__RETRY_INITIAL_INTERVAL=1
 ```
+
+> **Note:** `TEMPORAL__API_KEY` is for Temporal Cloud authentication. Local dev servers ignore it.
+
+### Configuration Reference
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `CLIENT_IDENTITY` | Client identity visible on the Temporal server | `None` |
+| `API_KEY` | Temporal Cloud API key | `None` |
+| `LAZY_CONNECT` | Defer connection until first client use | `false` |
+| `KEEP_ALIVE_INTERVAL_MS` | gRPC keep-alive ping interval | `30000` |
+| `KEEP_ALIVE_TIMEOUT_MS` | gRPC keep-alive timeout | `15000` |
+| `CLIENT_RPC_RETRY_*` | Client-side RPC retry backoff | SDK defaults |
+| `WORKER_GRACEFUL_SHUTDOWN_SECONDS` | Worker shutdown grace period | `30` |
+| `WORKER_MAX_CACHED_WORKFLOWS` | In-memory workflow cache size | `1000` |
+| `WORKER_DEBUG_MODE` | Enable workflow sandbox debug mode | `false` |
+| `WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION` | Disable eager activity execution | `false` |
+| `RETRY_INITIAL_INTERVAL` | Initial workflow/activity retry delay (seconds) | `1` |
+| `RETRY_NON_RETRYABLE_ERROR_TYPES` | Error types excluded from retries | `None` |
 
 ### Direct Configuration
 
@@ -52,6 +86,9 @@ config = TemporalConfig(
     RETRY_MAXIMUM_ATTEMPTS=3,
     RETRY_BACKOFF_COEFFICIENT=2.0,
     RETRY_MAXIMUM_INTERVAL=60,
+    RETRY_INITIAL_INTERVAL=1,
+    CLIENT_IDENTITY="my-service-client",
+    WORKER_DEBUG_MODE=False,
 )
 ```
 

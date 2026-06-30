@@ -8,6 +8,7 @@ and integration with ArchiPy service adapters.
 import asyncio
 import logging
 from collections.abc import Callable
+from datetime import timedelta
 from typing import Any, override
 from uuid import uuid4
 
@@ -50,6 +51,7 @@ class WorkerHandle(PortWorkerHandle):
         identity: str | None = None,
         max_concurrent_workflow_tasks: int | None = None,
         max_concurrent_activities: int | None = None,
+        graceful_shutdown_seconds: int = 30,
     ) -> None:
         """Initialize the worker handle.
 
@@ -65,6 +67,8 @@ class WorkerHandle(PortWorkerHandle):
                 Defaults to None.
             max_concurrent_activities (int, optional): Maximum concurrent activity tasks.
                 Defaults to None.
+            graceful_shutdown_seconds (int): Default graceful shutdown timeout in seconds.
+                Defaults to 30.
         """
         self._worker = worker
         self.worker_id = worker_id
@@ -75,6 +79,7 @@ class WorkerHandle(PortWorkerHandle):
         self.identity = identity
         self.max_concurrent_workflow_tasks = max_concurrent_workflow_tasks
         self.max_concurrent_activities = max_concurrent_activities
+        self._graceful_shutdown_seconds = graceful_shutdown_seconds
         self._running = False
         self._logger = logging.getLogger(__name__)
 
@@ -118,16 +123,19 @@ class WorkerHandle(PortWorkerHandle):
                 },
             ) from error
 
-    async def stop(self, grace_period: int = 30) -> None:
+    async def stop(self, grace_period: int | None = None) -> None:
         """Stop the worker gracefully.
 
         Args:
-            grace_period (int): Maximum time to wait for graceful shutdown in seconds.
-                Defaults to 30.
+            grace_period (int, optional): Maximum time to wait for graceful shutdown in seconds.
+                If None, uses the configured graceful shutdown timeout.
 
         Raises:
             WorkerShutdownError: If the worker fails to stop gracefully.
         """
+        if grace_period is None:
+            grace_period = self._graceful_shutdown_seconds
+
         if not self._running:
             return
 
@@ -307,6 +315,11 @@ class TemporalWorkerManager(WorkerPort):
                 identity=worker_identity,
                 max_concurrent_workflow_tasks=max_concurrent_workflow_tasks,
                 max_concurrent_activities=max_concurrent_activities,
+                max_cached_workflows=self.config.WORKER_MAX_CACHED_WORKFLOWS,
+                graceful_shutdown_timeout=timedelta(seconds=self.config.WORKER_GRACEFUL_SHUTDOWN_SECONDS),
+                debug_mode=self.config.WORKER_DEBUG_MODE,
+                disable_eager_activity_execution=self.config.WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION,
+                max_concurrent_local_activities=self.config.WORKER_MAX_CONCURRENT_LOCAL_ACTIVITIES,
             )
 
             # Create worker handle
@@ -320,6 +333,7 @@ class TemporalWorkerManager(WorkerPort):
                 identity=worker_identity,
                 max_concurrent_workflow_tasks=max_concurrent_workflow_tasks,
                 max_concurrent_activities=max_concurrent_activities,
+                graceful_shutdown_seconds=self.config.WORKER_GRACEFUL_SHUTDOWN_SECONDS,
             )
 
             # Start the worker

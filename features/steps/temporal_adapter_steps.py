@@ -258,6 +258,34 @@ def step_temporal_worker_manager_configured(context):
     context.logger.info("Temporal worker manager configured")
 
 
+@given('Temporal adapter is configured with client identity "{identity}"')
+def step_temporal_adapter_with_client_identity(context, identity: str) -> None:
+    """Configure Temporal adapter with a custom client identity."""
+    scenario_context = get_current_scenario_context(context)
+    test_containers = scenario_context.get("test_containers")
+    temporal_container = test_containers.get_container("temporal")
+    temporal_config = temporal_container.config.model_copy(update={"CLIENT_IDENTITY": identity})
+    scenario_context.temporal_adapter = TemporalAdapter(temporal_config)
+    scenario_context.worker_manager = None
+    context.logger.info("Temporal adapter configured with client identity %s", identity)
+
+
+@given("a Temporal worker manager is configured with worker debug mode enabled")
+def step_temporal_worker_manager_with_debug_mode(context) -> None:
+    """Configure Temporal worker manager with debug mode enabled."""
+    scenario_context = get_current_scenario_context(context)
+    test_containers = scenario_context.get("test_containers")
+    temporal_container = test_containers.get_container("temporal")
+    base_config = (
+        scenario_context.temporal_adapter.config
+        if hasattr(scenario_context, "temporal_adapter") and scenario_context.temporal_adapter is not None
+        else temporal_container.config
+    )
+    temporal_config = base_config.model_copy(update={"WORKER_DEBUG_MODE": True})
+    scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
+    context.logger.info("Temporal worker manager configured with debug mode enabled")
+
+
 @given('a worker is started for task queue "{task_queue}" with {workflow_name}')
 def step_start_worker_with_workflow(context, task_queue, workflow_name):
     """Start a worker with specific workflow.
@@ -1396,3 +1424,21 @@ def step_processed_data_should_have_item_count(context, count):
     result = scenario_context.workflow_result
     assert result["item_count"] == count, f"Expected item count {count}, got {result['item_count']}"
     context.logger.info(f"Processed data has item count: {count}")
+
+
+@then('the temporal adapter config should have client identity "{identity}"')
+def step_temporal_adapter_config_should_have_client_identity(context, identity: str) -> None:
+    """Verify Temporal adapter config has the expected client identity."""
+    adapter = get_temporal_adapter(context)
+    assert adapter.config.CLIENT_IDENTITY == identity, (
+        f"Expected CLIENT_IDENTITY {identity}, got {adapter.config.CLIENT_IDENTITY}"
+    )
+    context.logger.info("Temporal adapter config has client identity %s", identity)
+
+
+@then("the temporal worker manager config should have debug mode enabled")
+def step_temporal_worker_manager_config_should_have_debug_mode(context) -> None:
+    """Verify Temporal worker manager config has debug mode enabled."""
+    worker_manager = get_temporal_worker_manager(context)
+    assert worker_manager.config.WORKER_DEBUG_MODE is True, "Expected WORKER_DEBUG_MODE to be enabled"
+    context.logger.info("Temporal worker manager config has debug mode enabled")

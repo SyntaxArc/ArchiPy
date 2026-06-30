@@ -88,9 +88,11 @@ class BaseWorkflow[T, R]:
             heartbeat_timeout = timedelta(seconds=temporal_config.ACTIVITY_HEARTBEAT_TIMEOUT)
         if retry_policy is None:
             retry_policy = RetryPolicy(
+                initial_interval=timedelta(seconds=temporal_config.RETRY_INITIAL_INTERVAL),
                 maximum_attempts=temporal_config.RETRY_MAXIMUM_ATTEMPTS,
                 backoff_coefficient=temporal_config.RETRY_BACKOFF_COEFFICIENT,
                 maximum_interval=timedelta(seconds=temporal_config.RETRY_MAXIMUM_INTERVAL),
+                non_retryable_error_types=temporal_config.RETRY_NON_RETRYABLE_ERROR_TYPES,
             )
 
         return await workflow.execute_activity(
