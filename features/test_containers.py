@@ -1,6 +1,7 @@
 """Container manager for test containers"""
 
 import logging
+import time
 from pathlib import Path
 
 from testcontainers.core.container import DockerContainer
@@ -19,6 +20,7 @@ from archipy.configs.config_template import (
     MinioConfig,
     PostgresSQLAlchemyConfig,
     RedisConfig,
+    RedisMode,
     ScyllaDBConfig,
     StarRocksSQLAlchemyConfig,
     TemporalConfig,
@@ -35,6 +37,7 @@ TAG_CONTAINER_MAP: dict[str, str] = {
     "needs-minio": "minio",
     "needs-keycloak": "keycloak",
     "needs-redis": "redis",
+    "needs-redis-cluster": "redis-cluster",
     "needs-scylladb": "scylladb",
     "needs-starrocks": "starrocks",
     "needs-temporal": "temporal",
@@ -243,6 +246,102 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
         self.port = None
 
         logger.info("Redis container stopped")
+
+
+_CLUSTER_PORTS = [7001, 7002, 7003, 7004, 7005, 7006]
+_CLUSTER_NODE_ADDRESSES = [f"127.0.0.1:{port}" for port in _CLUSTER_PORTS]
+
+
+def _build_redis_cluster_node(image: str, port: int) -> DockerContainer:
+    """Build a Redis cluster node container using host networking."""
+    command = (
+        f"redis-server --port {port} --cluster-enabled yes "
+        f"--cluster-config-file nodes.conf --cluster-node-timeout 5000 "
+        f"--cluster-announce-ip 127.0.0.1 --appendonly no"
+    )
+    return DockerContainer(image).with_kwargs(network_mode="host").with_command(command)
+
+
+def _wait_for_cluster_ready(container: DockerContainer, port: int, timeout: float = 60.0) -> None:
+    """Poll until the Redis cluster reports cluster_state:ok."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        result = container.exec(["redis-cli", "-p", str(port), "cluster", "info"])
+        if b"cluster_state:ok" in result.output:
+            return
+        time.sleep(0.5)
+    msg = f"Redis cluster on port {port} did not reach cluster_state:ok within {timeout}s"
+    raise TimeoutError(msg)
+
+
+@ContainerManager.register("redis-cluster")
+class RedisClusterTestContainer(metaclass=Singleton, thread_safe=True):
+    """Six-node Redis cluster (3 masters + 3 replicas) using host networking (Linux only)."""
+
+    def __init__(self, image: str | None = None) -> None:
+        self.name = "redis-cluster"
+        self.image = image or BaseConfig.global_config().REDIS__IMAGE
+        self._is_running: bool = False
+        self._containers: list[DockerContainer] = []
+        self.cluster_config = RedisConfig(
+            MODE=RedisMode.CLUSTER,
+            CLUSTER_NODES=list(_CLUSTER_NODE_ADDRESSES),
+            DECODE_RESPONSES=True,
+            PASSWORD=None,
+            CLUSTER_REQUIRE_FULL_COVERAGE=True,
+            CLUSTER_READ_FROM_REPLICAS=True,
+        )
+
+    def _create_containers(self) -> list[DockerContainer]:
+        """Create fresh cluster node containers."""
+        return [_build_redis_cluster_node(self.image, port) for port in _CLUSTER_PORTS]
+
+    def start(self) -> list[DockerContainer]:
+        """Start the Redis cluster nodes and bootstrap the cluster."""
+        if self._is_running:
+            return self._containers
+
+        if not self._containers:
+            self._containers = self._create_containers()
+
+        for container in self._containers:
+            container.start()
+            wait_for_logs(container, "Ready to accept connections", timeout=30)
+
+        bootstrap_command = [
+            "redis-cli",
+            "--cluster",
+            "create",
+            *_CLUSTER_NODE_ADDRESSES,
+            "--cluster-replicas",
+            "1",
+            "--cluster-yes",
+        ]
+        result = self._containers[0].exec(bootstrap_command)
+        if result.exit_code != 0:
+            output = result.output.decode() if isinstance(result.output, bytes) else str(result.output)
+            msg = f"Redis cluster bootstrap failed (exit {result.exit_code}): {output}"
+            raise RuntimeError(msg)
+
+        _wait_for_cluster_ready(self._containers[0], _CLUSTER_PORTS[0])
+        self._is_running = True
+        logger.info("Redis cluster started on %s", ", ".join(_CLUSTER_NODE_ADDRESSES))
+        return self._containers
+
+    def stop(self) -> None:
+        """Stop all Redis cluster node containers."""
+        if not self._is_running and not self._containers:
+            return
+
+        for container in self._containers:
+            try:
+                container.stop()
+            except Exception:
+                logger.exception("Error stopping Redis cluster node")
+
+        self._containers = []
+        self._is_running = False
+        logger.info("Redis cluster stopped")
 
 
 @ContainerManager.register("postgres")

@@ -1,4 +1,4 @@
-@needs-redis
+@needs-redis @needs-redis-cluster
 Feature: Redis Testing
   As a developer
   I want to test Redis operations with both mocks and real containers
@@ -18,6 +18,7 @@ Feature: Redis Testing
       | adapter_type    |
       | mock            |
       | container       |
+      | cluster         |
 
   Scenario Outline: Remove a key
     Given a configured <adapter_type>
@@ -32,6 +33,7 @@ Feature: Redis Testing
       | adapter_type    |
       | mock            |
       | container       |
+      | cluster         |
 
   Scenario Outline: Manage a list of items
     Given a configured <adapter_type>
@@ -44,6 +46,7 @@ Feature: Redis Testing
       | adapter_type    |
       | mock            |
       | container       |
+      | cluster         |
 
   Scenario Outline: Handle a hash structure
     Given a configured <adapter_type>
@@ -56,6 +59,7 @@ Feature: Redis Testing
       | adapter_type    |
       | mock            |
       | container       |
+      | cluster         |
 
   Scenario Outline: Manage a set of colors
     Given a configured <adapter_type>
@@ -68,6 +72,7 @@ Feature: Redis Testing
       | adapter_type    |
       | mock            |
       | container       |
+      | cluster         |
 
   @async
   Scenario Outline: Store and retrieve a key-value pair asynchronously
@@ -81,6 +86,7 @@ Feature: Redis Testing
       | adapter_type    |
       | mock            |
       | container       |
+      | cluster         |
 
   @async
   Scenario Outline: Remove a key asynchronously
@@ -96,6 +102,7 @@ Feature: Redis Testing
       | adapter_type    |
       | mock            |
       | container       |
+      | cluster         |
 
   @async
   Scenario Outline: Manage a list of tasks asynchronously
@@ -109,6 +116,7 @@ Feature: Redis Testing
       | adapter_type    |
       | mock            |
       | container       |
+      | cluster         |
 
   @async
   Scenario Outline: Handle a hash structure asynchronously
@@ -122,6 +130,7 @@ Feature: Redis Testing
       | adapter_type    |
       | mock            |
       | container       |
+      | cluster         |
 
   @async
   Scenario Outline: Manage a set of tags asynchronously
@@ -135,3 +144,116 @@ Feature: Redis Testing
       | adapter_type    |
       | mock            |
       | container       |
+      | cluster         |
+
+  Scenario: Cluster reports healthy state
+    Given a configured cluster
+    When I query cluster info from the adapter
+    Then cluster state should be ok
+
+  Scenario Outline: Hash-tagged keys round-trip on cluster
+    Given a configured cluster
+    When I store the key "<key>" with value "<value>" in cluster
+    And I retrieve the value for key "<key>" from cluster
+    Then the sync retrieved value should be "<value>"
+
+    Examples: Hash-tagged keys
+      | key        | value   |
+      | {user}:1   | alice   |
+      | {order}:99 | shipped |
+
+  Scenario Outline: Slot lookup in valid range on cluster
+    Given a configured cluster
+    When I get the cluster slot for key "<key>"
+    Then the slot should be between 0 and 16383
+
+    Examples: Keys
+      | key        |
+      | {user}:1   |
+      | order:99   |
+
+  Scenario: Cluster topology has 3 masters and 3 replicas
+    Given a configured cluster
+    When I query cluster nodes from the adapter
+    Then cluster should have 3 masters and 3 replicas
+
+  Scenario Outline: Hash-tagged keys share slot on cluster
+    Given a configured cluster
+    When I get the cluster slots for keys "<key1>" and "<key2>"
+    Then both keys should share the same slot
+
+    Examples: Hash-tagged key pairs
+      | key1       | key2       |
+      | {user}:1   | {user}:2   |
+      | {order}:1  | {order}:2  |
+
+  Scenario Outline: Slot key inspection on cluster
+    Given a configured cluster
+    When I store the key "<key>" with value "<value>" in cluster
+    And I inspect keys in the cluster slot for key "<key>"
+    Then the cluster slot should contain at least 1 key
+    And the cluster slot should include key "<key>"
+
+    Examples: Keys
+      | key        | value   |
+      | {user}:1   | alice   |
+      | {order}:99 | shipped |
+
+  @async
+  Scenario: Cluster reports healthy state asynchronously
+    Given a configured async cluster
+    When I query cluster info from the async adapter
+    Then cluster state should be ok
+
+  @async
+  Scenario Outline: Hash-tagged keys round-trip on cluster asynchronously
+    Given a configured async cluster
+    When I store the key "<key>" with value "<value>" in async cluster
+    And I retrieve the value for key "<key>" from async cluster
+    Then the async retrieved value should be "<value>"
+
+    Examples: Hash-tagged keys
+      | key        | value   |
+      | {user}:1   | alice   |
+      | {order}:99 | shipped |
+
+  @async
+  Scenario Outline: Slot lookup in valid range on cluster asynchronously
+    Given a configured async cluster
+    When I get the cluster slot for key "<key>" from the async adapter
+    Then the slot should be between 0 and 16383
+
+    Examples: Keys
+      | key        |
+      | {user}:1   |
+      | order:99   |
+
+  @async
+  Scenario: Cluster topology has 3 masters and 3 replicas asynchronously
+    Given a configured async cluster
+    When I query cluster nodes from the async adapter
+    Then cluster should have 3 masters and 3 replicas
+
+  @async
+  Scenario Outline: Hash-tagged keys share slot on cluster asynchronously
+    Given a configured async cluster
+    When I get the cluster slots for keys "<key1>" and "<key2>" from the async adapter
+    Then both keys should share the same slot
+
+    Examples: Hash-tagged key pairs
+      | key1       | key2       |
+      | {user}:1   | {user}:2   |
+      | {order}:1  | {order}:2  |
+
+  @async
+  Scenario Outline: Slot key inspection on cluster asynchronously
+    Given a configured async cluster
+    When I store the key "<key>" with value "<value>" in async cluster
+    And I inspect keys in the cluster slot for key "<key>" from the async adapter
+    Then the cluster slot should contain at least 1 key
+    And the cluster slot should include key "<key>"
+
+    Examples: Keys
+      | key        | value   |
+      | {user}:1   | alice   |
+      | {order}:99 | shipped |
