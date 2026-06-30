@@ -6,13 +6,13 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Release notes for ArchiPy 4.12.1">
+        <meta name="description" content="Release notes for ArchiPy 4.13.0">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.12.1/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.13.0/">
       
       
       
@@ -25,7 +25,7 @@
     
     
       
-        <title>Changelog 4.12.1 - ArchiPy</title>
+        <title>Changelog 4.13.0 - ArchiPy</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#4121-2026-06-23" class="md-skip">
+        <a href="#4130-2026-06-30" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Changelog 4.12.1
+              Changelog 4.13.0
             
           </span>
         </div>
@@ -2994,10 +2994,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#chore-agent-skills" class="md-nav__link">
+  <a href="#adapters-keycloak" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Chore - Agent Skills
+        Adapters - Keycloak
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adapters-redis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapters - Redis
       
     </span>
   </a>
@@ -3022,10 +3033,60 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#dependencies-fastapi-compatibility" class="md-nav__link">
+  <a href="#configs-redis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Dependencies - FastAPI Compatibility
+        Configs - Redis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adapters-redis_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapters - Redis
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tests">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tests-redis-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests - Redis Adapter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tests-keycloak-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests - Keycloak Adapter
       
     </span>
   </a>
@@ -3065,7 +3126,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/4/4.12.1.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/4/4.13.0.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3073,45 +3134,60 @@
   
 
 
-<h1 id="4121-2026-06-23">4.12.1 — 2026-06-23<a class="headerlink" href="#4121-2026-06-23" title="Permanent link">&para;</a></h1>
-<p><a href="../4.13.0/">← 4.13.0</a> | <a href="../4.12.0/">4.12.0 →</a> | <a href="../">↑ 4.x series</a></p>
+<h1 id="4130-2026-06-30">4.13.0 — 2026-06-30<a class="headerlink" href="#4130-2026-06-30" title="Permanent link">&para;</a></h1>
+<p><a href="../4.12.1/">← 4.12.1</a> | <a href="../">↑ 4.x series</a></p>
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
-<h3 id="chore-agent-skills">Chore - Agent Skills<a class="headerlink" href="#chore-agent-skills" title="Permanent link">&para;</a></h3>
+<h3 id="adapters-keycloak">Adapters - Keycloak<a class="headerlink" href="#adapters-keycloak" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Caveman Skills Bundle</strong> - Vendored Cursor agent skills under <code>.agents/skills/</code> for terse AI-assisted development workflows.<ul>
-<li><code>caveman</code> — response-style skill with lite, full, and ultra intensity levels.</li>
-<li><code>cavecrew</code> — decision guide for delegating to caveman-style subagents (investigator, builder, reviewer).</li>
-<li><code>caveman-commit</code> — Conventional Commits message generator.</li>
-<li><code>caveman-compress</code> — memory-file compression with CLI scripts, validation, and benchmark tooling.</li>
-<li><code>caveman-help</code>, <code>caveman-review</code>, <code>caveman-stats</code> — help, diff review, and token-stats utilities.</li>
+<li><strong>Group Management</strong> - Added full group lifecycle management to <code>KeycloakPort</code>, <code>AsyncKeycloakPort</code>, and their adapters.<ul>
+<li><code>create_group</code>, <code>update_group</code>, <code>delete_group</code> for group CRUD.</li>
+<li><code>get_group</code>, <code>get_group_by_path</code>, <code>get_group_children</code>, <code>get_groups</code>, <code>get_subgroups</code>, <code>groups_count</code> for retrieval and hierarchy traversal.</li>
 </ul>
 </li>
-<li><strong>Skills Lockfile</strong> - Added <code>skills-lock.json</code> to pin skill sources and content hashes from <code>JuliusBrussee/caveman</code>.</li>
+<li><strong>Group Membership</strong> - Added methods for managing user membership and group access control.<ul>
+<li><code>group_user_add</code> and <code>group_user_remove</code> to attach or detach users from groups.</li>
+<li><code>group_set_permissions</code> to toggle group-level authorization.</li>
+<li><code>get_group_members</code> to list members of a group.</li>
+</ul>
+</li>
+<li><strong>Group Role Mappings</strong> - Added realm- and client-level role assignment for groups.<ul>
+<li><code>get_group_realm_roles</code>, <code>assign_group_realm_roles</code>, <code>delete_group_realm_roles</code>.</li>
+<li><code>get_group_client_roles</code>, <code>assign_group_client_roles</code>, <code>delete_group_client_roles</code>.</li>
+<li><code>get_composite_client_roles_of_group</code>, <code>get_client_role_groups</code>, <code>get_realm_role_groups</code> for composite and reverse lookups.</li>
+</ul>
+</li>
+</ul>
+<h3 id="adapters-redis">Adapters - Redis<a class="headerlink" href="#adapters-redis" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Database Flush</strong> - Added <code>flushdb</code> to <code>RedisPort</code>, <code>AsyncRedisPort</code>, and their adapters for deleting all keys in the current database, with an optional <code>asynchronous</code> flag.</li>
+<li><strong>RESP3 Protocol</strong> - Added <code>REDIS__PROTOCOL</code> configuration (<code>Literal[2, 3]</code>, default <code>3</code>) to select the RESP protocol version across standalone, cluster, and sentinel connections.</li>
+<li><strong>Sentinel Authentication</strong> - Added <code>REDIS__SENTINEL_PASSWORD</code> config for authenticating against sentinel nodes when distinct from the data-node password.</li>
+<li><strong>Cluster Read Balancing</strong> - Cluster connections now apply <code>LoadBalancingStrategy.ROUND_ROBIN</code> when <code>CLUSTER_READ_FROM_REPLICAS</code> is enabled.</li>
 </ul>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
-<h3 id="dependencies-fastapi-compatibility">Dependencies - FastAPI Compatibility<a class="headerlink" href="#dependencies-fastapi-compatibility" title="Permanent link">&para;</a></h3>
+<h3 id="configs-redis">Configs - Redis<a class="headerlink" href="#configs-redis" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>FastAPI Pin Lift</strong> - Raised the <code>fastapi</code> extra from <code>&gt;=0.136,&lt;0.137</code> to <code>&gt;=0.138.0</code>, removing the upper bound
-  introduced in 4.11.1 now that the codebase is compatible with FastAPI 0.138+.</li>
+<li><strong>Protocol Field Replacement</strong> - Replaced <code>RedisConfig.VERSION</code> (<code>REDIS__VERSION</code>) with <code>RedisConfig.PROTOCOL</code> (<code>REDIS__PROTOCOL</code>), now typed as <code>Literal[2, 3]</code> for the RESP protocol version. Update environment files accordingly.</li>
+</ul>
+<h3 id="adapters-redis_1">Adapters - Redis<a class="headerlink" href="#adapters-redis_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Async Iterator Typing</strong> - Async scan iterators (<code>scan_iter</code>, <code>sscan_iter</code>) now return <code>AsyncIterator[bytes | str]</code> instead of <code>Iterator[bytes | str]</code>.</li>
+</ul>
+<h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
+<h3 id="tests-redis-adapter">Tests - Redis Adapter<a class="headerlink" href="#tests-redis-adapter" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Cluster Test Container</strong> - Added <code>RedisClusterTestContainer</code> managing a six-node Redis cluster for integration coverage.</li>
+<li><strong>Cluster Scenarios</strong> - Extended the Redis feature suite with cluster configurations for both sync and async adapters, adding <code>cluster</code> as a recognized adapter type in step definitions.</li>
+<li><strong>Expanded BDD Coverage</strong> - Added scenarios covering strings, expiry/TTL, counters, multi-key operations, key types, pipelines, and <code>flushdb</code> across mock, container, and cluster adapters.</li>
+</ul>
+<h3 id="tests-keycloak-adapter">Tests - Keycloak Adapter<a class="headerlink" href="#tests-keycloak-adapter" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Group Scenarios</strong> - Added BDD coverage for group CRUD, membership, permissions, and realm/client role mappings.</li>
 </ul>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Optional extras</strong> - Updated optional adapter dependency pins.<ul>
-<li><code>elastic-apm</code>: <code>&gt;=6.26.1</code> → <code>&gt;=6.26.2</code></li>
-<li><code>fastapi</code>: <code>fastapi[all]&gt;=0.136,&lt;0.137</code> → <code>fastapi[all]&gt;=0.138.0</code></li>
-<li><code>minio</code>: <code>boto3&gt;=1.43.34</code> → <code>&gt;=1.43.36</code></li>
-</ul>
-</li>
-<li><strong>Dev group</strong> - Updated development tooling pins.<ul>
-<li><code>boto3-stubs</code>: <code>&gt;=1.43.34</code> → <code>&gt;=1.43.36</code></li>
-<li><code>ty</code>: <code>&gt;=0.0.51</code> → <code>&gt;=0.0.52</code></li>
-</ul>
-</li>
-<li><strong>Docs group</strong> - Updated documentation tooling pins.<ul>
-<li><code>pymdown-extensions</code>: <code>&gt;=10.21.3</code> → <code>&gt;=11.0</code></li>
-</ul>
-</li>
-<li><strong>Lockfile</strong> - Regenerated <code>uv.lock</code> to align with the updated <code>pyproject.toml</code> constraints.</li>
+<li><strong>Test Images</strong> - Bumped Keycloak test container image from <code>keycloak/keycloak:26.6.3</code> to <code>keycloak/keycloak:26.6.4</code>.</li>
+<li><strong>Lockfile</strong> - Regenerated <code>uv.lock</code> to align with current constraints.</li>
 </ul>
 
 
