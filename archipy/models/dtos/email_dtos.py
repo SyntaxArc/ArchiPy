@@ -36,7 +36,7 @@ class EmailAttachmentDTO(BaseDTO):
         # Set content type from filename if not provided
         if self.content_type is None:
             content_type, _ = mimetypes.guess_type(self.filename)
-            self.content_type = content_type or "application/octet-stream"
+            object.__setattr__(self, "content_type", content_type or "application/octet-stream")
 
         # Validate attachment size
         content = self.content
@@ -48,6 +48,6 @@ class EmailAttachmentDTO(BaseDTO):
 
         # Ensure content_id has angle brackets
         if self.content_id and not self.content_id.startswith("<"):
-            self.content_id = f"<{self.content_id}>"
+            object.__setattr__(self, "content_id", f"<{self.content_id}>")
 
         return self

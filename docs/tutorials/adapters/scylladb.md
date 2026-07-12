@@ -588,6 +588,87 @@ else:
     return result
 ```
 
+## Complete Example
+
+Here's a complete example demonstrating various features:
+
+```python
+import logging
+
+from archipy.adapters.scylladb import ScyllaDBAdapter
+from archipy.configs.config_template import ScyllaDBConfig
+from pydantic import SecretStr
+
+logger = logging.getLogger(__name__)
+
+# Configure adapter
+config = ScyllaDBConfig(
+    CONTACT_POINTS=["localhost"],
+    PORT=9042,
+    USERNAME="scylla",
+    PASSWORD=SecretStr("password"),
+    CONSISTENCY_LEVEL="QUORUM",
+    MAX_CONNECTIONS_PER_HOST=2,
+    ENABLE_CONNECTION_POOL_MONITORING=True,
+    ENABLE_PREPARED_STATEMENT_CACHE=True,
+)
+
+adapter = ScyllaDBAdapter(config)
+
+# Create schema
+adapter.create_keyspace("ecommerce", replication_factor=3)
+adapter.use_keyspace("ecommerce")
+
+adapter.create_table("""
+    CREATE TABLE IF NOT EXISTS products (
+        id int PRIMARY KEY,
+        name text,
+        category text,
+        price double,
+        stock int
+    )
+""")
+
+# Insert products
+products = [
+    {"id": 1, "name": "Laptop", "category": "Electronics", "price": 999.99, "stock": 50},
+    {"id": 2, "name": "Mouse", "category": "Electronics", "price": 25.50, "stock": 200},
+    {"id": 3, "name": "Desk", "category": "Furniture", "price": 299.00, "stock": 30},
+]
+
+for product in products:
+    adapter.insert("products", product)
+
+# Query products
+electronics = adapter.select("products", conditions={"category": "Electronics"})
+logger.info(f"Found {len(electronics)} electronics")
+
+# Count by category
+total_products = adapter.count("products")
+logger.info(f"Total products: {total_products}")
+
+# Check stock
+if adapter.exists("products", {"id": 1}):
+    product = adapter.select("products", conditions={"id": 1})[0]
+    logger.info(f"Product: {product.name}, Stock: {product.stock}")
+
+# Update with TTL for flash sale
+adapter.update(
+    "products",
+    data={"price": 799.99},
+    conditions={"id": 1},
+    ttl=3600  # Sale lasts 1 hour
+)
+
+# Monitor pool
+stats = adapter.get_pool_stats()
+logger.info(f"Pool stats: {stats}")
+
+# Health check
+health = adapter.health_check()
+logger.info(f"Health: {health['status']}, Latency: {health['latency_ms']:.2f}ms")
+```
+
 ## Best Practices
 
 ### 1. Connection Pooling
@@ -743,92 +824,11 @@ async def process_users(user_ids: list[str]) -> None:
     return results
 ```
 
-## Complete Example
-
-Here's a complete example demonstrating various features:
-
-```python
-from archipy.adapters.scylladb import ScyllaDBAdapter
-from archipy.configs.config_template import ScyllaDBConfig
-from pydantic import SecretStr
-
-# Configure adapter
-config = ScyllaDBConfig(
-    CONTACT_POINTS=["localhost"],
-    PORT=9042,
-    USERNAME="scylla",
-    PASSWORD=SecretStr("password"),
-    CONSISTENCY_LEVEL="QUORUM",
-    MAX_CONNECTIONS_PER_HOST=2,
-    ENABLE_CONNECTION_POOL_MONITORING=True,
-    ENABLE_PREPARED_STATEMENT_CACHE=True,
-)
-
-adapter = ScyllaDBAdapter(config)
-
-# Create schema
-adapter.create_keyspace("ecommerce", replication_factor=3)
-adapter.use_keyspace("ecommerce")
-
-adapter.create_table("""
-    CREATE TABLE IF NOT EXISTS products (
-        id int PRIMARY KEY,
-        name text,
-        category text,
-        price double,
-        stock int
-    )
-""")
-
-# Insert products
-products = [
-    {"id": 1, "name": "Laptop", "category": "Electronics", "price": 999.99, "stock": 50},
-    {"id": 2, "name": "Mouse", "category": "Electronics", "price": 25.50, "stock": 200},
-    {"id": 3, "name": "Desk", "category": "Furniture", "price": 299.00, "stock": 30},
-]
-
-for product in products:
-    adapter.insert("products", product)
-
-# Query products
-electronics = adapter.select("products", conditions={"category": "Electronics"})
-logger.info(f"Found {len(electronics)} electronics")
-
-# Count by category
-total_products = adapter.count("products")
-logger.info(f"Total products: {total_products}")
-
-# Check stock
-if adapter.exists("products", {"id": 1}):
-    product = adapter.select("products", conditions={"id": 1})[0]
-    logger.info(f"Product: {product.name}, Stock: {product.stock}")
-
-# Update with TTL for flash sale
-adapter.update(
-    "products",
-    data={"price": 799.99},
-    conditions={"id": 1},
-    ttl=3600  # Sale lasts 1 hour
-)
-
-# Monitor pool
-stats = adapter.get_pool_stats()
-logger.info(f"Pool stats: {stats}")
-
-# Health check
-health = adapter.health_check()
-logger.info(f"Health: {health['status']}, Latency: {health['latency_ms']:.2f}ms")
-```
-
-## References
-
-- [ScyllaDB Documentation](https://docs.scylladb.com/)
-- [Cassandra Query Language (CQL)](https://cassandra.apache.org/doc/latest/cql/)
-- [ArchiPy Configuration Guide](../../tutorials/config_management.md)
-
 ## See Also
 
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — ScyllaDB configuration setup
 - [BDD Testing](../testing_strategy.md) — Testing ScyllaDB operations
+- [ScyllaDB Documentation](https://docs.scylladb.com/) — Official ScyllaDB docs
+- [Cassandra Query Language (CQL)](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/) — CQL reference
 - [API Reference](../../api_reference/adapters/scylladb.md) — Full ScyllaDB adapter API documentation

@@ -51,6 +51,7 @@ import logging
 
 from archipy.configs.config_template import PostgresSQLAlchemyConfig
 from archipy.models.errors import ConfigurationError
+from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,7 @@ try:
         # Isolation level
         ISOLATION_LEVEL="REPEATABLE READ",
     )
-except Exception as e:
+except ValidationError as e:
     logger.error(f"Invalid PostgreSQL configuration: {e}")
     raise ConfigurationError() from e
 else:

@@ -1,3 +1,15 @@
+"""Base configuration system for ArchiPy applications.
+
+Settings are loaded from multiple sources, applied in the following priority
+order (highest priority first):
+
+1. `pyproject.toml` `[tool.configs]` section
+2. `configs.toml` or other specified TOML file
+3. `.env` file
+4. OS-level environment variables
+5. Default class field values
+"""
+
 from typing import TypeVar
 
 from pydantic_settings import (
@@ -35,15 +47,6 @@ from archipy.configs.config_template import (
 from archipy.configs.environment_type import EnvironmentType
 from archipy.models.types import LanguageType
 
-"""
-
-Priority :
-            1. pypoject.toml [tool.configs]
-            2. configs.toml or other toml file init
-            3. .env file
-            4. os level environment variable
-            5. class field value
-"""
 R = TypeVar("R", bound="BaseConfig")  # Runtime Config
 
 
@@ -74,11 +77,13 @@ class BaseConfig[R](BaseSettings):
         GRPC (GrpcConfig): gRPC service configuration
         KAFKA (KafkaConfig): Kafka integration configuration
         KEYCLOAK (KeycloakConfig): Keycloak integration configuration
+        LANGUAGE (LanguageType): Application default language
         MINIO (MinioConfig): MinIO object storage configuration
         PARSIAN_SHAPARAK (ParsianShaparakConfig): Parsian Shaparak payment gateway configuration
         POSTGRES_SQLALCHEMY (PostgresSQLAlchemyConfig): PostgreSQL SQLAlchemy configuration
         PROMETHEUS (PrometheusConfig): Prometheus metrics configuration
         REDIS (RedisConfig): Redis cache configuration
+        SAMAN_SHAPARAK (SamanShaparakConfig): Saman Shaparak (SEP) payment gateway configuration
         SCYLLADB (ScyllaDBConfig): ScyllaDB/Cassandra database configuration
         SENTRY (SentryConfig): Sentry error tracking configuration
         SQLALCHEMY (SQLAlchemyConfig): Database ORM configuration
@@ -181,6 +186,15 @@ class BaseConfig[R](BaseSettings):
 
         This method can be overridden in subclasses to perform
         custom configuration modifications after loading settings.
+        It is called automatically by `set_global()`.
+
+        Examples:
+            >>> class MyAppConfig(BaseConfig):
+            ...     def customize(self) -> None:
+            ...         super().customize()
+            ...         self.REDIS.MASTER_HOST = "redis.internal"
+            >>> config = MyAppConfig()
+            >>> BaseConfig.set_global(config)  # calls customize() automatically
         """
         if self.ELASTIC_APM.ENVIRONMENT is None:
             self.ELASTIC_APM.ENVIRONMENT = self.ENVIRONMENT

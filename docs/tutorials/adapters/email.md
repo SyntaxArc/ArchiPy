@@ -76,7 +76,7 @@ custom_config = EmailConfig(
 email_adapter = EmailAdapter(config=custom_config)
 ```
 
-## Sending Simple Emails
+### Sending Simple Emails
 
 ```python
 import logging
@@ -103,7 +103,7 @@ else:
     logger.info("Email sent successfully")
 ```
 
-## Sending Emails with CC and BCC
+### Sending Emails with CC and BCC
 
 ```python
 import logging
@@ -132,7 +132,7 @@ else:
     logger.info("Email sent with CC and BCC recipients")
 ```
 
-## Sending HTML Emails
+### Sending HTML Emails
 
 ```python
 import logging
@@ -168,7 +168,7 @@ else:
     logger.info("HTML email sent successfully")
 ```
 
-## Sending Emails with Attachments
+### Sending Emails with Attachments
 
 Pass file paths as strings or `EmailAttachmentDTO` objects in the `attachments` list:
 

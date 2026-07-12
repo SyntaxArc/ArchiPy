@@ -89,6 +89,16 @@ Feature: Metric Interceptor
     Then all metrics should have the same path_template label "/users/{id}"
     And the cache should have stored the path template
 
+  Scenario: Metrics resolve correct path templates across multiple routers
+    Given a FastAPI app with Prometheus enabled and metric interceptor with multiple routers
+    When requests are made to routes across different routers
+    Then each metric should have the correct prefixed path_template label
+
+  Scenario: Path template cache works correctly across multiple routers
+    Given a FastAPI app with Prometheus enabled and metric interceptor with multiple routers
+    When multiple requests are made to routes across different routers
+    Then the cache should correctly store templates from all routers
+
   Scenario: Temporal metrics are not collected when disabled
     Given a Temporal test container is running
     And a Temporal worker manager is configured

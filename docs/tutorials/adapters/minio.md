@@ -67,15 +67,25 @@ minio = MinioAdapter(custom_config)
 ```python
 import logging
 
+from archipy.adapters.minio.adapters import MinioAdapter
+from archipy.models.errors import AlreadyExistsError, InternalError, NotFoundError, PermissionDeniedError
+
 # Configure logging
 logger = logging.getLogger(__name__)
+
+minio = MinioAdapter()
 
 # Check if bucket exists and create if needed
 try:
     if not minio.bucket_exists("my-bucket"):
         # Create bucket
         minio.make_bucket("my-bucket")
-except Exception as e:
+except AlreadyExistsError as e:
+    logger.warning(f"Bucket already exists: {e}")
+except PermissionDeniedError as e:
+    logger.error(f"Permission denied to create bucket: {e}")
+    raise
+except InternalError as e:
     logger.error(f"Failed to check/create bucket: {e}")
     raise
 else:
@@ -84,7 +94,7 @@ else:
 # List all buckets
 try:
     buckets = minio.list_buckets()
-except Exception as e:
+except InternalError as e:
     logger.error(f"Failed to list buckets: {e}")
     raise
 else:
@@ -94,7 +104,12 @@ else:
 # Remove bucket
 try:
     minio.remove_bucket("my-bucket")
-except Exception as e:
+except NotFoundError as e:
+    logger.warning(f"Bucket not found: {e}")
+except PermissionDeniedError as e:
+    logger.error(f"Permission denied to remove bucket: {e}")
+    raise
+except InternalError as e:
     logger.error(f"Failed to remove bucket: {e}")
     raise
 else:
@@ -312,7 +327,7 @@ async def upload_file(bucket_name: str, file: UploadFile) -> dict[str, str]:
             os.unlink(temp_path)  # Clean up temp file
     except HTTPException:
         raise
-    except Exception as e:
+    except (OSError, InternalError) as e:
         logger.error(f"Unexpected error during upload: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 

@@ -50,8 +50,6 @@ def method_deprecation_warning(message: str | None = None) -> Callable[[Callable
             warnings.warn(final_message, DeprecationWarning, stacklevel=2)
             return func(*args, **kwargs)
 
-        # @wraps preserves the function signature, making wrapper compatible with the original function
-        wrapper.__wrapped__ = func
         return wrapper
 
     return decorator

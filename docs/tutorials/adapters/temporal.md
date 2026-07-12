@@ -159,6 +159,8 @@ async def process_data_activity(data: dict[str, list[str]]) -> str:
 
 
 # Execute workflow
+temporal = TemporalAdapter()
+
 async def main() -> None:
     """Execute the workflow and handle cleanup."""
     try:
@@ -182,7 +184,7 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-### Configuration Override Examples
+## Advanced Configuration Overrides
 
 ```python
 import asyncio
@@ -587,18 +589,6 @@ class RobustUserActivity(AtomicActivity[dict, dict]):
         await super()._handle_error(activity_input, error)
 ```
 
-## Best Practices
-
-1. **Workflow Design**: Keep workflows as coordinators - let activities handle business logic
-2. **Error Handling**: Use specific error types and proper error chains with `raise ... from e`
-3. **Transactions**: Use `AtomicActivity` for database operations requiring consistency
-4. **Testing**: Mock adapters and activities for unit testing
-5. **Configuration**: Use environment-specific configurations for different deployments
-6. **Monitoring**: Leverage workflow logging and error tracking
-7. **Timeouts**: Set appropriate timeouts for workflows and activities
-8. **Retries**: Configure retry policies based on error types and business requirements
-9. **Metrics**: Enable Prometheus metrics for production observability
-
 ## Prometheus Metrics Integration
 
 The Temporal adapter supports comprehensive metrics collection via Prometheus when enabled in configuration. The
@@ -694,19 +684,8 @@ Example PromQL queries for monitoring Temporal workflows:
 # Workflow execution rate (per second)
 rate(temporal_workflow_task_execution_total[5m])
 
-# Average workflow task execution time
-rate(temporal_workflow_task_execution_latency_sum[5m])
-/ rate(temporal_workflow_task_execution_latency_count[5m])
-
-# Active workers by task queue
-temporal_worker_task_slots_used{task_queue="my-task-queue"}
-
 # Activity failure rate
 rate(temporal_activity_task_execution_failed_total[5m])
-
-# Task queue poll success rate
-rate(temporal_worker_task_queue_poll_succeed_total[5m])
-/ rate(temporal_worker_task_queue_poll_total[5m])
 
 # P95 activity execution latency
 histogram_quantile(0.95,
@@ -714,51 +693,8 @@ histogram_quantile(0.95,
 )
 ```
 
-### Grafana Dashboard
-
-Create a Grafana dashboard to visualize Temporal metrics:
-
-```json
-{
-  "dashboard": {
-    "title": "Temporal Workflows",
-    "panels": [
-      {
-        "title": "Workflow Execution Rate",
-        "targets": [
-          {
-            "expr": "rate(temporal_workflow_task_execution_total[5m])"
-          }
-        ]
-      },
-      {
-        "title": "Active Workers",
-        "targets": [
-          {
-            "expr": "temporal_worker_task_slots_used"
-          }
-        ]
-      },
-      {
-        "title": "Activity Success Rate",
-        "targets": [
-          {
-            "expr": "rate(temporal_activity_task_execution_succeed_total[5m]) / rate(temporal_activity_task_execution_total[5m])"
-          }
-        ]
-      },
-      {
-        "title": "Workflow Task Latency (P95)",
-        "targets": [
-          {
-            "expr": "histogram_quantile(0.95, rate(temporal_workflow_task_execution_latency_bucket[5m]))"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+> **Tip:** Import these queries into a Grafana dashboard using the `temporal_*` metric prefix — panel setup is
+> standard Prometheus/Grafana configuration and isn't covered here.
 
 ### Complete Example with Metrics
 
@@ -875,6 +811,18 @@ If metrics are not appearing:
 The Temporal Runtime with Prometheus is created lazily on first client connection using a singleton manager (
 `TemporalRuntimeManager`) that ensures consistent Runtime configuration across all clients and workers. The singleton
 pattern prevents multiple Runtime instances and guarantees thread-safe access.
+
+## Best Practices
+
+1. **Workflow Design**: Keep workflows as coordinators - let activities handle business logic
+2. **Error Handling**: Use specific error types and proper error chains with `raise ... from e`
+3. **Transactions**: Use `AtomicActivity` for database operations requiring consistency
+4. **Testing**: Mock adapters and activities for unit testing
+5. **Configuration**: Use environment-specific configurations for different deployments
+6. **Monitoring**: Leverage workflow logging and error tracking
+7. **Timeouts**: Set appropriate timeouts for workflows and activities
+8. **Retries**: Configure retry policies based on error types and business requirements
+9. **Metrics**: Enable Prometheus metrics for production observability
 
 ## See Also
 

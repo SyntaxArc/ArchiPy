@@ -311,6 +311,29 @@ except CacheError as e:
     raise
 ```
 
+## Error Handling
+
+The Redis adapter maps connection and command failures to `CacheError`:
+
+```python
+import logging
+
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.models.errors import CacheError
+
+logger = logging.getLogger(__name__)
+
+try:
+    redis = RedisAdapter()
+    redis.set("session:1", "active", ex=3600)
+    value = redis.get("session:1")
+except CacheError as e:
+    logger.error(f"Redis operation failed: {e}")
+    raise
+else:
+    logger.info(f"Session value: {value}")
+```
+
 ## See Also
 
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining

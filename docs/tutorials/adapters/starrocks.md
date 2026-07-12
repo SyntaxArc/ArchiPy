@@ -71,18 +71,18 @@ class User(BaseEntity):
 # Create adapter
 try:
     adapter = StarrocksSQLAlchemyAdapter()
-except Exception as e:
+except DatabaseConnectionError as e:
     logger.error(f"Failed to create adapter: {e}")
-    raise DatabaseConnectionError() from e
+    raise
 else:
     logger.info("StarRocks adapter created successfully")
 
 # Create tables
 try:
     BaseEntity.metadata.create_all(adapter.session_manager.engine)
-except Exception as e:
+except DatabaseQueryError as e:
     logger.error(f"Failed to create tables: {e}")
-    raise DatabaseQueryError() from e
+    raise
 else:
     logger.info("Database tables created")
 
@@ -185,9 +185,9 @@ async def main() -> None:
     """Main async function demonstrating StarRocks async operations."""
     try:
         adapter = AsyncStarrocksSQLAlchemyAdapter()
-    except Exception as e:
+    except DatabaseConnectionError as e:
         logger.error(f"Failed to create async adapter: {e}")
-        raise DatabaseConnectionError() from e
+        raise
     else:
         logger.info("Async StarRocks adapter created")
 

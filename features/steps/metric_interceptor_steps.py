@@ -532,6 +532,134 @@ def step_then_prometheus_starts_once(context):
     assert is_running, "Prometheus server is not running"
 
 
+# ===== MULTI-ROUTER FASTAPI STEPS =====
+
+
+@given("a FastAPI app with Prometheus enabled and metric interceptor with multiple routers")
+def step_given_fastapi_app_with_multiple_routers(context):
+    from fastapi import APIRouter
+
+    scenario_context = get_current_scenario_context(context)
+    test_config = BaseConfig.global_config()
+    test_config.PROMETHEUS.IS_ENABLED = True
+
+    app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
+
+    users_router = APIRouter(prefix="/api/v1/users", tags=["users"])
+    orders_router = APIRouter(prefix="/api/v1/orders", tags=["orders"])
+    items_router = APIRouter(prefix="/api/v2/items", tags=["items"])
+
+    @users_router.get("/{user_id}")
+    def get_user(user_id: str):
+        return {"user_id": user_id}
+
+    @users_router.post("/{user_id}/posts")
+    def create_user_post(user_id: str):
+        return {"user_id": user_id, "post": "created"}
+
+    @orders_router.get("/{order_id}")
+    def get_order(order_id: str):
+        return {"order_id": order_id}
+
+    @orders_router.put("/{order_id}/items/{item_id}")
+    def update_order_item(order_id: str, item_id: str):
+        return {"order_id": order_id, "item_id": item_id}
+
+    @items_router.get("/{item_id}")
+    def get_item(item_id: str):
+        return {"item_id": item_id}
+
+    @items_router.delete("/{item_id}")
+    def delete_item(item_id: str):
+        return {"deleted": item_id}
+
+    app.include_router(users_router)
+    app.include_router(orders_router)
+    app.include_router(items_router)
+
+    scenario_context.store("app", app)
+    scenario_context.store("config", test_config)
+
+
+@when("requests are made to routes across different routers")
+def step_when_requests_across_routers(context):
+    scenario_context = get_current_scenario_context(context)
+    app = scenario_context.get("app")
+    client = TestClient(app)
+
+    initial_metrics = _get_metric_samples("fastapi_response_time_seconds")
+    scenario_context.store("initial_metrics", initial_metrics)
+
+    responses = {}
+    responses["get_user"] = client.get("/api/v1/users/123")
+    responses["create_post"] = client.post("/api/v1/users/456/posts")
+    responses["get_order"] = client.get("/api/v1/orders/789")
+    responses["update_order_item"] = client.put("/api/v1/orders/abc/items/xyz")
+    responses["get_item"] = client.get("/api/v2/items/item-1")
+    responses["delete_item"] = client.delete("/api/v2/items/item-2")
+
+    scenario_context.store("responses", responses)
+
+    final_metrics = _get_metric_samples("fastapi_response_time_seconds")
+    scenario_context.store("final_metrics", final_metrics)
+
+
+@then("each metric should have the correct prefixed path_template label")
+def step_then_metrics_have_prefixed_path_template(context):
+    scenario_context = get_current_scenario_context(context)
+    final_metrics = scenario_context.get("final_metrics")
+
+    expected_templates = {
+        "/api/v1/users/{user_id}",
+        "/api/v1/users/{user_id}/posts",
+        "/api/v1/orders/{order_id}",
+        "/api/v1/orders/{order_id}/items/{item_id}",
+        "/api/v2/items/{item_id}",
+    }
+
+    found_templates = {m.labels.get("path_template") for m in final_metrics if "path_template" in m.labels}
+
+    for template in expected_templates:
+        assert template in found_templates, f"Missing path_template '{template}'. Found: {found_templates}"
+
+
+@when("multiple requests are made to routes across different routers")
+def step_when_multiple_requests_across_routers(context):
+    scenario_context = get_current_scenario_context(context)
+    app = scenario_context.get("app")
+    client = TestClient(app)
+
+    initial_metrics = _get_metric_samples("fastapi_response_time_seconds")
+    scenario_context.store("initial_metrics", initial_metrics)
+
+    for _ in range(3):
+        client.get("/api/v1/users/123")
+    for _ in range(3):
+        client.get("/api/v2/items/item-1")
+
+    final_metrics = _get_metric_samples("fastapi_response_time_seconds")
+    scenario_context.store("final_metrics", final_metrics)
+
+
+@then("the cache should correctly store templates from all routers")
+def step_then_cache_stores_templates_from_all_routers(context):
+    from archipy.helpers.interceptors.fastapi.metric.interceptor import FastAPIMetricInterceptor
+
+    cache = FastAPIMetricInterceptor._path_template_cache
+
+    user_entries = {k: v for k, v in cache.items() if "/api/v1/users" in k}
+    item_entries = {k: v for k, v in cache.items() if "/api/v2/items" in k}
+
+    assert len(user_entries) > 0, "No cached templates for users router"
+    assert len(item_entries) > 0, "No cached templates for items router"
+
+    for v in user_entries.values():
+        assert "/api/v1/users/" in v, f"Users router cache value missing prefix: {v}"
+
+    for v in item_entries.values():
+        assert "/api/v2/items/" in v, f"Items router cache value missing prefix: {v}"
+
+
 # ===== HELPER FUNCTIONS =====
 
 

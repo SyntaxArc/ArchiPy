@@ -63,18 +63,18 @@ class User(BaseEntity):
 # Create adapter
 try:
     adapter = SQLiteSQLAlchemyAdapter()
-except Exception as e:
+except DatabaseConnectionError as e:
     logger.error(f"Failed to create adapter: {e}")
-    raise DatabaseConnectionError() from e
+    raise
 else:
     logger.info("SQLite adapter created successfully")
 
 # Create tables
 try:
     BaseEntity.metadata.create_all(adapter.session_manager.engine)
-except Exception as e:
+except DatabaseQueryError as e:
     logger.error(f"Failed to create tables: {e}")
-    raise DatabaseQueryError() from e
+    raise
 else:
     logger.info("Database tables created")
 
@@ -166,9 +166,9 @@ async def main() -> None:
     """Main async function demonstrating SQLite async operations."""
     try:
         adapter = AsyncSQLiteSQLAlchemyAdapter()
-    except Exception as e:
+    except DatabaseConnectionError as e:
         logger.error(f"Failed to create async adapter: {e}")
-        raise DatabaseConnectionError() from e
+        raise
     else:
         logger.info("Async SQLite adapter created")
 
@@ -189,9 +189,9 @@ async def main() -> None:
         try:
             user = User(username=username, email=email)
             result = await adapter.create(user)
-        except Exception as e:
+        except DatabaseQueryError as e:
             logger.error(f"Failed to create user: {e}")
-            raise DatabaseQueryError() from e
+            raise
         else:
             logger.info(f"User created: {username}")
             return result

@@ -52,6 +52,7 @@ import logging
 
 from archipy.configs.config_template import ElasticsearchConfig
 from archipy.models.errors import ConfigurationError
+from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ try:
         CONNECTIONS_PER_NODE=10,
         HTTP_COMPRESS=True,
     )
-except Exception as e:
+except ValidationError as e:
     logger.error(f"Invalid Elasticsearch configuration: {e}")
     raise ConfigurationError() from e
 else:
@@ -95,9 +96,9 @@ else:
     # Uses global config (BaseConfig.global_config().ELASTIC)
     try:
         es = ElasticsearchAdapter()
-    except Exception as e:
+    except InternalError as e:
         logger.error(f"Failed to create Elasticsearch adapter: {e}")
-        raise InternalError() from e
+        raise
     else:
         logger.info("Elasticsearch adapter initialised")
     ```
@@ -129,9 +130,9 @@ else:
             es = AsyncElasticsearchAdapter()
             pong = await es.ping()
             logger.info(f"Cluster reachable: {pong}")
-        except Exception as e:
+        except InternalError as e:
             logger.error(f"Elasticsearch connection failed: {e}")
-            raise InternalError() from e
+            raise
 
 
     asyncio.run(main())
@@ -183,9 +184,9 @@ try:
         logger.info(f"Index created: {response}")
     else:
         logger.info("Index already exists, skipping creation")
-except Exception as e:
+except InternalError as e:
     logger.error(f"Failed to create index: {e}")
-    raise InternalError() from e
+    raise
 ```
 
 ### Delete an Index
@@ -206,9 +207,9 @@ try:
         logger.info("Index deleted")
     else:
         logger.info("Index does not exist, nothing to delete")
-except Exception as e:
+except InternalError as e:
     logger.error(f"Failed to delete index: {e}")
-    raise InternalError() from e
+    raise
 ```
 
 ## Document Operations
@@ -244,9 +245,9 @@ try:
     response = es.index(index="articles", document=article)
     generated_id: str = response["_id"]
     logger.info(f"Document auto-indexed with id={generated_id}")
-except Exception as e:
+except InternalError as e:
     logger.error(f"Failed to index document: {e}")
-    raise InternalError() from e
+    raise
 ```
 
 ### Retrieve a Document
@@ -268,9 +269,9 @@ try:
 except KeyError as e:
     logger.warning(f"Document not found: {e}")
     raise NotFoundError() from e
-except Exception as e:
+except InternalError as e:
     logger.error(f"Failed to retrieve document: {e}")
-    raise InternalError() from e
+    raise
 ```
 
 ### Check Document Existence
@@ -306,9 +307,9 @@ update_fields: dict[str, int] = {"view_count": 42}
 try:
     response = es.update(index="articles", doc_id="article-001", doc=update_fields)
     logger.info(f"Document updated: {response['result']}")
-except Exception as e:
+except InternalError as e:
     logger.error(f"Failed to update document: {e}")
-    raise InternalError() from e
+    raise
 ```
 
 ### Delete a Document
@@ -326,9 +327,9 @@ es = ElasticsearchAdapter()
 try:
     response = es.delete(index="articles", doc_id="article-001")
     logger.info(f"Document deleted: {response['result']}")
-except Exception as e:
+except InternalError as e:
     logger.error(f"Failed to delete document: {e}")
-    raise InternalError() from e
+    raise
 ```
 
 ## Search
@@ -360,9 +361,9 @@ try:
     logger.info(f"Found {total} documents")
     for hit in hits:
         logger.info(f"  [{hit['_score']:.2f}] {hit['_source']['title']}")
-except Exception as e:
+except InternalError as e:
     logger.error(f"Search failed: {e}")
-    raise InternalError() from e
+    raise
 ```
 
 ### Bool Query with Filters
@@ -401,9 +402,9 @@ try:
     for hit in hits:
         src = hit["_source"]
         logger.info(f"  {src['title']} by {src['author']} ({src['view_count']} views)")
-except Exception as e:
+except InternalError as e:
     logger.error(f"Filtered search failed: {e}")
-    raise InternalError() from e
+    raise
 ```
 
 ### Full-Text Search with Highlighting
@@ -441,9 +442,9 @@ try:
         logger.info(f"Title: {title}")
         for fragment in highlights:
             logger.info(f"  ...{fragment}...")
-except Exception as e:
+except InternalError as e:
     logger.error(f"Highlighted search failed: {e}")
-    raise InternalError() from e
+    raise
 ```
 
 ### Aggregations
@@ -486,9 +487,9 @@ try:
         logger.info(f"  {bucket['key']}: {bucket['doc_count']} articles")
 
     logger.info(f"Average view count: {aggs['avg_views']['value']:.1f}")
-except Exception as e:
+except InternalError as e:
     logger.error(f"Aggregation query failed: {e}")
-    raise InternalError() from e
+    raise
 ```
 
 ## Bulk Operations
@@ -533,9 +534,9 @@ try:
         logger.error(f"Bulk index completed with {len(failed)} errors")
     else:
         logger.info(f"Bulk index successful: {len(articles)} documents indexed")
-except Exception as e:
+except InternalError as e:
     logger.error(f"Bulk index failed: {e}")
-    raise InternalError() from e
+    raise
 ```
 
 ### Bulk Update
@@ -564,9 +565,9 @@ for doc_id, new_view_count in updates:
 try:
     response = es.bulk(actions=actions)
     logger.info(f"Bulk update complete, errors={response.get('errors', False)}")
-except Exception as e:
+except InternalError as e:
     logger.error(f"Bulk update failed: {e}")
-    raise InternalError() from e
+    raise
 ```
 
 ## Async Usage
@@ -620,9 +621,9 @@ async def index_and_search() -> None:
         )
         total = response["hits"]["total"]["value"]
         logger.info(f"Found {total} documents by carol")
-    except Exception as e:
+    except InternalError as e:
         logger.error(f"Async Elasticsearch operation failed: {e}")
-        raise InternalError() from e
+        raise
 
 
 asyncio.run(index_and_search())
@@ -655,9 +656,9 @@ async def parallel_searches() -> None:
             *[es.search(index="articles", query=q) for q in queries],
             return_exceptions=True,
         )
-    except Exception as e:
+    except InternalError as e:
         logger.error(f"Parallel search failed: {e}")
-        raise InternalError() from e
+        raise
 
     for i, result in enumerate(results):
         if isinstance(result, Exception):
@@ -728,9 +729,9 @@ class ArticleRepository:
         try:
             self._es.index(index=self.INDEX, document=asdict(article), doc_id=article_id)
             logger.info(f"Saved article id={article_id}")
-        except Exception as e:
+        except InternalError as e:
             logger.error(f"Failed to save article {article_id}: {e}")
-            raise InternalError() from e
+            raise
 
     def get(self, article_id: str) -> Article:
         """Retrieve an article by ID.
@@ -751,9 +752,9 @@ class ArticleRepository:
             return Article(**src)
         except KeyError as e:
             raise NotFoundError() from e
-        except Exception as e:
+        except InternalError as e:
             logger.error(f"Failed to retrieve article {article_id}: {e}")
-            raise InternalError() from e
+            raise
 
     def search_by_author(self, author: str) -> Sequence[Article]:
         """Search articles by author.
@@ -773,9 +774,9 @@ class ArticleRepository:
                 query={"query": {"term": {"author": author}}},
             )
             return [Article(**hit["_source"]) for hit in response["hits"]["hits"]]
-        except Exception as e:
+        except InternalError as e:
             logger.error(f"Failed to search articles by author={author}: {e}")
-            raise InternalError() from e
+            raise
 
     def increment_views(self, article_id: str) -> None:
         """Increment the view count for an article.
@@ -792,9 +793,9 @@ class ArticleRepository:
                 doc_id=article_id,
                 doc={"view_count": self._get_view_count(article_id) + 1},
             )
-        except Exception as e:
+        except InternalError as e:
             logger.error(f"Failed to increment views for article {article_id}: {e}")
-            raise InternalError() from e
+            raise
 
     def _get_view_count(self, article_id: str) -> int:
         response = self._es.get(index=self.INDEX, doc_id=article_id)
@@ -830,7 +831,7 @@ re-indexing).
 ```python
 import logging
 
-from elasticsearch import Elasticsearch
+from elasticsearch import ApiError, Elasticsearch
 
 from archipy.configs.config_template import ElasticsearchConfig
 
@@ -851,7 +852,7 @@ try:
     })
     client.indices.put_alias(index="articles_v1", name="articles")
     logger.info("Created articles_v1 with alias articles")
-except Exception as e:
+except ApiError as e:
     logger.error(f"Alias setup failed: {e}")
     raise
 ```
@@ -878,13 +879,14 @@ def ensure_elasticsearch_ready() -> ElasticsearchAdapter:
     """
     try:
         es = ElasticsearchAdapter()
-        if not es.ping():
-            raise ServiceUnavailableError()
-        logger.info("Elasticsearch cluster is healthy")
-        return es
-    except Exception as e:
+    except InternalError as e:
         logger.error(f"Elasticsearch health check failed: {e}")
         raise ServiceUnavailableError() from e
+
+    if not es.ping():
+        raise ServiceUnavailableError()
+    logger.info("Elasticsearch cluster is healthy")
+    return es
 ```
 
 ### APM Integration

@@ -176,6 +176,27 @@ else:
     logger.info("All messages flushed")
 ```
 
+### Producer Health Check
+
+```python
+import logging
+
+from archipy.adapters.kafka.adapters import KafkaProducerAdapter
+from archipy.models.errors import UnavailableError
+
+logger = logging.getLogger(__name__)
+
+producer = KafkaProducerAdapter(topic_name="my-topic")
+
+try:
+    producer.validate_healthiness()
+except UnavailableError as e:
+    logger.error("Kafka producer is unhealthy: %s", e)
+    raise
+else:
+    logger.info("Kafka producer connection is healthy")
+```
+
 ### Consumer — Consuming Messages
 
 `KafkaConsumerAdapter` requires a `group_id` and **exactly one** of `topic_list` (subscribe)
@@ -466,27 +487,6 @@ except ResourceExhaustedError as e:
 except InternalError as e:
     logger.error("Unexpected error: %s", e)
     raise
-```
-
-## Producer Health Check
-
-```python
-import logging
-
-from archipy.adapters.kafka.adapters import KafkaProducerAdapter
-from archipy.models.errors import UnavailableError
-
-logger = logging.getLogger(__name__)
-
-producer = KafkaProducerAdapter(topic_name="my-topic")
-
-try:
-    producer.validate_healthiness()
-except UnavailableError as e:
-    logger.error("Kafka producer is unhealthy: %s", e)
-    raise
-else:
-    logger.info("Kafka producer connection is healthy")
 ```
 
 ## Integration with FastAPI

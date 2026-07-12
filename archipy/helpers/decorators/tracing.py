@@ -143,7 +143,6 @@ def capture_transaction[F: _Function](
                     except Exception:
                         logger.exception("Error closing Sentry transaction")
 
-        wrapper.__wrapped__ = func
         return wrapper
 
     return decorator
@@ -280,7 +279,6 @@ def capture_span[F: _Function](
                     except Exception:
                         logger.exception("Error closing Sentry span")
 
-        wrapper.__wrapped__ = func
         return wrapper
 
     return decorator
@@ -401,7 +399,6 @@ def async_capture_transaction[F: _AsyncFunction](
                     except Exception:
                         logger.exception("Error closing Sentry transaction")
 
-        wrapper.__wrapped__ = func  # type: ignore[attr-defined]
         return wrapper
 
     return decorator
@@ -545,7 +542,6 @@ def async_capture_span[F: _AsyncFunction](
                     except Exception:
                         logger.exception("Error closing Sentry span")
 
-        wrapper.__wrapped__ = func  # type: ignore[attr-defined]
         return wrapper
 
     return decorator

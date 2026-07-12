@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, ClassVar
+from collections.abc import Awaitable, Callable, Iterator
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from prometheus_client import Gauge, Histogram
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -14,6 +14,37 @@ from archipy.helpers.utils.base_utils import BaseUtils
 if TYPE_CHECKING:
     from fastapi import Request, Response
     from starlette.types import ASGIApp
+
+try:
+    from fastapi.routing import iter_route_contexts
+except ImportError:
+    iter_route_contexts: Callable[..., Any] | None = None
+
+
+def _flatten_routes(routes: list[Any]) -> Iterator[Any]:
+    """Yield routes in the shape expected by Starlette's route matching.
+
+    FastAPI 0.137 changed include_router() to keep nested routers as
+    _IncludedRouter entries. Those entries do not expose ``path`` directly, so
+    they need to be expanded into effective route contexts before matching.
+
+    FastAPI >= 0.137.2 provides iter_route_contexts() for that expansion. For
+    0.137.0 and 0.137.1, use _IncludedRouter.effective_route_contexts(). Older
+    FastAPI versions and plain Starlette already expose matchable route objects.
+    """
+    if any(hasattr(route, "effective_route_contexts") for route in routes):
+        if iter_route_contexts is not None:
+            yield from iter_route_contexts(routes)
+            return
+        for route in routes:
+            if hasattr(route, "effective_route_contexts"):
+                yield from route.effective_route_contexts()
+            else:
+                yield route
+        return
+
+    for route in routes:
+        yield route
 
 
 class FastAPIMetricInterceptor(BaseHTTPMiddleware):
@@ -111,7 +142,7 @@ class FastAPIMetricInterceptor(BaseHTTPMiddleware):
         if cache_key in self._path_template_cache:
             return self._path_template_cache[cache_key]
 
-        for route in request.app.routes:
+        for route in _flatten_routes(request.app.routes):
             match, _ = route.matches(request.scope)
             if match == Match.FULL:
                 path_template = route.path
