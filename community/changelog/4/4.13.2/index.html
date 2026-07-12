@@ -6,13 +6,13 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Release notes for ArchiPy 4.13.1">
+        <meta name="description" content="Release notes for ArchiPy 4.13.2">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.13.1/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.13.2/">
       
       
       
@@ -25,7 +25,7 @@
     
     
       
-        <title>Changelog 4.13.1 - ArchiPy</title>
+        <title>Changelog 4.13.2 - ArchiPy</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#4131-2026-06-30" class="md-skip">
+        <a href="#4132-2026-07-12" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Changelog 4.13.1
+              Changelog 4.13.2
             
           </span>
         </div>
@@ -2982,33 +2982,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Added
+        Fixed
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Added">
+    <nav class="md-nav" aria-label="Fixed">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#configs-temporal" class="md-nav__link">
+  <a href="#interceptors-fastapi-metric" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configs - Temporal
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#adapters-temporal" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adapters - Temporal
+        Interceptors - FastAPI Metric
       
     </span>
   </a>
@@ -3033,10 +3022,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#adapters-temporal_1" class="md-nav__link">
+  <a href="#configs-scylladb" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adapters - Temporal
+        Configs - ScyllaDB
       
     </span>
   </a>
@@ -3044,10 +3033,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
+  <a href="#decorators" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Documentation
+        Decorators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#models-email-dtos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models - Email DTOs
       
     </span>
   </a>
@@ -3060,22 +3060,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tests" class="md-nav__link">
+  <a href="#documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tests
+        Documentation
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Tests">
+    <nav class="md-nav" aria-label="Documentation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tests-temporal-adapter" class="md-nav__link">
+  <a href="#tutorials" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tests - Temporal Adapter
+        Tutorials
       
     </span>
   </a>
@@ -3115,7 +3115,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/4/4.13.1.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/4/4.13.2.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3123,44 +3123,40 @@
   
 
 
-<h1 id="4131-2026-06-30">4.13.1 — 2026-06-30<a class="headerlink" href="#4131-2026-06-30" title="Permanent link">&para;</a></h1>
-<p><a href="../4.13.2/">← 4.13.2</a> | <a href="../4.13.0/">4.13.0 →</a> | <a href="../">↑ 4.x series</a></p>
-<h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
-<h3 id="configs-temporal">Configs - Temporal<a class="headerlink" href="#configs-temporal" title="Permanent link">&para;</a></h3>
+<h1 id="4132-2026-07-12">4.13.2 — 2026-07-12<a class="headerlink" href="#4132-2026-07-12" title="Permanent link">&para;</a></h1>
+<p><a href="4.13.3.md">← 4.13.3</a> | <a href="../4.13.1/">4.13.1 →</a> | <a href="../">↑ 4.x series</a></p>
+<h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
+<h3 id="interceptors-fastapi-metric">Interceptors - FastAPI Metric<a class="headerlink" href="#interceptors-fastapi-metric" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>SDK 1.29 Client Settings</strong> - Expanded <code>TemporalConfig</code> with client connection options aligned to <code>temporalio</code> 1.29.<ul>
-<li>Added <code>CLIENT_IDENTITY</code>, <code>API_KEY</code>, <code>LAZY_CONNECT</code>, keep-alive intervals, and client RPC retry fields.</li>
-<li>Added <code>RPC_METADATA</code> for custom RPC headers.</li>
-<li>Added <code>RETRY_INITIAL_INTERVAL</code> and <code>RETRY_NON_RETRYABLE_ERROR_TYPES</code> for workflow/activity retry policies.</li>
-</ul>
-</li>
-</ul>
-<h3 id="adapters-temporal">Adapters - Temporal<a class="headerlink" href="#adapters-temporal" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Worker Tuning Configuration</strong> - Wired new worker settings from <code>TemporalConfig</code> into <code>TemporalWorkerManager</code>.<ul>
-<li>Added <code>WORKER_GRACEFUL_SHUTDOWN_SECONDS</code>, <code>WORKER_MAX_CACHED_WORKFLOWS</code>, <code>WORKER_DEBUG_MODE</code>, <code>WORKER_MAX_CONCURRENT_LOCAL_ACTIVITIES</code>, and <code>WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION</code>.</li>
-<li><code>WorkerHandle.stop()</code> now defaults to the configured graceful shutdown timeout.</li>
+<li><strong>Nested Router Path Templates</strong> - Resolved metric path template resolution for nested routers in FastAPI 0.137+.<ul>
+<li>Added <code>_flatten_routes()</code> helper to expand <code>_IncludedRouter</code> entries before route matching.</li>
+<li>Uses <code>iter_route_contexts()</code> for FastAPI &gt;= 0.137.2, falls back to <code>effective_route_contexts()</code> for 0.137.0–0.137.1.</li>
 </ul>
 </li>
 </ul>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
-<h3 id="adapters-temporal_1">Adapters - Temporal<a class="headerlink" href="#adapters-temporal_1" title="Permanent link">&para;</a></h3>
+<h3 id="configs-scylladb">Configs - ScyllaDB<a class="headerlink" href="#configs-scylladb" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Client Connection Wiring</strong> - <code>TemporalAdapter.get_client()</code> now passes keep-alive, RPC retry, identity, API key, and RPC metadata to <code>Client.connect</code>.</li>
-<li><strong>Retry Policy Defaults</strong> - Workflow start/execute and activity helpers now include <code>initial_interval</code> and <code>non_retryable_error_types</code> from config.</li>
+<li><strong>Default Replication Strategy</strong> - Changed <code>ScyllaDBConfig.REPLICATION_STRATEGY</code> default from <code>SimpleStrategy</code> to <code>NetworkTopologyStrategy</code> with default replication config <code>{"datacenter1": 1}</code>. Update environment files if using <code>SimpleStrategy</code>.</li>
 </ul>
-<h3 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h3>
+<h3 id="decorators">Decorators<a class="headerlink" href="#decorators" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Temporal Tutorial</strong> - Fixed install extra to <code>archipy[temporalio]</code> and documented new <code>TEMPORAL__*</code> environment variables.</li>
+<li><strong>Tracing &amp; Deprecation</strong> - Removed redundant <code>wrapper.__wrapped__ = func</code> assignments from <code>capture_transaction</code>, <code>capture_span</code>, <code>async_capture_transaction</code>, <code>async_capture_span</code>, and <code>method_deprecation_warning</code>.</li>
 </ul>
-<h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
-<h3 id="tests-temporal-adapter">Tests - Temporal Adapter<a class="headerlink" href="#tests-temporal-adapter" title="Permanent link">&para;</a></h3>
+<h3 id="models-email-dtos">Models - Email DTOs<a class="headerlink" href="#models-email-dtos" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Extended Config Scenario</strong> - Added BDD coverage verifying client identity and worker debug mode flow from config into adapters.</li>
+<li><strong>Frozen Model Mutation</strong> - Use <code>object.__setattr__</code> in <code>EmailAttachmentDTO</code> to support Pydantic v2 frozen model semantics.</li>
+</ul>
+<h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
+<h3 id="tutorials">Tutorials<a class="headerlink" href="#tutorials" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Updated adapter tutorials for Elasticsearch, Email, Kafka, Keycloak, MinIO, PostgreSQL, Redis, ScyllaDB, SQLite, StarRocks, and Temporal.</li>
 </ul>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>temporalio</strong> - Requires <code>temporalio&gt;=1.29.0</code> for expanded client and worker configuration support.</li>
+<li><strong>Test Containers</strong> - Bumped Keycloak <code>26.6.4</code> → <code>26.7.0</code>, Kafka <code>4.3.0</code> → <code>4.3.1</code>, ScyllaDB <code>2026.1.5</code> → <code>2026.2</code>.</li>
+<li><strong>Python Packages</strong> - Updated fastapi <code>0.138</code> → <code>0.139</code>, grpcio <code>1.81.1</code> → <code>1.82.1</code>, protobuf <code>6.33.6</code> → <code>7.35.1</code>, confluent-kafka <code>2.14.2</code> → <code>2.15.0</code>, boto3 <code>1.43.36</code> → <code>1.43.46</code>, sentry-sdk <code>2.63.0</code> → <code>2.64.0</code>, temporalio <code>1.29.0</code> → <code>1.30.0</code>, and other minor bumps.</li>
+<li><strong>Dev Tools</strong> - Updated ruff <code>0.15.18</code> → <code>0.15.21</code>, ty <code>0.0.52</code> → <code>0.0.58</code>.</li>
 </ul>
 
 
