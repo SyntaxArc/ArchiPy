@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 4.x series"
 
 | Version             | Date       | Summary                                                                                         |
 |---------------------|------------|-------------------------------------------------------------------------------------------------|
+| [4.13.2](4.13.2.md) | 2026-07-12 | FastAPI nested router metric fix, ScyllaDB NetworkTopologyStrategy default, dependency bumps    |
 | [4.13.1](4.13.1.md) | 2026-06-30 | Temporal SDK 1.29 config expansion for client connection, worker tuning, and retry policies     |
 | [4.13.0](4.13.0.md) | 2026-06-30 | Keycloak group management, Redis flushdb, RESP3 protocol config, sentinel auth, and cluster tests   |
 | [4.12.1](4.12.1.md) | 2026-06-23 | FastAPI 0.138+ compatibility, Caveman agent skills, and dependency pin updates                |
