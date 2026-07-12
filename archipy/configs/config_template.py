@@ -1247,11 +1247,11 @@ class ScyllaDBConfig(BaseModel):
         description="Local datacenter name for datacenter-aware routing",
     )
     REPLICATION_STRATEGY: Literal["SimpleStrategy", "NetworkTopologyStrategy"] = Field(
-        default="SimpleStrategy",
+        default="NetworkTopologyStrategy",
         description="Replication strategy for keyspace creation",
     )
     REPLICATION_CONFIG: dict[str, int] | None = Field(
-        default=None,
+        default={"datacenter1": 1},
         description="Replication configuration (e.g., {'dc1': 3, 'dc2': 2} for NetworkTopologyStrategy)",
     )
 
