@@ -311,6 +311,89 @@ except CacheError as e:
     raise
 ```
 
+### INCREX Window Counter
+
+Redis 8.8 adds the `INCREX` command — a generalized increment with optional bounds and conditional expiration.
+ArchiPy exposes it as `increx()` on both sync and async adapters. It is the primitive behind
+[FastAPI rate limiting](../helpers/interceptors.md#rate-limiting-dependency).
+
+> **Note:** Redis **8.8+** is required. The test container image in `.env.test` is `redis:8.8.0-alpine`.
+> `fakeredis` does not implement `INCREX`; use a real Redis 8.8 instance to exercise this command.
+
+`increx` returns a two-element list: `[new_value, actual_increment_applied]`. When `actual_increment_applied` is
+`0`, the increment was rejected or clamped at the bound.
+
+#### Synchronous example
+
+```python
+import logging
+
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.models.errors import CacheError
+
+logger = logging.getLogger(__name__)
+
+redis = RedisAdapter()
+
+try:
+    new_value, applied = redis.increx(
+        "rate:api:user-1",
+        byint=1,
+        ubound=5,
+        saturate=True,
+        px=60_000,
+        enx=True,
+    )
+    logger.info(f"Counter: {new_value}, applied: {applied}")
+except CacheError as e:
+    logger.error(f"INCREX failed: {e}")
+    raise
+```
+
+#### Asynchronous example
+
+```python
+import asyncio
+import logging
+
+from archipy.adapters.redis.adapters import AsyncRedisAdapter
+from archipy.models.errors import CacheError
+
+logger = logging.getLogger(__name__)
+
+
+async def main() -> None:
+    redis = AsyncRedisAdapter()
+    try:
+        new_value, applied = await redis.increx(
+            "rate:api:user-1",
+            byint=1,
+            ubound=5,
+            saturate=True,
+            px=60_000,
+            enx=True,
+        )
+        logger.info(f"Counter: {new_value}, applied: {applied}")
+    except CacheError as e:
+        logger.error(f"INCREX failed: {e}")
+        raise
+
+
+asyncio.run(main())
+```
+
+#### Parameters
+
+| Parameter | Description |
+|---|---|
+| `byint` / `byfloat` | Increment step (mutually exclusive; defaults to 1) |
+| `lbound` / `ubound` | Lower and upper bounds on the resulting value |
+| `saturate` | Clamp to the bound instead of rejecting when out of range |
+| `ex` / `px` | Relative expiry in seconds or milliseconds |
+| `exat` / `pxat` | Absolute expiry timestamp |
+| `persist` | Remove any existing expiration |
+| `enx` | Set expiration only when the key has no TTL (preserves window start) |
+
 ## Error Handling
 
 The Redis adapter maps connection and command failures to `CacheError`:
@@ -340,4 +423,5 @@ else:
 - [Configuration Management](../config_management.md) — Redis configuration setup
 - [BDD Testing](../testing_strategy.md) — Testing Redis operations
 - [Cache Decorator](../helpers/decorators.md#cache-decorator) — TTL cache decorator usage
+- [Interceptors - Rate Limiting](../helpers/interceptors.md#rate-limiting-dependency) — FastAPI rate limiting with `INCREX`
 - [API Reference](../../api_reference/adapters/redis.md) — Full Redis adapter API documentation
