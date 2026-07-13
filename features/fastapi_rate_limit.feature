@@ -133,3 +133,22 @@ Feature: FastAPI REST rate limit handler
     Then response 1 should have status 200
     When 1 requests are made to the endpoint with the stored JWT token
     Then response 1 should have status 429
+
+  Scenario: Multiple windows enforce burst before sustained limits
+    Given a multi-window FastAPI endpoint with burst 2 calls per 1 seconds and sustained 3 calls per 60 seconds
+    When 2 requests are made to the endpoint
+    Then response 1 should have status 200
+    And response 2 should have status 200
+    When 1 requests are made to the endpoint
+    Then response 1 should have status 429
+
+  Scenario: Multi-window success headers reflect the most constrained window
+    Given a multi-window FastAPI endpoint with burst 10 calls per 60 seconds and sustained 2 calls per 60 seconds
+    When 1 requests are made to the endpoint
+    Then response 1 should have status 200
+    And response 1 header "X-RateLimit-Limit" should equal "2"
+    And response 1 header "X-RateLimit-Remaining" should equal "1"
+
+  Scenario: Invalid primary rate limit window construction is rejected
+    When compute_rate_limit_window is called with calls_count 0 and seconds 60
+    Then an InvalidArgumentError should be raised

@@ -88,3 +88,13 @@ Decorator that raises an exception when a deprecated function or class is called
 options:
 show_root_toc_entry: false
 heading_level: 3
+
+## gRPC Rate Limit
+
+Decorator that declares per-RPC rate-limit windows on gRPC servicer methods. Read by
+`GrpcServerRateLimitInterceptor` and `AsyncGrpcServerRateLimitInterceptor`.
+
+::: archipy.helpers.decorators.grpc_rate_limit
+options:
+show_root_toc_entry: false
+heading_level: 3

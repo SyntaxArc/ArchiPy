@@ -85,6 +85,111 @@ def create_grpc_server_with_metrics(max_workers: int = 10) -> grpc.Server:
     )
 ```
 
+### Rate Limiting Interceptor
+
+Per-RPC gRPC rate limits use two pieces:
+
+1. **`grpc_rate_limit_decorator`** — declares limits on servicer methods (see
+   [Decorator Tutorials — gRPC Rate Limit](decorators.md#grpc-rate-limit-decorator))
+2. **`GrpcServerRateLimitInterceptor` / `AsyncGrpcServerRateLimitInterceptor`** — enforces decorated limits via Redis
+   `INCREX`
+
+Limits use the Redis 8.8 `INCREX` command, the same atomic counter primitive as the FastAPI handler.
+
+Install the required extras:
+
+```bash
+uv add "archipy[redis,grpc]"
+```
+
+> **Note:** Redis **8.8+** is required. The interceptor depends on the `INCREX` command.
+
+Register the interceptor on the server (automatically via config or manually) and declare limits on individual RPC
+methods.
+
+Enable automatic registration:
+
+```bash
+GRPC_RATE_LIMIT__IS_ENABLED=true
+```
+
+With ``IS_ENABLED``, ``AppUtils.create_grpc_app`` / ``create_async_grpc_app`` append the matching interceptor (same
+pattern as Prometheus metrics). Per-RPC limits still come only from ``grpc_rate_limit_decorator``.
+
+**Sync:**
+
+```python
+from archipy.helpers.decorators import grpc_rate_limit_decorator
+from archipy.helpers.utils.app_utils import AppUtils
+from archipy.configs.base_config import BaseConfig
+
+
+class MySyncServiceServicer(pb2_grpc.MyServiceServicer):
+    @grpc_rate_limit_decorator(calls_count=100, minutes=1)
+    def Cheap(self, request, context):
+        return pb2.CheapResponse()
+
+    @grpc_rate_limit_decorator(calls_count=10, seconds=1)
+    @grpc_rate_limit_decorator(calls_count=1000, days=1)
+    def Expensive(self, request, context):
+        return pb2.ExpensiveResponse()
+
+
+config = BaseConfig.global_config()
+server = AppUtils.create_grpc_app(config)
+```
+
+**Async:**
+
+```python
+from archipy.helpers.decorators import grpc_rate_limit_decorator
+from archipy.helpers.utils.app_utils import AppUtils
+from archipy.configs.base_config import BaseConfig
+
+
+class MyAsyncServiceServicer(pb2_grpc.MyServiceServicer):
+    @grpc_rate_limit_decorator(calls_count=100, minutes=1)
+    async def Cheap(self, request, context):
+        return pb2.CheapResponse()
+
+    @grpc_rate_limit_decorator(calls_count=10, seconds=1)
+    @grpc_rate_limit_decorator(calls_count=1000, days=1)
+    async def Expensive(self, request, context):
+        return pb2.ExpensiveResponse()
+
+
+config = BaseConfig.global_config()
+server = AppUtils.create_async_grpc_app(config)
+```
+
+Manual registration (when ``IS_ENABLED`` is false) via ``customized_interceptors`` is still supported; pass
+``GrpcServerRateLimitInterceptor`` or ``AsyncGrpcServerRateLimitInterceptor`` explicitly.
+
+#### Configuration
+
+Global defaults load from ``GRPC_RATE_LIMIT`` on ``BaseConfig.global_config()`` (env prefix
+``GRPC_RATE_LIMIT__``). Per-RPC limits are set only on ``grpc_rate_limit_decorator``; the interceptor
+constructor controls shared behavior such as Redis key prefix, fail-closed mode, and JWT identity.
+
+```bash
+GRPC_RATE_LIMIT__IS_ENABLED=true
+GRPC_RATE_LIMIT__FAIL_CLOSED=true
+GRPC_RATE_LIMIT__IDENTITY_FROM_ACCESS_TOKEN=true
+```
+
+#### Client identification
+
+By default the interceptor buckets authenticated callers by verified JWT access token ``sub`` from
+gRPC invocation metadata (`authorization: Bearer ...`). Missing or invalid tokens fall back to
+``context.peer()`` (for example `ipv4:1.2.3.4:5678`).
+
+> **Warning:** ``context.peer()`` reflects the immediate TCP peer. Behind an L7 proxy that
+> reconnects upstream, the peer is often the proxy address. Pass ``identifier_fn`` to the interceptor
+> when you need a custom server-resolved identity.
+
+Undecorated servicer methods are never rate-limited. Stacked decorators add multiple windows; all
+windows must pass before the RPC handler runs.
+
 ## FastAPI Interceptors
 
 ### Metrics Middleware
@@ -240,6 +345,22 @@ from archipy.helpers.interceptors.fastapi.rate_limit.identifiers import resolve_
 
 def jwt_or_ip_identifier(request: Request) -> str:
     return resolve_jwt_access_token_sub(request) or handler._extract_client_ip(request)
+```
+
+#### Multiple windows
+
+Pass ``additional_windows`` to enforce burst and sustained tiers on the same endpoint. All windows
+must pass; successful responses report the most constrained remaining quota in ``X-RateLimit-*``
+headers.
+
+```python
+from archipy.models.dtos.rate_limit_window_dto import RateLimitWindowDTO
+
+handler = FastAPIRestRateLimitHandler(
+    calls_count=10,
+    seconds=1,
+    additional_windows=[RateLimitWindowDTO(calls_count=1000, window_ms=86_400_000)],
+)
 ```
 
 #### Per-query-parameter buckets

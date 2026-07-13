@@ -30,6 +30,7 @@ from archipy.configs.config_template import (
     FastAPIRateLimitConfig,
     FileConfig,
     GrpcConfig,
+    GrpcRateLimitConfig,
     KafkaConfig,
     KeycloakConfig,
     MinioConfig,
@@ -77,6 +78,7 @@ class BaseConfig[R](BaseSettings):
         FASTAPI_RATE_LIMIT (FastAPIRateLimitConfig): FastAPI REST rate limiting settings
         FILE (FileConfig): File handling configuration
         GRPC (GrpcConfig): gRPC service configuration
+        GRPC_RATE_LIMIT (GrpcRateLimitConfig): gRPC server rate limiting settings
         KAFKA (KafkaConfig): Kafka integration configuration
         KEYCLOAK (KeycloakConfig): Keycloak integration configuration
         LANGUAGE (LanguageType): Application default language
@@ -168,6 +170,7 @@ class BaseConfig[R](BaseSettings):
     FASTAPI_RATE_LIMIT: FastAPIRateLimitConfig = FastAPIRateLimitConfig()
     FILE: FileConfig = FileConfig()
     GRPC: GrpcConfig = GrpcConfig()
+    GRPC_RATE_LIMIT: GrpcRateLimitConfig = GrpcRateLimitConfig()
     KAFKA: KafkaConfig = KafkaConfig()
     KEYCLOAK: KeycloakConfig = KeycloakConfig()
     MINIO: MinioConfig = MinioConfig()

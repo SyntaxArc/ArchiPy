@@ -75,3 +75,17 @@ heading_level: 3
 options:
 show_root_toc_entry: false
 heading_level: 3
+
+### rate_limit
+
+gRPC server interceptors that enforce decorator-declared Redis rate limits on servicer methods.
+
+::: archipy.helpers.interceptors.grpc.rate_limit.grpc_rate_limit_interceptor
+options:
+show_root_toc_entry: false
+heading_level: 3
+
+::: archipy.helpers.interceptors.grpc.rate_limit.identifiers
+options:
+show_root_toc_entry: false
+heading_level: 3

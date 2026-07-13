@@ -116,3 +116,12 @@ Utilities for registering and exposing Prometheus metrics within ArchiPy applica
 options:
 show_root_toc_entry: false
 heading_level: 3
+
+## Rate Limit Utils
+
+Utilities for building rate-limit window DTOs and reading decorator metadata from gRPC servicer methods.
+
+::: archipy.helpers.utils.rate_limit_utils
+options:
+show_root_toc_entry: false
+heading_level: 3

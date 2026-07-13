@@ -14,6 +14,8 @@ from starlette.status import HTTP_429_TOO_MANY_REQUESTS, HTTP_503_SERVICE_UNAVAI
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import FastAPIRateLimitConfig
 from archipy.helpers.interceptors.fastapi.rate_limit.identifiers import resolve_jwt_access_token_sub
+from archipy.helpers.utils.rate_limit_utils import RateLimitUtils
+from archipy.models.dtos.rate_limit_window_dto import RateLimitWindowDTO
 from archipy.models.errors import InvalidArgumentError
 
 if TYPE_CHECKING:
@@ -64,6 +66,7 @@ class FastAPIRestRateLimitHandler:
         reject_unknown_client: bool | None = None,
         rate_limit_headers: bool | None = None,
         identity_from_access_token: bool | None = None,
+        additional_windows: list[RateLimitWindowDTO] | None = None,
     ) -> None:
         """Initialize the rate limit handler with specified time window and request limits.
 
@@ -111,6 +114,9 @@ class FastAPIRestRateLimitHandler:
                 ``FASTAPI_RATE_LIMIT.IDENTITY_FROM_ACCESS_TOKEN``. Defaults to True. When enabled,
                 verifies Bearer access tokens via ``JWTUtils`` and buckets by ``sub``, falling back
                 to client IP.
+            additional_windows (list[RateLimitWindowDTO] | None, optional): Extra rate-limit tiers
+                enforced in addition to the primary window built from ``calls_count`` and time units.
+                All windows must pass; the most constrained remaining quota is reported in headers.
 
         Raises:
             InvalidArgumentError: If ``calls_count``, the computed window, or ``query_params`` config is invalid.
@@ -122,8 +128,17 @@ class FastAPIRestRateLimitHandler:
             >>> # Allow 1000 requests per day with specific query params
             >>> handler = FastAPIRestRateLimitHandler(calls_count=1000, days=1, query_params={"user_id", "action"})
         """
-        if calls_count < 1:
-            raise InvalidArgumentError(additional_data={"detail": "calls_count must be at least 1"})
+        primary_window = RateLimitUtils.compute_rate_limit_window(
+            calls_count=calls_count,
+            milliseconds=milliseconds,
+            seconds=seconds,
+            minutes=minutes,
+            hours=hours,
+            days=days,
+        )
+        self._windows: tuple[RateLimitWindowDTO, ...] = (primary_window, *(additional_windows or ()))
+        self.calls_count = primary_window.calls_count
+        self.milliseconds = primary_window.window_ms
 
         self.query_params = query_params or set()
         resolved_rate_limit_config = rate_limit_config or BaseConfig.global_config().FASTAPI_RATE_LIMIT
@@ -147,15 +162,6 @@ class FastAPIRestRateLimitHandler:
                         "to override"
                     ),
                 },
-            )
-
-        self.calls_count = calls_count
-        self.milliseconds = (
-            milliseconds + 1000 * seconds + 60 * 1000 * minutes + 60 * 60 * 1000 * hours + 24 * 60 * 60 * 1000 * days
-        )
-        if self.milliseconds <= 0:
-            raise InvalidArgumentError(
-                additional_data={"detail": "Rate limit window must be greater than 0 milliseconds"},
             )
 
         app_config = BaseConfig.global_config()
@@ -307,8 +313,8 @@ class FastAPIRestRateLimitHandler:
 
         return self._normalize_ip(hosts[0])
 
-    async def _check(self, key: str) -> tuple[int, int]:
-        """Increment the rate-limit counter and return limit state.
+    async def _check_window(self, key: str, window: RateLimitWindowDTO) -> tuple[int, int]:
+        """Increment one rate-limit counter and return limit state.
 
         Returns:
             tuple[int, int]: ``(pexpire_if_limited, remaining_calls)``. ``pexpire`` is 0 when allowed.
@@ -316,24 +322,57 @@ class FastAPIRestRateLimitHandler:
         new_value, applied = await self._redis_client.increx(
             key,
             byint=1,
-            ubound=self.calls_count,
+            ubound=window.calls_count,
             saturate=True,
-            px=self.milliseconds,
+            px=window.window_ms,
             enx=True,
         )
         if applied:
-            remaining = max(0, self.calls_count - int(new_value))
+            remaining = max(0, window.calls_count - int(new_value))
             return 0, remaining
         return await self._redis_client.pttl(key), 0
 
-    def _rate_limit_response_headers(self, remaining: int, *, limited: bool, pexpire: int = 0) -> dict[str, str]:
+    async def _check_windows(self, base_key: str) -> tuple[RateLimitWindowDTO | None, int, int, RateLimitWindowDTO]:
+        """Evaluate all configured windows for a request.
+
+        Returns:
+            tuple containing the breaching window (or None), PTTL if limited, remaining calls for
+            the header window, and the header window itself.
+        """
+        header_window = self._windows[0]
+        header_remaining = 0
+        min_remaining_ratio = 1.0
+
+        for window in self._windows:
+            key = f"{base_key}:{window.key_suffix}"
+            pexpire, remaining = await self._check_window(key, window)
+            if pexpire != 0:
+                return window, pexpire, 0, window
+
+            remaining_ratio = remaining / window.calls_count
+            if remaining_ratio <= min_remaining_ratio:
+                min_remaining_ratio = remaining_ratio
+                header_window = window
+                header_remaining = remaining
+
+        return None, 0, header_remaining, header_window
+
+    def _rate_limit_response_headers(
+        self,
+        remaining: int,
+        *,
+        limited: bool,
+        calls_count: int,
+        pexpire: int = 0,
+        window_ms: int | None = None,
+    ) -> dict[str, str]:
         """Build standard rate-limit response headers."""
         headers = {
-            "X-RateLimit-Limit": str(self.calls_count),
+            "X-RateLimit-Limit": str(calls_count),
             "X-RateLimit-Remaining": str(remaining),
         }
         if limited:
-            headers["Retry-After"] = str(self._retry_after_seconds(pexpire))
+            headers["Retry-After"] = str(self._retry_after_seconds(pexpire, window_ms or self.milliseconds))
         return headers
 
     async def __call__(self, request: Request, response: Response) -> None:
@@ -353,9 +392,9 @@ class FastAPIRestRateLimitHandler:
             return
 
         rate_key = self._get_identifier(request)
-        key = f"{self._key_prefix}:{rate_key}:{request.method}"
+        base_key = f"{self._key_prefix}:{rate_key}:{request.method}"
         try:
-            pexpire, remaining = await self._check(key)
+            breaching_window, pexpire, remaining, header_window = await self._check_windows(base_key)
         except (ConnectionError, OSError, TimeoutError, RedisError) as exc:
             if self._fail_closed:
                 raise HTTPException(
@@ -364,32 +403,43 @@ class FastAPIRestRateLimitHandler:
                 ) from exc
             return
 
-        if pexpire != 0:
-            self._create_callback(pexpire)
+        if breaching_window is not None:
+            self._create_callback(pexpire, breaching_window)
 
         if self._rate_limit_headers:
-            for header_name, header_value in self._rate_limit_response_headers(remaining, limited=False).items():
+            for header_name, header_value in self._rate_limit_response_headers(
+                remaining,
+                limited=False,
+                calls_count=header_window.calls_count,
+            ).items():
                 response.headers[header_name] = header_value
 
-    def _retry_after_seconds(self, pexpire: int) -> int:
+    def _retry_after_seconds(self, pexpire: int, window_ms: int) -> int:
         """Convert a PTTL value to a safe Retry-After header in seconds."""
         if pexpire > 0:
             return max(1, ceil(pexpire / 1000))
-        return max(1, ceil(self.milliseconds / 1000))
+        return max(1, ceil(window_ms / 1000))
 
-    def _create_callback(self, pexpire: int) -> None:
+    def _create_callback(self, pexpire: int, window: RateLimitWindowDTO) -> None:
         """Raises an HTTP 429 Too Many Requests error with the appropriate headers.
 
         Args:
             pexpire (int): The remaining time-to-live (TTL) in milliseconds before the rate limit resets.
+            window (RateLimitWindowDTO): The breached rate-limit window.
 
         Raises:
             HTTPException: An HTTP 429 Too Many Requests error with rate-limit headers.
         """
         headers = (
-            self._rate_limit_response_headers(0, limited=True, pexpire=pexpire)
+            self._rate_limit_response_headers(
+                0,
+                limited=True,
+                calls_count=window.calls_count,
+                pexpire=pexpire,
+                window_ms=window.window_ms,
+            )
             if self._rate_limit_headers
-            else {"Retry-After": str(self._retry_after_seconds(pexpire))}
+            else {"Retry-After": str(self._retry_after_seconds(pexpire, window.window_ms))}
         )
         raise HTTPException(
             status_code=HTTP_429_TOO_MANY_REQUESTS,

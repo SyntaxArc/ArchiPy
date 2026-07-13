@@ -302,6 +302,26 @@ class AsyncGrpcAPIUtils:
         except Exception:
             logger.exception("Failed to initialize Metric Interceptor")
 
+    @staticmethod
+    def setup_rate_limit_interceptor(config: BaseConfig, interceptors: list) -> None:
+        """Configures rate-limit interceptor for async gRPC server when enabled.
+
+        Args:
+            config (BaseConfig): The configuration object containing gRPC rate-limit settings.
+            interceptors (List): List of gRPC interceptors to add the rate-limit interceptor to.
+        """
+        if not config.GRPC_RATE_LIMIT.IS_ENABLED:
+            return
+
+        try:
+            from archipy.helpers.interceptors.grpc.rate_limit.grpc_rate_limit_interceptor import (
+                AsyncGrpcServerRateLimitInterceptor,
+            )
+
+            interceptors.append(AsyncGrpcServerRateLimitInterceptor(rate_limit_config=config.GRPC_RATE_LIMIT))
+        except Exception:
+            logger.exception("Failed to initialize Rate Limit Interceptor")
+
 
 class GrpcAPIUtils:
     """grpc api utilities."""
@@ -344,6 +364,26 @@ class GrpcAPIUtils:
 
         except Exception:
             logger.exception("Failed to initialize Metric Interceptor")
+
+    @staticmethod
+    def setup_rate_limit_interceptor(config: BaseConfig, interceptors: list) -> None:
+        """Configures rate-limit interceptor for gRPC server when enabled.
+
+        Args:
+            config (BaseConfig): The configuration object containing gRPC rate-limit settings.
+            interceptors (List): List of gRPC interceptors to add the rate-limit interceptor to.
+        """
+        if not config.GRPC_RATE_LIMIT.IS_ENABLED:
+            return
+
+        try:
+            from archipy.helpers.interceptors.grpc.rate_limit.grpc_rate_limit_interceptor import (
+                GrpcServerRateLimitInterceptor,
+            )
+
+            interceptors.append(GrpcServerRateLimitInterceptor(rate_limit_config=config.GRPC_RATE_LIMIT))
+        except Exception:
+            logger.exception("Failed to initialize Rate Limit Interceptor")
 
 
 class AppUtils:
@@ -419,6 +459,7 @@ class AppUtils:
 
         AsyncGrpcAPIUtils.setup_trace_interceptor(config, async_interceptors)
         AsyncGrpcAPIUtils.setup_metric_interceptor(config, async_interceptors)
+        AsyncGrpcAPIUtils.setup_rate_limit_interceptor(config, async_interceptors)
 
         if customized_interceptors:
             async_interceptors.extend(customized_interceptors)
@@ -448,6 +489,7 @@ class AppUtils:
 
         GrpcAPIUtils.setup_trace_interceptor(config, interceptors)
         GrpcAPIUtils.setup_metric_interceptor(config, interceptors)
+        GrpcAPIUtils.setup_rate_limit_interceptor(config, interceptors)
         if customized_interceptors:
             interceptors.extend(customized_interceptors)
 

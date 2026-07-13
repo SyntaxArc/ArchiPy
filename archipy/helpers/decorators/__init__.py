@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from .cache import ttl_cache_decorator
 from .deprecation_exception import class_deprecation_error, method_deprecation_error
 from .deprecation_warnings import class_deprecation_warning, method_deprecation_warning
+from .grpc_rate_limit import grpc_rate_limit_decorator
 from .retry import retry_decorator
 from .singleton import singleton_decorator
 from .timeout import timeout_decorator
@@ -100,6 +101,7 @@ __all__ = [
     "capture_transaction",
     "class_deprecation_error",
     "class_deprecation_warning",
+    "grpc_rate_limit_decorator",
     "method_deprecation_error",
     "method_deprecation_warning",
     "postgres_sqlalchemy_atomic_decorator",

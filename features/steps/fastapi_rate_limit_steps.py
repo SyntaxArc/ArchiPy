@@ -13,6 +13,8 @@ from archipy.helpers.interceptors.fastapi.rate_limit.fastapi_rest_rate_limit_han
 )
 from archipy.helpers.utils.app_utils import AppUtils
 from archipy.helpers.utils.jwt_utils import JWTUtils
+from archipy.helpers.utils.rate_limit_utils import RateLimitUtils
+from archipy.models.dtos.rate_limit_window_dto import RateLimitWindowDTO
 from archipy.models.errors import InvalidArgumentError
 from features.test_helpers import get_current_scenario_context
 
@@ -32,6 +34,7 @@ def _build_rate_limited_app(
     *,
     trusted_proxy_ips: list[str] | None = None,
     identity_from_access_token: bool | None = None,
+    additional_windows: list[RateLimitWindowDTO] | None = None,
 ):
     """Build a FastAPI app with a rate-limited GET endpoint."""
     test_config = BaseConfig.global_config()
@@ -42,6 +45,7 @@ def _build_rate_limited_app(
         seconds=seconds,
         trusted_proxy_ips=trusted_proxy_ips or [],
         identity_from_access_token=identity_from_access_token,
+        additional_windows=additional_windows,
     )
 
     @app.get(endpoint_path, dependencies=[Depends(rate_limit_handler)])
@@ -59,6 +63,33 @@ def step_given_rate_limited_endpoint(context, calls_count, seconds):
     endpoint_path = f"/rate-limit/{path_id}"
     scenario_context.store("calls_count", calls_count)
     scenario_context.store("seconds", seconds)
+    scenario_context.store("endpoint_path", endpoint_path)
+    scenario_context.store("trusted_proxy_ips", [])
+    scenario_context.store("identity_from_access_token", False)
+    scenario_context.store("additional_windows", None)
+
+
+@given(
+    "a multi-window FastAPI endpoint with burst {burst_calls:d} calls per {burst_seconds:d} seconds "
+    "and sustained {sustained_calls:d} calls per {sustained_seconds:d} seconds",
+)
+def step_given_multi_window_fastapi_endpoint(
+    context,
+    burst_calls,
+    burst_seconds,
+    sustained_calls,
+    sustained_seconds,
+):
+    """Register burst and sustained FastAPI rate-limit windows for the scenario."""
+    scenario_context = get_current_scenario_context(context)
+    path_id = uuid.uuid4().hex
+    endpoint_path = f"/rate-limit/multi/{path_id}"
+    scenario_context.store("calls_count", burst_calls)
+    scenario_context.store("seconds", burst_seconds)
+    scenario_context.store(
+        "additional_windows",
+        [RateLimitWindowDTO(calls_count=sustained_calls, window_ms=sustained_seconds * 1000)],
+    )
     scenario_context.store("endpoint_path", endpoint_path)
     scenario_context.store("trusted_proxy_ips", [])
     scenario_context.store("identity_from_access_token", False)
@@ -112,12 +143,14 @@ async def _make_requests(
         if identity_from_access_token is not None
         else scenario_context.get("identity_from_access_token")
     )
+    additional_windows = scenario_context.get("additional_windows")
     app = _build_rate_limited_app(
         calls_count,
         seconds,
         endpoint_path,
         trusted_proxy_ips=trusted_proxy_ips,
         identity_from_access_token=resolved_identity_from_access_token,
+        additional_windows=additional_windows,
     )
     responses = []
     request_headers = header_list or headers or {}
@@ -260,6 +293,19 @@ def step_then_response_has_header(context, index, header_name):
     response = responses[index - 1]
     assert header_name in response.headers, (
         f"Expected response {index} to include header {header_name!r}, got {dict(response.headers)}"
+    )
+
+
+@then('response {index:d} header "{header_name}" should equal "{expected_value}"')
+def step_then_response_header_equals(context, index, header_name, expected_value):
+    """Assert a response header has the expected value."""
+    scenario_context = get_current_scenario_context(context)
+    responses = scenario_context.get("responses")
+    assert responses is not None, "No responses stored in scenario context"
+    response = responses[index - 1]
+    actual_value = response.headers.get(header_name)
+    assert actual_value == expected_value, (
+        f"Expected response {index} header {header_name!r} to equal {expected_value!r}, got {actual_value!r}"
     )
 
 

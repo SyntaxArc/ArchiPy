@@ -71,6 +71,15 @@ options:
 show_root_toc_entry: false
 heading_level: 3
 
+## Rate Limit Window DTO
+
+DTO for a single rate-limit tier: maximum calls within a time window.
+
+::: archipy.models.dtos.rate_limit_window_dto
+options:
+show_root_toc_entry: false
+heading_level: 3
+
 ## FastAPI Exception Response DTO
 
 DTO representing the standardized error response body returned by FastAPI exception handlers.

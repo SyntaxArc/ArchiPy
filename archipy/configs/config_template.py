@@ -227,6 +227,44 @@ class FastAPIRateLimitConfig(BaseModel):
     )
 
 
+class GrpcRateLimitConfig(BaseModel):
+    """Configuration for gRPC server rate limiting.
+
+    Controls Redis key layout, failure modes, and identity resolution for
+    ``GrpcServerRateLimitInterceptor`` / ``AsyncGrpcServerRateLimitInterceptor``.
+    Per-RPC limits are declared via ``grpc_rate_limit_decorator`` on servicer methods.
+    When ``IS_ENABLED`` is True, ``AppUtils.create_grpc_app`` and ``AppUtils.create_async_grpc_app``
+    register the matching interceptor automatically.
+    """
+
+    IS_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "When True, register the gRPC rate-limit interceptor in "
+            "``AppUtils.create_grpc_app`` / ``AppUtils.create_async_grpc_app``."
+        ),
+    )
+    KEY_PREFIX: str | None = Field(
+        default=None,
+        description="Redis key prefix. When None, ``{GRPC.SERVE_HOST}:RateLimit`` is used.",
+    )
+    FAIL_CLOSED: bool = Field(
+        default=True,
+        description="When True, Redis or identity-resolution failures abort with UNAVAILABLE instead of allowing RPCs.",
+    )
+    SKIP_METHODS: list[str] = Field(
+        default=["/grpc.health.v1.Health/Check", "/grpc.health.v1.Health/Watch"],
+        description="Full gRPC method names excluded from rate limiting.",
+    )
+    IDENTITY_FROM_ACCESS_TOKEN: bool = Field(
+        default=True,
+        description=(
+            "When True, verify Bearer access tokens from invocation metadata via JWTUtils and bucket by sub; "
+            "fall back to peer IP when the token is missing or invalid."
+        ),
+    )
+
+
 class GrpcConfig(BaseModel):
     """Configuration settings for gRPC services.
 

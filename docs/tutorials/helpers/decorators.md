@@ -280,7 +280,87 @@ async def update_user_email(user_id: UUID, new_email: str) -> "User | None":  # 
     return user
 ```
 
+## gRPC Rate Limit Decorator
+
+`grpc_rate_limit_decorator` declares per-RPC rate limits on gRPC servicer methods. It does **not** enforce limits by
+itself — enable ``GRPC_RATE_LIMIT.IS_ENABLED`` (or register the interceptor manually) so decorated methods are checked
+before the handler runs.
+
+```python
+from archipy.helpers.decorators import grpc_rate_limit_decorator
+from archipy.helpers.utils.app_utils import AppUtils
+from archipy.configs.base_config import BaseConfig
+
+config = BaseConfig.global_config()
+```
+
+Set ``GRPC_RATE_LIMIT__IS_ENABLED=true`` so ``AppUtils.create_grpc_app`` / ``create_async_grpc_app`` register the
+matching interceptor automatically.
+
+**Sync servicer** — `def` handlers + `AppUtils.create_grpc_app`:
+
+```python
+class MySyncServiceServicer(pb2_grpc.MyServiceServicer):
+    @grpc_rate_limit_decorator(calls_count=100, minutes=1)
+    def Cheap(self, request, context):
+        return pb2.CheapResponse()
+
+    @grpc_rate_limit_decorator(calls_count=10, seconds=1)
+    @grpc_rate_limit_decorator(calls_count=1000, days=1)
+    def Expensive(self, request, context):
+        return pb2.ExpensiveResponse()
+
+
+sync_server = AppUtils.create_grpc_app(config)
+```
+
+**Async servicer** — `async def` handlers + `AppUtils.create_async_grpc_app`:
+
+```python
+class MyAsyncServiceServicer(pb2_grpc.MyServiceServicer):
+    @grpc_rate_limit_decorator(calls_count=100, minutes=1)
+    async def Cheap(self, request, context):
+        return pb2.CheapResponse()
+
+    @grpc_rate_limit_decorator(calls_count=10, seconds=1)
+    @grpc_rate_limit_decorator(calls_count=1000, days=1)
+    async def Expensive(self, request, context):
+        return pb2.ExpensiveResponse()
+
+
+async_server = AppUtils.create_async_grpc_app(config)
+```
+
+> **Note:** Use sync factories/interceptors with ``def`` handlers and async with ``async def``. Manual
+> ``customized_interceptors`` registration remains available when ``IS_ENABLED`` is false.
+
+### Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `calls_count` | `1` | Max requests allowed in the window |
+| `milliseconds` | `0` | Window component (ms) |
+| `seconds` | `0` | Window component (s) |
+| `minutes` | `0` | Window component (min) |
+| `hours` | `0` | Window component (h) |
+| `days` | `0` | Window component (days) |
+
+Time units are summed into one window. At least one time component must be greater than zero.
+
+### Stacking
+
+Apply multiple decorators on one method for burst + sustained tiers. The interceptor enforces windows in declaration
+order (inner decorator first) and short-circuits on the first breach.
+
+Undecorated methods are never rate-limited.
+
+> **Note:** Redis **8.8+** required (`INCREX`). Install `archipy[redis,grpc]`.
+
+See [Interceptor Tutorials — Rate Limiting](interceptors.md#rate-limiting-interceptor) for identity resolution,
+`GRPC_RATE_LIMIT` config, and fail-closed behavior.
+
 ## See Also
 
 - [API Reference - Decorators](../../api_reference/helpers/decorators.md) - Full decorators API documentation
+- [API Reference - gRPC Rate Limit Interceptor](../../api_reference/helpers/interceptors.md#rate_limit) - Interceptor API
 - [Helper Tutorials](index.md) - Overview of all helper tutorials
