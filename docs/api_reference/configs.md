@@ -127,6 +127,11 @@ options:
 show_root_toc_entry: false
 heading_level: 3
 
+::: archipy.configs.config_template.FastAPIRateLimitConfig
+options:
+show_root_toc_entry: false
+heading_level: 3
+
 ::: archipy.configs.config_template.GrpcConfig
 options:
 show_root_toc_entry: false

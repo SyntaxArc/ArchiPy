@@ -27,6 +27,7 @@ from archipy.configs.config_template import (
     ElasticsearchConfig,
     EmailConfig,
     FastAPIConfig,
+    FastAPIRateLimitConfig,
     FileConfig,
     GrpcConfig,
     KafkaConfig,
@@ -73,6 +74,7 @@ class BaseConfig[R](BaseSettings):
         EMAIL (EmailConfig): Email service configuration
         ENVIRONMENT (EnvironmentType): Application environment (dev, test, prod)
         FASTAPI (FastAPIConfig): FastAPI framework settings
+        FASTAPI_RATE_LIMIT (FastAPIRateLimitConfig): FastAPI REST rate limiting settings
         FILE (FileConfig): File handling configuration
         GRPC (GrpcConfig): gRPC service configuration
         KAFKA (KafkaConfig): Kafka integration configuration
@@ -163,6 +165,7 @@ class BaseConfig[R](BaseSettings):
     EMAIL: EmailConfig = EmailConfig()
     ENVIRONMENT: EnvironmentType = EnvironmentType.LOCAL
     FASTAPI: FastAPIConfig = FastAPIConfig()
+    FASTAPI_RATE_LIMIT: FastAPIRateLimitConfig = FastAPIRateLimitConfig()
     FILE: FileConfig = FileConfig()
     GRPC: GrpcConfig = GrpcConfig()
     KAFKA: KafkaConfig = KafkaConfig()

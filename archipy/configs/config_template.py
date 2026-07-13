@@ -169,6 +169,64 @@ class FastAPIConfig(BaseModel):
     )
 
 
+class FastAPIRateLimitConfig(BaseModel):
+    """Configuration for FastAPI REST rate limiting.
+
+    Controls trusted-proxy resolution, Redis key layout, failure modes, and
+    standard rate-limit response headers for ``FastAPIRestRateLimitHandler``.
+    """
+
+    TRUSTED_PROXY_IPS: list[str] | None = Field(
+        default=None,
+        description=(
+            "Trusted reverse-proxy CIDRs or IPs. When None, ``FASTAPI.FORWARDED_ALLOW_IPS`` is used. "
+            "The literal ``*`` trusts all peers (matches Uvicorn; unsafe for production rate limiting)."
+        ),
+    )
+    ALLOW_PRIVATE_IPS: bool = Field(
+        default=False,
+        description="Whether private, loopback, link-local, and multicast client addresses are accepted.",
+    )
+    KEY_PREFIX: str | None = Field(
+        default=None,
+        description="Redis key prefix. When None, ``{FASTAPI.PROJECT_NAME}:RateLimit`` is used.",
+    )
+    FAIL_CLOSED: bool = Field(
+        default=True,
+        description="When True, Redis or identity-resolution failures return HTTP 503 instead of allowing requests.",
+    )
+    SKIP_METHODS: list[str] = Field(
+        default=["OPTIONS"],
+        description="HTTP methods excluded from rate limiting.",
+    )
+    HASH_QUERY_PARAM_VALUES: bool = Field(
+        default=True,
+        description="Whether query parameter values are hashed in Redis keys to cap key length.",
+    )
+    REQUIRE_IDENTIFIER_FOR_QUERY_PARAMS: bool = Field(
+        default=True,
+        description=(
+            "When True, ``query_params`` on the handler requires ``identifier_fn`` "
+            "to avoid client-controlled per-user quota targeting."
+        ),
+    )
+    REJECT_UNKNOWN_CLIENT: bool = Field(
+        default=True,
+        description="When True, requests without a resolvable client identity return HTTP 503.",
+    )
+    RATE_LIMIT_HEADERS: bool = Field(
+        default=True,
+        description="When True, attach X-RateLimit-* headers on allowed and rejected responses.",
+    )
+    IDENTITY_FROM_ACCESS_TOKEN: bool = Field(
+        default=True,
+        description=(
+            "When True, verify Bearer access tokens via AUTH/JWTUtils and bucket by sub; "
+            "fall back to client IP when the token is missing or invalid."
+        ),
+    )
+
+
 class GrpcConfig(BaseModel):
     """Configuration settings for gRPC services.
 

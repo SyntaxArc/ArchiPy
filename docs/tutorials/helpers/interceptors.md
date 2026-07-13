@@ -143,46 +143,125 @@ async def resource() -> dict[str, str]:
     return {"status": "ok"}
 ```
 
+#### Configuration
+
+Global defaults load from ``FASTAPI_RATE_LIMIT`` on ``BaseConfig.global_config()`` (env prefix
+``FASTAPI_RATE_LIMIT__``). Per-route limits still pass ``calls_count`` and the time window to the
+handler constructor; optional kwargs override config fields for that handler instance only.
+
+```bash
+# .env — trusted proxies fall back to FASTAPI__FORWARDED_ALLOW_IPS when unset
+FASTAPI_RATE_LIMIT__FAIL_CLOSED=true
+FASTAPI_RATE_LIMIT__REJECT_UNKNOWN_CLIENT=true
+FASTAPI_RATE_LIMIT__RATE_LIMIT_HEADERS=true
+```
+
+```python
+from archipy.configs.base_config import BaseConfig
+
+config = BaseConfig.global_config()
+config.FASTAPI_RATE_LIMIT.TRUSTED_PROXY_IPS = ["10.0.0.0/8"]
+```
+
 #### How it works
 
 On each request the handler:
 
 1. Builds a Redis key from the client identifier, path, HTTP method, and optional query parameters.
 2. Calls `INCREX` with `ubound=calls_count`, `saturate=True`, `enx=True`, and a millisecond window (`px`).
-3. Allows the request when the increment is applied; otherwise raises HTTP **429 Too Many Requests** with a
-   `Retry-After` header (seconds, ceiling of the remaining TTL).
+3. Allows the request when the increment is applied; otherwise raises HTTP **429 Too Many Requests** with
+   `Retry-After`, `X-RateLimit-Limit`, and `X-RateLimit-Remaining` headers.
 
 `enx=True` sets the window expiry only when the key is first created, so subsequent requests within the window
 preserve the original TTL.
 
 #### Client identification
 
-The handler resolves the client in this order:
+Forwarded headers (`CF-Connecting-IP`, `True-Client-IP`, `Forwarded`, `X-Forwarded-For`) are
+honored **only** when the immediate peer (`request.client.host`) matches
+`FASTAPI_RATE_LIMIT.TRUSTED_PROXY_IPS`, `FASTAPI.FORWARDED_ALLOW_IPS`, or an explicit
+`trusted_proxy_ips` constructor override. Without trusted proxies, only `request.client.host` is
+used, which prevents clients from spoofing their identity.
 
-1. `X-Real-IP` header
-2. `X-Forwarded-For` header (first non-private IP)
-3. `request.client.host`
+When trusted proxies are configured:
 
-Private, loopback, link-local, and multicast addresses in headers are ignored and the next source is tried.
+1. `CF-Connecting-IP`
+2. `True-Client-IP`
+3. `Forwarded` (`for=` directives, recursive trusted-proxy walk)
+4. `X-Forwarded-For` — all header fields are combined (RFC 9110), port suffixes stripped,
+   then resolved with a recursive trusted-proxy walk (nginx `real_ip_recursive` semantics)
+5. `X-Real-IP` — only when `X-Forwarded-For` is absent (avoids nginx mis-identifying the proxy as the client)
+
+Private, loopback, link-local, and multicast addresses are rejected unless `allow_private_ips=True`.
+
+The literal `"*"` in `FASTAPI_RATE_LIMIT.TRUSTED_PROXY_IPS` or `FASTAPI.FORWARDED_ALLOW_IPS` trusts
+all peers (matches Uvicorn) but is unsafe for rate limiting — prefer explicit CIDRs.
+
+When running behind Uvicorn with `proxy_headers=True` and `forwarded_allow_ips` configured (see
+[Project Structure](../../getting-started/project_structure.md)), `request.client.host` is already
+rewritten to the real client before the handler runs. The logic above remains defense-in-depth for
+deployments that bypass Uvicorn's `ProxyHeadersMiddleware` (Hypercorn, custom ASGI servers, etc.).
 
 > **Warning:** In Python 3.14, documentation-range IPs such as `203.0.113.x` are classified as private. When
-> testing `X-Real-IP` behaviour locally, use globally routable addresses (for example `8.8.8.8`).
+> testing `X-Real-IP` behaviour locally, use globally routable addresses (for example `8.8.8.8`) and configure
+> `trusted_proxy_ips` to include your test peer (for example `127.0.0.1`).
+
+For authenticated APIs, rate limiting buckets by verified JWT access token ``sub`` by default
+(``identity_from_access_token=True``). Anonymous or invalid tokens fall back to the secure client IP.
+
+```python
+handler = FastAPIRestRateLimitHandler(calls_count=50, minutes=1)
+```
+
+Disable JWT identity when you need IP-only buckets:
+
+```python
+handler = FastAPIRestRateLimitHandler(calls_count=50, minutes=1, identity_from_access_token=False)
+```
+
+Or set ``FASTAPI_RATE_LIMIT__IDENTITY_FROM_ACCESS_TOKEN=false`` in the environment.
+
+For custom identity resolution (for example Keycloak ``request.state.user_info["sub"]`` after an auth
+``Depends``), pass ``identifier_fn``:
+
+```python
+def current_user_id(request: Request) -> str:
+    return str(request.state.user_info["sub"])
+
+
+handler = FastAPIRestRateLimitHandler(calls_count=50, minutes=1, identifier_fn=current_user_id)
+```
+
+For manual JWT extraction in a custom ``identifier_fn``:
+
+```python
+from archipy.helpers.interceptors.fastapi.rate_limit.identifiers import resolve_jwt_access_token_sub
+
+
+def jwt_or_ip_identifier(request: Request) -> str:
+    return resolve_jwt_access_token_sub(request) or handler._extract_client_ip(request)
+```
 
 #### Per-query-parameter buckets
 
-Pass `query_params` to include specific query parameters in the rate-limit key:
+Pass ``query_params`` together with server-resolved identity (``identity_from_access_token=True`` by default,
+or ``identifier_fn``). Values are hashed by default to keep Redis keys bounded:
 
 ```python
 handler = FastAPIRestRateLimitHandler(
     calls_count=50,
     minutes=1,
-    query_params={"user_id", "action"},
+    query_params={"action"},
 )
 
 @app.get("/api/action", dependencies=[Depends(handler)])
 async def action() -> dict[str, str]:
     return {"status": "ok"}
 ```
+
+> **Warning:** Do not rely on client-controlled query parameters alone to identify users. Use
+> ``identity_from_access_token`` or ``identifier_fn`` for per-user quotas. Set
+> ``require_identifier_for_query_params=False`` only when query parameters are not used for user identity.
 
 ## Using Multiple Interceptors
 
