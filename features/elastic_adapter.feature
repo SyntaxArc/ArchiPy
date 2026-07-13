@@ -62,9 +62,17 @@ Feature: Elasticsearch Operations Testing
       | index   | 2  | test-index  | {"title": "Doc 2", "content": "Second"}  |
       | index   | 3  | test-index  | {"title": "Doc 3", "content": "Third"}   |
       | update  | 1  | test-index  | {"doc": {"content": "Bulk updated"}}     |
-      | delete  | 4  | test-index  |                                          |
+      | delete  | 2  | test-index  |                                          |
     Then the bulk operation should succeed
     And all operations should be reflected in the index
+
+  Scenario: Scan documents synchronously
+    Given a valid Elasticsearch client connection
+    And index "test-index" exists
+    And a document exists in "test-index" with id "scan-1" and content '{"title": "Scan Target", "content": "scan me"}'
+    And a document exists in "test-index" with id "scan-2" and content '{"title": "Scan Target", "content": "scan me too"}'
+    When I scan "test-index" for query "Scan Target"
+    Then the scan should return at least 2 hits
 
   @async
   Scenario: Index a new document asynchronously
@@ -126,9 +134,18 @@ Feature: Elasticsearch Operations Testing
       | index   | 20 | test-index       | {"title": "Async 2", "content": "Second"} |
       | index   | 30 | test-index       | {"title": "Async 3", "content": "Third"}  |
       | update  | 10 | test-index       | {"doc": {"content": "Bulk async update"}} |
-      | delete  | 40 | test-index       |                                          |
+      | delete  | 20 | test-index       |                                          |
     Then the bulk operation should succeed
     And all operations should be reflected in the index
+
+  @async
+  Scenario: Scan documents asynchronously
+    Given a valid Elasticsearch client connection
+    And index "test-index" exists
+    And a document exists in "test-index" with id "async-scan-1" and content '{"title": "Async Scan", "content": "async scan me"}'
+    And a document exists in "test-index" with id "async-scan-2" and content '{"title": "Async Scan", "content": "async scan me too"}'
+    When I scan "test-index" for query "Async Scan"
+    Then the scan should return at least 2 hits
 
   Scenario: Connect with authenticated user
     Given an Elasticsearch cluster with security enabled

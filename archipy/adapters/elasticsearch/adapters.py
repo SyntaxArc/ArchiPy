@@ -1,10 +1,14 @@
 import logging
+from collections.abc import AsyncIterator, Iterable
 from typing import Any, override
 
 from elasticsearch import AsyncElasticsearch, Elasticsearch
+from elasticsearch.helpers import async_bulk, async_scan, bulk as es_bulk, scan as es_scan
 
 from archipy.adapters.elasticsearch.ports import (
     AsyncElasticsearchPort,
+    ElasticsearchBulkActionType,
+    ElasticsearchBulkResultType,
     ElasticsearchDocumentType,
     ElasticsearchIdType,
     ElasticsearchIndexType,
@@ -195,22 +199,41 @@ class ElasticsearchAdapter(ElasticsearchPort):
     @override
     def bulk(
         self,
-        actions: list[dict[str, Any]],
+        actions: Iterable[ElasticsearchBulkActionType],
+        stats_only: bool = False,
         **kwargs: Any,
-    ) -> ElasticsearchResponseType:
-        """Perform bulk operations in Elasticsearch.
+    ) -> ElasticsearchBulkResultType:
+        """Perform bulk operations using elasticsearch.helpers.bulk.
 
         Args:
-            actions (list[dict[str, Any]]): List of bulk actions to perform.
-            kwargs: Additional keyword arguments passed to the Elasticsearch client.
+            actions: Iterable of helper-format documents (generators supported).
+            stats_only: When True, return only success and error counts.
+            kwargs: Additional keyword arguments passed to elasticsearch.helpers.bulk.
 
         Returns:
-            ElasticsearchResponseType: The response from Elasticsearch.
+            A tuple of (success_count, error_count_or_error_list).
 
         Raises:
-            BulkIndexError: If any of the bulk operations fail.
+            BulkIndexError: If any bulk operation fails and raise_on_error is True (default).
         """
-        return self.client.bulk(operations=actions, **kwargs)
+        return es_bulk(self.client, actions, stats_only=stats_only, **kwargs)
+
+    @override
+    def scan(
+        self,
+        query: ElasticsearchQueryType | None = None,
+        **kwargs: Any,
+    ) -> Iterable[ElasticsearchDocumentType]:
+        """Iterate over all matching documents using elasticsearch.helpers.scan.
+
+        Args:
+            query: Optional search query body.
+            kwargs: Additional keyword arguments passed to elasticsearch.helpers.scan.
+
+        Returns:
+            An iterable yielding hit documents.
+        """
+        return es_scan(self.client, query=query, **kwargs)
 
     @override
     def create_index(
@@ -462,19 +485,42 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
     @override
     async def bulk(
         self,
-        actions: list[dict[str, Any]],
+        actions: Iterable[ElasticsearchBulkActionType],
+        stats_only: bool = False,
         **kwargs: Any,
-    ) -> ElasticsearchResponseType:
-        """Perform bulk operations in Elasticsearch.
+    ) -> ElasticsearchBulkResultType:
+        """Perform bulk operations using elasticsearch.helpers.async_bulk.
 
         Args:
-            actions (list[dict[str, Any]]): List of bulk actions to perform.
-            kwargs: Additional keyword arguments passed to the Elasticsearch client.
+            actions: Iterable of helper-format documents (generators supported).
+            stats_only: When True, return only success and error counts.
+            kwargs: Additional keyword arguments passed to elasticsearch.helpers.async_bulk.
 
         Returns:
-            ElasticsearchResponseType: The response from Elasticsearch.
+            A tuple of (success_count, error_count_or_error_list).
+
+        Raises:
+            BulkIndexError: If any bulk operation fails and raise_on_error is True (default).
         """
-        return await self.client.bulk(operations=actions, **kwargs)
+        return await async_bulk(self.client, actions, stats_only=stats_only, **kwargs)
+
+    @override
+    async def scan(
+        self,
+        query: ElasticsearchQueryType | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[ElasticsearchDocumentType]:
+        """Iterate over all matching documents using elasticsearch.helpers.async_scan.
+
+        Args:
+            query: Optional search query body.
+            kwargs: Additional keyword arguments passed to elasticsearch.helpers.async_scan.
+
+        Yields:
+            Hit documents from the scroll iteration.
+        """
+        async for document in async_scan(self.client, query=query, **kwargs):
+            yield document
 
     @override
     async def create_index(

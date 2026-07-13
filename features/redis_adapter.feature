@@ -802,3 +802,163 @@ Feature: Redis Testing
       | adapter_type | pipe_tag       |
       | container    | bdd-a-p-cont   |
       | cluster      | bdd-a-p-clust  |
+
+  # Redis 8.8 — Array data structure
+  Scenario Outline: Store and retrieve array elements
+    Given a configured <adapter_type>
+    When I arset index 0 to "alpha, beta, gamma" in array "bdd-s-array" in <adapter_type>
+    Then the sync array "bdd-s-array" should have 3 elements
+    When I get array index 1 from "bdd-s-array" in <adapter_type>
+    Then the sync array value should be "beta"
+    When I delete array index 0 from "bdd-s-array" in <adapter_type>
+    And I get array index 0 from "bdd-s-array" in <adapter_type>
+    Then the sync array value should be "None"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Array ring buffer retains last N elements
+    Given a configured <adapter_type>
+    When I arring size 2 with "first, second, third" into array "bdd-s-ring" in <adapter_type>
+    And I get array index 0 from "bdd-s-ring" in <adapter_type>
+    Then the sync array value should be "third"
+    When I get array index 1 from "bdd-s-ring" in <adapter_type>
+    Then the sync array value should be "second"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Store and retrieve array elements asynchronously
+    Given a configured async <adapter_type>
+    When I arset index 0 to "alpha, beta, gamma" in array "bdd-a-array" in async <adapter_type>
+    Then the async array "bdd-a-array" should have 3 elements
+    When I get array index 1 from "bdd-a-array" in async <adapter_type>
+    Then the async array value should be "beta"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: Array ring buffer retains last N elements asynchronously
+    Given a configured async <adapter_type>
+    When I arring size 2 with "first, second, third" into array "bdd-a-ring" in async <adapter_type>
+    And I get array index 0 from "bdd-a-ring" in async <adapter_type>
+    Then the async array value should be "third"
+    When I get array index 1 from "bdd-a-ring" in async <adapter_type>
+    Then the async array value should be "second"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  # Redis 8.8 — INCREX window counter rate limiter (requires Redis 8.8+)
+  Scenario Outline: INCREX respects upper bound for rate limiting
+    Given a configured <adapter_type>
+    When I increx key "bdd-s-rl" by 1 with upper bound 3 and expiry 60 seconds in <adapter_type>
+    Then the sync increx counter should be 1
+    And the sync increx applied increment should be 1
+    When I increx key "bdd-s-rl" by 1 with upper bound 3 and expiry 60 seconds in <adapter_type>
+    Then the sync increx counter should be 2
+    When I increx key "bdd-s-rl" by 1 with upper bound 3 and expiry 60 seconds in <adapter_type>
+    Then the sync increx counter should be 3
+    When I increx key "bdd-s-rl" by 1 with upper bound 3 and expiry 60 seconds in <adapter_type>
+    Then the sync increx counter should be 3
+    And the sync increx applied increment should be 0
+
+    Examples: Adapter Types
+      | adapter_type |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: INCREX respects upper bound for rate limiting asynchronously
+    Given a configured async <adapter_type>
+    When I increx key "bdd-a-rl" by 1 with upper bound 3 and expiry 60 seconds in async <adapter_type>
+    Then the async increx counter should be 1
+    And the async increx applied increment should be 1
+    When I increx key "bdd-a-rl" by 1 with upper bound 3 and expiry 60 seconds in async <adapter_type>
+    Then the async increx counter should be 2
+    When I increx key "bdd-a-rl" by 1 with upper bound 3 and expiry 60 seconds in async <adapter_type>
+    Then the async increx counter should be 3
+    When I increx key "bdd-a-rl" by 1 with upper bound 3 and expiry 60 seconds in async <adapter_type>
+    Then the async increx applied increment should be 0
+
+    Examples: Adapter Types
+      | adapter_type |
+      | container    |
+      | cluster      |
+
+  # Redis 8.8 — ZUNION/ZINTER COUNT aggregator (requires Redis 8.8+)
+  Scenario Outline: ZUNION COUNT aggregator scores by set membership
+    Given a configured <adapter_type>
+    When I zadd members "a=1,b=2" to sorted set "{bdd-s-zc}:1" in <adapter_type>
+    And I zadd members "b=3,c=4" to sorted set "{bdd-s-zc}:2" in <adapter_type>
+    When I zunion sets "{bdd-s-zc}:1" and "{bdd-s-zc}:2" with COUNT aggregator in <adapter_type>
+    Then the sync zunion COUNT score for "b" should be 2.0
+    And the sync zunion COUNT score for "a" should be 1.0
+
+    Examples: Adapter Types
+      | adapter_type |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: ZINTER COUNT aggregator scores by set membership
+    Given a configured <adapter_type>
+    When I zadd members "a=1,b=2" to sorted set "{bdd-s-zi}:1" in <adapter_type>
+    And I zadd members "b=3,c=4" to sorted set "{bdd-s-zi}:2" in <adapter_type>
+    When I zinter sets "{bdd-s-zi}:1" and "{bdd-s-zi}:2" with COUNT aggregator in <adapter_type>
+    Then the sync zinter COUNT score for "b" should be 2.0
+
+    Examples: Adapter Types
+      | adapter_type |
+      | container    |
+      | cluster      |
+
+  @async
+  Scenario Outline: ZUNION COUNT aggregator scores by set membership asynchronously
+    Given a configured async <adapter_type>
+    When I zadd members "a=1,b=2" to sorted set "{bdd-a-zc}:1" in async <adapter_type>
+    And I zadd members "b=3,c=4" to sorted set "{bdd-a-zc}:2" in async <adapter_type>
+    When I zunion sets "{bdd-a-zc}:1" and "{bdd-a-zc}:2" with COUNT aggregator in async <adapter_type>
+    Then the async zunion COUNT score for "b" should be 2.0
+
+    Examples: Adapter Types
+      | adapter_type |
+      | container    |
+      | cluster      |
+
+  # Redis 8.8 — Hash subkey notifications (requires Redis 8.8+)
+  Scenario Outline: Receive hash subkey notification on field update
+    Given a configured <adapter_type>
+    When I enable hash subkey notifications in <adapter_type>
+    And I psubscribe to subkeyevent hset channel in <adapter_type>
+    And I assign "name" to "Alice" in the hash "bdd-s-subhash" in <adapter_type>
+    Then the sync subkey notification should include field "name"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | container    |
+
+  @async
+  Scenario Outline: Receive hash subkey notification on field update asynchronously
+    Given a configured async <adapter_type>
+    When I enable hash subkey notifications in async <adapter_type>
+    And I psubscribe to subkeyevent hset channel in async <adapter_type>
+    And I assign "email" to "bob@test.com" in the hash "bdd-a-subhash" in async <adapter_type>
+    Then the async subkey notification should include field "email"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | container    |

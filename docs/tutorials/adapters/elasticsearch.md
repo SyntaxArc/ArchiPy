@@ -494,81 +494,151 @@ except InternalError as e:
 
 ## Bulk Operations
 
-Use `bulk()` to index, update, or delete many documents in a single API call, dramatically reducing network overhead.
+Use `bulk()` to index, update, or delete many documents via `elasticsearch.helpers.bulk`. The helper accepts
+generator-friendly action iterables, auto-chunks requests, and retries transient failures (including HTTP 429).
+
+Each action uses helper document format with `_index`, `_id`, `_source`, and optional `_op_type` (`index`, `create`,
+`update`, `delete`). The method returns `(success_count, error_count_or_error_list)`.
 
 ### Bulk Indexing
 
 ```python
 import logging
+from collections.abc import Iterator
 from datetime import datetime, timezone
 
 from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
-from archipy.models.errors import InternalError
+from elasticsearch import BulkIndexError
 
 logger = logging.getLogger(__name__)
 
 es = ElasticsearchAdapter()
 
-articles = [
-    {"id": f"article-{i:03d}", "title": f"Article {i}", "author": "bob", "view_count": i * 10}
-    for i in range(1, 101)
-]
 
-# Build actions list in Elasticsearch bulk format
-actions: list[dict[str, object]] = []
-for article in articles:
-    actions.append({"index": {"_index": "articles", "_id": article["id"]}})
-    actions.append({
-        "title": article["title"],
-        "author": article["author"],
-        "view_count": article["view_count"],
-        "published_at": datetime.now(tz=timezone.utc).isoformat(),
-        "tags": ["bulk", "import"],
-    })
+def article_actions() -> Iterator[dict[str, object]]:
+    """Yield helper-format bulk actions without loading all documents into memory."""
+    for i in range(1, 101):
+        yield {
+            "_index": "articles",
+            "_id": f"article-{i:03d}",
+            "_source": {
+                "title": f"Article {i}",
+                "author": "bob",
+                "view_count": i * 10,
+                "published_at": datetime.now(tz=timezone.utc).isoformat(),
+                "tags": ["bulk", "import"],
+            },
+        }
+
 
 try:
-    response = es.bulk(actions=actions)
-    errors = response.get("errors", False)
-    if errors:
-        failed = [item for item in response["items"] if "error" in item.get("index", {})]
-        logger.error(f"Bulk index completed with {len(failed)} errors")
+    success_count, errors = es.bulk(actions=article_actions())
+    if isinstance(errors, list) and errors:
+        logger.error(f"Bulk index completed with {len(errors)} errors: {errors}")
     else:
-        logger.info(f"Bulk index successful: {len(articles)} documents indexed")
-except InternalError as e:
+        logger.info(f"Bulk index successful: {success_count} documents indexed")
+except BulkIndexError as e:
     logger.error(f"Bulk index failed: {e}")
     raise
 ```
 
-### Bulk Update
+### Bulk Update and Delete
 
 ```python
 import logging
 
 from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
-from archipy.models.errors import InternalError
+from elasticsearch import BulkIndexError
 
 logger = logging.getLogger(__name__)
 
 es = ElasticsearchAdapter()
 
-updates: list[tuple[str, int]] = [
-    ("article-001", 150),
-    ("article-002", 89),
-    ("article-003", 210),
+actions: list[dict[str, object]] = [
+    {
+        "_op_type": "update",
+        "_index": "articles",
+        "_id": "article-001",
+        "doc": {"view_count": 150},
+    },
+    {
+        "_op_type": "update",
+        "_index": "articles",
+        "_id": "article-002",
+        "doc": {"view_count": 89},
+    },
+    {
+        "_op_type": "delete",
+        "_index": "articles",
+        "_id": "article-999",
+    },
 ]
 
-actions: list[dict[str, object]] = []
-for doc_id, new_view_count in updates:
-    actions.append({"update": {"_index": "articles", "_id": doc_id}})
-    actions.append({"doc": {"view_count": new_view_count}})
-
 try:
-    response = es.bulk(actions=actions)
-    logger.info(f"Bulk update complete, errors={response.get('errors', False)}")
-except InternalError as e:
-    logger.error(f"Bulk update failed: {e}")
+    success_count, errors = es.bulk(actions=actions, stats_only=True)
+    logger.info(f"Bulk update/delete complete: {success_count} successes, {errors} errors")
+except BulkIndexError as e:
+    logger.error(f"Bulk update/delete failed: {e}")
     raise
 ```
+
+> **Tip:** Pass `stats_only=True` when you only need success and error counts instead of per-document error details.
+
+## Scan Operations
+
+Use `scan()` to iterate over large result sets without manually managing the scroll API. The helper wraps scroll
+requests and yields hits one at a time.
+
+### Scan Documents
+
+```python
+import logging
+
+from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
+
+logger = logging.getLogger(__name__)
+
+es = ElasticsearchAdapter()
+
+query = {"query": {"match": {"author": "bob"}}}
+
+try:
+    hit_count = 0
+    for hit in es.scan(query=query, index="articles"):
+        hit_count += 1
+        logger.debug(f"Scanned document {hit['_id']}: {hit['_source']['title']}")
+    logger.info(f"Scan complete: {hit_count} documents")
+except Exception as e:
+    logger.error(f"Scan failed: {e}")
+    raise
+```
+
+### Async Scan
+
+```python
+import asyncio
+import logging
+
+from archipy.adapters.elasticsearch.adapters import AsyncElasticsearchAdapter
+
+logger = logging.getLogger(__name__)
+
+
+async def scan_articles() -> None:
+    es = AsyncElasticsearchAdapter()
+    query = {"query": {"match": {"author": "bob"}}}
+
+    hit_count = 0
+    async for hit in es.scan(query=query, index="articles"):
+        hit_count += 1
+        logger.debug(f"Scanned document {hit['_id']}: {hit['_source']['title']}")
+    logger.info(f"Async scan complete: {hit_count} documents")
+
+
+asyncio.run(scan_articles())
+```
+
+> **Note:** Setting `preserve_order=True` in `scan()` restores deterministic ordering at the cost of scroll performance.
 
 ## Async Usage
 
@@ -932,15 +1002,19 @@ if apm_cfg.IS_ENABLED:
 
 ### `BulkIndexError` during `bulk()`
 
-- The adapter raises `BulkIndexError` on partial failures. Inspect `error.errors` for per-document details.
+- `bulk()` delegates to `elasticsearch.helpers.bulk`, which raises `BulkIndexError` when any action fails and
+  `raise_on_error=True` (the default).
+- Inspect the exception's `errors` attribute for per-document failure details.
 - Common causes: mapping conflict (a field value does not match its declared type), shard unavailability.
+- Pass `raise_on_error=False` to collect failures in the returned error list instead of raising.
 
 ### High latency under load
 
 - Increase `CONNECTIONS_PER_NODE` for concurrent workloads.
 - Enable `HTTP_COMPRESS=True` to reduce payload sizes.
-- Use `bulk()` instead of individual `index()` calls for batch writes.
+- Use `bulk()` with generator actions instead of individual `index()` calls for batch writes.
 - Set a realistic `REQUEST_TIMEOUT` to surface slow queries early.
+- Use `scan()` instead of large `search()` requests when iterating over many documents.
 
 ### Sniffing warnings
 

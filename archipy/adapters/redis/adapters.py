@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Awaitable, Iterable, Iterator, Mapping
 from datetime import datetime, timedelta
-from typing import Any, override
+from typing import Any, cast, override
 
 from redis import RedisCluster, Sentinel
 from redis.asyncio import RedisCluster as AsyncRedisCluster, Sentinel as AsyncSentinel
@@ -51,6 +51,16 @@ def _sentinel_kwargs(configs: RedisConfig) -> dict[str, str] | None:
     if configs.SENTINEL_PASSWORD:
         return {"password": configs.SENTINEL_PASSWORD}
     return None
+
+
+def _normalize_zset_keys(
+    keys: Mapping[bytes | str, float] | Iterable[bytes | str],
+) -> dict[str, float] | list[str]:
+    """Normalize sorted-set keys for zunion/zinter into a form the Redis client accepts."""
+    if isinstance(keys, Mapping):
+        items = cast("Mapping[bytes | str, float]", keys).items()
+        return {str(k): float(v) for k, v in items}
+    return [str(k) for k in keys]
 
 
 class RedisAdapter(RedisPort):
@@ -265,6 +275,58 @@ class RedisAdapter(RedisPort):
             RedisResponseType: The new value after increment.
         """
         return self.client.incrby(name, amount)
+
+    @override
+    def increx(
+        self,
+        name: bytes | str,
+        byfloat: float | None = None,
+        byint: int | None = None,
+        lbound: float | None = None,
+        ubound: float | None = None,
+        saturate: bool = False,
+        ex: int | timedelta | None = None,
+        px: int | timedelta | None = None,
+        exat: int | datetime | None = None,
+        pxat: int | datetime | None = None,
+        persist: bool = False,
+        enx: bool = False,
+    ) -> list[Any]:
+        """Increment a windowed counter with bounds and expiration control.
+
+        Args:
+            name (bytes | str): The key to increment.
+            byfloat (float, optional): Increment amount as a float.
+            byint (int, optional): Increment amount as an int.
+            lbound (float | int, optional): Lower bound for the resulting value.
+            ubound (float | int, optional): Upper bound for the resulting value.
+            saturate (bool): Clamp out-of-bounds results instead of rejecting. Defaults to False.
+            ex (int | timedelta | None): Expire time in seconds.
+            px (int | timedelta | None): Expire time in milliseconds.
+            exat (int | datetime | None): Absolute expiration time in seconds.
+            pxat (int | datetime | None): Absolute expiration time in milliseconds.
+            persist (bool): Remove any existing expiration. Defaults to False.
+            enx (bool): Set expiration only if none already exists. Defaults to False.
+
+        Returns:
+            RedisResponseType: A two-element list of [new_value, actual_increment_applied].
+        """
+        return list(
+            self.client.increx(
+                name,
+                byfloat=byfloat,
+                byint=byint,
+                lbound=lbound,
+                ubound=ubound,
+                saturate=saturate,
+                ex=ex,
+                px=px,
+                exat=exat,
+                pxat=pxat,
+                persist=persist,
+                enx=enx,
+            ),
+        )
 
     @override
     def set(
@@ -971,6 +1033,118 @@ class RedisAdapter(RedisPort):
         return self.client.zscore(name, value)
 
     @override
+    def zunion(
+        self,
+        keys: Mapping[bytes | str, float] | Iterable[bytes | str],
+        aggregate: str | None = None,
+        withscores: bool = False,
+        score_cast_func: RedisScoreCastType = float,
+    ) -> list[bytes | str] | list[tuple[bytes | str, Any]] | list[list[Any]]:
+        """Compute the union of multiple sorted sets.
+
+        Args:
+            keys (Mapping[bytes | str, float] | Iterable[bytes | str]): Sorted set keys, optionally
+                mapped to per-set weights.
+            aggregate (str | None): "SUM", "MIN", "MAX", or "COUNT". Defaults to "SUM".
+            withscores (bool): Include scores in result. Defaults to False.
+            score_cast_func (RedisScoreCastType): Function to cast scores. Defaults to float.
+
+        Returns:
+            RedisResponseType: List of members or member-score pairs.
+        """
+        return self.client.zunion(_normalize_zset_keys(keys), aggregate, withscores, score_cast_func)
+
+    @override
+    def zinter(
+        self,
+        keys: Mapping[bytes | str, float] | Iterable[bytes | str],
+        aggregate: str | None = None,
+        withscores: bool = False,
+    ) -> list[bytes | str] | list[tuple[bytes | str, Any]] | list[list[Any]]:
+        """Compute the intersection of multiple sorted sets.
+
+        Args:
+            keys (Mapping[bytes | str, float] | Iterable[bytes | str]): Sorted set keys, optionally
+                mapped to per-set weights.
+            aggregate (str | None): "SUM", "MIN", "MAX", or "COUNT". Defaults to "SUM".
+            withscores (bool): Include scores in result. Defaults to False.
+
+        Returns:
+            RedisResponseType: List of members or member-score pairs.
+        """
+        return self.client.zinter(_normalize_zset_keys(keys), aggregate, withscores)
+
+    @override
+    def arset(self, name: bytes | str, index: int, *values: bytes | str | float) -> int:
+        """Set one or more contiguous values in an array.
+
+        Args:
+            name (bytes | str): The key of the array.
+            index (int): The starting index to set values at.
+            *values (bytes | str | float): Values to store at consecutive indices.
+
+        Returns:
+            RedisResponseType: The number of previously empty slots that were set.
+        """
+        result = self.client.arset(name, index, *values)
+        return self._ensure_sync_int(result)
+
+    @override
+    def arget(self, name: bytes | str, index: int) -> bytes | str | None:
+        """Get the value at an index in an array.
+
+        Args:
+            name (bytes | str): The key of the array.
+            index (int): The index to read.
+
+        Returns:
+            RedisResponseType: The value at the index, or None if unset.
+        """
+        return self.read_only_client.arget(name, index)
+
+    @override
+    def arlen(self, name: bytes | str) -> int:
+        """Get the number of populated elements in an array.
+
+        Args:
+            name (bytes | str): The key of the array.
+
+        Returns:
+            RedisResponseType: The number of populated elements.
+        """
+        result = self.read_only_client.arlen(name)
+        return self._ensure_sync_int(result)
+
+    @override
+    def ardel(self, name: bytes | str, *indices: int) -> int:
+        """Delete one or more indices from an array.
+
+        Args:
+            name (bytes | str): The key of the array.
+            *indices (int): Indices to delete.
+
+        Returns:
+            RedisResponseType: The number of elements deleted.
+        """
+        result = self.client.ardel(name, *indices)
+        return self._ensure_sync_int(result)
+
+    @override
+    def arring(self, name: bytes | str, size: int, *values: bytes | str | float) -> int:
+        """Insert values into an array as a fixed-size ring buffer.
+
+        Args:
+            name (bytes | str): The key of the array.
+            size (int): The fixed size of the ring buffer.
+            *values (bytes | str | float): Values to insert.
+
+        Returns:
+            RedisResponseType: The last index where a value was inserted.
+        """
+        result = self.client.arring(name, size, *values)
+        return self._ensure_sync_int(result)
+
+    @override
     def hdel(self, name: str, *keys: str | bytes) -> int:
         """Delete fields from a hash.
 
@@ -1206,6 +1380,34 @@ class RedisAdapter(RedisPort):
             bool: True if successful.
         """
         return self.client.flushdb(asynchronous=asynchronous)
+
+    @override
+    def config_set(self, name: str, value: str) -> bool:
+        """Set a Redis server configuration parameter.
+
+        Args:
+            name (str): The configuration parameter name.
+            value (str): The value to set.
+
+        Returns:
+            bool: True if successful.
+        """
+        return bool(self.client.config_set(name, value))
+
+    @override
+    def config_get(self, pattern: str = "*") -> dict[str, str]:
+        """Get Redis server configuration parameters matching a pattern.
+
+        Args:
+            pattern (str): Pattern to match configuration parameter names. Defaults to "*".
+
+        Returns:
+            RedisResponseType: Dictionary of configuration parameter names to values.
+        """
+        result = self.read_only_client.config_get(pattern)
+        if isinstance(result, Awaitable):
+            raise TypeError("Unexpected awaitable from sync Redis client")
+        return {str(k): str(v) for k, v in result.items()} if result else {}
 
 
 class AsyncRedisAdapter(AsyncRedisPort):
@@ -1471,6 +1673,59 @@ class AsyncRedisAdapter(AsyncRedisPort):
             RedisResponseType: The new value after increment.
         """
         return await self.client.incrby(name, amount)
+
+    @override
+    async def increx(
+        self,
+        name: bytes | str,
+        byfloat: float | None = None,
+        byint: int | None = None,
+        lbound: float | None = None,
+        ubound: float | None = None,
+        saturate: bool = False,
+        ex: int | timedelta | None = None,
+        px: int | timedelta | None = None,
+        exat: int | datetime | None = None,
+        pxat: int | datetime | None = None,
+        persist: bool = False,
+        enx: bool = False,
+    ) -> list[Any]:
+        """Increment a windowed counter with bounds and expiration control asynchronously.
+
+        Args:
+            name (bytes | str): The key to increment.
+            byfloat (float, optional): Increment amount as a float.
+            byint (int, optional): Increment amount as an int.
+            lbound (float | int, optional): Lower bound for the resulting value.
+            ubound (float | int, optional): Upper bound for the resulting value.
+            saturate (bool): Clamp out-of-bounds results instead of rejecting. Defaults to False.
+            ex (int | timedelta | None): Expire time in seconds.
+            px (int | timedelta | None): Expire time in milliseconds.
+            exat (int | datetime | None): Absolute expiration time in seconds.
+            pxat (int | datetime | None): Absolute expiration time in milliseconds.
+            persist (bool): Remove any existing expiration. Defaults to False.
+            enx (bool): Set expiration only if none already exists. Defaults to False.
+
+        Returns:
+            RedisResponseType: A two-element list of [new_value, actual_increment_applied].
+        """
+        result = self.client.increx(
+            name,
+            byfloat=byfloat,
+            byint=byint,
+            lbound=lbound,
+            ubound=ubound,
+            saturate=saturate,
+            ex=ex,
+            px=px,
+            exat=exat,
+            pxat=pxat,
+            persist=persist,
+            enx=enx,
+        )
+        if isinstance(result, Awaitable):
+            result = await result
+        return list(result)
 
     @override
     async def set(
@@ -2223,6 +2478,121 @@ class AsyncRedisAdapter(AsyncRedisPort):
         return await self.client.zscore(name, value)
 
     @override
+    async def zunion(
+        self,
+        keys: Mapping[bytes | str, float] | Iterable[bytes | str],
+        aggregate: str | None = None,
+        withscores: bool = False,
+        score_cast_func: RedisScoreCastType = float,
+    ) -> list[bytes | str] | list[tuple[bytes | str, Any]] | list[list[Any]]:
+        """Compute the union of multiple sorted sets asynchronously.
+
+        Args:
+            keys (Mapping[bytes | str, float] | Iterable[bytes | str]): Sorted set keys, optionally
+                mapped to per-set weights.
+            aggregate (str | None): "SUM", "MIN", "MAX", or "COUNT". Defaults to "SUM".
+            withscores (bool): Include scores in result. Defaults to False.
+            score_cast_func (RedisScoreCastType): Function to cast scores. Defaults to float.
+
+        Returns:
+            RedisResponseType: List of members or member-score pairs.
+        """
+        return await self.client.zunion(_normalize_zset_keys(keys), aggregate, withscores, score_cast_func)
+
+    @override
+    async def zinter(
+        self,
+        keys: Mapping[bytes | str, float] | Iterable[bytes | str],
+        aggregate: str | None = None,
+        withscores: bool = False,
+    ) -> list[bytes | str] | list[tuple[bytes | str, Any]] | list[list[Any]]:
+        """Compute the intersection of multiple sorted sets asynchronously.
+
+        Args:
+            keys (Mapping[bytes | str, float] | Iterable[bytes | str]): Sorted set keys, optionally
+                mapped to per-set weights.
+            aggregate (str | None): "SUM", "MIN", "MAX", or "COUNT". Defaults to "SUM".
+            withscores (bool): Include scores in result. Defaults to False.
+
+        Returns:
+            RedisResponseType: List of members or member-score pairs.
+        """
+        return await self.client.zinter(_normalize_zset_keys(keys), aggregate, withscores)
+
+    @override
+    async def arset(self, name: bytes | str, index: int, *values: bytes | str | float) -> int:
+        """Set one or more contiguous values in an array asynchronously.
+
+        Args:
+            name (bytes | str): The key of the array.
+            index (int): The starting index to set values at.
+            *values (bytes | str | float): Values to store at consecutive indices.
+
+        Returns:
+            RedisResponseType: The number of previously empty slots that were set.
+        """
+        result = self.client.arset(name, index, *values)
+        return await self._ensure_async_int(result)
+
+    @override
+    async def arget(self, name: bytes | str, index: int) -> bytes | str | None:
+        """Get the value at an index in an array asynchronously.
+
+        Args:
+            name (bytes | str): The key of the array.
+            index (int): The index to read.
+
+        Returns:
+            RedisResponseType: The value at the index, or None if unset.
+        """
+        result = self.read_only_client.arget(name, index)
+        if isinstance(result, Awaitable):
+            return await result
+        return result
+
+    @override
+    async def arlen(self, name: bytes | str) -> int:
+        """Get the number of populated elements in an array asynchronously.
+
+        Args:
+            name (bytes | str): The key of the array.
+
+        Returns:
+            RedisResponseType: The number of populated elements.
+        """
+        result = self.read_only_client.arlen(name)
+        return await self._ensure_async_int(result)
+
+    @override
+    async def ardel(self, name: bytes | str, *indices: int) -> int:
+        """Delete one or more indices from an array asynchronously.
+
+        Args:
+            name (bytes | str): The key of the array.
+            *indices (int): Indices to delete.
+
+        Returns:
+            RedisResponseType: The number of elements deleted.
+        """
+        result = self.client.ardel(name, *indices)
+        return await self._ensure_async_int(result)
+
+    @override
+    async def arring(self, name: bytes | str, size: int, *values: bytes | str | float) -> int:
+        """Insert values into an array as a fixed-size ring buffer asynchronously.
+
+        Args:
+            name (bytes | str): The key of the array.
+            size (int): The fixed size of the ring buffer.
+            *values (bytes | str | float): Values to insert.
+
+        Returns:
+            RedisResponseType: The last index where a value was inserted.
+        """
+        result = self.client.arring(name, size, *values)
+        return await self._ensure_async_int(result)
+
+    @override
     async def hdel(self, name: str, *keys: str | bytes) -> int:
         """Delete fields from hash asynchronously.
 
@@ -2481,3 +2851,34 @@ class AsyncRedisAdapter(AsyncRedisPort):
         if isinstance(result, Awaitable):
             return await result
         return result
+
+    @override
+    async def config_set(self, name: str, value: str) -> bool:
+        """Set a Redis server configuration parameter asynchronously.
+
+        Args:
+            name (str): The configuration parameter name.
+            value (str): The value to set.
+
+        Returns:
+            bool: True if successful.
+        """
+        result = self.client.config_set(name, value)
+        if isinstance(result, Awaitable):
+            result = await result
+        return bool(result)
+
+    @override
+    async def config_get(self, pattern: str = "*") -> dict[str, str]:
+        """Get Redis server configuration parameters matching a pattern asynchronously.
+
+        Args:
+            pattern (str): Pattern to match configuration parameter names. Defaults to "*".
+
+        Returns:
+            RedisResponseType: Dictionary of configuration parameter names to values.
+        """
+        result = self.read_only_client.config_get(pattern)
+        if isinstance(result, Awaitable):
+            result = await result
+        return {str(k): str(v) for k, v in result.items()} if result else {}

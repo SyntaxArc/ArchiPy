@@ -445,40 +445,45 @@ async def step_bulk_operation(context: Context) -> None:
     is_async = _is_async_scenario(context)
 
     try:
-        bulk_actions = []
+        bulk_actions: list[dict[str, object]] = []
+        tracked_actions: list[dict[str, str]] = []
         for row in context.table:
             action = row["action"]
             doc_id = row["id"]
             index_name = row["index"]
             actual_index_name = get_actual_index_name(context, index_name)
+            tracked_actions.append({"action": action, "index": actual_index_name, "id": doc_id})
 
-            if action == "index":
-                # For index actions, add action metadata then document
-                bulk_actions.append({action: {"_index": actual_index_name, "_id": doc_id}})
-                if row["document"]:
-                    doc_content = ast.literal_eval(row["document"])
-                    bulk_actions.append(doc_content)
-            elif action == "create":
-                # For create actions, add action metadata then document
-                bulk_actions.append({action: {"_index": actual_index_name, "_id": doc_id}})
-                if row["document"]:
-                    doc_content = ast.literal_eval(row["document"])
-                    bulk_actions.append(doc_content)
+            if action in {"index", "create"}:
+                doc_content = ast.literal_eval(row["document"]) if row["document"] else {}
+                bulk_actions.append({
+                    "_op_type": action,
+                    "_index": actual_index_name,
+                    "_id": doc_id,
+                    "_source": doc_content,
+                })
             elif action == "update":
-                # For update actions, add action metadata then update document
-                bulk_actions.append({action: {"_index": actual_index_name, "_id": doc_id}})
-                if row["document"]:
-                    doc_content = ast.literal_eval(row["document"])
-                    # Check if the user already provided the Elasticsearch format with 'doc' field
-                    if "doc" in doc_content:
-                        # User already provided the correct format, use as-is
-                        bulk_actions.append(doc_content)
-                    else:
-                        # User provided raw document, wrap in 'doc' field
-                        bulk_actions.append({"doc": doc_content})
+                doc_content = ast.literal_eval(row["document"]) if row["document"] else {}
+                if "doc" in doc_content:
+                    bulk_actions.append({
+                        "_op_type": "update",
+                        "_index": actual_index_name,
+                        "_id": doc_id,
+                        **doc_content,
+                    })
+                else:
+                    bulk_actions.append({
+                        "_op_type": "update",
+                        "_index": actual_index_name,
+                        "_id": doc_id,
+                        "doc": doc_content,
+                    })
             elif action == "delete":
-                # For delete actions, only add action metadata (no document needed)
-                bulk_actions.append({action: {"_index": actual_index_name, "_id": doc_id}})
+                bulk_actions.append({
+                    "_op_type": "delete",
+                    "_index": actual_index_name,
+                    "_id": doc_id,
+                })
 
         if is_async:
             result = await adapter.bulk(actions=bulk_actions)
@@ -486,11 +491,35 @@ async def step_bulk_operation(context: Context) -> None:
             result = adapter.bulk(actions=bulk_actions)
 
         _store_result(scenario_context, "last_bulk_result", result)
+        _store_result(scenario_context, "last_bulk_actions", tracked_actions)
         _log_operation(context, "Bulk operation", f"Performed bulk operation with {len(bulk_actions)} actions")
 
     except Exception as e:
         scenario_context.store("last_error", str(e))
         context.logger.exception(f"Bulk operation failed: {e}")
+        raise
+
+
+@when('I scan "{index_name}" for query "{query_text}"')
+async def step_scan_documents(context: Context, index_name: str, query_text: str) -> None:
+    """Scan documents matching the given query text."""
+    adapter = get_es_adapter(context)
+    scenario_context = _get_scenario_context(context)
+    is_async = _is_async_scenario(context)
+    actual_index_name = get_actual_index_name(context, index_name)
+    query = {"query": {"match": {"title": query_text}}}
+
+    try:
+        if is_async:
+            hits = [document async for document in adapter.scan(query=query, index=actual_index_name)]
+        else:
+            hits = list(adapter.scan(query=query, index=actual_index_name))
+
+        _store_result(scenario_context, "last_scan_hits", hits)
+        _log_operation(context, "Scan", f"Scanned index '{actual_index_name}' for '{query_text}'")
+    except Exception as e:
+        scenario_context.store("last_error", str(e))
+        context.logger.exception(f"Scan failed: {e}")
         raise
 
 
@@ -683,106 +712,65 @@ def step_bulk_succeeds(context: Context) -> None:
     """Verify that the bulk operation succeeded."""
     scenario_context = _get_scenario_context(context)
     result = scenario_context.get("last_bulk_result")
+    success_count, errors = result
 
-    # Check if bulk operation had errors
-    if result.get("errors", False):
-        # Log detailed error information
-        context.logger.error(f"Bulk operation had errors: {result}")
+    if isinstance(errors, list):
+        assert len(errors) == 0, f"Bulk operation had errors: {errors}"
+    else:
+        assert errors == 0, f"Bulk operation had {errors} errors"
 
-        # Check individual item results for more details
-        if "items" in result:
-            for i, item in enumerate(result["items"]):
-                action_type = next(iter(item))
-                action_result = item[action_type]
-
-                if "error" in action_result:
-                    context.logger.error(f"Item {i} ({action_type}) failed: {action_result['error']}")
-
-        assert False, f"Bulk operation had errors. Check logs for details."
-
-    # Verify all items were processed successfully
-    if "items" in result:
-        for i, item in enumerate(result["items"]):
-            action_type = next(iter(item))
-            action_result = item[action_type]
-
-            # Check if this specific action failed
-            if "error" in action_result:
-                context.logger.error(f"Item {i} ({action_type}) failed: {action_result['error']}")
-                assert False, f"Bulk operation item {i} ({action_type}) failed: {action_result['error']}"
-
-            # Verify expected result status
-            if action_type in ["index", "create"]:
-                assert action_result.get("result") in [
-                    "created",
-                    "updated",
-                ], f"Index/create failed for item {i}: {action_result}"
-            elif action_type == "update":
-                assert action_result.get("result") in [
-                    "updated",
-                    "noop",
-                ], f"Update failed for item {i}: {action_result}"
-            elif action_type == "delete":
-                # Delete can return 'deleted' for existing documents or 'not_found' for non-existing documents
-                # Both are valid results, not errors
-                assert action_result.get("result") in [
-                    "deleted",
-                    "not_found",
-                ], f"Delete failed for item {i}: {action_result}"
-                if action_result.get("result") == "not_found":
-                    context.logger.info(
-                        f"Item {i} ({action_type}): Document {action_result.get('_id')} was not found (expected for non-existing documents)",
-                    )
-
-    context.logger.info("Bulk operation verified successfully")
+    assert success_count > 0, "Bulk operation did not process any documents"
+    context.logger.info(f"Bulk operation verified successfully ({success_count} successes)")
 
 
 @then("all operations should be reflected in the index")
 async def step_bulk_operations_reflected(context: Context) -> None:
     """Verify that all bulk operations are reflected in the index."""
     scenario_context = _get_scenario_context(context)
-    result = scenario_context.get("last_bulk_result")
+    tracked_actions = scenario_context.get("last_bulk_actions", [])
     adapter = get_es_adapter(context)
     is_async = _is_async_scenario(context)
 
-    for item in result["items"]:
-        action_type = next(iter(item))  # Get the first key (index/update/delete)
-        action_result = item[action_type]
-
-        if action_type in ["index", "create"]:
-            try:
-                if is_async:
-                    doc = await adapter.get(index=action_result["_index"], doc_id=action_result["_id"])
-                else:
-                    doc = adapter.get(index=action_result["_index"], doc_id=action_result["_id"])
-                assert doc["found"], f"Document {action_result['_id']} not found after bulk operation"
-            except Exception as e:
-                context.logger.error(
-                    f"Failed to verify {action_type} operation for document {action_result['_id']}: {e}",
-                )
-                raise
-        elif action_type == "update":
-            try:
-                if is_async:
-                    doc = await adapter.get(index=action_result["_index"], doc_id=action_result["_id"])
-                else:
-                    doc = adapter.get(index=action_result["_index"], doc_id=action_result["_id"])
-                assert doc["found"], f"Document {action_result['_id']} not found after bulk update"
-            except Exception as e:
-                context.logger.error(f"Failed to verify update operation for document {action_result['_id']}: {e}")
-                raise
+    expected_exists: dict[tuple[str, str], bool] = {}
+    for action_info in tracked_actions:
+        action_type = action_info["action"]
+        index_name = action_info["index"]
+        doc_id = action_info["id"]
+        key = (index_name, doc_id)
+        if action_type in ["index", "create", "update"]:
+            expected_exists[key] = True
         elif action_type == "delete":
-            try:
+            expected_exists[key] = False
+
+    for (index_name, doc_id), should_exist in expected_exists.items():
+        try:
+            if should_exist:
                 if is_async:
-                    exists = await adapter.exists(index=action_result["_index"], doc_id=action_result["_id"])
+                    doc = await adapter.get(index=index_name, doc_id=doc_id)
                 else:
-                    exists = adapter.exists(index=action_result["_index"], doc_id=action_result["_id"])
-                assert not exists, f"Document {action_result['_id']} still exists after bulk delete"
-            except Exception as e:
-                context.logger.error(f"Failed to verify delete operation for document {action_result['_id']}: {e}")
-                raise
+                    doc = adapter.get(index=index_name, doc_id=doc_id)
+                assert doc["found"], f"Document {doc_id} not found after bulk operations"
+            else:
+                if is_async:
+                    exists = await adapter.exists(index=index_name, doc_id=doc_id)
+                else:
+                    exists = adapter.exists(index=index_name, doc_id=doc_id)
+                assert not exists, f"Document {doc_id} still exists after bulk delete"
+        except Exception as e:
+            context.logger.error(f"Failed to verify final state for document {doc_id}: {e}")
+            raise
 
     context.logger.info("All bulk operations reflected in index")
+
+
+@then("the scan should return at least {num_hits:d} hits")
+def step_scan_returns_hits(context: Context, num_hits: int) -> None:
+    """Verify that the scan returned the expected number of hits."""
+    scenario_context = _get_scenario_context(context)
+    hits = scenario_context.get("last_scan_hits", [])
+
+    assert len(hits) >= num_hits, f"Scan returned {len(hits)} hits, expected at least {num_hits}"
+    context.logger.info(f"Scan returned at least {num_hits} hits")
 
 
 @then("the connection should be successful")

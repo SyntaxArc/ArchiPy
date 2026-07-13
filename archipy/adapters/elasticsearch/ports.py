@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from collections.abc import Awaitable
+from collections.abc import AsyncIterator, Awaitable, Iterable
 from typing import Any
 
 ElasticsearchResponseType = Awaitable[Any] | Any
@@ -7,6 +7,8 @@ ElasticsearchDocumentType = dict[str, Any]
 ElasticsearchQueryType = dict[str, Any]
 ElasticsearchIndexType = str
 ElasticsearchIdType = str
+ElasticsearchBulkActionType = dict[str, Any] | str | bytes
+ElasticsearchBulkResultType = tuple[int, int | list[dict[str, Any]]]
 
 
 class ElasticsearchPort:
@@ -147,17 +149,42 @@ class ElasticsearchPort:
     @abstractmethod
     def bulk(
         self,
-        actions: list[dict[str, Any]],
+        actions: Iterable[ElasticsearchBulkActionType],
+        stats_only: bool = False,
         **kwargs: Any,
-    ) -> ElasticsearchResponseType:
-        """Perform bulk operations in Elasticsearch.
+    ) -> ElasticsearchBulkResultType:
+        """Perform bulk operations using elasticsearch.helpers.bulk.
 
         Args:
-            actions (list[dict[str, Any]]): List of bulk actions to perform.
-            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
+            actions: Iterable of helper-format documents (generators supported). Each action uses
+                ``_index``, ``_id``, ``_source``, and optional ``_op_type`` fields.
+            stats_only: When True, return only success and error counts instead of error details.
+            **kwargs: Additional keyword arguments passed to elasticsearch.helpers.bulk.
 
         Returns:
-            ElasticsearchResponseType: The response from Elasticsearch.
+            A tuple of ``(success_count, error_count_or_error_list)``.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+            BulkIndexError: If any bulk operation fails and raise_on_error is True (default).
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def scan(
+        self,
+        query: ElasticsearchQueryType | None = None,
+        **kwargs: Any,
+    ) -> Iterable[ElasticsearchDocumentType]:
+        """Iterate over all matching documents using elasticsearch.helpers.scan.
+
+        Args:
+            query: Optional search query body. Defaults to match_all when omitted.
+            **kwargs: Additional keyword arguments passed to elasticsearch.helpers.scan,
+                including ``index``.
+
+        Returns:
+            An iterable yielding hit documents.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -387,22 +414,48 @@ class AsyncElasticsearchPort:
     @abstractmethod
     async def bulk(
         self,
-        actions: list[dict[str, Any]],
+        actions: Iterable[ElasticsearchBulkActionType],
+        stats_only: bool = False,
         **kwargs: Any,
-    ) -> ElasticsearchResponseType:
-        """Perform bulk operations in Elasticsearch.
+    ) -> ElasticsearchBulkResultType:
+        """Perform bulk operations using elasticsearch.helpers.async_bulk.
 
         Args:
-            actions (list[dict[str, Any]]): List of bulk actions to perform.
-            **kwargs (Any): Additional keyword arguments passed to the Elasticsearch client.
+            actions: Iterable of helper-format documents (generators supported). Each action uses
+                ``_index``, ``_id``, ``_source``, and optional ``_op_type`` fields.
+            stats_only: When True, return only success and error counts instead of error details.
+            **kwargs: Additional keyword arguments passed to elasticsearch.helpers.async_bulk.
 
         Returns:
-            ElasticsearchResponseType: The response from Elasticsearch.
+            A tuple of ``(success_count, error_count_or_error_list)``.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+            BulkIndexError: If any bulk operation fails and raise_on_error is True (default).
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def scan(
+        self,
+        query: ElasticsearchQueryType | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[ElasticsearchDocumentType]:
+        """Iterate over all matching documents using elasticsearch.helpers.async_scan.
+
+        Args:
+            query: Optional search query body. Defaults to match_all when omitted.
+            **kwargs: Additional keyword arguments passed to elasticsearch.helpers.async_scan,
+                including ``index``.
+
+        Yields:
+            Hit documents from the scroll iteration.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
         """
         raise NotImplementedError
+        yield  # pragma: no cover - required for async generator typing
 
     @abstractmethod
     async def create_index(

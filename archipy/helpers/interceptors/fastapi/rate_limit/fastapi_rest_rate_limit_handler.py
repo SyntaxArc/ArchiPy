@@ -87,27 +87,28 @@ class FastAPIRestRateLimitHandler:
     async def _check(self, key: str) -> int:
         """Checks if the request count for the given key exceeds the allowed limit.
 
+        Uses the atomic Redis ``INCREX`` command (Redis 8.8+) to increment the counter,
+        cap it at ``calls_count`` and (re)arm the window's expiration in a single round trip.
+        This avoids the check-then-act race of separate GET/SET/INCRBY calls, where concurrent
+        requests for the same key could both read a stale count before either write lands.
+
         Args:
             key (str): The Redis key used to track the request count.
 
         Returns:
             int: The remaining time-to-live (TTL) in milliseconds if the limit is exceeded, otherwise 0.
         """
-        # Use await for getting value from Redis as it's asynchronous
-        current_request = await self._redis_client.get(key)
-        if current_request is None:
-            await self._redis_client.set(key, 1, px=self.milliseconds)
+        _, applied = await self._redis_client.increx(
+            key,
+            byint=1,
+            ubound=self.calls_count,
+            saturate=True,
+            px=self.milliseconds,
+            enx=True,
+        )
+        if applied:
             return 0
-
-        current_request = int(current_request)
-        if current_request < self.calls_count:
-            await self._redis_client.incrby(key)
-            return 0
-
-        ttl = await self._redis_client.pttl(key)
-        if ttl == -1:
-            await self._redis_client.delete(key)
-        return ttl
+        return await self._redis_client.pttl(key)
 
     async def __call__(self, request: Request) -> None:
         """Handles the rate-limiting logic for incoming requests.

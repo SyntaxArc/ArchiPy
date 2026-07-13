@@ -80,6 +80,52 @@ class RedisPort:
         raise NotImplementedError
 
     @abstractmethod
+    def increx(
+        self,
+        name: bytes | str,
+        byfloat: float | None = None,
+        byint: int | None = None,
+        lbound: float | None = None,
+        ubound: float | None = None,
+        saturate: bool = False,
+        ex: int | timedelta | None = None,
+        px: int | timedelta | None = None,
+        exat: int | datetime | None = None,
+        pxat: int | datetime | None = None,
+        persist: bool = False,
+        enx: bool = False,
+    ) -> list[Any]:
+        """Increments a windowed counter with bounds and expiration control (window counter rate limiter).
+
+        This wraps the Redis 8.8 ``INCREX`` command, a generalized form of ``INCR``/``INCRBY``/
+        ``INCRBYFLOAT`` with added support for value bounds and conditional expiration, making it
+        suitable for implementing rate limiters directly on the server.
+
+        Args:
+            name (bytes | str): The key to increment. Created if it doesn't already exist.
+            byfloat (float, optional): Increment amount as a float. Mutually exclusive with byint.
+            byint (int, optional): Increment amount as an int. Defaults to 1 if neither is set.
+            lbound (float | int, optional): Lower bound the resulting value must satisfy.
+            ubound (float | int, optional): Upper bound the resulting value must satisfy (token capacity).
+            saturate (bool): If True, clamp out-of-bounds results to the bound instead of rejecting
+                the request. Defaults to False.
+            ex (int | timedelta, optional): Expiration time in seconds.
+            px (int | timedelta, optional): Expiration time in milliseconds.
+            exat (int | datetime, optional): Absolute expiration time in seconds.
+            pxat (int | datetime, optional): Absolute expiration time in milliseconds.
+            persist (bool): If True, remove any existing expiration. Defaults to False.
+            enx (bool): If True, set the expiration only when the key does not already have one,
+                preserving the window's original TTL. Defaults to False.
+
+        Returns:
+            RedisResponseType: A two-element list of ``[new_value, actual_increment_applied]``.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def set(
         self,
         name: bytes | str,
@@ -869,6 +915,145 @@ class RedisPort:
         raise NotImplementedError
 
     @abstractmethod
+    def zunion(
+        self,
+        keys: Mapping[bytes | str, float] | Iterable[bytes | str],
+        aggregate: str | None = None,
+        withscores: bool = False,
+        score_cast_func: RedisScoreCastType = float,
+    ) -> list[bytes | str] | list[tuple[bytes | str, Any]] | list[list[Any]]:
+        """Computes the union of multiple sorted sets.
+
+        Args:
+            keys (Mapping[bytes | str, float] | Iterable[bytes | str]): Sorted set keys, optionally
+                mapped to per-set weights.
+            aggregate (str, optional): How to combine scores across sets: "SUM", "MIN", "MAX", or the
+                Redis 8.8 "COUNT" aggregator, which scores each element by the number of input sets
+                containing it (or the sum of their weights, if weights are given). Defaults to "SUM".
+            withscores (bool): If True, return scores with members. Defaults to False.
+            score_cast_func (RedisScoreCastType): Function to cast scores. Defaults to float.
+
+        Returns:
+            RedisResponseType: A list of members (and scores if withscores=True).
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def zinter(
+        self,
+        keys: Mapping[bytes | str, float] | Iterable[bytes | str],
+        aggregate: str | None = None,
+        withscores: bool = False,
+    ) -> list[bytes | str] | list[tuple[bytes | str, Any]] | list[list[Any]]:
+        """Computes the intersection of multiple sorted sets.
+
+        Args:
+            keys (Mapping[bytes | str, float] | Iterable[bytes | str]): Sorted set keys, optionally
+                mapped to per-set weights.
+            aggregate (str, optional): How to combine scores across sets: "SUM", "MIN", "MAX", or the
+                Redis 8.8 "COUNT" aggregator, which scores each element by the number of input sets
+                containing it (or the sum of their weights, if weights are given). Defaults to "SUM".
+            withscores (bool): If True, return scores with members. Defaults to False.
+
+        Returns:
+            RedisResponseType: A list of members (and scores if withscores=True).
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def arset(self, name: bytes | str, index: int, *values: bytes | str | float) -> int:
+        """Sets one or more contiguous values in the array stored at a key.
+
+        Values are stored at consecutive indices beginning at ``index`` in the Redis 8.8 array data
+        structure, an index-addressable, sparse-friendly container.
+
+        Args:
+            name (bytes | str): The key of the array.
+            index (int): The starting index (0 to 2**64-1) to set values at.
+            *values (bytes | str | float): The values to store at consecutive indices.
+
+        Returns:
+            RedisResponseType: The number of previously empty slots that were set.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def arget(self, name: bytes | str, index: int) -> bytes | str | None:
+        """Gets the value at an index in the array stored at a key.
+
+        Args:
+            name (bytes | str): The key of the array.
+            index (int): The index to read.
+
+        Returns:
+            RedisResponseType: The value at the index, or None if unset or the key doesn't exist.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def arlen(self, name: bytes | str) -> int:
+        """Gets the number of populated elements in an array.
+
+        Args:
+            name (bytes | str): The key of the array.
+
+        Returns:
+            RedisResponseType: The number of populated elements.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def ardel(self, name: bytes | str, *indices: int) -> int:
+        """Deletes one or more indices from an array.
+
+        Args:
+            name (bytes | str): The key of the array.
+            *indices (int): The indices to delete.
+
+        Returns:
+            RedisResponseType: The number of elements deleted.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def arring(self, name: bytes | str, size: int, *values: bytes | str | float) -> int:
+        """Inserts values into an array as a fixed-size ring buffer (sliding window).
+
+        Each value is placed at ``insert_idx % size``, wrapping back to index 0 and overwriting
+        older values once full, in a single atomic operation equivalent to ``RPUSH`` + ``LTRIM``.
+
+        Args:
+            name (bytes | str): The key of the array.
+            size (int): The fixed size of the ring buffer.
+            *values (bytes | str | float): The values to insert.
+
+        Returns:
+            RedisResponseType: The last index where a value was inserted.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def hdel(self, name: str, *keys: str | bytes) -> int:
         """Deletes one or more fields from a hash.
 
@@ -1100,6 +1285,39 @@ class RedisPort:
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def config_set(self, name: str, value: str) -> bool:
+        """Sets a Redis server configuration parameter.
+
+        Commonly used to enable keyspace/subkey notifications via ``notify-keyspace-events``.
+
+        Args:
+            name (str): The configuration parameter name.
+            value (str): The value to set.
+
+        Returns:
+            bool: True if successful.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def config_get(self, pattern: str = "*") -> dict[str, str]:
+        """Gets Redis server configuration parameters matching a pattern.
+
+        Args:
+            pattern (str): Pattern to match configuration parameter names. Defaults to "*".
+
+        Returns:
+            RedisResponseType: A dictionary of configuration parameter names to values.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
     # Cluster-specific methods (no-op for standalone mode)
     def cluster_info(self) -> dict[str, str] | None:
         """Get cluster information.
@@ -1224,6 +1442,52 @@ class AsyncRedisPort:
 
         Returns:
             RedisResponseType: The new value after incrementing.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def increx(
+        self,
+        name: bytes | str,
+        byfloat: float | None = None,
+        byint: int | None = None,
+        lbound: float | None = None,
+        ubound: float | None = None,
+        saturate: bool = False,
+        ex: int | timedelta | None = None,
+        px: int | timedelta | None = None,
+        exat: int | datetime | None = None,
+        pxat: int | datetime | None = None,
+        persist: bool = False,
+        enx: bool = False,
+    ) -> list[Any]:
+        """Increments a windowed counter with bounds and expiration control (window counter rate limiter).
+
+        This wraps the Redis 8.8 ``INCREX`` command, a generalized form of ``INCR``/``INCRBY``/
+        ``INCRBYFLOAT`` with added support for value bounds and conditional expiration, making it
+        suitable for implementing rate limiters directly on the server.
+
+        Args:
+            name (bytes | str): The key to increment. Created if it doesn't already exist.
+            byfloat (float, optional): Increment amount as a float. Mutually exclusive with byint.
+            byint (int, optional): Increment amount as an int. Defaults to 1 if neither is set.
+            lbound (float | int, optional): Lower bound the resulting value must satisfy.
+            ubound (float | int, optional): Upper bound the resulting value must satisfy (token capacity).
+            saturate (bool): If True, clamp out-of-bounds results to the bound instead of rejecting
+                the request. Defaults to False.
+            ex (int | timedelta, optional): Expiration time in seconds.
+            px (int | timedelta, optional): Expiration time in milliseconds.
+            exat (int | datetime, optional): Absolute expiration time in seconds.
+            pxat (int | datetime, optional): Absolute expiration time in milliseconds.
+            persist (bool): If True, remove any existing expiration. Defaults to False.
+            enx (bool): If True, set the expiration only when the key does not already have one,
+                preserving the window's original TTL. Defaults to False.
+
+        Returns:
+            RedisResponseType: A two-element list of ``[new_value, actual_increment_applied]``.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -2020,6 +2284,145 @@ class AsyncRedisPort:
         raise NotImplementedError
 
     @abstractmethod
+    async def zunion(
+        self,
+        keys: Mapping[bytes | str, float] | Iterable[bytes | str],
+        aggregate: str | None = None,
+        withscores: bool = False,
+        score_cast_func: RedisScoreCastType = float,
+    ) -> list[bytes | str] | list[tuple[bytes | str, Any]] | list[list[Any]]:
+        """Computes the union of multiple sorted sets asynchronously.
+
+        Args:
+            keys (Mapping[bytes | str, float] | Iterable[bytes | str]): Sorted set keys, optionally
+                mapped to per-set weights.
+            aggregate (str, optional): How to combine scores across sets: "SUM", "MIN", "MAX", or the
+                Redis 8.8 "COUNT" aggregator, which scores each element by the number of input sets
+                containing it (or the sum of their weights, if weights are given). Defaults to "SUM".
+            withscores (bool): If True, return scores with members. Defaults to False.
+            score_cast_func (RedisScoreCastType): Function to cast scores. Defaults to float.
+
+        Returns:
+            RedisResponseType: A list of members (and scores if withscores=True).
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def zinter(
+        self,
+        keys: Mapping[bytes | str, float] | Iterable[bytes | str],
+        aggregate: str | None = None,
+        withscores: bool = False,
+    ) -> list[bytes | str] | list[tuple[bytes | str, Any]] | list[list[Any]]:
+        """Computes the intersection of multiple sorted sets asynchronously.
+
+        Args:
+            keys (Mapping[bytes | str, float] | Iterable[bytes | str]): Sorted set keys, optionally
+                mapped to per-set weights.
+            aggregate (str, optional): How to combine scores across sets: "SUM", "MIN", "MAX", or the
+                Redis 8.8 "COUNT" aggregator, which scores each element by the number of input sets
+                containing it (or the sum of their weights, if weights are given). Defaults to "SUM".
+            withscores (bool): If True, return scores with members. Defaults to False.
+
+        Returns:
+            RedisResponseType: A list of members (and scores if withscores=True).
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def arset(self, name: bytes | str, index: int, *values: bytes | str | float) -> int:
+        """Sets one or more contiguous values in the array stored at a key asynchronously.
+
+        Values are stored at consecutive indices beginning at ``index`` in the Redis 8.8 array data
+        structure, an index-addressable, sparse-friendly container.
+
+        Args:
+            name (bytes | str): The key of the array.
+            index (int): The starting index (0 to 2**64-1) to set values at.
+            *values (bytes | str | float): The values to store at consecutive indices.
+
+        Returns:
+            RedisResponseType: The number of previously empty slots that were set.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def arget(self, name: bytes | str, index: int) -> bytes | str | None:
+        """Gets the value at an index in the array stored at a key asynchronously.
+
+        Args:
+            name (bytes | str): The key of the array.
+            index (int): The index to read.
+
+        Returns:
+            RedisResponseType: The value at the index, or None if unset or the key doesn't exist.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def arlen(self, name: bytes | str) -> int:
+        """Gets the number of populated elements in an array asynchronously.
+
+        Args:
+            name (bytes | str): The key of the array.
+
+        Returns:
+            RedisResponseType: The number of populated elements.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def ardel(self, name: bytes | str, *indices: int) -> int:
+        """Deletes one or more indices from an array asynchronously.
+
+        Args:
+            name (bytes | str): The key of the array.
+            *indices (int): The indices to delete.
+
+        Returns:
+            RedisResponseType: The number of elements deleted.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def arring(self, name: bytes | str, size: int, *values: bytes | str | float) -> int:
+        """Inserts values into an array as a fixed-size ring buffer (sliding window) asynchronously.
+
+        Each value is placed at ``insert_idx % size``, wrapping back to index 0 and overwriting
+        older values once full, in a single atomic operation equivalent to ``RPUSH`` + ``LTRIM``.
+
+        Args:
+            name (bytes | str): The key of the array.
+            size (int): The fixed size of the ring buffer.
+            *values (bytes | str | float): The values to insert.
+
+        Returns:
+            RedisResponseType: The last index where a value was inserted.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     async def hdel(self, name: str, *keys: str | bytes) -> int:
         """Deletes one or more fields from a hash asynchronously.
 
@@ -2245,6 +2648,39 @@ class AsyncRedisPort:
 
         Returns:
             Any: A pipeline object.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def config_set(self, name: str, value: str) -> bool:
+        """Sets a Redis server configuration parameter asynchronously.
+
+        Commonly used to enable keyspace/subkey notifications via ``notify-keyspace-events``.
+
+        Args:
+            name (str): The configuration parameter name.
+            value (str): The value to set.
+
+        Returns:
+            bool: True if successful.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def config_get(self, pattern: str = "*") -> dict[str, str]:
+        """Gets Redis server configuration parameters matching a pattern asynchronously.
+
+        Args:
+            pattern (str): Pattern to match configuration parameter names. Defaults to "*".
+
+        Returns:
+            RedisResponseType: A dictionary of configuration parameter names to values.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.

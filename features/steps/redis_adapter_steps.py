@@ -950,6 +950,24 @@ def _cleanup_pubsub(pubsub) -> None:
         pass
 
 
+def _zset_scores_to_dict(result) -> dict[str, float]:
+    """Convert a withscores zunion/zinter result into a member-to-score mapping."""
+    if not result:
+        return {}
+    scores: dict[str, float] = {}
+    for item in result:
+        if isinstance(item, (list, tuple)) and len(item) >= 2:
+            scores[str(item[0])] = float(item[1])
+    return scores
+
+
+def _format_array_value(value) -> str:
+    """Format an array element value for Gherkin assertions."""
+    if value is None:
+        return "None"
+    return str(value)
+
+
 async def _collect_async_scan_keys(adapter, pattern: str) -> list[str]:
     """Collect keys from async scan_iter across mock and real adapters."""
     scan_iterable = adapter.scan_iter(match=pattern)
@@ -2314,3 +2332,347 @@ async def step_then_async_pipeline_results(context, expected):
     """Verify async pipeline execute results."""
     results = get_result(context, "async_pipeline_results")
     assert results == expected, f"Expected pipeline results '{expected}', got '{results}'"
+
+
+# ---------------------------------------------------------------------------
+# Redis 8.8 — Array data structure (sync)
+# ---------------------------------------------------------------------------
+
+
+@when(
+    r'I arset index (?P<index>\d+) to "(?P<values>[^"]+)" in array "(?P<name>[^"]+)" '
+    r'in (?P<adapter_type>mock|container|cluster)',
+)
+def step_when_arset(context, index, values, name, adapter_type):
+    """Set contiguous values in a Redis 8.8 array."""
+    scenario_context = get_current_scenario_context(context)
+    value_list = [v.strip() for v in values.split(",")]
+    result = scenario_context.adapter.arset(name, int(index), *value_list)
+    store_result(context, f"arset_result_{name}", result)
+
+
+@then(r'the sync array "(?P<name>[^"]+)" should have (?P<count>\d+) elements')
+def step_then_sync_arlen(context, name, count):
+    """Verify array element count."""
+    scenario_context = get_current_scenario_context(context)
+    length = scenario_context.adapter.arlen(name)
+    assert length == int(count), f"Expected array length {count}, got {length}"
+
+
+@when(
+    r'I get array index (?P<index>\d+) from "(?P<name>[^"]+)" '
+    r'in (?P<adapter_type>mock|container|cluster)',
+)
+def step_when_arget(context, index, name, adapter_type):
+    """Get a value from a Redis 8.8 array by index."""
+    scenario_context = get_current_scenario_context(context)
+    value = scenario_context.adapter.arget(name, int(index))
+    store_result(context, "array_value", _format_array_value(value))
+
+
+@then(r'the sync array value should be "(?P<expected>[^"]+)"')
+def step_then_sync_array_value(context, expected):
+    """Verify array element value."""
+    value = get_result(context, "array_value")
+    assert value == expected, f"Expected array value '{expected}', got '{value}'"
+
+
+@when(
+    r'I delete array index (?P<index>\d+) from "(?P<name>[^"]+)" '
+    r'in (?P<adapter_type>mock|container|cluster)',
+)
+def step_when_ardel(context, index, name, adapter_type):
+    """Delete an index from a Redis 8.8 array."""
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.adapter.ardel(name, int(index))
+
+
+@when(
+    r'I arring size (?P<size>\d+) with "(?P<values>[^"]+)" into array "(?P<name>[^"]+)" '
+    r'in (?P<adapter_type>mock|container|cluster)',
+)
+def step_when_arring(context, size, values, name, adapter_type):
+    """Insert values into an array ring buffer."""
+    scenario_context = get_current_scenario_context(context)
+    value_list = [v.strip() for v in values.split(",")]
+    scenario_context.adapter.arring(name, int(size), *value_list)
+
+
+# ---------------------------------------------------------------------------
+# Redis 8.8 — Array data structure (async)
+# ---------------------------------------------------------------------------
+
+
+@when(
+    r'I arset index (?P<index>\d+) to "(?P<values>[^"]+)" in array "(?P<name>[^"]+)" '
+    r'in async (?P<adapter_type>mock|container|cluster)',
+)
+async def step_when_async_arset(context, index, values, name, adapter_type):
+    """Set contiguous values in a Redis 8.8 array asynchronously."""
+    scenario_context = get_current_scenario_context(context)
+    value_list = [v.strip() for v in values.split(",")]
+    result = await scenario_context.async_adapter.arset(name, int(index), *value_list)
+    store_result(context, f"arset_result_{name}", result)
+
+
+@then(r'the async array "(?P<name>[^"]+)" should have (?P<count>\d+) elements')
+async def step_then_async_arlen(context, name, count):
+    """Verify array element count asynchronously."""
+    scenario_context = get_current_scenario_context(context)
+    length = await scenario_context.async_adapter.arlen(name)
+    assert length == int(count), f"Expected array length {count}, got {length}"
+
+
+@when(
+    r'I get array index (?P<index>\d+) from "(?P<name>[^"]+)" '
+    r'in async (?P<adapter_type>mock|container|cluster)',
+)
+async def step_when_async_arget(context, index, name, adapter_type):
+    """Get a value from a Redis 8.8 array by index asynchronously."""
+    scenario_context = get_current_scenario_context(context)
+    value = await scenario_context.async_adapter.arget(name, int(index))
+    store_result(context, "async_array_value", _format_array_value(value))
+
+
+@then(r'the async array value should be "(?P<expected>[^"]+)"')
+async def step_then_async_array_value(context, expected):
+    """Verify array element value asynchronously."""
+    value = get_result(context, "async_array_value")
+    assert value == expected, f"Expected array value '{expected}', got '{value}'"
+
+
+@when(
+    r'I arring size (?P<size>\d+) with "(?P<values>[^"]+)" into array "(?P<name>[^"]+)" '
+    r'in async (?P<adapter_type>mock|container|cluster)',
+)
+async def step_when_async_arring(context, size, values, name, adapter_type):
+    """Insert values into an array ring buffer asynchronously."""
+    scenario_context = get_current_scenario_context(context)
+    value_list = [v.strip() for v in values.split(",")]
+    await scenario_context.async_adapter.arring(name, int(size), *value_list)
+
+
+# ---------------------------------------------------------------------------
+# Redis 8.8 — INCREX rate limiter (sync)
+# ---------------------------------------------------------------------------
+
+
+@when(
+    r'I increx key "(?P<key>[^"]+)" by (?P<amount>\d+) with upper bound (?P<ubound>\d+) '
+    r'and expiry (?P<seconds>\d+) seconds in (?P<adapter_type>mock|container|cluster)',
+)
+def step_when_increx(context, key, amount, ubound, seconds, adapter_type):
+    """Increment a windowed counter using INCREX."""
+    scenario_context = get_current_scenario_context(context)
+    result = scenario_context.adapter.increx(
+        key,
+        byint=int(amount),
+        ubound=int(ubound),
+        ex=int(seconds),
+    )
+    store_result(context, f"increx_result_{key}", result)
+
+
+@then(r"the sync increx counter should be (?P<expected>\d+)")
+def step_then_sync_increx_counter(context, expected):
+    """Verify INCREX new counter value."""
+    prev_step = next(
+        (s for s in reversed(context.scenario.steps) if s.step_type == "when" and "increx key" in s.name),
+        None,
+    )
+    key = prev_step.name.split('"')[1] if prev_step else None
+    result = get_result(context, f"increx_result_{key}")
+    assert result is not None and int(result[0]) == int(expected), f"Expected counter {expected}, got {result}"
+
+
+@then(r"the sync increx applied increment should be (?P<expected>\d+)")
+def step_then_sync_increx_applied(context, expected):
+    """Verify INCREX applied increment amount."""
+    prev_step = next(
+        (s for s in reversed(context.scenario.steps) if s.step_type == "when" and "increx key" in s.name),
+        None,
+    )
+    key = prev_step.name.split('"')[1] if prev_step else None
+    result = get_result(context, f"increx_result_{key}")
+    assert result is not None and int(result[1]) == int(expected), f"Expected applied increment {expected}, got {result}"
+
+
+# ---------------------------------------------------------------------------
+# Redis 8.8 — INCREX rate limiter (async)
+# ---------------------------------------------------------------------------
+
+
+@when(
+    r'I increx key "(?P<key>[^"]+)" by (?P<amount>\d+) with upper bound (?P<ubound>\d+) '
+    r'and expiry (?P<seconds>\d+) seconds in async (?P<adapter_type>mock|container|cluster)',
+)
+async def step_when_async_increx(context, key, amount, ubound, seconds, adapter_type):
+    """Increment a windowed counter using INCREX asynchronously."""
+    scenario_context = get_current_scenario_context(context)
+    result = await scenario_context.async_adapter.increx(
+        key,
+        byint=int(amount),
+        ubound=int(ubound),
+        ex=int(seconds),
+    )
+    store_result(context, f"async_increx_result_{key}", result)
+
+
+@then(r"the async increx counter should be (?P<expected>\d+)")
+async def step_then_async_increx_counter(context, expected):
+    """Verify INCREX new counter value asynchronously."""
+    prev_step = next(
+        (s for s in reversed(context.scenario.steps) if s.step_type == "when" and "increx key" in s.name),
+        None,
+    )
+    key = prev_step.name.split('"')[1] if prev_step else None
+    result = get_result(context, f"async_increx_result_{key}")
+    assert result is not None and int(result[0]) == int(expected), f"Expected counter {expected}, got {result}"
+
+
+@then(r"the async increx applied increment should be (?P<expected>\d+)")
+async def step_then_async_increx_applied(context, expected):
+    """Verify INCREX applied increment amount asynchronously."""
+    prev_step = next(
+        (s for s in reversed(context.scenario.steps) if s.step_type == "when" and "increx key" in s.name),
+        None,
+    )
+    key = prev_step.name.split('"')[1] if prev_step else None
+    result = get_result(context, f"async_increx_result_{key}")
+    assert result is not None and int(result[1]) == int(expected), f"Expected applied increment {expected}, got {result}"
+
+
+# ---------------------------------------------------------------------------
+# Redis 8.8 — ZUNION/ZINTER COUNT aggregator (sync)
+# ---------------------------------------------------------------------------
+
+
+@when(
+    r'I zunion sets "(?P<set1>[^"]+)" and "(?P<set2>[^"]+)" with COUNT aggregator '
+    r'in (?P<adapter_type>mock|container|cluster)',
+)
+def step_when_zunion_count(context, set1, set2, adapter_type):
+    """Compute sorted set union with COUNT aggregator."""
+    scenario_context = get_current_scenario_context(context)
+    result = scenario_context.adapter.zunion([set1, set2], aggregate="COUNT", withscores=True)
+    store_result(context, "zunion_count_scores", _zset_scores_to_dict(result))
+
+
+@then(r'the sync zunion COUNT score for "(?P<member>[^"]+)" should be (?P<expected>[\d.]+)')
+def step_then_sync_zunion_count_score(context, member, expected):
+    """Verify ZUNION COUNT aggregator score for a member."""
+    scores = get_result(context, "zunion_count_scores")
+    assert member in scores, f"Member '{member}' not in zunion result: {scores}"
+    assert scores[member] == float(expected), f"Expected score {expected} for '{member}', got {scores[member]}"
+
+
+@when(
+    r'I zinter sets "(?P<set1>[^"]+)" and "(?P<set2>[^"]+)" with COUNT aggregator '
+    r'in (?P<adapter_type>mock|container|cluster)',
+)
+def step_when_zinter_count(context, set1, set2, adapter_type):
+    """Compute sorted set intersection with COUNT aggregator."""
+    scenario_context = get_current_scenario_context(context)
+    result = scenario_context.adapter.zinter([set1, set2], aggregate="COUNT", withscores=True)
+    store_result(context, "zinter_count_scores", _zset_scores_to_dict(result))
+
+
+@then(r'the sync zinter COUNT score for "(?P<member>[^"]+)" should be (?P<expected>[\d.]+)')
+def step_then_sync_zinter_count_score(context, member, expected):
+    """Verify ZINTER COUNT aggregator score for a member."""
+    scores = get_result(context, "zinter_count_scores")
+    assert member in scores, f"Member '{member}' not in zinter result: {scores}"
+    assert scores[member] == float(expected), f"Expected score {expected} for '{member}', got {scores[member]}"
+
+
+# ---------------------------------------------------------------------------
+# Redis 8.8 — ZUNION/ZINTER COUNT aggregator (async)
+# ---------------------------------------------------------------------------
+
+
+@when(
+    r'I zunion sets "(?P<set1>[^"]+)" and "(?P<set2>[^"]+)" with COUNT aggregator '
+    r'in async (?P<adapter_type>mock|container|cluster)',
+)
+async def step_when_async_zunion_count(context, set1, set2, adapter_type):
+    """Compute sorted set union with COUNT aggregator asynchronously."""
+    scenario_context = get_current_scenario_context(context)
+    result = await scenario_context.async_adapter.zunion([set1, set2], aggregate="COUNT", withscores=True)
+    store_result(context, "async_zunion_count_scores", _zset_scores_to_dict(result))
+
+
+@then(r'the async zunion COUNT score for "(?P<member>[^"]+)" should be (?P<expected>[\d.]+)')
+async def step_then_async_zunion_count_score(context, member, expected):
+    """Verify ZUNION COUNT aggregator score for a member asynchronously."""
+    scores = get_result(context, "async_zunion_count_scores")
+    assert member in scores, f"Member '{member}' not in zunion result: {scores}"
+    assert scores[member] == float(expected), f"Expected score {expected} for '{member}', got {scores[member]}"
+
+
+# ---------------------------------------------------------------------------
+# Redis 8.8 — Hash subkey notifications (sync)
+# ---------------------------------------------------------------------------
+
+
+@when(r"I enable hash subkey notifications in (?P<adapter_type>mock|container|cluster)")
+def step_when_enable_subkey_notifications(context, adapter_type):
+    """Enable Redis 8.8 hash subkey notifications."""
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.adapter.config_set("notify-keyspace-events", "STIVh")
+
+
+@when(r"I psubscribe to subkeyevent hset channel in (?P<adapter_type>mock|container|cluster)")
+def step_when_psubscribe_subkeyevent_hset(context, adapter_type):
+    """Subscribe to hash field hset subkeyevent notifications."""
+    scenario_context = get_current_scenario_context(context)
+    pubsub = scenario_context.adapter.pubsub()
+    pubsub.psubscribe("__subkeyevent@0__:hset")
+    pubsub.get_message(timeout=2.0)
+    scenario_context.pubsub = pubsub
+
+
+@then(r'the sync subkey notification should include field "(?P<field>[^"]+)"')
+def step_then_sync_subkey_notification(context, field):
+    """Verify a hash subkey notification was received for the given field."""
+    scenario_context = get_current_scenario_context(context)
+    pubsub = scenario_context.pubsub
+    message = pubsub.get_message(timeout=2.0)
+    _cleanup_pubsub(pubsub)
+    assert message is not None, "No subkey notification received"
+    data = str(message.get("data", ""))
+    assert field in data, f"Expected field '{field}' in notification data '{data}'"
+
+
+# ---------------------------------------------------------------------------
+# Redis 8.8 — Hash subkey notifications (async)
+# ---------------------------------------------------------------------------
+
+
+@when(r"I enable hash subkey notifications in async (?P<adapter_type>mock|container|cluster)")
+async def step_when_async_enable_subkey_notifications(context, adapter_type):
+    """Enable Redis 8.8 hash subkey notifications asynchronously."""
+    scenario_context = get_current_scenario_context(context)
+    await scenario_context.async_adapter.config_set("notify-keyspace-events", "STIVh")
+
+
+@when(r"I psubscribe to subkeyevent hset channel in async (?P<adapter_type>mock|container|cluster)")
+async def step_when_async_psubscribe_subkeyevent_hset(context, adapter_type):
+    """Subscribe to hash field hset subkeyevent notifications asynchronously."""
+    scenario_context = get_current_scenario_context(context)
+    pubsub = await scenario_context.async_adapter.pubsub()
+    await pubsub.psubscribe("__subkeyevent@0__:hset")
+    await pubsub.get_message(timeout=2.0)
+    scenario_context.pubsub = pubsub
+
+
+@then(r'the async subkey notification should include field "(?P<field>[^"]+)"')
+async def step_then_async_subkey_notification(context, field):
+    """Verify a hash subkey notification was received for the given field asynchronously."""
+    scenario_context = get_current_scenario_context(context)
+    pubsub = scenario_context.pubsub
+    message = await pubsub.get_message(timeout=2.0)
+    await pubsub.unsubscribe()
+    await pubsub.aclose()
+    assert message is not None, "No subkey notification received"
+    data = str(message.get("data", ""))
+    assert field in data, f"Expected field '{field}' in notification data '{data}'"
