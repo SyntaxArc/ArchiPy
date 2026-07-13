@@ -1322,6 +1322,45 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#rate-limiting-interceptor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting Interceptor
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rate Limiting Interceptor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client-identification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Client identification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1363,7 +1402,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#configuration" class="md-nav__link">
+  <a href="#configuration_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Configuration
@@ -1385,10 +1424,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#client-identification" class="md-nav__link">
+  <a href="#client-identification_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Client identification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiple-windows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple windows
       
     </span>
   </a>
@@ -3230,6 +3280,45 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#rate-limiting-interceptor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting Interceptor
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rate Limiting Interceptor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client-identification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Client identification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3271,7 +3360,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#configuration" class="md-nav__link">
+  <a href="#configuration_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Configuration
@@ -3293,10 +3382,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#client-identification" class="md-nav__link">
+  <a href="#client-identification_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Client identification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiple-windows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple windows
       
     </span>
   </a>
@@ -3442,65 +3542,148 @@ handling.</p>
 </span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>        <span class="n">interceptors</span><span class="o">=</span><span class="n">interceptors</span><span class="p">,</span>
 </span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>    <span class="p">)</span>
 </span></code></pre></div>
+<h3 id="rate-limiting-interceptor">Rate Limiting Interceptor<a class="headerlink" href="#rate-limiting-interceptor" title="Permanent link">&para;</a></h3>
+<p>Per-RPC gRPC rate limits use two pieces:</p>
+<ol>
+<li><strong><code>grpc_rate_limit_decorator</code></strong> — declares limits on servicer methods (see
+   <a href="../decorators/#grpc-rate-limit-decorator">Decorator Tutorials — gRPC Rate Limit</a>)</li>
+<li><strong><code>GrpcServerRateLimitInterceptor</code> / <code>AsyncGrpcServerRateLimitInterceptor</code></strong> — enforces decorated limits via Redis
+   <code>INCREX</code></li>
+</ol>
+<p>Limits use the Redis 8.8 <code>INCREX</code> command, the same atomic counter primitive as the FastAPI handler.</p>
+<p>Install the required extras:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[redis,grpc]&quot;</span>
+</span></code></pre></div>
+<blockquote>
+<p><strong>Note:</strong> Redis <strong>8.8+</strong> is required. The interceptor depends on the <code>INCREX</code> command.</p>
+</blockquote>
+<p>Register the interceptor on the server (automatically via config or manually) and declare limits on individual RPC
+methods.</p>
+<p>Enable automatic registration:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">GRPC_RATE_LIMIT__IS_ENABLED</span><span class="o">=</span><span class="nb">true</span>
+</span></code></pre></div>
+<p>With <code>IS_ENABLED</code>, <code>AppUtils.create_grpc_app</code> / <code>create_async_grpc_app</code> append the matching interceptor (same
+pattern as Prometheus metrics). Per-RPC limits still come only from <code>grpc_rate_limit_decorator</code>.</p>
+<p><strong>Sync:</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">grpc_rate_limit_decorator</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">MySyncServiceServicer</span><span class="p">(</span><span class="n">pb2_grpc</span><span class="o">.</span><span class="n">MyServiceServicer</span><span class="p">):</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="nd">@grpc_rate_limit_decorator</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">Cheap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">CheapResponse</span><span class="p">()</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="nd">@grpc_rate_limit_decorator</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">seconds</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="nd">@grpc_rate_limit_decorator</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">Expensive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">ExpensiveResponse</span><span class="p">()</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">()</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="n">server</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_grpc_app</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>Async:</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">grpc_rate_limit_decorator</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAsyncServiceServicer</span><span class="p">(</span><span class="n">pb2_grpc</span><span class="o">.</span><span class="n">MyServiceServicer</span><span class="p">):</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="nd">@grpc_rate_limit_decorator</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">Cheap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">CheapResponse</span><span class="p">()</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="nd">@grpc_rate_limit_decorator</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">seconds</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="nd">@grpc_rate_limit_decorator</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">Expensive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">ExpensiveResponse</span><span class="p">()</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">()</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="n">server</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_async_grpc_app</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Manual registration (when <code>IS_ENABLED</code> is false) via <code>customized_interceptors</code> is still supported; pass
+<code>GrpcServerRateLimitInterceptor</code> or <code>AsyncGrpcServerRateLimitInterceptor</code> explicitly.</p>
+<h4 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h4>
+<p>Global defaults load from <code>GRPC_RATE_LIMIT</code> on <code>BaseConfig.global_config()</code> (env prefix
+<code>GRPC_RATE_LIMIT__</code>). Per-RPC limits are set only on <code>grpc_rate_limit_decorator</code>; the interceptor
+constructor controls shared behavior such as Redis key prefix, fail-closed mode, and JWT identity.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nv">GRPC_RATE_LIMIT__IS_ENABLED</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nv">GRPC_RATE_LIMIT__FAIL_CLOSED</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nv">GRPC_RATE_LIMIT__IDENTITY_FROM_ACCESS_TOKEN</span><span class="o">=</span><span class="nb">true</span>
+</span></code></pre></div>
+<h4 id="client-identification">Client identification<a class="headerlink" href="#client-identification" title="Permanent link">&para;</a></h4>
+<p>By default the interceptor buckets authenticated callers by verified JWT access token <code>sub</code> from
+gRPC invocation metadata (<code>authorization: Bearer ...</code>). Missing or invalid tokens fall back to
+<code>context.peer()</code> (for example <code>ipv4:1.2.3.4:5678</code>).</p>
+<blockquote>
+<p><strong>Warning:</strong> <code>context.peer()</code> reflects the immediate TCP peer. Behind an L7 proxy that
+reconnects upstream, the peer is often the proxy address. Pass <code>identifier_fn</code> to the interceptor
+when you need a custom server-resolved identity.</p>
+</blockquote>
+<p>Undecorated servicer methods are never rate-limited. Stacked decorators add multiple windows; all
+windows must pass before the RPC handler runs.</p>
 <h2 id="fastapi-interceptors">FastAPI Interceptors<a class="headerlink" href="#fastapi-interceptors" title="Permanent link">&para;</a></h2>
 <h3 id="metrics-middleware">Metrics Middleware<a class="headerlink" href="#metrics-middleware" title="Permanent link">&para;</a></h3>
 <p><code>FastAPIMetricInterceptor</code> records request durations and counts for Prometheus:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.metric.interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPIMetricInterceptor</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># Create a FastAPI app</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># Add the metrics middleware</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span><span class="n">FastAPIMetricInterceptor</span><span class="p">)</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1"># Example endpoint — duration and status will be recorded automatically</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/process&quot;</span><span class="p">)</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">process_data</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span> <span class="s2">&quot;result&quot;</span><span class="p">:</span> <span class="s2">&quot;processed&quot;</span><span class="p">}</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.metric.interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPIMetricInterceptor</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># Create a FastAPI app</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="c1"># Add the metrics middleware</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span><span class="n">FastAPIMetricInterceptor</span><span class="p">)</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="c1"># Example endpoint — duration and status will be recorded automatically</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/process&quot;</span><span class="p">)</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">process_data</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span> <span class="s2">&quot;result&quot;</span><span class="p">:</span> <span class="s2">&quot;processed&quot;</span><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="rate-limiting-dependency">Rate Limiting Dependency<a class="headerlink" href="#rate-limiting-dependency" title="Permanent link">&para;</a></h3>
 <p><code>FastAPIRestRateLimitHandler</code> enforces per-client request limits on HTTP endpoints using Redis as the backend.
 It uses the Redis 8.8 <code>INCREX</code> command for atomic counter increments with bounds and window expiry, avoiding
 check-then-act races under concurrent requests.</p>
 <p>Install the required extras:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[redis,fastapi]&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[redis,fastapi]&quot;</span>
 </span></code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> Redis <strong>8.8+</strong> is required. The handler depends on the <code>INCREX</code> command, which is not available on
 earlier Redis versions.</p>
 </blockquote>
 <p>Attach the handler as a route dependency with <code>Depends</code> — it is not registered as middleware:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Depends</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.rate_limit.fastapi_rest_rate_limit_handler</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">FastAPIRestRateLimitHandler</span><span class="p">,</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">)</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/resource&quot;</span><span class="p">,</span> <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span><span class="n">Depends</span><span class="p">(</span><span class="n">FastAPIRestRateLimitHandler</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">))])</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">resource</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ok&quot;</span><span class="p">}</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Depends</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.rate_limit.fastapi_rest_rate_limit_handler</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">FastAPIRestRateLimitHandler</span><span class="p">,</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="p">)</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/resource&quot;</span><span class="p">,</span> <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span><span class="n">Depends</span><span class="p">(</span><span class="n">FastAPIRestRateLimitHandler</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">))])</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">resource</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ok&quot;</span><span class="p">}</span>
 </span></code></pre></div>
-<h4 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h4>
+<h4 id="configuration_1">Configuration<a class="headerlink" href="#configuration_1" title="Permanent link">&para;</a></h4>
 <p>Global defaults load from <code>FASTAPI_RATE_LIMIT</code> on <code>BaseConfig.global_config()</code> (env prefix
 <code>FASTAPI_RATE_LIMIT__</code>). Per-route limits still pass <code>calls_count</code> and the time window to the
 handler constructor; optional kwargs override config fields for that handler instance only.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># .env — trusted proxies fall back to FASTAPI__FORWARDED_ALLOW_IPS when unset</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nv">FASTAPI_RATE_LIMIT__FAIL_CLOSED</span><span class="o">=</span><span class="nb">true</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nv">FASTAPI_RATE_LIMIT__REJECT_UNKNOWN_CLIENT</span><span class="o">=</span><span class="nb">true</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nv">FASTAPI_RATE_LIMIT__RATE_LIMIT_HEADERS</span><span class="o">=</span><span class="nb">true</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># .env — trusted proxies fall back to FASTAPI__FORWARDED_ALLOW_IPS when unset</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nv">FASTAPI_RATE_LIMIT__FAIL_CLOSED</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nv">FASTAPI_RATE_LIMIT__REJECT_UNKNOWN_CLIENT</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="nv">FASTAPI_RATE_LIMIT__RATE_LIMIT_HEADERS</span><span class="o">=</span><span class="nb">true</span>
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">()</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">config</span><span class="o">.</span><span class="n">FASTAPI_RATE_LIMIT</span><span class="o">.</span><span class="n">TRUSTED_PROXY_IPS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;10.0.0.0/8&quot;</span><span class="p">]</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">()</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="n">config</span><span class="o">.</span><span class="n">FASTAPI_RATE_LIMIT</span><span class="o">.</span><span class="n">TRUSTED_PROXY_IPS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;10.0.0.0/8&quot;</span><span class="p">]</span>
 </span></code></pre></div>
 <h4 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h4>
 <p>On each request the handler:</p>
@@ -3512,7 +3695,7 @@ handler constructor; optional kwargs override config fields for that handler ins
 </ol>
 <p><code>enx=True</code> sets the window expiry only when the key is first created, so subsequent requests within the window
 preserve the original TTL.</p>
-<h4 id="client-identification">Client identification<a class="headerlink" href="#client-identification" title="Permanent link">&para;</a></h4>
+<h4 id="client-identification_1">Client identification<a class="headerlink" href="#client-identification_1" title="Permanent link">&para;</a></h4>
 <p>Forwarded headers (<code>CF-Connecting-IP</code>, <code>True-Client-IP</code>, <code>Forwarded</code>, <code>X-Forwarded-For</code>) are
 honored <strong>only</strong> when the immediate peer (<code>request.client.host</code>) matches
 <code>FASTAPI_RATE_LIMIT.TRUSTED_PROXY_IPS</code>, <code>FASTAPI.FORWARDED_ALLOW_IPS</code>, or an explicit
@@ -3541,39 +3724,51 @@ testing <code>X-Real-IP</code> behaviour locally, use globally routable addresse
 </blockquote>
 <p>For authenticated APIs, rate limiting buckets by verified JWT access token <code>sub</code> by default
 (<code>identity_from_access_token=True</code>). Anonymous or invalid tokens fall back to the secure client IP.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">handler</span> <span class="o">=</span> <span class="n">FastAPIRestRateLimitHandler</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">handler</span> <span class="o">=</span> <span class="n">FastAPIRestRateLimitHandler</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Disable JWT identity when you need IP-only buckets:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">handler</span> <span class="o">=</span> <span class="n">FastAPIRestRateLimitHandler</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">identity_from_access_token</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">handler</span> <span class="o">=</span> <span class="n">FastAPIRestRateLimitHandler</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">identity_from_access_token</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Or set <code>FASTAPI_RATE_LIMIT__IDENTITY_FROM_ACCESS_TOKEN=false</code> in the environment.</p>
 <p>For custom identity resolution (for example Keycloak <code>request.state.user_info["sub"]</code> after an auth
 <code>Depends</code>), pass <code>identifier_fn</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">current_user_id</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">user_info</span><span class="p">[</span><span class="s2">&quot;sub&quot;</span><span class="p">])</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">handler</span> <span class="o">=</span> <span class="n">FastAPIRestRateLimitHandler</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">identifier_fn</span><span class="o">=</span><span class="n">current_user_id</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">current_user_id</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">user_info</span><span class="p">[</span><span class="s2">&quot;sub&quot;</span><span class="p">])</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="n">handler</span> <span class="o">=</span> <span class="n">FastAPIRestRateLimitHandler</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">identifier_fn</span><span class="o">=</span><span class="n">current_user_id</span><span class="p">)</span>
 </span></code></pre></div>
 <p>For manual JWT extraction in a custom <code>identifier_fn</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.rate_limit.identifiers</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_jwt_access_token_sub</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">jwt_or_ip_identifier</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="k">return</span> <span class="n">resolve_jwt_access_token_sub</span><span class="p">(</span><span class="n">request</span><span class="p">)</span> <span class="ow">or</span> <span class="n">handler</span><span class="o">.</span><span class="n">_extract_client_ip</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.rate_limit.identifiers</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_jwt_access_token_sub</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">jwt_or_ip_identifier</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>    <span class="k">return</span> <span class="n">resolve_jwt_access_token_sub</span><span class="p">(</span><span class="n">request</span><span class="p">)</span> <span class="ow">or</span> <span class="n">handler</span><span class="o">.</span><span class="n">_extract_client_ip</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+</span></code></pre></div>
+<h4 id="multiple-windows">Multiple windows<a class="headerlink" href="#multiple-windows" title="Permanent link">&para;</a></h4>
+<p>Pass <code>additional_windows</code> to enforce burst and sustained tiers on the same endpoint. All windows
+must pass; successful responses report the most constrained remaining quota in <code>X-RateLimit-*</code>
+headers.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.dtos.rate_limit_window_dto</span><span class="w"> </span><span class="kn">import</span> <span class="n">RateLimitWindowDTO</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="n">handler</span> <span class="o">=</span> <span class="n">FastAPIRestRateLimitHandler</span><span class="p">(</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="n">calls_count</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>    <span class="n">seconds</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>    <span class="n">additional_windows</span><span class="o">=</span><span class="p">[</span><span class="n">RateLimitWindowDTO</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">window_ms</span><span class="o">=</span><span class="mi">86_400_000</span><span class="p">)],</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="p">)</span>
 </span></code></pre></div>
 <h4 id="per-query-parameter-buckets">Per-query-parameter buckets<a class="headerlink" href="#per-query-parameter-buckets" title="Permanent link">&para;</a></h4>
 <p>Pass <code>query_params</code> together with server-resolved identity (<code>identity_from_access_token=True</code> by default,
 or <code>identifier_fn</code>). Values are hashed by default to keep Redis keys bounded:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">handler</span> <span class="o">=</span> <span class="n">FastAPIRestRateLimitHandler</span><span class="p">(</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">calls_count</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="n">query_params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;action&quot;</span><span class="p">},</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="p">)</span>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/action&quot;</span><span class="p">,</span> <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span><span class="n">Depends</span><span class="p">(</span><span class="n">handler</span><span class="p">)])</span>
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">action</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ok&quot;</span><span class="p">}</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">handler</span> <span class="o">=</span> <span class="n">FastAPIRestRateLimitHandler</span><span class="p">(</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>    <span class="n">calls_count</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>    <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>    <span class="n">query_params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;action&quot;</span><span class="p">},</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="p">)</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/action&quot;</span><span class="p">,</span> <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span><span class="n">Depends</span><span class="p">(</span><span class="n">handler</span><span class="p">)])</span>
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">action</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ok&quot;</span><span class="p">}</span>
 </span></code></pre></div>
 <blockquote>
 <p><strong>Warning:</strong> Do not rely on client-controlled query parameters alone to identify users. Use
@@ -3582,31 +3777,31 @@ or <code>identifier_fn</code>). Values are hashed by default to keep Redis keys 
 </blockquote>
 <h2 id="using-multiple-interceptors">Using Multiple Interceptors<a class="headerlink" href="#using-multiple-interceptors" title="Permanent link">&para;</a></h2>
 <p>Combining gRPC and FastAPI interceptors in an application:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent</span><span class="w"> </span><span class="kn">import</span> <span class="n">futures</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.metric.interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPIMetricInterceptor</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.grpc.trace.server_interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">GrpcServerTraceInterceptor</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="c1"># Create a FastAPI app with metrics middleware</span>
-</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_fastapi_app</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">FastAPI</span><span class="p">:</span>
-</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    <span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
-</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>
-</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>    <span class="c1"># Add metrics middleware</span>
-</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>    <span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span><span class="n">FastAPIMetricInterceptor</span><span class="p">)</span>
-</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>
-</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>    <span class="k">return</span> <span class="n">app</span>
-</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>
-</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>
-</span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="c1"># Create a gRPC server with the tracing interceptor</span>
-</span><span id="__span-12-21"><a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_grpc_server</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">grpc</span><span class="o">.</span><span class="n">Server</span><span class="p">:</span>
-</span><span id="__span-12-22"><a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>    <span class="k">return</span> <span class="n">grpc</span><span class="o">.</span><span class="n">server</span><span class="p">(</span>
-</span><span id="__span-12-23"><a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>        <span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
-</span><span id="__span-12-24"><a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>        <span class="n">interceptors</span><span class="o">=</span><span class="p">[</span><span class="n">GrpcServerTraceInterceptor</span><span class="p">()],</span>
-</span><span id="__span-12-25"><a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a>    <span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent</span><span class="w"> </span><span class="kn">import</span> <span class="n">futures</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.metric.interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPIMetricInterceptor</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.grpc.trace.server_interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">GrpcServerTraceInterceptor</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>
+</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>
+</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="c1"># Create a FastAPI app with metrics middleware</span>
+</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_fastapi_app</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">FastAPI</span><span class="p">:</span>
+</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>    <span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
+</span><span id="__span-18-13"><a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a>
+</span><span id="__span-18-14"><a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>    <span class="c1"># Add metrics middleware</span>
+</span><span id="__span-18-15"><a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>    <span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span><span class="n">FastAPIMetricInterceptor</span><span class="p">)</span>
+</span><span id="__span-18-16"><a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a>
+</span><span id="__span-18-17"><a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a>    <span class="k">return</span> <span class="n">app</span>
+</span><span id="__span-18-18"><a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a>
+</span><span id="__span-18-19"><a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a>
+</span><span id="__span-18-20"><a id="__codelineno-18-20" name="__codelineno-18-20" href="#__codelineno-18-20"></a><span class="c1"># Create a gRPC server with the tracing interceptor</span>
+</span><span id="__span-18-21"><a id="__codelineno-18-21" name="__codelineno-18-21" href="#__codelineno-18-21"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_grpc_server</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">grpc</span><span class="o">.</span><span class="n">Server</span><span class="p">:</span>
+</span><span id="__span-18-22"><a id="__codelineno-18-22" name="__codelineno-18-22" href="#__codelineno-18-22"></a>    <span class="k">return</span> <span class="n">grpc</span><span class="o">.</span><span class="n">server</span><span class="p">(</span>
+</span><span id="__span-18-23"><a id="__codelineno-18-23" name="__codelineno-18-23" href="#__codelineno-18-23"></a>        <span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
+</span><span id="__span-18-24"><a id="__codelineno-18-24" name="__codelineno-18-24" href="#__codelineno-18-24"></a>        <span class="n">interceptors</span><span class="o">=</span><span class="p">[</span><span class="n">GrpcServerTraceInterceptor</span><span class="p">()],</span>
+</span><span id="__span-18-25"><a id="__codelineno-18-25" name="__codelineno-18-25" href="#__codelineno-18-25"></a>    <span class="p">)</span>
 </span></code></pre></div>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>

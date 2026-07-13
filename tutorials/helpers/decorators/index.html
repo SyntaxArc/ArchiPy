@@ -1316,6 +1316,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#grpc-rate-limit-decorator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gRPC Rate Limit Decorator
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gRPC Rate Limit Decorator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stacking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stacking
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3168,6 +3207,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#grpc-rate-limit-decorator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gRPC Rate Limit Decorator
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="gRPC Rate Limit Decorator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stacking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stacking
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3458,9 +3536,106 @@
 </span><span id="__span-4-59"><a id="__codelineno-4-59" name="__codelineno-4-59" href="#__codelineno-4-59"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Updated email for user: </span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span><span id="__span-4-60"><a id="__codelineno-4-60" name="__codelineno-4-60" href="#__codelineno-4-60"></a>    <span class="k">return</span> <span class="n">user</span>
 </span></code></pre></div>
+<h2 id="grpc-rate-limit-decorator">gRPC Rate Limit Decorator<a class="headerlink" href="#grpc-rate-limit-decorator" title="Permanent link">&para;</a></h2>
+<p><code>grpc_rate_limit_decorator</code> declares per-RPC rate limits on gRPC servicer methods. It does <strong>not</strong> enforce limits by
+itself — enable <code>GRPC_RATE_LIMIT.IS_ENABLED</code> (or register the interceptor manually) so decorated methods are checked
+before the handler runs.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">grpc_rate_limit_decorator</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">()</span>
+</span></code></pre></div>
+<p>Set <code>GRPC_RATE_LIMIT__IS_ENABLED=true</code> so <code>AppUtils.create_grpc_app</code> / <code>create_async_grpc_app</code> register the
+matching interceptor automatically.</p>
+<p><strong>Sync servicer</strong> — <code>def</code> handlers + <code>AppUtils.create_grpc_app</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MySyncServiceServicer</span><span class="p">(</span><span class="n">pb2_grpc</span><span class="o">.</span><span class="n">MyServiceServicer</span><span class="p">):</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="nd">@grpc_rate_limit_decorator</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">Cheap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">CheapResponse</span><span class="p">()</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="nd">@grpc_rate_limit_decorator</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">seconds</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="nd">@grpc_rate_limit_decorator</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">Expensive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">ExpensiveResponse</span><span class="p">()</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="n">sync_server</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_grpc_app</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>Async servicer</strong> — <code>async def</code> handlers + <code>AppUtils.create_async_grpc_app</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAsyncServiceServicer</span><span class="p">(</span><span class="n">pb2_grpc</span><span class="o">.</span><span class="n">MyServiceServicer</span><span class="p">):</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="nd">@grpc_rate_limit_decorator</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">Cheap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">CheapResponse</span><span class="p">()</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="nd">@grpc_rate_limit_decorator</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">seconds</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="nd">@grpc_rate_limit_decorator</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">Expensive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">ExpensiveResponse</span><span class="p">()</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">async_server</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_async_grpc_app</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span></code></pre></div>
+<blockquote>
+<p><strong>Note:</strong> Use sync factories/interceptors with <code>def</code> handlers and async with <code>async def</code>. Manual
+<code>customized_interceptors</code> registration remains available when <code>IS_ENABLED</code> is false.</p>
+</blockquote>
+<h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>calls_count</code></td>
+<td><code>1</code></td>
+<td>Max requests allowed in the window</td>
+</tr>
+<tr>
+<td><code>milliseconds</code></td>
+<td><code>0</code></td>
+<td>Window component (ms)</td>
+</tr>
+<tr>
+<td><code>seconds</code></td>
+<td><code>0</code></td>
+<td>Window component (s)</td>
+</tr>
+<tr>
+<td><code>minutes</code></td>
+<td><code>0</code></td>
+<td>Window component (min)</td>
+</tr>
+<tr>
+<td><code>hours</code></td>
+<td><code>0</code></td>
+<td>Window component (h)</td>
+</tr>
+<tr>
+<td><code>days</code></td>
+<td><code>0</code></td>
+<td>Window component (days)</td>
+</tr>
+</tbody>
+</table>
+<p>Time units are summed into one window. At least one time component must be greater than zero.</p>
+<h3 id="stacking">Stacking<a class="headerlink" href="#stacking" title="Permanent link">&para;</a></h3>
+<p>Apply multiple decorators on one method for burst + sustained tiers. The interceptor enforces windows in declaration
+order (inner decorator first) and short-circuits on the first breach.</p>
+<p>Undecorated methods are never rate-limited.</p>
+<blockquote>
+<p><strong>Note:</strong> Redis <strong>8.8+</strong> required (<code>INCREX</code>). Install <code>archipy[redis,grpc]</code>.</p>
+</blockquote>
+<p>See <a href="../interceptors/#rate-limiting-interceptor">Interceptor Tutorials — Rate Limiting</a> for identity resolution,
+<code>GRPC_RATE_LIMIT</code> config, and fail-closed behavior.</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../../api_reference/helpers/decorators/">API Reference - Decorators</a> - Full decorators API documentation</li>
+<li><a href="../../../api_reference/helpers/interceptors/#rate_limit">API Reference - gRPC Rate Limit Interceptor</a> - Interceptor API</li>
 <li><a href="../">Helper Tutorials</a> - Overview of all helper tutorials</li>
 </ul>
 
