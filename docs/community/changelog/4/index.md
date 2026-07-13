@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 4.x series"
 
 | Version             | Date       | Summary                                                                                         |
 |---------------------|------------|-------------------------------------------------------------------------------------------------|
+| [4.15.0](4.15.0.md) | 2026-07-13 | Trusted-proxy FastAPI rate limiting, gRPC rate-limit interceptor, JWT identity bucketing        |
 | [4.14.0](4.14.0.md) | 2026-07-13 | Redis 8.8 INCREX/arrays/ZUNION-ZINTER, Elasticsearch bulk/scan helpers, atomic rate limiting    |
 | [4.13.2](4.13.2.md) | 2026-07-12 | FastAPI nested router metric fix, ScyllaDB NetworkTopologyStrategy default, dependency bumps    |
 | [4.13.1](4.13.1.md) | 2026-06-30 | Temporal SDK 1.29 config expansion for client connection, worker tuning, and retry policies     |
