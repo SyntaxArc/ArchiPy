@@ -1350,6 +1350,56 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#rate-limiting-dependency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting Dependency
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rate Limiting Dependency">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client-identification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Client identification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-query-parameter-buckets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-query-parameter buckets
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3197,6 +3247,56 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#rate-limiting-dependency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting Dependency
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rate Limiting Dependency">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client-identification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Client identification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-query-parameter-buckets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-query-parameter buckets
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3340,37 +3440,98 @@ handling.</p>
 </span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">process_data</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
 </span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span> <span class="s2">&quot;result&quot;</span><span class="p">:</span> <span class="s2">&quot;processed&quot;</span><span class="p">}</span>
 </span></code></pre></div>
+<h3 id="rate-limiting-dependency">Rate Limiting Dependency<a class="headerlink" href="#rate-limiting-dependency" title="Permanent link">&para;</a></h3>
+<p><code>FastAPIRestRateLimitHandler</code> enforces per-client request limits on HTTP endpoints using Redis as the backend.
+It uses the Redis 8.8 <code>INCREX</code> command for atomic counter increments with bounds and window expiry, avoiding
+check-then-act races under concurrent requests.</p>
+<p>Install the required extras:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[redis,fastapi]&quot;</span>
+</span></code></pre></div>
+<blockquote>
+<p><strong>Note:</strong> Redis <strong>8.8+</strong> is required. The handler depends on the <code>INCREX</code> command, which is not available on
+earlier Redis versions.</p>
+</blockquote>
+<p>Attach the handler as a route dependency with <code>Depends</code> — it is not registered as middleware:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Depends</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.rate_limit.fastapi_rest_rate_limit_handler</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">FastAPIRestRateLimitHandler</span><span class="p">,</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">)</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/resource&quot;</span><span class="p">,</span> <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span><span class="n">Depends</span><span class="p">(</span><span class="n">FastAPIRestRateLimitHandler</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">))])</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">resource</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ok&quot;</span><span class="p">}</span>
+</span></code></pre></div>
+<h4 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h4>
+<p>On each request the handler:</p>
+<ol>
+<li>Builds a Redis key from the client identifier, path, HTTP method, and optional query parameters.</li>
+<li>Calls <code>INCREX</code> with <code>ubound=calls_count</code>, <code>saturate=True</code>, <code>enx=True</code>, and a millisecond window (<code>px</code>).</li>
+<li>Allows the request when the increment is applied; otherwise raises HTTP <strong>429 Too Many Requests</strong> with a
+   <code>Retry-After</code> header (seconds, ceiling of the remaining TTL).</li>
+</ol>
+<p><code>enx=True</code> sets the window expiry only when the key is first created, so subsequent requests within the window
+preserve the original TTL.</p>
+<h4 id="client-identification">Client identification<a class="headerlink" href="#client-identification" title="Permanent link">&para;</a></h4>
+<p>The handler resolves the client in this order:</p>
+<ol>
+<li><code>X-Real-IP</code> header</li>
+<li><code>X-Forwarded-For</code> header (first non-private IP)</li>
+<li><code>request.client.host</code></li>
+</ol>
+<p>Private, loopback, link-local, and multicast addresses in headers are ignored and the next source is tried.</p>
+<blockquote>
+<p><strong>Warning:</strong> In Python 3.14, documentation-range IPs such as <code>203.0.113.x</code> are classified as private. When
+testing <code>X-Real-IP</code> behaviour locally, use globally routable addresses (for example <code>8.8.8.8</code>).</p>
+</blockquote>
+<h4 id="per-query-parameter-buckets">Per-query-parameter buckets<a class="headerlink" href="#per-query-parameter-buckets" title="Permanent link">&para;</a></h4>
+<p>Pass <code>query_params</code> to include specific query parameters in the rate-limit key:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">handler</span> <span class="o">=</span> <span class="n">FastAPIRestRateLimitHandler</span><span class="p">(</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">calls_count</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">query_params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="s2">&quot;action&quot;</span><span class="p">},</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">)</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/api/action&quot;</span><span class="p">,</span> <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span><span class="n">Depends</span><span class="p">(</span><span class="n">handler</span><span class="p">)])</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">action</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ok&quot;</span><span class="p">}</span>
+</span></code></pre></div>
 <h2 id="using-multiple-interceptors">Using Multiple Interceptors<a class="headerlink" href="#using-multiple-interceptors" title="Permanent link">&para;</a></h2>
 <p>Combining gRPC and FastAPI interceptors in an application:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent</span><span class="w"> </span><span class="kn">import</span> <span class="n">futures</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.metric.interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPIMetricInterceptor</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.grpc.trace.server_interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">GrpcServerTraceInterceptor</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># Create a FastAPI app with metrics middleware</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_fastapi_app</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">FastAPI</span><span class="p">:</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="c1"># Add metrics middleware</span>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span><span class="n">FastAPIMetricInterceptor</span><span class="p">)</span>
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>
-</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>    <span class="k">return</span> <span class="n">app</span>
-</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>
-</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>
-</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="c1"># Create a gRPC server with the tracing interceptor</span>
-</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_grpc_server</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">grpc</span><span class="o">.</span><span class="n">Server</span><span class="p">:</span>
-</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    <span class="k">return</span> <span class="n">grpc</span><span class="o">.</span><span class="n">server</span><span class="p">(</span>
-</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>        <span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
-</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>        <span class="n">interceptors</span><span class="o">=</span><span class="p">[</span><span class="n">GrpcServerTraceInterceptor</span><span class="p">()],</span>
-</span><span id="__span-3-25"><a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>    <span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent</span><span class="w"> </span><span class="kn">import</span> <span class="n">futures</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.metric.interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPIMetricInterceptor</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.grpc.trace.server_interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">GrpcServerTraceInterceptor</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="c1"># Create a FastAPI app with metrics middleware</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_fastapi_app</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">FastAPI</span><span class="p">:</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>    <span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>    <span class="c1"># Add metrics middleware</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>    <span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span><span class="n">FastAPIMetricInterceptor</span><span class="p">)</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>    <span class="k">return</span> <span class="n">app</span>
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="c1"># Create a gRPC server with the tracing interceptor</span>
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_grpc_server</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">grpc</span><span class="o">.</span><span class="n">Server</span><span class="p">:</span>
+</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>    <span class="k">return</span> <span class="n">grpc</span><span class="o">.</span><span class="n">server</span><span class="p">(</span>
+</span><span id="__span-6-23"><a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>        <span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
+</span><span id="__span-6-24"><a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>        <span class="n">interceptors</span><span class="o">=</span><span class="p">[</span><span class="n">GrpcServerTraceInterceptor</span><span class="p">()],</span>
+</span><span id="__span-6-25"><a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>    <span class="p">)</span>
 </span></code></pre></div>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../../api_reference/helpers/interceptors/">API Reference - Interceptors</a> - Full interceptors API documentation</li>
+<li><a href="../../adapters/redis/#increx-window-counter">Redis Adapter - INCREX</a> - Redis <code>INCREX</code> window counter usage</li>
 <li><a href="../">Helper Tutorials</a> - Overview of all helper tutorials</li>
 </ul>
 
