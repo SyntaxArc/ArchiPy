@@ -52,3 +52,12 @@ Enumeration of time interval units (seconds, minutes, hours, days) used in sched
 options:
 show_root_toc_entry: false
 heading_level: 3
+
+## Redis Search Types
+
+Enumerations for RediSearch index document types, vector algorithms, and distance metrics.
+
+::: archipy.models.types.redis_search_types
+options:
+show_root_toc_entry: false
+heading_level: 3

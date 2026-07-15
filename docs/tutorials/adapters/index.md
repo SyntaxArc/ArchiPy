@@ -22,7 +22,7 @@ your business logic and external dependencies.
 | [StarRocks](starrocks.md)               | Database access                | SQLAlchemy integration for StarRocks                 | [API](../../api_reference/adapters/starrocks.md)        |
 | [ScyllaDB](scylladb.md)                 | NoSQL database                 | Wide-column store for ScyllaDB and Cassandra         | [API](../../api_reference/adapters/scylladb.md)         |
 | [Elasticsearch](elasticsearch.md)       | Search & analytics             | Full-text search, document indexing, aggregations    | [API](../../api_reference/adapters/elasticsearch.md)    |
-| [Redis](redis.md)                       | Key-value store                | Caching, pub/sub, and data storage with Redis        | [API](../../api_reference/adapters/redis.md)            |
+| [Redis](redis.md)                       | Key-value store                | Caching, pub/sub, RediSearch, and vector KNN         | [API](../../api_reference/adapters/redis.md)            |
 | [Temporal](temporal.md)                 | Workflow orchestration         | Durable workflow execution and activity coordination | [API](../../api_reference/adapters/temporal.md)         |
 
 ## Adapter Architecture

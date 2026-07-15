@@ -88,3 +88,12 @@ DTO representing the standardized error response body returned by FastAPI except
 options:
 show_root_toc_entry: false
 heading_level: 3
+
+## Redis Search DTOs
+
+DTOs for RediSearch index schemas, document upserts, queries, aggregations, and normalized search results.
+
+::: archipy.models.dtos.redis.search
+options:
+show_root_toc_entry: false
+heading_level: 3

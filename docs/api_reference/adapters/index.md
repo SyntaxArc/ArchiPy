@@ -14,7 +14,7 @@ implementation).
 | Adapter                                 | Description                                                |
 |-----------------------------------------|------------------------------------------------------------|
 | [Base SQLAlchemy](base.md)              | Shared SQLAlchemy session management and base CRUD adapter |
-| [Redis](redis.md)                       | Redis cache and key-value store adapter                    |
+| [Redis](redis.md)                       | Redis cache, pub/sub, and RediSearch adapter               |
 | [PostgreSQL](postgres.md)               | PostgreSQL database adapter via SQLAlchemy                 |
 | [SQLite](sqlite.md)                     | SQLite database adapter via SQLAlchemy                     |
 | [StarRocks](starrocks.md)               | StarRocks analytical database adapter via SQLAlchemy       |

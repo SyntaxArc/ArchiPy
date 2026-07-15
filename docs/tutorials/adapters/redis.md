@@ -1,12 +1,12 @@
 ---
 title: Redis Adapter Tutorial
-description: Practical examples for using the ArchiPy Redis adapter.
+description: Practical examples for using the ArchiPy Redis adapter, including caching, pub/sub, and RediSearch.
 ---
 
 # Redis Adapter Tutorial
 
-This guide demonstrates how to use the ArchiPy Redis adapter for common caching and
-key-value storage patterns.
+This guide demonstrates how to use the ArchiPy Redis adapter for common caching,
+key-value storage, and RediSearch (full-text, vector KNN, and hybrid search).
 
 ## Installation
 
@@ -394,6 +394,292 @@ asyncio.run(main())
 | `persist` | Remove any existing expiration |
 | `enx` | Set expiration only when the key has no TTL (preserves window start) |
 
+## RediSearch
+
+ArchiPy exposes RediSearch through index-bound handles returned by `search_index()`. Each handle covers index
+management, document upserts, full-text search, vector KNN, hybrid search, aggregations, and aliases.
+
+> **Note:** RediSearch requires **Redis Stack** (or a Redis build with the RediSearch and RedisJSON modules). The
+> adapter uses a dedicated binary-safe client (`decode_responses=False`) for vector fields. RediSearch only works in
+> **standalone** mode — cluster and sentinel configurations raise `ConfigurationError`.
+
+### Create an Index
+
+Define the schema with DTO field configs, then create a HASH or JSON index with a key prefix:
+
+```python
+import logging
+
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.models.dtos.redis.search.index_schema_dto import (
+    IndexSchemaDTO,
+    TagFieldConfig,
+    TextFieldConfig,
+    VectorFieldConfig,
+)
+from archipy.models.types.redis_search_types import (
+    RedisIndexType,
+    VectorAlgorithm,
+    VectorDistanceMetric,
+)
+
+logger = logging.getLogger(__name__)
+
+redis = RedisAdapter()
+handle = redis.search_index("products")
+
+schema = IndexSchemaDTO(
+    fields=[
+        TextFieldConfig(name="title"),
+        TagFieldConfig(name="category"),
+        VectorFieldConfig(
+            name="embedding",
+            dim=3,
+            distance_metric=VectorDistanceMetric.COSINE,
+            algorithm=VectorAlgorithm.HNSW,
+        ),
+    ],
+    index_type=RedisIndexType.HASH,
+)
+
+handle.create_index(schema, prefix="product:")
+logger.info("RediSearch index created")
+```
+
+For JSON documents, set `index_type=RedisIndexType.JSON`. Field names are mapped to JSON paths (`$.title`, etc.)
+automatically.
+
+### Upsert Documents
+
+HASH documents store scalar fields in a Redis hash and pack vectors as float32 bytes:
+
+```python
+import logging
+
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.models.dtos.redis.search.document_dto import HashDocumentUpsertDTO
+
+logger = logging.getLogger(__name__)
+
+redis = RedisAdapter()
+handle = redis.search_index("products")
+
+handle.upsert_hash(
+    "product:1",
+    {"title": "Redis Guide", "category": "books"},
+    vector_field="embedding",
+    vector=[1.0, 0.0, 0.0],
+)
+
+handle.upsert_hash_dto(
+    HashDocumentUpsertDTO(
+        doc_id="product:2",
+        fields={"title": "Python Guide", "category": "books"},
+        vector_field="embedding",
+        vector=[0.0, 1.0, 0.0],
+    ),
+)
+logger.info("HASH documents indexed")
+```
+
+JSON documents store the full payload at a JSON path (default `$`):
+
+```python
+import logging
+
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.models.dtos.redis.search.document_dto import JsonDocumentUpsertDTO
+
+logger = logging.getLogger(__name__)
+
+redis = RedisAdapter()
+handle = redis.search_index("products-json")
+
+handle.upsert_json(
+    "json:1",
+    {"title": "JSON Book", "category": "books", "embedding": [0.0, 0.0, 1.0]},
+)
+
+handle.upsert_json_dto(
+    JsonDocumentUpsertDTO(
+        doc_id="json:2",
+        payload={"title": "Another Book", "embedding": [0.5, 0.5, 0.0]},
+    ),
+)
+logger.info("JSON documents indexed")
+```
+
+Use `pack_vector()` and `unpack_vector()` from `archipy.adapters.redis.search` when you need to convert embeddings
+outside the adapter:
+
+```python
+from archipy.adapters.redis.search import pack_vector, unpack_vector
+
+blob = pack_vector([1.0, 0.0, 0.0])
+vector = unpack_vector(blob, dim=3)
+```
+
+### Vector KNN Search
+
+Build a KNN query with `SearchQueryDTO.from_knn()`:
+
+```python
+import logging
+
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.models.dtos.redis.search.search_query_dto import SearchQueryDTO
+
+logger = logging.getLogger(__name__)
+
+redis = RedisAdapter()
+handle = redis.search_index("products")
+
+result = handle.search(
+    SearchQueryDTO.from_knn(
+        [0.9, 0.1, 0.0],
+        k=1,
+        return_fields=["title"],
+    ),
+)
+
+top_hit = result.hits[0]
+logger.info(f"Top hit: {top_hit.doc_id} — {top_hit.fields.get('title')} (score={top_hit.score})")
+```
+
+### Full-Text and Hybrid Search
+
+Full-text search uses a `SearchQueryDTO` with a text query string. Hybrid search combines full-text and vector KNN:
+
+```python
+import logging
+
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.models.dtos.redis.search.search_query_dto import SearchQueryDTO
+
+logger = logging.getLogger(__name__)
+
+redis = RedisAdapter()
+handle = redis.search_index("products")
+
+text_result = handle.search(
+    SearchQueryDTO(query="@title:database", return_fields=["title"], limit=5),
+)
+
+hybrid_result = handle.search(
+    SearchQueryDTO.from_hybrid(
+        "database",
+        [0.8, 0.2, 0.0],
+        k=3,
+        return_fields=["title"],
+    ),
+)
+
+logger.info(f"Text hits: {text_result.total}, hybrid hits: {len(hybrid_result.hits)}")
+```
+
+### Aggregations
+
+Group and count documents with `AggregationDTO`:
+
+```python
+import logging
+
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
+
+logger = logging.getLogger(__name__)
+
+redis = RedisAdapter()
+handle = redis.search_index("products")
+
+agg = handle.aggregate(
+    AggregationDTO(
+        query="*",
+        group_by=["category"],
+        reduce_function="COUNT",
+        reduce_field="count",
+    ),
+)
+
+logger.info(f"Aggregation rows: {agg['rows']}")
+```
+
+### Schema Changes, Aliases, and Index Lifecycle
+
+```python
+import logging
+
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.models.dtos.redis.search.index_schema_dto import NumericFieldConfig
+
+logger = logging.getLogger(__name__)
+
+redis = RedisAdapter()
+handle = redis.search_index("products")
+
+handle.alter_schema_add(NumericFieldConfig(name="price"))
+handle.add_alias("products-view")
+handle.update_alias("products-view")
+
+indexes = redis.list_search_indexes()
+logger.info(f"Indexes: {indexes}")
+
+handle.drop_index(delete_documents=True)
+handle.delete_alias("products-view")
+```
+
+### Asynchronous RediSearch
+
+The async adapter exposes the same handle API with `await`:
+
+```python
+import asyncio
+import logging
+
+from archipy.adapters.redis.adapters import AsyncRedisAdapter
+from archipy.models.dtos.redis.search.search_query_dto import SearchQueryDTO
+
+logger = logging.getLogger(__name__)
+
+
+async def main() -> None:
+    redis = AsyncRedisAdapter()
+    handle = redis.search_index("products")
+
+    await handle.upsert_hash(
+        "product:1",
+        {"title": "Async Redis"},
+        vector_field="embedding",
+        vector=[1.0, 0.0, 0.0],
+    )
+
+    result = await handle.search(
+        SearchQueryDTO.from_knn([0.9, 0.1, 0.0], k=1, return_fields=["title"]),
+    )
+    logger.info(f"Async search hits: {result.total}")
+
+
+asyncio.run(main())
+```
+
+### Document Retrieval and Deletion
+
+```python
+import logging
+
+from archipy.adapters.redis.adapters import RedisAdapter
+
+logger = logging.getLogger(__name__)
+
+redis = RedisAdapter()
+handle = redis.search_index("products")
+
+document = handle.get_document("product:1")
+logger.info(f"Document title: {document.get('title')}")
+
+handle.delete_document("product:1", delete_actual_document=True)
+```
+
 ## Error Handling
 
 The Redis adapter maps connection and command failures to `CacheError`:
@@ -424,4 +710,5 @@ else:
 - [BDD Testing](../testing_strategy.md) — Testing Redis operations
 - [Cache Decorator](../helpers/decorators.md#cache-decorator) — TTL cache decorator usage
 - [Interceptors - Rate Limiting](../helpers/interceptors.md#rate-limiting-dependency) — FastAPI rate limiting with `INCREX`
+- [BDD Testing](../testing_strategy.md) — RediSearch scenarios in `features/redis_adapter.feature`
 - [API Reference](../../api_reference/adapters/redis.md) — Full Redis adapter API documentation
