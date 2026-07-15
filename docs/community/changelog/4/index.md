@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 4.x series"
 
 | Version             | Date       | Summary                                                                                         |
 |---------------------|------------|-------------------------------------------------------------------------------------------------|
+| [4.17.0](4.17.0.md) | 2026-07-15 | RediSearch vector range search, SVS-VAMANA indexes, runtime tuning, and cluster index support   |
 | [4.16.0](4.16.0.md) | 2026-07-15 | RediSearch adapter, FastAPI GZip/TrustedHost/HTTPS middleware, tag-based release workflow         |
 | [4.15.0](4.15.0.md) | 2026-07-13 | Trusted-proxy FastAPI rate limiting, gRPC rate-limit interceptor, JWT identity bucketing        |
 | [4.14.0](4.14.0.md) | 2026-07-13 | Redis 8.8 INCREX/arrays/ZUNION-ZINTER, Elasticsearch bulk/scan helpers, atomic rate limiting    |
