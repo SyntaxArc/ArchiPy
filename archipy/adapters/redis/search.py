@@ -4,12 +4,13 @@ import struct
 from collections.abc import Awaitable
 from typing import Any, cast, override
 
+from redis import RedisCluster
+from redis.asyncio import RedisCluster as AsyncRedisCluster
 from redis.asyncio.client import Redis as AsyncRedis
 from redis.client import Redis
 from redis.commands.search import Search
 from redis.commands.search.aggregation import AggregateRequest, Asc, Desc
 from redis.commands.search.field import NumericField, TagField, TextField, VectorField
-from redis.commands.search.hybrid_query import HybridQuery, HybridSearchQuery, HybridVsimQuery, VectorSearchMethods
 from redis.commands.search.index_definition import IndexDefinition, IndexType
 from redis.commands.search.query import Query
 from redis.commands.search.reducers import count as agg_count
@@ -26,9 +27,63 @@ from archipy.models.dtos.redis.search.index_schema_dto import (
     TextFieldConfig,
     VectorFieldConfig,
 )
-from archipy.models.dtos.redis.search.search_query_dto import SearchQueryDTO
+from archipy.models.dtos.redis.search.search_query_dto import (
+    KnnQueryDTO,
+    RangeQueryDTO,
+    SearchQueryDTO,
+    VectorQueryRuntimeDTO,
+)
 from archipy.models.dtos.redis.search.search_result_dto import SearchHitDTO, SearchResultDTO
 from archipy.models.types.redis_search_types import RedisIndexType
+
+
+def _cluster_ft_list_target(client: RedisCluster | AsyncRedisCluster) -> Any:
+    """Pick a cluster node for keyless RediSearch admin commands."""
+    target_node = client.get_default_node()
+    if target_node is None:
+        primaries = client.get_primaries()
+        if not primaries:
+            return None
+        target_node = primaries[0]
+    return target_node
+
+
+def _normalize_index_names(result: Any) -> list[str]:
+    """Normalize FT._LIST output into index name strings."""
+    if not result:
+        return []
+    if isinstance(result, dict):
+        names: list[str] = []
+        for value in result.values():
+            names.extend(_normalize_index_names(value))
+        return list(dict.fromkeys(names))
+    return [index_name.decode() if isinstance(index_name, bytes) else str(index_name) for index_name in result]
+
+
+def list_redis_search_indexes(client: Redis | RedisCluster) -> list[str]:
+    """List RediSearch index names from a standalone or cluster client."""
+    if isinstance(client, RedisCluster):
+        target_node = _cluster_ft_list_target(client)
+        if target_node is None:
+            return []
+        result = client.execute_command("FT._LIST", target_nodes=target_node)
+    else:
+        result = client.execute_command("FT._LIST")
+    return _normalize_index_names(result)
+
+
+async def list_redis_search_indexes_async(client: AsyncRedis | AsyncRedisCluster) -> list[str]:
+    """List RediSearch index names from an async standalone or cluster client."""
+    if isinstance(client, AsyncRedisCluster):
+        target_node = _cluster_ft_list_target(client)
+        if target_node is None:
+            return []
+        result = await client.execute_command("FT._LIST", target_nodes=target_node)
+    else:
+        result = client.execute_command("FT._LIST")
+        if isinstance(result, Awaitable):
+            result = await result
+    return _normalize_index_names(result)
 
 
 def pack_vector(vector: list[float]) -> bytes:
@@ -54,6 +109,29 @@ def unpack_vector(blob: bytes, dim: int) -> list[float]:
         Decoded embedding values.
     """
     return list(struct.unpack(f"{dim}f", blob))
+
+
+def _vector_field_attributes(field: VectorFieldConfig) -> dict[str, Any]:
+    """Build RediSearch vector index attributes from a VectorFieldConfig."""
+    attributes: dict[str, Any] = {
+        "TYPE": field.vector_type.value,
+        "DIM": field.dim,
+        "DISTANCE_METRIC": field.distance_metric.value,
+    }
+    optional_attrs: dict[str, Any] = {
+        "M": field.m,
+        "EF_CONSTRUCTION": field.ef_construction,
+        "EF_RUNTIME": field.ef_runtime,
+        "EPSILON": field.epsilon,
+        "COMPRESSION": field.compression.value if field.compression is not None else None,
+        "CONSTRUCTION_WINDOW_SIZE": field.construction_window_size,
+        "GRAPH_MAX_DEGREE": field.graph_max_degree,
+        "SEARCH_WINDOW_SIZE": field.search_window_size,
+        "TRAINING_THRESHOLD": field.training_threshold,
+        "REDUCE": field.reduce,
+    }
+    attributes |= {key: value for key, value in optional_attrs.items() if value is not None}
+    return attributes
 
 
 def _build_redis_fields(
@@ -82,11 +160,7 @@ def _build_redis_fields(
                     VectorField(
                         field_name,
                         field.algorithm.value,
-                        {
-                            "TYPE": "FLOAT32",
-                            "DIM": field.dim,
-                            "DISTANCE_METRIC": field.distance_metric.value,
-                        },
+                        _vector_field_attributes(field),
                         as_name=as_name,
                     ),
                 )
@@ -205,22 +279,86 @@ def _result_to_dto(result: Any) -> SearchResultDTO:
     )
 
 
-def _hybrid_result_to_dto(result: Any) -> SearchResultDTO:
-    """Convert a redis-py hybrid search result into a SearchResultDTO."""
-    hits: list[SearchHitDTO] = []
-    if isinstance(result, dict):
-        result = Result.from_resp3(result)
-    for document in result.docs:
-        fields = _document_fields(document)
-        score = fields.pop("score", None) or fields.pop("vector_score", None)
-        hits.append(
-            SearchHitDTO(
-                doc_id=str(document.id),
-                score=float(score) if score is not None else None,
-                fields=fields,
-            ),
-        )
-    return SearchResultDTO(total=len(hits), hits=hits)
+def _append_runtime_query_params(
+    params: dict[str, str | int | float | bytes],
+    runtime: VectorQueryRuntimeDTO | None,
+) -> None:
+    """Add PARAMS entries referenced by vector query runtime attributes."""
+    if runtime is None:
+        return
+    if runtime.ef_runtime is not None:
+        params["EF_RUNTIME"] = runtime.ef_runtime
+    if runtime.epsilon is not None:
+        params["EPSILON"] = runtime.epsilon
+    if runtime.batch_size is not None:
+        params["BATCH_SIZE"] = runtime.batch_size
+    if runtime.search_window_size is not None:
+        params["SEARCH_WINDOW_SIZE"] = runtime.search_window_size
+    if runtime.use_search_history is not None:
+        params["USE_SEARCH_HISTORY"] = runtime.use_search_history.value
+    if runtime.search_buffer_capacity is not None:
+        params["SEARCH_BUFFER_CAPACITY"] = runtime.search_buffer_capacity
+
+
+def _build_vector_query_attributes(
+    runtime: VectorQueryRuntimeDTO | None,
+    *,
+    score_field: str | None = None,
+) -> str:
+    """Build RediSearch vector query attributes for runtime tuning."""
+    if runtime is None and score_field is None:
+        return ""
+    attributes: list[str] = []
+    if runtime is not None:
+        if runtime.shard_k_ratio is not None:
+            attributes.append(f"$SHARD_K_RATIO: {runtime.shard_k_ratio}")
+        if runtime.ef_runtime is not None:
+            attributes.append("$EF_RUNTIME: $EF_RUNTIME")
+        if runtime.epsilon is not None:
+            attributes.append("$EPSILON: $EPSILON")
+        if runtime.hybrid_policy is not None:
+            attributes.append(f"$HYBRID_POLICY: {runtime.hybrid_policy.value}")
+        if runtime.batch_size is not None:
+            attributes.append("$BATCH_SIZE: $BATCH_SIZE")
+        if runtime.search_window_size is not None:
+            attributes.append("$SEARCH_WINDOW_SIZE: $SEARCH_WINDOW_SIZE")
+        if runtime.use_search_history is not None:
+            attributes.append(f"$USE_SEARCH_HISTORY: {runtime.use_search_history.value}")
+        if runtime.search_buffer_capacity is not None:
+            attributes.append("$SEARCH_BUFFER_CAPACITY: $SEARCH_BUFFER_CAPACITY")
+    if score_field is not None:
+        attributes.append(f"$YIELD_DISTANCE_AS: {score_field}")
+    if not attributes:
+        return ""
+    return f"=>{{{' ; '.join(attributes)}}}"
+
+
+def _build_knn_clause(knn: KnnQueryDTO) -> str:
+    """Build the RediSearch KNN clause for a vector query."""
+    vector_field = _normalize_search_field_name(knn.vector_field)
+    knn_parts = [f"KNN {knn.k} @{vector_field} $vec"]
+    runtime = knn.runtime
+    if runtime is not None:
+        if runtime.ef_runtime is not None:
+            knn_parts.append("EF_RUNTIME $EF_RUNTIME")
+        if runtime.hybrid_policy is not None:
+            knn_parts.append(f"HYBRID_POLICY {runtime.hybrid_policy.value}")
+        if runtime.batch_size is not None:
+            knn_parts.append("BATCH_SIZE $BATCH_SIZE")
+        if runtime.search_window_size is not None:
+            knn_parts.append("SEARCH_WINDOW_SIZE $SEARCH_WINDOW_SIZE")
+        clause = f"[{' '.join(knn_parts)}]"
+        return f"{clause}{_build_vector_query_attributes(runtime, score_field=knn.score_field)}"
+    if knn.score_field:
+        knn_parts.append(f"AS {knn.score_field}")
+    return f"[{' '.join(knn_parts)}]"
+
+
+def _build_range_clause(range_query: RangeQueryDTO) -> str:
+    """Build the RediSearch VECTOR_RANGE clause for a vector query."""
+    vector_field = _normalize_search_field_ref(range_query.vector_field)
+    clause = f"{vector_field}:[VECTOR_RANGE {range_query.radius} $vec]"
+    return f"{clause}{_build_vector_query_attributes(range_query.runtime, score_field=range_query.score_field)}"
 
 
 def _build_search_query(
@@ -230,14 +368,15 @@ def _build_search_query(
     if query.knn is not None:
         knn = query.knn
         filter_part = f"({knn.filter_expr})" if knn.filter_expr else "*"
-        vector_field = _normalize_search_field_name(knn.vector_field)
-        query_string = f"{filter_part}=>[KNN {knn.k} @{vector_field} $vec AS {knn.score_field}]"
+        query_string = f"{filter_part}=>{_build_knn_clause(knn)}"
         redis_query = Query(query_string).sort_by(knn.score_field).paging(0, knn.k).dialect(2)
         if knn.return_fields:
             redis_query = redis_query.return_fields(
                 *[_normalize_search_field_name(field) for field in knn.return_fields],
             )
-        return redis_query, {"vec": pack_vector(knn.vector)}
+        params: dict[str, str | int | float | bytes] = {"vec": pack_vector(knn.vector)}
+        _append_runtime_query_params(params, knn.runtime)
+        return redis_query, params
 
     redis_query = Query(query.query).paging(query.offset, query.limit).dialect(2)
     if query.return_fields:
@@ -245,6 +384,31 @@ def _build_search_query(
             *[_normalize_search_field_name(field) for field in query.return_fields],
         )
     return redis_query, None
+
+
+def _build_range_query(
+    query: SearchQueryDTO,
+) -> tuple[Query, dict[str, str | int | float | bytes]]:
+    """Build a redis-py Query and params for a vector range search."""
+    if query.range is None:
+        raise ValueError("Range search requires range parameters")
+    range_query = query.range
+    range_clause = _build_range_clause(range_query)
+    if range_query.filter_expr:
+        query_string = f"({range_query.filter_expr}) | {range_clause}"
+    else:
+        query_string = range_clause
+    redis_query = Query(query_string).paging(query.offset, query.limit).dialect(2)
+    if range_query.score_field:
+        redis_query = redis_query.sort_by(range_query.score_field)
+    return_fields = range_query.return_fields or query.return_fields
+    if return_fields:
+        redis_query = redis_query.return_fields(
+            *[_normalize_search_field_name(field) for field in return_fields],
+        )
+    params: dict[str, str | int | float | bytes] = {"vec": pack_vector(range_query.vector)}
+    _append_runtime_query_params(params, range_query.runtime)
+    return redis_query, params
 
 
 def _build_aggregate_request(aggregation: AggregationDTO) -> AggregateRequest:
@@ -266,25 +430,29 @@ def _build_aggregate_request(aggregation: AggregationDTO) -> AggregateRequest:
     return request
 
 
-def _build_hybrid_query(query: SearchQueryDTO) -> tuple[HybridQuery, dict[str, str | int | float | bytes]]:
-    """Build a redis-py HybridQuery from a hybrid SearchQueryDTO."""
+def _build_hybrid_search_query(
+    query: SearchQueryDTO,
+) -> tuple[Query, dict[str, str | int | float | bytes]]:
+    """Build a combined FT.SEARCH query for hybrid text + vector KNN."""
     if query.knn is None:
         raise ValueError("Hybrid search requires knn parameters")
     knn = query.knn
-    text_query = HybridSearchQuery(query.query, scorer=query.text_scorer)
-    vsim_params: dict[str, Any] = {"K": knn.k}
-    vector_field = _normalize_search_field_ref(knn.vector_field)
-    vector_query = HybridVsimQuery(
-        vector_field,
-        "$vec",
-        vsim_search_method=VectorSearchMethods.KNN,
-        vsim_search_method_params=vsim_params,
-    )
-    return HybridQuery(text_query, vector_query), {"vec": pack_vector(knn.vector)}
+    text_part = f"({query.query})"
+    if knn.filter_expr:
+        text_part = f"{text_part} ({knn.filter_expr})"
+    query_string = f"{text_part}=>{_build_knn_clause(knn)}"
+    redis_query = Query(query_string).sort_by(knn.score_field).paging(0, knn.k).dialect(2)
+    if knn.return_fields:
+        redis_query = redis_query.return_fields(
+            *[_normalize_search_field_name(field) for field in knn.return_fields],
+        )
+    params: dict[str, str | int | float | bytes] = {"vec": pack_vector(knn.vector)}
+    _append_runtime_query_params(params, knn.runtime)
+    return redis_query, params
 
 
 def _write_hash_document(
-    client: Redis,
+    client: Redis | RedisCluster,
     doc_id: str,
     fields: dict[str, str | int | float],
     vector_field: str | None,
@@ -300,7 +468,7 @@ def _write_hash_document(
 class RedisSearchHandle(RedisSearchHandlePort):
     """Synchronous index-bound RediSearch handle."""
 
-    def __init__(self, client: Redis, index_name: str) -> None:
+    def __init__(self, client: Redis | RedisCluster, index_name: str) -> None:
         """Initialize the handle.
 
         Args:
@@ -426,14 +594,21 @@ class RedisSearchHandle(RedisSearchHandlePort):
     def search(self, query: SearchQueryDTO, **kwargs: Any) -> SearchResultDTO:
         """Execute a RediSearch query."""
         if query.is_hybrid:
-            hybrid_query, hybrid_params = _build_hybrid_query(query)
+            redis_query, query_params = _build_hybrid_search_query(query)
             if kwargs.pop("raw", False):
                 return cast(
                     "SearchResultDTO",
-                    self._search.hybrid_search(hybrid_query, params_substitution=hybrid_params, **kwargs),
+                    self._search.search(redis_query, query_params=query_params, **kwargs),
                 )
-            result = self._search.hybrid_search(hybrid_query, params_substitution=hybrid_params, **kwargs)
-            return _hybrid_result_to_dto(result)
+            result = self._search.search(redis_query, query_params=query_params, **kwargs)
+            return _result_to_dto(result)
+
+        if query.is_range:
+            redis_query, query_params = _build_range_query(query)
+            if kwargs.pop("raw", False):
+                return cast("SearchResultDTO", self._search.search(redis_query, query_params=query_params, **kwargs))
+            result = self._search.search(redis_query, query_params=query_params, **kwargs)
+            return _result_to_dto(result)
 
         redis_query, query_params = _build_search_query(query)
         if kwargs.pop("raw", False):
@@ -475,7 +650,7 @@ class RedisSearchHandle(RedisSearchHandlePort):
 class AsyncRedisSearchHandle(AsyncRedisSearchHandlePort):
     """Asynchronous index-bound RediSearch handle."""
 
-    def __init__(self, client: AsyncRedis, index_name: str) -> None:
+    def __init__(self, client: AsyncRedis | AsyncRedisCluster, index_name: str) -> None:
         """Initialize the async handle.
 
         Args:
@@ -619,18 +794,28 @@ class AsyncRedisSearchHandle(AsyncRedisSearchHandlePort):
     async def search(self, query: SearchQueryDTO, **kwargs: Any) -> SearchResultDTO:
         """Execute a RediSearch query asynchronously."""
         if query.is_hybrid:
-            hybrid_query, hybrid_params = _build_hybrid_query(query)
+            redis_query, query_params = _build_hybrid_search_query(query)
             if kwargs.pop("raw", False):
                 return cast(
                     "SearchResultDTO",
                     await self._await_result(
-                        self._search.hybrid_search(hybrid_query, params_substitution=hybrid_params, **kwargs),
+                        self._search.search(redis_query, query_params=query_params, **kwargs),
                     ),
                 )
             result = await self._await_result(
-                self._search.hybrid_search(hybrid_query, params_substitution=hybrid_params, **kwargs),
+                self._search.search(redis_query, query_params=query_params, **kwargs),
             )
-            return _hybrid_result_to_dto(result)
+            return _result_to_dto(result)
+
+        if query.is_range:
+            redis_query, query_params = _build_range_query(query)
+            if kwargs.pop("raw", False):
+                return cast(
+                    "SearchResultDTO",
+                    await self._await_result(self._search.search(redis_query, query_params=query_params, **kwargs)),
+                )
+            result = await self._await_result(self._search.search(redis_query, query_params=query_params, **kwargs))
+            return _result_to_dto(result)
 
         redis_query, query_params = _build_search_query(query)
         if kwargs.pop("raw", False):

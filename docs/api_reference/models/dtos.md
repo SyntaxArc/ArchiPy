@@ -89,7 +89,7 @@ options:
 show_root_toc_entry: false
 heading_level: 3
 
-## Redis Search DTOs
+## RediSearch DTOs
 
 DTOs for RediSearch index schemas, document upserts, queries, aggregations, and normalized search results.
 

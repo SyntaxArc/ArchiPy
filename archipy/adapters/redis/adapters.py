@@ -15,7 +15,12 @@ from archipy.adapters.redis.ports import (
     RedisPort,
     RedisScoreCastType,
 )
-from archipy.adapters.redis.search import AsyncRedisSearchHandle, RedisSearchHandle
+from archipy.adapters.redis.search import (
+    AsyncRedisSearchHandle,
+    RedisSearchHandle,
+    list_redis_search_indexes,
+    list_redis_search_indexes_async,
+)
 from archipy.adapters.redis.search_ports import AsyncRedisSearchHandlePort, RedisSearchHandlePort
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import RedisConfig, RedisMode
@@ -91,7 +96,7 @@ class RedisAdapter(RedisPort):
         """
         configs: RedisConfig = BaseConfig.global_config().REDIS if redis_config is None else redis_config
         self._configs = configs
-        self._search_client: Redis | None = None
+        self._search_client: Redis | RedisCluster | None = None
         self._set_clients(configs)
 
     def _set_clients(self, configs: RedisConfig) -> None:
@@ -250,21 +255,45 @@ class RedisAdapter(RedisPort):
             **_redis_connection_kwargs(configs, decode_responses=decode_responses),
         )
 
-    def _build_binary_client(self, configs: RedisConfig) -> Redis:
-        """Create a binary-safe Redis client for RediSearch operations.
-
-        RediSearch requires a standalone connection. Cluster and Sentinel
-        modes do not support FT.* commands.
-        """
-        if configs.MODE != RedisMode.STANDALONE:
+    def _build_binary_client(self, configs: RedisConfig) -> Redis | RedisCluster:
+        """Create a binary-safe Redis client for RediSearch operations."""
+        if configs.MODE == RedisMode.SENTINEL:
             raise ConfigurationError(
                 operation="redis_search",
-                reason=f"RediSearch requires standalone mode, got {configs.MODE.value}",
+                reason=f"RediSearch does not support sentinel mode, got {configs.MODE.value}",
             )
+        if configs.MODE == RedisMode.CLUSTER:
+            from redis.cluster import ClusterNode, LoadBalancingStrategy
+
+            startup_nodes = []
+            for node in configs.CLUSTER_NODES:
+                if ":" in node:
+                    host, port = node.split(":", 1)
+                    startup_nodes.append(ClusterNode(host, int(port)))
+                else:
+                    startup_nodes.append(ClusterNode(node, configs.PORT))
+
+            cluster_kwargs: dict[str, Any] = {}
+            if configs.CLUSTER_READ_FROM_REPLICAS:
+                cluster_kwargs["load_balancing_strategy"] = LoadBalancingStrategy.ROUND_ROBIN
+
+            return RedisCluster(
+                startup_nodes=startup_nodes,
+                password=configs.PASSWORD,
+                decode_responses=False,
+                max_connections=configs.MAX_CONNECTIONS,
+                socket_connect_timeout=configs.SOCKET_CONNECT_TIMEOUT,
+                socket_timeout=configs.SOCKET_TIMEOUT,
+                health_check_interval=configs.HEALTH_CHECK_INTERVAL,
+                require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
+                protocol=configs.PROTOCOL,
+                **cluster_kwargs,
+            )
+
         host = configs.MASTER_HOST or "localhost"
         return self._get_client(host, configs, decode_responses=False)
 
-    def _get_search_client(self) -> Redis:
+    def _get_search_client(self) -> Redis | RedisCluster:
         """Return a lazy binary-safe Redis client for RediSearch."""
         if self._search_client is None:
             self._search_client = self._build_binary_client(self._configs)
@@ -277,10 +306,7 @@ class RedisAdapter(RedisPort):
 
     def list_search_indexes(self) -> list[str]:
         """List RediSearch indexes available on the server."""
-        result = self._get_search_client().execute_command("FT._LIST")
-        if not result:
-            return []
-        return [index_name.decode() if isinstance(index_name, bytes) else index_name for index_name in result]
+        return list_redis_search_indexes(self._get_search_client())
 
     @staticmethod
     def _ensure_sync_int(value: int | Awaitable[int]) -> int:
@@ -1473,7 +1499,7 @@ class AsyncRedisAdapter(AsyncRedisPort):
         """
         configs: RedisConfig = BaseConfig.global_config().REDIS if redis_config is None else redis_config
         self._configs = configs
-        self._search_client: AsyncRedis | None = None
+        self._search_client: AsyncRedis | AsyncRedisCluster | None = None
         self._set_clients(configs)
 
     def _set_clients(self, configs: RedisConfig) -> None:
@@ -1632,21 +1658,45 @@ class AsyncRedisAdapter(AsyncRedisPort):
             **_redis_connection_kwargs(configs, decode_responses=decode_responses),
         )
 
-    def _build_binary_client(self, configs: RedisConfig) -> AsyncRedis:
-        """Create a binary-safe async Redis client for RediSearch operations.
-
-        RediSearch requires a standalone connection. Cluster and Sentinel
-        modes do not support FT.* commands.
-        """
-        if configs.MODE != RedisMode.STANDALONE:
+    def _build_binary_client(self, configs: RedisConfig) -> AsyncRedis | AsyncRedisCluster:
+        """Create a binary-safe async Redis client for RediSearch operations."""
+        if configs.MODE == RedisMode.SENTINEL:
             raise ConfigurationError(
                 operation="redis_search",
-                reason=f"RediSearch requires standalone mode, got {configs.MODE.value}",
+                reason=f"RediSearch does not support sentinel mode, got {configs.MODE.value}",
             )
+        if configs.MODE == RedisMode.CLUSTER:
+            from redis.asyncio.cluster import ClusterNode, LoadBalancingStrategy
+
+            startup_nodes = []
+            for node in configs.CLUSTER_NODES:
+                if ":" in node:
+                    host, port = node.split(":", 1)
+                    startup_nodes.append(ClusterNode(host, int(port)))
+                else:
+                    startup_nodes.append(ClusterNode(node, configs.PORT))
+
+            cluster_kwargs: dict[str, Any] = {}
+            if configs.CLUSTER_READ_FROM_REPLICAS:
+                cluster_kwargs["load_balancing_strategy"] = LoadBalancingStrategy.ROUND_ROBIN
+
+            return AsyncRedisCluster(
+                startup_nodes=startup_nodes,
+                password=configs.PASSWORD,
+                decode_responses=False,
+                max_connections=configs.MAX_CONNECTIONS,
+                socket_connect_timeout=configs.SOCKET_CONNECT_TIMEOUT,
+                socket_timeout=configs.SOCKET_TIMEOUT,
+                health_check_interval=configs.HEALTH_CHECK_INTERVAL,
+                require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
+                protocol=configs.PROTOCOL,
+                **cluster_kwargs,
+            )
+
         host = configs.MASTER_HOST or "localhost"
         return self._get_client(host, configs, decode_responses=False)
 
-    def _get_search_client(self) -> AsyncRedis:
+    def _get_search_client(self) -> AsyncRedis | AsyncRedisCluster:
         """Return a lazy binary-safe async Redis client for RediSearch."""
         if self._search_client is None:
             self._search_client = self._build_binary_client(self._configs)
@@ -1659,12 +1709,7 @@ class AsyncRedisAdapter(AsyncRedisPort):
 
     async def list_search_indexes(self) -> list[str]:
         """List RediSearch indexes available on the server asynchronously."""
-        result = self._get_search_client().execute_command("FT._LIST")
-        if isinstance(result, Awaitable):
-            result = await result
-        if not result:
-            return []
-        return [index_name.decode() if isinstance(index_name, bytes) else index_name for index_name in result]
+        return await list_redis_search_indexes_async(self._get_search_client())
 
     @staticmethod
     async def _ensure_async_int(value: int | Awaitable[int]) -> int:

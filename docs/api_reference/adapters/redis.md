@@ -39,7 +39,8 @@ heading_level: 3
 ## Search Adapters
 
 Concrete RediSearch handle implementations, plus `pack_vector()` and `unpack_vector()` helpers for float32 vector
-encoding.
+encoding. Supports `FLAT`, `HNSW`, and `SVS-VAMANA` vector indexes, KNN and `VECTOR_RANGE` queries, and runtime
+tuning parameters including cluster `shard_k_ratio`.
 
 ::: archipy.adapters.redis.search
 options:

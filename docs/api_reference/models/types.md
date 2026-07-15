@@ -53,7 +53,7 @@ options:
 show_root_toc_entry: false
 heading_level: 3
 
-## Redis Search Types
+## RediSearch Types
 
 Enumerations for RediSearch index document types, vector algorithms, and distance metrics.
 

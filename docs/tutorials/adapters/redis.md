@@ -1,12 +1,12 @@
 ---
 title: Redis Adapter Tutorial
-description: Practical examples for using the ArchiPy Redis adapter, including caching, pub/sub, and RediSearch.
+description: Practical examples for using the ArchiPy Redis adapter, including caching, pub/sub, RediSearch, and vector search.
 ---
 
 # Redis Adapter Tutorial
 
 This guide demonstrates how to use the ArchiPy Redis adapter for common caching,
-key-value storage, and RediSearch (full-text, vector KNN, and hybrid search).
+key-value storage, and RediSearch (full-text, vector KNN, vector range, hybrid search, and cluster indexes).
 
 ## Installation
 
@@ -397,11 +397,13 @@ asyncio.run(main())
 ## RediSearch
 
 ArchiPy exposes RediSearch through index-bound handles returned by `search_index()`. Each handle covers index
-management, document upserts, full-text search, vector KNN, hybrid search, aggregations, and aliases.
+management, document upserts, full-text search, vector KNN, vector range queries, hybrid search, aggregations, and
+aliases.
 
-> **Note:** RediSearch requires **Redis Stack** (or a Redis build with the RediSearch and RedisJSON modules). The
-> adapter uses a dedicated binary-safe client (`decode_responses=False`) for vector fields. RediSearch only works in
-> **standalone** mode — cluster and sentinel configurations raise `ConfigurationError`.
+> **Note:** RediSearch requires **Redis 8+** (query engine built into Redis Open Source). The adapter uses a
+> dedicated binary-safe client (`decode_responses=False`) for vector fields. Cluster and standalone modes are
+> supported; sentinel mode is not. On cluster, use hash-tagged key prefixes (for example `{products}:`) so indexed
+> documents share a slot.
 
 ### Create an Index
 
@@ -420,7 +422,9 @@ from archipy.models.dtos.redis.search.index_schema_dto import (
 from archipy.models.types.redis_search_types import (
     RedisIndexType,
     VectorAlgorithm,
+    VectorCompression,
     VectorDistanceMetric,
+    VectorType,
 )
 
 logger = logging.getLogger(__name__)
@@ -448,6 +452,91 @@ logger.info("RediSearch index created")
 
 For JSON documents, set `index_type=RedisIndexType.JSON`. Field names are mapped to JSON paths (`$.title`, etc.)
 automatically.
+
+#### SVS-VAMANA and HNSW tuning
+
+`VectorFieldConfig` supports `FLAT`, `HNSW`, and `SVS-VAMANA` algorithms. Optional index-time attributes are
+validated per algorithm — HNSW accepts `m`, `ef_construction`, and `ef_runtime`; SVS-VAMANA accepts `compression`,
+`construction_window_size`, `graph_max_degree`, `search_window_size`, `training_threshold`, and `reduce`.
+
+```python
+import logging
+
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.models.dtos.redis.search.index_schema_dto import (
+    IndexSchemaDTO,
+    TextFieldConfig,
+    VectorFieldConfig,
+)
+from archipy.models.types.redis_search_types import (
+    RedisIndexType,
+    VectorAlgorithm,
+    VectorCompression,
+    VectorDistanceMetric,
+    VectorType,
+)
+
+logger = logging.getLogger(__name__)
+
+redis = RedisAdapter()
+handle = redis.search_index("products-svs")
+
+schema = IndexSchemaDTO(
+    fields=[
+        TextFieldConfig(name="title"),
+        VectorFieldConfig(
+            name="embedding",
+            dim=128,
+            distance_metric=VectorDistanceMetric.COSINE,
+            algorithm=VectorAlgorithm.SVS_VAMANA,
+            vector_type=VectorType.FLOAT32,
+            compression=VectorCompression.LVQ8,
+            graph_max_degree=32,
+        ),
+    ],
+    index_type=RedisIndexType.HASH,
+)
+
+handle.create_index(schema, prefix="product:")
+logger.info("SVS-VAMANA index created")
+```
+
+### Cluster indexes
+
+On Redis Cluster, configure `RedisConfig.MODE=RedisMode.CLUSTER` and use **hash-tagged** key prefixes and document IDs
+so indexed keys share a slot (for example `{products}:` and `{products}:1`). The adapter builds a binary-safe cluster
+client for RediSearch automatically; sentinel mode is not supported.
+
+```python
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.configs.config_template import RedisConfig, RedisMode
+from archipy.models.dtos.redis.search.index_schema_dto import (
+    IndexSchemaDTO,
+    TextFieldConfig,
+    VectorFieldConfig,
+)
+from archipy.models.types.redis_search_types import RedisIndexType, VectorAlgorithm, VectorDistanceMetric
+
+cluster_schema = IndexSchemaDTO(
+    fields=[
+        TextFieldConfig(name="title"),
+        VectorFieldConfig(name="embedding", dim=3, algorithm=VectorAlgorithm.HNSW),
+    ],
+    index_type=RedisIndexType.HASH,
+)
+
+redis = RedisAdapter(
+    redis_config=RedisConfig(
+        MODE=RedisMode.CLUSTER,
+        CLUSTER_NODES=["127.0.0.1:7000", "127.0.0.1:7001", "127.0.0.1:7002"],
+    ),
+)
+handle = redis.search_index("cluster-products")
+handle.create_index(cluster_schema, prefix="{products}:")
+```
+
+> See [Redis scalable query best practices](https://redis.io/docs/latest/develop/ai/search-and-query/best-practices/scalable-query-best-practices/)
+> for cluster sizing and `SHARD_K_RATIO` guidance.
 
 ### Upsert Documents
 
@@ -546,9 +635,87 @@ top_hit = result.hits[0]
 logger.info(f"Top hit: {top_hit.doc_id} — {top_hit.fields.get('title')} (score={top_hit.score})")
 ```
 
+### Vector Range Search
+
+Find documents within a semantic distance radius with `SearchQueryDTO.from_range()`:
+
+```python
+import logging
+
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.models.dtos.redis.search.search_query_dto import SearchQueryDTO
+
+logger = logging.getLogger(__name__)
+
+redis = RedisAdapter()
+handle = redis.search_index("products")
+
+result = handle.search(
+    SearchQueryDTO.from_range(
+        [0.95, 0.05, 0.0],
+        radius=0.5,
+        return_fields=["title"],
+        score_field="vector_distance",
+        limit=10,
+    ),
+)
+
+logger.info(f"Range hits: {result.total}")
+```
+
+Combine a tag filter with the range clause via `filter_expr`:
+
+```python
+result = handle.search(
+    SearchQueryDTO.from_range(
+        [0.95, 0.05, 0.0],
+        radius=0.5,
+        filter_expr="@category:{books}",
+        return_fields=["title", "category"],
+    ),
+)
+```
+
+### Runtime Query Parameters
+
+Pass per-query tuning through `VectorQueryRuntimeDTO` on KNN, range, and hybrid builders. Supported fields include
+`ef_runtime`, `epsilon`, `batch_size`, `search_window_size`, `hybrid_policy`, `use_search_history`,
+`search_buffer_capacity`, and cluster-only `shard_k_ratio`.
+
+```python
+import logging
+
+from archipy.adapters.redis.adapters import RedisAdapter
+from archipy.models.dtos.redis.search.search_query_dto import (
+    SearchQueryDTO,
+    VectorQueryRuntimeDTO,
+)
+
+logger = logging.getLogger(__name__)
+
+redis = RedisAdapter()
+handle = redis.search_index("products")
+
+result = handle.search(
+    SearchQueryDTO.from_knn(
+        [0.9, 0.1, 0.0],
+        k=5,
+        return_fields=["title"],
+        runtime=VectorQueryRuntimeDTO(
+            ef_runtime=100,
+            shard_k_ratio=0.5,  # cluster: tune per-shard candidate pool
+        ),
+    ),
+)
+
+logger.info(f"KNN hits with runtime tuning: {result.total}")
+```
+
 ### Full-Text and Hybrid Search
 
-Full-text search uses a `SearchQueryDTO` with a text query string. Hybrid search combines full-text and vector KNN:
+Full-text search uses a `SearchQueryDTO` with a text query string. Hybrid search combines full-text and vector KNN.
+The adapter emits a combined `FT.SEARCH` query (`(text)=>[KNN ...]`) so hybrid works on standalone, JSON, and cluster
+deployments.
 
 ```python
 import logging
@@ -707,8 +874,7 @@ else:
 
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — Redis configuration setup
-- [BDD Testing](../testing_strategy.md) — Testing Redis operations
 - [Cache Decorator](../helpers/decorators.md#cache-decorator) — TTL cache decorator usage
 - [Interceptors - Rate Limiting](../helpers/interceptors.md#rate-limiting-dependency) — FastAPI rate limiting with `INCREX`
-- [BDD Testing](../testing_strategy.md) — RediSearch scenarios in `features/redis_adapter.feature`
+- [BDD Testing](../testing_strategy.md) — RediSearch scenarios in `features/redis_adapter.feature` (container and cluster)
 - [API Reference](../../api_reference/adapters/redis.md) — Full Redis adapter API documentation

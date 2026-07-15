@@ -23,8 +23,13 @@ from archipy.models.dtos.redis.search.index_schema_dto import (
     TextFieldConfig,
     VectorFieldConfig,
 )
-from archipy.models.dtos.redis.search.search_query_dto import SearchQueryDTO
-from archipy.models.types.redis_search_types import RedisIndexType, VectorAlgorithm, VectorDistanceMetric
+from archipy.models.dtos.redis.search.search_query_dto import SearchQueryDTO, VectorQueryRuntimeDTO
+from archipy.models.types.redis_search_types import (
+    RedisIndexType,
+    VectorAlgorithm,
+    VectorDistanceMetric,
+    VectorType,
+)
 
 # Use regex matcher to avoid ambiguity between "configured {adapter_type}" and "configured async {adapter_type}"
 use_step_matcher("re")
@@ -2695,7 +2700,11 @@ def _parse_index_type(index_type: str) -> RedisIndexType:
     return RedisIndexType(index_type)
 
 
-def _search_schema(index_type: RedisIndexType) -> IndexSchemaDTO:
+def _search_schema(
+    index_type: RedisIndexType,
+    *,
+    algorithm: VectorAlgorithm = VectorAlgorithm.HNSW,
+) -> IndexSchemaDTO:
     """Build a default RediSearch schema for the given index document type."""
     return IndexSchemaDTO(
         fields=[
@@ -2705,7 +2714,8 @@ def _search_schema(index_type: RedisIndexType) -> IndexSchemaDTO:
                 name="embedding",
                 dim=3,
                 distance_metric=VectorDistanceMetric.COSINE,
-                algorithm=VectorAlgorithm.HNSW,
+                algorithm=algorithm,
+                vector_type=VectorType.FLOAT32,
             ),
         ],
         index_type=index_type,
@@ -2806,6 +2816,61 @@ def step_when_create_search_index(context, index_name, prefix, index_type):
     handle.create_index(_search_schema(resolved_type), prefix=prefix, index_type=resolved_type)
     scenario_context.store("last_index_name", index_name)
     scenario_context.store("last_index_type", index_type)
+
+
+@when(
+    r'I create search index "(?P<index_name>[^"]+)" with prefix "(?P<prefix>[^"]+)" and algorithm '
+    r'(?P<algorithm>FLAT|HNSW|SVS-VAMANA) for (?P<index_type>HASH|JSON) documents',
+)
+def step_when_create_search_index_with_algorithm(context, index_name, prefix, algorithm, index_type):
+    """Create a search index with a specific vector algorithm."""
+    scenario_context = get_current_scenario_context(context)
+    adapter = scenario_context.adapter
+    handle = adapter.search_index(index_name)
+    resolved_type = _parse_index_type(index_type)
+    handle.create_index(
+        _search_schema(resolved_type, algorithm=VectorAlgorithm(algorithm)),
+        prefix=prefix,
+        index_type=resolved_type,
+    )
+    scenario_context.store("last_index_name", index_name)
+    scenario_context.store("last_index_type", index_type)
+
+
+@when(
+    r'I search index "(?P<index_name>[^"]+)" for vectors within radius (?P<radius>[\d.]+) of "(?P<vector>[^"]+)"',
+)
+def step_when_range_search(context, index_name, radius, vector):
+    """Run a vector range search against a search index."""
+    handle = get_current_scenario_context(context).adapter.search_index(index_name)
+    result = handle.search(
+        SearchQueryDTO.from_range(
+            _parse_search_vector(vector),
+            radius=float(radius),
+            return_fields=["title"],
+            score_field="vector_distance",
+            limit=10,
+        ),
+    )
+    store_result(context, "search_result", result)
+
+
+@when(
+    r'I search index "(?P<index_name>[^"]+)" for nearest vector "(?P<vector>[^"]+)" with k (?P<k>\d+) '
+    r'and shard_k_ratio (?P<ratio>[\d.]+)',
+)
+def step_when_knn_search_with_shard_ratio(context, index_name, vector, k, ratio):
+    """Run a KNN search with cluster shard ratio tuning."""
+    handle = get_current_scenario_context(context).adapter.search_index(index_name)
+    result = handle.search(
+        SearchQueryDTO.from_knn(
+            _parse_search_vector(vector),
+            k=int(k),
+            return_fields=["title"],
+            runtime=VectorQueryRuntimeDTO(shard_k_ratio=float(ratio)),
+        ),
+    )
+    store_result(context, "search_result", result)
 
 
 @when(
