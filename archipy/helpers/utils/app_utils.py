@@ -45,6 +45,9 @@ except ImportError:
 try:
     from fastapi import FastAPI, Request, Response
     from fastapi.exceptions import RequestValidationError
+    from fastapi.middleware.gzip import GZipMiddleware
+    from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+    from fastapi.middleware.trustedhost import TrustedHostMiddleware
     from fastapi.responses import JSONResponse
     from fastapi.routing import APIRoute
     from starlette.middleware.cors import CORSMiddleware
@@ -169,6 +172,60 @@ class FastAPIUtils:
             expose_headers=config.FASTAPI.CORS_MIDDLEWARE_EXPOSE_HEADERS,
             max_age=config.FASTAPI.CORS_MIDDLEWARE_MAX_AGE,
         )
+
+    @staticmethod
+    def setup_gzip(app: FastAPI, config: BaseConfig) -> None:
+        """Configures GZip response compression middleware if enabled.
+
+        Args:
+            app (FastAPI): The FastAPI application instance.
+            config (BaseConfig): The configuration object containing GZip middleware settings.
+        """
+        if not config.FASTAPI.GZIP_MIDDLEWARE_IS_ENABLED:
+            return
+
+        app.add_middleware(
+            GZipMiddleware,  # type: ignore[arg-type]
+            minimum_size=config.FASTAPI.GZIP_MIDDLEWARE_MINIMUM_SIZE,
+            compresslevel=config.FASTAPI.GZIP_MIDDLEWARE_COMPRESSLEVEL,
+        )
+
+    @staticmethod
+    def setup_trusted_host(app: FastAPI, config: BaseConfig) -> None:
+        """Configures TrustedHost middleware if enabled.
+
+        Args:
+            app (FastAPI): The FastAPI application instance.
+            config (BaseConfig): The configuration object containing TrustedHost middleware settings.
+        """
+        if not config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED:
+            return
+
+        allowed_hosts = config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS
+        if not allowed_hosts:
+            logger.warning(
+                "TrustedHost middleware enabled but TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS is empty; skipping",
+            )
+            return
+
+        app.add_middleware(
+            TrustedHostMiddleware,  # type: ignore[arg-type]
+            allowed_hosts=allowed_hosts,
+            www_redirect=config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_WWW_REDIRECT,
+        )
+
+    @staticmethod
+    def setup_https_redirect(app: FastAPI, config: BaseConfig) -> None:
+        """Configures HTTPS redirect middleware if enabled.
+
+        Args:
+            app (FastAPI): The FastAPI application instance.
+            config (BaseConfig): The configuration object containing HTTPS redirect middleware settings.
+        """
+        if not config.FASTAPI.HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED:
+            return
+
+        app.add_middleware(HTTPSRedirectMiddleware)  # type: ignore[arg-type]
 
     @staticmethod
     def setup_elastic_apm(app: FastAPI, config: BaseConfig) -> None:
@@ -437,6 +494,9 @@ class AppUtils:
 
         FastAPIUtils.setup_sentry(config)
         FastAPIUtils.setup_cors(app, config)
+        FastAPIUtils.setup_gzip(app, config)
+        FastAPIUtils.setup_https_redirect(app, config)
+        FastAPIUtils.setup_trusted_host(app, config)
         FastAPIUtils.setup_metric_interceptor(app, config)
         FastAPIUtils.setup_elastic_apm(app, config)
 

@@ -10,6 +10,16 @@ from archipy.models.errors import BaseError
 from features.test_helpers import get_current_scenario_context
 
 
+def _middleware_names(app) -> list[str]:
+    return [middleware.cls.__name__ for middleware in app.user_middleware]
+
+
+def _add_test_endpoint(app: FastAPI) -> None:
+    @app.get("/test")
+    def test_endpoint():
+        return {"status": "ok"}
+
+
 @given("a FastAPI app")
 def step_given_fastapi_app(context):
     scenario_context = get_current_scenario_context(context)
@@ -255,13 +265,13 @@ def step_then_headers_not_allowed(context):
         )
 
 
-@then("the response should return status code 405")
-def step_then_response_should_be_405(context):
+@then("the response should return status code {status_code:d}")
+def step_then_response_status_code(context, status_code):
     scenario_context = get_current_scenario_context(context)
     response = scenario_context.get("response")
 
-    assert response.status_code == 405, (
-        f"Expected 405 status code, but got: {response.status_code}"
+    assert response.status_code == status_code, (
+        f"Expected {status_code} status code, but got: {response.status_code}"
     )
 
 
@@ -328,3 +338,174 @@ def step_then_check_422_error(context):
     scenario_context = get_current_scenario_context(context)
     response = scenario_context.get("response")
     assert response.status_code == 422
+
+
+def _reset_optional_middleware_config(fastapi_config) -> None:
+    fastapi_config.GZIP_MIDDLEWARE_IS_ENABLED = False
+    fastapi_config.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = False
+    fastapi_config.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS = []
+    fastapi_config.HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED = False
+
+
+@given("a FastAPI app with GZip middleware enabled")
+def step_given_fastapi_app_with_gzip(context):
+    scenario_context = get_current_scenario_context(context)
+    test_config = BaseConfig.global_config()
+    _reset_optional_middleware_config(test_config.FASTAPI)
+    test_config.FASTAPI.GZIP_MIDDLEWARE_IS_ENABLED = True
+
+    app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
+
+    @app.get("/large")
+    def large_endpoint():
+        return {"data": "x" * 1000}
+
+    @app.get("/small")
+    def small_endpoint():
+        return {"ok": True}
+
+    scenario_context.store("app", app)
+
+
+@given('a FastAPI app with TrustedHost middleware enabled for "{host}"')
+def step_given_fastapi_app_with_trusted_host(context, host):
+    scenario_context = get_current_scenario_context(context)
+    test_config = BaseConfig.global_config()
+    _reset_optional_middleware_config(test_config.FASTAPI)
+    test_config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = True
+    test_config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS = [host]
+
+    app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
+    _add_test_endpoint(app)
+    scenario_context.store("app", app)
+
+
+@given("a FastAPI app with TrustedHost enabled and no allowed hosts")
+def step_given_fastapi_app_trusted_host_empty_hosts(context):
+    scenario_context = get_current_scenario_context(context)
+    test_config = BaseConfig.global_config()
+    _reset_optional_middleware_config(test_config.FASTAPI)
+    test_config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = True
+
+    app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
+    scenario_context.store("app", app)
+
+
+@given("a FastAPI app with HTTPS redirect middleware enabled")
+def step_given_fastapi_app_with_https_redirect(context):
+    scenario_context = get_current_scenario_context(context)
+    test_config = BaseConfig.global_config()
+    _reset_optional_middleware_config(test_config.FASTAPI)
+    test_config.FASTAPI.HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED = True
+
+    app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
+    _add_test_endpoint(app)
+    scenario_context.store("app", app)
+
+
+@given("a FastAPI app with HTTPS redirect middleware disabled")
+def step_given_fastapi_app_without_https_redirect(context):
+    scenario_context = get_current_scenario_context(context)
+    test_config = BaseConfig.global_config()
+    _reset_optional_middleware_config(test_config.FASTAPI)
+
+    app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
+    _add_test_endpoint(app)
+    scenario_context.store("app", app)
+
+
+@when("I request the large payload endpoint with gzip accepted")
+def step_when_request_large_payload_with_gzip(context):
+    scenario_context = get_current_scenario_context(context)
+    app = scenario_context.get("app")
+
+    client = TestClient(app)
+    response = client.get("/large", headers={"Accept-Encoding": "gzip"})
+    scenario_context.store("response", response)
+
+
+@when("I request the small payload endpoint with gzip accepted")
+def step_when_request_small_payload_with_gzip(context):
+    scenario_context = get_current_scenario_context(context)
+    app = scenario_context.get("app")
+
+    client = TestClient(app)
+    response = client.get("/small", headers={"Accept-Encoding": "gzip"})
+    scenario_context.store("response", response)
+
+
+@when("I request the test endpoint")
+def step_when_request_test_endpoint(context):
+    scenario_context = get_current_scenario_context(context)
+    app = scenario_context.get("app")
+
+    client = TestClient(app)
+    response = client.get("/test")
+    scenario_context.store("response", response)
+
+
+@when('I request the test endpoint with host "{host}"')
+def step_when_request_test_endpoint_with_host(context, host):
+    scenario_context = get_current_scenario_context(context)
+    app = scenario_context.get("app")
+
+    client = TestClient(app)
+    response = client.get("/test", headers={"Host": host})
+    scenario_context.store("response", response)
+
+
+@when("I request the test endpoint without following redirects")
+def step_when_request_test_endpoint_no_redirect(context):
+    scenario_context = get_current_scenario_context(context)
+    app = scenario_context.get("app")
+
+    client = TestClient(app)
+    response = client.get("/test", follow_redirects=False)
+    scenario_context.store("response", response)
+
+
+@then("the app should not have GZip middleware")
+def step_then_app_no_gzip_middleware(context):
+    scenario_context = get_current_scenario_context(context)
+    app = scenario_context.get("app")
+    assert "GZipMiddleware" not in _middleware_names(app), "GZip middleware was added"
+
+
+@then("the app should not have TrustedHost middleware")
+def step_then_app_no_trusted_host_middleware(context):
+    scenario_context = get_current_scenario_context(context)
+    app = scenario_context.get("app")
+    assert "TrustedHostMiddleware" not in _middleware_names(app), "TrustedHost middleware was added"
+
+
+@then("the app should not have HTTPS redirect middleware")
+def step_then_app_no_https_redirect_middleware(context):
+    scenario_context = get_current_scenario_context(context)
+    app = scenario_context.get("app")
+    assert "HTTPSRedirectMiddleware" not in _middleware_names(app), "HTTPS redirect middleware was added"
+
+
+@then("the response should have content-encoding gzip")
+def step_then_response_has_gzip_encoding(context):
+    scenario_context = get_current_scenario_context(context)
+    response = scenario_context.get("response")
+    assert response.headers.get("content-encoding") == "gzip", (
+        f"Expected content-encoding gzip, but got: {response.headers.get('content-encoding')}"
+    )
+
+
+@then("the response should not have content-encoding gzip")
+def step_then_response_no_gzip_encoding(context):
+    scenario_context = get_current_scenario_context(context)
+    response = scenario_context.get("response")
+    assert response.headers.get("content-encoding") != "gzip", (
+        f"Expected no gzip encoding, but got: {response.headers.get('content-encoding')}"
+    )
+
+
+@then("the response location should use https scheme")
+def step_then_response_location_https(context):
+    scenario_context = get_current_scenario_context(context)
+    response = scenario_context.get("response")
+    location = response.headers.get("location", "")
+    assert location.startswith("https://"), f"Expected https location, but got: {location}"

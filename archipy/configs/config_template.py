@@ -145,6 +145,34 @@ class FastAPIConfig(BaseModel):
     CORS_MIDDLEWARE_ALLOW_ORIGINS: list[str] = Field(default=["*"], description="Allowed CORS origins")
     CORS_MIDDLEWARE_EXPOSE_HEADERS: list[str] = Field(default=[], description="Exposed CORS headers")
     CORS_MIDDLEWARE_MAX_AGE: int = Field(default=600, description="Preflight cache duration in seconds")
+    GZIP_MIDDLEWARE_IS_ENABLED: bool = Field(default=False, description="Whether GZip response compression is enabled")
+    GZIP_MIDDLEWARE_MINIMUM_SIZE: int = Field(
+        default=500,
+        ge=0,
+        description="Minimum response body size in bytes before compression is applied",
+    )
+    GZIP_MIDDLEWARE_COMPRESSLEVEL: int = Field(
+        default=6,
+        ge=1,
+        le=9,
+        description="GZip compression level (1=fastest, 9=best compression)",
+    )
+    TRUSTED_HOST_MIDDLEWARE_IS_ENABLED: bool = Field(
+        default=False,
+        description="Whether TrustedHost middleware validates the Host header",
+    )
+    TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS: list[str] = Field(
+        default=[],
+        description="Allowed hostnames (e.g. example.com, *.example.com)",
+    )
+    TRUSTED_HOST_MIDDLEWARE_WWW_REDIRECT: bool = Field(
+        default=True,
+        description="Redirect www hosts to bare domain when allowed",
+    )
+    HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED: bool = Field(
+        default=False,
+        description="Whether HTTP requests are redirected to HTTPS",
+    )
     PROXY_HEADERS: bool = Field(default=True, description="Whether to trust proxy headers")
     RELOAD: bool = Field(default=False, description="Whether to enable auto-reload")
     SERVER_HEADER: bool = Field(default=True, description="Whether to include server header")

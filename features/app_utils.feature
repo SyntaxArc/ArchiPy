@@ -111,3 +111,50 @@ Feature: App Utilities
       | without Origin header                           |
       | without Access-Control-Request-Method header   |
       | with invalid Origin                            |
+
+  Scenario: Default app should not register optional middleware
+    When a FastAPI app is created
+    Then the app should not have GZip middleware
+    And the app should not have TrustedHost middleware
+    And the app should not have HTTPS redirect middleware
+
+  Scenario: GZip middleware compresses large responses
+    Given a FastAPI app with GZip middleware enabled
+    When I request the large payload endpoint with gzip accepted
+    Then the response should have content-encoding gzip
+
+  Scenario: GZip middleware skips small responses
+    Given a FastAPI app with GZip middleware enabled
+    When I request the small payload endpoint with gzip accepted
+    Then the response should not have content-encoding gzip
+
+  Scenario: TrustedHost middleware allows configured host
+    Given a FastAPI app with TrustedHost middleware enabled for "testserver"
+    When I request the test endpoint
+    Then the response should return status code 200
+
+  Scenario Outline: TrustedHost middleware rejects invalid host
+    Given a FastAPI app with TrustedHost middleware enabled for "testserver"
+    When I request the test endpoint with host "<host>"
+    Then the response should return status code 400
+
+    Examples:
+      | host         |
+      | evil.com     |
+      | attacker.org |
+
+  Scenario: TrustedHost middleware skips when allowed hosts is empty
+    Given a FastAPI app with TrustedHost enabled and no allowed hosts
+    Then the app should not have TrustedHost middleware
+
+  Scenario: HTTPS redirect middleware redirects HTTP requests
+    Given a FastAPI app with HTTPS redirect middleware enabled
+    When I request the test endpoint without following redirects
+    Then the response should return status code 307
+    And the response location should use https scheme
+
+  Scenario: HTTPS redirect middleware is not registered when disabled
+    Given a FastAPI app with HTTPS redirect middleware disabled
+    When I request the test endpoint
+    Then the response should return status code 200
+    And the app should not have HTTPS redirect middleware
