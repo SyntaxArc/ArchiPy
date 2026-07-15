@@ -15,17 +15,20 @@ from archipy.adapters.redis.ports import (
     RedisPort,
     RedisScoreCastType,
 )
+from archipy.adapters.redis.search import AsyncRedisSearchHandle, RedisSearchHandle
+from archipy.adapters.redis.search_ports import AsyncRedisSearchHandlePort, RedisSearchHandlePort
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import RedisConfig, RedisMode
+from archipy.models.errors import ConfigurationError
 
 _set = set
 
 
-def _redis_connection_kwargs(configs: RedisConfig) -> dict[str, Any]:
+def _redis_connection_kwargs(configs: RedisConfig, *, decode_responses: bool | None = None) -> dict[str, Any]:
     """Build common Redis client connection kwargs from config."""
     return {
         "password": configs.PASSWORD,
-        "decode_responses": configs.DECODE_RESPONSES,
+        "decode_responses": configs.DECODE_RESPONSES if decode_responses is None else decode_responses,
         "health_check_interval": configs.HEALTH_CHECK_INTERVAL,
         "max_connections": configs.MAX_CONNECTIONS,
         "socket_connect_timeout": configs.SOCKET_CONNECT_TIMEOUT,
@@ -87,6 +90,8 @@ class RedisAdapter(RedisPort):
                 If None, retrieves from global config. Defaults to None.
         """
         configs: RedisConfig = BaseConfig.global_config().REDIS if redis_config is None else redis_config
+        self._configs = configs
+        self._search_client: Redis | None = None
         self._set_clients(configs)
 
     def _set_clients(self, configs: RedisConfig) -> None:
@@ -227,12 +232,13 @@ class RedisAdapter(RedisPort):
         return None
 
     @staticmethod
-    def _get_client(host: str, configs: RedisConfig) -> Redis:
+    def _get_client(host: str, configs: RedisConfig, *, decode_responses: bool | None = None) -> Redis:
         """Create a Redis client with the specified configuration.
 
         Args:
             host (str): Redis host address.
             configs (RedisConfig): Configuration settings for Redis.
+            decode_responses: Optional override for response decoding.
 
         Returns:
             Redis: Configured Redis client instance.
@@ -241,8 +247,40 @@ class RedisAdapter(RedisPort):
             host=host,
             port=configs.PORT,
             db=configs.DATABASE,
-            **_redis_connection_kwargs(configs),
+            **_redis_connection_kwargs(configs, decode_responses=decode_responses),
         )
+
+    def _build_binary_client(self, configs: RedisConfig) -> Redis:
+        """Create a binary-safe Redis client for RediSearch operations.
+
+        RediSearch requires a standalone connection. Cluster and Sentinel
+        modes do not support FT.* commands.
+        """
+        if configs.MODE != RedisMode.STANDALONE:
+            raise ConfigurationError(
+                operation="redis_search",
+                reason=f"RediSearch requires standalone mode, got {configs.MODE.value}",
+            )
+        host = configs.MASTER_HOST or "localhost"
+        return self._get_client(host, configs, decode_responses=False)
+
+    def _get_search_client(self) -> Redis:
+        """Return a lazy binary-safe Redis client for RediSearch."""
+        if self._search_client is None:
+            self._search_client = self._build_binary_client(self._configs)
+        return self._search_client
+
+    @override
+    def search_index(self, name: str) -> RedisSearchHandlePort:
+        """Return an index-bound RediSearch handle."""
+        return RedisSearchHandle(self._get_search_client(), name)
+
+    def list_search_indexes(self) -> list[str]:
+        """List RediSearch indexes available on the server."""
+        result = self._get_search_client().execute_command("FT._LIST")
+        if not result:
+            return []
+        return [index_name.decode() if isinstance(index_name, bytes) else index_name for index_name in result]
 
     @staticmethod
     def _ensure_sync_int(value: int | Awaitable[int]) -> int:
@@ -1434,6 +1472,8 @@ class AsyncRedisAdapter(AsyncRedisPort):
                 If None, retrieves from global config. Defaults to None.
         """
         configs: RedisConfig = BaseConfig.global_config().REDIS if redis_config is None else redis_config
+        self._configs = configs
+        self._search_client: AsyncRedis | None = None
         self._set_clients(configs)
 
     def _set_clients(self, configs: RedisConfig) -> None:
@@ -1574,12 +1614,13 @@ class AsyncRedisAdapter(AsyncRedisPort):
         return None
 
     @staticmethod
-    def _get_client(host: str, configs: RedisConfig) -> AsyncRedis:
+    def _get_client(host: str, configs: RedisConfig, *, decode_responses: bool | None = None) -> AsyncRedis:
         """Create an async Redis client with the specified configuration.
 
         Args:
             host (str): Redis host address.
             configs (RedisConfig): Configuration settings for Redis.
+            decode_responses: Optional override for response decoding.
 
         Returns:
             AsyncRedis: Configured async Redis client instance.
@@ -1588,8 +1629,42 @@ class AsyncRedisAdapter(AsyncRedisPort):
             host=host,
             port=configs.PORT,
             db=configs.DATABASE,
-            **_redis_connection_kwargs(configs),
+            **_redis_connection_kwargs(configs, decode_responses=decode_responses),
         )
+
+    def _build_binary_client(self, configs: RedisConfig) -> AsyncRedis:
+        """Create a binary-safe async Redis client for RediSearch operations.
+
+        RediSearch requires a standalone connection. Cluster and Sentinel
+        modes do not support FT.* commands.
+        """
+        if configs.MODE != RedisMode.STANDALONE:
+            raise ConfigurationError(
+                operation="redis_search",
+                reason=f"RediSearch requires standalone mode, got {configs.MODE.value}",
+            )
+        host = configs.MASTER_HOST or "localhost"
+        return self._get_client(host, configs, decode_responses=False)
+
+    def _get_search_client(self) -> AsyncRedis:
+        """Return a lazy binary-safe async Redis client for RediSearch."""
+        if self._search_client is None:
+            self._search_client = self._build_binary_client(self._configs)
+        return self._search_client
+
+    @override
+    def search_index(self, name: str) -> AsyncRedisSearchHandlePort:
+        """Return an index-bound async RediSearch handle."""
+        return AsyncRedisSearchHandle(self._get_search_client(), name)
+
+    async def list_search_indexes(self) -> list[str]:
+        """List RediSearch indexes available on the server asynchronously."""
+        result = self._get_search_client().execute_command("FT._LIST")
+        if isinstance(result, Awaitable):
+            result = await result
+        if not result:
+            return []
+        return [index_name.decode() if isinstance(index_name, bytes) else index_name for index_name in result]
 
     @staticmethod
     async def _ensure_async_int(value: int | Awaitable[int]) -> int:

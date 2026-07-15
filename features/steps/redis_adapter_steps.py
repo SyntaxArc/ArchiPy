@@ -4,6 +4,7 @@ This module contains step definitions for simplified synchronous and asynchronou
 Redis mock scenarios as defined in the Redis Mock Testing feature.
 """
 
+import json
 import logging
 
 from behave import given, then, use_step_matcher, when
@@ -13,6 +14,17 @@ from features.test_helpers import get_current_scenario_context
 from archipy.adapters.redis.adapters import AsyncRedisAdapter, RedisAdapter
 from archipy.adapters.redis.mocks import AsyncRedisMock, RedisMock
 from archipy.configs.config_template import RedisConfig
+from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
+from archipy.models.dtos.redis.search.document_dto import HashDocumentUpsertDTO, JsonDocumentUpsertDTO
+from archipy.models.dtos.redis.search.index_schema_dto import (
+    IndexSchemaDTO,
+    NumericFieldConfig,
+    TagFieldConfig,
+    TextFieldConfig,
+    VectorFieldConfig,
+)
+from archipy.models.dtos.redis.search.search_query_dto import SearchQueryDTO
+from archipy.models.types.redis_search_types import RedisIndexType, VectorAlgorithm, VectorDistanceMetric
 
 # Use regex matcher to avoid ambiguity between "configured {adapter_type}" and "configured async {adapter_type}"
 use_step_matcher("re")
@@ -2676,3 +2688,407 @@ async def step_then_async_subkey_notification(context, field):
     assert message is not None, "No subkey notification received"
     data = str(message.get("data", ""))
     assert field in data, f"Expected field '{field}' in notification data '{data}'"
+
+
+def _parse_index_type(index_type: str) -> RedisIndexType:
+    """Parse a Gherkin index type label into RedisIndexType."""
+    return RedisIndexType(index_type)
+
+
+def _search_schema(index_type: RedisIndexType) -> IndexSchemaDTO:
+    """Build a default RediSearch schema for the given index document type."""
+    return IndexSchemaDTO(
+        fields=[
+            TextFieldConfig(name="title"),
+            TagFieldConfig(name="category"),
+            VectorFieldConfig(
+                name="embedding",
+                dim=3,
+                distance_metric=VectorDistanceMetric.COSINE,
+                algorithm=VectorAlgorithm.HNSW,
+            ),
+        ],
+        index_type=index_type,
+    )
+
+
+def _upsert_search_document(
+    handle,
+    doc_id: str,
+    fields: dict[str, str],
+    vector: list[float],
+    index_type: RedisIndexType,
+) -> None:
+    """Upsert a document into a HASH or JSON search index."""
+    if index_type == RedisIndexType.HASH:
+        handle.upsert_hash(
+            doc_id,
+            fields,
+            vector_field="embedding",
+            vector=vector,
+        )
+        return
+    handle.upsert_json(doc_id, {**fields, "embedding": vector})
+
+
+def _parse_search_vector(raw_vector: str) -> list[float]:
+    return [float(value) for value in json.loads(raw_vector)]
+
+
+def _search_index_field_names(info: dict) -> list[str]:
+    """Extract indexed field names from a RediSearch FT.INFO response."""
+    attributes = info.get("attributes", [])
+    field_names: list[str] = []
+    for attribute in attributes:
+        field_name: str | None = None
+        if isinstance(attribute, dict):
+            raw_name = attribute.get("identifier") or attribute.get("attribute")
+            field_name = str(raw_name) if raw_name is not None else None
+        elif isinstance(attribute, (list, tuple)):
+            decoded = [
+                item.decode() if isinstance(item, bytes) else str(item)
+                for item in attribute
+            ]
+            if "identifier" in decoded:
+                field_name = decoded[decoded.index("identifier") + 1]
+        if field_name is None:
+            continue
+        if field_name.startswith("$."):
+            field_name = field_name[2:]
+        field_names.append(field_name)
+    return field_names
+
+
+def _get_search_document(context, doc_id: str, index_name: str) -> dict:
+    return get_current_scenario_context(context).adapter.search_index(index_name).get_document(doc_id)
+
+
+@given(
+    r'search index "(?P<index_name>[^"]+)" exists with prefix "(?P<prefix>[^"]+)" for (?P<index_type>HASH|JSON) documents',
+)
+def step_given_search_index_exists(context, index_name, prefix, index_type):
+    """Create a search index if it does not already exist."""
+    scenario_context = get_current_scenario_context(context)
+    adapter = scenario_context.adapter
+    handle = adapter.search_index(index_name)
+    resolved_type = _parse_index_type(index_type)
+    if index_name not in adapter.list_search_indexes():
+        handle.create_index(_search_schema(resolved_type), prefix=prefix, index_type=resolved_type)
+    scenario_context.store("last_index_name", index_name)
+    scenario_context.store("last_index_type", index_type)
+
+
+@given(
+    r'async search index "(?P<index_name>[^"]+)" exists with prefix "(?P<prefix>[^"]+)" for (?P<index_type>HASH|JSON) documents',
+)
+async def step_given_async_search_index_exists(context, index_name, prefix, index_type):
+    """Create a search index asynchronously if needed."""
+    scenario_context = get_current_scenario_context(context)
+    adapter = scenario_context.async_adapter
+    indexes = await adapter.list_search_indexes()
+    handle = adapter.search_index(index_name)
+    resolved_type = _parse_index_type(index_type)
+    if index_name not in indexes:
+        await handle.create_index(_search_schema(resolved_type), prefix=prefix, index_type=resolved_type)
+    scenario_context.store("last_index_name", index_name)
+    scenario_context.store("last_index_type", index_type)
+
+
+@when(
+    r'I create search index "(?P<index_name>[^"]+)" with prefix "(?P<prefix>[^"]+)" for (?P<index_type>HASH|JSON) documents',
+)
+def step_when_create_search_index(context, index_name, prefix, index_type):
+    """Create a HASH or JSON search index."""
+    scenario_context = get_current_scenario_context(context)
+    adapter = scenario_context.adapter
+    handle = adapter.search_index(index_name)
+    resolved_type = _parse_index_type(index_type)
+    handle.create_index(_search_schema(resolved_type), prefix=prefix, index_type=resolved_type)
+    scenario_context.store("last_index_name", index_name)
+    scenario_context.store("last_index_type", index_type)
+
+
+@when(
+    r'I upsert search document "(?P<doc_id>[^"]+)" with title "(?P<title>[^"]+)" and vector "(?P<vector>[^"]+)" '
+    r'for (?P<index_type>HASH|JSON) documents',
+)
+def step_when_upsert_search_document(context, doc_id, title, vector, index_type):
+    """Upsert a HASH or JSON search document with a vector embedding."""
+    scenario_context = get_current_scenario_context(context)
+    index_name = scenario_context.get("last_index_name")
+    handle = scenario_context.adapter.search_index(index_name)
+    _upsert_search_document(
+        handle,
+        doc_id,
+        {"title": title},
+        _parse_search_vector(vector),
+        _parse_index_type(index_type),
+    )
+
+
+@when(
+    r'I upsert search document "(?P<doc_id>[^"]+)" asynchronously with title "(?P<title>[^"]+)" '
+    r'and vector "(?P<vector>[^"]+)" for (?P<index_type>HASH|JSON) documents',
+)
+async def step_when_upsert_search_document_async(context, doc_id, title, vector, index_type):
+    """Upsert a HASH or JSON search document asynchronously."""
+    scenario_context = get_current_scenario_context(context)
+    index_name = scenario_context.get("last_index_name")
+    handle = scenario_context.async_adapter.search_index(index_name)
+    resolved_type = _parse_index_type(index_type)
+    if resolved_type == RedisIndexType.HASH:
+        await handle.upsert_hash(
+            doc_id,
+            {"title": title},
+            vector_field="embedding",
+            vector=_parse_search_vector(vector),
+        )
+    else:
+        await handle.upsert_json(
+            doc_id,
+            {"title": title, "embedding": _parse_search_vector(vector)},
+        )
+
+
+@given(
+    r'search document "(?P<doc_id>[^"]+)" exists with title "(?P<title>[^"]+)" and vector "(?P<vector>[^"]+)" '
+    r'for (?P<index_type>HASH|JSON) documents',
+)
+def step_given_search_document_exists(context, doc_id, title, vector, index_type):
+    """Seed a HASH or JSON document in the active search index."""
+    step_when_upsert_search_document(context, doc_id, title, vector, index_type)
+
+
+@given(
+    r'search document "(?P<doc_id>[^"]+)" exists with title "(?P<title>[^"]+)" category "(?P<category>[^"]+)" '
+    r'and vector "(?P<vector>[^"]+)" for (?P<index_type>HASH|JSON) documents',
+)
+def step_given_search_document_with_category_exists(context, doc_id, title, category, vector, index_type):
+    """Seed a HASH or JSON document with a category tag."""
+    scenario_context = get_current_scenario_context(context)
+    index_name = scenario_context.get("last_index_name")
+    handle = scenario_context.adapter.search_index(index_name)
+    _upsert_search_document(
+        handle,
+        doc_id,
+        {"title": title, "category": category},
+        _parse_search_vector(vector),
+        _parse_index_type(index_type),
+    )
+
+
+@when(r'I upsert json document "(?P<doc_id>[^"]+)" with payload (?P<payload>\{.*\})')
+def step_when_upsert_json_document(context, doc_id, payload):
+    """Upsert a JSON document."""
+    scenario_context = get_current_scenario_context(context)
+    index_name = scenario_context.get("last_index_name")
+    handle = scenario_context.adapter.search_index(index_name)
+    handle.upsert_json(doc_id, json.loads(payload))
+
+
+@when(
+    r'I search index "(?P<index_name>[^"]+)" for nearest vector "(?P<vector>[^"]+)" with k (?P<k>\d+)',
+)
+def step_when_knn_search(context, index_name, vector, k):
+    """Run a KNN search against a search index."""
+    handle = get_current_scenario_context(context).adapter.search_index(index_name)
+    result = handle.search(
+        SearchQueryDTO.from_knn(_parse_search_vector(vector), k=int(k), return_fields=["title"]),
+    )
+    store_result(context, "search_result", result)
+
+
+@when(
+    r'I search index "(?P<index_name>[^"]+)" asynchronously for nearest vector "(?P<vector>[^"]+)" with k (?P<k>\d+)',
+)
+async def step_when_knn_search_async(context, index_name, vector, k):
+    """Run a KNN search asynchronously."""
+    handle = get_current_scenario_context(context).async_adapter.search_index(index_name)
+    result = await handle.search(
+        SearchQueryDTO.from_knn(_parse_search_vector(vector), k=int(k), return_fields=["title"]),
+    )
+    store_result(context, "async_search_result", result)
+
+
+@when(
+    r'I hybrid search index "(?P<index_name>[^"]+)" for text "(?P<text_query>[^"]+)" '
+    r'and vector "(?P<vector>[^"]+)" with k (?P<k>\d+)',
+)
+def step_when_hybrid_search(context, index_name, text_query, vector, k):
+    """Run a hybrid text and vector search."""
+    handle = get_current_scenario_context(context).adapter.search_index(index_name)
+    result = handle.search(
+        SearchQueryDTO.from_hybrid(
+            text_query,
+            _parse_search_vector(vector),
+            k=int(k),
+            return_fields=["title"],
+        ),
+    )
+    store_result(context, "search_result", result)
+
+
+@when(r'I aggregate search index "(?P<index_name>[^"]+)" grouped by category')
+def step_when_aggregate(context, index_name):
+    """Run a simple aggregation grouped by category."""
+    handle = get_current_scenario_context(context).adapter.search_index(index_name)
+    result = handle.aggregate(
+        AggregationDTO(
+            query="*",
+            group_by=["@category"],
+            reduce_function="COUNT",
+            reduce_field="total",
+        ),
+    )
+    store_result(context, "aggregation_result", result)
+
+
+@when(r'I drop search index "(?P<index_name>[^"]+)"')
+def step_when_drop_search_index(context, index_name):
+    """Drop a search index."""
+    get_current_scenario_context(context).adapter.search_index(index_name).drop_index(delete_documents=True)
+
+
+@when(
+    r'I add field "(?P<field_name>[^"]+)" as numeric to search index "(?P<index_name>[^"]+)" '
+    r'for (?P<index_type>HASH|JSON) documents',
+)
+def step_when_add_numeric_field_to_search_index(context, field_name, index_name, index_type):
+    """Add a numeric field to an existing search index schema."""
+    handle = get_current_scenario_context(context).adapter.search_index(index_name)
+    handle.alter_schema_add(
+        NumericFieldConfig(name=field_name),
+        index_type=_parse_index_type(index_type),
+    )
+
+
+@when(r'I add alias "(?P<alias>[^"]+)" to search index "(?P<index_name>[^"]+)"')
+def step_when_add_search_alias(context, alias, index_name):
+    """Add an alias for a search index."""
+    result = get_current_scenario_context(context).adapter.search_index(index_name).add_alias(alias)
+    store_result(context, "alias_operation_result", result)
+
+
+@when(r'I delete alias "(?P<alias>[^"]+)" from search index "(?P<index_name>[^"]+)"')
+def step_when_delete_search_alias(context, alias, index_name):
+    """Delete a search index alias."""
+    result = get_current_scenario_context(context).adapter.search_index(index_name).delete_alias(alias)
+    store_result(context, "alias_operation_result", result)
+
+
+@when(r'I delete document "(?P<doc_id>[^"]+)" from search index "(?P<index_name>[^"]+)"')
+def step_when_delete_search_document(context, doc_id, index_name):
+    """Delete a document from a search index."""
+    get_current_scenario_context(context).adapter.search_index(index_name).delete_document(doc_id)
+
+
+@when(
+    r'I upsert search document "(?P<doc_id>[^"]+)" via DTO with title "(?P<title>[^"]+)" '
+    r'and vector "(?P<vector>[^"]+)" for (?P<index_type>HASH|JSON) documents',
+)
+def step_when_upsert_search_document_via_dto(context, doc_id, title, vector, index_type):
+    """Upsert a HASH or JSON search document using DTO helpers."""
+    scenario_context = get_current_scenario_context(context)
+    index_name = scenario_context.get("last_index_name")
+    handle = scenario_context.adapter.search_index(index_name)
+    parsed_vector = _parse_search_vector(vector)
+    if _parse_index_type(index_type) == RedisIndexType.HASH:
+        handle.upsert_hash_dto(
+            HashDocumentUpsertDTO(
+                doc_id=doc_id,
+                fields={"title": title},
+                vector_field="embedding",
+                vector=parsed_vector,
+            ),
+        )
+        return
+    handle.upsert_json_dto(
+        JsonDocumentUpsertDTO(
+            doc_id=doc_id,
+            payload={"title": title, "embedding": parsed_vector},
+        ),
+    )
+
+
+@then(r'search index "(?P<index_name>[^"]+)" should exist')
+def step_then_search_index_exists(context, index_name):
+    """Assert that a search index exists."""
+    adapter = get_current_scenario_context(context).adapter
+    assert index_name in adapter.list_search_indexes()
+
+
+@then(r'search index "(?P<index_name>[^"]+)" should not exist')
+def step_then_search_index_not_exists(context, index_name):
+    """Assert that a search index does not exist."""
+    adapter = get_current_scenario_context(context).adapter
+    assert index_name not in adapter.list_search_indexes()
+
+
+@then(r'document "(?P<doc_id>[^"]+)" should exist in search index "(?P<index_name>[^"]+)"')
+def step_then_document_exists(context, doc_id, index_name):
+    """Assert that a document can be loaded from the index."""
+    document = _get_search_document(context, doc_id, index_name)
+    assert document["id"] == doc_id
+
+
+@then(
+    r'document "(?P<doc_id>[^"]+)" in search index "(?P<index_name>[^"]+)" should have title "(?P<title>[^"]+)"',
+)
+def step_then_document_has_title(context, doc_id, index_name, title):
+    """Assert that a loaded search document contains the expected title."""
+    document = _get_search_document(context, doc_id, index_name)
+    assert document.get("title") == title
+
+
+@then(r'document "(?P<doc_id>[^"]+)" should not exist in search index "(?P<index_name>[^"]+)"')
+def step_then_document_not_exists(context, doc_id, index_name):
+    """Assert that a document was removed from the search index."""
+    document = _get_search_document(context, doc_id, index_name)
+    assert document.get("title") is None
+
+
+@then(r'search index "(?P<index_name>[^"]+)" should have field "(?P<field_name>[^"]+)"')
+def step_then_search_index_has_field(context, index_name, field_name):
+    """Assert that a search index schema includes the given field."""
+    info = get_current_scenario_context(context).adapter.search_index(index_name).info()
+    field_names = _search_index_field_names(info)
+    assert field_name in field_names, f"Expected field '{field_name}' in {field_names!r}"
+
+
+@then(r"the alias operation should succeed")
+def step_then_alias_operation_succeeds(context):
+    """Assert the last alias-related operation returned success."""
+    result = get_result(context, "alias_operation_result")
+    assert result is True
+
+
+@then(r"the search should return at least (?P<count>\d+) hits?")
+def step_then_search_hits(context, count):
+    """Assert synchronous search hit count."""
+    result = get_result(context, "search_result")
+    assert result is not None
+    assert len(result.hits) >= int(count)
+
+
+@then(r"the async search should return at least (?P<count>\d+) hits?")
+def step_then_async_search_hits(context, count):
+    """Assert asynchronous search hit count."""
+    result = get_result(context, "async_search_result")
+    assert result is not None
+    assert len(result.hits) >= int(count)
+
+
+@then(r'the top hit id should be "(?P<doc_id>[^"]+)"')
+def step_then_top_hit_id(context, doc_id):
+    """Assert the first search hit document ID."""
+    result = get_result(context, "search_result")
+    assert result is not None
+    assert result.hits[0].doc_id == doc_id
+
+
+@then(r"the aggregation should return at least (?P<count>\d+) rows?")
+def step_then_aggregation_rows(context, count):
+    """Assert aggregation row count."""
+    result = get_result(context, "aggregation_result")
+    assert result is not None
+    assert len(result["rows"]) >= int(count)

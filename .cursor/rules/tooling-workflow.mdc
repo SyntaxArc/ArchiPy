@@ -63,14 +63,6 @@ make docs-build        # Build static site
 make docs-deploy       # Deploy to GitHub Pages
 ```
 
-## Version Bumping
-
-```bash
-make bump-patch message="fix: correct edge case in JWT utils"
-make bump-minor message="feat: add ScyllaDB async adapter"
-make bump-major message="breaking: redesign config layer"
-```
-
 ## Dependency Updates
 
 ```bash

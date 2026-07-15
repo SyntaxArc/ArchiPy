@@ -104,33 +104,6 @@ version: ## Display current version
 	@echo "${YELLOW}Current tag:${NC}"
 	@git describe --tags --abbrev=0 2>/dev/null || echo "No tags found"
 
-.PHONY: bump-patch
-bump-patch: ## Bump patch version
-	@echo "${BLUE}Bumping patch version...${NC}"
-	@if [ -n "$(message)" ]; then \
-		$(UV) run python scripts/bump_version.py patch -m "$(message)"; \
-	else \
-		$(UV) run python scripts/bump_version.py patch -m "$$(git log -1 --pretty=%s)"; \
-	fi
-
-.PHONY: bump-minor
-bump-minor: ## Bump minor version
-	@echo "${BLUE}Bumping minor version...${NC}"
-	@if [ -n "$(message)" ]; then \
-		$(UV) run python scripts/bump_version.py minor -m "$(message)"; \
-	else \
-		$(UV) run python scripts/bump_version.py minor -m "$$(git log -1 --pretty=%s)"; \
-	fi
-
-.PHONY: bump-major
-bump-major: ## Bump major version
-	@echo "${BLUE}Bumping major version...${NC}"
-	@if [ -n "$(message)" ]; then \
-		$(UV) run python scripts/bump_version.py major -m "$(message)"; \
-	else \
-		$(UV) run python scripts/bump_version.py major -m "$$(git log -1 --pretty=%s)"; \
-	fi
-
 .PHONY: docker-build
 docker-build: ## Build Docker image
 	@echo "${BLUE}Building Docker image...${NC}"

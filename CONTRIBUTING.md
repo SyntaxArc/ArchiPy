@@ -152,11 +152,6 @@ make build
 
 # Display current version
 make version
-
-# Bump versions
-make bump-patch    # Bug fixes
-make bump-minor    # New features
-make bump-major    # Breaking changes
 ```
 
 For a complete list:
@@ -180,9 +175,11 @@ implementation.
 
 ArchiPy follows [Semantic Versioning](https://semver.org/):
 
-- **Patch** (`make bump-patch`): Bug fixes and minor improvements
-- **Minor** (`make bump-minor`): New features (backward compatible)
-- **Major** (`make bump-major`): Breaking changes
+- **Patch**: Bug fixes and minor improvements
+- **Minor**: New features (backward compatible)
+- **Major**: Breaking changes
+
+Releases are tagged on `master` (for example `4.15.1`). Pushing a semver tag triggers the publish workflow.
 
 ## Getting Help
 
@@ -195,4 +192,3 @@ If you need assistance with contributing:
 - **Consult documentation**: [https://archipy.readthedocs.io/](https://archipy.readthedocs.io/)
 
 Thank you for contributing to ArchiPy! Your efforts help make this project better for everyone.
-

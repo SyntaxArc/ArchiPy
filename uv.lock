@@ -332,7 +332,7 @@ requires-dist = [
     { name = "async-lru", marker = "extra == 'scylladb'", specifier = ">=2.3.0" },
     { name = "asyncmy2", marker = "extra == 'starrocks-async'", specifier = ">=0.2.20" },
     { name = "behave", marker = "extra == 'behave'", specifier = ">=1.3.3" },
-    { name = "boto3", marker = "extra == 'minio'", specifier = ">=1.43.46" },
+    { name = "boto3", marker = "extra == 'minio'", specifier = ">=1.43.48" },
     { name = "cachetools", marker = "extra == 'cache'", specifier = ">=7.1.4" },
     { name = "cachetools", marker = "extra == 'keycloak'", specifier = ">=7.1.4" },
     { name = "cachetools", marker = "extra == 'minio'", specifier = ">=7.1.4" },
@@ -346,9 +346,9 @@ requires-dist = [
     { name = "fastapi", extras = ["all"], marker = "extra == 'fastapi'", specifier = ">=0.139.0" },
     { name = "grpcio", marker = "extra == 'grpc'", specifier = ">=1.82.1" },
     { name = "grpcio-health-checking", marker = "extra == 'grpc'", specifier = ">=1.82.1" },
-    { name = "httpx2", extras = ["socks"], marker = "extra == 'parsian-ipg-async'", specifier = ">=2.5.0" },
-    { name = "httpx2", extras = ["socks"], marker = "extra == 'saman-ipg'", specifier = ">=2.5.0" },
-    { name = "jdatetime", specifier = ">=5.3.0" },
+    { name = "httpx2", extras = ["socks"], marker = "extra == 'parsian-ipg-async'", specifier = ">=2.7.0" },
+    { name = "httpx2", extras = ["socks"], marker = "extra == 'saman-ipg'", specifier = ">=2.7.0" },
+    { name = "jdatetime", specifier = ">=6.0.1" },
     { name = "lz4", marker = "extra == 'scylladb'", specifier = ">=4.4.5" },
     { name = "prometheus-client", marker = "extra == 'prometheus'", specifier = ">=0.25.0" },
     { name = "protobuf", marker = "extra == 'grpc'", specifier = ">=7.35.1" },
@@ -362,7 +362,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.34.2" },
     { name = "requests", extras = ["socks"], marker = "extra == 'parsian-ipg'", specifier = ">=2.34.2" },
     { name = "scylla-driver", marker = "extra == 'scylladb'", specifier = ">=3.29.11" },
-    { name = "sentry-sdk", marker = "extra == 'sentry'", specifier = ">=2.64.0" },
+    { name = "sentry-sdk", marker = "extra == 'sentry'", specifier = ">=2.65.0" },
     { name = "sqlalchemy", marker = "extra == 'sqlalchemy'", specifier = ">=2.0.51" },
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlalchemy-async'", specifier = ">=2.0.51" },
     { name = "starrocks", marker = "extra == 'starrocks'", specifier = ">=1.3.3" },
@@ -378,15 +378,15 @@ provides-extras = ["aiosqlite", "behave", "cache", "dependency-injection", "elas
 dev = [
     { name = "add-trailing-comma", specifier = ">=4.0.0" },
     { name = "bandit", specifier = ">=1.9.4" },
-    { name = "boto3-stubs", specifier = ">=1.43.46" },
+    { name = "boto3-stubs", specifier = ">=1.43.48" },
     { name = "codespell", specifier = ">=2.4.2" },
     { name = "pre-commit", specifier = ">=4.6.0" },
     { name = "pre-commit-hooks", specifier = ">=6.0.0" },
     { name = "ruff", specifier = ">=0.15.21" },
-    { name = "ty", specifier = ">=0.0.58" },
-    { name = "types-cachetools", specifier = ">=7.0.0.20260518" },
+    { name = "ty", specifier = ">=0.0.59" },
+    { name = "types-cachetools", specifier = ">=7.0.0.20260713" },
     { name = "types-grpcio", specifier = ">=1.82.1.20260711" },
-    { name = "types-protobuf" },
+    { name = "types-protobuf", specifier = ">=7.34.1.20260518" },
     { name = "types-pymysql", specifier = ">=1.1.0.20260518" },
     { name = "types-regex", specifier = ">=2026.7.10.20260711" },
     { name = "types-requests", specifier = ">=2.33.0.20260712" },
@@ -730,11 +730,11 @@ wheels = [
 
 [[package]]
 name = "codespell"
-version = "2.4.2"
+version = "2.4.3"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2d/9d/1d0903dff693160f893ca6abcabad545088e7a2ee0a6deae7c24e958be69/codespell-2.4.2.tar.gz", hash = "sha256:3c33be9ae34543807f088aeb4832dfad8cb2dae38da61cac0a7045dd376cfdf3", size = 352058, upload-time = "2026-03-05T18:10:42.936Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/80/19/45e941380f69c042b43423513d201e6592346f992394347f5e7174c31407/codespell-2.4.3.tar.gz", hash = "sha256:cbe085e331227b37bb86ef8bddd08dc768c704ee9a07ca869852c093fa2793e2", size = 352773, upload-time = "2026-07-15T11:51:54.159Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/42/a1/52fa05533e95fe45bcc09bcf8a503874b1c08f221a4e35608017e0938f55/codespell-2.4.2-py3-none-any.whl", hash = "sha256:97e0c1060cf46bd1d5db89a936c98db8c2b804e1fdd4b5c645e82a1ec6b1f886", size = 353715, upload-time = "2026-03-05T18:10:41.398Z" },
+    { url = "https://files.pythonhosted.org/packages/8b/bf/bdb951d34eb169140b546f44be9ec4525d1acefb9eb5572071f5492b19fc/codespell-2.4.3-py3-none-any.whl", hash = "sha256:af2505b335e8573dbd2d384d1c4ef498f4006f4ba2d6fceca01e55b91f52628a", size = 340736, upload-time = "2026-07-15T11:51:52.925Z" },
 ]
 
 [[package]]
@@ -1438,14 +1438,14 @@ wheels = [
 
 [[package]]
 name = "jdatetime"
-version = "6.0.0"
+version = "6.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jalali-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/19/c4/39c3eda37e776238b31f2ec01831f73374afa0f6464e664d2d97ebd043fd/jdatetime-6.0.0.tar.gz", hash = "sha256:c063091031ef8b64a8d0adbcc4ba3b55f1b1bde8e1fe53b9ec2110e8c9c7f571", size = 22539, upload-time = "2026-07-13T13:22:13.664Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b9/1a/6f49f59d771db850c5c895e1fc8dd7fb495e146ba7b2b247df299442bb64/jdatetime-6.0.1.tar.gz", hash = "sha256:e349ec5fe4cd42b88e6f1a1d9d1de2391bfa7702a5d3d3ce870d593a475597b0", size = 22542, upload-time = "2026-07-15T07:45:56.197Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/36/64/be50794c72c6c945223f7bd7f2dcecc20fd178557c918d0330939b45868d/jdatetime-6.0.0-py3-none-any.whl", hash = "sha256:d43e7b8426bdc6e40821995aaed45a5fad9f24dad1ae9f60caf9846bb8eaf165", size = 12725, upload-time = "2026-07-13T13:22:12.642Z" },
+    { url = "https://files.pythonhosted.org/packages/26/87/2a9beabec59032feb868c0d05c0db571e2dce87b854a722f46623766a9e2/jdatetime-6.0.1-py3-none-any.whl", hash = "sha256:57ab3cc70fee4b7fdd9451553fcf1aa8e63034a7c8b1b28750e02caf89183219", size = 12726, upload-time = "2026-07-15T07:45:55.199Z" },
 ]
 
 [[package]]

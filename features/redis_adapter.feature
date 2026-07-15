@@ -962,3 +962,139 @@ Feature: Redis Testing
     Examples: Adapter Types
       | adapter_type |
       | container    |
+
+  # RediSearch / vector operations (requires Redis Stack — container only)
+  Scenario Outline: Create search index with vector field synchronously
+    Given a configured container
+    When I create search index "<index_name>" with prefix "<prefix>:" for <index_type> documents
+    Then search index "<index_name>" should exist
+
+    Examples: Redis index types
+      | index_type | index_name    | prefix  |
+      | HASH       | products-hash | product |
+      | JSON       | products-json | json    |
+
+  Scenario Outline: Upsert and KNN search documents synchronously
+    Given a configured container
+    And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
+    When I upsert search document "<doc1>" with title "Redis Guide" and vector "[1.0, 0.0, 0.0]" for <index_type> documents
+    And I upsert search document "<doc2>" with title "Python Guide" and vector "[0.0, 1.0, 0.0]" for <index_type> documents
+    And I search index "<index_name>" for nearest vector "[0.9, 0.1, 0.0]" with k 1
+    Then the search should return at least 1 hits
+    And the top hit id should be "<doc1>"
+
+    Examples: Redis index types
+      | index_type | index_name     | prefix | doc1    | doc2    |
+      | HASH       | products-knn   | item   | item:1  | item:2  |
+      | JSON       | products-knn-j | jsonk  | jsonk:1 | jsonk:2 |
+
+  Scenario Outline: Create index upsert and verify document fields synchronously
+    Given a configured container
+    When I create search index "<index_name>" with prefix "<prefix>:" for <index_type> documents
+    And I upsert search document "<doc_id>" with title "JSON Book" and vector "[0.0, 0.0, 1.0]" for <index_type> documents
+    Then document "<doc_id>" should exist in search index "<index_name>"
+    And document "<doc_id>" in search index "<index_name>" should have title "JSON Book"
+
+    Examples: Redis index types
+      | index_type | index_name        | prefix | doc_id  |
+      | HASH       | products-fields-h | fldh   | fldh:1  |
+      | JSON       | products-fields-j | fldj   | fldj:1  |
+
+  Scenario Outline: Hybrid search synchronously
+    Given a configured container
+    And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
+    And search document "<doc_id>" exists with title "Vector Database" and vector "[1.0, 0.0, 0.0]" for <index_type> documents
+    When I hybrid search index "<index_name>" for text "database" and vector "[0.8, 0.2, 0.0]" with k 1
+    Then the search should return at least 1 hits
+
+    Examples: Redis index types
+      | index_type | index_name        | prefix  | doc_id    |
+      | HASH       | products-hybrid   | hybrid  | hybrid:1  |
+      | JSON       | products-hybrid-j | hybridj | hybridj:1 |
+
+  Scenario Outline: Aggregate documents synchronously
+    Given a configured container
+    And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
+    And search document "<doc1>" exists with title "Alpha" category "books" and vector "[1.0, 0.0, 0.0]" for <index_type> documents
+    And search document "<doc2>" exists with title "Beta" category "books" and vector "[0.0, 1.0, 0.0]" for <index_type> documents
+    When I aggregate search index "<index_name>" grouped by category
+    Then the aggregation should return at least 1 row
+
+    Examples: Redis index types
+      | index_type | index_name     | prefix | doc1   | doc2   |
+      | HASH       | products-agg   | agg    | agg:1  | agg:2  |
+      | JSON       | products-agg-j | aggj   | aggj:1 | aggj:2 |
+
+  Scenario Outline: Drop search index synchronously
+    Given a configured container
+    And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
+    When I drop search index "<index_name>"
+    Then search index "<index_name>" should not exist
+
+    Examples: Redis index types
+      | index_type | index_name      | prefix |
+      | HASH       | products-drop   | drop   |
+      | JSON       | products-drop-j | dropj  |
+
+  @async
+  Scenario Outline: Upsert and KNN search documents asynchronously
+    Given a configured async container
+    And async search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
+    When I upsert search document "<doc_id>" asynchronously with title "Async Redis" and vector "[1.0, 0.0, 0.0]" for <index_type> documents
+    And I search index "<index_name>" asynchronously for nearest vector "[0.9, 0.1, 0.0]" with k 1
+    Then the async search should return at least 1 hit
+
+    Examples: Redis index types
+      | index_type | index_name           | prefix     | doc_id       |
+      | HASH       | async-products-knn   | async-item | async-item:1 |
+      | JSON       | async-products-knn-j | async-json | async-json:1 |
+
+  Scenario Outline: Alter index schema and verify new field
+    Given a configured container
+    And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
+    When I add field "price" as numeric to search index "<index_name>" for <index_type> documents
+    Then search index "<index_name>" should have field "price"
+
+    Examples: Redis index types
+      | index_type | index_name       | prefix |
+      | HASH       | products-alter   | alter  |
+      | JSON       | products-alter-j | alterj |
+
+  Scenario Outline: Add alias and search through it
+    Given a configured container
+    And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
+    And search document "<doc_id>" exists with title "Alias Test" and vector "[1.0, 0.0, 0.0]" for <index_type> documents
+    When I add alias "<alias>" to search index "<index_name>"
+    And I search index "<alias>" for nearest vector "[1.0, 0.0, 0.0]" with k 1
+    Then the search should return at least 1 hits
+    When I delete alias "<alias>" from search index "<index_name>"
+    And I add alias "<alias>" to search index "<index_name>"
+    Then the alias operation should succeed
+
+    Examples: Redis index types
+      | index_type | index_name       | prefix | doc_id   | alias                |
+      | HASH       | products-alias   | alias  | alias:1  | products-alias-view  |
+      | JSON       | products-alias-j | aliasj | aliasj:1 | products-alias-j-view |
+
+  Scenario Outline: Delete document from search index
+    Given a configured container
+    And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
+    And search document "<doc_id>" exists with title "To Delete" and vector "[1.0, 0.0, 0.0]" for <index_type> documents
+    When I delete document "<doc_id>" from search index "<index_name>"
+    Then document "<doc_id>" should not exist in search index "<index_name>"
+
+    Examples: Redis index types
+      | index_type | index_name        | prefix | doc_id  |
+      | HASH       | products-delete   | del    | del:1   |
+      | JSON       | products-delete-j | delj   | delj:1  |
+
+  Scenario Outline: Upsert document via DTO helper
+    Given a configured container
+    And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
+    When I upsert search document "<doc_id>" via DTO with title "<title>" and vector "<vector>" for <index_type> documents
+    Then document "<doc_id>" in search index "<index_name>" should have title "<title>"
+
+    Examples: Redis index types
+      | index_type | index_name        | prefix | doc_id  | title         | vector          |
+      | HASH       | products-dto-hash | dto-h  | dto-h:1 | DTO Book      | [1.0, 0.0, 0.0] |
+      | JSON       | products-dto-json | dto-j  | dto-j:1 | DTO JSON Book | [0.0, 0.0, 1.0] |

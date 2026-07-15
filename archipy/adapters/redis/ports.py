@@ -5,6 +5,8 @@ from collections.abc import AsyncIterator, Callable, Iterable, Iterator, Mapping
 from datetime import datetime, timedelta
 from typing import Any
 
+from archipy.adapters.redis.search_ports import AsyncRedisSearchHandlePort, RedisSearchHandlePort
+
 RedisScoreCastType = type | Callable
 _set = set
 
@@ -1312,6 +1314,21 @@ class RedisPort:
 
         Returns:
             RedisResponseType: A dictionary of configuration parameter names to values.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def search_index(self, name: str) -> RedisSearchHandlePort:
+        """Return an index-bound RediSearch handle.
+
+        Args:
+            name: RediSearch index name.
+
+        Returns:
+            RedisSearchHandlePort: Handle for index-scoped RediSearch operations.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -2681,6 +2698,21 @@ class AsyncRedisPort:
 
         Returns:
             RedisResponseType: A dictionary of configuration parameter names to values.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def search_index(self, name: str) -> AsyncRedisSearchHandlePort:
+        """Return an index-bound async RediSearch handle.
+
+        Args:
+            name: RediSearch index name.
+
+        Returns:
+            AsyncRedisSearchHandlePort: Handle for index-scoped async RediSearch operations.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.

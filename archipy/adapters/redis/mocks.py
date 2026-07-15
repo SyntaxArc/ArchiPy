@@ -58,6 +58,8 @@ class RedisMock(RedisAdapter):
         from archipy.configs.base_config import BaseConfig
 
         self.config = redis_config or BaseConfig.global_config().REDIS
+        self._configs = self.config
+        self._search_client: Redis | None = None
 
         # Create fake redis clients based on mode
         self._setup_fake_clients()
@@ -77,9 +79,15 @@ class RedisMock(RedisAdapter):
         pass
 
     @staticmethod
-    def _get_client(host: str, configs: RedisConfig) -> Redis:
-        # Override to return fakeredis instead
-        return fakeredis.FakeRedis(decode_responses=configs.DECODE_RESPONSES)
+    def _get_client(host: str, configs: RedisConfig, *, decode_responses: bool | None = None) -> Redis:
+        return fakeredis.FakeRedis(
+            decode_responses=configs.DECODE_RESPONSES if decode_responses is None else decode_responses,
+        )
+
+    def _get_search_client(self) -> Redis:
+        if self._search_client is None:
+            self._search_client = fakeredis.FakeRedis(decode_responses=False)
+        return self._search_client
 
 
 class AsyncRedisMock(AsyncRedisAdapter):
@@ -90,6 +98,8 @@ class AsyncRedisMock(AsyncRedisAdapter):
         from archipy.configs.base_config import BaseConfig
 
         self.config = redis_config or BaseConfig.global_config().REDIS
+        self._configs = self.config
+        self._search_client: AsyncRedis | None = None
 
         # Create fake async redis clients based on mode
         self._setup_async_fake_clients()
@@ -132,9 +142,17 @@ class AsyncRedisMock(AsyncRedisAdapter):
         pass
 
     @staticmethod
-    def _get_client(host: str, configs: RedisConfig) -> AsyncRedis:
-        # Override to return a mocked async client
+    def _get_client(host: str, configs: RedisConfig, *, decode_responses: bool | None = None) -> AsyncRedis:
         return AsyncMock()
+
+    def _get_search_client(self) -> AsyncRedis:
+        if self._search_client is None:
+            self._search_client = AsyncMock()
+            self._search_client.execute_command = self._create_async_wrapper(
+                "execute_command",
+                self._fake_redis.execute_command,
+            )
+        return self._search_client
 
     def _setup_async_methods(self) -> None:
         """Set up all async methods to use a synchronous fakeredis under the hood."""
