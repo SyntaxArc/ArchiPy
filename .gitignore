@@ -241,3 +241,6 @@ cython_debug/
 
 .ruff_cache
 bandit-report.json
+
+graphify-out
+.gitattributes
