@@ -92,7 +92,7 @@ class KafkaConsumerPort:
         raise NotImplementedError
 
     @abstractmethod
-    def commit(self, message: Message | None = None, asynchronous: bool = True) -> None | list[TopicPartition]:
+    def commit(self, message: Message | None = None, asynchronous: bool = True) -> list[TopicPartition] | None:
         """Commits the offset of a consumed message.
 
         Args:
@@ -247,7 +247,7 @@ class AsyncKafkaConsumerPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def commit(self, message: Message | None = None, asynchronous: bool = True) -> None | list[TopicPartition]:
+    async def commit(self, message: Message | None = None, asynchronous: bool = True) -> list[TopicPartition] | None:
         """Commits the offset of a consumed message.
 
         Args:

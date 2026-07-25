@@ -98,7 +98,7 @@ class ErrorUtils:
             exception (BaseException): The exception to capture and report.
         """
         # Always log the exception locally
-        logger.exception("An exception occurred")
+        logger.exception("An exception occurred")  # noqa: LOG004
         config: Any = BaseConfig.global_config()
 
         # Report exception to Sentry if enabled

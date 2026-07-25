@@ -1730,7 +1730,7 @@ class AsyncRedisAdapter(AsyncRedisPort):
         return bool(value)
 
     @staticmethod
-    async def _ensure_async_str(value: str | None | bytes | Awaitable[str | None | bytes]) -> str | None:
+    async def _ensure_async_str(value: str | bytes | Awaitable[str | bytes | None] | None) -> str | None:
         """Ensure an async string result, awaiting if necessary."""
         if isinstance(value, Awaitable):
             result = await value

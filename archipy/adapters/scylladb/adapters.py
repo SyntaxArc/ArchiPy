@@ -775,8 +775,12 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
             stats["hosts"] = hosts_stats
             stats["total_hosts"] = len(hosts_stats)
-            stats["total_open_connections"] = sum(h.get("open_connections", 0) for h in hosts_stats)
-            stats["total_in_flight_queries"] = sum(h.get("in_flight_queries", 0) for h in hosts_stats)
+            stats["total_open_connections"] = sum(  # ty: ignore[no-matching-overload]
+                h.get("open_connections", 0) for h in hosts_stats
+            )
+            stats["total_in_flight_queries"] = sum(  # ty: ignore[no-matching-overload]
+                h.get("in_flight_queries", 0) for h in hosts_stats
+            )
 
         except Exception as e:
             stats["error"] = str(e)
@@ -1447,8 +1451,12 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
             stats["hosts"] = hosts_stats
             stats["total_hosts"] = len(hosts_stats)
-            stats["total_open_connections"] = sum(h.get("open_connections", 0) for h in hosts_stats)
-            stats["total_in_flight_queries"] = sum(h.get("in_flight_queries", 0) for h in hosts_stats)
+            stats["total_open_connections"] = sum(  # ty: ignore[no-matching-overload]
+                h.get("open_connections", 0) for h in hosts_stats
+            )
+            stats["total_in_flight_queries"] = sum(  # ty: ignore[no-matching-overload]
+                h.get("in_flight_queries", 0) for h in hosts_stats
+            )
 
         except Exception as e:
             stats["error"] = str(e)

@@ -141,7 +141,8 @@ class AttachmentHandler:
             if isinstance(source, str):
                 return Path(source).read_bytes()
             if isinstance(source, os.PathLike):
-                return Path(os.fspath(source)).read_bytes()
+                path_str: str = os.fspath(source)  # ty: ignore[no-matching-overload]
+                return Path(path_str).read_bytes()
             raise ValueError(f"File attachment type requires string path, got {type(source)}")
         elif attachment_type == EmailAttachmentType.BASE64:
             if isinstance(source, str | bytes):
