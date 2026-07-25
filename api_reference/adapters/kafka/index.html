@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../../assets/logo.jpg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -33,7 +33,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -5433,7 +5433,7 @@ Defaults to None.</p>
 </span><span id="__span-0-92"><a id="__codelineno-0-92" name="__codelineno-0-92"></a>        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 </span><span id="__span-0-93"><a id="__codelineno-0-93" name="__codelineno-0-93"></a>
 </span><span id="__span-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94"></a>    <span class="nd">@abstractmethod</span>
-</span><span id="__span-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]:</span>
+</span><span id="__span-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Commits the offset of a consumed message.</span>
 </span><span id="__span-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97"></a>
 </span><span id="__span-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98"></a><span class="sd">        Args:</span>
@@ -5796,7 +5796,7 @@ Defaults to None.</p>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">commit</span><span class="p">(</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -5862,7 +5862,7 @@ Defaults to None.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code>None | <span title="list">list</span>[<span title="confluent_kafka.TopicPartition">TopicPartition</span>]</code>
+                  <code><span title="list">list</span>[<span title="confluent_kafka.TopicPartition">TopicPartition</span>] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5916,7 +5916,7 @@ partitions for asynchronous commits.</p>
 <span class="normal"><a href="#__codelineno-0-107">107</a></span>
 <span class="normal"><a href="#__codelineno-0-108">108</a></span>
 <span class="normal"><a href="#__codelineno-0-109">109</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94"></a><span class="nd">@abstractmethod</span>
-</span><span id="__span-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95"></a><span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]:</span>
+</span><span id="__span-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95"></a><span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Commits the offset of a consumed message.</span>
 </span><span id="__span-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97"></a>
 </span><span id="__span-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98"></a><span class="sd">    Args:</span>
@@ -7060,7 +7060,7 @@ If None, wait indefinitely.</p>
 </span><span id="__span-0-247"><a id="__codelineno-0-247" name="__codelineno-0-247"></a>        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 </span><span id="__span-0-248"><a id="__codelineno-0-248" name="__codelineno-0-248"></a>
 </span><span id="__span-0-249"><a id="__codelineno-0-249" name="__codelineno-0-249"></a>    <span class="nd">@abstractmethod</span>
-</span><span id="__span-0-250"><a id="__codelineno-0-250" name="__codelineno-0-250"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]:</span>
+</span><span id="__span-0-250"><a id="__codelineno-0-250" name="__codelineno-0-250"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-251"><a id="__codelineno-0-251" name="__codelineno-0-251"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Commits the offset of a consumed message.</span>
 </span><span id="__span-0-252"><a id="__codelineno-0-252" name="__codelineno-0-252"></a>
 </span><span id="__span-0-253"><a id="__codelineno-0-253" name="__codelineno-0-253"></a><span class="sd">        Args:</span>
@@ -7426,7 +7426,7 @@ If None, wait indefinitely.</p>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">commit</span><span class="p">(</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -7492,7 +7492,7 @@ If None, wait indefinitely.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code>None | <span title="list">list</span>[<span title="confluent_kafka.TopicPartition">TopicPartition</span>]</code>
+                  <code><span title="list">list</span>[<span title="confluent_kafka.TopicPartition">TopicPartition</span>] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -7546,7 +7546,7 @@ partitions for asynchronous commits.</p>
 <span class="normal"><a href="#__codelineno-0-262">262</a></span>
 <span class="normal"><a href="#__codelineno-0-263">263</a></span>
 <span class="normal"><a href="#__codelineno-0-264">264</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-249"><a id="__codelineno-0-249" name="__codelineno-0-249"></a><span class="nd">@abstractmethod</span>
-</span><span id="__span-0-250"><a id="__codelineno-0-250" name="__codelineno-0-250"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]:</span>
+</span><span id="__span-0-250"><a id="__codelineno-0-250" name="__codelineno-0-250"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-251"><a id="__codelineno-0-251" name="__codelineno-0-251"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Commits the offset of a consumed message.</span>
 </span><span id="__span-0-252"><a id="__codelineno-0-252" name="__codelineno-0-252"></a>
 </span><span id="__span-0-253"><a id="__codelineno-0-253" name="__codelineno-0-253"></a><span class="sd">    Args:</span>
@@ -9967,7 +9967,7 @@ batch consumption, and offset management.</p>
 </span><span id="__span-0-348"><a id="__codelineno-0-348" name="__codelineno-0-348"></a>            <span class="k">return</span> <span class="n">message</span>
 </span><span id="__span-0-349"><a id="__codelineno-0-349" name="__codelineno-0-349"></a>
 </span><span id="__span-0-350"><a id="__codelineno-0-350" name="__codelineno-0-350"></a>    <span class="nd">@override</span>
-</span><span id="__span-0-351"><a id="__codelineno-0-351" name="__codelineno-0-351"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]:</span>
+</span><span id="__span-0-351"><a id="__codelineno-0-351" name="__codelineno-0-351"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-352"><a id="__codelineno-0-352" name="__codelineno-0-352"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Commits the offset for a message.</span>
 </span><span id="__span-0-353"><a id="__codelineno-0-353" name="__codelineno-0-353"></a>
 </span><span id="__span-0-354"><a id="__codelineno-0-354" name="__codelineno-0-354"></a><span class="sd">        Args:</span>
@@ -10455,7 +10455,7 @@ Defaults to 500.</p>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">commit</span><span class="p">(</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -10521,7 +10521,7 @@ Defaults to 500.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code>None | <span title="list">list</span>[<span title="confluent_kafka.TopicPartition">TopicPartition</span>]</code>
+                  <code><span title="list">list</span>[<span title="confluent_kafka.TopicPartition">TopicPartition</span>] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -10609,7 +10609,7 @@ Defaults to 500.</p>
 <span class="normal"><a href="#__codelineno-0-378">378</a></span>
 <span class="normal"><a href="#__codelineno-0-379">379</a></span>
 <span class="normal"><a href="#__codelineno-0-380">380</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-350"><a id="__codelineno-0-350" name="__codelineno-0-350"></a><span class="nd">@override</span>
-</span><span id="__span-0-351"><a id="__codelineno-0-351" name="__codelineno-0-351"></a><span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]:</span>
+</span><span id="__span-0-351"><a id="__codelineno-0-351" name="__codelineno-0-351"></a><span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-352"><a id="__codelineno-0-352" name="__codelineno-0-352"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Commits the offset for a message.</span>
 </span><span id="__span-0-353"><a id="__codelineno-0-353" name="__codelineno-0-353"></a>
 </span><span id="__span-0-354"><a id="__codelineno-0-354" name="__codelineno-0-354"></a><span class="sd">    Args:</span>
@@ -13650,7 +13650,7 @@ It implements the AsyncKafkaConsumerPort interface.</p>
 </span><span id="__span-0-995"><a id="__codelineno-0-995" name="__codelineno-0-995"></a>            <span class="k">return</span> <span class="n">message</span>
 </span><span id="__span-0-996"><a id="__codelineno-0-996" name="__codelineno-0-996"></a>
 </span><span id="__span-0-997"><a id="__codelineno-0-997" name="__codelineno-0-997"></a>    <span class="nd">@override</span>
-</span><span id="__span-0-998"><a id="__codelineno-0-998" name="__codelineno-0-998"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]:</span>
+</span><span id="__span-0-998"><a id="__codelineno-0-998" name="__codelineno-0-998"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-999"><a id="__codelineno-0-999" name="__codelineno-0-999"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Commits the offset for a message asynchronously.</span>
 </span><span id="__span-0-1000"><a id="__codelineno-0-1000" name="__codelineno-0-1000"></a>
 </span><span id="__span-0-1001"><a id="__codelineno-0-1001" name="__codelineno-0-1001"></a><span class="sd">        Args:</span>
@@ -14148,7 +14148,7 @@ Defaults to 500.</p>
 <div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">commit</span><span class="p">(</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
@@ -14214,7 +14214,7 @@ Defaults to 500.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code>None | <span title="list">list</span>[<span title="confluent_kafka.TopicPartition">TopicPartition</span>]</code>
+                  <code><span title="list">list</span>[<span title="confluent_kafka.TopicPartition">TopicPartition</span>] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -14294,7 +14294,7 @@ Defaults to 500.</p>
 <span class="normal"><a href="#__codelineno-0-1017">1017</a></span>
 <span class="normal"><a href="#__codelineno-0-1018">1018</a></span>
 <span class="normal"><a href="#__codelineno-0-1019">1019</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-997"><a id="__codelineno-0-997" name="__codelineno-0-997"></a><span class="nd">@override</span>
-</span><span id="__span-0-998"><a id="__codelineno-0-998" name="__codelineno-0-998"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]:</span>
+</span><span id="__span-0-998"><a id="__codelineno-0-998" name="__codelineno-0-998"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Message</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">asynchronous</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TopicPartition</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-999"><a id="__codelineno-0-999" name="__codelineno-0-999"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Commits the offset for a message asynchronously.</span>
 </span><span id="__span-0-1000"><a id="__codelineno-0-1000" name="__codelineno-0-1000"></a>
 </span><span id="__span-0-1001"><a id="__codelineno-0-1001" name="__codelineno-0-1001"></a><span class="sd">    Args:</span>
@@ -14779,7 +14779,7 @@ heading_level: 3</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "content.code.copy", "content.tabs.link", "content.action.edit"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
