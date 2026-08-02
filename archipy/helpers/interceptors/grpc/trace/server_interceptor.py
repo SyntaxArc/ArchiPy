@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import inspect
 import logging
-from collections.abc import Awaitable, Callable, Iterable
-from typing import Any
-
-import grpc
+from typing import TYPE_CHECKING, Any
 
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers.interceptors.grpc.base.server_interceptor import (
@@ -19,7 +16,14 @@ from archipy.helpers.interceptors.grpc.base.server_interceptor import (
 )
 from archipy.helpers.utils.tracing_utils import TracingUtils
 
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable, Iterable
+
+    import grpc
+
 logger = logging.getLogger(__name__)
+
+_METADATA_PAIR_MIN_LEN = 2
 
 
 def _invocation_metadata_to_dict(metadata_items: Iterable[Any]) -> dict[str, str]:
@@ -28,7 +32,7 @@ def _invocation_metadata_to_dict(metadata_items: Iterable[Any]) -> dict[str, str
     for item in metadata_items:
         if hasattr(item, "key") and hasattr(item, "value"):
             key, value = item.key, item.value
-        elif isinstance(item, tuple) and len(item) >= 2:
+        elif isinstance(item, tuple) and len(item) >= _METADATA_PAIR_MIN_LEN:
             key, value = item[0], item[1]
         else:
             continue
@@ -37,6 +41,108 @@ def _invocation_metadata_to_dict(metadata_items: Iterable[Any]) -> dict[str, str
         else:
             metadata_dict[str(key)] = str(value)
     return metadata_dict
+
+
+def _start_sentry_server_transaction(config: Any, metadata_dict: dict[str, str], full_method_name: str) -> Any | None:
+    """Start a Sentry transaction for an inbound gRPC server call."""
+    if not config.SENTRY.IS_ENABLED:
+        return None
+    try:
+        import sentry_sdk
+
+        _, sentry_headers = TracingUtils.extract_inbound_trace(metadata_dict)
+        sentry_transaction = sentry_sdk.continue_trace(
+            sentry_headers,
+            op="grpc.server",
+            name=full_method_name,
+        )
+        sentry_transaction.__enter__()
+    except ImportError:
+        logger.debug("sentry_sdk is not installed, skipping Sentry transaction for gRPC server.")
+        return None
+    except Exception:
+        logger.exception("Failed to start Sentry transaction for gRPC server call")
+        return None
+    else:
+        return sentry_transaction
+
+
+def _start_elastic_server_transaction(config: Any, metadata_dict: dict[str, str]) -> Any | None:
+    """Begin an Elastic APM transaction for an inbound gRPC server call."""
+    if not config.ELASTIC_APM.IS_ENABLED:
+        return None
+    try:
+        import elasticapm
+
+        elastic_client = elasticapm.get_client()
+        if elastic_client is None:
+            logger.warning("Elastic APM client is not initialized; skipping APM transaction for gRPC.")
+            return None
+        if (parent := elasticapm.trace_parent_from_headers(metadata_dict)) is not None:
+            elastic_client.begin_transaction(transaction_type="request", trace_parent=parent)
+        else:
+            elastic_client.begin_transaction(transaction_type="request")
+    except ImportError:
+        logger.debug("elasticapm is not installed, skipping Elastic APM transaction for gRPC server.")
+        return None
+    except Exception:
+        logger.exception("Failed to begin Elastic APM transaction for gRPC server call")
+        return None
+    else:
+        return elastic_client
+
+
+def _finalize_server_trace_success(
+    *,
+    sentry_transaction: Any | None,
+    elastic_client: Any | None,
+    full_method_name: str,
+) -> None:
+    """Mark a successful gRPC server trace and close the Elastic transaction."""
+    try:
+        import elasticapm
+        from elasticapm.conf.constants import OUTCOME
+
+        elasticapm.set_transaction_outcome(OUTCOME.SUCCESS, override=False)
+    except ImportError:
+        pass
+    if sentry_transaction is not None and sentry_transaction.status is None:
+        sentry_transaction.set_status("ok")
+    if elastic_client is not None:
+        elastic_client.end_transaction(name=full_method_name, result="success")
+
+
+def _finalize_server_trace_failure(
+    *,
+    exception: BaseException,
+    sentry_transaction: Any | None,
+    elastic_client: Any | None,
+    full_method_name: str,
+) -> None:
+    """Mark a failed gRPC server trace and close the Elastic transaction."""
+    if sentry_transaction is not None:
+        sentry_transaction.set_status("internal_error")
+    if elastic_client is not None:
+        try:
+            import elasticapm
+
+            elasticapm.set_transaction_outcome(TracingUtils.outcome_for_exception(exception))
+        except ImportError:
+            pass
+        elastic_client.end_transaction(name=full_method_name, result="failure")
+
+
+def _close_sentry_server_transaction(
+    sentry_transaction: Any | None,
+    exc_info: tuple[type[BaseException] | None, BaseException | None, Any],
+) -> None:
+    """Exit the Sentry transaction context for a gRPC server call."""
+    if sentry_transaction is None:
+        return
+    try:
+        sentry_transaction.__exit__(exc_info[0], exc_info[1], exc_info[2])
+    except Exception:
+        logger.exception("Error closing Sentry transaction for gRPC server call")
 
 
 class _ServicerContextWrapper:
@@ -148,40 +254,8 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
         metadata_items = list(context.invocation_metadata())
         metadata_dict = _invocation_metadata_to_dict(metadata_items)
 
-        sentry_transaction = None
-        if config.SENTRY.IS_ENABLED:
-            try:
-                import sentry_sdk
-
-                _, sentry_headers = TracingUtils.extract_inbound_trace(metadata_dict)
-                sentry_transaction = sentry_sdk.continue_trace(
-                    sentry_headers,
-                    op="grpc.server",
-                    name=method_name_model.full_name,
-                )
-                sentry_transaction.__enter__()
-            except ImportError:
-                logger.debug("sentry_sdk is not installed, skipping Sentry transaction for gRPC server.")
-            except Exception:
-                logger.exception("Failed to start Sentry transaction for gRPC server call")
-
-        elastic_client: Any = None
-        if config.ELASTIC_APM.IS_ENABLED:
-            try:
-                import elasticapm
-
-                elastic_client = elasticapm.get_client()
-                if elastic_client is None:
-                    logger.warning("Elastic APM client is not initialized; skipping APM transaction for gRPC.")
-                elif (parent := elasticapm.trace_parent_from_headers(metadata_dict)) is not None:
-                    elastic_client.begin_transaction(transaction_type="request", trace_parent=parent)
-                else:
-                    elastic_client.begin_transaction(transaction_type="request")
-            except ImportError:
-                logger.debug("elasticapm is not installed, skipping Elastic APM transaction for gRPC server.")
-            except Exception:
-                logger.exception("Failed to begin Elastic APM transaction for gRPC server call")
-                elastic_client = None
+        sentry_transaction = _start_sentry_server_transaction(config, metadata_dict, method_name_model.full_name)
+        elastic_client = _start_elastic_server_transaction(config, metadata_dict)
 
         wrapped_ctx = _ServicerContextWrapper(context, sentry_transaction)
 
@@ -190,36 +264,22 @@ class GrpcServerTraceInterceptor(BaseGrpcServerInterceptor):
             result = method(request, wrapped_ctx)
         except Exception as exception:
             exc_info = (type(exception), exception, exception.__traceback__)
-            if sentry_transaction is not None:
-                sentry_transaction.set_status("internal_error")
-            if elastic_client is not None:
-                try:
-                    import elasticapm
-
-                    elasticapm.set_transaction_outcome(TracingUtils.outcome_for_exception(exception))
-                except ImportError:
-                    pass
-                elastic_client.end_transaction(name=method_name_model.full_name, result="failure")
+            _finalize_server_trace_failure(
+                exception=exception,
+                sentry_transaction=sentry_transaction,
+                elastic_client=elastic_client,
+                full_method_name=method_name_model.full_name,
+            )
             raise
         else:
-            try:
-                import elasticapm
-                from elasticapm.conf.constants import OUTCOME
-
-                elasticapm.set_transaction_outcome(OUTCOME.SUCCESS, override=False)
-            except ImportError:
-                pass
-            if sentry_transaction is not None and sentry_transaction.status is None:
-                sentry_transaction.set_status("ok")
-            if elastic_client is not None:
-                elastic_client.end_transaction(name=method_name_model.full_name, result="success")
+            _finalize_server_trace_success(
+                sentry_transaction=sentry_transaction,
+                elastic_client=elastic_client,
+                full_method_name=method_name_model.full_name,
+            )
             return result
         finally:
-            if sentry_transaction is not None:
-                try:
-                    sentry_transaction.__exit__(exc_info[0], exc_info[1], exc_info[2])
-                except Exception:
-                    logger.exception("Error closing Sentry transaction for gRPC server call")
+            _close_sentry_server_transaction(sentry_transaction, exc_info)
 
 
 class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
@@ -267,40 +327,8 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
         metadata_items = list(invocation_metadata) if invocation_metadata is not None else []
         metadata_dict = _invocation_metadata_to_dict(metadata_items)
 
-        sentry_transaction = None
-        if config.SENTRY.IS_ENABLED:
-            try:
-                import sentry_sdk
-
-                _, sentry_headers = TracingUtils.extract_inbound_trace(metadata_dict)
-                sentry_transaction = sentry_sdk.continue_trace(
-                    sentry_headers,
-                    op="grpc.server",
-                    name=method_name_model.full_name,
-                )
-                sentry_transaction.__enter__()
-            except ImportError:
-                logger.debug("sentry_sdk is not installed, skipping Sentry transaction for async gRPC server.")
-            except Exception:
-                logger.exception("Failed to start Sentry transaction for async gRPC server call")
-
-        elastic_client: Any = None
-        if config.ELASTIC_APM.IS_ENABLED:
-            try:
-                import elasticapm
-
-                elastic_client = elasticapm.get_client()
-                if elastic_client is None:
-                    logger.warning("Elastic APM client is not initialized; skipping APM transaction for gRPC.")
-                elif (parent := elasticapm.trace_parent_from_headers(metadata_dict)) is not None:
-                    elastic_client.begin_transaction(transaction_type="request", trace_parent=parent)
-                else:
-                    elastic_client.begin_transaction(transaction_type="request")
-            except ImportError:
-                logger.debug("elasticapm is not installed, skipping Elastic APM transaction for async gRPC server.")
-            except Exception:
-                logger.exception("Failed to begin Elastic APM transaction for async gRPC server call")
-                elastic_client = None
+        sentry_transaction = _start_sentry_server_transaction(config, metadata_dict, method_name_model.full_name)
+        elastic_client = _start_elastic_server_transaction(config, metadata_dict)
 
         wrapped_ctx = _AsyncServicerContextWrapper(context, sentry_transaction)
 
@@ -311,33 +339,19 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
                 result = await result
         except Exception as exception:
             exc_info = (type(exception), exception, exception.__traceback__)
-            if sentry_transaction is not None:
-                sentry_transaction.set_status("internal_error")
-            if elastic_client is not None:
-                try:
-                    import elasticapm
-
-                    elasticapm.set_transaction_outcome(TracingUtils.outcome_for_exception(exception))
-                except ImportError:
-                    pass
-                elastic_client.end_transaction(name=method_name_model.full_name, result="failure")
+            _finalize_server_trace_failure(
+                exception=exception,
+                sentry_transaction=sentry_transaction,
+                elastic_client=elastic_client,
+                full_method_name=method_name_model.full_name,
+            )
             raise
         else:
-            try:
-                import elasticapm
-                from elasticapm.conf.constants import OUTCOME
-
-                elasticapm.set_transaction_outcome(OUTCOME.SUCCESS, override=False)
-            except ImportError:
-                pass
-            if sentry_transaction is not None and sentry_transaction.status is None:
-                sentry_transaction.set_status("ok")
-            if elastic_client is not None:
-                elastic_client.end_transaction(name=method_name_model.full_name, result="success")
+            _finalize_server_trace_success(
+                sentry_transaction=sentry_transaction,
+                elastic_client=elastic_client,
+                full_method_name=method_name_model.full_name,
+            )
             return result
         finally:
-            if sentry_transaction is not None:
-                try:
-                    sentry_transaction.__exit__(exc_info[0], exc_info[1], exc_info[2])
-                except Exception:
-                    logger.exception("Error closing Sentry transaction for async gRPC server call")
+            _close_sentry_server_transaction(sentry_transaction, exc_info)

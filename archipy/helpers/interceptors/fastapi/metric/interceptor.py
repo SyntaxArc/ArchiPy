@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Awaitable, Callable, Iterator
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from prometheus_client import Gauge, Histogram
@@ -12,6 +11,8 @@ from archipy.configs.base_config import BaseConfig
 from archipy.helpers.utils.base_utils import BaseUtils
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable, Iterator
+
     from fastapi import Request, Response
     from starlette.types import ASGIApp
 

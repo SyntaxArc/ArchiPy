@@ -1,6 +1,5 @@
-from collections.abc import Callable
+from typing import TYPE_CHECKING
 
-import grpc
 from pydantic import ValidationError
 
 from archipy.helpers.interceptors.grpc.base.server_interceptor import (
@@ -11,6 +10,11 @@ from archipy.helpers.interceptors.grpc.base.server_interceptor import (
 from archipy.helpers.utils.base_utils import BaseUtils
 from archipy.models.errors import InternalError, InvalidArgumentError
 from archipy.models.errors.base_error import BaseError
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    import grpc
 
 
 class GrpcServerExceptionInterceptor(BaseGrpcServerInterceptor):

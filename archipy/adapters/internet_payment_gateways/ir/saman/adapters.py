@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import httpx2
 
@@ -7,7 +8,6 @@ from archipy.adapters.internet_payment_gateways.ir.saman.ports import (
     SamanShaparakPaymentPort,
 )
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import SamanShaparakConfig
 from archipy.models.dtos.saman_ipg_dtos import (
     PaymentRequestDTO,
     PaymentResponseDTO,
@@ -17,6 +17,10 @@ from archipy.models.dtos.saman_ipg_dtos import (
     VerifyResponseDTO,
 )
 from archipy.models.errors.system_errors import InternalError, UnavailableError
+from archipy.models.errors.validation_errors import InvalidArgumentError
+
+if TYPE_CHECKING:
+    from archipy.configs.config_template import SamanShaparakConfig
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +33,11 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
     """
 
     def __init__(self, config: SamanShaparakConfig | None = None) -> None:
+        """Initialize SamanShaparakPaymentAdapter."""
         configs = BaseConfig.global_config().SAMAN_SHAPARAK if config is None else config
 
         if not configs.TERMINAL_ID:
-            raise ValueError("TERMINAL_ID must be provided in SamanShaparakConfig")
+            raise InvalidArgumentError(argument_name="TERMINAL_ID")
 
         self.terminal_id = configs.TERMINAL_ID
         self.payment_url = str(configs.PAYMENT_URL)
@@ -223,10 +228,11 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
     """
 
     def __init__(self, config: SamanShaparakConfig | None = None) -> None:
+        """Initialize AsyncSamanShaparakPaymentAdapter."""
         configs = BaseConfig.global_config().SAMAN_SHAPARAK if config is None else config
 
         if not configs.TERMINAL_ID:
-            raise ValueError("TERMINAL_ID must be provided in SamanShaparakConfig")
+            raise InvalidArgumentError(argument_name="TERMINAL_ID")
 
         self.terminal_id = configs.TERMINAL_ID
         self.payment_url = str(configs.PAYMENT_URL)

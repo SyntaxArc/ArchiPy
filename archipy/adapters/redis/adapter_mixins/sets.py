@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Awaitable, Iterator
 
 from archipy.adapters.redis.adapter_mixins._shared import AsyncRedisMixinBase, SyncRedisMixinBase, _set
+from archipy.models.errors import InternalError, InvalidArgumentError
 
 
 class RedisSetsMixin(SyncRedisMixinBase):
@@ -97,7 +98,7 @@ class RedisSetsMixin(SyncRedisMixinBase):
         """
         result = self.read_only_client.smembers(name)
         if isinstance(result, Awaitable):
-            raise TypeError("Unexpected awaitable from sync Redis client")
+            raise InternalError(error_code="SYNC_REDIS_AWAITABLE")
         return set(result) if result else set()
 
     def spop(self, name: str, count: int | None = None) -> bytes | float | int | str | list | None:
@@ -112,7 +113,7 @@ class RedisSetsMixin(SyncRedisMixinBase):
         """
         result = self.client.spop(name, count)
         if isinstance(result, Awaitable):
-            raise TypeError("Unexpected awaitable from sync Redis client")
+            raise InternalError(error_code="SYNC_REDIS_AWAITABLE")
         if isinstance(result, set):
             return list(result)
         return result
@@ -144,7 +145,7 @@ class RedisSetsMixin(SyncRedisMixinBase):
         keys_list: list[str | bytes] = [keys, *list(args)]
         result = self.client.sunion(keys_list)
         if isinstance(result, Awaitable):
-            raise TypeError("Unexpected awaitable from sync Redis client")
+            raise InternalError(error_code="SYNC_REDIS_AWAITABLE")
         return set(result) if result else set()
 
 
@@ -271,7 +272,10 @@ class AsyncRedisSetsMixin(AsyncRedisMixinBase):
             # Type narrowing: result can be any of the return types
             if awaited_result is None or isinstance(awaited_result, (bytes, float, int, str, list)):
                 return awaited_result
-            raise TypeError(f"Unexpected type from spop: {type(awaited_result)}")
+            raise InvalidArgumentError(
+                argument_name="spop_result",
+                additional_data={"got": type(awaited_result).__name__},
+            )
         return result
 
     async def srem(self, name: str, *values: bytes | str | float) -> int:

@@ -1,15 +1,17 @@
 from abc import abstractmethod
 from collections.abc import Mapping, Sequence
-from typing import Any
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Executable, Result, ScalarResult, Select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
+if TYPE_CHECKING:
+    from uuid import UUID
 
-from archipy.models.dtos.pagination_dto import PaginationDTO
-from archipy.models.dtos.sort_dto import SortDTO
-from archipy.models.entities import BaseEntity
+    from sqlalchemy import Executable, Result, ScalarResult, Select
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.orm import Session
+
+    from archipy.models.dtos.pagination_dto import PaginationDTO
+    from archipy.models.dtos.sort_dto import SortDTO
+    from archipy.models.entities import BaseEntity
 
 _CoreSingleExecuteParams = Mapping[str, Any]
 _CoreMultiExecuteParams = Sequence[_CoreSingleExecuteParams]

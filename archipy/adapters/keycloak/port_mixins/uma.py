@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Iterable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from keycloak.uma_permissions import UMAPermission
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from keycloak.uma_permissions import UMAPermission
 
 
 class KeycloakUmaPort:

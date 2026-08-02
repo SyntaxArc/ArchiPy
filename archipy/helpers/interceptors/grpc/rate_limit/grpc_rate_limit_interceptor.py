@@ -3,14 +3,10 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Callable
 from math import ceil
 from typing import TYPE_CHECKING
 
-import grpc
-
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import GrpcRateLimitConfig
 from archipy.helpers.interceptors.grpc.base.server_interceptor import (
     BaseAsyncGrpcServerInterceptor,
     BaseGrpcServerInterceptor,
@@ -18,11 +14,16 @@ from archipy.helpers.interceptors.grpc.base.server_interceptor import (
 )
 from archipy.helpers.interceptors.grpc.rate_limit.identifiers import resolve_jwt_access_token_sub_from_metadata
 from archipy.helpers.utils.rate_limit_utils import RateLimitUtils
-from archipy.models.dtos.rate_limit_window_dto import RateLimitWindowDTO
 from archipy.models.errors import RateLimitExceededError, UnavailableError
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+
+    import grpc
+
     from archipy.adapters.redis.adapters import AsyncRedisAdapter, RedisAdapter
+    from archipy.configs.config_template import GrpcRateLimitConfig
+    from archipy.models.dtos.rate_limit_window_dto import RateLimitWindowDTO
 
 
 class _GrpcRateLimitInterceptorMixin:
@@ -198,6 +199,14 @@ class _GrpcRateLimitInterceptorMixin:
         """Abort an async RPC when the rate limiter backend is unavailable."""
         await UnavailableError(additional_data={"detail": detail}).abort_grpc_async(context)
 
+    @staticmethod
+    async def _invoke_maybe_async_handler(method: Callable, request: object, context: object) -> object:
+        """Invoke a gRPC handler and await the result when it is awaitable."""
+        result = method(request, context)
+        if inspect.isawaitable(result):
+            return await result
+        return result
+
 
 class GrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseGrpcServerInterceptor):
     """Sync gRPC server interceptor for decorator-declared Redis rate limits."""
@@ -327,29 +336,16 @@ class AsyncGrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseAs
             return 0, remaining
         return await self._redis_client.pttl(key), 0
 
-    async def intercept(
+    async def _enforce_rate_limit_windows_async(
         self,
         method: Callable,
         request: object,
         context: grpc.aio.ServicerContext,
         method_name_model: MethodName,
-    ) -> object:
-        """Enforce stacked rate-limit windows before invoking the async RPC handler."""
+        windows: Sequence[RateLimitWindowDTO],
+    ) -> object | None:
+        """Enforce rate-limit windows; return handler result on fail-open bypass."""
         from redis.exceptions import RedisError  # noqa: PLC0415
-
-        windows = RateLimitUtils.get_rate_limit_windows_from_callable(method)
-        if not windows:
-            result = method(request, context)
-            if inspect.isawaitable(result):
-                return await result
-            return result
-
-        full_method = self._full_method_name(method_name_model)
-        if full_method in self._skip_methods:
-            result = method(request, context)
-            if inspect.isawaitable(result):
-                return await result
-            return result
 
         identity = await self._resolve_identity_async(context, method_name_model)
         for window in windows:
@@ -360,16 +356,37 @@ class AsyncGrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseAs
                 if self._fail_closed:
                     await self._abort_unavailable_async(context, detail="Rate limiter unavailable")
                     raise RuntimeError("unreachable") from exc
-                result = method(request, context)
-                if inspect.isawaitable(result):
-                    return await result
-                return result
+                return await self._invoke_maybe_async_handler(method, request, context)
 
             if pexpire != 0:
                 await self._abort_rate_limited_async(context, window, pexpire)
                 raise RuntimeError("unreachable")
+        return None
 
-        result = method(request, context)
-        if inspect.isawaitable(result):
-            return await result
-        return result
+    async def intercept(
+        self,
+        method: Callable,
+        request: object,
+        context: grpc.aio.ServicerContext,
+        method_name_model: MethodName,
+    ) -> object:
+        """Enforce stacked rate-limit windows before invoking the async RPC handler."""
+        windows = RateLimitUtils.get_rate_limit_windows_from_callable(method)
+        if not windows:
+            return await self._invoke_maybe_async_handler(method, request, context)
+
+        full_method = self._full_method_name(method_name_model)
+        if full_method in self._skip_methods:
+            return await self._invoke_maybe_async_handler(method, request, context)
+
+        bypass_result = await self._enforce_rate_limit_windows_async(
+            method,
+            request,
+            context,
+            method_name_model,
+            windows,
+        )
+        if bypass_result is not None:
+            return bypass_result
+
+        return await self._invoke_maybe_async_handler(method, request, context)

@@ -1,7 +1,9 @@
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.orm import Session
 
 
 class SessionManagerPort:

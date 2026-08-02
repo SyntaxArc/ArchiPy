@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING
 
+from archipy.models.errors import ConfigurationError, InvalidArgumentError
+
 from .cache import ttl_cache_decorator
 from .deprecation_exception import class_deprecation_error, method_deprecation_error
 from .deprecation_warnings import class_deprecation_warning, method_deprecation_warning
@@ -62,7 +64,7 @@ def __getattr__(name: str) -> object:
     }
 
     if name not in sqlalchemy_decorator_names:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+        raise InvalidArgumentError(argument_name=name, additional_data={"module": __name__})
 
     if _SQLAlchemyDecorators._cache is None:
         try:
@@ -86,9 +88,7 @@ def __getattr__(name: str) -> object:
                 "starrocks_sqlalchemy_atomic_decorator": starrocks_sqlalchemy_atomic_decorator,
             }
         except ImportError as e:
-            raise ImportError(
-                "SQLAlchemy decorators require the 'sqlalchemy' extra. Install with: pip install archipy[sqlalchemy]",
-            ) from e
+            raise ConfigurationError(operation="import", reason="sqlalchemy_extra_required") from e
 
     return _SQLAlchemyDecorators._cache[name]
 

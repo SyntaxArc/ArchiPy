@@ -46,6 +46,7 @@ class InvalidArgumentError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidArgumentError."""
         data = {"argument": argument_name} if argument_name else {}
         if additional_data:
             data.update(additional_data)
@@ -78,6 +79,7 @@ class InvalidFormatError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidFormatError."""
         data = {}
         if format_type:
             data["format_type"] = format_type
@@ -107,6 +109,7 @@ class InvalidEmailError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidEmailError."""
         data = {"email": email} if email else {}
         if additional_data:
             data.update(additional_data)
@@ -138,6 +141,7 @@ class InvalidPhoneNumberError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidPhoneNumberError."""
         data = {"phone_number": phone_number}
         if additional_data:
             data.update(additional_data)
@@ -175,6 +179,7 @@ class InvalidLandlineNumberError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidLandlineNumberError."""
         data = {"landline_number": landline_number}
         if additional_data:
             data.update(additional_data)
@@ -212,6 +217,7 @@ class InvalidNationalCodeError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidNationalCodeError."""
         data = {"national_code": national_code}
         if additional_data:
             data.update(additional_data)
@@ -249,6 +255,7 @@ class InvalidPasswordError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidPasswordError."""
         data = {"requirements": requirements} if requirements else {}
         if additional_data:
             data.update(additional_data)
@@ -275,6 +282,7 @@ class InvalidDateError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidDateError."""
         data = {}
         if date:
             data["date"] = date
@@ -304,6 +312,7 @@ class InvalidUrlError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidUrlError."""
         data = {"url": url} if url else {}
         if additional_data:
             data.update(additional_data)
@@ -335,6 +344,7 @@ class InvalidIpError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidIpError."""
         data = {"ip": ip} if ip else {}
         if additional_data:
             data.update(additional_data)
@@ -366,6 +376,7 @@ class InvalidJsonError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidJsonError."""
         data = {}
         if json_data:
             data["json_data"] = json_data
@@ -394,6 +405,7 @@ class InvalidTimestampError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidTimestampError."""
         data = {}
         if timestamp:
             data["timestamp"] = timestamp
@@ -423,6 +435,7 @@ class OutOfRangeError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize OutOfRangeError."""
         data = {"field": field_name} if field_name else {}
         if additional_data:
             data.update(additional_data)

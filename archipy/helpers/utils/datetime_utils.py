@@ -1,7 +1,6 @@
 import time
-from collections.abc import Generator
 from datetime import UTC, date, datetime, timedelta
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import jdatetime
 import requests
@@ -10,6 +9,9 @@ from urllib3.util.retry import Retry
 
 from archipy.configs.base_config import BaseConfig
 from archipy.models.errors import UnknownError
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 class DatetimeUtils:

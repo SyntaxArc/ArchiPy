@@ -1,22 +1,11 @@
-from datetime import date, datetime
-from decimal import Decimal
 from enum import Enum
-from typing import Any, NoReturn, TypeVar, override
-from uuid import UUID
+from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, override
 
 from sqlalchemy import Delete, Executable, Result, ScalarResult, Update, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import InstrumentedAttribute, Session
-from sqlalchemy.sql import Select
 
 from archipy.adapters.base.sqlalchemy.ports import AnyExecuteParams, AsyncSQLAlchemyPort, SQLAlchemyPort
-from archipy.adapters.base.sqlalchemy.session_managers import (
-    AsyncBaseSQLAlchemySessionManager,
-    BaseSQLAlchemySessionManager,
-)
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import SQLAlchemyConfig
-from archipy.models.dtos.pagination_dto import PaginationDTO
 from archipy.models.dtos.sort_dto import SortDTO
 from archipy.models.entities import BaseEntity
 from archipy.models.errors import (
@@ -31,6 +20,21 @@ from archipy.models.errors import (
 )
 from archipy.models.types.base_types import FilterOperationType
 from archipy.models.types.sort_order_type import SortOrderType
+
+if TYPE_CHECKING:
+    from datetime import date, datetime
+    from decimal import Decimal
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.orm import InstrumentedAttribute, Session
+    from sqlalchemy.sql import Select
+
+    from archipy.adapters.base.sqlalchemy.session_managers import (
+        AsyncBaseSQLAlchemySessionManager,
+        BaseSQLAlchemySessionManager,
+    )
+    from archipy.models.dtos.pagination_dto import PaginationDTO
 
 # Generic type variable for BaseEntity subclasses
 T = TypeVar("T", bound=BaseEntity)
@@ -88,7 +92,14 @@ class SQLAlchemyFilterMixin:
     ) -> list:
         """Validate that value is a list for list operations."""
         if not isinstance(value, list):
-            raise InvalidArgumentError(f"{operation.value} operation requires a list, got {type(value)}")
+            raise InvalidArgumentError(
+                argument_name="value",
+                additional_data={
+                    "operation": operation.value,
+                    "expected_type": "list",
+                    "got": type(value).__name__,
+                },
+            )
         return value
 
     @staticmethod

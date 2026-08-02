@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from async_lru import alru_cache
 from keycloak.exceptions import (
@@ -14,15 +14,17 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
 )
-from archipy.adapters.keycloak.ports import (
-    KeycloakTokenType,
-    KeycloakUserType,
-    PublicKeyType,
-)
 from archipy.helpers.decorators import ttl_cache_decorator
 from archipy.models.errors import (
     InternalError,
 )
+
+if TYPE_CHECKING:
+    from archipy.adapters.keycloak.ports import (
+        KeycloakTokenType,
+        KeycloakUserType,
+        PublicKeyType,
+    )
 
 logger = logging.getLogger(__name__)
 

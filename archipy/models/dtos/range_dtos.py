@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import ClassVar, Protocol, Self, TypeVar
+from typing import ClassVar, Protocol, Self, TypeVar, cast
 
 from pydantic import field_validator, model_validator
 
@@ -42,10 +42,9 @@ class BaseRangeDTO[R](BaseDTO):
             OutOfRangeError: If from_ is greater than to.
         """
         if self.from_ is not None and self.to is not None:
-            # Use comparison with proper type handling
-            # The protocol ensures both values support comparison
+            # Cast through Comparable so the type checker accepts `>`.
             try:
-                if self.from_ > self.to:  # ty: ignore[unsupported-operator]
+                if cast("Comparable", self.from_) > cast("Comparable", self.to):
                     raise OutOfRangeError(field_name="from_")
             except TypeError:
                 # If comparison fails, skip validation (shouldn't happen with proper types)

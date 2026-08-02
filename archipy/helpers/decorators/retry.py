@@ -1,9 +1,11 @@
 import logging
 import time
-from collections.abc import Callable
-from typing import ParamSpec, TypeVar
+from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 from archipy.models.errors import ResourceExhaustedError
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Define type variables for decorators
 P = ParamSpec("P")

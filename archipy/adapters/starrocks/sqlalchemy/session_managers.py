@@ -1,9 +1,7 @@
-from typing import Any, override
+from typing import TYPE_CHECKING, Any, override
 
 from sqlalchemy import URL
-from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.sql.functions import GenericFunction
 from starrocks.dialect import StarRocksSQLCompiler, StarRocksTypeCompiler
 
 from archipy.adapters.base.sqlalchemy.session_managers import (
@@ -14,6 +12,10 @@ from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import StarRocksSQLAlchemyConfig
 from archipy.helpers.metaclasses.singleton import Singleton
 from archipy.models.errors import DatabaseConnectionError
+
+if TYPE_CHECKING:
+    from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
+    from sqlalchemy.sql.functions import GenericFunction
 
 
 # Patch the StarRocks type compiler to map UUID to VARCHAR at module level

@@ -67,6 +67,7 @@ class InvalidCredentialsError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidCredentialsError."""
         data = {"username": username} if username else {}
         if additional_data:
             data.update(additional_data)
@@ -138,6 +139,7 @@ class SessionExpiredError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize SessionExpiredError."""
         data = {"session_id": session_id} if session_id else {}
         if additional_data:
             data.update(additional_data)
@@ -196,6 +198,7 @@ class AccountLockedError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize AccountLockedError."""
         data = {}
         if username:
             data["username"] = username
@@ -232,6 +235,7 @@ class AccountDisabledError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize AccountDisabledError."""
         data = {}
         if username:
             data["username"] = username
@@ -268,6 +272,7 @@ class InvalidVerificationCodeError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidVerificationCodeError."""
         data = {}
         if code:
             data["code"] = code

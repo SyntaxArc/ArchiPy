@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from archipy.models.dtos.base_dtos import BaseDTO
-from archipy.models.errors import InvalidEntityTypeError
+from archipy.models.errors import ConfigurationError, InternalError, InvalidEntityTypeError
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
@@ -10,7 +10,6 @@ else:
 
 try:
     from google.protobuf.json_format import MessageToDict, ParseDict
-    from google.protobuf.message import Message
 
     PROTOBUF_AVAILABLE = True
 except ImportError:
@@ -26,16 +25,17 @@ class BaseProtobufDTO(BaseDTO):
     _proto_class: ClassVar[type[Message] | None] = None
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize BaseProtobufDTO."""
         # Add a check at runtime when someone tries to use the class
         if not PROTOBUF_AVAILABLE:
-            raise RuntimeError("The 'protobuf' extra is not installed. ")
+            raise ConfigurationError(operation="import", reason="protobuf_extra_required")
         super().__init__(*args, **kwargs)
 
     @classmethod
     def from_proto(cls, request: Message) -> Self:
         """Converts a Protobuf message into a Pydantic DTO instance."""
         if cls._proto_class is None:
-            raise NotImplementedError(f"{cls.__name__} is not mapped to a proto class.")
+            raise InternalError(error_code="PROTO_CLASS_NOT_MAPPED", additional_data={"class_name": cls.__name__})
 
         if not isinstance(request, cls._proto_class):
             raise InvalidEntityTypeError(
@@ -54,6 +54,9 @@ class BaseProtobufDTO(BaseDTO):
     def to_proto(self) -> Message:
         """Converts the Pydantic DTO instance into a Protobuf message."""
         if self._proto_class is None:
-            raise NotImplementedError(f"{self.__class__.__name__} is not mapped to a proto class.")
+            raise InternalError(
+                error_code="PROTO_CLASS_NOT_MAPPED",
+                additional_data={"class_name": self.__class__.__name__},
+            )
 
         return ParseDict(self.model_dump(mode="json"), self._proto_class())

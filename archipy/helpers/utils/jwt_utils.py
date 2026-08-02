@@ -4,13 +4,15 @@ This module provides a robust JWT handling implementation with support for acces
 cryptographic security, token validation, and comprehensive error handling.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import AuthConfig
 from archipy.helpers.utils.datetime_utils import DatetimeUtils
 from archipy.models.errors import InvalidArgumentError, InvalidTokenError, TokenExpiredError
+
+if TYPE_CHECKING:
+    from archipy.configs.config_template import AuthConfig
 
 
 class JWTUtils:

@@ -60,13 +60,13 @@ class RedisSortedSetsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def zcount(self, name: bytes | str, min: float | str, max: float | str) -> int:
+    def zcount(self, name: bytes | str, min_: float | str, max_: float | str) -> int:
         """Counts members in a sorted set within a score range.
 
         Args:
             name (bytes | str): The key of the sorted set.
-            min (float | str): The minimum score (inclusive).
-            max (float | str): The maximum score (inclusive).
+            min_ (float | str): The minimum score (inclusive).
+            max_ (float | str): The maximum score (inclusive).
 
         Returns:
             RedisResponseType: The number of members within the score range.
@@ -182,8 +182,8 @@ class RedisSortedSetsPort:
     def zrangebyscore(
         self,
         name: bytes | str,
-        min: float | str,
-        max: float | str,
+        min_: float | str,
+        max_: float | str,
         start: int | None = None,
         num: int | None = None,
         withscores: bool = False,
@@ -193,8 +193,8 @@ class RedisSortedSetsPort:
 
         Args:
             name (bytes | str): The key of the sorted set.
-            min (float | str): The minimum score (inclusive).
-            max (float | str): The maximum score (inclusive).
+            min_ (float | str): The minimum score (inclusive).
+            max_ (float | str): The maximum score (inclusive).
             start (int, optional): Starting offset.
             num (int, optional): Number of elements to return.
             withscores (bool): If True, return scores with members. Defaults to False.
@@ -377,13 +377,13 @@ class AsyncRedisSortedSetsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def zcount(self, name: bytes | str, min: float | str, max: float | str) -> int:
+    async def zcount(self, name: bytes | str, min_: float | str, max_: float | str) -> int:
         """Counts members in a sorted set within a score range asynchronously.
 
         Args:
             name (bytes | str): The key of the sorted set.
-            min (float | str): The minimum score (inclusive).
-            max (float | str): The maximum score (inclusive).
+            min_ (float | str): The minimum score (inclusive).
+            max_ (float | str): The maximum score (inclusive).
 
         Returns:
             RedisResponseType: The number of members within the score range.
@@ -499,8 +499,8 @@ class AsyncRedisSortedSetsPort:
     async def zrangebyscore(
         self,
         name: bytes | str,
-        min: float | str,
-        max: float | str,
+        min_: float | str,
+        max_: float | str,
         start: int | None = None,
         num: int | None = None,
         withscores: bool = False,
@@ -510,8 +510,8 @@ class AsyncRedisSortedSetsPort:
 
         Args:
             name (bytes | str): The key of the sorted set.
-            min (float | str): The minimum score (inclusive).
-            max (float | str): The maximum score (inclusive).
+            min_ (float | str): The minimum score (inclusive).
+            max_ (float | str): The maximum score (inclusive).
             start (int, optional): Starting offset.
             num (int, optional): Number of elements to return.
             withscores (bool): If True, return scores with members. Defaults to False.

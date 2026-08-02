@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from fastapi import Request
-
 from archipy.models.errors import InvalidTokenError, TokenExpiredError
 
 if TYPE_CHECKING:
+    from fastapi import Request
+
     from archipy.configs.config_template import AuthConfig
 
 

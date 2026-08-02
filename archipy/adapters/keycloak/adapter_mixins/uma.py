@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Any
-
-from keycloak.uma_permissions import UMAPermission
+from typing import TYPE_CHECKING, Any
 
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from keycloak.uma_permissions import UMAPermission
 
 
 class KeycloakUmaMixin(SyncKeycloakMixinBase):

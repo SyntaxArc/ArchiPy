@@ -1,7 +1,9 @@
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 
-from confluent_kafka import Message, TopicPartition
-from confluent_kafka.admin import ClusterMetadata
+if TYPE_CHECKING:
+    from confluent_kafka import Message, TopicPartition
+    from confluent_kafka.admin import ClusterMetadata
 
 
 class KafkaAdminPort:

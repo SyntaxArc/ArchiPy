@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Awaitable, Iterable, Iterator, Mapping
-from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from archipy.adapters.redis.adapter_mixins._shared import AsyncRedisMixinBase, SyncRedisMixinBase
+
+if TYPE_CHECKING:
+    from datetime import datetime, timedelta
 
 
 class RedisKeysMixin(SyncRedisMixinBase):

@@ -1,6 +1,5 @@
 import logging
-from collections.abc import AsyncIterator, Iterable
-from typing import Any, override
+from typing import TYPE_CHECKING, Any, override
 
 from elasticsearch import AsyncElasticsearch, Elasticsearch
 from elasticsearch.helpers import async_bulk, async_scan, bulk as es_bulk, scan as es_scan
@@ -17,7 +16,11 @@ from archipy.adapters.elasticsearch.ports import (
     ElasticsearchResponseType,
 )
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import ElasticsearchConfig
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Iterable
+
+    from archipy.configs.config_template import ElasticsearchConfig
 
 logger = logging.getLogger(__name__)
 

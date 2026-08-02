@@ -1,9 +1,13 @@
 import abc
-from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
 
 import grpc
 
 from archipy.models.dtos.base_dtos import BaseDTO
+from archipy.models.errors import InternalError
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 
 def _get_factory_and_method(
@@ -29,7 +33,7 @@ def _get_factory_and_method(
     if rpc_handler.stream_stream:
         return grpc.stream_stream_rpc_method_handler, rpc_handler.stream_stream
     # pragma: no cover
-    raise RuntimeError("RPC handler implementation does not exist")
+    raise InternalError(error_code="RPC_HANDLER_NOT_FOUND")
 
 
 class MethodName(BaseDTO):

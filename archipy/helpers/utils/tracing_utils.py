@@ -5,12 +5,63 @@ from __future__ import annotations
 import functools
 import logging
 import threading
-from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from archipy.configs.base_config import BaseConfig
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from archipy.configs.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
+
+
+def _inject_elastic_trace_headers(
+    meta: list[tuple[str, str | bytes]],
+    keys: set[str],
+    apm_span: Any,
+) -> None:
+    """Append Elastic APM trace headers when not already present."""
+    from elasticapm.conf import constants
+    from elasticapm.traces import DroppedSpan
+
+    if constants.TRACEPARENT_HEADER_NAME.lower() in keys:
+        return
+    if apm_span is None or isinstance(apm_span, DroppedSpan):
+        return
+
+    transaction = getattr(apm_span, "transaction", None)
+    if transaction is None:
+        return
+
+    trace_parent = transaction.trace_parent.copy_from(span_id=apm_span.id)
+    meta.append((constants.TRACEPARENT_HEADER_NAME, trace_parent.to_string()))
+    keys.add(constants.TRACEPARENT_HEADER_NAME.lower())
+    tracestate = trace_parent.tracestate
+    if tracestate and constants.TRACESTATE_HEADER_NAME.lower() not in keys:
+        meta.append((constants.TRACESTATE_HEADER_NAME, tracestate))
+        keys.add(constants.TRACESTATE_HEADER_NAME.lower())
+
+
+def _inject_sentry_trace_headers(meta: list[tuple[str, str | bytes]], keys: set[str]) -> None:
+    """Append Sentry trace headers when not already present."""
+    try:
+        import sentry_sdk
+    except ImportError:
+        logger.debug("sentry_sdk is not installed, skipping Sentry trace header injection.")
+        return
+
+    if not sentry_sdk.is_initialized():
+        return
+
+    if TracingUtils.SENTRY_TRACE_HEADER not in keys:
+        traceparent = sentry_sdk.get_traceparent()
+        if traceparent:
+            meta.append((TracingUtils.SENTRY_TRACE_HEADER, traceparent))
+            keys.add(TracingUtils.SENTRY_TRACE_HEADER)
+    if TracingUtils.BAGGAGE_HEADER not in keys:
+        baggage = sentry_sdk.get_baggage()
+        if baggage:
+            meta.append((TracingUtils.BAGGAGE_HEADER, baggage))
 
 
 @functools.lru_cache(maxsize=1)
@@ -39,6 +90,9 @@ def _grpc_status_outcome_map() -> dict[Any, Any]:
         grpc.StatusCode.DATA_LOSS: OUTCOME.FAILURE,
         grpc.StatusCode.UNAUTHENTICATED: OUTCOME.SUCCESS,
     }
+
+
+HTTP_SERVER_ERROR_MIN = 500
 
 
 class TracingUtils:
@@ -177,40 +231,13 @@ class TracingUtils:
         Returns:
             A new metadata list suitable for ``ClientCallDetails``.
         """
-        from elasticapm.conf import constants
-        from elasticapm.traces import DroppedSpan
-
         meta: list[tuple[str, str | bytes]] = list(metadata) if metadata else []
         keys = TracingUtils._metadata_key_set(meta)
 
-        if constants.TRACEPARENT_HEADER_NAME.lower() not in keys:
-            if apm_span is not None and not isinstance(apm_span, DroppedSpan):
-                transaction = getattr(apm_span, "transaction", None)
-                if transaction is not None:
-                    trace_parent = transaction.trace_parent.copy_from(span_id=apm_span.id)
-                    meta.append((constants.TRACEPARENT_HEADER_NAME, trace_parent.to_string()))
-                    keys.add(constants.TRACEPARENT_HEADER_NAME.lower())
-                    tracestate = trace_parent.tracestate
-                    if tracestate and constants.TRACESTATE_HEADER_NAME.lower() not in keys:
-                        meta.append((constants.TRACESTATE_HEADER_NAME, tracestate))
-                        keys.add(constants.TRACESTATE_HEADER_NAME.lower())
+        _inject_elastic_trace_headers(meta, keys, apm_span)
 
         if include_sentry:
-            try:
-                import sentry_sdk
-
-                if sentry_sdk.is_initialized():
-                    if TracingUtils.SENTRY_TRACE_HEADER not in keys:
-                        traceparent = sentry_sdk.get_traceparent()
-                        if traceparent:
-                            meta.append((TracingUtils.SENTRY_TRACE_HEADER, traceparent))
-                            keys.add(TracingUtils.SENTRY_TRACE_HEADER)
-                    if TracingUtils.BAGGAGE_HEADER not in keys:
-                        baggage = sentry_sdk.get_baggage()
-                        if baggage:
-                            meta.append((TracingUtils.BAGGAGE_HEADER, baggage))
-            except ImportError:
-                logger.debug("sentry_sdk is not installed, skipping Sentry trace header injection.")
+            _inject_sentry_trace_headers(meta, keys)
 
         return meta
 
@@ -261,6 +288,6 @@ class TracingUtils:
 
         from archipy.models.errors.base_error import BaseError
 
-        if isinstance(exception, BaseError) and exception.http_status < 500:
+        if isinstance(exception, BaseError) and exception.http_status < HTTP_SERVER_ERROR_MIN:
             return OUTCOME.SUCCESS
         return OUTCOME.FAILURE

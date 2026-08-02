@@ -1,16 +1,19 @@
-from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
 
 import fakeredis
-from redis import RedisCluster
-from redis.asyncio import RedisCluster as AsyncRedisCluster
-from redis.asyncio.client import Redis as AsyncRedis
-from redis.client import Redis
 
 from archipy.adapters.redis.adapters import AsyncRedisAdapter, RedisAdapter
 from archipy.adapters.redis.ports import AsyncRedisPort
 from archipy.configs.config_template import RedisConfig, RedisMode
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from redis import RedisCluster
+    from redis.asyncio import RedisCluster as AsyncRedisCluster
+    from redis.asyncio.client import Redis as AsyncRedis
+    from redis.client import Redis
 
 
 class FakeRedisClusterWrapper(fakeredis.FakeRedis):
@@ -56,6 +59,7 @@ class RedisMock(RedisAdapter):
     """A Redis adapter implementation using fakeredis for testing."""
 
     def __init__(self, redis_config: RedisConfig | None = None) -> None:
+        """Initialize RedisMock."""
         # Skip the parent's __init__ which would create real Redis connections
         from archipy.configs.base_config import BaseConfig
 
@@ -96,6 +100,7 @@ class AsyncRedisMock(AsyncRedisAdapter):
     """An async Redis adapter implementation using fakeredis for testing."""
 
     def __init__(self, redis_config: RedisConfig | None = None) -> None:
+        """Initialize AsyncRedisMock."""
         # Skip the parent's __init__ which would create real Redis connections
         from archipy.configs.base_config import BaseConfig
 

@@ -17,6 +17,8 @@ except ImportError:
 from archipy.models.errors.base_error import BaseError
 from archipy.models.errors.system_errors import InternalError
 
+HTTP_BAD_REQUEST = 400
+
 
 class RealmAlreadyExistsError(BaseError):
     """Exception raised when trying to create a realm that already exists."""
@@ -196,7 +198,7 @@ def handle_keycloak_error(keycloak_error: KeycloakError, **additional_data: Any)
         return InsufficientPermissionsError(additional_data=context)
 
     # Validation errors (400 status codes that don't match above)
-    if response_code == 400:
+    if response_code == HTTP_BAD_REQUEST:
         return ValidationError(additional_data=context)
 
     # Default to InternalError for unrecognized errors

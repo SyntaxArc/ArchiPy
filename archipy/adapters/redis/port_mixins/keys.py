@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import AsyncIterator, Iterable, Iterator, Mapping
-from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Iterable, Iterator, Mapping
+    from datetime import datetime, timedelta
 
 
 class RedisKeysPort:

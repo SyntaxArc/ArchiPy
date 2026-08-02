@@ -50,7 +50,11 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
         """
         if not isinstance(orm_config, self._expected_config_type()):
             raise InvalidArgumentError(
-                f"Expected {self._expected_config_type().__name__}, got {type(orm_config).__name__}",
+                argument_name="orm_config",
+                additional_data={
+                    "expected": self._expected_config_type().__name__,
+                    "got": type(orm_config).__name__,
+                },
             )
         try:
             self.engine = self._create_engine(orm_config)
@@ -233,7 +237,11 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
         """
         if not isinstance(orm_config, self._expected_config_type()):
             raise InvalidArgumentError(
-                f"Expected {self._expected_config_type().__name__}, got {type(orm_config).__name__}",
+                argument_name="orm_config",
+                additional_data={
+                    "expected": self._expected_config_type().__name__,
+                    "got": type(orm_config).__name__,
+                },
             )
         try:
             self.engine = self._create_async_engine(orm_config)

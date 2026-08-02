@@ -1,8 +1,10 @@
 import abc
-from collections.abc import AsyncIterable, Callable, Iterable, Iterator, Sequence
-from typing import Any, NamedTuple, TypeVar
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar
 
 import grpc
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterable, Callable, Iterable, Iterator, Sequence
 
 _TRequest = TypeVar("_TRequest")
 
@@ -99,8 +101,7 @@ class BaseGrpcClientInterceptor(
         Returns:
             Any: The result of the intercepted RPC call.
         """
-        result = self.intercept(_swap_args(continuation), request, client_call_details)
-        return result
+        return self.intercept(_swap_args(continuation), request, client_call_details)
 
     def intercept_unary_stream(
         self,
@@ -118,8 +119,7 @@ class BaseGrpcClientInterceptor(
         Returns:
             Any: The result of the intercepted RPC call.
         """
-        result = self.intercept(_swap_args(continuation), request, client_call_details)
-        return result
+        return self.intercept(_swap_args(continuation), request, client_call_details)
 
     def intercept_stream_unary(
         self,
@@ -137,8 +137,7 @@ class BaseGrpcClientInterceptor(
         Returns:
             Any: The result of the intercepted RPC call.
         """
-        result = self.intercept(_swap_args(continuation), request_iterator, client_call_details)
-        return result
+        return self.intercept(_swap_args(continuation), request_iterator, client_call_details)
 
     def intercept_stream_stream(
         self,
@@ -156,8 +155,7 @@ class BaseGrpcClientInterceptor(
         Returns:
             Any: The result of the intercepted RPC call.
         """
-        result = self.intercept(_swap_args(continuation), request_iterator, client_call_details)
-        return result
+        return self.intercept(_swap_args(continuation), request_iterator, client_call_details)
 
 
 class _AsyncClientCallDetailsFields(NamedTuple):
@@ -234,8 +232,7 @@ class BaseAsyncGrpcClientInterceptor(
         Returns:
             Any: The result of the intercepted RPC call.
         """
-        result = await self.intercept(_swap_args(continuation), request, client_call_details)
-        return result
+        return await self.intercept(_swap_args(continuation), request, client_call_details)
 
     async def intercept_unary_stream(
         self,
@@ -253,8 +250,7 @@ class BaseAsyncGrpcClientInterceptor(
         Returns:
             Any: The result of the intercepted RPC call.
         """
-        result = await self.intercept(_swap_args(continuation), request, client_call_details)
-        return result
+        return await self.intercept(_swap_args(continuation), request, client_call_details)
 
     async def intercept_stream_unary(
         self,
@@ -272,8 +268,7 @@ class BaseAsyncGrpcClientInterceptor(
         Returns:
             Any: The result of the intercepted RPC call.
         """
-        result = await self.intercept(_swap_args(continuation), request_iterator, client_call_details)
-        return result
+        return await self.intercept(_swap_args(continuation), request_iterator, client_call_details)
 
     async def intercept_stream_stream(
         self,
@@ -291,5 +286,4 @@ class BaseAsyncGrpcClientInterceptor(
         Returns:
             Any: The result of the intercepted RPC call.
         """
-        result = await self.intercept(_swap_args(continuation), request_iterator, client_call_details)
-        return result
+        return await self.intercept(_swap_args(continuation), request_iterator, client_call_details)

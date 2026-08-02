@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from async_lru import alru_cache
 from keycloak.exceptions import (
@@ -15,15 +15,19 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
 )
-from archipy.adapters.keycloak.ports import (
-    KeycloakUserType,
-)
 from archipy.helpers.decorators import ttl_cache_decorator
 from archipy.models.errors import (
     InternalError,
 )
 
+if TYPE_CHECKING:
+    from archipy.adapters.keycloak.ports import (
+        KeycloakUserType,
+    )
+
 logger = logging.getLogger(__name__)
+
+HTTP_NOT_FOUND = 404
 
 
 class KeycloakUsersMixin(SyncKeycloakMixinBase):
@@ -45,7 +49,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
         try:
             return self.admin_adapter.get_user(user_id)
         except KeycloakGetError as e:
-            if e.response_code == 404:
+            if e.response_code == HTTP_NOT_FOUND:
                 return None
             self._handle_keycloak_exception(e, "get_user_by_id")
         except KeycloakError as e:
@@ -252,7 +256,7 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
         try:
             return await self.admin_adapter.a_get_user(user_id)
         except KeycloakGetError as e:
-            if e.response_code == 404:
+            if e.response_code == HTTP_NOT_FOUND:
                 return None
             raise InternalError() from e
         except KeycloakError as e:

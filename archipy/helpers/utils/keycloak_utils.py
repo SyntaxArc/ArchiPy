@@ -1,11 +1,12 @@
 import functools
 import logging
-from collections.abc import Callable
 from contextvars import ContextVar
 from functools import cache
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from grpc import ServicerContext
     from grpc.aio import ServicerContext as AsyncServicerContext
 
@@ -65,8 +66,8 @@ def _abort_grpc_sync_if_servicer_context(error: BaseError, context: object) -> N
     if not GRPC_AVAILABLE or not hasattr(error, "abort_grpc_sync"):
         return
     if isinstance(context, ServicerContext):
-        servicer_ctx = context
-        error.abort_grpc_sync(servicer_ctx)  # ty: ignore[invalid-argument-type]
+        # Any cast: base_error's ServicerContext alias diverges under optional-grpc typing.
+        error.abort_grpc_sync(cast("Any", context))
 
 
 async def _abort_grpc_async_if_servicer_context(error: BaseError, context: object) -> None:
@@ -74,8 +75,8 @@ async def _abort_grpc_async_if_servicer_context(error: BaseError, context: objec
     if not GRPC_AVAILABLE or not hasattr(error, "abort_grpc_async"):
         return
     if isinstance(context, AsyncServicerContext):
-        aio_ctx = context
-        await error.abort_grpc_async(aio_ctx)  # ty: ignore[invalid-argument-type]
+        # Any cast: base_error's AsyncServicerContext alias diverges under optional-grpc typing.
+        await error.abort_grpc_async(cast("Any", context))
 
 
 def _extract_roles(user_info: dict[str, Any], client_id: str | None) -> set[str]:

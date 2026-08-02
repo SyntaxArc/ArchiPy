@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Iterable, Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from archipy.adapters.redis.adapter_mixins._shared import (
     AsyncRedisMixinBase,
     SyncRedisMixinBase,
     _normalize_zset_keys,
 )
-from archipy.adapters.redis.port_mixins.sorted_sets import RedisScoreCastType
+
+if TYPE_CHECKING:
+    from archipy.adapters.redis.port_mixins.sorted_sets import RedisScoreCastType
 
 
 class RedisSortedSetsMixin(SyncRedisMixinBase):
@@ -58,18 +60,18 @@ class RedisSortedSetsMixin(SyncRedisMixinBase):
         """
         return self.client.zcard(name)
 
-    def zcount(self, name: bytes | str, min: float | str, max: float | str) -> int:
+    def zcount(self, name: bytes | str, min_: float | str, max_: float | str) -> int:
         """Count members in a sorted set with scores in range.
 
         Args:
             name (bytes | str): The sorted set key name.
-            min (float | str): Minimum score.
-            max (float | str): Maximum score.
+            min_ (float | str): Minimum score.
+            max_ (float | str): Maximum score.
 
         Returns:
             RedisResponseType: Number of members in range.
         """
-        return self.client.zcount(name, min, max)
+        return self.client.zcount(name, min_, max_)
 
     def zpopmax(
         self,
@@ -171,8 +173,8 @@ class RedisSortedSetsMixin(SyncRedisMixinBase):
     def zrangebyscore(
         self,
         name: bytes | str,
-        min: float | str,
-        max: float | str,
+        min_: float | str,
+        max_: float | str,
         start: int | None = None,
         num: int | None = None,
         withscores: bool = False,
@@ -182,8 +184,8 @@ class RedisSortedSetsMixin(SyncRedisMixinBase):
 
         Args:
             name (bytes | str): The sorted set key name.
-            min (float | str): Minimum score.
-            max (float | str): Maximum score.
+            min_ (float | str): Minimum score.
+            max_ (float | str): Maximum score.
             start (int | None): Offset. Defaults to None.
             num (int | None): Count. Defaults to None.
             withscores (bool): Include scores in result. Defaults to False.
@@ -192,7 +194,7 @@ class RedisSortedSetsMixin(SyncRedisMixinBase):
         Returns:
             RedisResponseType: List of members or member-score pairs.
         """
-        return self.client.zrangebyscore(name, min, max, start, num, withscores, score_cast_func)
+        return self.client.zrangebyscore(name, min_, max_, start, num, withscores, score_cast_func)
 
     def zrank(self, name: bytes | str, value: bytes | str | float) -> int | list[Any] | None:
         """Get the rank of a member in a sorted set.
@@ -335,18 +337,18 @@ class AsyncRedisSortedSetsMixin(AsyncRedisMixinBase):
         """
         return await self.client.zcard(name)
 
-    async def zcount(self, name: bytes | str, min: float | str, max: float | str) -> int:
+    async def zcount(self, name: bytes | str, min_: float | str, max_: float | str) -> int:
         """Count members in score range asynchronously.
 
         Args:
             name (bytes | str): The sorted set key name.
-            min (float | str): Minimum score.
-            max (float | str): Maximum score.
+            min_ (float | str): Minimum score.
+            max_ (float | str): Maximum score.
 
         Returns:
             RedisResponseType: Number of members in range.
         """
-        return await self.client.zcount(name, min, max)
+        return await self.client.zcount(name, min_, max_)
 
     async def zpopmax(
         self,
@@ -448,8 +450,8 @@ class AsyncRedisSortedSetsMixin(AsyncRedisMixinBase):
     async def zrangebyscore(
         self,
         name: bytes | str,
-        min: float | str,
-        max: float | str,
+        min_: float | str,
+        max_: float | str,
         start: int | None = None,
         num: int | None = None,
         withscores: bool = False,
@@ -459,8 +461,8 @@ class AsyncRedisSortedSetsMixin(AsyncRedisMixinBase):
 
         Args:
             name (bytes | str): The sorted set key name.
-            min (float | str): Minimum score.
-            max (float | str): Maximum score.
+            min_ (float | str): Minimum score.
+            max_ (float | str): Maximum score.
             start (int | None): Offset. Defaults to None.
             num (int | None): Count. Defaults to None.
             withscores (bool): Include scores. Defaults to False.
@@ -469,7 +471,7 @@ class AsyncRedisSortedSetsMixin(AsyncRedisMixinBase):
         Returns:
             RedisResponseType: List of members or member-score pairs.
         """
-        return await self.client.zrangebyscore(name, min, max, start, num, withscores, score_cast_func)
+        return await self.client.zrangebyscore(name, min_, max_, start, num, withscores, score_cast_func)
 
     async def zrank(self, name: bytes | str, value: bytes | str | float) -> int | list[Any] | None:
         """Get rank of member in sorted set asynchronously.

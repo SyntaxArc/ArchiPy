@@ -13,6 +13,11 @@ from archipy.models.errors import (
     InvalidPhoneNumberError,
 )
 
+IRANIAN_MOBILE_LOCAL_LEN = 10
+IRANIAN_NATIONAL_CODE_LEN = 10
+NATIONAL_CODE_CHECKSUM_THRESHOLD = 2
+NATIONAL_CODE_MODULUS = 11
+
 
 class BaseUtils(ErrorUtils, DatetimeUtils, PasswordUtils, JWTUtils, TOTPUtils, FileUtils, StringUtils):
     """A utility class that combines multiple utility functionalities into a single class.
@@ -40,7 +45,7 @@ class BaseUtils(ErrorUtils, DatetimeUtils, PasswordUtils, JWTUtils, TOTPUtils, F
             cleaned_number = "0" + cleaned_number[2:]  # Replace "98" with "0"
 
         # Ensure mobile numbers start with '09'
-        if len(cleaned_number) == 10 and cleaned_number.startswith("9"):
+        if len(cleaned_number) == IRANIAN_MOBILE_LOCAL_LEN and cleaned_number.startswith("9"):
             cleaned_number = "0" + cleaned_number  # Convert "9123456789" → "09123456789"
 
         return cleaned_number
@@ -111,7 +116,7 @@ class BaseUtils(ErrorUtils, DatetimeUtils, PasswordUtils, JWTUtils, TOTPUtils, F
             Raises:
                 InvalidNationalCodeError: If the length is not 10 digits.
             """
-            if not len(national_code) == 10:
+            if not len(national_code) == IRANIAN_NATIONAL_CODE_LEN:
                 raise InvalidNationalCodeError(national_code)
 
         def _calculate_weighted_sum(national_code: str) -> int:
@@ -137,7 +142,9 @@ class BaseUtils(ErrorUtils, DatetimeUtils, PasswordUtils, JWTUtils, TOTPUtils, F
             weighted_sum = _calculate_weighted_sum(national_code)
             remainder = weighted_sum % 11
 
-            calculated_checksum = remainder if remainder < 2 else 11 - remainder
+            calculated_checksum = (
+                remainder if remainder < NATIONAL_CODE_CHECKSUM_THRESHOLD else NATIONAL_CODE_MODULUS - remainder
+            )
             actual_checksum = int(national_code[-1])
 
             return calculated_checksum, actual_checksum

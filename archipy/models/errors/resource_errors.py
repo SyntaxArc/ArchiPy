@@ -45,6 +45,7 @@ class NotFoundError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize NotFoundError."""
         data = {"resource_type": resource_type} if resource_type else {}
         if additional_data:
             data.update(additional_data)
@@ -76,6 +77,7 @@ class AlreadyExistsError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize AlreadyExistsError."""
         data = {"resource_type": resource_type} if resource_type else {}
         if additional_data:
             data.update(additional_data)
@@ -108,6 +110,7 @@ class ConflictError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize ConflictError."""
         data = {}
         if resource_type:
             data["resource_type"] = resource_type
@@ -138,6 +141,7 @@ class ResourceLockedError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize ResourceLockedError."""
         data = {}
         if resource_id:
             data["resource_id"] = resource_id
@@ -168,6 +172,7 @@ class ResourceBusyError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize ResourceBusyError."""
         data = {}
         if resource_id:
             data["resource_id"] = resource_id
@@ -215,6 +220,7 @@ class InvalidEntityTypeError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidEntityTypeError."""
         data = {}
         if message:
             data["message"] = message
@@ -248,6 +254,7 @@ class FileTooLargeError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize FileTooLargeError."""
         data = {}
         if file_name:
             data["file_name"] = file_name
@@ -281,6 +288,7 @@ class InvalidFileTypeError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidFileTypeError."""
         data = {}
         if file_name:
             data["file_name"] = file_name
@@ -314,6 +322,7 @@ class QuotaExceededError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize QuotaExceededError."""
         data = {}
         if quota_type:
             data["quota_type"] = quota_type
@@ -347,6 +356,7 @@ class ResourceExhaustedError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize ResourceExhaustedError."""
         data = {"resource_type": resource_type} if resource_type else {}
         if additional_data:
             data.update(additional_data)
@@ -374,6 +384,7 @@ class StorageError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize StorageError."""
         data = {"storage_type": storage_type} if storage_type else {}
         if additional_data:
             data.update(additional_data)

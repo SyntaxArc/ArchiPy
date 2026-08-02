@@ -1,11 +1,14 @@
 import base64
 import hashlib
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import FileConfig
 from archipy.helpers.utils.datetime_utils import DatetimeUtils
 from archipy.models.errors import InvalidArgumentError, OutOfRangeError
+
+if TYPE_CHECKING:
+    from archipy.configs.config_template import FileConfig
 
 
 class FileUtils:

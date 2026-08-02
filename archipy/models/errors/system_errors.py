@@ -4,6 +4,8 @@ if TYPE_CHECKING:
     from http import HTTPStatus
 
     from grpc import StatusCode
+
+    from archipy.models.types.language_type import LanguageType
 else:
     HTTPStatus = None
     StatusCode = None
@@ -23,7 +25,6 @@ except ImportError:
     GRPC_AVAILABLE = False
 
 from archipy.models.errors.base_error import BaseError
-from archipy.models.types.language_type import LanguageType
 
 
 class InternalError(BaseError):
@@ -51,6 +52,7 @@ class InternalError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize InternalError."""
         data = {}
         if error_code:
             data["error_code"] = error_code
@@ -85,6 +87,7 @@ class ConfigurationError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize ConfigurationError."""
         data = {}
         if operation:
             data["operation"] = operation
@@ -120,6 +123,7 @@ class UnavailableError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize UnavailableError."""
         data = {}
         if resource_type:
             data["resource_type"] = resource_type
@@ -153,6 +157,7 @@ class UnknownError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize UnknownError."""
         data = {}
         if config_key:
             data["config_key"] = config_key
@@ -185,6 +190,7 @@ class AbortedError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize AbortedError."""
         data = {}
         if service:
             data["service"] = service
@@ -221,6 +227,7 @@ class DeadlockDetectedError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize DeadlockDetectedError."""
         data = {}
         if service:
             data["service"] = service

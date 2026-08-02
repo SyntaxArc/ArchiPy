@@ -8,17 +8,21 @@ import base64
 import hmac
 import secrets  # Using secrets instead of random for cryptographic operations
 import struct
-from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import AuthConfig
 from archipy.helpers.utils.datetime_utils import DatetimeUtils
 from archipy.models.errors import (
     InternalError,
     InvalidArgumentError,
     InvalidTokenError,
 )
+
+if TYPE_CHECKING:
+    from datetime import datetime
+
+    from archipy.configs.config_template import AuthConfig
 
 
 class TOTPUtils:

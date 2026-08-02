@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from archipy.adapters.keycloak.port_mixins._shared import (
-    KeycloakRoleType,
-)
+if TYPE_CHECKING:
+    from archipy.adapters.keycloak.port_mixins._shared import (
+        KeycloakRoleType,
+    )
 
 
 class KeycloakRolesPort:

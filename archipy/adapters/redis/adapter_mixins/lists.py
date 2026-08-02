@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable
 
 from archipy.adapters.redis.adapter_mixins._shared import AsyncRedisMixinBase, SyncRedisMixinBase
+from archipy.models.errors import InternalError
 
 
 class RedisListsMixin(SyncRedisMixinBase):
@@ -60,7 +61,7 @@ class RedisListsMixin(SyncRedisMixinBase):
         """
         result = self.read_only_client.lrange(name, start, end)
         if isinstance(result, Awaitable):
-            raise TypeError("Unexpected awaitable from sync Redis client")
+            raise InternalError(error_code="SYNC_REDIS_AWAITABLE")
         return list(result)
 
     def lrem(self, name: str, count: int, value: str) -> int:

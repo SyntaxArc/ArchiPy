@@ -61,6 +61,38 @@ class ScyllaDBExceptionHandlerMixin:
     """Mixin class to handle ScyllaDB/Cassandra exceptions in a consistent way."""
 
     @classmethod
+    def _raise_for_cassandra_driver_exception(cls, exception: Exception, error_msg: str, operation: str) -> None:
+        """Map known cassandra-driver exceptions when applicable."""
+        try:
+            from cassandra import (
+                AuthenticationFailed,
+                InvalidRequest,
+                OperationTimedOut,
+                Unavailable,
+            )
+            from cassandra.cluster import NoHostAvailable
+        except ImportError:
+            return
+
+        if isinstance(exception, Unavailable) or "unavailable" in error_msg:
+            raise ServiceUnavailableError(service="ScyllaDB") from exception
+
+        if isinstance(exception, OperationTimedOut) or "timeout" in error_msg:
+            raise ConnectionTimeoutError(service="ScyllaDB", timeout=None) from exception
+
+        if isinstance(exception, AuthenticationFailed) or "authentication" in error_msg:
+            raise InvalidCredentialsError() from exception
+
+        if isinstance(exception, InvalidRequest):
+            raise InvalidArgumentError(argument_name=operation) from exception
+
+        if "protocol" in error_msg:
+            raise ConfigurationError(operation="scylladb", reason="Protocol error") from exception
+
+        if isinstance(exception, NoHostAvailable) or "no host available" in error_msg:
+            raise ServiceUnavailableError(service="ScyllaDB") from exception
+
+    @classmethod
     def _handle_scylladb_exception(cls, exception: Exception, operation: str) -> NoReturn:
         """Handle ScyllaDB/Cassandra exceptions and map them to appropriate application errors.
 
@@ -80,36 +112,7 @@ class ScyllaDBExceptionHandlerMixin:
                 additional_data={"table_name": table_name},
             ) from exception
 
-        try:
-            from cassandra import (
-                AuthenticationFailed,
-                InvalidRequest,
-                OperationTimedOut,
-                Unavailable,
-            )
-            from cassandra.cluster import NoHostAvailable
-
-            if isinstance(exception, Unavailable) or "unavailable" in error_msg:
-                raise ServiceUnavailableError(service="ScyllaDB") from exception
-
-            if isinstance(exception, OperationTimedOut) or "timeout" in error_msg:
-                raise ConnectionTimeoutError(service="ScyllaDB", timeout=None) from exception
-
-            if isinstance(exception, AuthenticationFailed) or "authentication" in error_msg:
-                raise InvalidCredentialsError() from exception
-
-            if isinstance(exception, InvalidRequest):
-                raise InvalidArgumentError(argument_name=operation) from exception
-
-            if "protocol" in error_msg:
-                raise ConfigurationError(operation="scylladb", reason="Protocol error") from exception
-
-            # NoHostAvailable
-            if isinstance(exception, NoHostAvailable) or "no host available" in error_msg:
-                raise ServiceUnavailableError(service="ScyllaDB") from exception
-
-        except ImportError:
-            pass
+        cls._raise_for_cassandra_driver_exception(exception, error_msg, operation)
 
         if "network" in error_msg or "connection" in error_msg or "socket" in error_msg:
             raise NetworkError(service="ScyllaDB") from exception

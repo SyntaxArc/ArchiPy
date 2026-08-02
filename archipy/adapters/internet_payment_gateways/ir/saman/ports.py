@@ -1,13 +1,15 @@
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 
-from archipy.models.dtos.saman_ipg_dtos import (
-    PaymentRequestDTO,
-    PaymentResponseDTO,
-    ReverseRequestDTO,
-    ReverseResponseDTO,
-    VerifyRequestDTO,
-    VerifyResponseDTO,
-)
+if TYPE_CHECKING:
+    from archipy.models.dtos.saman_ipg_dtos import (
+        PaymentRequestDTO,
+        PaymentResponseDTO,
+        ReverseRequestDTO,
+        ReverseResponseDTO,
+        VerifyRequestDTO,
+        VerifyResponseDTO,
+    )
 
 
 class SamanShaparakPaymentPort:

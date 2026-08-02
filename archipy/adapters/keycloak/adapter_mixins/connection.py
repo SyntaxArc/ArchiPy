@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import TYPE_CHECKING
 
 from keycloak import KeycloakAdmin, KeycloakOpenID, KeycloakUMA
 from keycloak.exceptions import (
@@ -18,12 +19,15 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     SyncKeycloakMixinBase,
 )
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import KeycloakConfig
 from archipy.models.errors import (
+    ConfigurationError,
     ConnectionTimeoutError,
     UnauthenticatedError,
     UnavailableError,
 )
+
+if TYPE_CHECKING:
+    from archipy.configs.config_template import KeycloakConfig
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +79,7 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
         server_url = configs.SERVER_URL
         client_id = configs.CLIENT_ID
         if not server_url or not client_id:
-            raise ValueError("SERVER_URL and CLIENT_ID must be provided")
+            raise ConfigurationError(operation="keycloak_connect", reason="server_url_and_client_id_required")
         return KeycloakOpenID(
             server_url=server_url,
             client_id=client_id,
@@ -135,7 +139,7 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
         except KeycloakConnectionError as e:
             self._admin_adapter = None
             self._admin_token_expiry = 0
-            raise ConnectionTimeoutError("Failed to connect to Keycloak server") from e
+            raise ConnectionTimeoutError(service="keycloak") from e
         except KeycloakError as e:
             self._admin_adapter = None
             self._admin_token_expiry = 0
@@ -166,7 +170,7 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
             self._initialize_admin_client()
 
         if self._admin_adapter is None:
-            raise UnavailableError("Keycloak admin client is not available")
+            raise UnavailableError(resource_type="keycloak_admin_client")
 
         return self._admin_adapter
 
@@ -183,7 +187,7 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
         server_url = configs.SERVER_URL
         client_id = configs.CLIENT_ID
         if not server_url or not client_id:
-            raise ValueError("SERVER_URL and CLIENT_ID must be provided")
+            raise ConfigurationError(operation="keycloak_connect", reason="server_url_and_client_id_required")
         return KeycloakUMA(
             KeycloakOpenIDConnection(
                 server_url=server_url,
@@ -254,7 +258,7 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
         server_url = configs.SERVER_URL
         client_id = configs.CLIENT_ID
         if not server_url or not client_id:
-            raise ValueError("SERVER_URL and CLIENT_ID must be provided")
+            raise ConfigurationError(operation="keycloak_connect", reason="server_url_and_client_id_required")
         return KeycloakOpenID(
             server_url=server_url,
             client_id=client_id,
@@ -313,7 +317,7 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
         except KeycloakConnectionError as e:
             self._admin_adapter = None
             self._admin_token_expiry = 0
-            raise ConnectionTimeoutError("Failed to connect to Keycloak server") from e
+            raise ConnectionTimeoutError(service="keycloak") from e
         except KeycloakError as e:
             self._admin_adapter = None
             self._admin_token_expiry = 0
@@ -344,7 +348,7 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
             self._initialize_admin_client()
 
         if self._admin_adapter is None:
-            raise UnavailableError("Keycloak admin client is not available")
+            raise UnavailableError(resource_type="keycloak_admin_client")
 
         return self._admin_adapter
 
@@ -361,7 +365,7 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
         server_url = configs.SERVER_URL
         client_id = configs.CLIENT_ID
         if not server_url or not client_id:
-            raise ValueError("SERVER_URL and CLIENT_ID must be provided")
+            raise ConfigurationError(operation="keycloak_connect", reason="server_url_and_client_id_required")
         return KeycloakUMA(
             KeycloakOpenIDConnection(
                 server_url=server_url,

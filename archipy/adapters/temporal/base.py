@@ -6,12 +6,16 @@ adapters and standardized patterns.
 """
 
 from abc import abstractmethod
-from collections.abc import Callable
 from datetime import timedelta
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from temporalio import activity, workflow
 from temporalio.common import RetryPolicy
+
+from archipy.models.errors import InvalidArgumentError
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Type imports for generic base classes
 
@@ -481,7 +485,10 @@ class AtomicActivity(BaseActivity[T, R]):
         """
         super().__init__(logic)
         if db_type not in ("postgres", "sqlite", "starrocks"):
-            raise ValueError(f"Invalid db_type: {db_type}. Must be one of: postgres, sqlite, starrocks")
+            raise InvalidArgumentError(
+                argument_name="db_type",
+                additional_data={"got": db_type, "allowed": ["postgres", "sqlite", "starrocks"]},
+            )
         self.db_type = db_type
 
     def _get_atomic_decorator(self) -> Callable[..., Any]:

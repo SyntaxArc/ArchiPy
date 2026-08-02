@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 import httpx2
 import requests
@@ -12,7 +13,6 @@ from archipy.adapters.internet_payment_gateways.ir.parsian.ports import (
     ParsianShaparakPaymentPort,
 )
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import ParsianShaparakConfig
 from archipy.models.dtos.parsian_ipg_dtos import (
     ConfirmRequestDTO,
     ConfirmResponseDTO,
@@ -23,7 +23,10 @@ from archipy.models.dtos.parsian_ipg_dtos import (
     ReverseRequestDTO,
     ReverseResponseDTO,
 )
-from archipy.models.errors import InternalError, UnavailableError
+from archipy.models.errors import InternalError, InvalidArgumentError, UnavailableError
+
+if TYPE_CHECKING:
+    from archipy.configs.config_template import ParsianShaparakConfig
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +52,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
         """
         configs = BaseConfig.global_config().PARSIAN_SHAPARAK if config is None else config
         if not configs.LOGIN_ACCOUNT or not isinstance(configs.LOGIN_ACCOUNT, str):
-            raise ValueError("LOGIN_ACCOUNT must be a non-empty string")
+            raise InvalidArgumentError(argument_name="LOGIN_ACCOUNT")
 
         self.login_account = configs.LOGIN_ACCOUNT
         sync_transport = None
@@ -223,7 +226,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
         """
         configs = BaseConfig.global_config().PARSIAN_SHAPARAK if config is None else config
         if not configs.LOGIN_ACCOUNT or not isinstance(configs.LOGIN_ACCOUNT, str):
-            raise ValueError("LOGIN_ACCOUNT must be a non-empty string")
+            raise InvalidArgumentError(argument_name="LOGIN_ACCOUNT")
 
         self.login_account = configs.LOGIN_ACCOUNT
         proxy = self._get_proxy(configs.PROXIES)

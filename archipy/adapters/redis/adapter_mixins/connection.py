@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from redis import RedisCluster, Sentinel
 from redis.asyncio import RedisCluster as AsyncRedisCluster, Sentinel as AsyncSentinel
@@ -24,10 +24,12 @@ from archipy.adapters.redis.search import (
     list_redis_search_indexes,
     list_redis_search_indexes_async,
 )
-from archipy.adapters.redis.search_ports import AsyncRedisSearchHandlePort, RedisSearchHandlePort
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import RedisConfig, RedisMode
-from archipy.models.errors import ConfigurationError
+from archipy.models.errors import ConfigurationError, InternalError, InvalidArgumentError
+
+if TYPE_CHECKING:
+    from archipy.adapters.redis.search_ports import AsyncRedisSearchHandlePort, RedisSearchHandlePort
 
 
 class RedisConnectionMixin(SyncRedisMixinBase):
@@ -59,7 +61,11 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             case RedisMode.STANDALONE:
                 self._set_standalone_clients(configs)
             case _:
-                raise ValueError(f"Unsupported Redis mode: {configs.MODE}")
+                raise ConfigurationError(
+                    operation="redis_connect",
+                    reason="unsupported_mode",
+                    additional_data={"mode": str(configs.MODE)},
+                )
 
     def _set_standalone_clients(self, configs: RedisConfig) -> None:
         """Set up standalone Redis clients.
@@ -119,7 +125,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
         """
         sentinel_service_name = configs.SENTINEL_SERVICE_NAME
         if not sentinel_service_name:
-            raise ValueError("SENTINEL_SERVICE_NAME must be provided for sentinel mode")
+            raise InvalidArgumentError(argument_name="SENTINEL_SERVICE_NAME")
         sentinel_nodes = [(node.split(":")[0], int(node.split(":")[1])) for node in configs.SENTINEL_NODES]
 
         sentinel = Sentinel(
@@ -214,7 +220,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
     def _ensure_sync_int(value: int | Awaitable[int]) -> int:
         """Ensure a synchronous integer result, raising if awaitable."""
         if isinstance(value, Awaitable):
-            raise TypeError("Unexpected awaitable from sync Redis client")
+            raise InternalError(error_code="SYNC_REDIS_AWAITABLE")
         return int(value)
 
     def get_pipeline(self, transaction: Any = True, shard_hint: Any = None) -> Pipeline:
@@ -271,7 +277,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
         """
         result = self.read_only_client.config_get(pattern)
         if isinstance(result, Awaitable):
-            raise TypeError("Unexpected awaitable from sync Redis client")
+            raise InternalError(error_code="SYNC_REDIS_AWAITABLE")
         return {str(k): str(v) for k, v in result.items()} if result else {}
 
 
@@ -304,7 +310,11 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             case RedisMode.STANDALONE:
                 self._set_standalone_clients(configs)
             case _:
-                raise ValueError(f"Unsupported Redis mode: {configs.MODE}")
+                raise ConfigurationError(
+                    operation="redis_connect",
+                    reason="unsupported_mode",
+                    additional_data={"mode": str(configs.MODE)},
+                )
 
     def _set_standalone_clients(self, configs: RedisConfig) -> None:
         """Set up standalone async Redis clients.
@@ -364,7 +374,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
         """
         sentinel_service_name = configs.SENTINEL_SERVICE_NAME
         if not sentinel_service_name:
-            raise ValueError("SENTINEL_SERVICE_NAME must be provided for sentinel mode")
+            raise InvalidArgumentError(argument_name="SENTINEL_SERVICE_NAME")
         sentinel_nodes = [(node.split(":")[0], int(node.split(":")[1])) for node in configs.SENTINEL_NODES]
 
         sentinel = AsyncSentinel(
@@ -461,7 +471,10 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
         if isinstance(value, Awaitable):
             awaited_value = await value
             if not isinstance(awaited_value, int):
-                raise TypeError(f"Expected int, got {type(awaited_value)}")
+                raise InvalidArgumentError(
+                    argument_name="value",
+                    additional_data={"expected": "int", "got": type(awaited_value).__name__},
+                )
             return awaited_value
         return value
 
@@ -481,7 +494,10 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             if isinstance(result, bytes):
                 return result.decode("utf-8") if result else None
             if result is not None and not isinstance(result, str):
-                raise TypeError(f"Expected str | None, got {type(result)}")
+                raise InvalidArgumentError(
+                    argument_name="value",
+                    additional_data={"expected": "str | None", "got": type(result).__name__},
+                )
             return result
         if isinstance(value, bytes):
             return value.decode("utf-8") if value else None
@@ -529,7 +545,10 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
         """
         result = self.client.pipeline(transaction, shard_hint)
         if not isinstance(result, (AsyncPipeline, AsyncClusterPipeline)):
-            raise TypeError(f"Expected AsyncPipeline, got {type(result)}")
+            raise InvalidArgumentError(
+                argument_name="pipeline",
+                additional_data={"expected": "AsyncPipeline", "got": type(result).__name__},
+            )
         return result
 
     async def ping(self) -> bool:

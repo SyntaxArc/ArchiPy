@@ -1,14 +1,16 @@
 import logging
-from typing import Any, Protocol
-
-from pydantic_core._pydantic_core import ValidationError
+from typing import TYPE_CHECKING, Any, Protocol
 
 from archipy.configs.base_config import BaseConfig
 from archipy.models.dtos.fastapi_exception_response_dto import (
     FastAPIErrorResponseDTO,
     ValidationErrorResponseDTO,
 )
-from archipy.models.errors import BaseError
+
+if TYPE_CHECKING:
+    from pydantic_core._pydantic_core import ValidationError
+
+    from archipy.models.errors import BaseError
 
 logger = logging.getLogger(__name__)
 

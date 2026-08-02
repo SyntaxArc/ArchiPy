@@ -1,7 +1,6 @@
 import asyncio
 import time
-from collections.abc import Callable
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 import grpc
 
@@ -12,6 +11,37 @@ from archipy.helpers.interceptors.grpc.base.server_interceptor import (
     MethodName,
 )
 from archipy.helpers.utils.base_utils import BaseUtils
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+def _status_code_from_context(context: grpc.ServicerContext | grpc.aio.ServicerContext) -> str:
+    """Extract a gRPC status code name from a servicer context."""
+    if not hasattr(context, "code") or not callable(context.code):
+        return "OK"
+    code_obj = context.code()  # ty: ignore[call-top-callable]
+    if code_obj is None:
+        return "OK"
+    code_name = getattr(code_obj, "name", None)
+    return code_name if code_name is not None else "OK"
+
+
+def _status_code_from_async_exception(exception: Exception) -> str:
+    """Extract a gRPC status code name from an async RPC exception."""
+    if isinstance(exception, grpc.aio.AioRpcError):
+        code_obj = exception.code()
+        if code_obj is not None:
+            code_name = getattr(code_obj, "name", None)
+            if code_name is not None:
+                return code_name
+    if hasattr(exception, "code") and callable(exception.code):
+        code_obj = exception.code()  # ty: ignore[call-top-callable]
+        if code_obj is not None:
+            code_name = getattr(code_obj, "name", None)
+            if code_name is not None:
+                return code_name
+    return "INTERNAL"
 
 
 class GrpcServerMetricInterceptor(BaseGrpcServerInterceptor):
@@ -88,14 +118,7 @@ class GrpcServerMetricInterceptor(BaseGrpcServerInterceptor):
 
         try:
             result = method(request, context)
-
-            if hasattr(context, "code") and callable(context.code):
-                code_method = context.code
-                code_obj = code_method()  # ty: ignore[call-top-callable]
-                if code_obj is not None:
-                    code_name = getattr(code_obj, "name", None)
-                    if code_name is not None:
-                        status_code = code_name
+            status_code = _status_code_from_context(context)
         except Exception as exception:
             BaseUtils.capture_exception(exception)
             raise
@@ -187,25 +210,9 @@ class AsyncGrpcServerMetricInterceptor(BaseAsyncGrpcServerInterceptor):
         try:
             try:
                 result = await method(request, context)
-
-                if hasattr(context, "code") and context.code():
-                    status_code = context.code().name
+                status_code = _status_code_from_context(context)
             except Exception as exception:
-                if isinstance(exception, grpc.aio.AioRpcError):
-                    code_obj = exception.code()
-                    if code_obj is not None:
-                        code_name = getattr(code_obj, "name", None)
-                        if code_name is not None:
-                            status_code = code_name
-                elif hasattr(exception, "code") and callable(exception.code):
-                    code_method = exception.code
-                    code_obj = code_method()  # ty: ignore[call-top-callable]
-                    if code_obj is not None:
-                        code_name = getattr(code_obj, "name", None)
-                        if code_name is not None:
-                            status_code = code_name
-                else:
-                    status_code = "INTERNAL"
+                status_code = _status_code_from_async_exception(exception)
                 raise
             else:
                 return result

@@ -5,11 +5,14 @@ import os
 import secrets  # Use secrets instead of random for cryptographic operations
 import string
 from base64 import b64decode, b64encode
+from typing import TYPE_CHECKING
 
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import AuthConfig
 from archipy.models.errors import InvalidPasswordError
-from archipy.models.types.language_type import LanguageType
+
+if TYPE_CHECKING:
+    from archipy.configs.config_template import AuthConfig
+    from archipy.models.types.language_type import LanguageType
 
 
 class PasswordUtils:

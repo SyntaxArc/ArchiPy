@@ -6,10 +6,11 @@ the ArchiPy architecture.
 """
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from temporalio.client import ScheduleSpec
 
 T = TypeVar("T")

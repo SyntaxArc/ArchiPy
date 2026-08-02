@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable
 
 from archipy.adapters.redis.adapter_mixins._shared import AsyncRedisMixinBase, SyncRedisMixinBase
+from archipy.models.errors import InternalError
 
 
 class RedisHashesMixin(SyncRedisMixinBase):
@@ -48,8 +49,7 @@ class RedisHashesMixin(SyncRedisMixinBase):
         Returns:
             str | None: Value of the field or None.
         """
-        result = self.read_only_client.hget(name, key)
-        return result
+        return self.read_only_client.hget(name, key)
 
     def hgetall(self, name: str) -> dict[bytes | str, bytes | str]:
         """Get all fields and values in a hash.
@@ -62,7 +62,7 @@ class RedisHashesMixin(SyncRedisMixinBase):
         """
         result = self.read_only_client.hgetall(name)
         if isinstance(result, Awaitable):
-            raise TypeError("Unexpected awaitable from sync Redis client")
+            raise InternalError(error_code="SYNC_REDIS_AWAITABLE")
         if result:
             return {str(k): v for k, v in result.items()}
         return {}
@@ -78,7 +78,7 @@ class RedisHashesMixin(SyncRedisMixinBase):
         """
         result = self.read_only_client.hkeys(name)
         if isinstance(result, Awaitable):
-            raise TypeError("Unexpected awaitable from sync Redis client")
+            raise InternalError(error_code="SYNC_REDIS_AWAITABLE")
         return list(result) if result else []
 
     def hlen(self, name: str) -> int:
@@ -134,7 +134,7 @@ class RedisHashesMixin(SyncRedisMixinBase):
         keys_list: list[str] = [str(k) for k in keys] + [str(arg) if isinstance(arg, bytes) else arg for arg in args]
         result = self.read_only_client.hmget(name, keys_list)
         if isinstance(result, Awaitable):
-            raise TypeError("Unexpected awaitable from sync Redis client")
+            raise InternalError(error_code="SYNC_REDIS_AWAITABLE")
         return list(result) if result else []
 
     def hvals(self, name: str) -> list[bytes | str]:
@@ -148,7 +148,7 @@ class RedisHashesMixin(SyncRedisMixinBase):
         """
         result = self.read_only_client.hvals(name)
         if isinstance(result, Awaitable):
-            raise TypeError("Unexpected awaitable from sync Redis client")
+            raise InternalError(error_code="SYNC_REDIS_AWAITABLE")
         return list(result) if result else []
 
 

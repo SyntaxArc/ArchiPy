@@ -14,7 +14,9 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, HttpUrl, PostgresDsn, SecretStr, field_validator, model_validator
 
-from archipy.models.errors import FailedPreconditionError, InvalidArgumentError
+from archipy.models.errors import ConfigurationError, FailedPreconditionError, InvalidArgumentError
+
+TLS_CERT_PARTS_REQUIRED = 3
 
 logger = logging.getLogger(__name__)
 
@@ -494,7 +496,7 @@ class KafkaConfig(BaseModel):
         """
         if self.SECURITY_PROTOCOL in ["SASL_PLAINTEXT", "SASL_SSL"]:
             if not (self.SASL_MECHANISM and self.USERNAME and self.PASSWORD):
-                raise ValueError("SASL authentication requires SASL_MECHANISM, USERNAME, and PASSWORD to be set.")
+                raise ConfigurationError(operation="kafka_validate", reason="sasl_auth_incomplete")
         if self.SECURITY_PROTOCOL == "SSL":
             if not (self.SSL_CA_FILE or self.SSL_CERT_FILE or self.SSL_KEY_FILE):
                 logger.warning("SSL enabled but no SSL certificates provided; this may cause connection issues.")
@@ -514,9 +516,9 @@ class KafkaConfig(BaseModel):
             ValueError: If consumer settings are incompatible.
         """
         if self.ENABLE_AUTO_COMMIT and self.AUTO_OFFSET_RESET == "none":
-            raise ValueError("ENABLE_AUTO_COMMIT cannot be True when AUTO_OFFSET_RESET is 'none'.")
+            raise ConfigurationError(operation="kafka_consumer", reason="auto_commit_offset_reset_conflict")
         if self.HEARTBEAT_INTERVAL_MS >= self.SESSION_TIMEOUT_MS:
-            raise ValueError("HEARTBEAT_INTERVAL_MS must be less than SESSION_TIMEOUT_MS.")
+            raise ConfigurationError(operation="kafka_consumer", reason="heartbeat_exceeds_session_timeout")
         return self
 
     @model_validator(mode="after")
@@ -533,9 +535,9 @@ class KafkaConfig(BaseModel):
             ValueError: If idempotence or transaction settings are invalid.
         """
         if self.ENABLE_IDEMPOTENCE and self.ACKS != "all":
-            raise ValueError("ENABLE_IDEMPOTENCE requires ACKS to be 'all'.")
+            raise ConfigurationError(operation="kafka_producer", reason="idempotence_requires_acks_all")
         if self.TRANSACTIONAL_ID is not None and not self.ENABLE_IDEMPOTENCE:
-            raise ValueError("TRANSACTIONAL_ID requires ENABLE_IDEMPOTENCE to be True.")
+            raise ConfigurationError(operation="kafka_producer", reason="transactional_id_requires_idempotence")
         return self
 
 
@@ -673,39 +675,47 @@ class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
             url = str(self.POSTGRES_DSN)
             parsed = urlparse(url)
 
-            # Extract scheme/driver (override default if URL scheme is different)
             if parsed.scheme and parsed.scheme != self.DRIVER_NAME:
                 self.DRIVER_NAME = parsed.scheme
 
-            # Extract username and password
-            if parsed.netloc:
-                auth_part = parsed.netloc.split("@")[0] if "@" in parsed.netloc else ""
-                if ":" in auth_part:
-                    username, password = auth_part.split(":", 1)
-                    if self.USERNAME is None:
-                        self.USERNAME = username
-                    if self.PASSWORD is None:
-                        self.PASSWORD = password
-                elif auth_part and self.USERNAME is None:
-                    self.USERNAME = auth_part
+            _extract_postgres_auth_from_url(parsed, self)
+            _extract_postgres_host_port_from_url(parsed, self)
 
-            # Extract host and port
-            host_part = parsed.netloc.split("@")[-1] if "@" in parsed.netloc else parsed.netloc
-            if ":" in host_part:
-                host, port_str = host_part.split(":", 1)
-                if self.HOST is None:
-                    self.HOST = host
-                if self.PORT is None:
-                    with contextlib.suppress(ValueError):
-                        self.PORT = int(port_str)
-            elif host_part and self.HOST is None:
-                self.HOST = host_part
-
-            # Extract database name
             if self.DATABASE is None and parsed.path and parsed.path.startswith("/"):
                 self.DATABASE = parsed.path[1:]
 
         return self
+
+
+def _extract_postgres_auth_from_url(parsed: object, config: PostgresSQLAlchemyConfig) -> None:
+    """Populate username and password on config from a parsed Postgres DSN."""
+    netloc = getattr(parsed, "netloc", "")
+    if not netloc:
+        return
+    auth_part = netloc.split("@")[0] if "@" in netloc else ""
+    if ":" in auth_part:
+        username, password = auth_part.split(":", 1)
+        if config.USERNAME is None:
+            config.USERNAME = username
+        if config.PASSWORD is None:
+            config.PASSWORD = password
+    elif auth_part and config.USERNAME is None:
+        config.USERNAME = auth_part
+
+
+def _extract_postgres_host_port_from_url(parsed: object, config: PostgresSQLAlchemyConfig) -> None:
+    """Populate host and port on config from a parsed Postgres DSN."""
+    netloc = getattr(parsed, "netloc", "")
+    host_part = netloc.split("@")[-1] if "@" in netloc else netloc
+    if ":" in host_part:
+        host, port_str = host_part.split(":", 1)
+        if config.HOST is None:
+            config.HOST = host
+        if config.PORT is None:
+            with contextlib.suppress(ValueError):
+                config.PORT = int(port_str)
+    elif host_part and config.HOST is None:
+        config.HOST = host_part
 
 
 class StarRocksSQLAlchemyConfig(SQLAlchemyConfig):
@@ -748,9 +758,10 @@ class StarRocksSQLAlchemyConfig(SQLAlchemyConfig):
         # Normalize the value (handle case variations and underscores)
         normalized = v.upper().replace("_", " ").strip()
         if normalized != "READ COMMITTED":
-            raise ValueError(
-                f"StarRocks only supports READ COMMITTED isolation level. Got: {v}. "
-                "StarRocks does not support other isolation levels like REPEATABLE READ or SERIALIZABLE.",
+            raise ConfigurationError(
+                operation="starrocks",
+                reason="isolation_level_not_read_committed",
+                additional_data={"got": v},
             )
         return "READ COMMITTED"
 
@@ -808,17 +819,17 @@ class RedisConfig(BaseModel):
         """Validate mode-specific configuration."""
         if self.MODE == RedisMode.CLUSTER:
             if not self.CLUSTER_NODES:
-                raise ValueError("CLUSTER_NODES must be provided when MODE is 'cluster'")
+                raise ConfigurationError(operation="redis", reason="cluster_nodes_required")
             if self.DATABASE != 0:
                 logger.warning("DATABASE setting ignored in cluster mode")
 
         elif self.MODE == RedisMode.SENTINEL:
             if not self.SENTINEL_NODES or not self.SENTINEL_SERVICE_NAME:
-                raise ValueError("SENTINEL_NODES and SENTINEL_SERVICE_NAME required for sentinel mode")
+                raise ConfigurationError(operation="redis", reason="sentinel_config_incomplete")
 
         elif self.MODE == RedisMode.STANDALONE:
             if not self.MASTER_HOST:
-                raise ValueError("MASTER_HOST required for standalone mode")
+                raise ConfigurationError(operation="redis", reason="master_host_required")
 
         return self
 
@@ -1186,7 +1197,7 @@ class TemporalConfig(BaseModel):
         tls_fields = [self.TLS_CA_CERT, self.TLS_CLIENT_CERT, self.TLS_CLIENT_KEY]
         tls_provided = [field for field in tls_fields if field is not None]
 
-        if len(tls_provided) > 0 and len(tls_provided) != 3:
+        if len(tls_provided) > 0 and len(tls_provided) != TLS_CERT_PARTS_REQUIRED:
             raise InvalidArgumentError()
 
         return self

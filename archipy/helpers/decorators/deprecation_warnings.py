@@ -1,7 +1,9 @@
 import warnings
-from collections.abc import Callable
 from functools import wraps
-from typing import Any, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Define type variables for the decorator
 P = ParamSpec("P")

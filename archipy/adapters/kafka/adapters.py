@@ -1,6 +1,6 @@
 import contextlib
 import logging
-from typing import NoReturn, override
+from typing import TYPE_CHECKING, NoReturn, override
 
 from confluent_kafka import Consumer, KafkaError, Message, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient, ClusterMetadata, NewTopic
@@ -14,7 +14,6 @@ from archipy.adapters.kafka.ports import (
     KafkaProducerPort,
 )
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import KafkaConfig
 from archipy.models.errors import (
     ConfigurationError,
     ConnectionTimeoutError,
@@ -25,6 +24,9 @@ from archipy.models.errors import (
     ServiceUnavailableError,
     UnavailableError,
 )
+
+if TYPE_CHECKING:
+    from archipy.configs.config_template import KafkaConfig
 
 logger = logging.getLogger(__name__)
 

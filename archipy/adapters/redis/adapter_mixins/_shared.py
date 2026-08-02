@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Iterable, Mapping
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from redis import RedisCluster
-from redis.asyncio import RedisCluster as AsyncRedisCluster
-from redis.asyncio.client import Redis as AsyncRedis
-from redis.client import Redis
+if TYPE_CHECKING:
+    from redis import RedisCluster
+    from redis.asyncio import RedisCluster as AsyncRedisCluster
+    from redis.asyncio.client import Redis as AsyncRedis
+    from redis.client import Redis
 
-from archipy.configs.config_template import RedisConfig
+    from archipy.configs.config_template import RedisConfig
 
 _set = set
 

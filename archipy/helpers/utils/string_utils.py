@@ -344,6 +344,59 @@ class StringUtils(StringUtilsConstants):
         return text is None or (isinstance(text, str) and not text.strip())
 
     @classmethod
+    def _apply_persian_text_normalizations(
+        cls,
+        text: str,
+        *,
+        remove_vowels: bool,
+        normalize_persian_chars: bool,
+        normalize_punctuation: bool,
+        remove_punctuation: bool,
+        normalize_numbers: bool,
+    ) -> str:
+        """Apply character, punctuation, and number normalizations."""
+        if remove_vowels:
+            text = cls.remove_arabic_vowels(text)
+        if normalize_persian_chars:
+            text = cls.normalize_persian_chars(text)
+        if normalize_punctuation:
+            text = cls.normalize_punctuation(text)
+        if remove_punctuation:
+            text = cls.remove_punctuation_marks(text)
+        if normalize_numbers:
+            text = cls.normalize_numbers(text)
+        return text
+
+    @classmethod
+    def _apply_persian_text_masks(
+        cls,
+        text: str,
+        *,
+        mask_urls: bool,
+        mask_emails: bool,
+        mask_phones: bool,
+        mask_currencies: bool,
+        mask_all_numbers: bool,
+        url_mask: str | None,
+        email_mask: str | None,
+        phone_mask: str | None,
+        currency_mask: str | None,
+        number_mask: str | None,
+    ) -> str:
+        """Apply optional masking transforms to Persian text."""
+        if mask_urls:
+            text = cls.mask_urls(text, mask=url_mask)
+        if mask_emails:
+            text = cls.mask_emails(text, mask=email_mask)
+        if mask_phones:
+            text = cls.mask_phones(text, mask=phone_mask)
+        if mask_currencies:
+            text = cls.replace_currencies_with_mask(text, mask=currency_mask)
+        if mask_all_numbers:
+            text = cls.replace_numbers_with_mask(text, mask=number_mask)
+        return text
+
+    @classmethod
     def normalize_persian_text(
         cls,
         text: str,
@@ -396,33 +449,31 @@ class StringUtils(StringUtilsConstants):
         if not text:
             return text
 
-        # Remove emojis if requested
         if remove_emojis:
             text = cls.remove_emoji(text)
 
-        # Apply normalizations
-        if remove_vowels:
-            text = cls.remove_arabic_vowels(text)
-        if normalize_persian_chars:
-            text = cls.normalize_persian_chars(text)
-        if normalize_punctuation:
-            text = cls.normalize_punctuation(text)
-        if remove_punctuation:
-            text = cls.remove_punctuation_marks(text)
-        if normalize_numbers:
-            text = cls.normalize_numbers(text)
+        text = cls._apply_persian_text_normalizations(
+            text,
+            remove_vowels=remove_vowels,
+            normalize_persian_chars=normalize_persian_chars,
+            normalize_punctuation=normalize_punctuation,
+            remove_punctuation=remove_punctuation,
+            normalize_numbers=normalize_numbers,
+        )
 
-        # Apply masking
-        if mask_urls:
-            text = cls.mask_urls(text, mask=url_mask)
-        if mask_emails:
-            text = cls.mask_emails(text, mask=email_mask)
-        if mask_phones:
-            text = cls.mask_phones(text, mask=phone_mask)
-        if mask_currencies:
-            text = cls.replace_currencies_with_mask(text, mask=currency_mask)
-        if mask_all_numbers:
-            text = cls.replace_numbers_with_mask(text, mask=number_mask)
+        text = cls._apply_persian_text_masks(
+            text,
+            mask_urls=mask_urls,
+            mask_emails=mask_emails,
+            mask_phones=mask_phones,
+            mask_currencies=mask_currencies,
+            mask_all_numbers=mask_all_numbers,
+            url_mask=url_mask,
+            email_mask=email_mask,
+            phone_mask=phone_mask,
+            currency_mask=currency_mask,
+            number_mask=number_mask,
+        )
 
         if clean_spacing:
             text = cls.clean_spacing(text)

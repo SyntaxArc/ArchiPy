@@ -4,6 +4,8 @@ if TYPE_CHECKING:
     from http import HTTPStatus
 
     from grpc import StatusCode
+
+    from archipy.models.types.language_type import LanguageType
 else:
     HTTPStatus = None
     StatusCode = None
@@ -23,7 +25,6 @@ except ImportError:
     GRPC_AVAILABLE = False
 
 from archipy.models.errors.base_error import BaseError
-from archipy.models.types.language_type import LanguageType
 
 
 class InvalidStateError(BaseError):
@@ -46,6 +47,7 @@ class InvalidStateError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidStateError."""
         data = {}
         if current_state:
             data["current_state"] = current_state
@@ -77,6 +79,7 @@ class FailedPreconditionError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize FailedPreconditionError."""
         data = {}
         if precondition:
             data["precondition"] = precondition
@@ -104,6 +107,7 @@ class BusinessRuleViolationError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize BusinessRuleViolationError."""
         data = {}
         if rule:
             data["rule"] = rule
@@ -132,6 +136,7 @@ class InvalidOperationError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize InvalidOperationError."""
         data = {}
         if operation:
             data["operation"] = operation
@@ -191,6 +196,7 @@ class MaintenanceModeError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize MaintenanceModeError."""
         data = {"estimated_duration": estimated_duration} if estimated_duration else {}
         if additional_data:
             data.update(additional_data)

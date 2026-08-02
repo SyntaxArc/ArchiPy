@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import grpc
 
@@ -17,6 +16,9 @@ from archipy.helpers.interceptors.grpc.base.client_interceptor import (
     _swap_args,
 )
 from archipy.helpers.utils.tracing_utils import TracingUtils
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 

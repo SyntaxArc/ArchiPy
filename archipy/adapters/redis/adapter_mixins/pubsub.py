@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
-
-from redis.asyncio.client import PubSub as AsyncPubSub
-from redis.client import PubSub
+from typing import TYPE_CHECKING, Any
 
 from archipy.adapters.redis.adapter_mixins._shared import AsyncRedisMixinBase, SyncRedisMixinBase
+
+if TYPE_CHECKING:
+    from redis.asyncio.client import PubSub as AsyncPubSub
+    from redis.client import PubSub
 
 
 class RedisPubSubMixin(SyncRedisMixinBase):

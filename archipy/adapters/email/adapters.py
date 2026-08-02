@@ -11,7 +11,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from queue import Queue
-from typing import BinaryIO, override
+from typing import TYPE_CHECKING, BinaryIO, override
 
 import requests
 from jinja2 import Template
@@ -19,19 +19,24 @@ from pydantic import EmailStr, HttpUrl
 
 from archipy.adapters.email.ports import EmailPort
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import EmailConfig
 from archipy.helpers.utils.base_utils import BaseUtils
 from archipy.models.dtos.email_dtos import EmailAttachmentDTO
 from archipy.models.errors import InvalidArgumentError
 from archipy.models.types.email_types import EmailAttachmentDispositionType, EmailAttachmentType
 
+if TYPE_CHECKING:
+    from archipy.configs.config_template import EmailConfig
+
 logger = logging.getLogger(__name__)
+
+TOKEN_REFRESH_SECONDS = 300
 
 
 class EmailConnectionManager:
     """Manages SMTP connections with connection pooling and timeout handling."""
 
     def __init__(self, config: EmailConfig) -> None:
+        """Initialize EmailConnectionManager."""
         self.config = config
         self.smtp_connection: smtplib.SMTP | None = None
         self.last_used: datetime | None = None
@@ -39,7 +44,7 @@ class EmailConnectionManager:
     def connect(self) -> None:
         """Establish SMTP connection with authentication."""
         if not self.config.SMTP_SERVER:
-            raise InvalidArgumentError("SMTP_SERVER is required for email connection")
+            raise InvalidArgumentError(argument_name="SMTP_SERVER")
 
         try:
             self.smtp_connection = smtplib.SMTP(
@@ -73,7 +78,7 @@ class EmailConnectionManager:
             return
 
         time_diff = (datetime.now() - self.last_used).total_seconds()
-        if time_diff > 300:  # Refresh after 5 minutes
+        if time_diff > TOKEN_REFRESH_SECONDS:  # Refresh after 5 minutes
             self.disconnect()
             self.connect()
 
@@ -82,6 +87,7 @@ class EmailConnectionPool:
     """Connection pool for managing multiple SMTP connections."""
 
     def __init__(self, config: EmailConfig) -> None:
+        """Initialize EmailConnectionPool."""
         self.config = config
         self.pool: Queue[EmailConnectionManager] = Queue(maxsize=config.POOL_SIZE)
         self._initialize_pool()
@@ -132,44 +138,86 @@ class AttachmentHandler:
                 max_size=max_size,
             )
         except Exception as exception:
-            raise InvalidArgumentError(f"Failed to create attachment: {exception!s}") from exception
+            raise InvalidArgumentError(
+                argument_name="attachment",
+                additional_data={"reason": "create_failed", "detail": str(exception)},
+            ) from exception
+
+    @staticmethod
+    def _process_file_source(source: str | bytes | BinaryIO | HttpUrl) -> bytes:
+        """Read bytes from a filesystem path attachment source."""
+        if isinstance(source, str):
+            return Path(source).read_bytes()
+        if isinstance(source, os.PathLike):
+            path_str: str = os.fspath(source)  # ty: ignore[no-matching-overload]
+            return Path(path_str).read_bytes()
+        raise InvalidArgumentError(
+            argument_name="source",
+            additional_data={"attachment_type": "file", "got": type(source).__name__},
+        )
+
+    @staticmethod
+    def _process_base64_source(source: str | bytes | BinaryIO | HttpUrl) -> bytes:
+        """Decode a base64 attachment source."""
+        if isinstance(source, str | bytes):
+            return base64.b64decode(source)
+        raise InvalidArgumentError(
+            argument_name="source",
+            additional_data={"attachment_type": "base64", "got": type(source).__name__},
+        )
+
+    @staticmethod
+    def _process_url_source(source: str | bytes | BinaryIO | HttpUrl) -> bytes:
+        """Fetch bytes from a URL attachment source."""
+        if isinstance(source, str | HttpUrl):
+            response = requests.get(str(source), timeout=30)
+            response.raise_for_status()
+            return bytes(response.content)
+        raise InvalidArgumentError(
+            argument_name="source",
+            additional_data={"attachment_type": "url", "got": type(source).__name__},
+        )
+
+    @staticmethod
+    def _read_binary_content(source: object) -> bytes:
+        """Read bytes from a binary-like object with a ``read`` method."""
+        if isinstance(source, bytes):
+            return source
+        if isinstance(source, BinaryIO):
+            return source.read()
+        if hasattr(source, "read"):
+            read_method = source.read
+            if callable(read_method):
+                result = read_method()  # ty: ignore[call-top-callable]
+                if isinstance(result, bytes):
+                    return result
+                if isinstance(result, str):
+                    return result.encode("utf-8")
+                raise InvalidArgumentError(
+                    argument_name="read_result",
+                    additional_data={"got": type(result).__name__},
+                )
+        raise InvalidArgumentError(
+            argument_name="source",
+            additional_data={"got": type(source).__name__},
+        )
 
     @staticmethod
     def _process_source(source: str | bytes | BinaryIO | HttpUrl, attachment_type: EmailAttachmentType) -> bytes:
         """Process different types of attachment sources."""
-        if attachment_type == EmailAttachmentType.FILE:
-            if isinstance(source, str):
-                return Path(source).read_bytes()
-            if isinstance(source, os.PathLike):
-                path_str: str = os.fspath(source)  # ty: ignore[no-matching-overload]
-                return Path(path_str).read_bytes()
-            raise ValueError(f"File attachment type requires string path, got {type(source)}")
-        elif attachment_type == EmailAttachmentType.BASE64:
-            if isinstance(source, str | bytes):
-                return base64.b64decode(source)
-            raise ValueError(f"Base64 attachment type requires str or bytes, got {type(source)}")
-        elif attachment_type == EmailAttachmentType.URL:
-            if isinstance(source, str | HttpUrl):
-                response = requests.get(str(source), timeout=30)
-                response.raise_for_status()
-                return bytes(response.content)
-            raise ValueError(f"URL attachment type requires str or HttpUrl, got {type(source)}")
-        elif attachment_type == EmailAttachmentType.BINARY:
-            if isinstance(source, bytes):
-                return source
-            if isinstance(source, BinaryIO):
-                return source.read()
-            if hasattr(source, "read"):
-                read_method = source.read
-                if callable(read_method):
-                    result = read_method()  # ty: ignore[call-top-callable]
-                    if isinstance(result, bytes):
-                        return result
-                    if isinstance(result, str):
-                        return result.encode("utf-8")
-                    raise ValueError(f"read() method returned unexpected type: {type(result)}")
-            raise ValueError(f"Invalid binary source type: {type(source)}")
-        raise ValueError(f"Unsupported attachment type: {attachment_type}")
+        processors = {
+            EmailAttachmentType.FILE: AttachmentHandler._process_file_source,
+            EmailAttachmentType.BASE64: AttachmentHandler._process_base64_source,
+            EmailAttachmentType.URL: AttachmentHandler._process_url_source,
+            EmailAttachmentType.BINARY: AttachmentHandler._read_binary_content,
+        }
+        processor = processors.get(attachment_type)
+        if processor is None:
+            raise InvalidArgumentError(
+                argument_name="attachment_type",
+                additional_data={"got": str(attachment_type)},
+            )
+        return processor(source)
 
     @staticmethod
     def process_attachment(msg: MIMEMultipart, attachment: EmailAttachmentDTO) -> None:
@@ -199,7 +247,7 @@ class AttachmentHandler:
     ) -> MIMEText | MIMEImage | MIMEAudio | MIMEBase:
         """Create appropriate MIME part based on content type."""
         if not attachment.content_type:
-            raise ValueError("Content type is required for attachment")
+            raise InvalidArgumentError(argument_name="content_type")
         main_type, sub_type = attachment.content_type.split("/", 1)
 
         if main_type == "text":
@@ -218,6 +266,7 @@ class EmailAdapter(EmailPort):
     """Email adapter implementing EmailPort for sending emails with SMTP."""
 
     def __init__(self, config: EmailConfig | None = None) -> None:
+        """Initialize EmailAdapter."""
         self.config = config or BaseConfig.global_config().EMAIL
         self.connection_pool = EmailConnectionPool(self.config)
 

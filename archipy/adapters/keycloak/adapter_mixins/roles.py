@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from async_lru import alru_cache
 from keycloak.exceptions import (
@@ -15,15 +15,20 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
 )
-from archipy.adapters.keycloak.ports import (
-    KeycloakRoleType,
-)
 from archipy.helpers.decorators import ttl_cache_decorator
 from archipy.models.errors import (
     InternalError,
+    NotFoundError,
 )
 
+if TYPE_CHECKING:
+    from archipy.adapters.keycloak.ports import (
+        KeycloakRoleType,
+    )
+
 logger = logging.getLogger(__name__)
+
+HTTP_NOT_FOUND = 404
 
 
 class KeycloakRolesMixin(SyncKeycloakMixinBase):
@@ -130,7 +135,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             # Get client
             client = self.admin_adapter.get_client_id(client_id)
             if client is None:
-                raise ValueError("client_id resolved to None")
+                raise InternalError(error_code="KEYCLOAK_CLIENT_ID_NONE")
             # Get role representation
             # Keycloak admin adapter methods accept these types at runtime
             role = self.admin_adapter.get_client_role(client, role_name)
@@ -204,7 +209,10 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         try:
             resolved_client_id = self.admin_adapter.get_client_id(client_id)
             if resolved_client_id is None:
-                raise ValueError(f"Client ID not found: {client_id}")
+                raise NotFoundError(
+                    resource_type="keycloak_client",
+                    additional_data={"client_id": client_id},
+                )
 
             # Prepare role data
             role_data = {"name": role_name}
@@ -293,7 +301,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         try:
             client = self.admin_adapter.get_client_id(client_id)
             if client is None:
-                raise ValueError("client_id resolved to None")
+                raise InternalError(error_code="KEYCLOAK_CLIENT_ID_NONE")
             # Keycloak admin adapter methods accept these types at runtime
             role = self.admin_adapter.get_client_role(client, role_name)
             self.admin_adapter.delete_client_roles_of_user(user_id, client, [role])
@@ -418,7 +426,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
                     role = self.admin_adapter.get_realm_role(role_name)
                     child_roles.append(role)
                 except KeycloakGetError as e:
-                    if e.response_code == 404:
+                    if e.response_code == HTTP_NOT_FOUND:
                         logger.warning("Child role not found: %s", role_name)
                         continue
                     raise
@@ -446,7 +454,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         try:
             internal_client_id = self.admin_adapter.get_client_id(client_id)
             if internal_client_id is None:
-                raise ValueError("client_id resolved to None")
+                raise InternalError(error_code="KEYCLOAK_CLIENT_ID_NONE")
 
             child_roles = []
             for role_name in child_role_names:
@@ -455,14 +463,14 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
                     role = self.admin_adapter.get_client_role(internal_client_id, role_name)
                     child_roles.append(role)
                 except KeycloakGetError as e:
-                    if e.response_code == 404:
+                    if e.response_code == HTTP_NOT_FOUND:
                         logger.warning("Client role not found: %s", role_name)
                         continue
                     raise
 
             if child_roles:
                 if internal_client_id is None:
-                    raise ValueError("Client ID not found")
+                    raise NotFoundError(resource_type="keycloak_client")
                 resolved_client_id: str = internal_client_id
                 self.admin_adapter.add_composite_client_roles_to_role(
                     role_name=composite_role_name,
@@ -593,7 +601,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             # Get client
             client = await self.admin_adapter.a_get_client_id(client_id)
             if client is None:
-                raise ValueError("client_id resolved to None")
+                raise InternalError(error_code="KEYCLOAK_CLIENT_ID_NONE")
             # Get role representation
             # Keycloak admin adapter methods accept these types at runtime
             role = await self.admin_adapter.a_get_client_role(client, role_name)
@@ -665,7 +673,10 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
         try:
             resolved_client_id = await self.admin_adapter.a_get_client_id(client_id)
             if resolved_client_id is None:
-                raise ValueError(f"Client ID not found: {client_id}")
+                raise NotFoundError(
+                    resource_type="keycloak_client",
+                    additional_data={"client_id": client_id},
+                )
 
             # Prepare role data
             role_data = {"name": role_name}
@@ -754,7 +765,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
         try:
             client = await self.admin_adapter.a_get_client_id(client_id)
             if client is None:
-                raise ValueError("client_id resolved to None")
+                raise InternalError(error_code="KEYCLOAK_CLIENT_ID_NONE")
             # Keycloak admin adapter methods accept these types at runtime
             role = await self.admin_adapter.a_get_client_role(client, role_name)
             await self.admin_adapter.a_delete_client_roles_of_user(user_id, client, [role])
@@ -879,7 +890,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
                     role = await self.admin_adapter.a_get_realm_role(role_name)
                     child_roles.append(role)
                 except KeycloakGetError as e:
-                    if e.response_code == 404:
+                    if e.response_code == HTTP_NOT_FOUND:
                         logger.warning("Child role not found: %s", role_name)
                         continue
                     raise
@@ -910,7 +921,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
         try:
             internal_client_id = await self.admin_adapter.a_get_client_id(client_id)
             if internal_client_id is None:
-                raise ValueError("client_id resolved to None")
+                raise InternalError(error_code="KEYCLOAK_CLIENT_ID_NONE")
 
             child_roles = []
             for role_name in child_role_names:
@@ -919,14 +930,14 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
                     role = await self.admin_adapter.a_get_client_role(internal_client_id, role_name)
                     child_roles.append(role)
                 except KeycloakGetError as e:
-                    if e.response_code == 404:
+                    if e.response_code == HTTP_NOT_FOUND:
                         logger.warning("Client role not found: %s", role_name)
                         continue
                     raise
 
             if child_roles:
                 if internal_client_id is None:
-                    raise ValueError("Client ID not found")
+                    raise NotFoundError(resource_type="keycloak_client")
                 resolved_client_id: str = internal_client_id
                 await self.admin_adapter.a_add_composite_client_roles_to_role(
                     role_name=composite_role_name,

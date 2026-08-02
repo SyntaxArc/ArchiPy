@@ -4,17 +4,14 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Awaitable, Callable
-from typing import Any, NoReturn, TypeVar
+from typing import TYPE_CHECKING, Any, NoReturn, TypeVar
 
-from keycloak import KeycloakAdmin, KeycloakOpenID, KeycloakUMA
 from keycloak.exceptions import (
     KeycloakAuthenticationError,
     KeycloakConnectionError,
     KeycloakError,
 )
 
-from archipy.configs.config_template import KeycloakConfig
 from archipy.models.errors import (
     ClientAlreadyExistsError,
     InsufficientPermissionsError,
@@ -30,7 +27,17 @@ from archipy.models.errors import (
     ValidationError,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from keycloak import KeycloakAdmin, KeycloakOpenID, KeycloakUMA
+
+    from archipy.configs.config_template import KeycloakConfig
+
 logger = logging.getLogger(__name__)
+
+HTTP_BAD_REQUEST = 400
+HTTP_NOT_FOUND = 404
 
 T = TypeVar("T")
 
@@ -75,6 +82,85 @@ class KeycloakExceptionHandlerMixin:
         return error_message
 
     @classmethod
+    def _build_keycloak_error_context(
+        cls,
+        exception: KeycloakError,
+        operation: str,
+        error_message: str,
+    ) -> dict[str, Any]:
+        """Build common error context for Keycloak exception mapping."""
+        return {
+            "operation": operation,
+            "original_error": error_message,
+            "response_code": getattr(exception, "response_code", None),
+            "keycloak_error_type": type(exception).__name__,
+        }
+
+    @classmethod
+    def _raise_for_keycloak_connection_error(
+        cls,
+        exception: KeycloakError,
+        error_lower: str,
+        additional_data: dict[str, Any],
+    ) -> NoReturn:
+        """Map Keycloak connection errors to application errors."""
+        if "timeout" in error_lower:
+            raise KeycloakConnectionTimeoutError(additional_data=additional_data) from exception
+        raise KeycloakServiceUnavailableError(additional_data=additional_data) from exception
+
+    @classmethod
+    def _raise_for_keycloak_already_exists(
+        cls,
+        exception: KeycloakError,
+        error_lower: str,
+        additional_data: dict[str, Any],
+    ) -> None:
+        """Raise when the error indicates a duplicate resource."""
+        if "already exists" not in error_lower:
+            return
+        if "realm" in error_lower:
+            raise RealmAlreadyExistsError(additional_data=additional_data) from exception
+        if "user exists with same" in error_lower:
+            raise UserAlreadyExistsError(additional_data=additional_data) from exception
+        if "client" in error_lower:
+            raise ClientAlreadyExistsError(additional_data=additional_data) from exception
+        if "role" in error_lower:
+            raise RoleAlreadyExistsError(additional_data=additional_data) from exception
+
+    @classmethod
+    def _raise_for_keycloak_message_patterns(
+        cls,
+        exception: KeycloakError,
+        error_lower: str,
+        response_code: int | None,
+        additional_data: dict[str, Any],
+    ) -> None:
+        """Map message-pattern Keycloak errors."""
+        auth_phrases = ["invalid user credentials", "invalid credentials", "authentication failed", "unauthorized"]
+        if isinstance(exception, KeycloakAuthenticationError) or any(phrase in error_lower for phrase in auth_phrases):
+            raise InvalidCredentialsError(additional_data=additional_data) from exception
+
+        cls._raise_for_keycloak_already_exists(exception, error_lower, additional_data)
+
+        if "not found" in error_lower:
+            raise ResourceNotFoundError(additional_data=additional_data) from exception
+
+        permission_phrases = ["forbidden", "access denied", "insufficient permissions", "insufficient scope"]
+        if any(phrase in error_lower for phrase in permission_phrases):
+            raise InsufficientPermissionsError(additional_data=additional_data) from exception
+
+        password_phrases = ["invalid password", "password policy", "minimum length", "password must"]
+        if any(phrase in error_lower for phrase in password_phrases):
+            raise PasswordPolicyError(additional_data=additional_data) from exception
+
+        validation_phrases = ["validation", "invalid", "required field", "bad request"]
+        if response_code == HTTP_BAD_REQUEST or any(phrase in error_lower for phrase in validation_phrases):
+            raise ValidationError(additional_data=additional_data) from exception
+
+        if response_code in [503, 504] or "unavailable" in error_lower:
+            raise KeycloakServiceUnavailableError(additional_data=additional_data) from exception
+
+    @classmethod
     def _handle_keycloak_exception(cls, exception: KeycloakError, operation: str) -> NoReturn:
         """Handle Keycloak exceptions and map them to appropriate application errors.
 
@@ -86,70 +172,15 @@ class KeycloakExceptionHandlerMixin:
             Various application-specific errors based on the exception type/content
         """
         error_message = cls._extract_error_message(exception)
-        response_code = getattr(exception, "response_code", None)
         error_lower = error_message.lower()
+        additional_data = cls._build_keycloak_error_context(exception, operation, error_message)
+        response_code = additional_data["response_code"]
 
-        # Common context data
-        additional_data = {
-            "operation": operation,
-            "original_error": error_message,
-            "response_code": response_code,
-            "keycloak_error_type": type(exception).__name__,
-        }
-
-        # Connection and network errors
         if isinstance(exception, KeycloakConnectionError):
-            if "timeout" in error_lower:
-                raise KeycloakConnectionTimeoutError(additional_data=additional_data) from exception
-            raise KeycloakServiceUnavailableError(additional_data=additional_data) from exception
+            cls._raise_for_keycloak_connection_error(exception, error_lower, additional_data)
 
-        # Authentication errors
-        if isinstance(exception, KeycloakAuthenticationError) or any(
-            phrase in error_lower
-            for phrase in ["invalid user credentials", "invalid credentials", "authentication failed", "unauthorized"]
-        ):
-            raise InvalidCredentialsError(additional_data=additional_data) from exception
+        cls._raise_for_keycloak_message_patterns(exception, error_lower, response_code, additional_data)
 
-        # Resource already exists errors
-        if "already exists" in error_lower:
-            if "realm" in error_lower:
-                raise RealmAlreadyExistsError(additional_data=additional_data) from exception
-            elif "user exists with same" in error_lower:
-                raise UserAlreadyExistsError(additional_data=additional_data) from exception
-            elif "client" in error_lower:
-                raise ClientAlreadyExistsError(additional_data=additional_data) from exception
-            elif "role" in error_lower:
-                raise RoleAlreadyExistsError(additional_data=additional_data) from exception
-
-        # Not found errors
-        if "not found" in error_lower:
-            raise ResourceNotFoundError(additional_data=additional_data) from exception
-
-        # Permission errors
-        if any(
-            phrase in error_lower
-            for phrase in ["forbidden", "access denied", "insufficient permissions", "insufficient scope"]
-        ):
-            raise InsufficientPermissionsError(additional_data=additional_data) from exception
-
-        # Password policy errors
-        if any(
-            phrase in error_lower
-            for phrase in ["invalid password", "password policy", "minimum length", "password must"]
-        ):
-            raise PasswordPolicyError(additional_data=additional_data) from exception
-
-        # Validation errors (400 status codes that don't match above)
-        if response_code == 400 or any(
-            phrase in error_lower for phrase in ["validation", "invalid", "required field", "bad request"]
-        ):
-            raise ValidationError(additional_data=additional_data) from exception
-
-        # Service unavailable
-        if response_code in [503, 504] or "unavailable" in error_lower:
-            raise KeycloakServiceUnavailableError(additional_data=additional_data) from exception
-
-        # Default to InternalError for unrecognized errors
         raise InternalError(additional_data=additional_data) from exception
 
     @classmethod

@@ -1,6 +1,8 @@
 from http import HTTPStatus
+from typing import TYPE_CHECKING
 
-from archipy.models.errors.base_error import BaseError
+if TYPE_CHECKING:
+    from archipy.models.errors.base_error import BaseError
 
 
 class FastAPIErrorResponseDTO:

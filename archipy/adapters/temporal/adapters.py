@@ -5,10 +5,9 @@ integrating with the Temporal workflow engine while following ArchiPy patterns
 and conventions.
 """
 
-from collections.abc import Callable
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, TypeVar, override
+from typing import TYPE_CHECKING, Any, TypeVar, override
 from uuid import uuid4
 
 from temporalio.client import (
@@ -26,12 +25,16 @@ from temporalio.common import RetryPolicy
 from temporalio.service import RetryConfig
 
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import TemporalConfig
 from archipy.models.errors import InvalidArgumentError
 from archipy.models.errors.base_error import BaseError
 
 from .ports import TemporalPort
 from .runtime import TemporalRuntimeManager
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from archipy.configs.config_template import TemporalConfig
 
 T = TypeVar("T")
 

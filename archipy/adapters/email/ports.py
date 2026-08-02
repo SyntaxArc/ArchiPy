@@ -1,8 +1,10 @@
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 
-from pydantic import EmailStr
+if TYPE_CHECKING:
+    from pydantic import EmailStr
 
-from archipy.models.dtos.email_dtos import EmailAttachmentDTO
+    from archipy.models.dtos.email_dtos import EmailAttachmentDTO
 
 
 class EmailPort:

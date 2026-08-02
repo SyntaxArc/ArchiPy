@@ -47,6 +47,7 @@ class DatabaseError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize DatabaseError."""
         data = {}
         if database:
             data["database"] = database
@@ -93,6 +94,7 @@ class DatabaseQueryError(DatabaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize DatabaseQueryError."""
         data = {}
         if query:
             data["query"] = query
@@ -123,6 +125,7 @@ class DatabaseTransactionError(DatabaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize DatabaseTransactionError."""
         data = {}
         if transaction_id:
             data["transaction_id"] = transaction_id
@@ -151,6 +154,7 @@ class DatabaseTimeoutError(DatabaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize DatabaseTimeoutError."""
         data = {}
         if timeout:
             data["timeout"] = timeout
@@ -179,6 +183,7 @@ class DatabaseConstraintError(DatabaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize DatabaseConstraintError."""
         data = {}
         if constraint:
             data["constraint"] = constraint
@@ -266,6 +271,7 @@ class CacheError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize CacheError."""
         data = {}
         if cache_type:
             data["cache_type"] = cache_type
@@ -293,6 +299,7 @@ class CacheMissError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize CacheMissError."""
         data = {"cache_key": cache_key} if cache_key else {}
         if additional_data:
             data.update(additional_data)

@@ -1,5 +1,5 @@
 import json
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, NoReturn
 
 if TYPE_CHECKING:
     from http import HTTPStatus
@@ -39,6 +39,18 @@ elif not TYPE_CHECKING:
     AsyncServicerContext = object
 
 from archipy.models.types.language_type import LanguageType
+
+
+def _raise_grpc_unavailable() -> NoReturn:
+    from archipy.models.errors.system_errors import InternalError
+
+    raise InternalError(error_code="GRPC_UNAVAILABLE")
+
+
+def _raise_invalid_grpc_context(reason: str) -> NoReturn:
+    from archipy.models.errors.validation_errors import InvalidArgumentError
+
+    raise InvalidArgumentError(argument_name="grpc_context", additional_data={"reason": reason})
 
 
 class BaseError(Exception):
@@ -190,10 +202,10 @@ class BaseError(Exception):
             grpc.StatusCode: Corresponding StatusCode enum member
 
         Raises:
-            ValueError: If gRPC is not available.
+            InternalError: If gRPC is not available.
         """
         if not GRPC_AVAILABLE or grpc is None:
-            raise ValueError("gRPC is not available")
+            _raise_grpc_unavailable()
 
         status_map = {
             0: grpc.StatusCode.OK,
@@ -224,13 +236,13 @@ class BaseError(Exception):
             context: The gRPC ServicerContext to abort.
 
         Raises:
-            ValueError: If context is None or doesn't have abort method.
+            InvalidArgumentError: If context is None or doesn't have abort method.
         """
         if context is None:
-            raise ValueError("gRPC context cannot be None")
+            _raise_invalid_grpc_context("context_is_none")
 
         if not GRPC_AVAILABLE or not hasattr(context, "abort"):
-            raise ValueError("Invalid gRPC context: missing abort method")
+            _raise_invalid_grpc_context("missing_abort_method")
 
         status_code: grpc.StatusCode = self._convert_int_to_grpc_status(self.grpc_status)
         message = self.get_message()
@@ -241,7 +253,7 @@ class BaseError(Exception):
         if hasattr(context, "abort") and callable(context.abort):
             await context.abort(status_code, message)
         else:
-            raise ValueError("gRPC context abort method not available or not callable")
+            _raise_invalid_grpc_context("abort_not_callable")
 
     def abort_grpc_sync(self, context: ServicerContext) -> None:
         """Aborts a sync gRPC call with the appropriate status code and message.
@@ -250,13 +262,13 @@ class BaseError(Exception):
             context: The gRPC ServicerContext to abort.
 
         Raises:
-            ValueError: If context is None or doesn't have abort method.
+            InvalidArgumentError: If context is None or doesn't have abort method.
         """
         if context is None:
-            raise ValueError("gRPC context cannot be None")
+            _raise_invalid_grpc_context("context_is_none")
 
         if not GRPC_AVAILABLE or not hasattr(context, "abort"):
-            raise ValueError("Invalid gRPC context: missing abort method")
+            _raise_invalid_grpc_context("missing_abort_method")
 
         status_code: grpc.StatusCode = self._convert_int_to_grpc_status(self.grpc_status)
         message = self.get_message()
@@ -267,7 +279,7 @@ class BaseError(Exception):
         if hasattr(context, "abort") and callable(context.abort):
             context.abort(status_code, message)
         else:
-            raise ValueError("gRPC context abort method not available or not callable")
+            _raise_invalid_grpc_context("abort_not_callable")
 
     @classmethod
     async def abort_with_error_async(

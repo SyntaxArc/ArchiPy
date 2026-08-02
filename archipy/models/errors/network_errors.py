@@ -4,6 +4,8 @@ if TYPE_CHECKING:
     from http import HTTPStatus
 
     from grpc import StatusCode
+
+    from archipy.models.types.language_type import LanguageType
 else:
     HTTPStatus = None
     StatusCode = None
@@ -23,7 +25,6 @@ except ImportError:
     GRPC_AVAILABLE = False
 
 from archipy.models.errors.base_error import BaseError
-from archipy.models.types.language_type import LanguageType
 
 
 class NetworkError(BaseError):
@@ -45,6 +46,7 @@ class NetworkError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize NetworkError."""
         data = {}
         if service:
             data["service"] = service
@@ -73,6 +75,7 @@ class ConnectionTimeoutError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize ConnectionTimeoutError."""
         data = {}
         if service:
             data["service"] = service
@@ -105,6 +108,7 @@ class ServiceUnavailableError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize ServiceUnavailableError."""
         data = {}
         if service:
             data["service"] = service
@@ -135,6 +139,7 @@ class GatewayTimeoutError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize GatewayTimeoutError."""
         data = {}
         if gateway:
             data["gateway"] = gateway
@@ -164,6 +169,7 @@ class BadGatewayError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize BadGatewayError."""
         data = {}
         if gateway:
             data["gateway"] = gateway
@@ -194,6 +200,7 @@ class RateLimitExceededError(BaseError):
         lang: LanguageType | None = None,
         additional_data: dict | None = None,
     ) -> None:
+        """Initialize RateLimitExceededError."""
         data = {}
         if rate_limit_type:
             data["rate_limit_type"] = rate_limit_type

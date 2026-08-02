@@ -1,15 +1,17 @@
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 
-from archipy.models.dtos.parsian_ipg_dtos import (
-    ConfirmRequestDTO,
-    ConfirmResponseDTO,
-    ConfirmWithAmountRequestDTO,
-    ConfirmWithAmountResponseDTO,
-    PaymentRequestDTO,
-    PaymentResponseDTO,
-    ReverseRequestDTO,
-    ReverseResponseDTO,
-)
+if TYPE_CHECKING:
+    from archipy.models.dtos.parsian_ipg_dtos import (
+        ConfirmRequestDTO,
+        ConfirmResponseDTO,
+        ConfirmWithAmountRequestDTO,
+        ConfirmWithAmountResponseDTO,
+        PaymentRequestDTO,
+        PaymentResponseDTO,
+        ReverseRequestDTO,
+        ReverseResponseDTO,
+    )
 
 
 class ParsianShaparakPaymentPort:

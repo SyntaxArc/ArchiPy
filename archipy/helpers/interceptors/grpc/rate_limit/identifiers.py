@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 from archipy.models.errors import InvalidTokenError, TokenExpiredError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from archipy.configs.config_template import AuthConfig
+
+
+_METADATA_PAIR_MIN_LEN = 2
 
 
 def invocation_metadata_to_dict(metadata_items: Iterable[Any]) -> dict[str, str]:
@@ -24,7 +28,7 @@ def invocation_metadata_to_dict(metadata_items: Iterable[Any]) -> dict[str, str]
     for item in metadata_items:
         if hasattr(item, "key") and hasattr(item, "value"):
             key, value = item.key, item.value
-        elif isinstance(item, tuple) and len(item) >= 2:
+        elif isinstance(item, tuple) and len(item) >= _METADATA_PAIR_MIN_LEN:
             key, value = item[0], item[1]
         else:
             continue

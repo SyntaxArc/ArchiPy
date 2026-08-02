@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from concurrent import futures
-from contextlib import AbstractAsyncContextManager
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
@@ -15,12 +13,17 @@ from archipy.helpers.utils.prometheus_utils import PrometheusUtils
 from archipy.helpers.utils.tracing_utils import TracingUtils
 from archipy.models.errors import (
     BaseError,
+    ConfigurationError,
     InvalidArgumentError,
     UnavailableError,
     UnknownError,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from contextlib import AbstractAsyncContextManager
+
+    from fastapi.routing import APIRoute
     from grpc import aio as grpc_aio
     from grpc.aio import Server as GrpcAioServer
 
@@ -49,7 +52,6 @@ try:
     from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
     from fastapi.middleware.trustedhost import TrustedHostMiddleware
     from fastapi.responses import JSONResponse
-    from fastapi.routing import APIRoute
     from starlette.middleware.cors import CORSMiddleware
 
     FASTAPI_APP = True
@@ -525,15 +527,14 @@ class AppUtils:
             async_interceptors.extend(customized_interceptors)
 
         if create_grpc_server is None:
-            raise ImportError("grpc.aio is not available")
-        app = create_grpc_server(
+            raise ConfigurationError(operation="import", reason="grpc_aio_extra_required")
+        return create_grpc_server(
             futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),
             interceptors=async_interceptors,
             compression=compression,
             options=config.GRPC.SERVER_OPTIONS_CONFIG_LIST,
             maximum_concurrent_rpcs=config.GRPC.MAX_CONCURRENT_RPCS,
         )
-        return app
 
     @classmethod
     def create_grpc_app(
@@ -553,12 +554,10 @@ class AppUtils:
         if customized_interceptors:
             interceptors.extend(customized_interceptors)
 
-        app = grpc.server(
+        return grpc.server(
             futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),
             interceptors=interceptors,
             compression=compression,
             options=config.GRPC.SERVER_OPTIONS_CONFIG_LIST,
             maximum_concurrent_rpcs=config.GRPC.MAX_CONCURRENT_RPCS,
         )
-
-        return app

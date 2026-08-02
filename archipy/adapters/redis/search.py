@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import struct
 from collections.abc import Awaitable
-from typing import Any, cast, override
+from typing import TYPE_CHECKING, Any, cast, override
 
 from redis import RedisCluster
 from redis.asyncio import RedisCluster as AsyncRedisCluster
-from redis.asyncio.client import Redis as AsyncRedis
-from redis.client import Redis
 from redis.commands.search import Search
 from redis.commands.search.aggregation import AggregateRequest, Asc, Desc
 from redis.commands.search.field import NumericField, TagField, TextField, VectorField
@@ -17,8 +15,6 @@ from redis.commands.search.reducers import count as agg_count
 from redis.commands.search.result import Result
 
 from archipy.adapters.redis.search_ports import AsyncRedisSearchHandlePort, RedisSearchHandlePort
-from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
-from archipy.models.dtos.redis.search.document_dto import HashDocumentUpsertDTO, JsonDocumentUpsertDTO
 from archipy.models.dtos.redis.search.index_schema_dto import (
     IndexFieldConfig,
     IndexSchemaDTO,
@@ -27,14 +23,22 @@ from archipy.models.dtos.redis.search.index_schema_dto import (
     TextFieldConfig,
     VectorFieldConfig,
 )
-from archipy.models.dtos.redis.search.search_query_dto import (
-    KnnQueryDTO,
-    RangeQueryDTO,
-    SearchQueryDTO,
-    VectorQueryRuntimeDTO,
-)
 from archipy.models.dtos.redis.search.search_result_dto import SearchHitDTO, SearchResultDTO
+from archipy.models.errors import InvalidArgumentError
 from archipy.models.types.redis_search_types import RedisIndexType
+
+if TYPE_CHECKING:
+    from redis.asyncio.client import Redis as AsyncRedis
+    from redis.client import Redis
+
+    from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
+    from archipy.models.dtos.redis.search.document_dto import HashDocumentUpsertDTO, JsonDocumentUpsertDTO
+    from archipy.models.dtos.redis.search.search_query_dto import (
+        KnnQueryDTO,
+        RangeQueryDTO,
+        SearchQueryDTO,
+        VectorQueryRuntimeDTO,
+    )
 
 
 def _cluster_ft_list_target(client: RedisCluster | AsyncRedisCluster) -> Any:
@@ -216,33 +220,53 @@ def _normalize_info_dict(info: dict[Any, Any]) -> dict[str, Any]:
     return normalized
 
 
-def _index_type_from_info(info: dict[str, Any]) -> RedisIndexType | None:
-    """Resolve RedisIndexType from an FT.INFO response."""
-    definition = info.get("index_definition")
+def _index_type_from_definition(definition: object) -> RedisIndexType | None:
+    """Resolve RedisIndexType from an FT.INFO index_definition field."""
     if isinstance(definition, dict):
         key_type = definition.get("key_type") or definition.get("type")
         if key_type == "JSON":
             return RedisIndexType.JSON
         if key_type == "HASH":
             return RedisIndexType.HASH
+        return None
     if isinstance(definition, (list, tuple)):
         decoded = [str(item) for item in definition]
         if "JSON" in decoded:
             return RedisIndexType.JSON
         if "HASH" in decoded:
             return RedisIndexType.HASH
-    for attribute in info.get("attributes", []):
-        identifier: str | None = None
-        if isinstance(attribute, dict):
-            raw_identifier = attribute.get("identifier")
-            identifier = str(raw_identifier) if raw_identifier is not None else None
-        elif isinstance(attribute, (list, tuple)):
-            decoded = [str(item) for item in attribute]
-            if "identifier" in decoded:
-                identifier = decoded[decoded.index("identifier") + 1]
+    return None
+
+
+def _attribute_identifier(attribute: object) -> str | None:
+    """Extract the field identifier from an FT.INFO attribute entry."""
+    if isinstance(attribute, dict):
+        raw_identifier = attribute.get("identifier")
+        return str(raw_identifier) if raw_identifier is not None else None
+    if isinstance(attribute, (list, tuple)):
+        decoded = [str(item) for item in attribute]
+        if "identifier" in decoded:
+            return decoded[decoded.index("identifier") + 1]
+    return None
+
+
+def _index_type_from_attributes(attributes: object) -> RedisIndexType | None:
+    """Infer JSON index type from attribute identifiers."""
+    if not isinstance(attributes, list):
+        return None
+    for attribute in attributes:
+        identifier = _attribute_identifier(attribute)
         if identifier and identifier.startswith("$."):
             return RedisIndexType.JSON
     return None
+
+
+def _index_type_from_info(info: dict[str, Any]) -> RedisIndexType | None:
+    """Resolve RedisIndexType from an FT.INFO response."""
+    resolved = _index_type_from_definition(info.get("index_definition"))
+    if resolved is not None:
+        return resolved
+    return _index_type_from_attributes(info.get("attributes", []))
 
 
 def _normalize_search_field_name(name: str) -> str:
@@ -300,6 +324,29 @@ def _append_runtime_query_params(
         params["SEARCH_BUFFER_CAPACITY"] = runtime.search_buffer_capacity
 
 
+def _append_runtime_vector_attributes(
+    attributes: list[str],
+    runtime: VectorQueryRuntimeDTO,
+) -> None:
+    """Append runtime tuning attributes for a vector query."""
+    if runtime.shard_k_ratio is not None:
+        attributes.append(f"$SHARD_K_RATIO: {runtime.shard_k_ratio}")
+    if runtime.ef_runtime is not None:
+        attributes.append("$EF_RUNTIME: $EF_RUNTIME")
+    if runtime.epsilon is not None:
+        attributes.append("$EPSILON: $EPSILON")
+    if runtime.hybrid_policy is not None:
+        attributes.append(f"$HYBRID_POLICY: {runtime.hybrid_policy.value}")
+    if runtime.batch_size is not None:
+        attributes.append("$BATCH_SIZE: $BATCH_SIZE")
+    if runtime.search_window_size is not None:
+        attributes.append("$SEARCH_WINDOW_SIZE: $SEARCH_WINDOW_SIZE")
+    if runtime.use_search_history is not None:
+        attributes.append(f"$USE_SEARCH_HISTORY: {runtime.use_search_history.value}")
+    if runtime.search_buffer_capacity is not None:
+        attributes.append("$SEARCH_BUFFER_CAPACITY: $SEARCH_BUFFER_CAPACITY")
+
+
 def _build_vector_query_attributes(
     runtime: VectorQueryRuntimeDTO | None,
     *,
@@ -310,22 +357,7 @@ def _build_vector_query_attributes(
         return ""
     attributes: list[str] = []
     if runtime is not None:
-        if runtime.shard_k_ratio is not None:
-            attributes.append(f"$SHARD_K_RATIO: {runtime.shard_k_ratio}")
-        if runtime.ef_runtime is not None:
-            attributes.append("$EF_RUNTIME: $EF_RUNTIME")
-        if runtime.epsilon is not None:
-            attributes.append("$EPSILON: $EPSILON")
-        if runtime.hybrid_policy is not None:
-            attributes.append(f"$HYBRID_POLICY: {runtime.hybrid_policy.value}")
-        if runtime.batch_size is not None:
-            attributes.append("$BATCH_SIZE: $BATCH_SIZE")
-        if runtime.search_window_size is not None:
-            attributes.append("$SEARCH_WINDOW_SIZE: $SEARCH_WINDOW_SIZE")
-        if runtime.use_search_history is not None:
-            attributes.append(f"$USE_SEARCH_HISTORY: {runtime.use_search_history.value}")
-        if runtime.search_buffer_capacity is not None:
-            attributes.append("$SEARCH_BUFFER_CAPACITY: $SEARCH_BUFFER_CAPACITY")
+        _append_runtime_vector_attributes(attributes, runtime)
     if score_field is not None:
         attributes.append(f"$YIELD_DISTANCE_AS: {score_field}")
     if not attributes:
@@ -391,7 +423,7 @@ def _build_range_query(
 ) -> tuple[Query, dict[str, str | int | float | bytes]]:
     """Build a redis-py Query and params for a vector range search."""
     if query.range is None:
-        raise ValueError("Range search requires range parameters")
+        raise InvalidArgumentError(argument_name="range")
     range_query = query.range
     range_clause = _build_range_clause(range_query)
     query_string = f"({range_query.filter_expr}) | {range_clause}" if range_query.filter_expr else range_clause
@@ -432,7 +464,7 @@ def _build_hybrid_search_query(
 ) -> tuple[Query, dict[str, str | int | float | bytes]]:
     """Build a combined FT.SEARCH query for hybrid text + vector KNN."""
     if query.knn is None:
-        raise ValueError("Hybrid search requires knn parameters")
+        raise InvalidArgumentError(argument_name="knn")
     knn = query.knn
     text_part = f"({query.query})"
     if knn.filter_expr:
