@@ -1,7 +1,7 @@
 """SQLAlchemy atomic transaction decorators.
 
 This module provides decorators for managing SQLAlchemy transactions with automatic commit/rollback
-and support for different database types (PostgreSQL, SQLite, StarRocks).
+and support for different database types (PostgreSQL, SQLite, StarRocks, MySQL).
 """
 
 import logging
@@ -52,6 +52,10 @@ ATOMIC_BLOCK_CONFIGS = {
         "flag": "in_starrocks_sqlalchemy_atomic_block",
         "registry": "archipy.adapters.starrocks.sqlalchemy.session_manager_registry.StarRocksSessionManagerRegistry",
     },
+    "mysql": {
+        "flag": "in_mysql_sqlalchemy_atomic_block",
+        "registry": "archipy.adapters.mysql.sqlalchemy.session_manager_registry.MySQLSessionManagerRegistry",
+    },
 }
 
 # Type variables for function return types
@@ -94,7 +98,7 @@ def _handle_db_exception(exception: BaseException, db_type: str, func_name: str)
 
     Args:
         exception (BaseException): The exception to handle.
-        db_type (str): The database type ("postgres", "sqlite", or "starrocks").
+        db_type (str): The database type ("postgres", "sqlite", "starrocks", or "mysql").
         func_name (str): The name of the function being executed.
 
     Raises:
@@ -273,7 +277,7 @@ def sqlalchemy_atomic_decorator[R](
     Supports both synchronous and asynchronous functions.
 
     Args:
-        db_type (str): The database type ("postgres", "sqlite", or "starrocks").
+        db_type (str): The database type ("postgres", "sqlite", "starrocks", or "mysql").
         is_async (bool): Whether the function is asynchronous. Defaults to False.
         function (Callable | None): The function to wrap. If None, returns a partial function.
 
@@ -409,3 +413,29 @@ def async_starrocks_sqlalchemy_atomic_decorator(
         Callable | partial: The wrapped function or a partial function for later use.
     """
     return sqlalchemy_atomic_decorator(db_type="starrocks", is_async=True, function=function)
+
+
+def mysql_sqlalchemy_atomic_decorator(function: Callable[..., Any] | None = None) -> Callable[..., Any] | partial:
+    """Decorator for MySQL atomic transactions.
+
+    Args:
+        function (Callable | None): The function to wrap. If None, returns a partial function.
+
+    Returns:
+        Callable | partial: The wrapped function or a partial function for later use.
+    """
+    return sqlalchemy_atomic_decorator(db_type="mysql", function=function)
+
+
+def async_mysql_sqlalchemy_atomic_decorator(
+    function: Callable[..., Any] | None = None,
+) -> Callable[..., Any] | partial:
+    """Decorator for asynchronous MySQL atomic transactions.
+
+    Args:
+        function (Callable | None): The function to wrap. If None, returns a partial function.
+
+    Returns:
+        Callable | partial: The wrapped function or a partial function for later use.
+    """
+    return sqlalchemy_atomic_decorator(db_type="mysql", is_async=True, function=function)

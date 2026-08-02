@@ -280,7 +280,7 @@ Feature: Redis cache adapter
     Then retrieving "greeting" returns "hello"
 ```
 
-Available tags: `@needs-redis`, `@needs-postgres`, `@needs-kafka`, `@needs-keycloak`,
+Available tags: `@needs-redis`, `@needs-postgres`, `@needs-mysql`, `@needs-kafka`, `@needs-keycloak`,
 `@needs-minio`, `@needs-elasticsearch`, `@needs-scylladb`, `@needs-starrocks`, `@needs-temporal`.
 
 ### Using `ScenarioContext` in step definitions

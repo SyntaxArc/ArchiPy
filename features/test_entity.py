@@ -39,7 +39,7 @@ class TestEntity(UpdatableDeletableEntity):
     test_uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     pk_uuid = Synonym("test_uuid")
 
-    description = Column(String, nullable=True)
+    description = Column(String(255), nullable=True)
 
     # Add relationship for testing complex scenarios
     related_entities = relationship("RelatedTestEntity", back_populates="parent", cascade="all, delete-orphan")
@@ -102,7 +102,7 @@ class TestManagerEntity(UpdatableManagerEntity):
     test_uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     pk_uuid = Synonym("test_uuid")
 
-    description = Column(String, nullable=True)
+    description = Column(String(255), nullable=True)
 
     # Manager-related fields required by ManagerMixin and UpdatableManagerMixin
     created_by_uuid = Column(UUID(as_uuid=True), nullable=False)
@@ -167,7 +167,7 @@ class TestAdminEntity(UpdatableAdminEntity):
     test_uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     pk_uuid = Synonym("test_uuid")
 
-    description = Column(String, nullable=True)
+    description = Column(String(255), nullable=True)
 
     # Admin-related fields required by AdminMixin and UpdatableAdminMixin
     created_by_admin_uuid = Column(UUID(as_uuid=True), nullable=False)
@@ -233,8 +233,8 @@ class RelatedTestEntity(BaseEntity):
     related_uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     pk_uuid = Synonym("related_uuid")
 
-    name = Column(String, nullable=False)
-    value = Column(String, nullable=True)
+    name = Column(String(255), nullable=False)
+    value = Column(String(255), nullable=True)
     parent_id = Column(UUID(as_uuid=True), ForeignKey("test_entities.test_uuid"), nullable=False)
 
     # Relationship to parent

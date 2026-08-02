@@ -133,6 +133,7 @@ nav:
           - Overview: tutorials/adapters/index.md
           - Redis: tutorials/adapters/redis.md
           - PostgreSQL: tutorials/adapters/postgres.md
+          - MySQL: tutorials/adapters/mysql.md
           - SQLite: tutorials/adapters/sqlite.md
           - StarRocks: tutorials/adapters/starrocks.md
           - Kafka: tutorials/adapters/kafka.md
@@ -163,6 +164,7 @@ nav:
           - Base SQLAlchemy: api_reference/adapters/base.md
           - Redis: api_reference/adapters/redis.md
           - PostgreSQL: api_reference/adapters/postgres.md
+          - MySQL: api_reference/adapters/mysql.md
           - SQLite: api_reference/adapters/sqlite.md
           - StarRocks: api_reference/adapters/starrocks.md
           - Kafka: api_reference/adapters/kafka.md

@@ -1,4 +1,4 @@
-@needs-postgres
+@needs-postgres @needs-mysql
 Feature: SQLAlchemy Atomic Transactions
 
   Scenario Outline: Create and retrieve entity in atomic transaction
@@ -11,6 +11,7 @@ Feature: SQLAlchemy Atomic Transactions
       | db_type |
       | postgres|
       | sqlite  |
+      | mysql   |
 
   Scenario Outline: Handle transaction rollback on exception
     Given the application database is initialized for <db_type>
@@ -23,6 +24,7 @@ Feature: SQLAlchemy Atomic Transactions
       | db_type |
       | postgres|
       | sqlite  |
+      | mysql   |
 
   Scenario Outline: Support nested atomic transactions
     Given the application database is initialized for <db_type>
@@ -35,6 +37,7 @@ Feature: SQLAlchemy Atomic Transactions
       | db_type |
       | postgres|
       | sqlite  |
+      | mysql   |
 
   Scenario Outline: Update entities in atomic transaction
     Given the application database is initialized for <db_type>
@@ -47,6 +50,7 @@ Feature: SQLAlchemy Atomic Transactions
       | db_type |
       | postgres|
       | sqlite  |
+      | mysql   |
 
   Scenario Outline: Create entities with relationships in atomic transaction
     Given the application database is initialized for <db_type>
@@ -58,6 +62,7 @@ Feature: SQLAlchemy Atomic Transactions
       | db_type |
       | postgres|
       | sqlite  |
+      | mysql   |
 
   Scenario Outline: Support different entity types in atomic transactions
     Given the application database is initialized for <db_type>
@@ -69,6 +74,7 @@ Feature: SQLAlchemy Atomic Transactions
       | db_type |
       | postgres|
       | sqlite  |
+      | mysql   |
 
   Scenario Outline: Test error handling in atomic transactions
     Given the application database is initialized for <db_type>
@@ -81,6 +87,7 @@ Feature: SQLAlchemy Atomic Transactions
       | db_type |
       | postgres|
       | sqlite  |
+      | mysql   |
 
   Scenario Outline: Verify session consistency across multiple atomic blocks
     Given the application database is initialized for <db_type>
@@ -92,6 +99,7 @@ Feature: SQLAlchemy Atomic Transactions
       | db_type |
       | postgres|
       | sqlite  |
+      | mysql   |
 
   @async
   Scenario Outline: Create and retrieve entity in async atomic transaction
@@ -104,6 +112,7 @@ Feature: SQLAlchemy Atomic Transactions
       | db_type |
       | postgres|
       | sqlite  |
+      | mysql   |
 
   @async
   Scenario Outline: Handle transaction rollback in async atomic transaction
@@ -117,6 +126,7 @@ Feature: SQLAlchemy Atomic Transactions
       | db_type |
       | postgres|
       | sqlite  |
+      | mysql   |
 
   @async
   Scenario Outline: Create multiple entities in async atomic transaction
@@ -129,6 +139,7 @@ Feature: SQLAlchemy Atomic Transactions
       | db_type |
       | postgres|
       | sqlite  |
+      | mysql   |
 
   @async
   Scenario Outline: Create and manage complex entity relationships asynchronously
@@ -141,3 +152,4 @@ Feature: SQLAlchemy Atomic Transactions
       | db_type |
       | postgres|
       | sqlite  |
+      | mysql   |

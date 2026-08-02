@@ -48,13 +48,13 @@ With optional extras (install only what you need):
 === "uv"
 
     ```bash
-    uv add "archipy[postgres,sqlalchemy,starrocks,redis,keycloak,minio,kafka]"
+    uv add "archipy[postgres,mysql,sqlalchemy,starrocks,redis,keycloak,minio,kafka]"
     ```
 
 === "pip"
 
     ```bash
-    pip install "archipy[postgres,sqlalchemy,starrocks,redis,keycloak,minio,kafka]"
+    pip install "archipy[postgres,mysql,sqlalchemy,starrocks,redis,keycloak,minio,kafka]"
     ```
 
 ## Optional Dependencies
@@ -64,6 +64,8 @@ ArchiPy supports modular features through optional extras — install only what 
 | Category      | Extra                           | Description                                       |
 |---------------|---------------------------------|---------------------------------------------------|
 | Database      | `archipy[postgres]`             | PostgreSQL adapter with SQLAlchemy integration    |
+| Database      | `archipy[mysql]`                | MySQL adapter with SQLAlchemy integration         |
+| Database      | `archipy[mysql-async]`          | MySQL async adapter (asyncmy2)                    |
 | Database      | `archipy[aiosqlite]`            | SQLite async adapter with SQLAlchemy integration  |
 | Database      | `archipy[starrocks]`            | StarRocks adapter with SQLAlchemy integration     |
 | Database      | `archipy[starrocks-async]`      | StarRocks async adapter                           |

@@ -16,6 +16,7 @@ implementation).
 | [Base SQLAlchemy](base.md)              | Shared SQLAlchemy session management and base CRUD adapter |
 | [Redis](redis.md)                       | Redis cache, pub/sub, and RediSearch adapter               |
 | [PostgreSQL](postgres.md)               | PostgreSQL database adapter via SQLAlchemy                 |
+| [MySQL](mysql.md)                       | MySQL database adapter via SQLAlchemy                      |
 | [SQLite](sqlite.md)                     | SQLite database adapter via SQLAlchemy                     |
 | [StarRocks](starrocks.md)               | StarRocks analytical database adapter via SQLAlchemy       |
 | [Kafka](kafka.md)                       | Apache Kafka message streaming adapter                     |
@@ -40,6 +41,7 @@ implementation).
 | Base SQLAlchemy  | 🟢 Stable | Production-ready |
 | Redis            | 🟢 Stable | Production-ready |
 | PostgreSQL       | 🟢 Stable | Production-ready |
+| MySQL            | 🟢 Stable | Production-ready |
 | SQLite           | 🟢 Stable | Production-ready |
 | StarRocks        | 🟡 Beta   | API may change   |
 | Kafka            | 🟢 Stable | Production-ready |

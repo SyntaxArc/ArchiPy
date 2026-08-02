@@ -34,6 +34,8 @@ keycloak = ["python-keycloak>=7.1.1", "cachetools>=7.1.4", "async-lru>=2.3.0"]
 minio = ["boto3>=1.43.48", "cachetools>=7.1.4", "async-lru>=2.3.0"]
 parsian-ipg = ["zeep>=4.3.3", "requests[socks]>=2.34.2"]
 parsian-ipg-async = ["zeep[async]>=4.3.3", "httpx2[socks]>=2.7.0"]
+mysql = ["pymysql>=1.2.0"]
+mysql-async = ["asyncmy2>=0.2.20"]
 postgres = ["psycopg[binary,pool]>=3.3.4"]
 prometheus = ["prometheus-client>=0.25.0"]
 redis = ["redis[hiredis]>=8.0.1"]
@@ -46,7 +48,7 @@ sqlalchemy-async = ["sqlalchemy[asyncio]>=2.0.51"]
 starrocks = ["starrocks>=1.3.3", "pymysql>=1.2.0"]
 starrocks-async = ["starrocks>=1.3.3", "aiomysql>=0.3.2", "asyncmy2>=0.2.20"]
 temporalio = ["temporalio>=1.30.0"]
-testcontainers = ["testcontainers[elasticsearch, minio]>=4.14.2"]
+testcontainers = ["testcontainers[elasticsearch, minio, mysql]>=4.14.2"]
 
 [build-system]
 requires = ["hatchling"]
@@ -198,6 +200,7 @@ docstring-code-line-length = "dynamic"
 "archipy/models/entities/sqlalchemy/base_entities.py" = ["TC003"]  # datetime required at runtime for SQLAlchemy Mapped[]
 "archipy/adapters/base/sqlalchemy/session_manager_registry.py" = ["PLC0415"]  # Circular import workaround
 "archipy/adapters/temporal/base.py" = ["ARG002"]  # Interface methods may have unused params
+"archipy/adapters/mysql/sqlalchemy/session_manager_registry.py" = ["PLC0415"]  # Circular import workaround
 "archipy/adapters/postgres/sqlalchemy/session_manager_registry.py" = ["PLC0415"]  # Circular import workaround
 "archipy/adapters/sqlite/sqlalchemy/session_manager_registry.py" = ["PLC0415"]  # Circular import workaround
 "archipy/adapters/starrocks/sqlalchemy/session_manager_registry.py" = ["PLC0415"]  # Circular import workaround

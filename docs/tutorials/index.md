@@ -21,6 +21,7 @@ All examples follow ArchiPy's coding standards:
 Learn how to use ArchiPy's database, cache, messaging, and storage adapters with complete error handling:
 
 - [PostgreSQL](adapters/postgres.md) - Database operations with SQLAlchemy and atomic transactions
+- [MySQL](adapters/mysql.md) - Database operations with SQLAlchemy and atomic transactions
 - [SQLite](adapters/sqlite.md) - Lightweight database adapter for local storage
 - [StarRocks](adapters/starrocks.md) - Analytics database adapter
 - [ScyllaDB](adapters/scylladb.md) - NoSQL database adapter for ScyllaDB and Apache Cassandra

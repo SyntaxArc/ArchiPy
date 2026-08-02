@@ -75,7 +75,7 @@ ArchiPy is organized into four layers:
 - **Models** — Entities (SQLAlchemy), DTOs (Pydantic), Errors, and Types — data structures only, no I/O
 - **Helpers** — Pure utilities: decorators (retry, cache, atomic), interceptors (rate limiting, tracing), JWT, password,
   date utils
-- **Adapters** — Plug-and-play integrations: PostgreSQL, SQLite, StarRocks, Redis, Kafka, Keycloak, MinIO, ScyllaDB,
+- **Adapters** — Plug-and-play integrations: PostgreSQL, MySQL, SQLite, StarRocks, Redis, Kafka, Keycloak, MinIO, ScyllaDB,
   Elasticsearch, Temporal, Email, Payment Gateways
 
 ## Architecture Overview

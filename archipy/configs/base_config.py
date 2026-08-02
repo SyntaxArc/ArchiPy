@@ -34,6 +34,7 @@ from archipy.configs.config_template import (
     KafkaConfig,
     KeycloakConfig,
     MinioConfig,
+    MySQLSQLAlchemyConfig,
     ParsianShaparakConfig,
     PostgresSQLAlchemyConfig,
     PrometheusConfig,
@@ -83,6 +84,7 @@ class BaseConfig[R](BaseSettings):
         KEYCLOAK (KeycloakConfig): Keycloak integration configuration
         LANGUAGE (LanguageType): Application default language
         MINIO (MinioConfig): MinIO object storage configuration
+        MYSQL_SQLALCHEMY (MySQLSQLAlchemyConfig): MySQL SQLAlchemy configuration
         PARSIAN_SHAPARAK (ParsianShaparakConfig): Parsian Shaparak payment gateway configuration
         POSTGRES_SQLALCHEMY (PostgresSQLAlchemyConfig): PostgreSQL SQLAlchemy configuration
         PROMETHEUS (PrometheusConfig): Prometheus metrics configuration
@@ -183,6 +185,7 @@ class BaseConfig[R](BaseSettings):
     SQLALCHEMY: SQLAlchemyConfig = SQLAlchemyConfig()
     STARROCKS_SQLALCHEMY: StarRocksSQLAlchemyConfig = StarRocksSQLAlchemyConfig()
     POSTGRES_SQLALCHEMY: PostgresSQLAlchemyConfig = PostgresSQLAlchemyConfig()
+    MYSQL_SQLALCHEMY: MySQLSQLAlchemyConfig = MySQLSQLAlchemyConfig()
     SQLITE_SQLALCHEMY: SQLiteSQLAlchemyConfig = SQLiteSQLAlchemyConfig()
     TEMPORAL: TemporalConfig = TemporalConfig()
     LANGUAGE: LanguageType = LanguageType.FA

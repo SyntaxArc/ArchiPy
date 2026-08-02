@@ -25,9 +25,11 @@ class _SQLAlchemyDecorators:
 # The actual implementations are provided via __getattr__ at runtime
 if TYPE_CHECKING:
     from .sqlalchemy_atomic import (
+        async_mysql_sqlalchemy_atomic_decorator,
         async_postgres_sqlalchemy_atomic_decorator,
         async_sqlite_sqlalchemy_atomic_decorator,
         async_starrocks_sqlalchemy_atomic_decorator,
+        mysql_sqlalchemy_atomic_decorator,
         postgres_sqlalchemy_atomic_decorator,
         sqlalchemy_atomic_decorator,
         sqlite_sqlalchemy_atomic_decorator,
@@ -54,9 +56,11 @@ def __getattr__(name: str) -> object:
         AttributeError: If the requested attribute is not a SQLAlchemy decorator.
     """
     sqlalchemy_decorator_names = {
+        "async_mysql_sqlalchemy_atomic_decorator",
         "async_postgres_sqlalchemy_atomic_decorator",
         "async_sqlite_sqlalchemy_atomic_decorator",
         "async_starrocks_sqlalchemy_atomic_decorator",
+        "mysql_sqlalchemy_atomic_decorator",
         "postgres_sqlalchemy_atomic_decorator",
         "sqlalchemy_atomic_decorator",
         "sqlite_sqlalchemy_atomic_decorator",
@@ -69,9 +73,11 @@ def __getattr__(name: str) -> object:
     if _SQLAlchemyDecorators._cache is None:
         try:
             from .sqlalchemy_atomic import (
+                async_mysql_sqlalchemy_atomic_decorator,
                 async_postgres_sqlalchemy_atomic_decorator,
                 async_sqlite_sqlalchemy_atomic_decorator,
                 async_starrocks_sqlalchemy_atomic_decorator,
+                mysql_sqlalchemy_atomic_decorator,
                 postgres_sqlalchemy_atomic_decorator,
                 sqlalchemy_atomic_decorator,
                 sqlite_sqlalchemy_atomic_decorator,
@@ -79,9 +85,11 @@ def __getattr__(name: str) -> object:
             )
 
             _SQLAlchemyDecorators._cache = {
+                "async_mysql_sqlalchemy_atomic_decorator": async_mysql_sqlalchemy_atomic_decorator,
                 "async_postgres_sqlalchemy_atomic_decorator": async_postgres_sqlalchemy_atomic_decorator,
                 "async_sqlite_sqlalchemy_atomic_decorator": async_sqlite_sqlalchemy_atomic_decorator,
                 "async_starrocks_sqlalchemy_atomic_decorator": async_starrocks_sqlalchemy_atomic_decorator,
+                "mysql_sqlalchemy_atomic_decorator": mysql_sqlalchemy_atomic_decorator,
                 "postgres_sqlalchemy_atomic_decorator": postgres_sqlalchemy_atomic_decorator,
                 "sqlalchemy_atomic_decorator": sqlalchemy_atomic_decorator,
                 "sqlite_sqlalchemy_atomic_decorator": sqlite_sqlalchemy_atomic_decorator,
@@ -94,6 +102,7 @@ def __getattr__(name: str) -> object:
 
 
 __all__ = [
+    "async_mysql_sqlalchemy_atomic_decorator",
     "async_postgres_sqlalchemy_atomic_decorator",
     "async_sqlite_sqlalchemy_atomic_decorator",
     "async_starrocks_sqlalchemy_atomic_decorator",
@@ -104,6 +113,7 @@ __all__ = [
     "grpc_rate_limit_decorator",
     "method_deprecation_error",
     "method_deprecation_warning",
+    "mysql_sqlalchemy_atomic_decorator",
     "postgres_sqlalchemy_atomic_decorator",
     "retry_decorator",
     "singleton_decorator",

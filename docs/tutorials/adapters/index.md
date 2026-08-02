@@ -18,6 +18,7 @@ your business logic and external dependencies.
 | [MinIO](minio.md)                       | Object storage                 | S3-compatible object storage for files and documents | [API](../../api_reference/adapters/minio.md)            |
 | [Payment Gateways](payment_gateways.md) | Payment gateway                | Process online payments with Parsian & Saman   | [API](../../api_reference/adapters/payment_gateways.md) |
 | [PostgreSQL](postgres.md)               | Database access                | SQLAlchemy integration for PostgreSQL                | [API](../../api_reference/adapters/postgres.md)         |
+| [MySQL](mysql.md)                       | Database access                | SQLAlchemy integration for MySQL                     | [API](../../api_reference/adapters/mysql.md)            |
 | [SQLite](sqlite.md)                     | Database access                | SQLAlchemy integration for SQLite                    | [API](../../api_reference/adapters/sqlite.md)           |
 | [StarRocks](starrocks.md)               | Database access                | SQLAlchemy integration for StarRocks                 | [API](../../api_reference/adapters/starrocks.md)        |
 | [ScyllaDB](scylladb.md)                 | NoSQL database                 | Wide-column store for ScyllaDB and Cassandra         | [API](../../api_reference/adapters/scylladb.md)         |

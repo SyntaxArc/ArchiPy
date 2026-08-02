@@ -718,6 +718,16 @@ def _extract_postgres_host_port_from_url(parsed: object, config: PostgresSQLAlch
         config.HOST = host_part
 
 
+class MySQLSQLAlchemyConfig(SQLAlchemyConfig):
+    """Configuration settings for MySQL SQLAlchemy ORM.
+
+    Extends SQLAlchemyConfig with MySQL-specific defaults.
+    """
+
+    DRIVER_NAME: str = Field(default="mysql+pymysql", description="MySQL driver name")
+    PORT: int | None = Field(default=3306, description="MySQL port")
+
+
 class StarRocksSQLAlchemyConfig(SQLAlchemyConfig):
     """Configuration settings for Starrocks SQLAlchemy ORM.
 

@@ -12,6 +12,11 @@ from datetime import datetime
 
 from behave import given, then, when
 
+from archipy.adapters.mysql.sqlalchemy.adapters import (
+    AsyncMySQLSQLAlchemyAdapter,
+    MySQLSQLAlchemyAdapter,
+)
+from archipy.adapters.mysql.sqlalchemy.session_manager_registry import MySQLSessionManagerRegistry
 from archipy.adapters.postgres.sqlalchemy.adapters import (
     AsyncPostgresSQLAlchemyAdapter,
     PostgresSQLAlchemyAdapter,
@@ -20,10 +25,12 @@ from archipy.adapters.postgres.sqlalchemy.session_manager_registry import Postgr
 from archipy.adapters.sqlite.sqlalchemy.adapters import AsyncSQLiteSQLAlchemyAdapter, SQLiteSQLAlchemyAdapter
 from archipy.adapters.sqlite.sqlalchemy.session_manager_registry import SQLiteSessionManagerRegistry
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import PostgresSQLAlchemyConfig, SQLiteSQLAlchemyConfig
+from archipy.configs.config_template import SQLiteSQLAlchemyConfig
 from archipy.helpers.decorators.sqlalchemy_atomic import (
+    async_mysql_sqlalchemy_atomic_decorator,
     async_postgres_sqlalchemy_atomic_decorator,
     async_sqlite_sqlalchemy_atomic_decorator,
+    mysql_sqlalchemy_atomic_decorator,
     postgres_sqlalchemy_atomic_decorator,
     sqlite_sqlalchemy_atomic_decorator,
 )
@@ -89,6 +96,8 @@ def _get_db_type(context) -> str:
         tags = [str(tag) for tag in context.scenario.tags] if hasattr(context.scenario, "tags") else []
         if "needs-postgres" in tags:
             return "postgres"
+        if "needs-mysql" in tags:
+            return "mysql"
 
     return "sqlite"
 
@@ -97,7 +106,7 @@ def _get_atomic_decorator(db_type: str, is_async: bool = False):
     """Get the appropriate atomic decorator for the database type.
 
     Args:
-        db_type: Database type ('postgres' or 'sqlite')
+        db_type: Database type ('postgres', 'sqlite', or 'mysql')
         is_async: Whether to return async decorator
 
     Returns:
@@ -105,38 +114,41 @@ def _get_atomic_decorator(db_type: str, is_async: bool = False):
     """
     if db_type == "postgres":
         return async_postgres_sqlalchemy_atomic_decorator if is_async else postgres_sqlalchemy_atomic_decorator
-    else:  # sqlite
-        return async_sqlite_sqlalchemy_atomic_decorator if is_async else sqlite_sqlalchemy_atomic_decorator
+    if db_type == "mysql":
+        return async_mysql_sqlalchemy_atomic_decorator if is_async else mysql_sqlalchemy_atomic_decorator
+    return async_sqlite_sqlalchemy_atomic_decorator if is_async else sqlite_sqlalchemy_atomic_decorator
 
 
 def _get_session_registry(db_type: str):
     """Get the appropriate session manager registry for the database type.
 
     Args:
-        db_type: Database type ('postgres' or 'sqlite')
+        db_type: Database type ('postgres', 'sqlite', or 'mysql')
 
     Returns:
         The appropriate session manager registry class
     """
     if db_type == "postgres":
         return PostgresSessionManagerRegistry
-    else:  # sqlite
-        return SQLiteSessionManagerRegistry
+    if db_type == "mysql":
+        return MySQLSessionManagerRegistry
+    return SQLiteSessionManagerRegistry
 
 
 def _get_adapter_classes(db_type: str):
     """Get the appropriate adapter classes for the database type.
 
     Args:
-        db_type: Database type ('postgres' or 'sqlite')
+        db_type: Database type ('postgres', 'sqlite', or 'mysql')
 
     Returns:
         Tuple of (sync_adapter_class, async_adapter_class)
     """
     if db_type == "postgres":
         return PostgresSQLAlchemyAdapter, AsyncPostgresSQLAlchemyAdapter
-    else:  # sqlite
-        return SQLiteSQLAlchemyAdapter, AsyncSQLiteSQLAlchemyAdapter
+    if db_type == "mysql":
+        return MySQLSQLAlchemyAdapter, AsyncMySQLSQLAlchemyAdapter
+    return SQLiteSQLAlchemyAdapter, AsyncSQLiteSQLAlchemyAdapter
 
 
 @given("the application database is initialized for {db_type}")
@@ -145,7 +157,7 @@ async def step_given_database_initialized(context, db_type: str):
 
     Args:
         context: Behave context
-        db_type: Database type ('postgres' or 'sqlite')
+        db_type: Database type ('postgres', 'sqlite', or 'mysql')
     """
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
 
@@ -193,6 +205,41 @@ async def step_given_database_initialized(context, db_type: str):
                 logger.info("Async PostgreSQL adapter and schema setup completed")
             except Exception as e:
                 logger.exception(f"Error setting up async PostgreSQL adapter: {e}")
+
+    elif db_type == "mysql":
+        # Use MySQL container connection details
+        global_config = BaseConfig.global_config()
+        mysql_config = global_config.MYSQL_SQLALCHEMY
+
+        logger.info(f"Creating MySQL adapter with host: {mysql_config.HOST}, port: {mysql_config.PORT}")
+
+        # Create sync adapter
+        adapter = sync_adapter_class(orm_config=mysql_config)
+        session_registry.set_sync_manager(adapter.session_manager)
+        scenario_context.adapter = adapter
+
+        # Set up database schema with sync adapter
+        logger.info("Creating database schema with sync MySQL adapter")
+        BaseEntity.metadata.drop_all(adapter.session_manager.engine)
+        BaseEntity.metadata.create_all(adapter.session_manager.engine)
+
+        # For async tests, create and set up the async adapter
+        if any("async" in tag.lower() for tag in context.scenario.tags):
+            logger.info("Creating async MySQL adapter")
+
+            try:
+                # Create async adapter with same config
+                async_adapter = async_adapter_class(orm_config=mysql_config)
+                session_registry.set_async_manager(async_adapter.session_manager)
+                scenario_context.async_adapter = async_adapter
+
+                # Create schema with async adapter
+                logger.info("Creating database schema with async MySQL adapter")
+                await async_schema_setup(async_adapter)
+
+                logger.info("Async MySQL adapter and schema setup completed")
+            except Exception as e:
+                logger.exception(f"Error setting up async MySQL adapter: {e}")
 
     else:  # sqlite
         # Use file-based SQLite database
@@ -798,8 +845,12 @@ def step_then_entity_and_relationships_retrievable(context):
         assert main_entity is not None, "Main entity not found"
         logger.info(f"Main entity retrieved with UUID {main_uuid}")
 
-        # Query for related entities
-        related_query = select(RelatedTestEntity).where(RelatedTestEntity.parent_id == main_uuid)
+        # Query for related entities (order by name for cross-DB determinism)
+        related_query = (
+            select(RelatedTestEntity)
+            .where(RelatedTestEntity.parent_id == main_uuid)
+            .order_by(RelatedTestEntity.name)
+        )
         related_entities = session.execute(related_query).scalars().all()
 
         # Verify we have the expected number of related entities
@@ -1419,8 +1470,12 @@ async def step_then_related_entities_accessible(context):
         assert parent is not None, "Parent entity not found"
         logger.info("Parent entity retrieved successfully")
 
-        # Query for related entities
-        stmt = select(RelatedTestEntity).where(RelatedTestEntity.parent_id == parent_uuid)
+        # Query for related entities (order by name for cross-DB determinism)
+        stmt = (
+            select(RelatedTestEntity)
+            .where(RelatedTestEntity.parent_id == parent_uuid)
+            .order_by(RelatedTestEntity.name)
+        )
         result = await session.execute(stmt)
         related_entities = result.scalars().all()
 

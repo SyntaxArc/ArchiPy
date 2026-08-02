@@ -29,6 +29,7 @@ class TestConfig(BaseConfig):
     # Test container images
     REDIS__IMAGE: str
     POSTGRES__IMAGE: str
+    MYSQL__IMAGE: str
     ELASTIC__IMAGE: str
     KAFKA__IMAGE: str
     MINIO__IMAGE: str

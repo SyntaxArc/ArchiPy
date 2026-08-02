@@ -4,6 +4,7 @@ import logging
 import time
 from pathlib import Path
 
+from testcontainers.community.mysql import MySqlContainer
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 from testcontainers.elasticsearch import ElasticSearchContainer
@@ -18,6 +19,7 @@ from archipy.configs.config_template import (
     KafkaConfig,
     KeycloakConfig,
     MinioConfig,
+    MySQLSQLAlchemyConfig,
     PostgresSQLAlchemyConfig,
     RedisConfig,
     RedisMode,
@@ -32,6 +34,7 @@ logger = logging.getLogger(__name__)
 # Mapping of feature tags to container names
 TAG_CONTAINER_MAP: dict[str, str] = {
     "needs-postgres": "postgres",
+    "needs-mysql": "mysql",
     "needs-kafka": "kafka",
     "needs-elasticsearch": "elasticsearch",
     "needs-minio": "minio",
@@ -422,6 +425,86 @@ class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
         self.port = None
 
         logger.info("PostgreSQL container stopped")
+
+
+@ContainerManager.register("mysql")
+class MySQLTestContainer(metaclass=Singleton, thread_safe=True):
+    def __init__(self, config: MySQLSQLAlchemyConfig | None = None, image: str | None = None) -> None:
+        self.name = "mysql"
+        self.config = config or BaseConfig.global_config().MYSQL_SQLALCHEMY
+        self.image = image or BaseConfig.global_config().MYSQL__IMAGE
+        self._is_running: bool = False
+
+        # Container properties
+        self.host: str | None = None
+        self.port: int | None = None
+        self.database: str | None = self.config.DATABASE
+        self.username: str | None = self.config.USERNAME
+        self.password: str | None = self.config.PASSWORD
+
+        # Use config values or fallback to defaults for test containers
+        dbname = self.database or "test_db"
+        username = self.username or "test_user"
+        password = self.password or "test_password"
+
+        # Set up the container
+        self._container = MySqlContainer(
+            image=self.image,
+            dbname=dbname,
+            username=username,
+            password=password,
+        )
+
+    def start(self) -> MySqlContainer:
+        """Start the MySQL container."""
+        if self._is_running:
+            return self._container
+
+        # Recreate container if it was stopped
+        if self._container is None:
+            dbname = self.database or "test_db"
+            username = self.username or "test_user"
+            password = self.password or "test_password"
+
+            self._container = MySqlContainer(
+                image=self.image,
+                dbname=dbname,
+                username=username,
+                password=password,
+            )
+
+        self._container.start()
+        self._is_running = True
+
+        # Get dynamic host and port
+        self.host = self._container.get_container_host_ip()
+        self.port = int(self._container.get_exposed_port(3306))
+
+        # Update global config with actual container endpoint
+        global_config = BaseConfig.global_config()
+        global_config.MYSQL_SQLALCHEMY.HOST = self.host
+        global_config.MYSQL_SQLALCHEMY.PORT = self.port
+
+        logger.info("MySQL container started on %s:%s", self.host, self.port)
+
+        return self._container
+
+    def stop(self) -> None:
+        """Stop the MySQL container."""
+        if not self._is_running:
+            return
+
+        if self._container:
+            self._container.stop()
+
+        self._container = None
+        self._is_running = False
+
+        # Reset container properties
+        self.host = None
+        self.port = None
+
+        logger.info("MySQL container stopped")
 
 
 @ContainerManager.register("keycloak")
