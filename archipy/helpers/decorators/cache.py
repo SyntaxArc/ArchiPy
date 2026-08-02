@@ -159,10 +159,7 @@ def ttl_cache_decorator[**P, R](
     """
     from cachetools import TTLCache
 
-    if isinstance(ttl_seconds, int):
-        resolved_ttl = int(ttl_seconds)
-    else:
-        resolved_ttl = int(ttl_seconds())
+    resolved_ttl = int(ttl_seconds) if isinstance(ttl_seconds, int) else int(ttl_seconds())
     cache: TTLCache = TTLCache(maxsize=maxsize, ttl=resolved_ttl)
 
     def decorator(func: Callable[P, R]) -> CachedFunction[P, R]:

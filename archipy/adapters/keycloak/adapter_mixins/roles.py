@@ -332,7 +332,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
                 return True
 
         except Exception as e:
-            logger.debug(f"Role check failed: {e!s}")
+            logger.debug("Role check failed: %s", e)
             return False
         else:
             return False
@@ -365,7 +365,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
                 return True
 
         except Exception as e:
-            logger.debug(f"Role check failed: {e!s}")
+            logger.debug("Role check failed: %s", e)
             return False
         else:
             return False
@@ -401,7 +401,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             return role_names.issubset(all_roles)
 
         except Exception as e:
-            logger.debug(f"All roles check failed: {e!s}")
+            logger.debug("All roles check failed: %s", e)
             return False
 
     def add_realm_roles_to_composite(self, composite_role_name: str, child_role_names: list[str]) -> None:
@@ -419,13 +419,13 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
                     child_roles.append(role)
                 except KeycloakGetError as e:
                     if e.response_code == 404:
-                        logger.warning(f"Child role not found: {role_name}")
+                        logger.warning("Child role not found: %s", role_name)
                         continue
                     raise
 
             if child_roles:
                 self.admin_adapter.add_composite_realm_roles_to_role(role_name=composite_role_name, roles=child_roles)
-                logger.info(f"Added {len(child_roles)} realm roles to composite role: {composite_role_name}")
+                logger.info("Added %s realm roles to composite role: %s", len(child_roles), composite_role_name)
 
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "add_realm_roles_to_composite")
@@ -456,7 +456,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
                     child_roles.append(role)
                 except KeycloakGetError as e:
                     if e.response_code == 404:
-                        logger.warning(f"Client role not found: {role_name}")
+                        logger.warning("Client role not found: %s", role_name)
                         continue
                     raise
 
@@ -469,7 +469,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
                     client_role_id=resolved_client_id,
                     roles=child_roles,
                 )
-                logger.info(f"Added {len(child_roles)} client roles to composite role: {composite_role_name}")
+                logger.info("Added %s client roles to composite role: %s", len(child_roles), composite_role_name)
 
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "add_client_roles_to_composite")
@@ -793,7 +793,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
                 return True
 
         except Exception as e:
-            logger.debug(f"Role check failed: {e!s}")
+            logger.debug("Role check failed: %s", e)
             return False
         else:
             return False
@@ -826,7 +826,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
                 return True
 
         except Exception as e:
-            logger.debug(f"Role check failed: {e!s}")
+            logger.debug("Role check failed: %s", e)
             return False
         else:
             return False
@@ -862,7 +862,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             return role_names.issubset(all_roles)
 
         except Exception as e:
-            logger.debug(f"All roles check failed: {e!s}")
+            logger.debug("All roles check failed: %s", e)
             return False
 
     async def add_realm_roles_to_composite(self, composite_role_name: str, child_role_names: list[str]) -> None:
@@ -880,7 +880,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
                     child_roles.append(role)
                 except KeycloakGetError as e:
                     if e.response_code == 404:
-                        logger.warning(f"Child role not found: {role_name}")
+                        logger.warning("Child role not found: %s", role_name)
                         continue
                     raise
 
@@ -889,7 +889,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
                     role_name=composite_role_name,
                     roles=child_roles,
                 )
-                logger.info(f"Added {len(child_roles)} realm roles to composite role: {composite_role_name}")
+                logger.info("Added %s realm roles to composite role: %s", len(child_roles), composite_role_name)
 
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "add_realm_roles_to_composite")
@@ -920,7 +920,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
                     child_roles.append(role)
                 except KeycloakGetError as e:
                     if e.response_code == 404:
-                        logger.warning(f"Client role not found: {role_name}")
+                        logger.warning("Client role not found: %s", role_name)
                         continue
                     raise
 
@@ -933,7 +933,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
                     client_role_id=resolved_client_id,
                     roles=child_roles,
                 )
-                logger.info(f"Added {len(child_roles)} client roles to composite role: {composite_role_name}")
+                logger.info("Added %s client roles to composite role: %s", len(child_roles), composite_role_name)
 
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "add_client_roles_to_composite")

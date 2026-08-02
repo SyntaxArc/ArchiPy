@@ -441,10 +441,7 @@ class KeycloakUtils:
             if key in metadata:
                 auth_value = metadata[key]
                 # Handle both bytes and string values
-                if isinstance(auth_value, bytes):
-                    auth_value_str = auth_value.decode("utf-8")
-                else:
-                    auth_value_str = str(auth_value)
+                auth_value_str = auth_value.decode("utf-8") if isinstance(auth_value, bytes) else str(auth_value)
 
                 if auth_value_str.startswith(("Bearer ", "bearer ")):
                     return auth_value_str[7:]

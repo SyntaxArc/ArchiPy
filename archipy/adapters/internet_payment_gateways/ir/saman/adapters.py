@@ -42,7 +42,7 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
         proxy = self._get_proxy(configs.PROXIES)
         self.client = httpx2.Client(proxy=proxy, timeout=30)
 
-        logger.info(f"SamanShaparakPaymentAdapter initialized with terminal {self.terminal_id}")
+        logger.info("SamanShaparakPaymentAdapter initialized with terminal %s", self.terminal_id)
 
     @staticmethod
     def _get_proxy(proxies: dict[str, str] | None) -> str | None:
@@ -77,7 +77,7 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
             }
             payload = {k: v for k, v in payload.items() if v is not None}
 
-            logger.debug(f"Saman initiate payment payload: {payload}")
+            logger.debug("Saman initiate payment payload: %s", payload)
             resp = self.client.post(self.payment_url, json=payload)
             resp.raise_for_status()
             data = resp.json()
@@ -236,7 +236,7 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
         proxy = self._get_proxy(configs.PROXIES)
         self.client = httpx2.AsyncClient(proxy=proxy, timeout=30)
 
-        logger.info(f"AsyncSamanShaparakPaymentAdapter initialized with terminal {self.terminal_id}")
+        logger.info("AsyncSamanShaparakPaymentAdapter initialized with terminal %s", self.terminal_id)
 
     @staticmethod
     def _get_proxy(proxies: dict[str, str] | None) -> str | None:
@@ -271,7 +271,7 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
             }
             payload = {k: v for k, v in payload.items() if v is not None}
 
-            logger.debug(f"Saman async initiate payment payload: {payload}")
+            logger.debug("Saman async initiate payment payload: %s", payload)
             resp = await self.client.post(self.payment_url, json=payload)
             resp.raise_for_status()
             data = resp.json()

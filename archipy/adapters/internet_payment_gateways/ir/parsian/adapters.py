@@ -85,14 +85,14 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
                 "Originator": request.originator,
             }
 
-            logger.debug(f"Initiating payment: {request_data}")
+            logger.debug("Initiating payment: %s", request_data)
             response = self.sale_client.service.SalePaymentRequest(requestData=request_data)
             result = PaymentResponseDTO(
                 token=response.Token,
                 status=response.Status,
                 message=response.Message,
             )
-            logger.debug(f"Payment response: {result}")
+            logger.debug("Payment response: %s", result)
         except Fault as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Sale Service") from exception
         except Exception as exception:
@@ -116,7 +116,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
         try:
             request_data = {"LoginAccount": self.login_account, "Token": request.token}
 
-            logger.debug(f"Confirming payment: {request_data}")
+            logger.debug("Confirming payment: %s", request_data)
             response = self.confirm_client.service.ConfirmPayment(requestData=request_data)
             result = ConfirmResponseDTO(
                 status=response.Status,
@@ -124,7 +124,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
                 card_number_masked=response.CardNumberMasked,
                 token=response.Token,
             )
-            logger.debug(f"Confirm response: {result}")
+            logger.debug("Confirm response: %s", result)
         except Fault as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Confirm Service") from exception
         except Exception as exception:
@@ -153,7 +153,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
                 "Amount": request.amount,
             }
 
-            logger.debug(f"Confirming payment with amount: {request_data}")
+            logger.debug("Confirming payment with amount: %s", request_data)
             response = self.confirm_client.service.ConfirmPaymentWithAmount(requestData=request_data)
             result = ConfirmWithAmountResponseDTO(
                 status=response.Status,
@@ -161,7 +161,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
                 card_number_masked=response.CardNumberMasked,
                 token=response.Token,
             )
-            logger.debug(f"Confirm with amount response: {result}")
+            logger.debug("Confirm with amount response: %s", result)
         except Fault as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Confirm Service") from exception
         except Exception as exception:
@@ -185,14 +185,14 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
         try:
             request_data = {"LoginAccount": self.login_account, "Token": request.token}
 
-            logger.debug(f"Reversing payment: {request_data}")
+            logger.debug("Reversing payment: %s", request_data)
             response = self.reversal_client.service.ReversalRequest(requestData=request_data)
             result = ReverseResponseDTO(
                 status=response.Status,
                 message=response.Message,
                 token=response.Token,
             )
-            logger.debug(f"Reversal response: {result}")
+            logger.debug("Reversal response: %s", result)
         except Fault as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Reversal Service") from exception
         except Exception as exception:
@@ -265,14 +265,14 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
                 "Originator": request.originator,
             }
 
-            logger.debug(f"Initiating payment: {request_data}")
+            logger.debug("Initiating payment: %s", request_data)
             response = await self.sale_client.service.SalePaymentRequest(requestData=request_data)
             result = PaymentResponseDTO(
                 token=response.Token,
                 status=response.Status,
                 message=response.Message,
             )
-            logger.debug(f"Payment response: {result}")
+            logger.debug("Payment response: %s", result)
         except Fault as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Sale Service") from exception
         except Exception as exception:
@@ -296,7 +296,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
         try:
             request_data = {"LoginAccount": self.login_account, "Token": request.token}
 
-            logger.debug(f"Confirming payment: {request_data}")
+            logger.debug("Confirming payment: %s", request_data)
             response = await self.confirm_client.service.ConfirmPayment(requestData=request_data)
             result = ConfirmResponseDTO(
                 status=response.Status,
@@ -304,7 +304,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
                 card_number_masked=response.CardNumberMasked,
                 token=response.Token,
             )
-            logger.debug(f"Confirm response: {result}")
+            logger.debug("Confirm response: %s", result)
         except Fault as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Confirm Service") from exception
         except Exception as exception:
@@ -333,7 +333,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
                 "Amount": request.amount,
             }
 
-            logger.debug(f"Confirming payment with amount: {request_data}")
+            logger.debug("Confirming payment with amount: %s", request_data)
             response = await self.confirm_client.service.ConfirmPaymentWithAmount(requestData=request_data)
             result = ConfirmWithAmountResponseDTO(
                 status=response.Status,
@@ -341,7 +341,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
                 card_number_masked=response.CardNumberMasked,
                 token=response.Token,
             )
-            logger.debug(f"Confirm with amount response: {result}")
+            logger.debug("Confirm with amount response: %s", result)
         except Fault as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Confirm Service") from exception
         except Exception as exception:
@@ -365,14 +365,14 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
         try:
             request_data = {"LoginAccount": self.login_account, "Token": request.token}
 
-            logger.debug(f"Reversing payment: {request_data}")
+            logger.debug("Reversing payment: %s", request_data)
             response = await self.reversal_client.service.ReversalRequest(requestData=request_data)
             result = ReverseResponseDTO(
                 status=response.Status,
                 message=response.Message,
                 token=response.Token,
             )
-            logger.debug(f"Reversal response: {result}")
+            logger.debug("Reversal response: %s", result)
         except Fault as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Reversal Service") from exception
         except Exception as exception:

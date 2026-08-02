@@ -228,7 +228,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
             if hasattr(self.get_user_by_username, "clear_cache"):
                 self.get_user_by_username.clear_cache()
 
-            logger.info(f"Successfully deleted user with ID {user_id}")
+            logger.info("Successfully deleted user with ID %s", user_id)
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "delete_user")
 
@@ -434,7 +434,7 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
             if hasattr(self.get_user_by_username, "cache_clear"):
                 self.get_user_by_username.cache_clear()
 
-            logger.info(f"Successfully deleted user with ID {user_id}")
+            logger.info("Successfully deleted user with ID %s", user_id)
 
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "delete_user")

@@ -129,7 +129,7 @@ class KeycloakClientsMixin(SyncKeycloakMixinBase):
             try:
                 internal_client_id = self.admin_adapter.create_client(payload, skip_exists=skip_exists)
             except KeycloakError as e:
-                logger.debug(f"Failed to create client: {e!s}")
+                logger.debug("Failed to create client: %s", e)
 
                 # Handle client already exists with skip_exists option
                 if skip_exists:
@@ -273,7 +273,7 @@ class AsyncKeycloakClientsMixin(AsyncKeycloakMixinBase):
             try:
                 internal_client_id = await self.admin_adapter.a_create_client(payload, skip_exists=skip_exists)
             except KeycloakError as e:
-                logger.debug(f"Failed to create client: {e!s}")
+                logger.debug("Failed to create client: %s", e)
 
                 # Handle client already exists with skip_exists option
                 if skip_exists:

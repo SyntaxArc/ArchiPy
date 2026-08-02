@@ -110,7 +110,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             # Let the underlying adapter handle key selection to align with expected types
             self._openid_adapter.decode_token(token)
         except Exception as e:
-            logger.debug(f"Token validation failed: {e!s}")
+            logger.debug("Token validation failed: %s", e)
             return False
         else:
             return True
@@ -334,10 +334,10 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
                     return True
 
         except KeycloakError as e:
-            logger.debug(f"Permission check failed with Keycloak error: {e!s}")
+            logger.debug("Permission check failed with Keycloak error: %s", e)
             return False
         except Exception as e:
-            logger.debug(f"Permission check failed with unexpected error: {e!s}")
+            logger.debug("Permission check failed with unexpected error: %s", e)
             return False
         else:
             return False
@@ -428,7 +428,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
                 key=await self.get_public_key(),
             )
         except Exception as e:
-            logger.debug(f"Token validation failed: {e!s}")
+            logger.debug("Token validation failed: %s", e)
             return False
         else:
             return True
@@ -640,10 +640,10 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
                     return True
 
         except KeycloakError as e:
-            logger.debug(f"Permission check failed with Keycloak error: {e!s}")
+            logger.debug("Permission check failed with Keycloak error: %s", e)
             return False
         except Exception as e:
-            logger.debug(f"Permission check failed with unexpected error: {e!s}")
+            logger.debug("Permission check failed with unexpected error: %s", e)
             return False
         else:
             return False

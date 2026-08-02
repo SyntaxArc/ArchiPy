@@ -73,7 +73,7 @@ def _handle_db_exception(exception: BaseException, db_type: str, func_name: str)
         DatabaseConstraintError: If a constraint violation occurs.
         DatabaseError: If a generic exception occurs within a database transaction.
     """
-    logger.debug(f"Exception in {db_type} atomic block (func: {func_name}): {exception}")
+    logger.debug("Exception in %s atomic block (func: %s): %s", db_type, func_name, exception)
 
     # Handle specific SQLAlchemy errors
     if isinstance(exception, OperationalError):

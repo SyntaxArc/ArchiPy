@@ -134,8 +134,6 @@ lint.select = [
 
 # Explicitly ignore specific rules
 lint.ignore = [
-    "ANN002", # Missing type annotation for *args
-    "ANN003", # Missing type annotation for **kwargs
     "BLE001", # Do not catch blind exception: `Exception`
     "C901", # Function is too complex (McCabe complexity)
     "D100", # Missing docstring in public module
@@ -144,31 +142,21 @@ lint.ignore = [
     "E501", # Line too long (handled by Ruff formatter)
     "EM101", # Raw string in exception (conflicts with error handling patterns)
     "EM102", # f-string in exception (conflicts with error handling patterns)
-    "F811", # Redefinition of unused function
-    "G004", # Logging statement uses f-string
     "PERF203", # try-except in loop (sometimes necessary for robust error handling)
-    "PLR0904", # Too many public methods (adapters may need many methods)
     "PLR0913", # Too many arguments in function (e.g., FastAPI Swagger)
-    "PLR0914", # Too many locals (complex business logic may require this)
     "PLR0917", # Too many positional arguments (abstract methods match external APIs)
-    "PLR1702", # Too many nested blocks (BDD steps may have nested scenarios)
     "PLR2004", # Magic value used in comparison
-    "Q000", # Allow single quotes (conflicts with Ruff formatter's double-quote preference)
-    "RUF001", "RUF003", # String contains ambiguous characters
-    "S101", # Ignore assert used (equivalent to bandit's B101)
-    "S301", # Ignore pickle usage (equivalent to bandit's B301)
-    "S403", # Ignore pickle usage (equivalent to bandit's B403)
+    "RUF003", # String contains ambiguous characters
     "SIM102", # Collapsible if (sometimes explicit is clearer)
-    "SIM108", # Use ternary (sometimes if-else is more readable)
     "TC001", # Move typing import to TYPE_CHECKING (may break Pydantic)
     "TC002", # Type-checking import issues
     "TC003", # Move stdlib import to TYPE_CHECKING (may break runtime)
-    "TRY003", #Avoid specifying long messages outside the exception class
+    "TRY003", # Avoid specifying long messages outside the exception class
     "TRY301", # Abstract raise into a function
 ]
 
 # Define source directories
-src = ["archipy", "features"]
+src = ["archipy"]
 
 exclude = [
     "features/*",
@@ -199,12 +187,9 @@ docstring-code-line-length = "dynamic"
 
 # Per-file ignores
 [tool.ruff.lint.per-file-ignores]
-# Ignore F811 (redefinition of function) in steps implementations
 "archipy/configs/config_template.py" = ["S104"]  # Allow binding to all interfaces for containerized deployments
 "archipy/models/errors/keycloak_errors.py" = ["ANN401"]  # Allow Any type for additional_data
 "archipy/helpers/interceptors/grpc/base/client_interceptor.py" = ["ANN401"]  # Allow Any type for gRPC message types
-  # Allow Any type for gRPC message types
-"archipy/helpers/decorators/sqlalchemy_atomic.py" = ["BLE001"]  # Allow complex decorator patterns
 "archipy/helpers/utils/keycloak_utils.py" = ["FBT001", "FBT002", "PLC0415", "B008"]  # Allow lazy imports for optional dependencies
 "archipy/helpers/utils/app_utils.py" = ["PLC0415", "ARG004"]  # Allow lazy imports and unused args in FastAPI handlers
 "archipy/helpers/utils/jwt_utils.py" = ["S105", "PLC0415"]  # Allow lazy imports for optional dependencies
@@ -219,7 +204,6 @@ docstring-code-line-length = "dynamic"
 "archipy/adapters/redis/port_mixins/*" = ["ANN401", "D102", "FBT001", "FBT002", "A002", "ARG002"]  # Port mixins inherit ports.py exemptions
 "archipy/adapters/scylladb/ports.py" = ["ANN401"]  # Allow Any type for CQL parameters
 "archipy/models/dtos/base_protobuf_dto.py" = ["ANN401"]
-"archipy/adapters/kafka/adapters.py" = ["BLE001"]
 "archipy/adapters/base/sqlalchemy/session_manager_registry.py" = ["PLC0415"]  # Circular import workaround
 "archipy/adapters/temporal/base.py" = ["ARG002"]  # Interface methods may have unused params
 "archipy/adapters/postgres/sqlalchemy/session_manager_registry.py" = ["PLC0415"]  # Circular import workaround
@@ -231,9 +215,9 @@ docstring-code-line-length = "dynamic"
 "archipy/adapters/redis/search.py" = ["ANN401"]  # redis-py search result objects use dynamic shapes
 "archipy/adapters/redis/search_ports.py" = ["ANN401", "ARG002"]  # Port escape hatch kwargs
 "archipy/adapters/redis/mocks.py" = ["ARG002", "ARG004", "ARG005", "ANN401", "ARG001", "PLR0913", "PLC0415"]  # Lazy imports and mock functions
-"archipy/adapters/scylladb/adapters.py" = ["BLE001", "ANN401", "PLC0415"]  # Allow broad exceptions, Any types, lazy imports
-"archipy/adapters/keycloak/adapters.py" = ["BLE001", "PLC0415"]  # Lazy imports for optional dependencies
-"archipy/adapters/keycloak/adapter_mixins/*" = ["BLE001", "PLC0415", "ANN401", "PLW0108"]  # Adapter mixins inherit adapters.py exemptions; lambdas wrap Keycloak calls
+"archipy/adapters/scylladb/adapters.py" = ["ANN401", "PLC0415"]  # Allow Any types and lazy imports
+"archipy/adapters/keycloak/adapters.py" = ["PLC0415"]  # Lazy imports for optional dependencies
+"archipy/adapters/keycloak/adapter_mixins/*" = ["PLC0415", "ANN401", "PLW0108"]  # Adapter mixins inherit adapters.py exemptions; lambdas wrap Keycloak calls
 "archipy/adapters/temporal/*" = ["ANN401", "TRY300", "RUF006", "PLC0415"]  # Allow Any types for Temporal's dynamic system, else blocks, asyncio task handling, lazy imports
 "archipy/adapters/scylladb/*" = ["S608"]  # False positives - using parameterized queries with %s placeholders
 "archipy/helpers/decorators/*" = ["ANN401", "ARG001", "PLR0913", "PLC0415", "PLR0915", "PLR0912"]  # Allow Any, unused args, many params, lazy imports in decorators
@@ -242,8 +226,6 @@ docstring-code-line-length = "dynamic"
 "archipy/helpers/utils/tracing_utils.py" = ["PLC0415", "ANN401"]  # Lazy optional deps; span/status union types
 "archipy/helpers/interceptors/grpc/metric/server_interceptor.py" = ["PLC0415"]  # Lazy imports
 "archipy/models/errors/base_error.py" = ["PLC0415"]  # Circular import workaround
-"features/steps/*" = ["F811", "ANN001", "ANN201", "ARG001", "PLR0913"]  # Allow redefinition, missing annotations, unused args in BDD steps
-"scripts/*" = ["S603", "S607"]
 
 # Configure McCabe complexity
 [tool.ruff.lint.mccabe]

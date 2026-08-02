@@ -256,7 +256,7 @@ class EmailAdapter(EmailPort):
                 try:
                     if connection.smtp_connection:
                         connection.smtp_connection.send_message(msg, to_addrs=recipients)
-                        logger.debug(f"Email sent successfully to {to_email}")
+                        logger.debug("Email sent successfully to %s", to_email)
                         return
                     else:
                         connection.connect()

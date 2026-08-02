@@ -394,10 +394,7 @@ def _build_range_query(
         raise ValueError("Range search requires range parameters")
     range_query = query.range
     range_clause = _build_range_clause(range_query)
-    if range_query.filter_expr:
-        query_string = f"({range_query.filter_expr}) | {range_clause}"
-    else:
-        query_string = range_clause
+    query_string = f"({range_query.filter_expr}) | {range_clause}" if range_query.filter_expr else range_clause
     redis_query = Query(query_string).paging(query.offset, query.limit).dialect(2)
     if range_query.score_field:
         redis_query = redis_query.sort_by(range_query.score_field)

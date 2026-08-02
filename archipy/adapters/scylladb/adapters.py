@@ -303,10 +303,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         session = self.get_session()
         try:
-            if params:
-                result = session.execute(query, params)
-            else:
-                result = session.execute(query)
+            result = session.execute(query, params) if params else session.execute(query)
         except Exception as e:
             self._handle_scylladb_exception(e, "execute")
             raise
@@ -374,10 +371,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         session = self.get_session()
         try:
-            if params:
-                result = session.execute(statement, params)
-            else:
-                result = session.execute(statement)
+            result = session.execute(statement, params) if params else session.execute(statement)
         except Exception as e:
             self._handle_scylladb_exception(e, "execute_prepared")
             raise
@@ -639,7 +633,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 self._cluster.shutdown()
         except Exception as e:
             # Ignore errors during cleanup, but log them
-            logger.debug(f"Error during ScyllaDB adapter cleanup: {e}")
+            logger.debug("Error during ScyllaDB adapter cleanup: %s", e)
 
     def __del__(self) -> None:
         """Destructor to ensure resources are cleaned up."""
@@ -647,7 +641,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             self.close()
         except Exception as e:
             # Ignore errors during destructor cleanup
-            logger.debug(f"Error in ScyllaDB adapter destructor: {e}")
+            logger.debug("Error in ScyllaDB adapter destructor: %s", e)
 
     @override
     def health_check(self) -> dict[str, Any]:
@@ -959,10 +953,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         session = await self.get_session()
         try:
-            if params:
-                future = session.execute_async(query, params)
-            else:
-                future = session.execute_async(query)
+            future = session.execute_async(query, params) if params else session.execute_async(query)
             result = await self._await_future(future)
         except Exception as e:
             self._handle_scylladb_exception(e, "execute")
@@ -1031,10 +1022,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         session = await self.get_session()
         try:
-            if params:
-                future = session.execute_async(statement, params)
-            else:
-                future = session.execute_async(statement)
+            future = session.execute_async(statement, params) if params else session.execute_async(statement)
             result = await self._await_future(future)
         except Exception as e:
             self._handle_scylladb_exception(e, "execute_prepared")
@@ -1311,7 +1299,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 self._cluster.shutdown()
         except Exception as e:
             # Ignore errors during cleanup, but log them
-            logger.debug(f"Error during async ScyllaDB adapter cleanup: {e}")
+            logger.debug("Error during async ScyllaDB adapter cleanup: %s", e)
 
     def __del__(self) -> None:
         """Destructor to ensure resources are cleaned up."""
@@ -1322,7 +1310,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 self._cluster.shutdown()
         except Exception as e:
             # Ignore errors during destructor cleanup
-            logger.debug(f"Error in async ScyllaDB adapter destructor: {e}")
+            logger.debug("Error in async ScyllaDB adapter destructor: %s", e)
 
     @override
     async def health_check(self) -> dict[str, Any]:

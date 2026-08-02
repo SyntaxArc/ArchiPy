@@ -264,10 +264,7 @@ class AsyncGrpcServerTraceInterceptor(BaseAsyncGrpcServerInterceptor):
         TracingUtils.init_tracing_if_needed(config)
 
         invocation_metadata = context.invocation_metadata()
-        if invocation_metadata is not None:
-            metadata_items = list(invocation_metadata)
-        else:
-            metadata_items = []
+        metadata_items = list(invocation_metadata) if invocation_metadata is not None else []
         metadata_dict = _invocation_metadata_to_dict(metadata_items)
 
         sentry_transaction = None

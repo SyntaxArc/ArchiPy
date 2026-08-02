@@ -51,7 +51,7 @@ class KeycloakRealmsMixin(SyncKeycloakMixinBase):
         try:
             self.admin_adapter.create_realm(payload=payload, skip_exists=skip_exists)
         except KeycloakError as e:
-            logger.debug(f"Failed to create realm: {e!s}")
+            logger.debug("Failed to create realm: %s", e)
 
             # Handle realm already exists with skip_exists option
             if skip_exists:
@@ -130,7 +130,7 @@ class AsyncKeycloakRealmsMixin(AsyncKeycloakMixinBase):
         try:
             await self.admin_adapter.a_create_realm(payload=payload, skip_exists=skip_exists)
         except KeycloakError as e:
-            logger.debug(f"Failed to create realm: {e!s}")
+            logger.debug("Failed to create realm: %s", e)
 
             # Handle realm already exists with skip_exists option
             if skip_exists:
