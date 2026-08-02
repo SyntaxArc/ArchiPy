@@ -1,0 +1,67 @@
+---
+description: Create GitHub releases and version tags that trigger PyPI publish for ArchiPy
+alwaysApply: false
+---
+
+# GitHub Release Workflow
+
+Use when the user asks to create a release, tag, or publish. Changelog writing stays in `changelog.mdc` — this rule covers tagging and `gh release` only.
+
+## Prerequisites
+
+Before tagging:
+
+1. Changelog exists at `docs/community/changelog/<MAJOR>/<version>.md` with indexes updated per `changelog.mdc`
+2. Feature work and `docs(changelog): update changelog for version <version>` are committed
+3. User has **accepted** the changelog draft
+
+Do not create a tag or GitHub release until the user accepts the changelog.
+
+## Push Then Release
+
+```bash
+git push -u origin HEAD
+# Retry SSH if the remote drops the connection
+```
+
+Tag format: `X.Y.Z` — **no** `v` prefix. Matches `.github/workflows/publish.yml` (`on.push.tags: '[0-9]+.[0-9]+.[0-9]+'`).
+
+## Create Release
+
+Strip YAML frontmatter, H1 (`# X.Y.Z — date`), and nav links. Body must start at the first `##` section (usually `## Added`), matching prior releases (e.g. 4.17.1).
+
+```bash
+# ✅ GOOD — title is version only; notes start at ## Added
+tmp=$(mktemp)
+sed -n '/^## /,$p' docs/community/changelog/<MAJOR>/<version>.md > "$tmp"
+gh release create <version> --title "<version>" --notes-file "$tmp" --latest
+rm "$tmp"
+```
+
+```text
+# ❌ BAD — do not paste the changelog file as-is
+---
+title: "Changelog 4.18.0"
+description: "Release notes for ArchiPy 4.18.0"
+---
+# 4.18.0 — 2026-08-02
+[4.17.1 →](4.17.1.md) | [↑ 4.x series](index.md)
+```
+
+## Verify
+
+```bash
+gh release view <version>
+gh run list --workflow=publish.yml --limit 1
+```
+
+Confirm the release URL and that the publish workflow started.
+
+## Fix Wrong Notes
+
+```bash
+tmp=$(mktemp)
+sed -n '/^## /,$p' docs/community/changelog/<MAJOR>/<version>.md > "$tmp"
+gh release edit <version> --notes-file "$tmp"
+rm "$tmp"
+```
