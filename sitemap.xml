@@ -45,6 +45,10 @@
          <lastmod>2026-08-02</lastmod>
     </url>
     <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/mysql/</loc>
+         <lastmod>2026-08-02</lastmod>
+    </url>
+    <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/payment_gateways/</loc>
          <lastmod>2026-08-02</lastmod>
     </url>
@@ -597,6 +601,10 @@
          <lastmod>2026-08-02</lastmod>
     </url>
     <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.18.0/</loc>
+         <lastmod>2026-08-02</lastmod>
+    </url>
+    <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.2.0/</loc>
          <lastmod>2026-08-02</lastmod>
     </url>
@@ -742,6 +750,10 @@
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/minio/</loc>
+         <lastmod>2026-08-02</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/mysql/</loc>
          <lastmod>2026-08-02</lastmod>
     </url>
     <url>

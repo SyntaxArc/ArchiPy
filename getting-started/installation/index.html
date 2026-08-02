@@ -813,6 +813,8 @@
       
         
       
+        
+      
     
     
     
@@ -912,6 +914,34 @@
     
   
     PostgreSQL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/adapters/mysql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MySQL
   
 
     
@@ -1767,6 +1797,8 @@
       
         
       
+        
+      
     
     
     
@@ -1894,6 +1926,34 @@
     
   
     PostgreSQL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api_reference/adapters/mysql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MySQL
   
 
     
@@ -3209,11 +3269,11 @@ resolution.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">uv</label><label for="__tabbed_2_2">pip</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[postgres,sqlalchemy,starrocks,redis,keycloak,minio,kafka]&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;archipy[postgres,mysql,sqlalchemy,starrocks,redis,keycloak,minio,kafka]&quot;</span>
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;archipy[postgres,sqlalchemy,starrocks,redis,keycloak,minio,kafka]&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;archipy[postgres,mysql,sqlalchemy,starrocks,redis,keycloak,minio,kafka]&quot;</span>
 </span></code></pre></div>
 </div>
 </div>
@@ -3233,6 +3293,16 @@ resolution.</p>
 <td>Database</td>
 <td><code>archipy[postgres]</code></td>
 <td>PostgreSQL adapter with SQLAlchemy integration</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><code>archipy[mysql]</code></td>
+<td>MySQL adapter with SQLAlchemy integration</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><code>archipy[mysql-async]</code></td>
+<td>MySQL async adapter (asyncmy2)</td>
 </tr>
 <tr>
 <td>Database</td>
