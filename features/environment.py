@@ -37,6 +37,7 @@ class TestConfig(BaseConfig):
     SCYLLADB__IMAGE: str
     STARROCKS__IMAGE: str
     TEMPORAL__IMAGE: str
+    VAULT__IMAGE: str
     TESTCONTAINERS_RYUK_CONTAINER_IMAGE: str | None = None
 
     def __init__(self, **kwargs) -> None:
@@ -169,6 +170,8 @@ def before_scenario(context: Context, scenario: Scenario) -> None:
 
 def after_scenario(context: Context, scenario: Scenario) -> None:
     """Cleanup performed after each scenario runs."""
+    import os
+
     logger = getattr(context, "logger", logging.getLogger("behave.environment"))
 
     # Get the scenario ID
@@ -180,6 +183,37 @@ def after_scenario(context: Context, scenario: Scenario) -> None:
         from features.steps.temporal_adapter_steps import cleanup_event_loop
 
         cleanup_event_loop(context)
+    except Exception:
+        pass
+
+    # Clear Vault settings-source env overrides so later scenarios are not polluted
+    vault_runtime_keys = (
+        "VAULT__ENABLED",
+        "VAULT__ADDR",
+        "VAULT__TOKEN",
+        "VAULT__SECRET_PATHS",
+        "VAULT__AUTH_METHOD",
+        "VAULT__MOUNT_POINT",
+        "VAULT__VERIFY_SSL",
+    )
+    for key in vault_runtime_keys:
+        os.environ.pop(key, None)
+
+    for key in getattr(context, "env_keys_to_clear", []):
+        os.environ.pop(key, None)
+    context.env_keys_to_clear = []
+
+    # Re-sync VAULT connection fields from the running container after settings-source tests
+    try:
+        global_config = BaseConfig.global_config()
+        global_config.VAULT.ENABLED = False
+        instance = ContainerManager._container_instances.get("vault")
+        if instance is not None and getattr(instance, "_is_running", False):
+            global_config.VAULT.ADDR = instance.addr
+            global_config.VAULT.TOKEN = instance.root_token
+            global_config.VAULT.AUTH_METHOD = "token"
+            global_config.VAULT.VERIFY_SSL = False
+            global_config.VAULT.MOUNT_POINT = "secret"
     except Exception:
         pass
 

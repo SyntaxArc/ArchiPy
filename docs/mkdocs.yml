@@ -142,6 +142,7 @@ nav:
           - ScyllaDB: tutorials/adapters/scylladb.md
           - Elasticsearch: tutorials/adapters/elasticsearch.md
           - Temporal: tutorials/adapters/temporal.md
+          - Vault: tutorials/adapters/vault.md
           - Email: tutorials/adapters/email.md
           - Payment Gateways: tutorials/adapters/payment_gateways.md
       - Helpers:
@@ -173,6 +174,7 @@ nav:
           - ScyllaDB: api_reference/adapters/scylladb.md
           - Elasticsearch: api_reference/adapters/elasticsearch.md
           - Temporal: api_reference/adapters/temporal.md
+          - Vault: api_reference/adapters/vault.md
           - Email: api_reference/adapters/email.md
           - Payment Gateways: api_reference/adapters/payment_gateways.md
       - Configs: api_reference/configs.md

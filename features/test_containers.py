@@ -9,6 +9,7 @@ from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 from testcontainers.elasticsearch import ElasticSearchContainer
 from testcontainers.keycloak import KeycloakContainer
+from testcontainers.community.vault import VaultContainer
 from testcontainers.minio import MinioContainer
 from testcontainers.postgres import PostgresContainer
 from testcontainers.redis import RedisContainer
@@ -26,6 +27,7 @@ from archipy.configs.config_template import (
     ScyllaDBConfig,
     StarRocksSQLAlchemyConfig,
     TemporalConfig,
+    VaultConfig,
 )
 from archipy.helpers.metaclasses.singleton import Singleton
 
@@ -44,6 +46,7 @@ TAG_CONTAINER_MAP: dict[str, str] = {
     "needs-scylladb": "scylladb",
     "needs-starrocks": "starrocks",
     "needs-temporal": "temporal",
+    "needs-vault": "vault",
 }
 
 
@@ -1154,3 +1157,75 @@ class TemporalContainer(metaclass=Singleton, thread_safe=True):
         self.config = None
 
         logger.info("Temporal container stopped")
+
+
+@ContainerManager.register("vault")
+class VaultTestContainer(metaclass=Singleton, thread_safe=True):
+    """Test container for HashiCorp Vault (dev mode)."""
+
+    def __init__(self, config: VaultConfig | None = None, image: str | None = None) -> None:
+        """Initialize Vault test container.
+
+        Args:
+            config: Optional Vault configuration. Defaults to global VAULT config.
+            image: Docker image override. Defaults to VAULT__IMAGE from TestConfig.
+        """
+        self.name = "vault"
+        self.config = config or BaseConfig.global_config().VAULT
+        self.image = image or BaseConfig.global_config().VAULT__IMAGE
+        self.root_token = "toor"
+        self._container: VaultContainer | None = None
+        self._is_running = False
+        self.host: str | None = None
+        self.port: int | None = None
+        self.addr: str | None = None
+
+        self._container = VaultContainer(
+            image=self.image,
+            root_token=self.root_token,
+        ).with_kwargs(extra_hosts={"host.docker.internal": "host-gateway"})
+
+    def start(self) -> VaultContainer:
+        """Start the Vault container and update global VAULT config."""
+        if self._is_running:
+            return self._container
+
+        if self._container is None:
+            self._container = VaultContainer(
+                image=self.image,
+                root_token=self.root_token,
+            ).with_kwargs(extra_hosts={"host.docker.internal": "host-gateway"})
+
+        self._container.start()
+        self._is_running = True
+
+        self.host = self._container.get_container_host_ip()
+        self.port = int(self._container.get_exposed_port(8200))
+        self.addr = self._container.get_connection_url()
+
+        global_config = BaseConfig.global_config()
+        global_config.VAULT.ADDR = self.addr
+        global_config.VAULT.TOKEN = self.root_token
+        global_config.VAULT.AUTH_METHOD = "token"
+        global_config.VAULT.VERIFY_SSL = False
+        global_config.VAULT.MOUNT_POINT = "secret"
+        global_config.VAULT.ENABLED = False  # settings source opt-in per scenario
+
+        logger.info("Vault container started at %s", self.addr)
+        return self._container
+
+    def stop(self) -> None:
+        """Stop the Vault container."""
+        if not self._is_running:
+            return
+
+        if self._container:
+            self._container.stop()
+
+        self._container = None
+        self._is_running = False
+        self.host = None
+        self.port = None
+        self.addr = None
+
+        logger.info("Vault container stopped")

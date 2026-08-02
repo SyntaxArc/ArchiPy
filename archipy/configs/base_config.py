@@ -3,13 +3,17 @@
 Settings are loaded from multiple sources, applied in the following priority
 order (highest priority first):
 
-1. `pyproject.toml` `[tool.configs]` section
-2. `configs.toml` or other specified TOML file
-3. `.env` file
-4. OS-level environment variables
-5. Default class field values
+1. Docker/K8s secret files (`file_secret_settings`)
+2. HashiCorp Vault KV v2 secrets (when `VAULT__ENABLED=true`)
+3. `pyproject.toml` `[tool.configs]` section
+4. `configs.toml` or other specified TOML file
+5. OS-level environment variables
+6. `.env` file
+7. Default class field values / init settings
 """
 
+import importlib
+import os
 from typing import TypeVar
 
 from pydantic_settings import (
@@ -46,8 +50,10 @@ from archipy.configs.config_template import (
     SQLiteSQLAlchemyConfig,
     StarRocksSQLAlchemyConfig,
     TemporalConfig,
+    VaultConfig,
 )
 from archipy.configs.environment_type import EnvironmentType
+from archipy.models.errors import ConfigurationError
 from archipy.models.types import LanguageType
 
 R = TypeVar("R", bound="BaseConfig")  # Runtime Config
@@ -59,11 +65,13 @@ class BaseConfig[R](BaseSettings):
     This class provides a comprehensive configuration system that loads settings
     from multiple sources in the following priority order:
 
-    1. pyproject.toml [tool.configs] section
-    2. configs.toml or other specified TOML files
-    3. Environment variables (.env file)
-    4. OS-level environment variables
-    5. Default class field values
+    1. Docker/K8s secret files (`file_secret_settings`)
+    2. HashiCorp Vault KV v2 secrets (when `VAULT__ENABLED=true`)
+    3. pyproject.toml [tool.configs] section
+    4. configs.toml or other specified TOML files
+    5. OS-level environment variables
+    6. Environment variables (.env file)
+    7. Default class field values / init settings
 
     The class implements the Singleton pattern via a global config instance that
     can be set once and accessed throughout the application.
@@ -96,6 +104,7 @@ class BaseConfig[R](BaseSettings):
         SQLITE_SQLALCHEMY (SqliteSQLAlchemyConfig): SQLite SQLAlchemy configuration
         STARROCKS_SQLALCHEMY (StarrocksSQLAlchemyConfig): Starrocks SQLAlchemy configuration
         TEMPORAL (TemporalConfig): Temporal workflow orchestration configuration
+        VAULT (VaultConfig): HashiCorp Vault connection and secrets settings
 
     Examples:
         >>> from archipy.configs.base_config import BaseConfig
@@ -152,15 +161,40 @@ class BaseConfig[R](BaseSettings):
 
         Returns:
             A tuple of configuration sources in priority order
+
+        Raises:
+            ConfigurationError: If Vault is enabled but the ``vault`` extra is not installed.
         """
-        return (
-            file_secret_settings,
-            PyprojectTomlConfigSettingsSource(settings_cls),
-            TomlConfigSettingsSource(settings_cls),
-            env_settings,
-            dotenv_settings,
-            init_settings,
+        sources: list[PydanticBaseSettingsSource] = [file_secret_settings]
+
+        # Import Vault settings source only when explicitly enabled — avoids loading
+        # hvac on cold start for apps that ship with the vault extra but leave it off.
+        vault_enabled = os.environ.get("VAULT__ENABLED", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if vault_enabled:
+            try:
+                vault_module = importlib.import_module("archipy.configs.vault_settings_source")
+            except ImportError as e:
+                raise ConfigurationError(
+                    operation="vault_import",
+                    reason='hvac is not installed; install with uv add "archipy[vault]"',
+                ) from e
+            sources.append(vault_module.VaultSettingsSource(settings_cls))
+
+        sources.extend(
+            [
+                PyprojectTomlConfigSettingsSource(settings_cls),
+                TomlConfigSettingsSource(settings_cls),
+                env_settings,
+                dotenv_settings,
+                init_settings,
+            ],
         )
+        return tuple(sources)
 
     AUTH: AuthConfig = AuthConfig()
     DATETIME: DatetimeConfig = DatetimeConfig()
@@ -188,6 +222,7 @@ class BaseConfig[R](BaseSettings):
     MYSQL_SQLALCHEMY: MySQLSQLAlchemyConfig = MySQLSQLAlchemyConfig()
     SQLITE_SQLALCHEMY: SQLiteSQLAlchemyConfig = SQLiteSQLAlchemyConfig()
     TEMPORAL: TemporalConfig = TemporalConfig()
+    VAULT: VaultConfig = VaultConfig()
     LANGUAGE: LanguageType = LanguageType.FA
 
     def customize(self) -> None:

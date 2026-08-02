@@ -25,6 +25,7 @@ implementation).
 | [ScyllaDB](scylladb.md)                 | ScyllaDB/Cassandra wide-column store adapter               |
 | [Elasticsearch](elasticsearch.md)       | Elasticsearch search engine adapter                        |
 | [Temporal](temporal.md)                 | Temporal workflow orchestration adapter                    |
+| [Vault](vault.md)                       | HashiCorp Vault secrets, leases, and transit adapter       |
 | [Email](email.md)                       | Email service adapter                                      |
 | [Payment Gateways](payment_gateways.md) | Internet payment gateway adapters (Parsian Shaparak, Saman Shaparak) |
 
@@ -50,5 +51,6 @@ implementation).
 | ScyllaDB         | 🟢 Stable | Production-ready |
 | Elasticsearch    | 🟢 Stable | Production-ready |
 | Temporal         | 🟢 Stable | Production-ready |
+| Vault            | 🟢 Stable | Production-ready |
 | Email            | 🟢 Stable | Production-ready |
 | Payment Gateways | 🟢 Stable | Production-ready |

@@ -25,6 +25,7 @@ your business logic and external dependencies.
 | [Elasticsearch](elasticsearch.md)       | Search & analytics             | Full-text search, document indexing, aggregations    | [API](../../api_reference/adapters/elasticsearch.md)    |
 | [Redis](redis.md)                       | Key-value store                | Caching, pub/sub, RediSearch vector/range/hybrid, cluster | [API](../../api_reference/adapters/redis.md)            |
 | [Temporal](temporal.md)                 | Workflow orchestration         | Durable workflow execution and activity coordination | [API](../../api_reference/adapters/temporal.md)         |
+| [Vault](vault.md)                       | Secrets management             | KV v2 secrets, dynamic leases, transit encryption    | [API](../../api_reference/adapters/vault.md)            |
 
 ## Adapter Architecture
 

@@ -270,6 +270,58 @@ from archipy.adapters.redis.adapters import RedisAdapter
 redis_adapter = RedisAdapter()
 ```
 
+## Vault-backed Secrets
+
+When the optional `vault` extra is installed, `BaseConfig` can load KV v2 secrets from
+HashiCorp Vault at startup via `VaultSettingsSource`.
+
+### Installation
+
+```bash
+uv add "archipy[vault]"
+```
+
+### Enabling the settings source
+
+```bash
+VAULT__ENABLED=true
+VAULT__ADDR=https://vault.example.com:8200
+VAULT__AUTH_METHOD=token
+VAULT__TOKEN=s.xxxxx
+VAULT__MOUNT_POINT=secret
+VAULT__SECRET_PATHS=["myapp/config"]
+```
+
+Secret payloads may use flat keys with `__` to target nested config fields:
+
+```json
+{
+  "REDIS__PASSWORD": "from-vault",
+  "POSTGRES_SQLALCHEMY__PASSWORD": "from-vault"
+}
+```
+
+### Priority order
+
+Vault sits immediately after Docker/K8s secret files:
+
+1. Docker/K8s secret files (`file_secret_settings`)
+2. **HashiCorp Vault** (when `VAULT__ENABLED=true`)
+3. `pyproject.toml` `[tool.configs]`
+4. `configs.toml`
+5. OS environment variables
+6. `.env` file
+7. Init / field defaults
+
+Apps that need a different order can override `settings_customise_sources` in a
+`BaseConfig` subclass and reposition `VaultSettingsSource`.
+
+> **Note:** When Vault is disabled (`VAULT__ENABLED` unset/false), the settings source
+> is a no-op and `hvac` is never imported.
+
+For runtime secret CRUD, dynamic leases, and transit encryption, use the
+[Vault adapter](adapters/vault.md).
+
 ## Best Practices
 
 1. **Use meaningful defaults**: Configure sensible defaults that work in local development
@@ -285,4 +337,5 @@ redis_adapter = RedisAdapter()
 ## See Also
 
 - [API Reference - Configs](../api_reference/configs.md) - Full configuration API documentation
+- [Vault Adapter Tutorial](adapters/vault.md) - Runtime Vault operations
 - [Tutorials Overview](index.md) - Overview of all tutorials
