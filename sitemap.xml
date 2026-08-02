@@ -77,6 +77,10 @@
          <lastmod>2026-08-02</lastmod>
     </url>
     <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/api_reference/adapters/vault/</loc>
+         <lastmod>2026-08-02</lastmod>
+    </url>
+    <url>
          <loc>https://syntaxarc.github.io/ArchiPy/api_reference/helpers/</loc>
          <lastmod>2026-08-02</lastmod>
     </url>
@@ -605,6 +609,10 @@
          <lastmod>2026-08-02</lastmod>
     </url>
     <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.19.0/</loc>
+         <lastmod>2026-08-02</lastmod>
+    </url>
+    <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/4/4.2.0/</loc>
          <lastmod>2026-08-02</lastmod>
     </url>
@@ -782,6 +790,10 @@
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/temporal/</loc>
+         <lastmod>2026-08-02</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/vault/</loc>
          <lastmod>2026-08-02</lastmod>
     </url>
     <url>
