@@ -1,9 +1,8 @@
-from typing import TYPE_CHECKING
-
 from archipy.models.dtos.base_dtos import BaseDTO
-
-if TYPE_CHECKING:
-    from archipy.models.types.redis_search_types import UseSearchHistory, VectorHybridPolicy
+from archipy.models.types.redis_search_types import (  # noqa: TC001
+    UseSearchHistory,
+    VectorHybridPolicy,
+)
 
 
 class VectorQueryRuntimeDTO(BaseDTO):
