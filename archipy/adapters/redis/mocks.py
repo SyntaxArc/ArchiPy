@@ -3,6 +3,8 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import fakeredis
+from redis import RedisCluster
+from redis.asyncio import RedisCluster as AsyncRedisCluster
 from redis.asyncio.client import Redis as AsyncRedis
 from redis.client import Redis
 
@@ -59,7 +61,7 @@ class RedisMock(RedisAdapter):
 
         self.config = redis_config or BaseConfig.global_config().REDIS
         self._configs = self.config
-        self._search_client: Redis | None = None
+        self._search_client: Redis | RedisCluster | None = None
 
         # Create fake redis clients based on mode
         self._setup_fake_clients()
@@ -84,7 +86,7 @@ class RedisMock(RedisAdapter):
             decode_responses=configs.DECODE_RESPONSES if decode_responses is None else decode_responses,
         )
 
-    def _get_search_client(self) -> Redis:
+    def _get_search_client(self) -> Redis | RedisCluster:
         if self._search_client is None:
             self._search_client = fakeredis.FakeRedis(decode_responses=False)
         return self._search_client
@@ -99,7 +101,7 @@ class AsyncRedisMock(AsyncRedisAdapter):
 
         self.config = redis_config or BaseConfig.global_config().REDIS
         self._configs = self.config
-        self._search_client: AsyncRedis | None = None
+        self._search_client: AsyncRedis | AsyncRedisCluster | None = None
 
         # Create fake async redis clients based on mode
         self._setup_async_fake_clients()
@@ -145,7 +147,7 @@ class AsyncRedisMock(AsyncRedisAdapter):
     def _get_client(host: str, configs: RedisConfig, *, decode_responses: bool | None = None) -> AsyncRedis:
         return AsyncMock()
 
-    def _get_search_client(self) -> AsyncRedis:
+    def _get_search_client(self) -> AsyncRedis | AsyncRedisCluster:
         if self._search_client is None:
             self._search_client = AsyncMock()
             self._search_client.execute_command = self._create_async_wrapper(
