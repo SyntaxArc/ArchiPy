@@ -3105,6 +3105,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#deprecations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deprecations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Deprecations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#which-apis-are-deprecated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which APIs are deprecated?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3716,6 +3744,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#deprecations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deprecations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Deprecations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#which-apis-are-deprecated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which APIs are deprecated?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3978,6 +4034,51 @@ values.</p>
   naturally into class hierarchies and works with inheritance.</li>
 </ul>
 <hr />
+<h2 id="deprecations">Deprecations<a class="headerlink" href="#deprecations" title="Permanent link">&para;</a></h2>
+<h3 id="which-apis-are-deprecated">Which APIs are deprecated?<a class="headerlink" href="#which-apis-are-deprecated" title="Permanent link">&para;</a></h3>
+<p>ArchiPy currently deprecates the <strong>FastAPI rate-limit interceptor</strong>, which is superseded by the official
+<a href="https://github.com/redis/fastapi-redis-sdk">fastapi-redis-sdk</a>. The APIs below are no longer maintained and will be
+removed in a future major release.</p>
+<table>
+<thead>
+<tr>
+<th>Affected API</th>
+<th>Runtime signal when used now</th>
+<th>Replacement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FastAPIRestRateLimitHandler</code></td>
+<td><code>DeprecationError</code> on instantiation</td>
+<td><code>rate_limit()</code> dependency from <code>fastapi-redis-sdk</code></td>
+</tr>
+<tr>
+<td><code>extract_bearer_token</code> / <code>resolve_jwt_access_token_sub</code> (<code>fastapi.rate_limit.identifiers</code>)</td>
+<td><code>DeprecationError</code> on call</td>
+<td>Identity resolution in your own auth <code>Depends</code></td>
+</tr>
+<tr>
+<td><code>FastAPIRateLimitConfig</code></td>
+<td><code>DeprecationWarning</code> on instantiation</td>
+<td><code>fastapi-redis-sdk</code> with <code>REDIS_*</code> env vars</td>
+</tr>
+<tr>
+<td><code>BaseConfig.FASTAPI_RATE_LIMIT</code></td>
+<td>Deprecated config field</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>FASTAPI_RATE_LIMIT__*</code> environment variables</td>
+<td>Deprecated config variables</td>
+<td><code>REDIS_*</code> environment variables</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Not affected:</strong> the gRPC rate-limit interceptor, <code>GrpcRateLimitConfig</code>, <code>RateLimitUtils</code>, and
+<code>RateLimitWindowDTO</code> remain fully supported.</p>
+<p>Follow the <a href="../../tutorials/helpers/interceptors/#migrating-to-fastapi-redis-sdk">migration guide</a> to switch.</p>
+<hr />
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../getting-started/concepts/">Concepts</a> — Clean Architecture layers and import rules</li>
@@ -3985,6 +4086,7 @@ values.</p>
 <li><a href="../../tutorials/testing_strategy/">Testing Strategy</a> — unit, integration, and BDD test patterns</li>
 <li><a href="../../tutorials/config_management/">Configuration Management</a> — environment variables, <code>.env</code> files, nested config</li>
 <li><a href="../../tutorials/error_handling/">Error Handling</a> — domain exceptions and chaining</li>
+<li><a href="../../tutorials/helpers/interceptors/">Interceptors</a> — gRPC &amp; FastAPI interceptors and the rate-limit migration guide</li>
 </ul>
 
 

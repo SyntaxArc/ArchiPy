@@ -4137,8 +4137,8 @@ single aggregate.</p>
 <p><strong>Note:</strong> <code>proxy_headers</code> and <code>forwarded_allow_ips</code> wire <code>FASTAPI.PROXY_HEADERS</code> and
 <code>FASTAPI.FORWARDED_ALLOW_IPS</code> into Uvicorn's <code>ProxyHeadersMiddleware</code>. When enabled, Uvicorn
 rewrites <code>request.client.host</code> from trusted <code>X-Forwarded-For</code> headers before your application
-runs. <code>FastAPIRestRateLimitHandler</code> applies its own trusted-proxy logic as defense-in-depth —
-see <a href="../../tutorials/helpers/interceptors/#client-identification">Interceptor Tutorials — Client identification</a>.</p>
+runs. The deprecated <code>FastAPIRestRateLimitHandler</code> applied its own trusted-proxy logic as
+defense-in-depth — see <a href="../../tutorials/helpers/interceptors/#client-identification">Interceptor Tutorials — Client identification</a>.</p>
 </blockquote>
 <hr />
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
