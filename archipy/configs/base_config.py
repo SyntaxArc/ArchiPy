@@ -14,6 +14,7 @@ order (highest priority first):
 
 import importlib
 import os
+import warnings
 from typing import TypeVar
 
 from pydantic_settings import (
@@ -84,7 +85,7 @@ class BaseConfig[R](BaseSettings):
         EMAIL (EmailConfig): Email service configuration
         ENVIRONMENT (EnvironmentType): Application environment (dev, test, prod)
         FASTAPI (FastAPIConfig): FastAPI framework settings
-        FASTAPI_RATE_LIMIT (FastAPIRateLimitConfig): FastAPI REST rate limiting settings
+        FASTAPI_RATE_LIMIT (FastAPIRateLimitConfig): FastAPI REST rate limiting settings (deprecated; migrate to fastapi-redis-sdk)
         FILE (FileConfig): File handling configuration
         GRPC (GrpcConfig): gRPC service configuration
         GRPC_RATE_LIMIT (GrpcRateLimitConfig): gRPC server rate limiting settings
@@ -203,7 +204,10 @@ class BaseConfig[R](BaseSettings):
     EMAIL: EmailConfig = EmailConfig()
     ENVIRONMENT: EnvironmentType = EnvironmentType.LOCAL
     FASTAPI: FastAPIConfig = FastAPIConfig()
-    FASTAPI_RATE_LIMIT: FastAPIRateLimitConfig = FastAPIRateLimitConfig()
+    # Suppress the deprecation warning for the internal default; it still fires on direct use.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        FASTAPI_RATE_LIMIT: FastAPIRateLimitConfig = FastAPIRateLimitConfig()
     FILE: FileConfig = FileConfig()
     GRPC: GrpcConfig = GrpcConfig()
     GRPC_RATE_LIMIT: GrpcRateLimitConfig = GrpcRateLimitConfig()

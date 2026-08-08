@@ -78,7 +78,7 @@ The helpers layer contains pure utilities with no direct external I/O:
 |-------------------------|------------------------------------------------------------------------------|
 | `helpers/utils/`        | JWT, password, TOTP, datetime, string, file, Prometheus                      |
 | `helpers/decorators/`   | `@atomic`, `@ttl_cache`, `@retry`, `@singleton`, `@timeout`, `@timing`       |
-| `helpers/interceptors/` | FastAPI rate limiting and metrics; gRPC tracing, metrics, exception handling |
+| `helpers/interceptors/` | FastAPI metrics; gRPC tracing, metrics, exception handling, rate limiting |
 | `helpers/metaclasses/`  | `SingletonMeta` and other meta-programming utilities                         |
 
 ### Adapters

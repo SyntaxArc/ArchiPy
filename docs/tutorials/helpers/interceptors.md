@@ -8,6 +8,25 @@ description: Practical tutorials for using ArchiPy helper interceptors.
 This page demonstrates how to use ArchiPy's interceptors for cross-cutting concerns like tracing, metrics, and error
 handling.
 
+## Deprecations
+
+The following APIs are **deprecated** and will be removed in a future major release. They are no longer
+maintained and emit a runtime signal when used.
+
+| Deprecated API                                                                            | Kind         | Runtime signal                   | Replacement                                   |
+|-------------------------------------------------------------------------------------------|--------------|----------------------------------|-----------------------------------------------|
+| `FastAPIRestRateLimitHandler`                                                             | class        | `DeprecationError` on instantiation | `rate_limit()` from `fastapi-redis-sdk`    |
+| `extract_bearer_token` / `resolve_jwt_access_token_sub` (`fastapi.rate_limit.identifiers`) | functions    | `DeprecationError` on call       | Your own auth `Depends`                       |
+| `FastAPIRateLimitConfig`                                                                  | config class | `DeprecationWarning` on instantiation | `fastapi-redis-sdk` + `REDIS_*` env vars |
+| `BaseConfig.FASTAPI_RATE_LIMIT`                                                           | config field | —                                | `fastapi-redis-sdk` + `REDIS_*` env vars |
+| `FASTAPI_RATE_LIMIT__*` environment variables                                             | env vars     | —                                | `REDIS_*` environment variables                |
+
+**Not affected:** the gRPC rate-limit interceptor (`GrpcServerRateLimitInterceptor`,
+`AsyncGrpcServerRateLimitInterceptor`) and `grpc_rate_limit_decorator` remain fully supported, as do
+`GrpcRateLimitConfig`, `RateLimitUtils`, and `RateLimitWindowDTO`.
+
+See [Migrating to `fastapi-redis-sdk`](#migrating-to-fastapi-redis-sdk) below for the step-by-step replacement.
+
 ## gRPC Interceptors
 
 ### Tracing Interceptor
@@ -217,172 +236,69 @@ async def process_data(query: str) -> dict[str, str]:
 
 ### Rate Limiting Dependency
 
-`FastAPIRestRateLimitHandler` enforces per-client request limits on HTTP endpoints using Redis as the backend.
-It uses the Redis 8.8 `INCREX` command for atomic counter increments with bounds and window expiry, avoiding
-check-then-act races under concurrent requests.
+> **Deprecated:** The FastAPI rate-limit interceptor — `FastAPIRestRateLimitHandler`, its
+> `FastAPIRateLimitConfig` settings, and the `fastapi.rate_limit.identifiers` helpers — is
+> **deprecated** and will be removed in a future major release. Instantiating the handler or
+> calling the identity helpers raises `DeprecationError`. It is no longer maintained.
 
-Install the required extras:
+The FastAPI rate limiter in ArchiPy has been superseded by the official
+[`fastapi-redis-sdk`](https://github.com/redis/fastapi-redis-sdk), which provides the same
+distributed per-client counters with `X-RateLimit-*` / `Retry-After` headers and a fluent rate
+language (`"10/second"`). The gRPC rate-limit interceptor is **not** affected by this
+deprecation.
+
+#### Migrating to `fastapi-redis-sdk`
+
+Install the SDK and configure Redis via environment variables (`REDIS_URL`, or `REDIS_HOST` /
+`REDIS_PORT` / `REDIS_PASSWORD`):
 
 ```bash
-uv add "archipy[redis,fastapi]"
+uv add fastapi-redis-sdk
+export REDIS_URL=redis://user:pass@host:6379/0
 ```
 
-> **Note:** Redis **8.8+** is required. The handler depends on the `INCREX` command, which is not available on
-> earlier Redis versions.
-
-Attach the handler as a route dependency with `Depends` — it is not registered as middleware:
+Replace the handler dependency with the `rate_limit()` dependency:
 
 ```python
-from fastapi import Depends
+from fastapi import Depends, FastAPI
+from redis_fastapi import FastAPIRedis, rate_limit
 
-from archipy.helpers.interceptors.fastapi.rate_limit.fastapi_rest_rate_limit_handler import (
-    FastAPIRestRateLimitHandler,
+app = FastAPI()
+FastAPIRedis(app).lifespan().rate_limiting()
+
+
+@app.get(
+    "/search",
+    dependencies=[
+        Depends(rate_limit("10/second", scope="search:burst")),  # burst
+        Depends(rate_limit("100/minute", scope="search:sustained")),  # sustained
+    ],
 )
-from archipy.helpers.utils.app_utils import AppUtils
-
-app = AppUtils.create_fastapi_app()
-
-
-@app.get("/api/resource", dependencies=[Depends(FastAPIRestRateLimitHandler(calls_count=100, minutes=1))])
-async def resource() -> dict[str, str]:
-    return {"status": "ok"}
+async def search() -> dict[str, str]:
+    return {"results": []}
 ```
 
-#### Configuration
+Both limits count per client IP by default and a request must satisfy both; distinct `scope`
+values keep the counters independent on the same route. When a limit is exceeded the request
+gets a `429 Too Many Requests` with `Retry-After`, and every response carries
+`X-RateLimit-Limit` / `-Remaining` / `-Reset`. Counters live in Redis, so limits hold across
+every worker and pod. `fastapi-redis-sdk` requires Redis **7.4+** (no `INCREX` 8.8 dependency)
+and supports Python 3.10–3.14 with FastAPI 0.115+.
 
-Global defaults load from ``FASTAPI_RATE_LIMIT`` on ``BaseConfig.global_config()`` (env prefix
-``FASTAPI_RATE_LIMIT__``). Per-route limits still pass ``calls_count`` and the time window to the
-handler constructor; optional kwargs override config fields for that handler instance only.
-
-```bash
-# .env — trusted proxies fall back to FASTAPI__FORWARDED_ALLOW_IPS when unset
-FASTAPI_RATE_LIMIT__FAIL_CLOSED=true
-FASTAPI_RATE_LIMIT__REJECT_UNKNOWN_CLIENT=true
-FASTAPI_RATE_LIMIT__RATE_LIMIT_HEADERS=true
-```
-
-```python
-from archipy.configs.base_config import BaseConfig
-
-config = BaseConfig.global_config()
-config.FASTAPI_RATE_LIMIT.TRUSTED_PROXY_IPS = ["10.0.0.0/8"]
-```
-
-#### How it works
-
-On each request the handler:
-
-1. Builds a Redis key from the client identifier, path, HTTP method, and optional query parameters.
-2. Calls `INCREX` with `ubound=calls_count`, `saturate=True`, `enx=True`, and a millisecond window (`px`).
-3. Allows the request when the increment is applied; otherwise raises HTTP **429 Too Many Requests** with
-   `Retry-After`, `X-RateLimit-Limit`, and `X-RateLimit-Remaining` headers.
-
-`enx=True` sets the window expiry only when the key is first created, so subsequent requests within the window
-preserve the original TTL.
+| ArchiPy (deprecated)                            | `fastapi-redis-sdk`                          |
+|-------------------------------------------------|----------------------------------------------|
+| `Depends(FastAPIRestRateLimitHandler(calls_count=100, minutes=1))` | `Depends(rate_limit("100/minute"))` |
+| `additional_windows` stacked tiers              | stack multiple `rate_limit()` dependencies   |
+| `FASTAPI_RATE_LIMIT__*` environment variables   | `REDIS_*` environment variables              |
 
 #### Client identification
 
-Forwarded headers (`CF-Connecting-IP`, `True-Client-IP`, `Forwarded`, `X-Forwarded-For`) are
-honored **only** when the immediate peer (`request.client.host`) matches
-`FASTAPI_RATE_LIMIT.TRUSTED_PROXY_IPS`, `FASTAPI.FORWARDED_ALLOW_IPS`, or an explicit
-`trusted_proxy_ips` constructor override. Without trusted proxies, only `request.client.host` is
-used, which prevents clients from spoofing their identity.
-
-When trusted proxies are configured:
-
-1. `CF-Connecting-IP`
-2. `True-Client-IP`
-3. `Forwarded` (`for=` directives, recursive trusted-proxy walk)
-4. `X-Forwarded-For` — all header fields are combined (RFC 9110), port suffixes stripped,
-   then resolved with a recursive trusted-proxy walk (nginx `real_ip_recursive` semantics)
-5. `X-Real-IP` — only when `X-Forwarded-For` is absent (avoids nginx mis-identifying the proxy as the client)
-
-Private, loopback, link-local, and multicast addresses are rejected unless `allow_private_ips=True`.
-
-The literal `"*"` in `FASTAPI_RATE_LIMIT.TRUSTED_PROXY_IPS` or `FASTAPI.FORWARDED_ALLOW_IPS` trusts
-all peers (matches Uvicorn) but is unsafe for rate limiting — prefer explicit CIDRs.
-
-When running behind Uvicorn with `proxy_headers=True` and `forwarded_allow_ips` configured (see
-[Project Structure](../../getting-started/project_structure.md)), `request.client.host` is already
-rewritten to the real client before the handler runs. The logic above remains defense-in-depth for
-deployments that bypass Uvicorn's `ProxyHeadersMiddleware` (Hypercorn, custom ASGI servers, etc.).
-
-> **Warning:** In Python 3.14, documentation-range IPs such as `203.0.113.x` are classified as private. When
-> testing `X-Real-IP` behaviour locally, use globally routable addresses (for example `8.8.8.8`) and configure
-> `trusted_proxy_ips` to include your test peer (for example `127.0.0.1`).
-
-For authenticated APIs, rate limiting buckets by verified JWT access token ``sub`` by default
-(``identity_from_access_token=True``). Anonymous or invalid tokens fall back to the secure client IP.
-
-```python
-handler = FastAPIRestRateLimitHandler(calls_count=50, minutes=1)
-```
-
-Disable JWT identity when you need IP-only buckets:
-
-```python
-handler = FastAPIRestRateLimitHandler(calls_count=50, minutes=1, identity_from_access_token=False)
-```
-
-Or set ``FASTAPI_RATE_LIMIT__IDENTITY_FROM_ACCESS_TOKEN=false`` in the environment.
-
-For custom identity resolution (for example Keycloak ``request.state.user_info["sub"]`` after an auth
-``Depends``), pass ``identifier_fn``:
-
-```python
-def current_user_id(request: Request) -> str:
-    return str(request.state.user_info["sub"])
-
-
-handler = FastAPIRestRateLimitHandler(calls_count=50, minutes=1, identifier_fn=current_user_id)
-```
-
-For manual JWT extraction in a custom ``identifier_fn``:
-
-```python
-from archipy.helpers.interceptors.fastapi.rate_limit.identifiers import resolve_jwt_access_token_sub
-
-
-def jwt_or_ip_identifier(request: Request) -> str:
-    return resolve_jwt_access_token_sub(request) or handler._extract_client_ip(request)
-```
-
-#### Multiple windows
-
-Pass ``additional_windows`` to enforce burst and sustained tiers on the same endpoint. All windows
-must pass; successful responses report the most constrained remaining quota in ``X-RateLimit-*``
-headers.
-
-```python
-from archipy.models.dtos.rate_limit_window_dto import RateLimitWindowDTO
-
-handler = FastAPIRestRateLimitHandler(
-    calls_count=10,
-    seconds=1,
-    additional_windows=[RateLimitWindowDTO(calls_count=1000, window_ms=86_400_000)],
-)
-```
-
-#### Per-query-parameter buckets
-
-Pass ``query_params`` together with server-resolved identity (``identity_from_access_token=True`` by default,
-or ``identifier_fn``). Values are hashed by default to keep Redis keys bounded:
-
-```python
-handler = FastAPIRestRateLimitHandler(
-    calls_count=50,
-    minutes=1,
-    query_params={"action"},
-)
-
-@app.get("/api/action", dependencies=[Depends(handler)])
-async def action() -> dict[str, str]:
-    return {"status": "ok"}
-```
-
-> **Warning:** Do not rely on client-controlled query parameters alone to identify users. Use
-> ``identity_from_access_token`` or ``identifier_fn`` for per-user quotas. Set
-> ``require_identifier_for_query_params=False`` only when query parameters are not used for user identity.
+`FastAPIRestRateLimitHandler` previously resolved the client identity from trusted proxy
+headers (`CF-Connecting-IP`, `True-Client-IP`, `Forwarded`, `X-Forwarded-For`, `X-Real-IP`)
+only when the immediate peer matched `FASTAPI_RATE_LIMIT.TRUSTED_PROXY_IPS` /
+`FASTAPI.FORWARDED_ALLOW_IPS`. This behavior is deprecated along with the handler; in
+`fastapi-redis-sdk` per-client counters default to the client IP. For per-user quotas, identify
+the caller in your auth `Depends` and use a distinct `scope` per user instead.
 
 ## Using Multiple Interceptors
 

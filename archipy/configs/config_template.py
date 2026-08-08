@@ -8,6 +8,7 @@ and more.
 import contextlib
 import logging
 import os
+import warnings
 from enum import StrEnum
 from typing import Literal, Self
 from urllib.parse import urlparse
@@ -202,9 +203,31 @@ class FastAPIConfig(BaseModel):
 class FastAPIRateLimitConfig(BaseModel):
     """Configuration for FastAPI REST rate limiting.
 
-    Controls trusted-proxy resolution, Redis key layout, failure modes, and
-    standard rate-limit response headers for ``FastAPIRestRateLimitHandler``.
+    .. deprecated::
+        ``FastAPIRateLimitConfig`` belongs to the deprecated FastAPI rate-limit interceptor
+        and will be removed in a future major release. Migrate to the official
+        `fastapi-redis-sdk <https://github.com/redis/fastapi-redis-sdk>`_, which configures
+        rate limiting through ``REDIS_*`` environment variables.       Note: unlike the handler, this class cannot raise on instantiation because
+       ``BaseConfig`` instantiates it as a field default at import time; instead it emits a
+       ``DeprecationWarning`` (suppressed for the internal ``BaseConfig`` default).
+
+       Controls trusted-proxy resolution, Redis key layout, failure modes, and
+       standard rate-limit response headers for ``FastAPIRestRateLimitHandler``.
     """
+
+    def __init__(self, **data: object) -> None:
+        """Initialize the config, emitting a deprecation warning.
+
+        Args:
+            data: Config field values.
+        """
+        warnings.warn(
+            "FastAPIRateLimitConfig is deprecated and will be removed in a future major release. "
+            "Migrate to fastapi-redis-sdk (https://github.com/redis/fastapi-redis-sdk).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(**data)
 
     TRUSTED_PROXY_IPS: list[str] | None = Field(
         default=None,

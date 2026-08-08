@@ -265,6 +265,29 @@ Both enforce the singleton pattern but suit different use cases:
 
 ---
 
+## Deprecations
+
+### Which APIs are deprecated?
+
+ArchiPy currently deprecates the **FastAPI rate-limit interceptor**, which is superseded by the official
+[fastapi-redis-sdk](https://github.com/redis/fastapi-redis-sdk). The APIs below are no longer maintained and will be
+removed in a future major release.
+
+| Affected API                                                                             | Runtime signal when used now                   | Replacement                              |
+|------------------------------------------------------------------------------------------|-----------------------------------------------|------------------------------------------|
+| `FastAPIRestRateLimitHandler`                                                            | `DeprecationError` on instantiation           | `rate_limit()` dependency from `fastapi-redis-sdk` |
+| `extract_bearer_token` / `resolve_jwt_access_token_sub` (`fastapi.rate_limit.identifiers`) | `DeprecationError` on call                   | Identity resolution in your own auth `Depends` |
+| `FastAPIRateLimitConfig`                                                                 | `DeprecationWarning` on instantiation         | `fastapi-redis-sdk` with `REDIS_*` env vars |
+| `BaseConfig.FASTAPI_RATE_LIMIT`                                                          | Deprecated config field                       | —                                        |
+| `FASTAPI_RATE_LIMIT__*` environment variables                                            | Deprecated config variables                   | `REDIS_*` environment variables          |
+
+**Not affected:** the gRPC rate-limit interceptor, `GrpcRateLimitConfig`, `RateLimitUtils`, and
+`RateLimitWindowDTO` remain fully supported.
+
+Follow the [migration guide](../tutorials/helpers/interceptors.md#migrating-to-fastapi-redis-sdk) to switch.
+
+---
+
 ## See Also
 
 - [Concepts](../getting-started/concepts.md) — Clean Architecture layers and import rules
@@ -272,3 +295,4 @@ Both enforce the singleton pattern but suit different use cases:
 - [Testing Strategy](../tutorials/testing_strategy.md) — unit, integration, and BDD test patterns
 - [Configuration Management](../tutorials/config_management.md) — environment variables, `.env` files, nested config
 - [Error Handling](../tutorials/error_handling.md) — domain exceptions and chaining
+- [Interceptors](../tutorials/helpers/interceptors.md) — gRPC & FastAPI interceptors and the rate-limit migration guide

@@ -9,9 +9,11 @@ from fastapi import HTTPException, Request, Response
 from starlette.status import HTTP_429_TOO_MANY_REQUESTS, HTTP_503_SERVICE_UNAVAILABLE
 
 from archipy.configs.base_config import BaseConfig
+from archipy.helpers.decorators.deprecation_exception import class_deprecation_error
 from archipy.helpers.interceptors.fastapi.rate_limit.identifiers import resolve_jwt_access_token_sub
 from archipy.helpers.utils.rate_limit_utils import RateLimitUtils
 from archipy.models.errors import InvalidArgumentError
+from archipy.models.types.language_type import LanguageType
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -29,8 +31,16 @@ _SINGLE_VALUE_PROXY_HEADER_NAMES: tuple[str, ...] = (
 )
 
 
+@class_deprecation_error(operation="FastAPIRestRateLimitHandler", lang=LanguageType.EN)
 class FastAPIRestRateLimitHandler:
     """A rate-limiting handler for FastAPI REST endpoints using Redis for tracking.
+
+    .. deprecated::
+        ``FastAPIRestRateLimitHandler`` is deprecated and will be removed in a future major
+        release. Instantiating it raises ``DeprecationError``. Migrate to the official
+        `fastapi-redis-sdk <https://github.com/redis/fastapi-redis-sdk>`_, which provides the
+        ``rate_limit()`` FastAPI dependency with distributed per-client counters and the same
+        ``X-RateLimit-*`` / ``Retry-After`` headers (Redis 7.4+).
 
     This class provides rate-limiting functionality by tracking the number of requests
     made to a specific endpoint within a defined time window. If the request limit is
@@ -124,11 +134,8 @@ class FastAPIRestRateLimitHandler:
             InvalidArgumentError: If ``calls_count``, the computed window, or ``query_params`` config is invalid.
 
         Example:
-            >>> # Allow 100 requests per minute
-            >>> handler = FastAPIRestRateLimitHandler(calls_count=100, minutes=1)
-            >>>
-            >>> # Allow 1000 requests per day with specific query params
-            >>> handler = FastAPIRestRateLimitHandler(calls_count=1000, days=1, query_params={"user_id", "action"})
+            Deprecated. See the `fastapi-redis-sdk <https://github.com/redis/fastapi-redis-sdk>`_
+            migration guide for the replacement ``rate_limit()`` dependency.
         """
         primary_window = RateLimitUtils.compute_rate_limit_window(
             calls_count=calls_count,

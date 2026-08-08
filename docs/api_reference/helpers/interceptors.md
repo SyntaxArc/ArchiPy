@@ -21,6 +21,10 @@ heading_level: 3
 
 ### rate_limit
 
+> **Deprecated:** The FastAPI rate-limit interceptor is deprecated and will be removed in a
+> future major release. Migrate to the official
+> [fastapi-redis-sdk](https://github.com/redis/fastapi-redis-sdk).
+
 FastAPI interceptor that enforces configurable rate limits on HTTP endpoints using Redis as a backend.
 
 ::: archipy.helpers.interceptors.fastapi.rate_limit.fastapi_rest_rate_limit_handler

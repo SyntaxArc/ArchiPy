@@ -314,8 +314,9 @@ except CacheError as e:
 ### INCREX Window Counter
 
 Redis 8.8 adds the `INCREX` command — a generalized increment with optional bounds and conditional expiration.
-ArchiPy exposes it as `increx()` on both sync and async adapters. It is the primitive behind
-[FastAPI rate limiting](../helpers/interceptors.md#rate-limiting-dependency).
+ArchiPy exposes it as `increx()` on both sync and async adapters. It is the primitive behind the
+[deprecated FastAPI rate limiting](../helpers/interceptors.md#rate-limiting-dependency) handler
+(migrate to `fastapi-redis-sdk`).
 
 > **Note:** Redis **8.8+** is required. The test container image in `.env.test` is `redis:8.8.0-alpine`.
 > `fakeredis` does not implement `INCREX`; use a real Redis 8.8 instance to exercise this command.
@@ -875,6 +876,6 @@ else:
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — Redis configuration setup
 - [Cache Decorator](../helpers/decorators.md#cache-decorator) — TTL cache decorator usage
-- [Interceptors - Rate Limiting](../helpers/interceptors.md#rate-limiting-dependency) — FastAPI rate limiting with `INCREX`
+- [Interceptors - Rate Limiting](../helpers/interceptors.md#rate-limiting-dependency) — deprecated FastAPI rate limiting with `INCREX` (migrate to `fastapi-redis-sdk`)
 - [BDD Testing](../testing_strategy.md) — RediSearch scenarios in `features/redis_adapter.feature` (container and cluster)
 - [API Reference](../../api_reference/adapters/redis.md) — Full Redis adapter API documentation
