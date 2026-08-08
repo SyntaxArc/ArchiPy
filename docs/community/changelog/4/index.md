@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 4.x series"
 
 | Version             | Date       | Summary                                                                                         |
 |---------------------|------------|-------------------------------------------------------------------------------------------------|
+| [4.20.0](4.20.0.md) | 2026-08-03 | Deprecate the FastAPI rate-limit interceptor; migrate to fastapi-redis-sdk                    |
 | [4.19.0](4.19.0.md) | 2026-08-02 | HashiCorp Vault adapter, settings source, multi-auth, BDD coverage, and docs                    |
 | [4.18.0](4.18.0.md) | 2026-08-02 | MySQL SQLAlchemy adapter (sync/async), atomic decorators, BDD coverage, and docs                |
 | [4.17.1](4.17.1.md) | 2026-08-02 | Keycloak and Redis adapter mixin refactor, TYPE_CHECKING import cleanup, and CI/DTO fixes       |
