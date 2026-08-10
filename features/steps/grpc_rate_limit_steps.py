@@ -345,6 +345,14 @@ def step_when_compute_rate_limit_window_invalid(context, calls_count, seconds):
         scenario_context.store("invalid_handler_error", exc)
 
 
+@then("an InvalidArgumentError should be raised")
+def step_then_invalid_argument_error_raised(context):
+    """Assert InvalidArgumentError was raised for invalid window construction."""
+    scenario_context = get_current_scenario_context(context)
+    error = scenario_context.get("invalid_handler_error")
+    assert isinstance(error, InvalidArgumentError), f"Expected InvalidArgumentError, got {error!r}"
+
+
 @then("gRPC outcome {index:d} should be {outcome}")
 def step_then_grpc_outcome(context, index, outcome):
     """Assert the outcome of a stored gRPC invocation."""
