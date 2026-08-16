@@ -149,7 +149,7 @@ class AttachmentHandler:
         if isinstance(source, str):
             return Path(source).read_bytes()
         if isinstance(source, os.PathLike):
-            path_str: str = os.fspath(source)  # ty: ignore[no-matching-overload]
+            path_str: str = os.fspath(source)
             return Path(path_str).read_bytes()
         raise InvalidArgumentError(
             argument_name="source",
