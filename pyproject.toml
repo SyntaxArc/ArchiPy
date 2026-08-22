@@ -25,21 +25,21 @@ dependency-injection = ["dependency-injector>=4.49.1"]
 elastic-apm = ["elastic-apm>=6.26.2"]
 elasticsearch = ["elasticsearch>=9.5.0"]
 elasticsearch-async = ["elasticsearch[async]>=9.5.0"]
-fakeredis = ["fakeredis>=2.37.0"]
+fakeredis = ["fakeredis>=2.37.1"]
 fastapi = ["fastapi[all]>=0.141.1"]
-grpc = ["grpcio>=1.83.0", "grpcio-health-checking>=1.83.0", "protobuf>=7.35.1"]
+grpc = ["grpcio>=1.83.0", "grpcio-health-checking>=1.83.0", "protobuf>=7.36.0"]
 jwt = ["pyjwt>=2.13.0"]
 kafka = ["confluent-kafka>=2.15.0"]
 keycloak = ["python-keycloak>=7.1.1", "cachetools>=7.1.7", "async-lru>=2.3.0"]
-minio = ["boto3>=1.43.72", "cachetools>=7.1.7", "async-lru>=2.3.0"]
+minio = ["boto3>=1.43.78", "cachetools>=7.1.7", "async-lru>=2.3.0"]
 parsian-ipg = ["zeep>=4.3.3", "requests[socks]>=2.34.2"]
-parsian-ipg-async = ["zeep[async]>=4.3.3", "httpx2[socks]>=2.10.0"]
+parsian-ipg-async = ["zeep[async]>=4.3.3", "httpx2[socks]>=2.12.0"]
 mysql = ["pymysql>=1.2.0"]
 mysql-async = ["asyncmy2>=0.2.21"]
 postgres = ["psycopg[binary,pool]>=3.3.4"]
 prometheus = ["prometheus-client>=0.26.0"]
 redis = ["redis[hiredis]>=8.1.0"]
-saman-ipg = ["httpx2[socks]>=2.10.0"]
+saman-ipg = ["httpx2[socks]>=2.12.0"]
 scheduler = ["apscheduler>=3.11.3"]
 scylladb = ["scylla-driver>=3.29.11", "lz4>=4.4.5", "cachetools>=7.1.7", "async-lru>=2.3.0"]
 sentry = ["sentry-sdk>=2.68.0"]
@@ -59,26 +59,26 @@ build-backend = "hatchling.build"
 dev = [
     "add-trailing-comma>=4.0.0",
     "bandit>=1.9.4",
-    "boto3-stubs>=1.43.72",
+    "boto3-stubs>=1.43.78",
     "codespell>=2.4.3",
     "pre-commit-hooks>=6.0.0",
     "pre-commit>=4.6.2",
-    "ruff>=0.16.3",
-    "ty>=0.0.72",
+    "ruff>=0.16.4",
+    "ty>=0.0.73",
     "types-cachetools>=7.0.0.20260713",
     "types-grpcio>=1.83.0.20260730",
-    "types-protobuf>=7.34.1.20260816",
+    "types-protobuf>=7.35.1.20260822",
     "types-pymysql>=1.2.0.20260807",
     "types-regex>=2026.7.19.20260720",
     "types-requests>=2.33.0.20260712",
-    "validate-pyproject>=0.25",
+    "validate-pyproject>=0.26",
 ]
 
 docs = [
     "mkdocs-autorefs>=1.4.4",
     "mkdocs-material>=9.7.7",
     "mkdocs>=1.6.1",
-    "mkdocstrings-python>=2.0.5",
+    "mkdocstrings-python>=2.0.7",
     "mkdocstrings>=1.0.6",
     "pymdown-extensions>=11.0.1",
 ]
