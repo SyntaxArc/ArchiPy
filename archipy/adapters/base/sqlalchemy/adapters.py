@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, override
 from sqlalchemy import Delete, Executable, Result, ScalarResult, Update, func, select
 
 from archipy.adapters.base.sqlalchemy.ports import AnyExecuteParams, AsyncSQLAlchemyPort, SQLAlchemyPort
-from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import SQLAlchemyConfig
 from archipy.models.dtos.sort_dto import SortDTO
 from archipy.models.entities import BaseEntity
@@ -233,16 +232,15 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
         orm_config: Configuration for SQLAlchemy. If None, uses global config.
     """
 
-    def __init__(self, orm_config: ConfigT | None = None) -> None:
+    def __init__(self, orm_config: ConfigT) -> None:
         """Initialize the base adapter with a session manager.
 
         Args:
-            orm_config: Configuration for SQLAlchemy. If None, uses global config.
+            orm_config: Configuration for SQLAlchemy. Subclasses resolve the
+                appropriate default from global config when not provided.
         """
-        configs = BaseConfig.global_config().SQLALCHEMY if orm_config is None else orm_config
-        # Cast to ConfigT since subclasses will ensure the proper type
         self.session_manager: BaseSQLAlchemySessionManager[ConfigT] = self._create_session_manager(
-            configs,
+            orm_config,
         )
 
     def _create_session_manager(self, configs: ConfigT) -> BaseSQLAlchemySessionManager[ConfigT]:
@@ -564,16 +562,15 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
         orm_config: Configuration for SQLAlchemy. If None, uses global config.
     """
 
-    def __init__(self, orm_config: ConfigT | None = None) -> None:
+    def __init__(self, orm_config: ConfigT) -> None:
         """Initialize the base async adapter with a session manager.
 
         Args:
-            orm_config: Configuration for SQLAlchemy. If None, uses global config.
+            orm_config: Configuration for SQLAlchemy. Subclasses resolve the
+                appropriate default from global config when not provided.
         """
-        configs = BaseConfig.global_config().SQLALCHEMY if orm_config is None else orm_config
-        # Cast to ConfigT since subclasses will ensure the proper type
         self.session_manager: AsyncBaseSQLAlchemySessionManager[ConfigT] = self._create_async_session_manager(
-            configs,
+            orm_config,
         )
 
     def _create_async_session_manager(self, configs: ConfigT) -> AsyncBaseSQLAlchemySessionManager[ConfigT]:
