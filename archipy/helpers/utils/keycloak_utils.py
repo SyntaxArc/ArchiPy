@@ -2,28 +2,10 @@ import functools
 import logging
 from contextvars import ContextVar
 from functools import cache
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-    from grpc import ServicerContext
-    from grpc.aio import ServicerContext as AsyncServicerContext
-
-try:
-    from grpc import ServicerContext
-    from grpc.aio import ServicerContext as AsyncServicerContext
-
-    GRPC_AVAILABLE = True
-    GrpcContextType = ServicerContext
-    AsyncGrpcContextType = AsyncServicerContext
-except ImportError:
-    # Type stubs for when grpc is not available
-    ServicerContext: type = object  # Explicit type annotation for shadowing
-    AsyncServicerContext: type = object  # Explicit type annotation for shadowing
-    GRPC_AVAILABLE = False
-    GrpcContextType = object
-    AsyncGrpcContextType = object
 
 from fastapi import Depends, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -37,6 +19,11 @@ from archipy.models.errors import (
     PermissionDeniedError,
     TokenExpiredError,
     UnauthenticatedError,
+)
+from archipy.models.errors.base_error import (
+    GRPC_AVAILABLE,
+    AsyncServicerContext,
+    ServicerContext,
 )
 from archipy.models.types.language_type import LanguageType
 
@@ -66,8 +53,7 @@ def _abort_grpc_sync_if_servicer_context(error: BaseError, context: object) -> N
     if not GRPC_AVAILABLE or not hasattr(error, "abort_grpc_sync"):
         return
     if isinstance(context, ServicerContext):
-        # Any cast: base_error's ServicerContext alias diverges under optional-grpc typing.
-        error.abort_grpc_sync(cast("Any", context))
+        error.abort_grpc_sync(context)
 
 
 async def _abort_grpc_async_if_servicer_context(error: BaseError, context: object) -> None:
@@ -75,8 +61,7 @@ async def _abort_grpc_async_if_servicer_context(error: BaseError, context: objec
     if not GRPC_AVAILABLE or not hasattr(error, "abort_grpc_async"):
         return
     if isinstance(context, AsyncServicerContext):
-        # Any cast: base_error's AsyncServicerContext alias diverges under optional-grpc typing.
-        await error.abort_grpc_async(cast("Any", context))
+        await error.abort_grpc_async(context)
 
 
 def _extract_roles(user_info: dict[str, Any], client_id: str | None) -> set[str]:

@@ -42,7 +42,8 @@ class BaseRangeDTO[R](BaseDTO):
             OutOfRangeError: If from_ is greater than to.
         """
         if self.from_ is not None and self.to is not None:
-            # Cast through Comparable so the type checker accepts `>`.
+            # Cast through Comparable so the type checker accepts `>` (ty does not
+            # apply the R bound when resolving operators on generic attributes).
             try:
                 if cast("Comparable", self.from_) > cast("Comparable", self.to):
                     raise OutOfRangeError(field_name="from_")

@@ -15,7 +15,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, get_args
 
 import hvac
 from pydantic_settings import PydanticBaseSettingsSource
@@ -102,22 +102,7 @@ def _resolve_optional_file_or_value(file_path: str | None, value: str | None) ->
     return value
 
 
-_SUPPORTED_AUTH_METHODS = frozenset(
-    {
-        "token",
-        "approle",
-        "kubernetes",
-        "userpass",
-        "ldap",
-        "okta",
-        "jwt",
-        "aws",
-        "azure",
-        "gcp",
-        "github",
-        "cert",
-    },
-)
+_AUTH_METHOD_MAP: dict[str, VaultAuthMethod] = {method: method for method in get_args(VaultAuthMethod)}
 
 
 def _build_session(config: VaultConfig) -> Session:
@@ -541,7 +526,8 @@ def _vault_config_from_env() -> VaultConfig:
     Used by ``VaultSettingsSource`` before the full settings pipeline is built.
     """
     auth_method = os.environ.get("VAULT__AUTH_METHOD", "token").strip().lower() or "token"
-    if auth_method not in _SUPPORTED_AUTH_METHODS:
+    resolved_auth_method = _AUTH_METHOD_MAP.get(auth_method)
+    if resolved_auth_method is None:
         raise ConfigurationError(
             operation="vault_config",
             reason=f"Invalid VAULT__AUTH_METHOD: {auth_method}",
@@ -554,7 +540,7 @@ def _vault_config_from_env() -> VaultConfig:
         ENABLED=_env_truthy("VAULT__ENABLED"),
         ADDR=_env_opt("VAULT__ADDR"),
         NAMESPACE=_env_opt("VAULT__NAMESPACE"),
-        AUTH_METHOD=cast("VaultAuthMethod", auth_method),
+        AUTH_METHOD=resolved_auth_method,
         TOKEN=_env_opt("VAULT__TOKEN"),
         TOKEN_FILE=_env_opt("VAULT__TOKEN_FILE"),
         APPROLE_ROLE_ID=_env_opt("VAULT__APPROLE_ROLE_ID"),

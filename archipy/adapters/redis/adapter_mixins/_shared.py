@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from redis import RedisCluster
@@ -96,6 +96,5 @@ def _normalize_zset_keys(
 ) -> dict[str, float] | list[str]:
     """Normalize sorted-set keys for zunion/zinter into a form the Redis client accepts."""
     if isinstance(keys, Mapping):
-        items = cast("Mapping[bytes | str, float]", keys).items()
-        return {str(k): float(v) for k, v in items}
-    return [str(k) for k in keys]
+        return {str(key): float(value) for key, value in keys.items()}
+    return [str(key) for key in keys]

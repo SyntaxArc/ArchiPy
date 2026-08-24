@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from async_lru import alru_cache
 from keycloak.exceptions import (
@@ -27,6 +28,24 @@ if TYPE_CHECKING:
     )
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_userinfo(raw: dict[str, Any] | bytes) -> KeycloakUserType:
+    """Normalize a Keycloak userinfo response into a string-keyed dict.
+
+    Args:
+        raw: The userinfo payload as returned by python-keycloak (parsed dict or raw JSON bytes).
+
+    Returns:
+        User information with string keys.
+
+    Raises:
+        InternalError: If the payload is neither a JSON object nor a dict.
+    """
+    payload = json.loads(raw) if isinstance(raw, bytes) else raw
+    if not isinstance(payload, dict):
+        raise InternalError(additional_data={"operation": "userinfo", "error": "unexpected payload type"})
+    return {str(key): value for key, value in payload.items()}
 
 
 class KeycloakAuthMixin(SyncKeycloakMixinBase):
@@ -157,7 +176,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
 
     @ttl_cache_decorator(ttl_seconds=30, maxsize=100)  # Cache for 30 seconds
     def _get_userinfo_cached(self, token: str) -> KeycloakUserType:
-        return cast("KeycloakUserType", self._openid_adapter.userinfo(token))
+        return _normalize_userinfo(self._openid_adapter.userinfo(token))
 
     @ttl_cache_decorator(ttl_seconds=3600, maxsize=1)  # Cache for 1 hour
     def get_well_known_config(self) -> dict[str, Any] | None:
@@ -457,7 +476,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
 
     @alru_cache(ttl=30, maxsize=100)  # Cache for 30 seconds
     async def _get_userinfo_cached(self, token: str) -> KeycloakUserType:
-        return cast("KeycloakUserType", await self.openid_adapter.a_userinfo(token))
+        return _normalize_userinfo(await self.openid_adapter.a_userinfo(token))
 
     @alru_cache(ttl=3600, maxsize=1)  # Cache for 1 hour
     async def get_well_known_config(self) -> dict[str, Any] | None:

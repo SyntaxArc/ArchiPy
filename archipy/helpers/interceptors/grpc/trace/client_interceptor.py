@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import grpc
 
@@ -40,7 +40,10 @@ def _streaming_client_metadata(
     config: BaseConfig,
 ) -> list[tuple[str, str | bytes]]:
     """Headers for streaming RPCs: transaction-level traceparent + Sentry headers (no span)."""
-    meta: list[tuple[str, str | bytes]] = list(cast("Any", call_details.metadata or []))
+    meta = [
+        (str(key), value if isinstance(value, str | bytes) else str(value))
+        for key, value in (call_details.metadata or ())
+    ]
     if config.ELASTIC_APM.IS_ENABLED and not _metadata_has_traceparent_key(meta):
         try:
             import elasticapm
