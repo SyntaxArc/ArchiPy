@@ -7,6 +7,10 @@ description: "Release history and version changelog for ArchiPy."
 
 All notable changes to ArchiPy are documented here, organized by major version series.
 
+## [5.x Series](5/index.md)
+
+1 release — from 5.0.0 to 5.0.0
+
 ## [4.x Series](4/index.md)
 
 44 releases — from 4.0.0 to 4.20.0
