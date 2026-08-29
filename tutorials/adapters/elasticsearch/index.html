@@ -1488,10 +1488,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#apm-integration" class="md-nav__link">
+  <a href="#observability-opentelemetry" class="md-nav__link">
     <span class="md-ellipsis">
       
-        APM Integration
+        Observability (OpenTelemetry)
       
     </span>
   </a>
@@ -3395,6 +3395,8 @@
       
         
       
+        
+      
     
     
     
@@ -3449,6 +3451,34 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../community/changelog/5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.x
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -4056,10 +4086,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#apm-integration" class="md-nav__link">
+  <a href="#observability-opentelemetry" class="md-nav__link">
     <span class="md-ellipsis">
       
-        APM Integration
+        Observability (OpenTelemetry)
       
     </span>
   </a>
@@ -5049,30 +5079,21 @@ re-indexing).</p>
 </span><span id="__span-25-26"><a id="__codelineno-25-26" name="__codelineno-25-26" href="#__codelineno-25-26"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Elasticsearch cluster is healthy"</span><span class="p">)</span>
 </span><span id="__span-25-27"><a id="__codelineno-25-27" name="__codelineno-25-27" href="#__codelineno-25-27"></a>    <span class="k">return</span> <span class="n">es</span>
 </span></code></pre></div>
-<h3 id="apm-integration">APM Integration<a class="headerlink" href="#apm-integration" title="Permanent link">&para;</a></h3>
-<p>Use <code>ElasticsearchAPMConfig</code> to enable Elastic APM for distributed tracing in your service:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">elasticapm</span>  <span class="c1"># type: ignore[import-untyped]</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
-</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>
-</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>
-</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">AppConfig</span><span class="p">(</span><span class="n">BaseConfig</span><span class="p">):</span>
-</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>    <span class="n">APP_NAME</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"my-service"</span>
-</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>
-</span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>
-</span><span id="__span-26-10"><a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a><span class="n">config</span> <span class="o">=</span> <span class="n">AppConfig</span><span class="p">()</span>
-</span><span id="__span-26-11"><a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a><span class="n">apm_cfg</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">ELASTIC_APM</span>
-</span><span id="__span-26-12"><a id="__codelineno-26-12" name="__codelineno-26-12" href="#__codelineno-26-12"></a>
-</span><span id="__span-26-13"><a id="__codelineno-26-13" name="__codelineno-26-13" href="#__codelineno-26-13"></a><span class="k">if</span> <span class="n">apm_cfg</span><span class="o">.</span><span class="n">IS_ENABLED</span><span class="p">:</span>
-</span><span id="__span-26-14"><a id="__codelineno-26-14" name="__codelineno-26-14" href="#__codelineno-26-14"></a>    <span class="n">apm_client</span> <span class="o">=</span> <span class="n">elasticapm</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span>
-</span><span id="__span-26-15"><a id="__codelineno-26-15" name="__codelineno-26-15" href="#__codelineno-26-15"></a>        <span class="n">server_url</span><span class="o">=</span><span class="n">apm_cfg</span><span class="o">.</span><span class="n">SERVER_URL</span><span class="p">,</span>
-</span><span id="__span-26-16"><a id="__codelineno-26-16" name="__codelineno-26-16" href="#__codelineno-26-16"></a>        <span class="n">service_name</span><span class="o">=</span><span class="n">apm_cfg</span><span class="o">.</span><span class="n">SERVICE_NAME</span><span class="p">,</span>
-</span><span id="__span-26-17"><a id="__codelineno-26-17" name="__codelineno-26-17" href="#__codelineno-26-17"></a>        <span class="n">secret_token</span><span class="o">=</span><span class="n">apm_cfg</span><span class="o">.</span><span class="n">SECRET_TOKEN</span><span class="o">.</span><span class="n">get_secret_value</span><span class="p">()</span> <span class="k">if</span> <span class="n">apm_cfg</span><span class="o">.</span><span class="n">SECRET_TOKEN</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-26-18"><a id="__codelineno-26-18" name="__codelineno-26-18" href="#__codelineno-26-18"></a>        <span class="n">environment</span><span class="o">=</span><span class="n">apm_cfg</span><span class="o">.</span><span class="n">ENVIRONMENT</span><span class="p">,</span>
-</span><span id="__span-26-19"><a id="__codelineno-26-19" name="__codelineno-26-19" href="#__codelineno-26-19"></a>        <span class="n">transaction_sample_rate</span><span class="o">=</span><span class="n">apm_cfg</span><span class="o">.</span><span class="n">TRANSACTION_SAMPLE_RATE</span><span class="p">,</span>
-</span><span id="__span-26-20"><a id="__codelineno-26-20" name="__codelineno-26-20" href="#__codelineno-26-20"></a>    <span class="p">)</span>
-</span><span id="__span-26-21"><a id="__codelineno-26-21" name="__codelineno-26-21" href="#__codelineno-26-21"></a>    <span class="n">elasticapm</span><span class="o">.</span><span class="n">instrument</span><span class="p">()</span>
+<h3 id="observability-opentelemetry">Observability (OpenTelemetry)<a class="headerlink" href="#observability-opentelemetry" title="Permanent link">&para;</a></h3>
+<p>The Elasticsearch <strong>adapter</strong> (<code>ElasticsearchAdapter</code> / <code>AsyncElasticsearchAdapter</code>) is unchanged
+in 5.0.0. Elastic APM (<code>ElasticsearchAPMConfig</code> / <code>ELASTIC_APM</code>) was removed — use OpenTelemetry
+instead.</p>
+<p>Install the contrib instrumentor and enable OTel:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[otel-elasticsearch]"</span>
 </span></code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="nv">OTEL__IS_ENABLED</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="nv">OTEL__OTLP_ENDPOINT</span><span class="o">=</span>http://localhost:4317
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="nv">OTEL__TRACES_ENABLED</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="nv">OTEL__METRICS_ENABLED</span><span class="o">=</span><span class="nb">true</span>
+</span></code></pre></div>
+<p><code>OtelUtils.init_otel_if_needed</code> (via <code>AppUtils.create_fastapi_app</code> / <code>create_grpc_app</code>, or
+manually) instruments the Elasticsearch client library when that extra is installed. See
+<a href="../../observability/">Observability</a> for full configuration.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="connectionerror-on-startup"><code>ConnectionError</code> on startup<a class="headerlink" href="#connectionerror-on-startup" title="Permanent link">&para;</a></h3>
 <ul>
@@ -5111,6 +5132,7 @@ re-indexing).</p>
 <ul>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns with proper chaining</li>
 <li><a href="../../config_management/">Configuration Management</a> — Elasticsearch configuration setup</li>
+<li><a href="../../observability/">Observability</a> — OpenTelemetry (replaces Elastic APM)</li>
 <li><a href="../../../api_reference/adapters/elasticsearch/">API Reference</a> — Full Elasticsearch adapter API documentation</li>
 <li><a href="https://www.elastic.co/guide/en/elasticsearch/client/python-api/current/index.html">Elasticsearch Python Client docs</a></li>
 </ul>

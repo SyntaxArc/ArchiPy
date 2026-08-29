@@ -3052,6 +3052,8 @@
       
         
       
+        
+      
     
     
     
@@ -3109,6 +3111,34 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.x
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -3629,7 +3659,7 @@ maintained.</p>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Do not log sensitive data</strong> — passwords, tokens, credit card numbers, PII.</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Use structured logging</strong> (<code>logging</code> module with JSON formatters) to ease log analysis.</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Redact secrets</strong> in exception messages before they reach error trackers (Sentry, Elastic APM).</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong>Redact secrets</strong> in exception messages before they reach logs or OpenTelemetry spans.</li>
 </ul>
 <h3 id="dependency-management">Dependency Management<a class="headerlink" href="#dependency-management" title="Permanent link">&para;</a></h3>
 <ul class="task-list">

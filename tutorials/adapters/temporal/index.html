@@ -1237,15 +1237,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#prometheus-metrics-integration" class="md-nav__link">
+  <a href="#opentelemetry-metrics-and-tracing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prometheus Metrics Integration
+        OpenTelemetry Metrics and Tracing
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Prometheus Metrics Integration">
+    <nav class="md-nav" aria-label="OpenTelemetry Metrics and Tracing">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1264,6 +1264,17 @@
     <span class="md-ellipsis">
       
         Environment-Based Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-gets-wired" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What gets wired
       
     </span>
   </a>
@@ -1306,17 +1317,6 @@
         
       </ul>
     </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#prometheus-queries" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Prometheus Queries
-      
-    </span>
-  </a>
   
 </li>
         
@@ -3161,6 +3161,8 @@
       
         
       
+        
+      
     
     
     
@@ -3215,6 +3217,34 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../community/changelog/5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.x
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -3543,15 +3573,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#prometheus-metrics-integration" class="md-nav__link">
+  <a href="#opentelemetry-metrics-and-tracing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prometheus Metrics Integration
+        OpenTelemetry Metrics and Tracing
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Prometheus Metrics Integration">
+    <nav class="md-nav" aria-label="OpenTelemetry Metrics and Tracing">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -3570,6 +3600,17 @@
     <span class="md-ellipsis">
       
         Environment-Based Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-gets-wired" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What gets wired
       
     </span>
   </a>
@@ -3612,17 +3653,6 @@
         
       </ul>
     </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#prometheus-queries" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Prometheus Queries
-      
-    </span>
-  </a>
   
 </li>
         
@@ -3725,29 +3755,28 @@ error handling and Python 3.14 type hints.</p>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nv">TEMPORAL__NAMESPACE</span><span class="o">=</span>default
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">TEMPORAL__TASK_QUEUE</span><span class="o">=</span>my-task-queue
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nv">TEMPORAL__ENABLE_METRICS</span><span class="o">=</span><span class="nb">false</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nv">TEMPORAL__METRICS_PORT</span><span class="o">=</span><span class="m">8201</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nv">TEMPORAL__CLIENT_IDENTITY</span><span class="o">=</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nv">TEMPORAL__API_KEY</span><span class="o">=</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nv">TEMPORAL__LAZY_CONNECT</span><span class="o">=</span><span class="nb">false</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nv">TEMPORAL__KEEP_ALIVE_INTERVAL_MS</span><span class="o">=</span><span class="m">30000</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="nv">TEMPORAL__KEEP_ALIVE_TIMEOUT_MS</span><span class="o">=</span><span class="m">15000</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="nv">TEMPORAL__CLIENT_RPC_RETRY_MAX_RETRIES</span><span class="o">=</span><span class="m">10</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nv">TEMPORAL__CLIENT_RPC_RETRY_INITIAL_INTERVAL_MS</span><span class="o">=</span><span class="m">100</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="nv">TEMPORAL__CLIENT_RPC_RETRY_MAX_INTERVAL_MS</span><span class="o">=</span><span class="m">5000</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="nv">TEMPORAL__WORKER_GRACEFUL_SHUTDOWN_SECONDS</span><span class="o">=</span><span class="m">30</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="nv">TEMPORAL__WORKER_MAX_CACHED_WORKFLOWS</span><span class="o">=</span><span class="m">1000</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="nv">TEMPORAL__WORKER_DEBUG_MODE</span><span class="o">=</span><span class="nb">false</span>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="nv">TEMPORAL__WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION</span><span class="o">=</span><span class="nb">false</span>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="nv">TEMPORAL__TLS_CA_CERT</span><span class="o">=</span>/path/to/ca.crt
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="nv">TEMPORAL__TLS_CLIENT_CERT</span><span class="o">=</span>/path/to/client.crt
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="nv">TEMPORAL__TLS_CLIENT_KEY</span><span class="o">=</span>/path/to/client.key
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="nv">TEMPORAL__WORKFLOW_EXECUTION_TIMEOUT</span><span class="o">=</span><span class="m">300</span>
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="nv">TEMPORAL__WORKFLOW_RUN_TIMEOUT</span><span class="o">=</span><span class="m">60</span>
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="nv">TEMPORAL__ACTIVITY_START_TO_CLOSE_TIMEOUT</span><span class="o">=</span><span class="m">30</span>
-</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="nv">TEMPORAL__RETRY_MAXIMUM_ATTEMPTS</span><span class="o">=</span><span class="m">3</span>
-</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="nv">TEMPORAL__RETRY_BACKOFF_COEFFICIENT</span><span class="o">=</span><span class="m">2</span>.0
-</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="nv">TEMPORAL__RETRY_MAXIMUM_INTERVAL</span><span class="o">=</span><span class="m">60</span>
-</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="nv">TEMPORAL__RETRY_INITIAL_INTERVAL</span><span class="o">=</span><span class="m">1</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nv">TEMPORAL__CLIENT_IDENTITY</span><span class="o">=</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nv">TEMPORAL__API_KEY</span><span class="o">=</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nv">TEMPORAL__LAZY_CONNECT</span><span class="o">=</span><span class="nb">false</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nv">TEMPORAL__KEEP_ALIVE_INTERVAL_MS</span><span class="o">=</span><span class="m">30000</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nv">TEMPORAL__KEEP_ALIVE_TIMEOUT_MS</span><span class="o">=</span><span class="m">15000</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="nv">TEMPORAL__CLIENT_RPC_RETRY_MAX_RETRIES</span><span class="o">=</span><span class="m">10</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="nv">TEMPORAL__CLIENT_RPC_RETRY_INITIAL_INTERVAL_MS</span><span class="o">=</span><span class="m">100</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nv">TEMPORAL__CLIENT_RPC_RETRY_MAX_INTERVAL_MS</span><span class="o">=</span><span class="m">5000</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="nv">TEMPORAL__WORKER_GRACEFUL_SHUTDOWN_SECONDS</span><span class="o">=</span><span class="m">30</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="nv">TEMPORAL__WORKER_MAX_CACHED_WORKFLOWS</span><span class="o">=</span><span class="m">1000</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="nv">TEMPORAL__WORKER_DEBUG_MODE</span><span class="o">=</span><span class="nb">false</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="nv">TEMPORAL__WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION</span><span class="o">=</span><span class="nb">false</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="nv">TEMPORAL__TLS_CA_CERT</span><span class="o">=</span>/path/to/ca.crt
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="nv">TEMPORAL__TLS_CLIENT_CERT</span><span class="o">=</span>/path/to/client.crt
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="nv">TEMPORAL__TLS_CLIENT_KEY</span><span class="o">=</span>/path/to/client.key
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="nv">TEMPORAL__WORKFLOW_EXECUTION_TIMEOUT</span><span class="o">=</span><span class="m">300</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="nv">TEMPORAL__WORKFLOW_RUN_TIMEOUT</span><span class="o">=</span><span class="m">60</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="nv">TEMPORAL__ACTIVITY_START_TO_CLOSE_TIMEOUT</span><span class="o">=</span><span class="m">30</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="nv">TEMPORAL__RETRY_MAXIMUM_ATTEMPTS</span><span class="o">=</span><span class="m">3</span>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="nv">TEMPORAL__RETRY_BACKOFF_COEFFICIENT</span><span class="o">=</span><span class="m">2</span>.0
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="nv">TEMPORAL__RETRY_MAXIMUM_INTERVAL</span><span class="o">=</span><span class="m">60</span>
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="nv">TEMPORAL__RETRY_INITIAL_INTERVAL</span><span class="o">=</span><span class="m">1</span>
 </span></code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> <code>TEMPORAL__API_KEY</code> is for Temporal Cloud authentication. Local dev servers ignore it.</p>
@@ -4324,189 +4353,186 @@ error handling and Python 3.14 type hints.</p>
 </span><span id="__span-7-112"><a id="__codelineno-7-112" name="__codelineno-7-112" href="#__codelineno-7-112"></a>        <span class="c1"># Call parent error handler</span>
 </span><span id="__span-7-113"><a id="__codelineno-7-113" name="__codelineno-7-113" href="#__codelineno-7-113"></a>        <span class="k">await</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_handle_error</span><span class="p">(</span><span class="n">activity_input</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
 </span></code></pre></div>
-<h2 id="prometheus-metrics-integration">Prometheus Metrics Integration<a class="headerlink" href="#prometheus-metrics-integration" title="Permanent link">&para;</a></h2>
-<p>The Temporal adapter supports comprehensive metrics collection via Prometheus when enabled in configuration. The
-Temporal SDK automatically emits detailed metrics about workflow and activity execution, task queue operations, and
-worker performance.</p>
+<h2 id="opentelemetry-metrics-and-tracing">OpenTelemetry Metrics and Tracing<a class="headerlink" href="#opentelemetry-metrics-and-tracing" title="Permanent link">&para;</a></h2>
+<p>The Temporal adapter exports SDK metrics over OTLP and attaches Temporal's
+<code>TracingInterceptor</code> when OpenTelemetry is enabled on <code>BaseConfig.OTEL</code>.</p>
 <h3 id="configuration_1">Configuration<a class="headerlink" href="#configuration_1" title="Permanent link">&para;</a></h3>
-<p>Enable Prometheus metrics for Temporal by setting both the global Prometheus flag and the Temporal-specific metrics
-flag:</p>
+<p>Enable OTel globally and flip Temporal's metrics flag:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.temporal</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporalAdapter</span><span class="p">,</span> <span class="n">TemporalWorkerManager</span>
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.config_template</span><span class="w"> </span><span class="kn">import</span> <span class="n">PrometheusConfig</span><span class="p">,</span> <span class="n">TemporalConfig</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.config_template</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpentelemetryConfig</span><span class="p">,</span> <span class="n">TemporalConfig</span>
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1"># Configure logging</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="c1"># Configure global Prometheus settings</span>
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="p">()</span>
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="n">config</span><span class="o">.</span><span class="n">PROMETHEUS</span> <span class="o">=</span> <span class="n">PrometheusConfig</span><span class="p">(</span>
-</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>    <span class="n">IS_ENABLED</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Enable Prometheus globally</span>
-</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>    <span class="n">SERVER_PORT</span><span class="o">=</span><span class="mi">8200</span>  <span class="c1"># Metrics endpoint port</span>
-</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="p">)</span>
-</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>
-</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="c1"># Configure Temporal with metrics enabled</span>
-</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="n">temporal_config</span> <span class="o">=</span> <span class="n">TemporalConfig</span><span class="p">(</span>
-</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>    <span class="n">HOST</span><span class="o">=</span><span class="s2">"localhost"</span><span class="p">,</span>
-</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>    <span class="n">PORT</span><span class="o">=</span><span class="mi">7233</span><span class="p">,</span>
-</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>    <span class="n">NAMESPACE</span><span class="o">=</span><span class="s2">"default"</span><span class="p">,</span>
-</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>    <span class="n">TASK_QUEUE</span><span class="o">=</span><span class="s2">"my-task-queue"</span><span class="p">,</span>
-</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>    <span class="n">ENABLE_METRICS</span><span class="o">=</span><span class="kc">True</span>  <span class="c1"># Enable Temporal metrics</span>
-</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a><span class="p">)</span>
-</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>
-</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a><span class="c1"># Create adapter - metrics will be automatically configured</span>
-</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a><span class="c1"># The TemporalRuntimeManager singleton ensures consistent Runtime across all clients/workers</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="p">()</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="n">config</span><span class="o">.</span><span class="n">OTEL</span> <span class="o">=</span> <span class="n">OpentelemetryConfig</span><span class="p">(</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    <span class="n">IS_ENABLED</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="n">OTLP_ENDPOINT</span><span class="o">=</span><span class="s2">"http://localhost:4317"</span><span class="p">,</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>    <span class="n">PROTOCOL</span><span class="o">=</span><span class="s2">"grpc"</span><span class="p">,</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>    <span class="n">METRICS_ENABLED</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>    <span class="n">TRACES_ENABLED</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>    <span class="n">SERVICE_NAME</span><span class="o">=</span><span class="s2">"temporal-worker"</span><span class="p">,</span>
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="p">)</span>
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="n">BaseConfig</span><span class="o">.</span><span class="n">set_global</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>
+</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="n">temporal_config</span> <span class="o">=</span> <span class="n">TemporalConfig</span><span class="p">(</span>
+</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>    <span class="n">HOST</span><span class="o">=</span><span class="s2">"localhost"</span><span class="p">,</span>
+</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>    <span class="n">PORT</span><span class="o">=</span><span class="mi">7233</span><span class="p">,</span>
+</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>    <span class="n">NAMESPACE</span><span class="o">=</span><span class="s2">"default"</span><span class="p">,</span>
+</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>    <span class="n">TASK_QUEUE</span><span class="o">=</span><span class="s2">"my-task-queue"</span><span class="p">,</span>
+</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>    <span class="n">ENABLE_METRICS</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Uses BaseConfig.OTEL endpoint via OpenTelemetryConfig</span>
+</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a><span class="p">)</span>
+</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>
 </span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a><span class="n">temporal_adapter</span> <span class="o">=</span> <span class="n">TemporalAdapter</span><span class="p">(</span><span class="n">temporal_config</span><span class="p">)</span>
 </span><span id="__span-8-29"><a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a><span class="n">worker_manager</span> <span class="o">=</span> <span class="n">TemporalWorkerManager</span><span class="p">(</span><span class="n">temporal_config</span><span class="p">)</span>
 </span><span id="__span-8-30"><a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>
-</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Temporal adapter created with Prometheus metrics enabled"</span><span class="p">)</span>
+</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Temporal adapter created with OTLP metrics and TracingInterceptor"</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="environment-based-configuration">Environment-Based Configuration<a class="headerlink" href="#environment-based-configuration" title="Permanent link">&para;</a></h3>
-<p><code>BaseConfig</code> automatically reads <code>TEMPORAL__*</code> environment variables — no manual <code>os.getenv()</code> calls needed:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># TEMPORAL__HOST=temporal.production.com</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1"># TEMPORAL__ENABLE_METRICS=true</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1"># TEMPORAL__METRICS_PORT=8201</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># Or via pyproject.toml [tool.configs] section:</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="c1"># [tool.configs.TEMPORAL]</span>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># ENABLE_METRICS = true</span>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="c1"># HOST = "temporal.production.com"</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">OTEL__IS_ENABLED</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nv">OTEL__OTLP_ENDPOINT</span><span class="o">=</span>http://localhost:4317
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nv">OTEL__METRICS_ENABLED</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nv">OTEL__TRACES_ENABLED</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="nv">TEMPORAL__ENABLE_METRICS</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="nv">TEMPORAL__HOST</span><span class="o">=</span>temporal.production.com
 </span></code></pre></div>
+<h3 id="what-gets-wired">What gets wired<a class="headerlink" href="#what-gets-wired" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>When</th>
+<th>Mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Metrics</td>
+<td><code>TEMPORAL.ENABLE_METRICS</code> and <code>OTEL.IS_ENABLED</code> + <code>METRICS_ENABLED</code></td>
+<td>Temporal <code>Runtime</code> with <code>OpenTelemetryConfig</code> (OTLP URL/headers/protocol from <code>OTEL</code>)</td>
+</tr>
+<tr>
+<td>Traces</td>
+<td><code>OTEL.IS_ENABLED</code> and <code>TRACES_ENABLED</code></td>
+<td><code>temporalio.contrib.opentelemetry.TracingInterceptor</code> on the client after <code>OtelUtils.init_otel_if_needed</code></td>
+</tr>
+</tbody>
+</table>
 <h3 id="available-metrics">Available Metrics<a class="headerlink" href="#available-metrics" title="Permanent link">&para;</a></h3>
-<p>When metrics are enabled, the Temporal SDK automatically exposes comprehensive metrics at
-<code>http://localhost:8200/metrics</code> (or your configured port). These metrics are shared with any existing FastAPI or gRPC
-metrics.</p>
+<p>When metrics are enabled, the Temporal SDK emits client and worker metrics to your OTLP
+collector (same endpoint as the rest of the app). Typical series include:</p>
 <h4 id="client-side-metrics">Client-Side Metrics<a class="headerlink" href="#client-side-metrics" title="Permanent link">&para;</a></h4>
-<p>Metrics emitted by the Temporal client (adapter):</p>
 <ul>
-<li><code>temporal_request_*</code> - Client request counts and latency</li>
-<li><code>temporal_long_request_*</code> - Long-polling request metrics</li>
-<li><code>temporal_workflow_*</code> - Workflow operation metrics (start, execute, cancel, terminate)</li>
-<li><code>temporal_sticky_cache_*</code> - Sticky workflow cache statistics</li>
+<li><code>temporal_request_*</code> — client request counts and latency</li>
+<li><code>temporal_long_request_*</code> — long-polling request metrics</li>
+<li><code>temporal_workflow_*</code> — workflow operation metrics (start, execute, cancel, terminate)</li>
+<li><code>temporal_sticky_cache_*</code> — sticky workflow cache statistics</li>
 </ul>
 <h4 id="worker-side-metrics">Worker-Side Metrics<a class="headerlink" href="#worker-side-metrics" title="Permanent link">&para;</a></h4>
-<p>Metrics emitted by Temporal workers:</p>
 <ul>
-<li><code>temporal_worker_task_slots_available</code> - Available task slots (gauge)</li>
-<li><code>temporal_worker_task_slots_used</code> - Task slots currently in use (gauge)</li>
-<li><code>temporal_worker_task_queue_poll_*</code> - Task queue polling metrics</li>
-<li><code>temporal_workflow_task_execution_*</code> - Workflow task execution metrics</li>
-<li><code>temporal_activity_task_execution_*</code> - Activity task execution metrics</li>
-<li><code>temporal_workflow_task_replay_latency</code> - Workflow replay latency histogram</li>
-<li><code>temporal_activity_execution_*</code> - Activity execution counts and latency</li>
+<li><code>temporal_worker_task_slots_available</code> / <code>_used</code> — task slot gauges</li>
+<li><code>temporal_worker_task_queue_poll_*</code> — task queue polling metrics</li>
+<li><code>temporal_workflow_task_execution_*</code> / <code>temporal_activity_task_execution_*</code> — task execution</li>
+<li><code>temporal_workflow_task_replay_latency</code> — workflow replay latency</li>
+<li><code>temporal_activity_execution_*</code> — activity execution counts and latency</li>
 </ul>
-<h3 id="prometheus-queries">Prometheus Queries<a class="headerlink" href="#prometheus-queries" title="Permanent link">&para;</a></h3>
-<p>Example PromQL queries for monitoring Temporal workflows:</p>
-<div class="language-promql highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Workflow execution rate (per second)</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kr">rate</span><span class="o">(</span><span class="nv">temporal_workflow_task_execution_total</span><span class="p">[</span><span class="s">5m</span><span class="p">]</span><span class="o">)</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Activity failure rate</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="kr">rate</span><span class="o">(</span><span class="nv">temporal_activity_task_execution_failed_total</span><span class="p">[</span><span class="s">5m</span><span class="p">]</span><span class="o">)</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
-</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># P95 activity execution latency</span>
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="kr">histogram_quantile</span><span class="o">(</span><span class="mf">0.95</span><span class="p">,</span>
-</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">  </span><span class="kr">rate</span><span class="o">(</span><span class="nv">temporal_activity_execution_latency_bucket</span><span class="p">[</span><span class="s">5m</span><span class="p">]</span><span class="o">)</span>
-</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="o">)</span>
-</span></code></pre></div>
 <blockquote>
-<p><strong>Tip:</strong> Import these queries into a Grafana dashboard using the <code>temporal_*</code> metric prefix — panel setup is
-standard Prometheus/Grafana configuration and isn't covered here.</p>
+<p><strong>Tip:</strong> Query these series in your OTLP backend / Grafana after the collector scrapes or
+receives OTLP — panel setup is backend-specific and isn't covered here.</p>
 </blockquote>
 <h3 id="complete-example-with-metrics">Complete Example with Metrics<a class="headerlink" href="#complete-example-with-metrics" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">temporalio</span><span class="w"> </span><span class="kn">import</span> <span class="n">activity</span><span class="p">,</span> <span class="n">workflow</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.temporal</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseWorkflow</span><span class="p">,</span> <span class="n">TemporalAdapter</span><span class="p">,</span> <span class="n">TemporalWorkerManager</span>
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.config_template</span><span class="w"> </span><span class="kn">import</span> <span class="n">PrometheusConfig</span><span class="p">,</span> <span class="n">TemporalConfig</span>
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="c1"># Configure logging</span>
-</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
-</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>
-</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="c1"># Configure Prometheus</span>
-</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="p">()</span>
-</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="n">config</span><span class="o">.</span><span class="n">PROMETHEUS</span> <span class="o">=</span> <span class="n">PrometheusConfig</span><span class="p">(</span><span class="n">IS_ENABLED</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">SERVER_PORT</span><span class="o">=</span><span class="mi">8200</span><span class="p">)</span>
-</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>
-</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="c1"># Configure Temporal with metrics</span>
-</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="n">temporal_config</span> <span class="o">=</span> <span class="n">TemporalConfig</span><span class="p">(</span>
-</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>    <span class="n">HOST</span><span class="o">=</span><span class="s2">"localhost"</span><span class="p">,</span>
-</span><span id="__span-11-20"><a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>    <span class="n">PORT</span><span class="o">=</span><span class="mi">7233</span><span class="p">,</span>
-</span><span id="__span-11-21"><a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>    <span class="n">NAMESPACE</span><span class="o">=</span><span class="s2">"default"</span><span class="p">,</span>
-</span><span id="__span-11-22"><a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>    <span class="n">TASK_QUEUE</span><span class="o">=</span><span class="s2">"metrics-demo"</span><span class="p">,</span>
-</span><span id="__span-11-23"><a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>    <span class="n">ENABLE_METRICS</span><span class="o">=</span><span class="kc">True</span>
-</span><span id="__span-11-24"><a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a><span class="p">)</span>
-</span><span id="__span-11-25"><a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a>
-</span><span id="__span-11-26"><a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a>
-</span><span id="__span-11-27"><a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a><span class="c1"># Define workflow</span>
-</span><span id="__span-11-28"><a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a><span class="k">class</span><span class="w"> </span><span class="nc">MetricsWorkflow</span><span class="p">(</span><span class="n">BaseWorkflow</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]):</span>
-</span><span id="__span-11-29"><a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a><span class="w">    </span><span class="sd">"""Workflow with metrics collection."""</span>
-</span><span id="__span-11-30"><a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a>
-</span><span id="__span-11-31"><a id="__codelineno-11-31" name="__codelineno-11-31" href="#__codelineno-11-31"></a>    <span class="nd">@workflow</span><span class="o">.</span><span class="n">run</span>
-</span><span id="__span-11-32"><a id="__codelineno-11-32" name="__codelineno-11-32" href="#__codelineno-11-32"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="__span-11-33"><a id="__codelineno-11-33" name="__codelineno-11-33" href="#__codelineno-11-33"></a><span class="w">        </span><span class="sd">"""Process with metrics tracking."""</span>
-</span><span id="__span-11-34"><a id="__codelineno-11-34" name="__codelineno-11-34" href="#__codelineno-11-34"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_log_workflow_event</span><span class="p">(</span><span class="s2">"workflow_started"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">})</span>
-</span><span id="__span-11-35"><a id="__codelineno-11-35" name="__codelineno-11-35" href="#__codelineno-11-35"></a>
-</span><span id="__span-11-36"><a id="__codelineno-11-36" name="__codelineno-11-36" href="#__codelineno-11-36"></a>        <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute_activity_with_retry</span><span class="p">(</span>
-</span><span id="__span-11-37"><a id="__codelineno-11-37" name="__codelineno-11-37" href="#__codelineno-11-37"></a>            <span class="n">greet_activity</span><span class="p">,</span>
-</span><span id="__span-11-38"><a id="__codelineno-11-38" name="__codelineno-11-38" href="#__codelineno-11-38"></a>            <span class="n">name</span>
-</span><span id="__span-11-39"><a id="__codelineno-11-39" name="__codelineno-11-39" href="#__codelineno-11-39"></a>        <span class="p">)</span>
-</span><span id="__span-11-40"><a id="__codelineno-11-40" name="__codelineno-11-40" href="#__codelineno-11-40"></a>
-</span><span id="__span-11-41"><a id="__codelineno-11-41" name="__codelineno-11-41" href="#__codelineno-11-41"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_log_workflow_event</span><span class="p">(</span><span class="s2">"workflow_completed"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"result"</span><span class="p">:</span> <span class="n">result</span><span class="p">})</span>
-</span><span id="__span-11-42"><a id="__codelineno-11-42" name="__codelineno-11-42" href="#__codelineno-11-42"></a>        <span class="k">return</span> <span class="n">result</span>
-</span><span id="__span-11-43"><a id="__codelineno-11-43" name="__codelineno-11-43" href="#__codelineno-11-43"></a>
-</span><span id="__span-11-44"><a id="__codelineno-11-44" name="__codelineno-11-44" href="#__codelineno-11-44"></a>
-</span><span id="__span-11-45"><a id="__codelineno-11-45" name="__codelineno-11-45" href="#__codelineno-11-45"></a><span class="nd">@activity</span><span class="o">.</span><span class="n">defn</span>
-</span><span id="__span-11-46"><a id="__codelineno-11-46" name="__codelineno-11-46" href="#__codelineno-11-46"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">greet_activity</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="__span-11-47"><a id="__codelineno-11-47" name="__codelineno-11-47" href="#__codelineno-11-47"></a><span class="w">    </span><span class="sd">"""Activity with metrics tracking."""</span>
-</span><span id="__span-11-48"><a id="__codelineno-11-48" name="__codelineno-11-48" href="#__codelineno-11-48"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Processing greeting for </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-11-49"><a id="__codelineno-11-49" name="__codelineno-11-49" href="#__codelineno-11-49"></a>    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>  <span class="c1"># Simulate work</span>
-</span><span id="__span-11-50"><a id="__codelineno-11-50" name="__codelineno-11-50" href="#__codelineno-11-50"></a>    <span class="k">return</span> <span class="sa">f</span><span class="s2">"Hello, </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">!"</span>
-</span><span id="__span-11-51"><a id="__codelineno-11-51" name="__codelineno-11-51" href="#__codelineno-11-51"></a>
-</span><span id="__span-11-52"><a id="__codelineno-11-52" name="__codelineno-11-52" href="#__codelineno-11-52"></a>
-</span><span id="__span-11-53"><a id="__codelineno-11-53" name="__codelineno-11-53" href="#__codelineno-11-53"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-11-54"><a id="__codelineno-11-54" name="__codelineno-11-54" href="#__codelineno-11-54"></a><span class="w">    </span><span class="sd">"""Run workflow with metrics collection."""</span>
-</span><span id="__span-11-55"><a id="__codelineno-11-55" name="__codelineno-11-55" href="#__codelineno-11-55"></a>    <span class="c1"># Create adapter and worker</span>
-</span><span id="__span-11-56"><a id="__codelineno-11-56" name="__codelineno-11-56" href="#__codelineno-11-56"></a>    <span class="n">temporal_adapter</span> <span class="o">=</span> <span class="n">TemporalAdapter</span><span class="p">(</span><span class="n">temporal_config</span><span class="p">)</span>
-</span><span id="__span-11-57"><a id="__codelineno-11-57" name="__codelineno-11-57" href="#__codelineno-11-57"></a>    <span class="n">worker_manager</span> <span class="o">=</span> <span class="n">TemporalWorkerManager</span><span class="p">(</span><span class="n">temporal_config</span><span class="p">)</span>
-</span><span id="__span-11-58"><a id="__codelineno-11-58" name="__codelineno-11-58" href="#__codelineno-11-58"></a>
-</span><span id="__span-11-59"><a id="__codelineno-11-59" name="__codelineno-11-59" href="#__codelineno-11-59"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-11-60"><a id="__codelineno-11-60" name="__codelineno-11-60" href="#__codelineno-11-60"></a>        <span class="c1"># Start worker</span>
-</span><span id="__span-11-61"><a id="__codelineno-11-61" name="__codelineno-11-61" href="#__codelineno-11-61"></a>        <span class="n">worker_handle</span> <span class="o">=</span> <span class="k">await</span> <span class="n">worker_manager</span><span class="o">.</span><span class="n">start_worker</span><span class="p">(</span>
-</span><span id="__span-11-62"><a id="__codelineno-11-62" name="__codelineno-11-62" href="#__codelineno-11-62"></a>            <span class="n">task_queue</span><span class="o">=</span><span class="s2">"metrics-demo"</span><span class="p">,</span>
-</span><span id="__span-11-63"><a id="__codelineno-11-63" name="__codelineno-11-63" href="#__codelineno-11-63"></a>            <span class="n">workflows</span><span class="o">=</span><span class="p">[</span><span class="n">MetricsWorkflow</span><span class="p">],</span>
-</span><span id="__span-11-64"><a id="__codelineno-11-64" name="__codelineno-11-64" href="#__codelineno-11-64"></a>            <span class="n">activities</span><span class="o">=</span><span class="p">[</span><span class="n">greet_activity</span><span class="p">]</span>
-</span><span id="__span-11-65"><a id="__codelineno-11-65" name="__codelineno-11-65" href="#__codelineno-11-65"></a>        <span class="p">)</span>
-</span><span id="__span-11-66"><a id="__codelineno-11-66" name="__codelineno-11-66" href="#__codelineno-11-66"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Worker started with metrics enabled"</span><span class="p">)</span>
-</span><span id="__span-11-67"><a id="__codelineno-11-67" name="__codelineno-11-67" href="#__codelineno-11-67"></a>
-</span><span id="__span-11-68"><a id="__codelineno-11-68" name="__codelineno-11-68" href="#__codelineno-11-68"></a>        <span class="c1"># Execute workflows - metrics will be collected</span>
-</span><span id="__span-11-69"><a id="__codelineno-11-69" name="__codelineno-11-69" href="#__codelineno-11-69"></a>        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="__span-11-70"><a id="__codelineno-11-70" name="__codelineno-11-70" href="#__codelineno-11-70"></a>        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
-</span><span id="__span-11-71"><a id="__codelineno-11-71" name="__codelineno-11-71" href="#__codelineno-11-71"></a>            <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">temporal_adapter</span><span class="o">.</span><span class="n">execute_workflow</span><span class="p">(</span>
-</span><span id="__span-11-72"><a id="__codelineno-11-72" name="__codelineno-11-72" href="#__codelineno-11-72"></a>                <span class="n">MetricsWorkflow</span><span class="p">,</span>
-</span><span id="__span-11-73"><a id="__codelineno-11-73" name="__codelineno-11-73" href="#__codelineno-11-73"></a>                <span class="sa">f</span><span class="s2">"User</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-</span><span id="__span-11-74"><a id="__codelineno-11-74" name="__codelineno-11-74" href="#__codelineno-11-74"></a>                <span class="n">workflow_id</span><span class="o">=</span><span class="sa">f</span><span class="s2">"metrics-workflow-</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-</span><span id="__span-11-75"><a id="__codelineno-11-75" name="__codelineno-11-75" href="#__codelineno-11-75"></a>                <span class="n">task_queue</span><span class="o">=</span><span class="s2">"metrics-demo"</span>
-</span><span id="__span-11-76"><a id="__codelineno-11-76" name="__codelineno-11-76" href="#__codelineno-11-76"></a>            <span class="p">)</span>
-</span><span id="__span-11-77"><a id="__codelineno-11-77" name="__codelineno-11-77" href="#__codelineno-11-77"></a>            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-</span><span id="__span-11-78"><a id="__codelineno-11-78" name="__codelineno-11-78" href="#__codelineno-11-78"></a>
-</span><span id="__span-11-79"><a id="__codelineno-11-79" name="__codelineno-11-79" href="#__codelineno-11-79"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Completed </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2"> workflows"</span><span class="p">)</span>
-</span><span id="__span-11-80"><a id="__codelineno-11-80" name="__codelineno-11-80" href="#__codelineno-11-80"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Metrics available at http://localhost:8200/metrics"</span><span class="p">)</span>
-</span><span id="__span-11-81"><a id="__codelineno-11-81" name="__codelineno-11-81" href="#__codelineno-11-81"></a>
-</span><span id="__span-11-82"><a id="__codelineno-11-82" name="__codelineno-11-82" href="#__codelineno-11-82"></a>    <span class="k">finally</span><span class="p">:</span>
-</span><span id="__span-11-83"><a id="__codelineno-11-83" name="__codelineno-11-83" href="#__codelineno-11-83"></a>        <span class="k">await</span> <span class="n">worker_manager</span><span class="o">.</span><span class="n">shutdown_all_workers</span><span class="p">()</span>
-</span><span id="__span-11-84"><a id="__codelineno-11-84" name="__codelineno-11-84" href="#__codelineno-11-84"></a>        <span class="k">await</span> <span class="n">temporal_adapter</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</span><span id="__span-11-85"><a id="__codelineno-11-85" name="__codelineno-11-85" href="#__codelineno-11-85"></a>
-</span><span id="__span-11-86"><a id="__codelineno-11-86" name="__codelineno-11-86" href="#__codelineno-11-86"></a>
-</span><span id="__span-11-87"><a id="__codelineno-11-87" name="__codelineno-11-87" href="#__codelineno-11-87"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
-</span><span id="__span-11-88"><a id="__codelineno-11-88" name="__codelineno-11-88" href="#__codelineno-11-88"></a>    <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">temporalio</span><span class="w"> </span><span class="kn">import</span> <span class="n">activity</span><span class="p">,</span> <span class="n">workflow</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.temporal</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseWorkflow</span><span class="p">,</span> <span class="n">TemporalAdapter</span><span class="p">,</span> <span class="n">TemporalWorkerManager</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.config_template</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpentelemetryConfig</span><span class="p">,</span> <span class="n">TemporalConfig</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="p">()</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="n">config</span><span class="o">.</span><span class="n">OTEL</span> <span class="o">=</span> <span class="n">OpentelemetryConfig</span><span class="p">(</span>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>    <span class="n">IS_ENABLED</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>    <span class="n">OTLP_ENDPOINT</span><span class="o">=</span><span class="s2">"http://localhost:4317"</span><span class="p">,</span>
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>    <span class="n">METRICS_ENABLED</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>    <span class="n">TRACES_ENABLED</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="p">)</span>
+</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="n">BaseConfig</span><span class="o">.</span><span class="n">set_global</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>
+</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="n">temporal_config</span> <span class="o">=</span> <span class="n">TemporalConfig</span><span class="p">(</span>
+</span><span id="__span-10-22"><a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>    <span class="n">HOST</span><span class="o">=</span><span class="s2">"localhost"</span><span class="p">,</span>
+</span><span id="__span-10-23"><a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>    <span class="n">PORT</span><span class="o">=</span><span class="mi">7233</span><span class="p">,</span>
+</span><span id="__span-10-24"><a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a>    <span class="n">NAMESPACE</span><span class="o">=</span><span class="s2">"default"</span><span class="p">,</span>
+</span><span id="__span-10-25"><a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>    <span class="n">TASK_QUEUE</span><span class="o">=</span><span class="s2">"metrics-demo"</span><span class="p">,</span>
+</span><span id="__span-10-26"><a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a>    <span class="n">ENABLE_METRICS</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-10-27"><a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a><span class="p">)</span>
+</span><span id="__span-10-28"><a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>
+</span><span id="__span-10-29"><a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a>
+</span><span id="__span-10-30"><a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a><span class="k">class</span><span class="w"> </span><span class="nc">MetricsWorkflow</span><span class="p">(</span><span class="n">BaseWorkflow</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]):</span>
+</span><span id="__span-10-31"><a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a><span class="w">    </span><span class="sd">"""Workflow with OTel metrics collection."""</span>
+</span><span id="__span-10-32"><a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a>
+</span><span id="__span-10-33"><a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a>    <span class="nd">@workflow</span><span class="o">.</span><span class="n">run</span>
+</span><span id="__span-10-34"><a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="__span-10-35"><a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a><span class="w">        </span><span class="sd">"""Process with metrics tracking."""</span>
+</span><span id="__span-10-36"><a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_log_workflow_event</span><span class="p">(</span><span class="s2">"workflow_started"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">})</span>
+</span><span id="__span-10-37"><a id="__codelineno-10-37" name="__codelineno-10-37" href="#__codelineno-10-37"></a>
+</span><span id="__span-10-38"><a id="__codelineno-10-38" name="__codelineno-10-38" href="#__codelineno-10-38"></a>        <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute_activity_with_retry</span><span class="p">(</span>
+</span><span id="__span-10-39"><a id="__codelineno-10-39" name="__codelineno-10-39" href="#__codelineno-10-39"></a>            <span class="n">greet_activity</span><span class="p">,</span>
+</span><span id="__span-10-40"><a id="__codelineno-10-40" name="__codelineno-10-40" href="#__codelineno-10-40"></a>            <span class="n">name</span><span class="p">,</span>
+</span><span id="__span-10-41"><a id="__codelineno-10-41" name="__codelineno-10-41" href="#__codelineno-10-41"></a>        <span class="p">)</span>
+</span><span id="__span-10-42"><a id="__codelineno-10-42" name="__codelineno-10-42" href="#__codelineno-10-42"></a>
+</span><span id="__span-10-43"><a id="__codelineno-10-43" name="__codelineno-10-43" href="#__codelineno-10-43"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_log_workflow_event</span><span class="p">(</span><span class="s2">"workflow_completed"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"result"</span><span class="p">:</span> <span class="n">result</span><span class="p">})</span>
+</span><span id="__span-10-44"><a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a>        <span class="k">return</span> <span class="n">result</span>
+</span><span id="__span-10-45"><a id="__codelineno-10-45" name="__codelineno-10-45" href="#__codelineno-10-45"></a>
+</span><span id="__span-10-46"><a id="__codelineno-10-46" name="__codelineno-10-46" href="#__codelineno-10-46"></a>
+</span><span id="__span-10-47"><a id="__codelineno-10-47" name="__codelineno-10-47" href="#__codelineno-10-47"></a><span class="nd">@activity</span><span class="o">.</span><span class="n">defn</span>
+</span><span id="__span-10-48"><a id="__codelineno-10-48" name="__codelineno-10-48" href="#__codelineno-10-48"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">greet_activity</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="__span-10-49"><a id="__codelineno-10-49" name="__codelineno-10-49" href="#__codelineno-10-49"></a><span class="w">    </span><span class="sd">"""Activity with metrics tracking."""</span>
+</span><span id="__span-10-50"><a id="__codelineno-10-50" name="__codelineno-10-50" href="#__codelineno-10-50"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Processing greeting for </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+</span><span id="__span-10-51"><a id="__codelineno-10-51" name="__codelineno-10-51" href="#__codelineno-10-51"></a>    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+</span><span id="__span-10-52"><a id="__codelineno-10-52" name="__codelineno-10-52" href="#__codelineno-10-52"></a>    <span class="k">return</span> <span class="sa">f</span><span class="s2">"Hello, </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">!"</span>
+</span><span id="__span-10-53"><a id="__codelineno-10-53" name="__codelineno-10-53" href="#__codelineno-10-53"></a>
+</span><span id="__span-10-54"><a id="__codelineno-10-54" name="__codelineno-10-54" href="#__codelineno-10-54"></a>
+</span><span id="__span-10-55"><a id="__codelineno-10-55" name="__codelineno-10-55" href="#__codelineno-10-55"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-10-56"><a id="__codelineno-10-56" name="__codelineno-10-56" href="#__codelineno-10-56"></a><span class="w">    </span><span class="sd">"""Run workflow with OTLP metrics collection."""</span>
+</span><span id="__span-10-57"><a id="__codelineno-10-57" name="__codelineno-10-57" href="#__codelineno-10-57"></a>    <span class="n">temporal_adapter</span> <span class="o">=</span> <span class="n">TemporalAdapter</span><span class="p">(</span><span class="n">temporal_config</span><span class="p">)</span>
+</span><span id="__span-10-58"><a id="__codelineno-10-58" name="__codelineno-10-58" href="#__codelineno-10-58"></a>    <span class="n">worker_manager</span> <span class="o">=</span> <span class="n">TemporalWorkerManager</span><span class="p">(</span><span class="n">temporal_config</span><span class="p">)</span>
+</span><span id="__span-10-59"><a id="__codelineno-10-59" name="__codelineno-10-59" href="#__codelineno-10-59"></a>
+</span><span id="__span-10-60"><a id="__codelineno-10-60" name="__codelineno-10-60" href="#__codelineno-10-60"></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-10-61"><a id="__codelineno-10-61" name="__codelineno-10-61" href="#__codelineno-10-61"></a>        <span class="k">await</span> <span class="n">worker_manager</span><span class="o">.</span><span class="n">start_worker</span><span class="p">(</span>
+</span><span id="__span-10-62"><a id="__codelineno-10-62" name="__codelineno-10-62" href="#__codelineno-10-62"></a>            <span class="n">task_queue</span><span class="o">=</span><span class="s2">"metrics-demo"</span><span class="p">,</span>
+</span><span id="__span-10-63"><a id="__codelineno-10-63" name="__codelineno-10-63" href="#__codelineno-10-63"></a>            <span class="n">workflows</span><span class="o">=</span><span class="p">[</span><span class="n">MetricsWorkflow</span><span class="p">],</span>
+</span><span id="__span-10-64"><a id="__codelineno-10-64" name="__codelineno-10-64" href="#__codelineno-10-64"></a>            <span class="n">activities</span><span class="o">=</span><span class="p">[</span><span class="n">greet_activity</span><span class="p">],</span>
+</span><span id="__span-10-65"><a id="__codelineno-10-65" name="__codelineno-10-65" href="#__codelineno-10-65"></a>        <span class="p">)</span>
+</span><span id="__span-10-66"><a id="__codelineno-10-66" name="__codelineno-10-66" href="#__codelineno-10-66"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Worker started with OTLP metrics enabled"</span><span class="p">)</span>
+</span><span id="__span-10-67"><a id="__codelineno-10-67" name="__codelineno-10-67" href="#__codelineno-10-67"></a>
+</span><span id="__span-10-68"><a id="__codelineno-10-68" name="__codelineno-10-68" href="#__codelineno-10-68"></a>        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="__span-10-69"><a id="__codelineno-10-69" name="__codelineno-10-69" href="#__codelineno-10-69"></a>        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+</span><span id="__span-10-70"><a id="__codelineno-10-70" name="__codelineno-10-70" href="#__codelineno-10-70"></a>            <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">temporal_adapter</span><span class="o">.</span><span class="n">execute_workflow</span><span class="p">(</span>
+</span><span id="__span-10-71"><a id="__codelineno-10-71" name="__codelineno-10-71" href="#__codelineno-10-71"></a>                <span class="n">MetricsWorkflow</span><span class="p">,</span>
+</span><span id="__span-10-72"><a id="__codelineno-10-72" name="__codelineno-10-72" href="#__codelineno-10-72"></a>                <span class="sa">f</span><span class="s2">"User</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+</span><span id="__span-10-73"><a id="__codelineno-10-73" name="__codelineno-10-73" href="#__codelineno-10-73"></a>                <span class="n">workflow_id</span><span class="o">=</span><span class="sa">f</span><span class="s2">"metrics-workflow-</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+</span><span id="__span-10-74"><a id="__codelineno-10-74" name="__codelineno-10-74" href="#__codelineno-10-74"></a>                <span class="n">task_queue</span><span class="o">=</span><span class="s2">"metrics-demo"</span><span class="p">,</span>
+</span><span id="__span-10-75"><a id="__codelineno-10-75" name="__codelineno-10-75" href="#__codelineno-10-75"></a>            <span class="p">)</span>
+</span><span id="__span-10-76"><a id="__codelineno-10-76" name="__codelineno-10-76" href="#__codelineno-10-76"></a>            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span><span id="__span-10-77"><a id="__codelineno-10-77" name="__codelineno-10-77" href="#__codelineno-10-77"></a>
+</span><span id="__span-10-78"><a id="__codelineno-10-78" name="__codelineno-10-78" href="#__codelineno-10-78"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Completed </span><span class="si">%d</span><span class="s2"> workflows; metrics exported via OTLP"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">))</span>
+</span><span id="__span-10-79"><a id="__codelineno-10-79" name="__codelineno-10-79" href="#__codelineno-10-79"></a>
+</span><span id="__span-10-80"><a id="__codelineno-10-80" name="__codelineno-10-80" href="#__codelineno-10-80"></a>    <span class="k">finally</span><span class="p">:</span>
+</span><span id="__span-10-81"><a id="__codelineno-10-81" name="__codelineno-10-81" href="#__codelineno-10-81"></a>        <span class="k">await</span> <span class="n">worker_manager</span><span class="o">.</span><span class="n">shutdown_all_workers</span><span class="p">()</span>
+</span><span id="__span-10-82"><a id="__codelineno-10-82" name="__codelineno-10-82" href="#__codelineno-10-82"></a>        <span class="k">await</span> <span class="n">temporal_adapter</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="__span-10-83"><a id="__codelineno-10-83" name="__codelineno-10-83" href="#__codelineno-10-83"></a>
+</span><span id="__span-10-84"><a id="__codelineno-10-84" name="__codelineno-10-84" href="#__codelineno-10-84"></a>
+</span><span id="__span-10-85"><a id="__codelineno-10-85" name="__codelineno-10-85" href="#__codelineno-10-85"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+</span><span id="__span-10-86"><a id="__codelineno-10-86" name="__codelineno-10-86" href="#__codelineno-10-86"></a>    <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </span></code></pre></div>
 <h3 id="monitoring-best-practices">Monitoring Best Practices<a class="headerlink" href="#monitoring-best-practices" title="Permanent link">&para;</a></h3>
 <ol>
-<li><strong>Set Alerts</strong>: Configure Prometheus alerts for high failure rates or latency</li>
+<li><strong>Set Alerts</strong>: Alert on high failure rates or latency in your OTLP backend</li>
 <li><strong>Track Task Queues</strong>: Monitor task queue depths and worker availability</li>
 <li><strong>Workflow Duration</strong>: Alert on workflows exceeding expected execution time</li>
 <li><strong>Activity Failures</strong>: Track activity failure patterns for debugging</li>
@@ -4514,17 +4540,17 @@ standard Prometheus/Grafana configuration and isn't covered here.</p>
 <li><strong>Resource Usage</strong>: Correlate Temporal metrics with system resource metrics</li>
 </ol>
 <h3 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h3>
-<p>If metrics are not appearing:</p>
+<p>If metrics or traces are missing:</p>
 <ol>
-<li>Verify <code>PROMETHEUS.IS_ENABLED = True</code> in global config</li>
-<li>Verify <code>ENABLE_METRICS = True</code> in TemporalConfig</li>
-<li>Check that the Prometheus endpoint is accessible: <code>curl http://localhost:8200/metrics</code></li>
-<li>Ensure the <code>temporalio</code> package is installed with metrics support</li>
-<li>Check logs for any Runtime initialization errors</li>
+<li>Verify <code>OTEL.IS_ENABLED = True</code> and <code>METRICS_ENABLED</code> / <code>TRACES_ENABLED</code> as needed</li>
+<li>Verify <code>ENABLE_METRICS = True</code> in <code>TemporalConfig</code> for SDK metrics</li>
+<li>Confirm the OTLP collector is reachable at <code>OTEL.OTLP_ENDPOINT</code></li>
+<li>Ensure <code>temporalio</code> is installed (<code>archipy[temporalio]</code>)</li>
+<li>Check logs for Runtime / TracingInterceptor initialization errors</li>
 </ol>
-<p>The Temporal Runtime with Prometheus is created lazily on first client connection using a singleton manager (
-<code>TemporalRuntimeManager</code>) that ensures consistent Runtime configuration across all clients and workers. The singleton
-pattern prevents multiple Runtime instances and guarantees thread-safe access.</p>
+<p>The Temporal Runtime with OTLP is created lazily on first client connection using
+<code>TemporalRuntimeManager</code> (singleton). Once created with metrics enabled, the Runtime cannot be
+reconfigured in-process (Temporal SDK limitation).</p>
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
 <ol>
 <li><strong>Workflow Design</strong>: Keep workflows as coordinators - let activities handle business logic</li>
@@ -4532,15 +4558,16 @@ pattern prevents multiple Runtime instances and guarantees thread-safe access.</
 <li><strong>Transactions</strong>: Use <code>AtomicActivity</code> for database operations requiring consistency</li>
 <li><strong>Testing</strong>: Mock adapters and activities for unit testing</li>
 <li><strong>Configuration</strong>: Use environment-specific configurations for different deployments</li>
-<li><strong>Monitoring</strong>: Leverage workflow logging and error tracking</li>
+<li><strong>Monitoring</strong>: Leverage workflow logging and OTel tracing/metrics</li>
 <li><strong>Timeouts</strong>: Set appropriate timeouts for workflows and activities</li>
 <li><strong>Retries</strong>: Configure retry policies based on error types and business requirements</li>
-<li><strong>Metrics</strong>: Enable Prometheus metrics for production observability</li>
+<li><strong>Metrics</strong>: Enable <code>ENABLE_METRICS</code> with global <code>OTEL</code> for production observability</li>
 </ol>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns with proper chaining</li>
 <li><a href="../../config_management/">Configuration Management</a> — Temporal configuration setup</li>
+<li><a href="../../observability/">Observability</a> — OpenTelemetry OTLP traces and metrics</li>
 <li><a href="../../testing_strategy/">BDD Testing</a> — Testing workflow operations</li>
 <li><a href="../../helpers/decorators/#sqlalchemy-transaction-decorators">SQLAlchemy Decorators</a> — Atomic transaction usage</li>
 <li><a href="../../../api_reference/adapters/temporal/">API Reference</a> — Full Temporal adapter API documentation</li>

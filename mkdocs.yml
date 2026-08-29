@@ -197,6 +197,7 @@ nav:
       - Security: community/security.md
       - Changelog:
           - Overview: community/changelog/index.md
+          - "5.x": community/changelog/5/index.md
           - "4.x": community/changelog/4/index.md
           - "3.x": community/changelog/3/index.md
           - "2.x": community/changelog/2/index.md

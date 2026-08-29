@@ -6,13 +6,13 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Release notes for ArchiPy 3.13.4">
+        <meta name="description" content="Release notes for ArchiPy 5.0.0">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/3/3.13.4/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.0.0/">
       
       
       
@@ -25,7 +25,7 @@
     
     
       
-        <title>Changelog 3.13.4 - ArchiPy</title>
+        <title>Changelog 5.0.0 - ArchiPy</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#3134-2025-10-07" class="md-skip">
+        <a href="#500-2026-08-29" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Changelog 3.13.4
+              Changelog 5.0.0
             
           </span>
         </div>
@@ -2901,7 +2901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../5/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -2957,7 +2957,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../3/" class="md-nav__link">
         
   
   
@@ -3132,22 +3132,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#breaking-changes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Changed
+        Breaking Changes
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Changed">
+    <nav class="md-nav" aria-label="Breaking Changes">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#dependency-updates" class="md-nav__link">
+  <a href="#configs-observability" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Dependency Updates
+        Configs - Observability
       
     </span>
   </a>
@@ -3155,10 +3155,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#testing-infrastructure" class="md-nav__link">
+  <a href="#helpers-utils-decorators" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Testing Infrastructure
+        Helpers - Utils &amp; Decorators
       
     </span>
   </a>
@@ -3166,10 +3166,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#development-workflow-improvements" class="md-nav__link">
+  <a href="#helpers-interceptors-apputils" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Development Workflow Improvements
+        Helpers - Interceptors &amp; AppUtils
       
     </span>
   </a>
@@ -3177,10 +3177,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#development-environment" class="md-nav__link">
+  <a href="#adapters-temporal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Development Environment
+        Adapters - Temporal
       
     </span>
   </a>
@@ -3188,10 +3188,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configuration-management" class="md-nav__link">
+  <a href="#dependencies-extras" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuration Management
+        Dependencies - Extras
       
     </span>
   </a>
@@ -3204,10 +3204,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#performance" class="md-nav__link">
+  <a href="#migration-guide" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Performance
+        Migration Guide
       
     </span>
   </a>
@@ -3215,10 +3215,88 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#security" class="md-nav__link">
+  <a href="#added" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Security
+        Added
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Added">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#helpers-opentelemetry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helpers - OpenTelemetry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configs-opentelemetryconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configs - OpentelemetryConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Removed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#helpers-legacy-observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helpers - Legacy Observability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configs-legacy-observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configs - Legacy Observability
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Gaps
       
     </span>
   </a>
@@ -3242,7 +3320,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/3/3.13.4.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/5/5.0.0.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3250,100 +3328,153 @@
   
 
 
-<h1 id="3134-2025-10-07">3.13.4 — 2025-10-07<a class="headerlink" href="#3134-2025-10-07" title="Permanent link">&para;</a></h1>
-<p><a href="../3.13.5/">← 3.13.5</a> | <a href="../3.13.3/">3.13.3 →</a> | <a href="../">↑ 3.x series</a></p>
-<h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
-<h3 id="dependency-updates">Dependency Updates<a class="headerlink" href="#dependency-updates" title="Permanent link">&para;</a></h3>
+<h1 id="500-2026-08-29">5.0.0 — 2026-08-29<a class="headerlink" href="#500-2026-08-29" title="Permanent link">&para;</a></h1>
+<p><a href="../">↑ 5.x series</a></p>
+<h2 id="breaking-changes">Breaking Changes<a class="headerlink" href="#breaking-changes" title="Permanent link">&para;</a></h2>
+<h3 id="configs-observability">Configs - Observability<a class="headerlink" href="#configs-observability" title="Permanent link">&para;</a></h3>
 <ul>
-<li>
-<p><strong>Comprehensive Dependency Synchronization</strong> - Updated all dependencies to latest compatible versions for improved
-  security and performance</p>
+<li><strong>OpenTelemetry replaces Sentry, Elastic APM, and Prometheus</strong> - Observability is configured
+  exclusively through <code>BaseConfig.OTEL</code> (<code>OpentelemetryConfig</code>). Providers are built from pydantic
+  settings — <code>OTEL_*</code> environment-variable autoconfiguration is not used.</li>
+<li><strong>Removed config classes / fields</strong> - <code>SentryConfig</code>, <code>PrometheusConfig</code>,
+  <code>ElasticsearchAPMConfig</code>, <code>FastAPIRateLimitConfig</code>, and the corresponding <code>BaseConfig</code> fields /
+  <code>SENTRY__*</code>, <code>PROMETHEUS__*</code>, <code>ELASTIC_APM__*</code>, <code>FASTAPI_RATE_LIMIT__*</code> env prefixes.</li>
+</ul>
+<h3 id="helpers-utils-decorators">Helpers - Utils &amp; Decorators<a class="headerlink" href="#helpers-utils-decorators" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Updated Pydantic from 2.11.9 to 2.11.10 for enhanced data validation and performance improvements</li>
-<li>Updated Requests from 2.32.4 to 2.32.5 for improved HTTP client capabilities and security fixes</li>
-<li>Updated Elastic APM from 6.23.0 to 6.24.0 for enhanced application performance monitoring</li>
-<li>Updated Redis client from 6.2.0 to 6.4.0 with hiredis extension for improved performance</li>
-<li>Updated Sentry SDK from 2.39.0 to 2.40.0 for better error tracking and monitoring capabilities</li>
-<li>Updated SQLAlchemy from 2.0.41 to 2.0.43 for enhanced ORM functionality and performance</li>
-<li>Updated StarRocks driver from 1.2.2 to 1.2.3 for improved database connectivity</li>
-<li>Updated Temporalio from 1.18.0 to 1.18.1 for enhanced workflow orchestration capabilities</li>
+<li><strong><code>OtelUtils</code> replaces <code>TracingUtils</code> / <code>PrometheusUtils</code></strong> - New module
+  <code>archipy.helpers.utils.otel_utils</code>.</li>
+<li><strong>Tracing decorators renamed</strong> - <code>@capture_transaction</code> / <code>@capture_span</code> (and async variants)
+  → <code>@trace_root</code> / <code>@trace_span</code> / <code>@async_trace_root</code> / <code>@async_trace_span</code> / <code>@trace_class</code>.</li>
+<li><strong>Metrics decorators added</strong> - <code>@measure_duration</code>, <code>@async_measure_duration</code>, <code>@count_calls</code>,
+  <code>@async_count_calls</code>.</li>
+<li><strong><code>BaseUtils.capture_exception</code></strong> - Records on the current OpenTelemetry span (no Sentry /
+  Elastic APM capture).</li>
 </ul>
-</li>
-<li>
-<p><strong>Development Tools Enhancement</strong> - Updated development and build infrastructure for improved developer experience</p>
+<h3 id="helpers-interceptors-apputils">Helpers - Interceptors &amp; AppUtils<a class="headerlink" href="#helpers-interceptors-apputils" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Updated Bandit from 1.7.8 to 1.8.6 for enhanced security vulnerability scanning</li>
-<li>Updated Pre-commit hooks from 4.6.0 to 6.0.0 for improved code quality enforcement</li>
-<li>Updated Pre-commit from 3.8.0 to 4.3.0 for better hook management and performance</li>
-<li>Updated Ruff from 0.13.2 to 0.13.3 for enhanced linting capabilities and Python 3.13 support</li>
-<li>Updated Validate-pyproject from 0.18 to 0.24.1 for improved project configuration validation</li>
-<li>Updated PyMdown Extensions from 10.14.3 to 10.16.1 for enhanced Markdown processing</li>
+<li><strong>Removed</strong> - <code>FastAPIMetricInterceptor</code>, FastAPI rate-limit handler / identifiers,
+  gRPC metric interceptors, gRPC trace interceptors (client and server), and the empty
+  <code>archipy.helpers.interceptors.fastapi</code> package.</li>
+<li><strong><code>AppUtils.create_fastapi_app</code></strong> - Auto-instruments via <code>FastAPIInstrumentor</code> when
+  <code>OTEL.IS_ENABLED</code> (<code>archipy[otel-fastapi]</code>).</li>
+<li><strong><code>AppUtils.create_grpc_app</code> / <code>create_async_grpc_app</code></strong> - Insert OTel contrib server
+  interceptors when enabled (<code>archipy[otel-grpc]</code>). Exception and gRPC rate-limit interceptors
+  remain.</li>
+<li><strong>Client gRPC</strong> - Use <code>OtelUtils.grpc_client_interceptors()</code> /
+  <code>async_grpc_client_interceptors()</code>.</li>
 </ul>
-</li>
-</ul>
-<h3 id="testing-infrastructure">Testing Infrastructure<a class="headerlink" href="#testing-infrastructure" title="Permanent link">&para;</a></h3>
+<h3 id="adapters-temporal">Adapters - Temporal<a class="headerlink" href="#adapters-temporal" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Kafka Test Environment Update</strong> - Updated Kafka test container image for improved test reliability<ul>
-<li>Updated Kafka test image from confluentinc/cp-kafka:7.4.10 to 7.9.3</li>
-<li>Enhanced test environment compatibility with latest Kafka features</li>
-<li>Improved test stability and performance in CI/CD environments</li>
+<li><strong>Prometheus scrape endpoint removed</strong> - Temporal metrics use Temporal SDK
+  <code>OpenTelemetryConfig</code> (OTLP) driven by <code>TEMPORAL.ENABLE_METRICS</code> <strong>and</strong>
+  <code>OTEL.IS_ENABLED</code> + <code>OTEL.METRICS_ENABLED</code> (endpoint/protocol/headers from <code>OTEL</code>).</li>
+<li><strong>Traces</strong> - Client attaches <code>temporalio.contrib.opentelemetry.TracingInterceptor</code> when OTel
+  traces are enabled.</li>
 </ul>
-</li>
-</ul>
-<h3 id="development-workflow-improvements">Development Workflow Improvements<a class="headerlink" href="#development-workflow-improvements" title="Permanent link">&para;</a></h3>
+<h3 id="dependencies-extras">Dependencies - Extras<a class="headerlink" href="#dependencies-extras" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Enhanced Dependency Management</strong> - Improved Makefile targets for better dependency management<ul>
-<li>Added <code>--upgrade</code> flag to <code>install</code> and <code>install-dev</code> targets for automatic dependency updates</li>
-<li>Added new <code>update-all</code> target for aggressive dependency updates with comprehensive upgrade process</li>
-<li>Enhanced dependency synchronization between pyproject.toml and uv.lock files</li>
-<li>Improved developer experience with streamlined dependency update workflows</li>
+<li><strong>Removed extras</strong> - <code>prometheus</code>, <code>sentry</code>, <code>elastic-apm</code>.</li>
+<li><strong>Added extras</strong> - <code>otel</code>, <code>otel-fastapi</code>, <code>otel-grpc</code>, <code>otel-sqlalchemy</code>, <code>otel-redis</code>,
+  <code>otel-elasticsearch</code>, <code>otel-kafka</code>, <code>otel-scylladb</code>, <code>otel-minio</code>.</li>
 </ul>
-</li>
-</ul>
-<h3 id="development-environment">Development Environment<a class="headerlink" href="#development-environment" title="Permanent link">&para;</a></h3>
+<h2 id="migration-guide">Migration Guide<a class="headerlink" href="#migration-guide" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Old API / extra</th>
+<th>New API / extra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>archipy[prometheus]</code></td>
+<td><code>archipy[otel]</code> (+ stack extras as needed)</td>
+</tr>
+<tr>
+<td><code>archipy[sentry]</code> / <code>archipy[elastic-apm]</code></td>
+<td><code>archipy[otel]</code> (+ <code>otel-fastapi</code> / <code>otel-grpc</code>)</td>
+</tr>
+<tr>
+<td><code>BaseConfig.SENTRY</code> / <code>PROMETHEUS</code> / <code>ELASTIC_APM</code></td>
+<td><code>BaseConfig.OTEL</code> (<code>OpentelemetryConfig</code>)</td>
+</tr>
+<tr>
+<td><code>SENTRY__*</code> / <code>PROMETHEUS__*</code> / <code>ELASTIC_APM__*</code></td>
+<td><code>OTEL__*</code> env prefix</td>
+</tr>
+<tr>
+<td><code>TracingUtils</code></td>
+<td><code>OtelUtils</code></td>
+</tr>
+<tr>
+<td><code>PrometheusUtils</code></td>
+<td>OTLP metrics via <code>OtelUtils</code> / collector</td>
+</tr>
+<tr>
+<td><code>@capture_transaction</code></td>
+<td><code>@trace_root</code> / <code>@async_trace_root</code></td>
+</tr>
+<tr>
+<td><code>@capture_span</code></td>
+<td><code>@trace_span</code> / <code>@async_trace_span</code></td>
+</tr>
+<tr>
+<td><code>FastAPIMetricInterceptor</code></td>
+<td><code>AppUtils.create_fastapi_app</code> + <code>otel-fastapi</code></td>
+</tr>
+<tr>
+<td>gRPC metric / trace interceptors</td>
+<td><code>AppUtils.create_grpc_app</code> + <code>otel-grpc</code></td>
+</tr>
+<tr>
+<td>gRPC client trace interceptors</td>
+<td><code>OtelUtils.grpc_client_interceptors()</code></td>
+</tr>
+<tr>
+<td><code>sentry_sdk.capture_exception</code> / APM capture</td>
+<td><code>BaseUtils.capture_exception</code> (current span)</td>
+</tr>
+<tr>
+<td>Temporal Prometheus port / scrape</td>
+<td><code>ENABLE_METRICS</code> + <code>OTEL.IS_ENABLED</code> / <code>METRICS_ENABLED</code></td>
+</tr>
+<tr>
+<td><code>FastAPIRestRateLimitHandler</code></td>
+<td><a href="https://github.com/redis/fastapi-redis-sdk"><code>fastapi-redis-sdk</code></a> <code>rate_limit()</code></td>
+</tr>
+</tbody>
+</table>
+<p>See <a href="../../../../tutorials/observability/">Observability</a> for configuration and usage.</p>
+<h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
+<h3 id="helpers-opentelemetry">Helpers - OpenTelemetry<a class="headerlink" href="#helpers-opentelemetry" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Cursor IDE Rules Enhancement</strong> - Updated Cursor IDE rules for improved development experience<ul>
-<li>Enhanced code generation guidelines and architectural patterns</li>
-<li>Improved development workflow documentation and best practices</li>
-<li>Updated coding standards and quality enforcement rules</li>
+<li><strong><code>OtelUtils</code></strong> - Idempotent provider lifecycle, library instrumentors, status mapping, gRPC
+  client interceptors, and test helpers (<code>configure_for_testing</code> / <code>reset_for_testing</code>).</li>
+<li><strong>Tracing &amp; metrics decorators</strong> - Span and meter decorators under
+  <code>archipy.helpers.decorators</code>.</li>
 </ul>
-</li>
-</ul>
-<h3 id="configuration-management">Configuration Management<a class="headerlink" href="#configuration-management" title="Permanent link">&para;</a></h3>
+<h3 id="configs-opentelemetryconfig">Configs - OpentelemetryConfig<a class="headerlink" href="#configs-opentelemetryconfig" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Comprehensive .env.example Update</strong> - Synchronized environment configuration template with all available config
-  options<ul>
-<li>Added Language configuration support with Persian (FA) language setting</li>
-<li>Enhanced Elasticsearch configuration with complete API key, SSL, and sniffing options</li>
-<li>Expanded Kafka configuration with SSL settings, compression, batch processing, and transaction support</li>
-<li>Added Redis cluster and sentinel mode configurations with connection pooling settings</li>
-<li>Included Temporal workflow orchestration configuration (completely new section)</li>
-<li>Added Parsian Shaparak payment gateway configuration (completely new section)</li>
-<li>Enhanced authentication configuration with comprehensive TOTP, password policies, and token security features</li>
-<li>Added separate SQLite and StarRocks SQLAlchemy configurations for different database types</li>
-<li>Improved existing configurations with missing fields and proper default values</li>
-<li>Organized configuration sections with clear headers and proper data type formatting</li>
-<li>Provided comprehensive reference for all available ArchiPy configuration options</li>
+<li><strong><code>OpentelemetryConfig</code></strong> - Master switch, OTLP endpoint/protocol/headers, traces/metrics/logs
+  toggles, sample ratio, resource attributes, FastAPI excluded URLs, log level.</li>
 </ul>
-</li>
-</ul>
-<h2 id="performance">Performance<a class="headerlink" href="#performance" title="Permanent link">&para;</a></h2>
+<h2 id="removed">Removed<a class="headerlink" href="#removed" title="Permanent link">&para;</a></h2>
+<h3 id="helpers-legacy-observability">Helpers - Legacy Observability<a class="headerlink" href="#helpers-legacy-observability" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Optimized Dependency Resolution</strong> - Improved dependency resolution and installation performance<ul>
-<li>Enhanced UV package manager integration with latest features</li>
-<li>Improved lock file generation and dependency resolution speed</li>
-<li>Better memory usage during dependency installation and updates</li>
+<li><strong><code>prometheus_utils</code></strong>, <strong><code>tracing_utils</code></strong>, FastAPI metric middleware, FastAPI rate-limit
+  package, gRPC metric and trace interceptor packages.</li>
 </ul>
-</li>
-</ul>
-<h2 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h2>
+<h3 id="configs-legacy-observability">Configs - Legacy Observability<a class="headerlink" href="#configs-legacy-observability" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Enhanced Security Posture</strong> - Multiple security updates across dependencies<ul>
-<li>Updated dependencies include latest security patches and vulnerability fixes</li>
-<li>Improved overall application security through latest package versions</li>
-<li>Enhanced cryptographic libraries and security-related packages</li>
+<li><strong><code>SentryConfig</code></strong>, <strong><code>PrometheusConfig</code></strong>, <strong><code>ElasticsearchAPMConfig</code></strong>,
+  <strong><code>FastAPIRateLimitConfig</code></strong>.</li>
 </ul>
-</li>
+<h2 id="known-gaps">Known Gaps<a class="headerlink" href="#known-gaps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>httpx2</strong> — core HTTP clients use httpx2; <code>otel</code> instruments httpx/requests only</li>
+<li><strong>Kafka aio</strong> — Confluent sync instrumentor; async Kafka paths may be uninstrumented</li>
+<li><strong>SMTP</strong> — email adapter / smtplib not auto-instrumented</li>
 </ul>
 
 

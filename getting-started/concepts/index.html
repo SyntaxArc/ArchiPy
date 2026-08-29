@@ -3019,6 +3019,8 @@
       
         
       
+        
+      
     
     
     
@@ -3073,6 +3075,34 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../community/changelog/5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.x
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -3546,15 +3576,15 @@ variables or <code>.env</code> files and validated at startup:</p>
 <tbody>
 <tr>
 <td><code>helpers/utils/</code></td>
-<td>JWT, password, TOTP, datetime, string, file, Prometheus</td>
+<td>JWT, password, TOTP, datetime, string, file, OpenTelemetry</td>
 </tr>
 <tr>
 <td><code>helpers/decorators/</code></td>
-<td><code>@atomic</code>, <code>@ttl_cache</code>, <code>@retry</code>, <code>@singleton</code>, <code>@timeout</code>, <code>@timing</code></td>
+<td><code>@atomic</code>, <code>@ttl_cache</code>, <code>@retry</code>, <code>@singleton</code>, <code>@timeout</code>, <code>@timing</code>, <code>@trace_*</code>, metrics</td>
 </tr>
 <tr>
 <td><code>helpers/interceptors/</code></td>
-<td>FastAPI metrics; gRPC tracing, metrics, exception handling, rate limiting</td>
+<td>gRPC exception handling and rate limiting (OTel via AppUtils)</td>
 </tr>
 <tr>
 <td><code>helpers/metaclasses/</code></td>

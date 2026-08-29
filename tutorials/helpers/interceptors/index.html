@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Practical tutorials for using ArchiPy helper interceptors.">
+        <meta name="description" content="Practical tutorials for ArchiPy gRPC interceptors and OpenTelemetry contrib wiring.">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
@@ -1349,10 +1349,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#deprecations" class="md-nav__link">
+  <a href="#opentelemetry-replaces-metrictrace-interceptors" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Deprecations
+        OpenTelemetry (replaces metric/trace interceptors)
       
     </span>
   </a>
@@ -1372,21 +1372,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tracing-interceptor" class="md-nav__link">
+  <a href="#exception-interceptor" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tracing Interceptor
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#metrics-interceptor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metrics Interceptor
+        Exception Interceptor
       
     </span>
   </a>
@@ -1438,77 +1427,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fastapi-interceptors" class="md-nav__link">
+  <a href="#fastapi-rate-limiting" class="md-nav__link">
     <span class="md-ellipsis">
       
-        FastAPI Interceptors
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="FastAPI Interceptors">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#metrics-middleware" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metrics Middleware
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#rate-limiting-dependency" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rate Limiting Dependency
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Rate Limiting Dependency">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#migrating-to-fastapi-redis-sdk" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migrating to fastapi-redis-sdk
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#client-identification_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Client identification
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#using-multiple-interceptors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using Multiple Interceptors
+        FastAPI Rate Limiting
       
     </span>
   </a>
@@ -3079,6 +3001,8 @@
       
         
       
+        
+      
     
     
     
@@ -3133,6 +3057,34 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../community/changelog/5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.x
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -3345,10 +3297,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#deprecations" class="md-nav__link">
+  <a href="#opentelemetry-replaces-metrictrace-interceptors" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Deprecations
+        OpenTelemetry (replaces metric/trace interceptors)
       
     </span>
   </a>
@@ -3368,21 +3320,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tracing-interceptor" class="md-nav__link">
+  <a href="#exception-interceptor" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tracing Interceptor
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#metrics-interceptor" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metrics Interceptor
+        Exception Interceptor
       
     </span>
   </a>
@@ -3434,77 +3375,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fastapi-interceptors" class="md-nav__link">
+  <a href="#fastapi-rate-limiting" class="md-nav__link">
     <span class="md-ellipsis">
       
-        FastAPI Interceptors
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="FastAPI Interceptors">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#metrics-middleware" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metrics Middleware
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#rate-limiting-dependency" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rate Limiting Dependency
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Rate Limiting Dependency">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#migrating-to-fastapi-redis-sdk" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migrating to fastapi-redis-sdk
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#client-identification_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Client identification
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#using-multiple-interceptors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using Multiple Interceptors
+        FastAPI Rate Limiting
       
     </span>
   </a>
@@ -3548,124 +3422,86 @@
 
 
 <h1 id="interceptor-tutorials">Interceptor Tutorials<a class="headerlink" href="#interceptor-tutorials" title="Permanent link">&para;</a></h1>
-<p>This page demonstrates how to use ArchiPy's interceptors for cross-cutting concerns like tracing, metrics, and error
-handling.</p>
-<h2 id="deprecations">Deprecations<a class="headerlink" href="#deprecations" title="Permanent link">&para;</a></h2>
-<p>The following APIs are <strong>deprecated</strong> and will be removed in a future major release. They are no longer
-maintained and emit a runtime signal when used.</p>
+<p>This page covers ArchiPy's remaining interceptors (gRPC exception handling and rate limiting)
+and how OpenTelemetry is wired through AppUtils rather than custom metric/trace interceptors.</p>
+<h2 id="opentelemetry-replaces-metrictrace-interceptors">OpenTelemetry (replaces metric/trace interceptors)<a class="headerlink" href="#opentelemetry-replaces-metrictrace-interceptors" title="Permanent link">&para;</a></h2>
+<p>FastAPI metric middleware and gRPC metric/trace interceptors were removed in 5.0.0. Traces and
+metrics come from OpenTelemetry contrib instrumentors configured via <code>BaseConfig.OTEL</code>.</p>
 <table>
 <thead>
 <tr>
-<th>Deprecated API</th>
-<th>Kind</th>
-<th>Runtime signal</th>
-<th>Replacement</th>
+<th>Stack</th>
+<th>Wiring</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>FastAPIRestRateLimitHandler</code></td>
-<td>class</td>
-<td><code>DeprecationError</code> on instantiation</td>
-<td><code>rate_limit()</code> from <code>fastapi-redis-sdk</code></td>
+<td>FastAPI</td>
+<td><code>AppUtils.create_fastapi_app</code> → <code>FastAPIUtils.setup_otel</code> (<code>FastAPIInstrumentor</code>)</td>
 </tr>
 <tr>
-<td><code>extract_bearer_token</code> / <code>resolve_jwt_access_token_sub</code> (<code>fastapi.rate_limit.identifiers</code>)</td>
-<td>functions</td>
-<td><code>DeprecationError</code> on call</td>
-<td>Your own auth <code>Depends</code></td>
+<td>gRPC</td>
+<td><code>AppUtils.create_grpc_app</code> / <code>create_async_grpc_app</code> → contrib server interceptor at index 0</td>
 </tr>
 <tr>
-<td><code>FastAPIRateLimitConfig</code></td>
-<td>config class</td>
-<td><code>DeprecationWarning</code> on instantiation</td>
-<td><code>fastapi-redis-sdk</code> + <code>REDIS_*</code> env vars</td>
-</tr>
-<tr>
-<td><code>BaseConfig.FASTAPI_RATE_LIMIT</code></td>
-<td>config field</td>
-<td>—</td>
-<td><code>fastapi-redis-sdk</code> + <code>REDIS_*</code> env vars</td>
-</tr>
-<tr>
-<td><code>FASTAPI_RATE_LIMIT__*</code> environment variables</td>
-<td>env vars</td>
-<td>—</td>
-<td><code>REDIS_*</code> environment variables</td>
+<td>Client gRPC</td>
+<td><code>OtelUtils.grpc_client_interceptors()</code> / <code>async_grpc_client_interceptors()</code></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Not affected:</strong> the gRPC rate-limit interceptor (<code>GrpcServerRateLimitInterceptor</code>,
-<code>AsyncGrpcServerRateLimitInterceptor</code>) and <code>grpc_rate_limit_decorator</code> remain fully supported, as do
-<code>GrpcRateLimitConfig</code>, <code>RateLimitUtils</code>, and <code>RateLimitWindowDTO</code>.</p>
-<p>See <a href="#migrating-to-fastapi-redis-sdk">Migrating to <code>fastapi-redis-sdk</code></a> below for the step-by-step replacement.</p>
-<h2 id="grpc-interceptors">gRPC Interceptors<a class="headerlink" href="#grpc-interceptors" title="Permanent link">&para;</a></h2>
-<h3 id="tracing-interceptor">Tracing Interceptor<a class="headerlink" href="#tracing-interceptor" title="Permanent link">&para;</a></h3>
-<p>The tracing interceptor adds request/response tracking to gRPC services:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent</span><span class="w"> </span><span class="kn">import</span> <span class="n">futures</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.grpc.trace.server_interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">GrpcServerTraceInterceptor</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">InternalError</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># Create a gRPC server with tracing</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_grpc_server</span><span class="p">(</span><span class="n">max_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">grpc</span><span class="o">.</span><span class="n">Server</span><span class="p">:</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="sd">"""Create a gRPC server with tracing interceptor.</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="sd">        max_workers: Maximum worker threads for the server</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="sd">        Configured gRPC server instance</span>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="sd">    """</span>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>        <span class="c1"># Initialize the tracing interceptor</span>
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>        <span class="n">trace_interceptor</span> <span class="o">=</span> <span class="n">GrpcServerTraceInterceptor</span><span class="p">()</span>
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>        <span class="c1"># Create the server with the interceptor</span>
-</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>        <span class="n">server</span> <span class="o">=</span> <span class="n">grpc</span><span class="o">.</span><span class="n">server</span><span class="p">(</span>
-</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>            <span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">max_workers</span><span class="p">),</span>
-</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>            <span class="n">interceptors</span><span class="o">=</span><span class="p">[</span><span class="n">trace_interceptor</span><span class="p">],</span>
-</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>        <span class="p">)</span>
-</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>        <span class="k">return</span> <span class="n">server</span>
-</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>        <span class="k">raise</span> <span class="n">InternalError</span><span class="p">(</span><span class="n">additional_data</span><span class="o">=</span><span class="p">{</span><span class="s2">"detail"</span><span class="p">:</span> <span class="s2">"Failed to create gRPC server"</span><span class="p">})</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
-</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>
-</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>
-</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="c1"># Usage</span>
-</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="n">server</span> <span class="o">=</span> <span class="n">create_grpc_server</span><span class="p">()</span>
-</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="c1"># Add your services to the server</span>
-</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="c1"># my_service.add_to_server(server)</span>
-</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="c1"># server.add_insecure_port('[::]:50051')</span>
-</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="c1"># server.start()</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">()</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">grpc_server</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_grpc_app</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Apps created with OTel auto-instrumentation"</span><span class="p">)</span>
 </span></code></pre></div>
-<h3 id="metrics-interceptor">Metrics Interceptor<a class="headerlink" href="#metrics-interceptor" title="Permanent link">&para;</a></h3>
-<p>The metrics interceptor records gRPC call durations and counts for Prometheus:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
+<p>Install <code>archipy[otel-fastapi]</code> and/or <code>archipy[otel-grpc]</code> as needed. Full config and decorator
+reference: <a href="../../observability/">Observability</a>.</p>
+<h2 id="grpc-interceptors">gRPC Interceptors<a class="headerlink" href="#grpc-interceptors" title="Permanent link">&para;</a></h2>
+<h3 id="exception-interceptor">Exception Interceptor<a class="headerlink" href="#exception-interceptor" title="Permanent link">&para;</a></h3>
+<p><code>GrpcServerExceptionInterceptor</code> / <code>AsyncGrpcServerExceptionInterceptor</code> convert domain errors
+to gRPC status codes and call <code>BaseUtils.capture_exception</code> (records on the current OTel span).
+<code>AppUtils.create_grpc_app</code> / <code>create_async_grpc_app</code> always register the matching interceptor.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent</span><span class="w"> </span><span class="kn">import</span> <span class="n">futures</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.grpc.metric.server_interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">GrpcServerMetricInterceptor</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.grpc.trace.server_interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">GrpcServerTraceInterceptor</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_grpc_server_with_metrics</span><span class="p">(</span><span class="n">max_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">grpc</span><span class="o">.</span><span class="n">Server</span><span class="p">:</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="sd">"""Create a gRPC server with both tracing and metrics interceptors.</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.grpc.exception.server_interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">GrpcServerExceptionInterceptor</span><span class="p">,</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">)</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">InternalError</span>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="sd">    Args:</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="sd">        max_workers: Maximum worker threads for the server</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
 </span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="sd">    Returns:</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="sd">        Configured gRPC server instance</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="sd">    """</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="n">interceptors</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>        <span class="n">GrpcServerTraceInterceptor</span><span class="p">(),</span>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>        <span class="n">GrpcServerMetricInterceptor</span><span class="p">(),</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    <span class="p">]</span>
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="k">return</span> <span class="n">grpc</span><span class="o">.</span><span class="n">server</span><span class="p">(</span>
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>        <span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">max_workers</span><span class="p">),</span>
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>        <span class="n">interceptors</span><span class="o">=</span><span class="n">interceptors</span><span class="p">,</span>
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>    <span class="p">)</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_grpc_server</span><span class="p">(</span><span class="n">max_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">grpc</span><span class="o">.</span><span class="n">Server</span><span class="p">:</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">    </span><span class="sd">"""Create a gRPC server with the exception interceptor.</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="sd">    Args:</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="sd">        max_workers: Maximum worker threads for the server.</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="sd">    Returns:</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="sd">        Configured gRPC server instance.</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="sd">    Raises:</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="sd">        InternalError: If server creation fails.</span>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="sd">    """</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>        <span class="n">server</span> <span class="o">=</span> <span class="n">grpc</span><span class="o">.</span><span class="n">server</span><span class="p">(</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>            <span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">max_workers</span><span class="p">),</span>
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>            <span class="n">interceptors</span><span class="o">=</span><span class="p">[</span><span class="n">GrpcServerExceptionInterceptor</span><span class="p">()],</span>
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>        <span class="p">)</span>
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"gRPC server created with exception interceptor"</span><span class="p">)</span>
+</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>        <span class="k">return</span> <span class="n">server</span>
+</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>        <span class="k">raise</span> <span class="n">InternalError</span><span class="p">(</span><span class="n">additional_data</span><span class="o">=</span><span class="p">{</span><span class="s2">"detail"</span><span class="p">:</span> <span class="s2">"Failed to create gRPC server"</span><span class="p">})</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
 </span></code></pre></div>
 <h3 id="rate-limiting-interceptor">Rate Limiting Interceptor<a class="headerlink" href="#rate-limiting-interceptor" title="Permanent link">&para;</a></h3>
 <p>Per-RPC gRPC rate limits use two pieces:</p>
@@ -3675,24 +3511,21 @@ maintained and emit a runtime signal when used.</p>
 <li><strong><code>GrpcServerRateLimitInterceptor</code> / <code>AsyncGrpcServerRateLimitInterceptor</code></strong> — enforces decorated limits via Redis
    <code>INCREX</code></li>
 </ol>
-<p>Limits use the Redis 8.8 <code>INCREX</code> command, the same atomic counter primitive as the FastAPI handler.</p>
 <p>Install the required extras:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[redis,grpc]"</span>
 </span></code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> Redis <strong>8.8+</strong> is required. The interceptor depends on the <code>INCREX</code> command.</p>
 </blockquote>
-<p>Register the interceptor on the server (automatically via config or manually) and declare limits on individual RPC
-methods.</p>
 <p>Enable automatic registration:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">GRPC_RATE_LIMIT__IS_ENABLED</span><span class="o">=</span><span class="nb">true</span>
 </span></code></pre></div>
-<p>With <code>IS_ENABLED</code>, <code>AppUtils.create_grpc_app</code> / <code>create_async_grpc_app</code> append the matching interceptor (same
-pattern as Prometheus metrics). Per-RPC limits still come only from <code>grpc_rate_limit_decorator</code>.</p>
+<p>With <code>IS_ENABLED</code>, <code>AppUtils.create_grpc_app</code> / <code>create_async_grpc_app</code> append the matching
+interceptor. Per-RPC limits still come only from <code>grpc_rate_limit_decorator</code>.</p>
 <p><strong>Sync:</strong></p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">grpc_rate_limit_decorator</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">grpc_rate_limit_decorator</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">MySyncServiceServicer</span><span class="p">(</span><span class="n">pb2_grpc</span><span class="o">.</span><span class="n">MyServiceServicer</span><span class="p">):</span>
@@ -3710,9 +3543,9 @@ pattern as Prometheus metrics). Per-RPC limits still come only from <code>grpc_r
 </span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="n">server</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_grpc_app</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 </span></code></pre></div>
 <p><strong>Async:</strong></p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">grpc_rate_limit_decorator</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">grpc_rate_limit_decorator</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAsyncServiceServicer</span><span class="p">(</span><span class="n">pb2_grpc</span><span class="o">.</span><span class="n">MyServiceServicer</span><span class="p">):</span>
@@ -3729,12 +3562,9 @@ pattern as Prometheus metrics). Per-RPC limits still come only from <code>grpc_r
 </span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">()</span>
 </span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="n">server</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_async_grpc_app</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 </span></code></pre></div>
-<p>Manual registration (when <code>IS_ENABLED</code> is false) via <code>customized_interceptors</code> is still supported; pass
-<code>GrpcServerRateLimitInterceptor</code> or <code>AsyncGrpcServerRateLimitInterceptor</code> explicitly.</p>
+<p>Manual registration (when <code>IS_ENABLED</code> is false) via <code>customized_interceptors</code> is still supported;
+pass <code>GrpcServerRateLimitInterceptor</code> or <code>AsyncGrpcServerRateLimitInterceptor</code> explicitly.</p>
 <h4 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h4>
-<p>Global defaults load from <code>GRPC_RATE_LIMIT</code> on <code>BaseConfig.global_config()</code> (env prefix
-<code>GRPC_RATE_LIMIT__</code>). Per-RPC limits are set only on <code>grpc_rate_limit_decorator</code>; the interceptor
-constructor controls shared behavior such as Redis key prefix, fail-closed mode, and JWT identity.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nv">GRPC_RATE_LIMIT__IS_ENABLED</span><span class="o">=</span><span class="nb">true</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nv">GRPC_RATE_LIMIT__FAIL_CLOSED</span><span class="o">=</span><span class="nb">true</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nv">GRPC_RATE_LIMIT__IDENTITY_FROM_ACCESS_TOKEN</span><span class="o">=</span><span class="nb">true</span>
@@ -3750,130 +3580,36 @@ when you need a custom server-resolved identity.</p>
 </blockquote>
 <p>Undecorated servicer methods are never rate-limited. Stacked decorators add multiple windows; all
 windows must pass before the RPC handler runs.</p>
-<h2 id="fastapi-interceptors">FastAPI Interceptors<a class="headerlink" href="#fastapi-interceptors" title="Permanent link">&para;</a></h2>
-<h3 id="metrics-middleware">Metrics Middleware<a class="headerlink" href="#metrics-middleware" title="Permanent link">&para;</a></h3>
-<p><code>FastAPIMetricInterceptor</code> records request durations and counts for Prometheus:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.metric.interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPIMetricInterceptor</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># Create a FastAPI app</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="c1"># Add the metrics middleware</span>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span><span class="n">FastAPIMetricInterceptor</span><span class="p">)</span>
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
-</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="c1"># Example endpoint — duration and status will be recorded automatically</span>
-</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/process"</span><span class="p">)</span>
-</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">process_data</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span> <span class="s2">"result"</span><span class="p">:</span> <span class="s2">"processed"</span><span class="p">}</span>
+<h2 id="fastapi-rate-limiting">FastAPI Rate Limiting<a class="headerlink" href="#fastapi-rate-limiting" title="Permanent link">&para;</a></h2>
+<p>ArchiPy no longer ships a FastAPI rate-limit handler. Use the official
+<a href="https://github.com/redis/fastapi-redis-sdk"><code>fastapi-redis-sdk</code></a>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>uv<span class="w"> </span>add<span class="w"> </span>fastapi-redis-sdk
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">REDIS_URL</span><span class="o">=</span>redis://user:pass@host:6379/0
 </span></code></pre></div>
-<h3 id="rate-limiting-dependency">Rate Limiting Dependency<a class="headerlink" href="#rate-limiting-dependency" title="Permanent link">&para;</a></h3>
-<blockquote>
-<p><strong>Deprecated:</strong> The FastAPI rate-limit interceptor — <code>FastAPIRestRateLimitHandler</code>, its
-<code>FastAPIRateLimitConfig</code> settings, and the <code>fastapi.rate_limit.identifiers</code> helpers — is
-<strong>deprecated</strong> and will be removed in a future major release. Instantiating the handler or
-calling the identity helpers raises <code>DeprecationError</code>. It is no longer maintained.</p>
-</blockquote>
-<p>The FastAPI rate limiter in ArchiPy has been superseded by the official
-<a href="https://github.com/redis/fastapi-redis-sdk"><code>fastapi-redis-sdk</code></a>, which provides the same
-distributed per-client counters with <code>X-RateLimit-*</code> / <code>Retry-After</code> headers and a fluent rate
-language (<code>"10/second"</code>). The gRPC rate-limit interceptor is <strong>not</strong> affected by this
-deprecation.</p>
-<h4 id="migrating-to-fastapi-redis-sdk">Migrating to <code>fastapi-redis-sdk</code><a class="headerlink" href="#migrating-to-fastapi-redis-sdk" title="Permanent link">&para;</a></h4>
-<p>Install the SDK and configure Redis via environment variables (<code>REDIS_URL</code>, or <code>REDIS_HOST</code> /
-<code>REDIS_PORT</code> / <code>REDIS_PASSWORD</code>):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>uv<span class="w"> </span>add<span class="w"> </span>fastapi-redis-sdk
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">REDIS_URL</span><span class="o">=</span>redis://user:pass@host:6379/0
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Depends</span><span class="p">,</span> <span class="n">FastAPI</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redis_fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPIRedis</span><span class="p">,</span> <span class="n">rate_limit</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">()</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">FastAPIRedis</span><span class="p">(</span><span class="n">app</span><span class="p">)</span><span class="o">.</span><span class="n">lifespan</span><span class="p">()</span><span class="o">.</span><span class="n">rate_limiting</span><span class="p">()</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="s2">"/search"</span><span class="p">,</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>        <span class="n">Depends</span><span class="p">(</span><span class="n">rate_limit</span><span class="p">(</span><span class="s2">"10/second"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"search:burst"</span><span class="p">)),</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>        <span class="n">Depends</span><span class="p">(</span><span class="n">rate_limit</span><span class="p">(</span><span class="s2">"100/minute"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"search:sustained"</span><span class="p">)),</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>    <span class="p">],</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="p">)</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">search</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">"results"</span><span class="p">:</span> <span class="p">[]}</span>
 </span></code></pre></div>
-<p>Replace the handler dependency with the <code>rate_limit()</code> dependency:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">Depends</span><span class="p">,</span> <span class="n">FastAPI</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redis_fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPIRedis</span><span class="p">,</span> <span class="n">rate_limit</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">()</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">FastAPIRedis</span><span class="p">(</span><span class="n">app</span><span class="p">)</span><span class="o">.</span><span class="n">lifespan</span><span class="p">()</span><span class="o">.</span><span class="n">rate_limiting</span><span class="p">()</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="s2">"/search"</span><span class="p">,</span>
-</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span>
-</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>        <span class="n">Depends</span><span class="p">(</span><span class="n">rate_limit</span><span class="p">(</span><span class="s2">"10/second"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"search:burst"</span><span class="p">)),</span>  <span class="c1"># burst</span>
-</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>        <span class="n">Depends</span><span class="p">(</span><span class="n">rate_limit</span><span class="p">(</span><span class="s2">"100/minute"</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="s2">"search:sustained"</span><span class="p">)),</span>  <span class="c1"># sustained</span>
-</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>    <span class="p">],</span>
-</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="p">)</span>
-</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">search</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">"results"</span><span class="p">:</span> <span class="p">[]}</span>
-</span></code></pre></div>
-<p>Both limits count per client IP by default and a request must satisfy both; distinct <code>scope</code>
-values keep the counters independent on the same route. When a limit is exceeded the request
-gets a <code>429 Too Many Requests</code> with <code>Retry-After</code>, and every response carries
-<code>X-RateLimit-Limit</code> / <code>-Remaining</code> / <code>-Reset</code>. Counters live in Redis, so limits hold across
-every worker and pod. <code>fastapi-redis-sdk</code> requires Redis <strong>7.4+</strong> (no <code>INCREX</code> 8.8 dependency)
-and supports Python 3.10–3.14 with FastAPI 0.115+.</p>
-<table>
-<thead>
-<tr>
-<th>ArchiPy (deprecated)</th>
-<th><code>fastapi-redis-sdk</code></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>Depends(FastAPIRestRateLimitHandler(calls_count=100, minutes=1))</code></td>
-<td><code>Depends(rate_limit("100/minute"))</code></td>
-</tr>
-<tr>
-<td><code>additional_windows</code> stacked tiers</td>
-<td>stack multiple <code>rate_limit()</code> dependencies</td>
-</tr>
-<tr>
-<td><code>FASTAPI_RATE_LIMIT__*</code> environment variables</td>
-<td><code>REDIS_*</code> environment variables</td>
-</tr>
-</tbody>
-</table>
-<h4 id="client-identification_1">Client identification<a class="headerlink" href="#client-identification_1" title="Permanent link">&para;</a></h4>
-<p><code>FastAPIRestRateLimitHandler</code> previously resolved the client identity from trusted proxy
-headers (<code>CF-Connecting-IP</code>, <code>True-Client-IP</code>, <code>Forwarded</code>, <code>X-Forwarded-For</code>, <code>X-Real-IP</code>)
-only when the immediate peer matched <code>FASTAPI_RATE_LIMIT.TRUSTED_PROXY_IPS</code> /
-<code>FASTAPI.FORWARDED_ALLOW_IPS</code>. This behavior is deprecated along with the handler; in
-<code>fastapi-redis-sdk</code> per-client counters default to the client IP. For per-user quotas, identify
-the caller in your auth <code>Depends</code> and use a distinct <code>scope</code> per user instead.</p>
-<h2 id="using-multiple-interceptors">Using Multiple Interceptors<a class="headerlink" href="#using-multiple-interceptors" title="Permanent link">&para;</a></h2>
-<p>Combining gRPC and FastAPI interceptors in an application:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">grpc</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent</span><span class="w"> </span><span class="kn">import</span> <span class="n">futures</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.fastapi.metric.interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPIMetricInterceptor</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.interceptors.grpc.trace.server_interceptor</span><span class="w"> </span><span class="kn">import</span> <span class="n">GrpcServerTraceInterceptor</span>
-</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>
-</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
-</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="c1"># Create a FastAPI app with metrics middleware</span>
-</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_fastapi_app</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">FastAPI</span><span class="p">:</span>
-</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>    <span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">()</span>
-</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>
-</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>    <span class="c1"># Add metrics middleware</span>
-</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>    <span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span><span class="n">FastAPIMetricInterceptor</span><span class="p">)</span>
-</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>
-</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>    <span class="k">return</span> <span class="n">app</span>
-</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>
-</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>
-</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="c1"># Create a gRPC server with the tracing interceptor</span>
-</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_grpc_server</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">grpc</span><span class="o">.</span><span class="n">Server</span><span class="p">:</span>
-</span><span id="__span-10-22"><a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>    <span class="k">return</span> <span class="n">grpc</span><span class="o">.</span><span class="n">server</span><span class="p">(</span>
-</span><span id="__span-10-23"><a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>        <span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
-</span><span id="__span-10-24"><a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a>        <span class="n">interceptors</span><span class="o">=</span><span class="p">[</span><span class="n">GrpcServerTraceInterceptor</span><span class="p">()],</span>
-</span><span id="__span-10-25"><a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>    <span class="p">)</span>
-</span></code></pre></div>
+<p>The gRPC rate-limit interceptor is unaffected.</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../../../api_reference/helpers/interceptors/">API Reference - Interceptors</a> - Full interceptors API documentation</li>
-<li><a href="../../adapters/redis/#increx-window-counter">Redis Adapter - INCREX</a> - Redis <code>INCREX</code> window counter usage</li>
-<li><a href="../">Helper Tutorials</a> - Overview of all helper tutorials</li>
+<li><a href="../../observability/">Observability</a> — OpenTelemetry config, AppUtils wiring, decorators</li>
+<li><a href="../../../api_reference/helpers/interceptors/">API Reference - Interceptors</a> — interceptor API docs</li>
+<li><a href="../../adapters/redis/#increx-window-counter">Redis Adapter - INCREX</a> — Redis <code>INCREX</code> window counter</li>
+<li><a href="../">Helper Tutorials</a> — overview of all helper tutorials</li>
 </ul>
 
 

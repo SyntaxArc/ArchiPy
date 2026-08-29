@@ -2836,6 +2836,8 @@
       
         
       
+        
+      
     
     
     
@@ -2890,6 +2892,34 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.x
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -3183,21 +3213,21 @@
 
 
 <h1 id="4200-2026-08-03">4.20.0 — 2026-08-03<a class="headerlink" href="#4200-2026-08-03" title="Permanent link">&para;</a></h1>
-<p><a href="../4.19.0/">← 4.19.0</a> | <a href="../">↑ 4.x series</a></p>
+<p><a href="../4.19.0/">← 4.19.0</a> | <a href="../../5/5.0.0/">5.0.0 →</a> | <a href="../">↑ 4.x series</a></p>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="helpers-fastapi-rate-limit">Helpers - FastAPI Rate Limit<a class="headerlink" href="#helpers-fastapi-rate-limit" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>FastAPI Rate Limit Interceptor Deprecated</strong> - <code>FastAPIRestRateLimitHandler</code>, the
   <code>fastapi.rate_limit.identifiers</code> helpers (<code>extract_bearer_token</code>, <code>resolve_jwt_access_token_sub</code>),
-  and <code>FastAPIRateLimitConfig</code> are <strong>deprecated</strong> and will be removed in a future major release.
-  Instantiating <code>FastAPIRestRateLimitHandler</code> or calling the identifier helpers now raises
-  <code>DeprecationError</code>. <code>FastAPIRateLimitConfig</code> emits a <code>DeprecationWarning</code> on
-  instantiation (it cannot raise because <code>BaseConfig</code> instantiates it as a field default at
-  import time; the internal default suppresses the warning).</li>
-<li><strong>Replacement</strong> - The feature is superseded by the official
+  and <code>FastAPIRateLimitConfig</code> are <strong>deprecated</strong>. Instantiating <code>FastAPIRestRateLimitHandler</code> or
+  calling the identifier helpers raises <code>DeprecationError</code>. <code>FastAPIRateLimitConfig</code> emits a
+  <code>DeprecationWarning</code> on instantiation (it cannot raise because <code>BaseConfig</code> instantiates it as a
+  field default at import time; the internal default suppresses the warning).</li>
+<li><strong>Removed in 5.0.0</strong> - The deprecated FastAPI rate-limit handler, identifiers,
+  <code>FastAPIRateLimitConfig</code>, and <code>archipy.helpers.interceptors.fastapi</code> were deleted in
+  <a href="../../5/5.0.0/">5.0.0</a>. Use
   <a href="https://github.com/redis/fastapi-redis-sdk">fastapi-redis-sdk</a> (<code>rate_limit()</code> FastAPI
-  dependency, <code>X-RateLimit-*</code> / <code>Retry-After</code> headers, distributed per-client counters, Redis 7.4+).
-  See the <a href="../../../../tutorials/helpers/interceptors/#migrating-to-fastapi-redis-sdk">migration guide</a>.</li>
+  dependency). See <a href="../../../../tutorials/helpers/interceptors/#fastapi-rate-limiting">FastAPI Rate Limiting</a>.</li>
 <li><strong>Unaffected</strong> - The gRPC rate-limit interceptor, <code>RateLimitUtils</code>, and <code>RateLimitWindowDTO</code>
   remain supported and are not deprecated.</li>
 </ul>

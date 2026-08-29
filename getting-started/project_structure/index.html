@@ -3008,6 +3008,8 @@
       
         
       
+        
+      
     
     
     
@@ -3062,6 +3064,34 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../community/changelog/5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.x
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -3670,8 +3700,8 @@ after the scenario completes.</p>
 <p><strong>Note:</strong> <code>proxy_headers</code> and <code>forwarded_allow_ips</code> wire <code>FASTAPI.PROXY_HEADERS</code> and
 <code>FASTAPI.FORWARDED_ALLOW_IPS</code> into Uvicorn's <code>ProxyHeadersMiddleware</code>. When enabled, Uvicorn
 rewrites <code>request.client.host</code> from trusted <code>X-Forwarded-For</code> headers before your application
-runs. The deprecated <code>FastAPIRestRateLimitHandler</code> applied its own trusted-proxy logic as
-defense-in-depth — see <a href="../../tutorials/helpers/interceptors/#client-identification">Interceptor Tutorials — Client identification</a>.</p>
+runs. For HTTP rate limiting, use <a href="https://github.com/redis/fastapi-redis-sdk">fastapi-redis-sdk</a>
+— see <a href="../../tutorials/helpers/interceptors/#fastapi-rate-limiting">Interceptors — FastAPI Rate Limiting</a>.</p>
 </blockquote>
 <hr />
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>

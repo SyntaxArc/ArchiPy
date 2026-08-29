@@ -2947,6 +2947,8 @@
       
         
       
+        
+      
     
     
     
@@ -3001,6 +3003,34 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../community/changelog/5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.x
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -3451,18 +3481,48 @@ resolution.</p>
 </tr>
 <tr>
 <td>Observability</td>
-<td><code>archipy[prometheus]</code></td>
-<td>Metrics and monitoring</td>
+<td><code>archipy[otel]</code></td>
+<td>OpenTelemetry SDK, OTLP exporters, httpx/requests</td>
 </tr>
 <tr>
 <td>Observability</td>
-<td><code>archipy[sentry]</code></td>
-<td>Error tracking and monitoring</td>
+<td><code>archipy[otel-fastapi]</code></td>
+<td>FastAPI auto-instrumentation</td>
 </tr>
 <tr>
 <td>Observability</td>
-<td><code>archipy[elastic-apm]</code></td>
-<td>Elastic APM tracing</td>
+<td><code>archipy[otel-grpc]</code></td>
+<td>gRPC server/client contrib interceptors</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td><code>archipy[otel-sqlalchemy]</code></td>
+<td>SQLAlchemy instrumentation</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td><code>archipy[otel-redis]</code></td>
+<td>Redis instrumentation</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td><code>archipy[otel-elasticsearch]</code></td>
+<td>Elasticsearch instrumentation</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td><code>archipy[otel-kafka]</code></td>
+<td>Confluent Kafka instrumentation</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td><code>archipy[otel-scylladb]</code></td>
+<td>Cassandra/ScyllaDB instrumentation</td>
+</tr>
+<tr>
+<td>Observability</td>
+<td><code>archipy[otel-minio]</code></td>
+<td>Botocore (MinIO/S3) instrumentation</td>
 </tr>
 <tr>
 <td>Utilities</td>
@@ -3502,7 +3562,11 @@ resolution.</p>
 </tbody>
 </table>
 <blockquote>
-<p><strong>Note:</strong> Importing <strong>metric interceptors</strong> (for example <code>FastAPIMetricInterceptor</code> under <code>archipy.helpers.interceptors.fastapi.metric</code>, or gRPC metric server interceptors) requires <code>archipy[prometheus]</code> because they use <code>prometheus_client</code> at import time. Calling <code>PrometheusUtils.start_prometheus_server_if_needed</code> also requires that extra.</p>
+<p><strong>Note:</strong> Enable observability with <code>OTEL__IS_ENABLED=true</code> and install the matching <code>otel-*</code>
+extras for each stack you use. See <a href="../../tutorials/observability/">Observability</a>.</p>
+<p><strong>Note:</strong> ArchiPy’s HTTP clients (for example payment IPG adapters) use <strong>httpx2</strong>. The
+<code>otel</code> extra instruments <strong>httpx</strong> and <strong>requests</strong>, not httpx2 — outbound httpx2 calls are a
+known auto-instrumentation gap.</p>
 </blockquote>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <p>If issues arise, verify:</p>

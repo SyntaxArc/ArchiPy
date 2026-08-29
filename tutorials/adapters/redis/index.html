@@ -3295,6 +3295,8 @@
       
         
       
+        
+      
     
     
     
@@ -3349,6 +3351,34 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../community/changelog/5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5.x
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -4251,8 +4281,8 @@ key-value storage, and RediSearch (full-text, vector KNN, vector range, hybrid s
 <h3 id="increx-window-counter">INCREX Window Counter<a class="headerlink" href="#increx-window-counter" title="Permanent link">&para;</a></h3>
 <p>Redis 8.8 adds the <code>INCREX</code> command — a generalized increment with optional bounds and conditional expiration.
 ArchiPy exposes it as <code>increx()</code> on both sync and async adapters. It is the primitive behind the
-<a href="../../helpers/interceptors/#rate-limiting-dependency">deprecated FastAPI rate limiting</a> handler
-(migrate to <code>fastapi-redis-sdk</code>).</p>
+<a href="../../helpers/interceptors/#rate-limiting-interceptor">gRPC rate-limit interceptor</a>. For FastAPI HTTP
+limits, use <a href="https://github.com/redis/fastapi-redis-sdk"><code>fastapi-redis-sdk</code></a>.</p>
 <blockquote>
 <p><strong>Note:</strong> Redis <strong>8.8+</strong> is required. The test container image in <code>.env.test</code> is <code>redis:8.8.0-alpine</code>.
 <code>fakeredis</code> does not implement <code>INCREX</code>; use a real Redis 8.8 instance to exercise this command.</p>
@@ -4772,7 +4802,7 @@ deployments.</p>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns with proper chaining</li>
 <li><a href="../../config_management/">Configuration Management</a> — Redis configuration setup</li>
 <li><a href="../../helpers/decorators/#cache-decorator">Cache Decorator</a> — TTL cache decorator usage</li>
-<li><a href="../../helpers/interceptors/#rate-limiting-dependency">Interceptors - Rate Limiting</a> — deprecated FastAPI rate limiting with <code>INCREX</code> (migrate to <code>fastapi-redis-sdk</code>)</li>
+<li><a href="../../helpers/interceptors/#rate-limiting-interceptor">Interceptors - Rate Limiting</a> — gRPC rate limiting with <code>INCREX</code>; FastAPI via <code>fastapi-redis-sdk</code></li>
 <li><a href="../../testing_strategy/">BDD Testing</a> — RediSearch scenarios in <code>features/redis_adapter.feature</code> (container and cluster)</li>
 <li><a href="../../../api_reference/adapters/redis/">API Reference</a> — Full Redis adapter API documentation</li>
 </ul>
