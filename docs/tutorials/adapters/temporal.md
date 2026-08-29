@@ -26,7 +26,6 @@ TEMPORAL__PORT=7233
 TEMPORAL__NAMESPACE=default
 TEMPORAL__TASK_QUEUE=my-task-queue
 TEMPORAL__ENABLE_METRICS=false
-TEMPORAL__METRICS_PORT=8201
 TEMPORAL__CLIENT_IDENTITY=
 TEMPORAL__API_KEY=
 TEMPORAL__LAZY_CONNECT=false
@@ -589,112 +588,89 @@ class RobustUserActivity(AtomicActivity[dict, dict]):
         await super()._handle_error(activity_input, error)
 ```
 
-## Prometheus Metrics Integration
+## OpenTelemetry Metrics and Tracing
 
-The Temporal adapter supports comprehensive metrics collection via Prometheus when enabled in configuration. The
-Temporal SDK automatically emits detailed metrics about workflow and activity execution, task queue operations, and
-worker performance.
+The Temporal adapter exports SDK metrics over OTLP and attaches Temporal's
+`TracingInterceptor` when OpenTelemetry is enabled on `BaseConfig.OTEL`.
 
 ### Configuration
 
-Enable Prometheus metrics for Temporal by setting both the global Prometheus flag and the Temporal-specific metrics
-flag:
+Enable OTel globally and flip Temporal's metrics flag:
 
 ```python
 import logging
 
 from archipy.adapters.temporal import TemporalAdapter, TemporalWorkerManager
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import PrometheusConfig, TemporalConfig
+from archipy.configs.config_template import OpentelemetryConfig, TemporalConfig
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
-# Configure global Prometheus settings
 config = BaseConfig()
-config.PROMETHEUS = PrometheusConfig(
-    IS_ENABLED=True,  # Enable Prometheus globally
-    SERVER_PORT=8200  # Metrics endpoint port
+config.OTEL = OpentelemetryConfig(
+    IS_ENABLED=True,
+    OTLP_ENDPOINT="http://localhost:4317",
+    PROTOCOL="grpc",
+    METRICS_ENABLED=True,
+    TRACES_ENABLED=True,
+    SERVICE_NAME="temporal-worker",
 )
+BaseConfig.set_global(config)
 
-# Configure Temporal with metrics enabled
 temporal_config = TemporalConfig(
     HOST="localhost",
     PORT=7233,
     NAMESPACE="default",
     TASK_QUEUE="my-task-queue",
-    ENABLE_METRICS=True  # Enable Temporal metrics
+    ENABLE_METRICS=True,  # Uses BaseConfig.OTEL endpoint via OpenTelemetryConfig
 )
 
-# Create adapter - metrics will be automatically configured
-# The TemporalRuntimeManager singleton ensures consistent Runtime across all clients/workers
 temporal_adapter = TemporalAdapter(temporal_config)
 worker_manager = TemporalWorkerManager(temporal_config)
 
-logger.info("Temporal adapter created with Prometheus metrics enabled")
+logger.info("Temporal adapter created with OTLP metrics and TracingInterceptor")
 ```
 
 ### Environment-Based Configuration
 
-`BaseConfig` automatically reads `TEMPORAL__*` environment variables — no manual `os.getenv()` calls needed:
-
-```python
-# TEMPORAL__HOST=temporal.production.com
-# TEMPORAL__ENABLE_METRICS=true
-# TEMPORAL__METRICS_PORT=8201
-
-# Or via pyproject.toml [tool.configs] section:
-# [tool.configs.TEMPORAL]
-# ENABLE_METRICS = true
-# HOST = "temporal.production.com"
+```bash
+OTEL__IS_ENABLED=true
+OTEL__OTLP_ENDPOINT=http://localhost:4317
+OTEL__METRICS_ENABLED=true
+OTEL__TRACES_ENABLED=true
+TEMPORAL__ENABLE_METRICS=true
+TEMPORAL__HOST=temporal.production.com
 ```
+
+### What gets wired
+
+| Feature | When | Mechanism |
+|---------|------|-----------|
+| Metrics | `TEMPORAL.ENABLE_METRICS` and `OTEL.IS_ENABLED` + `METRICS_ENABLED` | Temporal `Runtime` with `OpenTelemetryConfig` (OTLP URL/headers/protocol from `OTEL`) |
+| Traces | `OTEL.IS_ENABLED` and `TRACES_ENABLED` | `temporalio.contrib.opentelemetry.TracingInterceptor` on the client after `OtelUtils.init_otel_if_needed` |
 
 ### Available Metrics
 
-When metrics are enabled, the Temporal SDK automatically exposes comprehensive metrics at
-`http://localhost:8200/metrics` (or your configured port). These metrics are shared with any existing FastAPI or gRPC
-metrics.
+When metrics are enabled, the Temporal SDK emits client and worker metrics to your OTLP
+collector (same endpoint as the rest of the app). Typical series include:
 
 #### Client-Side Metrics
 
-Metrics emitted by the Temporal client (adapter):
-
-- `temporal_request_*` - Client request counts and latency
-- `temporal_long_request_*` - Long-polling request metrics
-- `temporal_workflow_*` - Workflow operation metrics (start, execute, cancel, terminate)
-- `temporal_sticky_cache_*` - Sticky workflow cache statistics
+- `temporal_request_*` — client request counts and latency
+- `temporal_long_request_*` — long-polling request metrics
+- `temporal_workflow_*` — workflow operation metrics (start, execute, cancel, terminate)
+- `temporal_sticky_cache_*` — sticky workflow cache statistics
 
 #### Worker-Side Metrics
 
-Metrics emitted by Temporal workers:
+- `temporal_worker_task_slots_available` / `_used` — task slot gauges
+- `temporal_worker_task_queue_poll_*` — task queue polling metrics
+- `temporal_workflow_task_execution_*` / `temporal_activity_task_execution_*` — task execution
+- `temporal_workflow_task_replay_latency` — workflow replay latency
+- `temporal_activity_execution_*` — activity execution counts and latency
 
-- `temporal_worker_task_slots_available` - Available task slots (gauge)
-- `temporal_worker_task_slots_used` - Task slots currently in use (gauge)
-- `temporal_worker_task_queue_poll_*` - Task queue polling metrics
-- `temporal_workflow_task_execution_*` - Workflow task execution metrics
-- `temporal_activity_task_execution_*` - Activity task execution metrics
-- `temporal_workflow_task_replay_latency` - Workflow replay latency histogram
-- `temporal_activity_execution_*` - Activity execution counts and latency
-
-### Prometheus Queries
-
-Example PromQL queries for monitoring Temporal workflows:
-
-```promql
-# Workflow execution rate (per second)
-rate(temporal_workflow_task_execution_total[5m])
-
-# Activity failure rate
-rate(temporal_activity_task_execution_failed_total[5m])
-
-# P95 activity execution latency
-histogram_quantile(0.95,
-  rate(temporal_activity_execution_latency_bucket[5m])
-)
-```
-
-> **Tip:** Import these queries into a Grafana dashboard using the `temporal_*` metric prefix — panel setup is
-> standard Prometheus/Grafana configuration and isn't covered here.
+> **Tip:** Query these series in your OTLP backend / Grafana after the collector scrapes or
+> receives OTLP — panel setup is backend-specific and isn't covered here.
 
 ### Complete Example with Metrics
 
@@ -706,28 +682,30 @@ from temporalio import activity, workflow
 
 from archipy.adapters.temporal import BaseWorkflow, TemporalAdapter, TemporalWorkerManager
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import PrometheusConfig, TemporalConfig
+from archipy.configs.config_template import OpentelemetryConfig, TemporalConfig
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
-# Configure Prometheus
 config = BaseConfig()
-config.PROMETHEUS = PrometheusConfig(IS_ENABLED=True, SERVER_PORT=8200)
+config.OTEL = OpentelemetryConfig(
+    IS_ENABLED=True,
+    OTLP_ENDPOINT="http://localhost:4317",
+    METRICS_ENABLED=True,
+    TRACES_ENABLED=True,
+)
+BaseConfig.set_global(config)
 
-# Configure Temporal with metrics
 temporal_config = TemporalConfig(
     HOST="localhost",
     PORT=7233,
     NAMESPACE="default",
     TASK_QUEUE="metrics-demo",
-    ENABLE_METRICS=True
+    ENABLE_METRICS=True,
 )
 
 
-# Define workflow
 class MetricsWorkflow(BaseWorkflow[str, str]):
-    """Workflow with metrics collection."""
+    """Workflow with OTel metrics collection."""
 
     @workflow.run
     async def run(self, name: str) -> str:
@@ -736,7 +714,7 @@ class MetricsWorkflow(BaseWorkflow[str, str]):
 
         result = await self._execute_activity_with_retry(
             greet_activity,
-            name
+            name,
         )
 
         self._log_workflow_event("workflow_completed", {"result": result})
@@ -746,39 +724,35 @@ class MetricsWorkflow(BaseWorkflow[str, str]):
 @activity.defn
 async def greet_activity(name: str) -> str:
     """Activity with metrics tracking."""
-    logger.info(f"Processing greeting for {name}")
-    await asyncio.sleep(0.1)  # Simulate work
+    logger.info("Processing greeting for %s", name)
+    await asyncio.sleep(0.1)
     return f"Hello, {name}!"
 
 
 async def main() -> None:
-    """Run workflow with metrics collection."""
-    # Create adapter and worker
+    """Run workflow with OTLP metrics collection."""
     temporal_adapter = TemporalAdapter(temporal_config)
     worker_manager = TemporalWorkerManager(temporal_config)
 
     try:
-        # Start worker
-        worker_handle = await worker_manager.start_worker(
+        await worker_manager.start_worker(
             task_queue="metrics-demo",
             workflows=[MetricsWorkflow],
-            activities=[greet_activity]
+            activities=[greet_activity],
         )
-        logger.info("Worker started with metrics enabled")
+        logger.info("Worker started with OTLP metrics enabled")
 
-        # Execute workflows - metrics will be collected
         results = []
         for i in range(10):
             result = await temporal_adapter.execute_workflow(
                 MetricsWorkflow,
                 f"User{i}",
                 workflow_id=f"metrics-workflow-{i}",
-                task_queue="metrics-demo"
+                task_queue="metrics-demo",
             )
             results.append(result)
 
-        logger.info(f"Completed {len(results)} workflows")
-        logger.info("Metrics available at http://localhost:8200/metrics")
+        logger.info("Completed %d workflows; metrics exported via OTLP", len(results))
 
     finally:
         await worker_manager.shutdown_all_workers()
@@ -791,7 +765,7 @@ if __name__ == "__main__":
 
 ### Monitoring Best Practices
 
-1. **Set Alerts**: Configure Prometheus alerts for high failure rates or latency
+1. **Set Alerts**: Alert on high failure rates or latency in your OTLP backend
 2. **Track Task Queues**: Monitor task queue depths and worker availability
 3. **Workflow Duration**: Alert on workflows exceeding expected execution time
 4. **Activity Failures**: Track activity failure patterns for debugging
@@ -800,17 +774,17 @@ if __name__ == "__main__":
 
 ### Troubleshooting
 
-If metrics are not appearing:
+If metrics or traces are missing:
 
-1. Verify `PROMETHEUS.IS_ENABLED = True` in global config
-2. Verify `ENABLE_METRICS = True` in TemporalConfig
-3. Check that the Prometheus endpoint is accessible: `curl http://localhost:8200/metrics`
-4. Ensure the `temporalio` package is installed with metrics support
-5. Check logs for any Runtime initialization errors
+1. Verify `OTEL.IS_ENABLED = True` and `METRICS_ENABLED` / `TRACES_ENABLED` as needed
+2. Verify `ENABLE_METRICS = True` in `TemporalConfig` for SDK metrics
+3. Confirm the OTLP collector is reachable at `OTEL.OTLP_ENDPOINT`
+4. Ensure `temporalio` is installed (`archipy[temporalio]`)
+5. Check logs for Runtime / TracingInterceptor initialization errors
 
-The Temporal Runtime with Prometheus is created lazily on first client connection using a singleton manager (
-`TemporalRuntimeManager`) that ensures consistent Runtime configuration across all clients and workers. The singleton
-pattern prevents multiple Runtime instances and guarantees thread-safe access.
+The Temporal Runtime with OTLP is created lazily on first client connection using
+`TemporalRuntimeManager` (singleton). Once created with metrics enabled, the Runtime cannot be
+reconfigured in-process (Temporal SDK limitation).
 
 ## Best Practices
 
@@ -819,15 +793,16 @@ pattern prevents multiple Runtime instances and guarantees thread-safe access.
 3. **Transactions**: Use `AtomicActivity` for database operations requiring consistency
 4. **Testing**: Mock adapters and activities for unit testing
 5. **Configuration**: Use environment-specific configurations for different deployments
-6. **Monitoring**: Leverage workflow logging and error tracking
+6. **Monitoring**: Leverage workflow logging and OTel tracing/metrics
 7. **Timeouts**: Set appropriate timeouts for workflows and activities
 8. **Retries**: Configure retry policies based on error types and business requirements
-9. **Metrics**: Enable Prometheus metrics for production observability
+9. **Metrics**: Enable `ENABLE_METRICS` with global `OTEL` for production observability
 
 ## See Also
 
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — Temporal configuration setup
+- [Observability](../observability.md) — OpenTelemetry OTLP traces and metrics
 - [BDD Testing](../testing_strategy.md) — Testing workflow operations
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Atomic transaction usage
 - [API Reference](../../api_reference/adapters/temporal.md) — Full Temporal adapter API documentation

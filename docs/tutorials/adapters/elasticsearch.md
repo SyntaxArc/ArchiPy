@@ -959,33 +959,28 @@ def ensure_elasticsearch_ready() -> ElasticsearchAdapter:
     return es
 ```
 
-### APM Integration
+### Observability (OpenTelemetry)
 
-Use `ElasticsearchAPMConfig` to enable Elastic APM for distributed tracing in your service:
+The Elasticsearch **adapter** (`ElasticsearchAdapter` / `AsyncElasticsearchAdapter`) is unchanged
+in 5.0.0. Elastic APM (`ElasticsearchAPMConfig` / `ELASTIC_APM`) was removed — use OpenTelemetry
+instead.
 
-```python
-import elasticapm  # type: ignore[import-untyped]
+Install the contrib instrumentor and enable OTel:
 
-from archipy.configs.base_config import BaseConfig
-
-
-class AppConfig(BaseConfig):
-    APP_NAME: str = "my-service"
-
-
-config = AppConfig()
-apm_cfg = config.ELASTIC_APM
-
-if apm_cfg.IS_ENABLED:
-    apm_client = elasticapm.Client(
-        server_url=apm_cfg.SERVER_URL,
-        service_name=apm_cfg.SERVICE_NAME,
-        secret_token=apm_cfg.SECRET_TOKEN.get_secret_value() if apm_cfg.SECRET_TOKEN else None,
-        environment=apm_cfg.ENVIRONMENT,
-        transaction_sample_rate=apm_cfg.TRANSACTION_SAMPLE_RATE,
-    )
-    elasticapm.instrument()
+```bash
+uv add "archipy[otel-elasticsearch]"
 ```
+
+```bash
+OTEL__IS_ENABLED=true
+OTEL__OTLP_ENDPOINT=http://localhost:4317
+OTEL__TRACES_ENABLED=true
+OTEL__METRICS_ENABLED=true
+```
+
+`OtelUtils.init_otel_if_needed` (via `AppUtils.create_fastapi_app` / `create_grpc_app`, or
+manually) instruments the Elasticsearch client library when that extra is installed. See
+[Observability](../observability.md) for full configuration.
 
 ## Troubleshooting
 
@@ -1026,5 +1021,6 @@ if apm_cfg.IS_ENABLED:
 
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — Elasticsearch configuration setup
+- [Observability](../observability.md) — OpenTelemetry (replaces Elastic APM)
 - [API Reference](../../api_reference/adapters/elasticsearch.md) — Full Elasticsearch adapter API documentation
 - [Elasticsearch Python Client docs](https://www.elastic.co/guide/en/elasticsearch/client/python-api/current/index.html)

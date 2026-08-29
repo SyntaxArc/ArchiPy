@@ -309,7 +309,7 @@ class TemporalWorkerManager(WorkerPort):
 
         try:
             # Create the Temporal worker
-            # Note: Worker inherits Runtime (including Prometheus config) from the Client
+            # Note: Worker inherits Runtime (including OTLP metrics config) from the Client
             worker = Worker(
                 client,
                 task_queue=task_queue,

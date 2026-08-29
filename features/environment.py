@@ -186,6 +186,14 @@ def after_scenario(context: Context, scenario: Scenario) -> None:
     except Exception:
         pass
 
+    # Reset OTel in-memory providers / config flags so later features are not polluted
+    try:
+        from features.steps.otel_steps import teardown_otel_testing
+
+        teardown_otel_testing(context)
+    except Exception:
+        pass
+
     # Clear Vault settings-source env overrides so later scenarios are not polluted
     vault_runtime_keys = (
         "VAULT__ENABLED",

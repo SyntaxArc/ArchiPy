@@ -14,7 +14,6 @@ order (highest priority first):
 
 import importlib
 import os
-import warnings
 from typing import TypeVar
 
 from pydantic_settings import (
@@ -28,11 +27,9 @@ from pydantic_settings import (
 from archipy.configs.config_template import (
     AuthConfig,
     DatetimeConfig,
-    ElasticsearchAPMConfig,
     ElasticsearchConfig,
     EmailConfig,
     FastAPIConfig,
-    FastAPIRateLimitConfig,
     FileConfig,
     GrpcConfig,
     GrpcRateLimitConfig,
@@ -40,13 +37,12 @@ from archipy.configs.config_template import (
     KeycloakConfig,
     MinioConfig,
     MySQLSQLAlchemyConfig,
+    OpentelemetryConfig,
     ParsianShaparakConfig,
     PostgresSQLAlchemyConfig,
-    PrometheusConfig,
     RedisConfig,
     SamanShaparakConfig,
     ScyllaDBConfig,
-    SentryConfig,
     SQLAlchemyConfig,
     SQLiteSQLAlchemyConfig,
     StarRocksSQLAlchemyConfig,
@@ -81,11 +77,9 @@ class BaseConfig[R](BaseSettings):
         AUTH (AuthConfig): Authentication and security settings
         DATETIME (DatetimeConfig): Date/time handling configuration
         ELASTIC (ElasticsearchConfig): Elasticsearch configuration
-        ELASTIC_APM (ElasticsearchAPMConfig): Elasticsearch APM configuration
         EMAIL (EmailConfig): Email service configuration
         ENVIRONMENT (EnvironmentType): Application environment (dev, test, prod)
         FASTAPI (FastAPIConfig): FastAPI framework settings
-        FASTAPI_RATE_LIMIT (FastAPIRateLimitConfig): FastAPI REST rate limiting settings (deprecated; migrate to fastapi-redis-sdk)
         FILE (FileConfig): File handling configuration
         GRPC (GrpcConfig): gRPC service configuration
         GRPC_RATE_LIMIT (GrpcRateLimitConfig): gRPC server rate limiting settings
@@ -94,13 +88,12 @@ class BaseConfig[R](BaseSettings):
         LANGUAGE (LanguageType): Application default language
         MINIO (MinioConfig): MinIO object storage configuration
         MYSQL_SQLALCHEMY (MySQLSQLAlchemyConfig): MySQL SQLAlchemy configuration
+        OTEL (OpentelemetryConfig): OpenTelemetry observability configuration
         PARSIAN_SHAPARAK (ParsianShaparakConfig): Parsian Shaparak payment gateway configuration
         POSTGRES_SQLALCHEMY (PostgresSQLAlchemyConfig): PostgreSQL SQLAlchemy configuration
-        PROMETHEUS (PrometheusConfig): Prometheus metrics configuration
         REDIS (RedisConfig): Redis cache configuration
         SAMAN_SHAPARAK (SamanShaparakConfig): Saman Shaparak (SEP) payment gateway configuration
         SCYLLADB (ScyllaDBConfig): ScyllaDB/Cassandra database configuration
-        SENTRY (SentryConfig): Sentry error tracking configuration
         SQLALCHEMY (SQLAlchemyConfig): Database ORM configuration
         SQLITE_SQLALCHEMY (SqliteSQLAlchemyConfig): SQLite SQLAlchemy configuration
         STARROCKS_SQLALCHEMY (StarrocksSQLAlchemyConfig): Starrocks SQLAlchemy configuration
@@ -200,26 +193,20 @@ class BaseConfig[R](BaseSettings):
     AUTH: AuthConfig = AuthConfig()
     DATETIME: DatetimeConfig = DatetimeConfig()
     ELASTIC: ElasticsearchConfig = ElasticsearchConfig()
-    ELASTIC_APM: ElasticsearchAPMConfig = ElasticsearchAPMConfig()
     EMAIL: EmailConfig = EmailConfig()
     ENVIRONMENT: EnvironmentType = EnvironmentType.LOCAL
     FASTAPI: FastAPIConfig = FastAPIConfig()
-    # Suppress the deprecation warning for the internal default; it still fires on direct use.
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", DeprecationWarning)
-        FASTAPI_RATE_LIMIT: FastAPIRateLimitConfig = FastAPIRateLimitConfig()
     FILE: FileConfig = FileConfig()
     GRPC: GrpcConfig = GrpcConfig()
     GRPC_RATE_LIMIT: GrpcRateLimitConfig = GrpcRateLimitConfig()
     KAFKA: KafkaConfig = KafkaConfig()
     KEYCLOAK: KeycloakConfig = KeycloakConfig()
     MINIO: MinioConfig = MinioConfig()
+    OTEL: OpentelemetryConfig = OpentelemetryConfig()
     PARSIAN_SHAPARAK: ParsianShaparakConfig = ParsianShaparakConfig()
     SAMAN_SHAPARAK: SamanShaparakConfig = SamanShaparakConfig()
-    PROMETHEUS: PrometheusConfig = PrometheusConfig()
     REDIS: RedisConfig = RedisConfig()
     SCYLLADB: ScyllaDBConfig = ScyllaDBConfig()
-    SENTRY: SentryConfig = SentryConfig()
     SQLALCHEMY: SQLAlchemyConfig = SQLAlchemyConfig()
     STARROCKS_SQLALCHEMY: StarRocksSQLAlchemyConfig = StarRocksSQLAlchemyConfig()
     POSTGRES_SQLALCHEMY: PostgresSQLAlchemyConfig = PostgresSQLAlchemyConfig()
@@ -244,11 +231,8 @@ class BaseConfig[R](BaseSettings):
             >>> config = MyAppConfig()
             >>> BaseConfig.set_global(config)  # calls customize() automatically
         """
-        if self.ELASTIC_APM.ENVIRONMENT is None:
-            self.ELASTIC_APM.ENVIRONMENT = self.ENVIRONMENT
-
-        if self.SENTRY.ENVIRONMENT is None:
-            self.SENTRY.ENVIRONMENT = self.ENVIRONMENT
+        if self.OTEL.ENVIRONMENT is None:
+            self.OTEL.ENVIRONMENT = self.ENVIRONMENT
 
     @classmethod
     def global_config(cls) -> BaseConfig:

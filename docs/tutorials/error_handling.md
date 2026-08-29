@@ -286,11 +286,15 @@ async def get_user_endpoint(user_id: str) -> dict[str, Any]:  # type: ignore[nam
 
 ## Error Logging and Monitoring
 
+Use `BaseUtils.capture_exception` to log locally and record the exception on the **current
+OpenTelemetry span** when `OTEL.IS_ENABLED` is true. There is no Sentry or Elastic APM capture
+path in ArchiPy 5.x.
+
 ```python
 import logging
+from typing import Any
 
-import sentry_sdk
-
+from archipy.helpers.utils.base_utils import BaseUtils
 from archipy.models.errors import (
     BaseError,
     ConfigurationError,
@@ -301,8 +305,8 @@ from archipy.models.errors import (
 logger = logging.getLogger(__name__)
 
 
-def log_error(error: BaseError, context: dict[str, Any] | None = None) -> None:  # type: ignore[name-defined]
-    """Log error with context and send to monitoring service.
+def log_error(error: BaseError, context: dict[str, Any] | None = None) -> None:
+    """Log error with context and record it on the active OTel span.
 
     Args:
         error: The ArchiPy BaseError instance.
@@ -314,15 +318,16 @@ def log_error(error: BaseError, context: dict[str, Any] | None = None) -> None: 
         error_dict["context"] = context
 
     logger.error(
-        f"Error occurred: {error_dict['error']}",
+        "Error occurred: %s",
+        error_dict.get("error"),
         extra={"error": error_dict},
     )
 
     if isinstance(error, (InternalError, UnknownError, ConfigurationError)):
-        sentry_sdk.capture_exception(error)
+        BaseUtils.capture_exception(error)
 
 
-def process_request(request_data: dict[str, Any]) -> Any:  # type: ignore[name-defined]
+def process_request(request_data: dict[str, Any]) -> Any:
     """Process an incoming request.
 
     Args:
@@ -335,12 +340,15 @@ def process_request(request_data: dict[str, Any]) -> Any:  # type: ignore[name-d
         BaseError: On any domain error during processing.
     """
     try:
-        result = service.process(request_data)  # type: ignore[name-defined]
-        return result
+        return service.process(request_data)  # type: ignore[name-defined]
     except BaseError as e:
         log_error(e, context={"request_data": request_data})
         raise
 ```
+
+> **Note:** `capture_exception` only attaches to a recording span. Ensure the call runs inside
+> FastAPI/gRPC auto-instrumentation or a `@trace_span` / `@trace_root` decorator. See
+> [Observability](observability.md).
 
 ## Exception Chaining
 

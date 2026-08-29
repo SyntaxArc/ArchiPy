@@ -2,12 +2,11 @@ import time
 from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any, ClassVar
 
+import httpx2
 import jdatetime
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 from archipy.configs.base_config import BaseConfig
+from archipy.helpers.decorators.tracing import trace_span
 from archipy.models.errors import UnknownError
 
 if TYPE_CHECKING:
@@ -121,12 +120,13 @@ class DatetimeUtils:
             # Cache the result with appropriate expiration
             expiry_time = current_time + timedelta(seconds=cache_ttl)
             cls._holiday_cache[date_str] = (is_holiday, expiry_time)
-        except requests.RequestException as exception:
+        except httpx2.HTTPError as exception:
             raise UnknownError from exception
 
         return is_holiday
 
     @staticmethod
+    @trace_span(name="datetime.get_holiday_api")
     def _call_holiday_api(jalali_date: jdatetime.date) -> dict[str, Any]:
         """Calls the Time.ir API to fetch holiday data for the given Jalali date.
 
@@ -137,24 +137,17 @@ class DatetimeUtils:
             Dict[str, Any]: The JSON response from the API.
 
         Raises:
-            requests.RequestException: If the API request fails.
+            httpx2.HTTPError: If the API request fails.
         """
         config: Any = BaseConfig.global_config()
-        retry_strategy = Retry(
-            total=config.DATETIME.MAX_RETRIES,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["HEAD", "GET", "OPTIONS"],
-        )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        session = requests.Session()
-        session.mount("https://", adapter)
-
+        transport = httpx2.HTTPTransport(retries=config.DATETIME.MAX_RETRIES)
         url = DatetimeUtils._build_api_url(jalali_date)
         headers = {"x-api-key": config.DATETIME.TIME_IR_API_KEY}
-        response = session.get(url, headers=headers, timeout=config.DATETIME.REQUEST_TIMEOUT)
-        response.raise_for_status()
-        result: dict[str, Any] = response.json()
-        return result
+        with httpx2.Client(transport=transport, timeout=config.DATETIME.REQUEST_TIMEOUT) as client:
+            response = client.get(url, headers=headers)
+            response.raise_for_status()
+            result: dict[str, Any] = response.json()
+            return result
 
     @staticmethod
     def _build_api_url(jalali_date: jdatetime.date) -> str:

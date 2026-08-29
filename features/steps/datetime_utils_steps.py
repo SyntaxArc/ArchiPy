@@ -164,10 +164,29 @@ def step_when_check_holiday_in_iran(context: Context) -> None:
     scenario_context = get_current_scenario_context(context)
     target_date = scenario_context.get("target_date")
     date_str = scenario_context.get("date_str")
+    DatetimeUtils._holiday_cache.clear()
+
+    def mock_call_holiday_api(jalali_date) -> dict:
+        # Nowruz (1 Farvardin) is the only fixed holiday used by these scenarios.
+        is_nowruz = jalali_date.month == 1 and jalali_date.day == 1
+        events = (
+            [
+                {
+                    "jalali_year": jalali_date.year,
+                    "jalali_month": jalali_date.month,
+                    "jalali_day": jalali_date.day,
+                    "is_holiday": True,
+                },
+            ]
+            if is_nowruz
+            else []
+        )
+        return {"data": {"event_list": events}}
 
     try:
         if target_date is not None:
-            result = DatetimeUtils.is_holiday_in_iran(target_date)
+            with patch.object(DatetimeUtils, "_call_holiday_api", side_effect=mock_call_holiday_api):
+                result = DatetimeUtils.is_holiday_in_iran(target_date)
             scenario_context.store("result", result)
             scenario_context.store("error", None)
         else:

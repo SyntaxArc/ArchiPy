@@ -93,11 +93,6 @@ options:
 show_root_toc_entry: false
 heading_level: 3
 
-::: archipy.configs.config_template.ElasticsearchAPMConfig
-options:
-show_root_toc_entry: false
-heading_level: 3
-
 ### Service Configs
 
 ::: archipy.configs.config_template.RedisConfig
@@ -137,15 +132,6 @@ options:
 show_root_toc_entry: false
 heading_level: 3
 
-> **Deprecated:** `FastAPIRateLimitConfig` belongs to the deprecated FastAPI rate-limit
-> interceptor and will be removed in a future major release. Instantiating it emits a
-> `DeprecationWarning`. Migrate to [fastapi-redis-sdk](https://github.com/redis/fastapi-redis-sdk).
-
-::: archipy.configs.config_template.FastAPIRateLimitConfig
-options:
-show_root_toc_entry: false
-heading_level: 3
-
 ::: archipy.configs.config_template.GrpcRateLimitConfig
 options:
 show_root_toc_entry: false
@@ -158,12 +144,7 @@ heading_level: 3
 
 ### Observability Configs
 
-::: archipy.configs.config_template.SentryConfig
-options:
-show_root_toc_entry: false
-heading_level: 3
-
-::: archipy.configs.config_template.PrometheusConfig
+::: archipy.configs.config_template.OpentelemetryConfig
 options:
 show_root_toc_entry: false
 heading_level: 3

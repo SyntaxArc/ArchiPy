@@ -46,9 +46,20 @@ heading_level: 3
 
 ## Tracing
 
-Decorator that adds distributed tracing instrumentation to a function.
+OpenTelemetry span decorators for functions and classes (`trace_span`, `async_trace_span`,
+`trace_root`, `async_trace_root`, `trace_class`).
 
 ::: archipy.helpers.decorators.tracing
+options:
+show_root_toc_entry: false
+heading_level: 3
+
+## Metrics
+
+OpenTelemetry metrics decorators for duration histograms and call counters
+(`measure_duration`, `async_measure_duration`, `count_calls`, `async_count_calls`).
+
+::: archipy.helpers.decorators.metrics
 options:
 show_root_toc_entry: false
 heading_level: 3

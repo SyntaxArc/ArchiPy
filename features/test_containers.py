@@ -604,6 +604,9 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         self.cluster_name: str = "test-cluster"
 
         self._container = ElasticSearchContainer(image=self.image)
+        if self._container._wait_strategy is not None:
+            # ES startup can exceed the default 120s on loaded machines; allow up to 5 minutes.
+            self._container._wait_strategy = self._container._wait_strategy.with_startup_timeout(300)
 
     def start(self) -> ElasticSearchContainer:
         """Start the Elasticsearch container."""

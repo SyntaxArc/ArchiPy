@@ -13,12 +13,13 @@ from pathlib import Path
 from queue import Queue
 from typing import TYPE_CHECKING, BinaryIO, override
 
-import requests
+import httpx2
 from jinja2 import Template
 from pydantic import EmailStr, HttpUrl
 
 from archipy.adapters.email.ports import EmailPort
 from archipy.configs.base_config import BaseConfig
+from archipy.helpers.decorators.tracing import trace_span
 from archipy.helpers.utils.base_utils import BaseUtils
 from archipy.models.dtos.email_dtos import EmailAttachmentDTO
 from archipy.models.errors import InvalidArgumentError
@@ -167,10 +168,11 @@ class AttachmentHandler:
         )
 
     @staticmethod
+    @trace_span(name="email.fetch_attachment_url")
     def _process_url_source(source: str | bytes | BinaryIO | HttpUrl) -> bytes:
         """Fetch bytes from a URL attachment source."""
         if isinstance(source, str | HttpUrl):
-            response = requests.get(str(source), timeout=30)
+            response = httpx2.get(str(source), timeout=30)
             response.raise_for_status()
             return bytes(response.content)
         raise InvalidArgumentError(

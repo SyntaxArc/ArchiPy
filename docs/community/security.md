@@ -132,7 +132,7 @@ is_valid = PasswordUtils.verify_password(plain_password, hashed)
 
 - [ ] **Do not log sensitive data** — passwords, tokens, credit card numbers, PII.
 - [ ] **Use structured logging** (`logging` module with JSON formatters) to ease log analysis.
-- [ ] **Redact secrets** in exception messages before they reach error trackers (Sentry, Elastic APM).
+- [ ] **Redact secrets** in exception messages before they reach logs or OpenTelemetry spans.
 
 ### Dependency Management
 

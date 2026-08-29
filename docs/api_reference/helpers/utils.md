@@ -6,7 +6,7 @@ description: API reference for ArchiPy utility functions.
 # Utils
 
 The `helpers/utils` subpackage provides utility classes with static methods for common operations including date/time
-handling, string manipulation, file I/O, JWT tokens, passwords, TOTP, Keycloak integration, Prometheus metrics, and
+handling, string manipulation, file I/O, JWT tokens, passwords, TOTP, Keycloak integration, OpenTelemetry, and
 application-level utilities.
 
 ## Base Utils
@@ -108,11 +108,11 @@ options:
 show_root_toc_entry: false
 heading_level: 3
 
-## Prometheus Utils
+## OpenTelemetry Utils
 
-Utilities for registering and exposing Prometheus metrics within ArchiPy applications.
+Utilities for OpenTelemetry provider lifecycle, library instrumentation, status mapping, and gRPC client interceptors.
 
-::: archipy.helpers.utils.prometheus_utils
+::: archipy.helpers.utils.otel_utils
 options:
 show_root_toc_entry: false
 heading_level: 3

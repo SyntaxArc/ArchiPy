@@ -83,9 +83,15 @@ ArchiPy supports modular features through optional extras — install only what 
 | Service       | `archipy[saman-ipg]`            | Payment gateway (Saman)                           |
 | Web           | `archipy[fastapi]`              | FastAPI integration with middleware and utilities |
 | Web           | `archipy[grpc]`                 | gRPC integration with interceptors                |
-| Observability | `archipy[prometheus]`           | Metrics and monitoring                            |
-| Observability | `archipy[sentry]`               | Error tracking and monitoring                     |
-| Observability | `archipy[elastic-apm]`          | Elastic APM tracing                               |
+| Observability | `archipy[otel]`                 | OpenTelemetry SDK, OTLP exporters, httpx/requests |
+| Observability | `archipy[otel-fastapi]`         | FastAPI auto-instrumentation                      |
+| Observability | `archipy[otel-grpc]`            | gRPC server/client contrib interceptors           |
+| Observability | `archipy[otel-sqlalchemy]`      | SQLAlchemy instrumentation                        |
+| Observability | `archipy[otel-redis]`           | Redis instrumentation                             |
+| Observability | `archipy[otel-elasticsearch]`   | Elasticsearch instrumentation                     |
+| Observability | `archipy[otel-kafka]`           | Confluent Kafka instrumentation                   |
+| Observability | `archipy[otel-scylladb]`        | Cassandra/ScyllaDB instrumentation                |
+| Observability | `archipy[otel-minio]`           | Botocore (MinIO/S3) instrumentation               |
 | Utilities     | `archipy[jwt]`                  | JSON Web Token utilities                          |
 | Utilities     | `archipy[scheduler]`            | Task scheduling utilities                         |
 | Utilities     | `archipy[cache]`                | TTL and async caching utilities                   |
@@ -94,7 +100,12 @@ ArchiPy supports modular features through optional extras — install only what 
 | Testing       | `archipy[testcontainers]`       | Testcontainers integration                        |
 | Testing       | `archipy[behave]`               | BDD testing framework                             |
 
-> **Note:** Importing **metric interceptors** (for example `FastAPIMetricInterceptor` under `archipy.helpers.interceptors.fastapi.metric`, or gRPC metric server interceptors) requires `archipy[prometheus]` because they use `prometheus_client` at import time. Calling `PrometheusUtils.start_prometheus_server_if_needed` also requires that extra.
+> **Note:** Enable observability with `OTEL__IS_ENABLED=true` and install the matching `otel-*`
+> extras for each stack you use. See [Observability](../tutorials/observability.md).
+>
+> **Note:** ArchiPy’s HTTP clients (for example payment IPG adapters) use **httpx2**. The
+> `otel` extra instruments **httpx** and **requests**, not httpx2 — outbound httpx2 calls are a
+> known auto-instrumentation gap.
 
 ## Troubleshooting
 

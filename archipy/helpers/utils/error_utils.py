@@ -91,10 +91,10 @@ class ErrorUtils:
 
     @staticmethod
     def capture_exception(exception: BaseException) -> None:
-        """Captures an exception and reports it to configured external services.
+        """Captures an exception and records it on the current OpenTelemetry span.
 
-        This method logs the exception locally and optionally reports it to Sentry and Elastic APM,
-        depending on the configuration.
+        Always logs locally. When OTel is enabled and a recording span is active,
+        records the exception event and sets span status via ``OtelUtils.status_for_exception``.
 
         Args:
             exception (BaseException): The exception to capture and report.
@@ -103,25 +103,20 @@ class ErrorUtils:
         logger.exception("An exception occurred")  # noqa: LOG004
         config: Any = BaseConfig.global_config()
 
-        # Report exception to Sentry if enabled
-        if config.SENTRY.IS_ENABLED:
-            try:
-                import sentry_sdk
+        if not config.OTEL.IS_ENABLED:
+            return
 
-                sentry_sdk.capture_exception(exception)
-            except ImportError:
-                logger.exception("sentry_sdk is not installed, cannot capture exception in Sentry.")
+        try:
+            from opentelemetry import trace
 
-        # Report exception to Elastic APM if enabled
-        if config.ELASTIC_APM.IS_ENABLED:
-            try:
-                import elasticapm
+            from archipy.helpers.utils.otel_utils import OtelUtils
 
-                # Type ignoring elasticapm.get_client() as it's a third-party function
-                client = elasticapm.get_client()
-                client.capture_exception()
-            except ImportError:
-                logger.exception("elasticapm is not installed, cannot capture exception in Elastic APM.")
+            span = trace.get_current_span()
+            if span.is_recording():
+                span.record_exception(exception)
+                span.set_status(OtelUtils.status_for_exception(exception))
+        except ImportError:
+            logger.debug("opentelemetry is not installed, cannot record exception on span.")
 
     @staticmethod
     async def async_handle_fastapi_exception(_request: RequestProtocol, exception: BaseError) -> JSONResponseProtocol:

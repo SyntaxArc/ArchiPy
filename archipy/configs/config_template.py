@@ -8,7 +8,6 @@ and more.
 import contextlib
 import logging
 import os
-import warnings
 from enum import StrEnum
 from typing import Literal, Self
 from urllib.parse import urlparse
@@ -95,33 +94,6 @@ class ElasticsearchConfig(BaseModel):
         return self
 
 
-class ElasticsearchAPMConfig(BaseModel):
-    """Configuration settings for Elasticsearch APM (Application Performance Monitoring).
-
-    Controls behavior of the Elastic APM agent for application monitoring, tracing,
-    and error reporting.
-    """
-
-    API_REQUEST_SIZE: str = Field(default="768kb", description="Maximum size of API requests")
-    API_REQUEST_TIME: str = Field(default="10s", description="Maximum time for API requests")
-    AUTO_LOG_STACKS: bool = Field(default=True, description="Whether to automatically log stack traces")
-    CAPTURE_BODY: str = Field(default="off", description="Level of request body capture")
-    CAPTURE_HEADERS: bool = Field(default=False, description="Whether to capture HTTP headers")
-    COLLECT_LOCAL_VARIABLES: str = Field(default="errors", description="Level of local variable collection")
-    IS_ENABLED: bool = Field(default=False, description="Whether APM is enabled")
-    ENVIRONMENT: str | None = Field(default=None, description="APM environment name")
-    LOG_FILE: str = Field(default="", description="Path to APM log file")
-    LOG_FILE_SIZE: str = Field(default="50mb", description="Maximum size of APM log file")
-    RECORDING: bool = Field(default=True, description="Whether to record transactions")
-    SECRET_TOKEN: str | None = Field(default=None, description="APM secret token")
-    SERVER_TIMEOUT: str = Field(default="5s", description="Server timeout duration")
-    SERVER_URL: str | None = Field(default=None, description="APM server URL")
-    SERVICE_NAME: str = Field(default="unknown-python-service", description="Name of the service being monitored")
-    SERVICE_VERSION: str | None = Field(default=None, description="Version of the service")
-    TRANSACTION_SAMPLE_RATE: float = Field(default=0.001, description="Rate at which to sample transactions")
-    API_KEY: str | None = Field(default=None, description="API key for authentication")
-
-
 class FastAPIConfig(BaseModel):
     """Configuration settings for FastAPI applications.
 
@@ -197,86 +169,6 @@ class FastAPIConfig(BaseModel):
     SWAGGER_UI_PARAMS: dict[str, str] | None = Field(
         default={"docExpansion": "none"},
         description="Swagger UI parameters",
-    )
-
-
-class FastAPIRateLimitConfig(BaseModel):
-    """Configuration for FastAPI REST rate limiting.
-
-    .. deprecated::
-        ``FastAPIRateLimitConfig`` belongs to the deprecated FastAPI rate-limit interceptor
-        and will be removed in a future major release. Migrate to the official
-        `fastapi-redis-sdk <https://github.com/redis/fastapi-redis-sdk>`_, which configures
-        rate limiting through ``REDIS_*`` environment variables.       Note: unlike the handler, this class cannot raise on instantiation because
-       ``BaseConfig`` instantiates it as a field default at import time; instead it emits a
-       ``DeprecationWarning`` (suppressed for the internal ``BaseConfig`` default).
-
-       Controls trusted-proxy resolution, Redis key layout, failure modes, and
-       standard rate-limit response headers for ``FastAPIRestRateLimitHandler``.
-    """
-
-    def __init__(self, **data: object) -> None:
-        """Initialize the config, emitting a deprecation warning.
-
-        Args:
-            data: Config field values.
-        """
-        warnings.warn(
-            "FastAPIRateLimitConfig is deprecated and will be removed in a future major release. "
-            "Migrate to fastapi-redis-sdk (https://github.com/redis/fastapi-redis-sdk).",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        super().__init__(**data)
-
-    TRUSTED_PROXY_IPS: list[str] | None = Field(
-        default=None,
-        description=(
-            "Trusted reverse-proxy CIDRs or IPs. When None, ``FASTAPI.FORWARDED_ALLOW_IPS`` is used. "
-            "The literal ``*`` trusts all peers (matches Uvicorn; unsafe for production rate limiting)."
-        ),
-    )
-    ALLOW_PRIVATE_IPS: bool = Field(
-        default=False,
-        description="Whether private, loopback, link-local, and multicast client addresses are accepted.",
-    )
-    KEY_PREFIX: str | None = Field(
-        default=None,
-        description="Redis key prefix. When None, ``{FASTAPI.PROJECT_NAME}:RateLimit`` is used.",
-    )
-    FAIL_CLOSED: bool = Field(
-        default=True,
-        description="When True, Redis or identity-resolution failures return HTTP 503 instead of allowing requests.",
-    )
-    SKIP_METHODS: list[str] = Field(
-        default=["OPTIONS"],
-        description="HTTP methods excluded from rate limiting.",
-    )
-    HASH_QUERY_PARAM_VALUES: bool = Field(
-        default=True,
-        description="Whether query parameter values are hashed in Redis keys to cap key length.",
-    )
-    REQUIRE_IDENTIFIER_FOR_QUERY_PARAMS: bool = Field(
-        default=True,
-        description=(
-            "When True, ``query_params`` on the handler requires ``identifier_fn`` "
-            "to avoid client-controlled per-user quota targeting."
-        ),
-    )
-    REJECT_UNKNOWN_CLIENT: bool = Field(
-        default=True,
-        description="When True, requests without a resolvable client identity return HTTP 503.",
-    )
-    RATE_LIMIT_HEADERS: bool = Field(
-        default=True,
-        description="When True, attach X-RateLimit-* headers on allowed and rejected responses.",
-    )
-    IDENTITY_FROM_ACCESS_TOKEN: bool = Field(
-        default=True,
-        description=(
-            "When True, verify Bearer access tokens via AUTH/JWTUtils and bucket by sub; "
-            "fall back to client IP when the token is missing or invalid."
-        ),
     )
 
 
@@ -966,15 +858,59 @@ class StarRocksSQLAlchemyConfig(SQLAlchemyConfig):
         return "READ COMMITTED"
 
 
-class PrometheusConfig(BaseModel):
-    """Configuration settings for Prometheus metrics integration.
+class OpentelemetryConfig(BaseModel):
+    """Configuration settings for OpenTelemetry observability.
 
-    Controls whether Prometheus metrics collection is enabled and the port
-    for the metrics endpoint.
+    Controls OTLP export of traces, metrics, and logs. Providers are built
+    programmatically from this config — ``OTEL_*`` environment-variable
+    autoconfiguration is not used.
     """
 
-    IS_ENABLED: bool = Field(default=False, description="Whether Prometheus metrics are enabled")
-    SERVER_PORT: int = Field(default=8200, description="Port for the Prometheus metrics endpoint")
+    IS_ENABLED: bool = Field(default=False, description="Master switch for OpenTelemetry")
+    TRACES_ENABLED: bool = Field(default=True, description="Export traces when OTel is enabled")
+    METRICS_ENABLED: bool = Field(default=True, description="Export metrics when OTel is enabled")
+    LOGS_ENABLED: bool = Field(default=True, description="Export logs when OTel is enabled")
+    SERVICE_NAME: str | None = Field(default=None, description="OTel resource service.name")
+    OTLP_ENDPOINT: str = Field(
+        default="http://localhost:4317",
+        description="OTLP collector endpoint (gRPC default port 4317; HTTP/protobuf typically 4318)",
+    )
+    PROTOCOL: Literal["grpc", "http/protobuf"] = Field(
+        default="grpc",
+        description="OTLP transport protocol",
+    )
+    OTLP_HEADERS: dict[str, str] = Field(
+        default_factory=dict,
+        description="Headers sent with each OTLP export (auth tokens, routing metadata)",
+    )
+    TIMEOUT: float = Field(default=10.0, ge=0.1, description="OTLP export timeout in seconds")
+    TRACES_SAMPLE_RATIO: float = Field(
+        default=0.1,
+        ge=0.0,
+        le=1.0,
+        description="Parent-based trace ID ratio sampler (inbound sampled traces always continue)",
+    )
+    RESOURCE_ATTRIBUTES: dict[str, str] = Field(
+        default_factory=dict,
+        description="Extra OTel resource attributes merged into the Resource",
+    )
+    METRIC_EXPORT_INTERVAL_MS: int = Field(
+        default=60000,
+        ge=1000,
+        description="Periodic metric export interval in milliseconds",
+    )
+    ENVIRONMENT: str | None = Field(
+        default=None,
+        description="Deployment environment resource attribute (defaults from BaseConfig.ENVIRONMENT)",
+    )
+    FASTAPI_EXCLUDED_URLS: str | None = Field(
+        default=None,
+        description="Comma-separated URL patterns skipped by FastAPI instrumentation (e.g. health,docs)",
+    )
+    LOGS_LEVEL: str = Field(
+        default="INFO",
+        description="Minimum level for the OTLP LoggingHandler attached to the root logger",
+    )
 
 
 class RedisConfig(BaseModel):
@@ -1032,53 +968,6 @@ class RedisConfig(BaseModel):
                 raise ConfigurationError(operation="redis", reason="master_host_required")
 
         return self
-
-
-class SentryConfig(BaseModel):
-    """Configuration settings for Sentry error tracking integration.
-
-    Controls Sentry client behavior, including DSN, sampling rates, PII, breadcrumbs,
-    stack traces, profiling, and integration defaults.
-    """
-
-    IS_ENABLED: bool = Field(default=False, description="Whether Sentry is enabled")
-    DSN: str | None = Field(default=None, description="Sentry DSN for error reporting")
-    DEBUG: bool = Field(default=False, description="Whether to enable debug mode")
-    RELEASE: str = Field(default="", description="Application release version")
-    SAMPLE_RATE: float = Field(default=1.0, description="Error sampling rate (0.0 to 1.0)")
-    TRACES_SAMPLE_RATE: float = Field(default=0.0, description="Performance monitoring sampling rate (0.0 to 1.0)")
-    SEND_DEFAULT_PII: bool = Field(
-        default=False,
-        description="Whether to send personally identifiable information (e.g. IP, user) to Sentry",
-    )
-    MAX_BREADCRUMBS: int = Field(default=100, description="Maximum number of breadcrumbs per event")
-    ATTACH_STACKTRACE: bool = Field(
-        default=False,
-        description="Whether to attach a stack trace to all messages (not only exceptions)",
-    )
-    SERVER_NAME: str | None = Field(default=None, description="Override the reported server hostname")
-    IN_APP_INCLUDE: list[str] = Field(
-        default_factory=list,
-        description="Module path prefixes to mark as in-app in stack traces",
-    )
-    IN_APP_EXCLUDE: list[str] = Field(
-        default_factory=list,
-        description="Module path prefixes to exclude from in-app marking",
-    )
-    PROFILES_SAMPLE_RATE: float = Field(
-        default=0.0,
-        description="Continuous profiling sample rate (0.0 to 1.0)",
-    )
-    IGNORE_ERRORS: list[str] = Field(
-        default_factory=list,
-        description="Exception type names (fully qualified or short) to ignore",
-    )
-    SHUTDOWN_TIMEOUT: int = Field(default=2, description="Seconds to wait for pending events on client shutdown")
-    DEFAULT_INTEGRATIONS: bool = Field(
-        default=True,
-        description="Whether to enable Sentry default integrations automatically",
-    )
-    ENVIRONMENT: str | None = Field(default=None, description="Sentry environment name")
 
 
 class AuthConfig(BaseModel):
@@ -1251,16 +1140,13 @@ class TemporalConfig(BaseModel):
     NAMESPACE: str = Field(default="default", description="Temporal namespace for workflow isolation")
     TASK_QUEUE: str = Field(default="task-queue", description="Default task queue name")
 
-    # Metrics Configuration
+    # Metrics Configuration (OTLP via global OTEL config)
     ENABLE_METRICS: bool = Field(
         default=False,
-        description="Enable Prometheus metrics collection for Temporal workflows and activities",
-    )
-    METRICS_PORT: int = Field(
-        default=8201,
-        ge=1,
-        le=65535,
-        description="Port for Temporal Prometheus metrics endpoint (separate from main Prometheus port)",
+        description=(
+            "Enable OTLP metrics export for Temporal workflows and activities "
+            "(requires BaseConfig.OTEL.IS_ENABLED and METRICS_ENABLED; uses OTEL endpoint)"
+        ),
     )
 
     # Client Connection Configuration

@@ -108,15 +108,28 @@ class TemporalAdapter(TemporalPort):
                     tls_config = self._build_tls_config()
                     connect_kwargs["tls"] = tls_config
 
-                # Configure Runtime with Prometheus telemetry if enabled
-                if self.config.ENABLE_METRICS:
+                # Configure Runtime with OTLP metrics if Temporal + OTel metrics are enabled
+                global_config = BaseConfig.global_config()
+                otel = global_config.OTEL
+                if self.config.ENABLE_METRICS and otel.IS_ENABLED and otel.METRICS_ENABLED:
                     runtime_manager = TemporalRuntimeManager()
                     runtime = runtime_manager.get_runtime(
-                        prometheus_enabled=True,
-                        prometheus_port=self.config.METRICS_PORT,
+                        otel_metrics_enabled=True,
+                        otlp_endpoint=otel.OTLP_ENDPOINT,
+                        headers=dict(otel.OTLP_HEADERS),
+                        use_http=(otel.PROTOCOL == "http/protobuf"),
                     )
                     if runtime is not None:
                         connect_kwargs["runtime"] = runtime
+
+                # Attach OTel tracing interceptor when traces are enabled
+                if otel.IS_ENABLED and otel.TRACES_ENABLED:
+                    from temporalio.contrib.opentelemetry import TracingInterceptor
+
+                    from archipy.helpers.utils.otel_utils import OtelUtils
+
+                    OtelUtils.init_otel_if_needed(global_config)
+                    connect_kwargs["interceptors"] = [TracingInterceptor()]
 
                 self._client = await Client.connect(
                     f"{self.config.HOST}:{self.config.PORT}",

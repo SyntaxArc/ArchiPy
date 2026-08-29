@@ -9,8 +9,6 @@ from pydantic import ValidationError
 
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers.utils.base_utils import BaseUtils
-from archipy.helpers.utils.prometheus_utils import PrometheusUtils
-from archipy.helpers.utils.tracing_utils import TracingUtils
 from archipy.models.errors import (
     BaseError,
     ConfigurationError,
@@ -142,18 +140,6 @@ class FastAPIUtils:
         return f"{tags[0]}-{route.name}" if tags else route.name
 
     @staticmethod
-    def setup_sentry(config: BaseConfig) -> None:
-        """No-op placeholder: Sentry is initialized in ``create_fastapi_app`` with ``TracingUtils``.
-
-        Kept so callers can extend FastAPI startup with Sentry-only hooks without changing call sites.
-
-        Args:
-            config (BaseConfig): The configuration object containing Sentry settings.
-        """
-        if not config.SENTRY.IS_ENABLED:
-            return
-
-    @staticmethod
     def setup_cors(app: FastAPI, config: BaseConfig) -> None:
         """Configures CORS middleware.
 
@@ -230,46 +216,34 @@ class FastAPIUtils:
         app.add_middleware(HTTPSRedirectMiddleware)  # type: ignore[arg-type]
 
     @staticmethod
-    def setup_elastic_apm(app: FastAPI, config: BaseConfig) -> None:
-        """Configures Elastic APM if enabled.
+    def setup_otel(app: FastAPI, config: BaseConfig) -> None:
+        """Configure OpenTelemetry instrumentation for a FastAPI application.
 
         Args:
-            app (FastAPI): The FastAPI application instance.
-            config (BaseConfig): The configuration object containing Elastic APM settings.
+            app: The FastAPI application instance.
+            config: Application configuration containing OTel settings.
         """
-        if not config.ELASTIC_APM.IS_ENABLED:
+        if not config.OTEL.IS_ENABLED:
             return
 
-        try:
-            import elasticapm
-            from elasticapm.contrib.starlette import ElasticAPM, make_apm_client
-
-            apm_client = elasticapm.get_client()
-            if apm_client is None:
-                apm_client = make_apm_client(config.ELASTIC_APM.model_dump(exclude=["IS_ENABLED"]))
-            app.add_middleware(ElasticAPM, client=apm_client)  # type: ignore[arg-type]
-        except Exception:
-            logger.exception("Failed to initialize Elastic APM")
-
-    @staticmethod
-    def setup_metric_interceptor(app: FastAPI, config: BaseConfig) -> None:
-        """Configures metric interceptor for FastAPI if Prometheus is enabled.
-
-        Args:
-            app (FastAPI): The FastAPI application instance.
-            config (BaseConfig): The configuration object containing Prometheus settings.
-        """
-        if not config.PROMETHEUS.IS_ENABLED:
-            return
+        from archipy.helpers.utils.otel_utils import OTEL_FASTAPI_INSTALL_HINT, OtelUtils
 
         try:
-            from archipy.helpers.interceptors.fastapi.metric.interceptor import FastAPIMetricInterceptor
+            OtelUtils.init_otel_if_needed(config)
+            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-            PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
+            instrument_kwargs: dict[str, Any] = {
+                "tracer_provider": OtelUtils.tracer_provider(),
+                "meter_provider": OtelUtils.meter_provider(),
+            }
+            if config.OTEL.FASTAPI_EXCLUDED_URLS is not None:
+                instrument_kwargs["excluded_urls"] = config.OTEL.FASTAPI_EXCLUDED_URLS
 
-            app.add_middleware(FastAPIMetricInterceptor)  # type: ignore[arg-type]
+            FastAPIInstrumentor.instrument_app(app, **instrument_kwargs)
+        except ImportError:
+            logger.warning("%s", OTEL_FASTAPI_INSTALL_HINT)
         except Exception:
-            logger.exception("Failed to initialize Metric Interceptor")
+            logger.exception("Failed to initialize OpenTelemetry for FastAPI")
 
     @staticmethod
     def setup_exception_handlers(app: FastAPI) -> None:
@@ -323,43 +297,32 @@ class AsyncGrpcAPIUtils:
     """async grpc api utilities."""
 
     @staticmethod
-    def setup_trace_interceptor(config: BaseConfig, interceptors: list) -> None:
-        """Configures trace interceptor for gRPC server if tracing is enabled.
+    def setup_otel_interceptor(config: BaseConfig, interceptors: list) -> None:
+        """Configure OpenTelemetry server interceptor for an async gRPC server.
+
+        Inserts the OTel interceptor at position 0 so it wraps later interceptors.
 
         Args:
-            config (BaseConfig): The configuration object containing tracing settings.
-            interceptors (List): List of gRPC interceptors to add the trace interceptor to.
+            config: Application configuration containing OTel settings.
+            interceptors: Mutable list of gRPC interceptors.
         """
-        if not config.ELASTIC_APM.IS_ENABLED and not config.SENTRY.IS_ENABLED:
+        if not config.OTEL.IS_ENABLED:
             return
 
-        try:
-            from archipy.helpers.interceptors.grpc.trace.server_interceptor import AsyncGrpcServerTraceInterceptor
-
-            interceptors.append(AsyncGrpcServerTraceInterceptor())
-        except Exception:
-            logger.exception("Failed to initialize Trace Interceptor")
-
-    @staticmethod
-    def setup_metric_interceptor(config: BaseConfig, interceptors: list) -> None:
-        """Configures metric interceptor for gRPC server if Prometheus is enabled.
-
-        Args:
-            config (BaseConfig): The configuration object containing Prometheus settings.
-            interceptors (List): List of gRPC interceptors to add the metric interceptor to.
-        """
-        if not config.PROMETHEUS.IS_ENABLED:
-            return
+        from archipy.helpers.utils.otel_utils import OTEL_GRPC_INSTALL_HINT, OtelUtils
 
         try:
-            from archipy.helpers.interceptors.grpc.metric.server_interceptor import AsyncGrpcServerMetricInterceptor
+            OtelUtils.init_otel_if_needed(config)
+            from opentelemetry.instrumentation.grpc import aio_server_interceptor
 
-            PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
+            tracer_provider = OtelUtils.tracer_provider()
+            otel_interceptor = aio_server_interceptor(tracer_provider=tracer_provider)
 
-            interceptors.append(AsyncGrpcServerMetricInterceptor())
-
+            interceptors.insert(0, otel_interceptor)
+        except ImportError:
+            logger.warning("%s", OTEL_GRPC_INSTALL_HINT)
         except Exception:
-            logger.exception("Failed to initialize Metric Interceptor")
+            logger.exception("Failed to initialize OpenTelemetry interceptor for async gRPC")
 
     @staticmethod
     def setup_rate_limit_interceptor(config: BaseConfig, interceptors: list) -> None:
@@ -386,43 +349,32 @@ class GrpcAPIUtils:
     """grpc api utilities."""
 
     @staticmethod
-    def setup_trace_interceptor(config: BaseConfig, interceptors: list) -> None:
-        """Configures trace interceptor for gRPC server if tracing is enabled.
+    def setup_otel_interceptor(config: BaseConfig, interceptors: list) -> None:
+        """Configure OpenTelemetry server interceptor for a sync gRPC server.
+
+        Inserts the OTel interceptor at position 0 so it wraps later interceptors.
 
         Args:
-            config (BaseConfig): The configuration object containing tracing settings.
-            interceptors (List): List of gRPC interceptors to add the trace interceptor to.
+            config: Application configuration containing OTel settings.
+            interceptors: Mutable list of gRPC interceptors.
         """
-        if not config.ELASTIC_APM.IS_ENABLED and not config.SENTRY.IS_ENABLED:
+        if not config.OTEL.IS_ENABLED:
             return
 
-        try:
-            from archipy.helpers.interceptors.grpc.trace.server_interceptor import GrpcServerTraceInterceptor
-
-            interceptors.append(GrpcServerTraceInterceptor())
-        except Exception:
-            logger.exception("Failed to initialize Trace Interceptor")
-
-    @staticmethod
-    def setup_metric_interceptor(config: BaseConfig, interceptors: list) -> None:
-        """Configures metric interceptor for gRPC server if Prometheus is enabled.
-
-        Args:
-            config (BaseConfig): The configuration object containing Prometheus settings.
-            interceptors (List): List of gRPC interceptors to add the metric interceptor to.
-        """
-        if not config.PROMETHEUS.IS_ENABLED:
-            return
+        from archipy.helpers.utils.otel_utils import OTEL_GRPC_INSTALL_HINT, OtelUtils
 
         try:
-            from archipy.helpers.interceptors.grpc.metric.server_interceptor import GrpcServerMetricInterceptor
+            OtelUtils.init_otel_if_needed(config)
+            from opentelemetry.instrumentation.grpc import server_interceptor
 
-            PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
+            tracer_provider = OtelUtils.tracer_provider()
+            otel_interceptor = server_interceptor(tracer_provider=tracer_provider)
 
-            interceptors.append(GrpcServerMetricInterceptor())
-
+            interceptors.insert(0, otel_interceptor)
+        except ImportError:
+            logger.warning("%s", OTEL_GRPC_INSTALL_HINT)
         except Exception:
-            logger.exception("Failed to initialize Metric Interceptor")
+            logger.exception("Failed to initialize OpenTelemetry interceptor for gRPC")
 
     @staticmethod
     def setup_rate_limit_interceptor(config: BaseConfig, interceptors: list) -> None:
@@ -472,9 +424,6 @@ class AppUtils:
         """
         config = config or BaseConfig.global_config()
 
-        if TracingUtils.is_tracing_enabled(config):
-            TracingUtils.init_tracing_if_needed(config)
-
         # Define common responses for all endpoints
         common_responses = BaseUtils.get_fastapi_exception_responses(
             [UnknownError, UnavailableError, InvalidArgumentError],
@@ -494,13 +443,11 @@ class AppUtils:
             lifespan=lifespan,
         )
 
-        FastAPIUtils.setup_sentry(config)
         FastAPIUtils.setup_cors(app, config)
         FastAPIUtils.setup_gzip(app, config)
         FastAPIUtils.setup_https_redirect(app, config)
         FastAPIUtils.setup_trusted_host(app, config)
-        FastAPIUtils.setup_metric_interceptor(app, config)
-        FastAPIUtils.setup_elastic_apm(app, config)
+        FastAPIUtils.setup_otel(app, config)
 
         if configure_exception_handlers:
             FastAPIUtils.setup_exception_handlers(app)
@@ -519,8 +466,8 @@ class AppUtils:
 
         async_interceptors = [AsyncGrpcServerExceptionInterceptor()]
 
-        AsyncGrpcAPIUtils.setup_trace_interceptor(config, async_interceptors)
-        AsyncGrpcAPIUtils.setup_metric_interceptor(config, async_interceptors)
+        # OTel inserts at 0 → order: OTel → exception → rate-limit → custom
+        AsyncGrpcAPIUtils.setup_otel_interceptor(config, async_interceptors)
         AsyncGrpcAPIUtils.setup_rate_limit_interceptor(config, async_interceptors)
 
         if customized_interceptors:
@@ -548,8 +495,8 @@ class AppUtils:
 
         interceptors: list[grpc.ServerInterceptor] = [GrpcServerExceptionInterceptor()]
 
-        GrpcAPIUtils.setup_trace_interceptor(config, interceptors)
-        GrpcAPIUtils.setup_metric_interceptor(config, interceptors)
+        # OTel inserts at 0 → order: OTel → exception → rate-limit → custom
+        GrpcAPIUtils.setup_otel_interceptor(config, interceptors)
         GrpcAPIUtils.setup_rate_limit_interceptor(config, interceptors)
         if customized_interceptors:
             interceptors.extend(customized_interceptors)

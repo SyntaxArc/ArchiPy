@@ -1,12 +1,12 @@
 """Temporal Runtime singleton for managing Runtime instances with telemetry.
 
 This module provides a singleton class for creating and managing Temporal Runtime
-instances with Prometheus metrics integration.
+instances with OpenTelemetry metrics integration.
 """
 
 import logging
 
-from temporalio.runtime import PrometheusConfig, Runtime, TelemetryConfig
+from temporalio.runtime import OpenTelemetryConfig, Runtime, TelemetryConfig
 
 from archipy.helpers.metaclasses.singleton import Singleton
 
@@ -27,8 +27,11 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
         # Get the singleton manager
         manager = TemporalRuntimeManager()
 
-        # Get Runtime with Prometheus enabled
-        runtime = manager.get_runtime(prometheus_enabled=True, prometheus_port=18201)
+        # Get Runtime with OTLP metrics enabled
+        runtime = manager.get_runtime(
+            otel_metrics_enabled=True,
+            otlp_endpoint="http://localhost:4317",
+        )
         ```
     """
 
@@ -36,12 +39,20 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
         """Initialize the TemporalRuntimeManager singleton."""
         self._runtime: Runtime | None = None
 
-    def get_runtime(self, prometheus_enabled: bool = False, prometheus_port: int = 18201) -> Runtime | None:
-        """Get or create a Runtime with Prometheus telemetry.
+    def get_runtime(
+        self,
+        otel_metrics_enabled: bool = False,
+        otlp_endpoint: str = "http://localhost:4317",
+        headers: dict[str, str] | None = None,
+        use_http: bool = False,
+    ) -> Runtime | None:
+        """Get or create a Runtime with OpenTelemetry telemetry.
 
         Args:
-            prometheus_enabled (bool): Whether to enable Prometheus metrics collection.
-            prometheus_port (int): Port for the Prometheus metrics endpoint.
+            otel_metrics_enabled: Whether to enable OTLP metrics export.
+            otlp_endpoint: OTLP collector endpoint URL.
+            headers: Optional headers for OTLP export (auth tokens, routing).
+            use_http: If True, use HTTP/protobuf transport instead of gRPC.
 
         Returns:
             Runtime | None: The configured Runtime instance if metrics are enabled,
@@ -49,29 +60,33 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
 
         Note:
             Once a Runtime is created with metrics enabled, it cannot be disabled
-            or recreated on a different port due to Temporal SDK limitations.
+            or recreated with different settings due to Temporal SDK limitations.
             Subsequent calls will return the existing Runtime regardless of parameters.
         """
-        if not prometheus_enabled:
-            logger.debug("Prometheus metrics disabled for Temporal, using default runtime")
+        if not otel_metrics_enabled:
+            logger.debug("OTLP metrics disabled for Temporal, using default runtime")
             return None
 
-        # If Runtime already created, return it (can't change once bound to port)
+        # If Runtime already created, return it (can't change once bound)
         if self._runtime is not None:
             logger.debug("Returning existing Temporal Runtime instance")
             return self._runtime
 
-        logger.info("Creating Temporal Runtime with Prometheus metrics on port %d", prometheus_port)
+        logger.info("Creating Temporal Runtime with OTLP metrics at %s", otlp_endpoint)
 
         try:
             self._runtime = Runtime(
                 telemetry=TelemetryConfig(
-                    metrics=PrometheusConfig(bind_address=f"0.0.0.0:{prometheus_port}"),
+                    metrics=OpenTelemetryConfig(
+                        url=otlp_endpoint,
+                        headers=headers or None,
+                        http=use_http,
+                    ),
                 ),
             )
-            logger.info("Temporal Runtime created successfully with Prometheus telemetry")
+            logger.info("Temporal Runtime created successfully with OpenTelemetry telemetry")
         except Exception:
-            logger.exception("Failed to create Temporal Runtime with Prometheus config")
+            logger.exception("Failed to create Temporal Runtime with OpenTelemetry config")
             # Return None so Temporal uses default Runtime
             return None
 
@@ -81,10 +96,9 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
         """Reset the Runtime instance.
 
         Warning:
-            This does NOT actually close the Runtime or release the port binding.
+            This does NOT actually close the Runtime or release telemetry resources.
             The Temporal SDK does not support Runtime cleanup. This method only
-            resets internal references for testing purposes. The port will remain
-            bound until the process exits.
+            resets internal references for testing purposes.
         """
-        logger.warning("Resetting Temporal Runtime reference (port remains bound until process exit)")
+        logger.warning("Resetting Temporal Runtime reference (resources remain until process exit)")
         self._runtime = None

@@ -1,26 +1,19 @@
-"""Tracing decorators for capturing transactions and spans in pure Python applications.
-
-This module provides decorators to instrument code with APM tracing when not using
-gRPC or FastAPI frameworks. Supports both Sentry and Elastic APM based on configuration.
-"""
+"""OpenTelemetry tracing decorators for function and class instrumentation."""
 
 from __future__ import annotations
 
 import functools
-import logging
-import warnings
+import inspect
 from typing import TYPE_CHECKING, Any, Protocol
 
 from archipy.configs.base_config import BaseConfig
-from archipy.helpers.utils.tracing_utils import TracingUtils
+from archipy.helpers.utils.otel_utils import OtelUtils
 from archipy.models.errors import InvalidArgumentError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
-logger = logging.getLogger(__name__)
-
-ExcInfo = tuple[type[BaseException] | None, BaseException | None, Any]
+_ATTR_VALUE_MAX_LEN = 256
 
 
 class _Function(Protocol):
@@ -39,584 +32,464 @@ class _AsyncFunction(Protocol):
     def __call__(self, *args: Any, **kwargs: Any) -> Coroutine[Any, Any, Any]: ...
 
 
-def _warn_deprecated_description(description: str | None) -> None:
-    """Emit a deprecation warning when ``description`` is provided."""
-    if description is not None:
-        warnings.warn(
-            "The 'description' parameter is deprecated and will be removed in a future version.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+def _coerce_attr_value(value: object) -> bool | int | float | str:
+    """Coerce a Python value to an OpenTelemetry attribute type.
+
+    Args:
+        value: The argument value to record on a span.
+
+    Returns:
+        A bool, int, float, or str suitable for span attributes. Non-primitive
+        values are converted via ``repr`` and truncated to 256 characters.
+    """
+    if isinstance(value, bool | int | float | str):
+        return value
+    text = repr(value)
+    if len(text) > _ATTR_VALUE_MAX_LEN:
+        return text[:_ATTR_VALUE_MAX_LEN]
+    return text
 
 
-def _start_sentry_transaction(config: Any, transaction_name: str, op: str) -> Any:
-    """Start a Sentry transaction when Sentry tracing is enabled."""
-    if not config.SENTRY.IS_ENABLED:
-        return None
-    try:
-        import sentry_sdk
-
-        sentry_transaction = sentry_sdk.start_transaction(
-            name=transaction_name,
-            op=op,
-        )
-        sentry_transaction.__enter__()
-    except ImportError:
-        logger.debug("sentry_sdk is not installed, skipping Sentry transaction capture.")
-        return None
-    except Exception:
-        logger.exception("Failed to start Sentry transaction")
-        return None
-    else:
-        return sentry_transaction
-
-
-def _start_sentry_span(config: Any, span_name: str, op: str) -> Any:
-    """Start a Sentry span when Sentry tracing is enabled."""
-    if not config.SENTRY.IS_ENABLED:
-        return None
-    try:
-        import sentry_sdk
-
-        sentry_span = sentry_sdk.start_span(
-            op=op,
-            name=span_name,
-        )
-        sentry_span.__enter__()
-    except ImportError:
-        logger.debug("sentry_sdk is not installed, skipping Sentry span capture.")
-        return None
-    except Exception:
-        logger.exception("Failed to start Sentry span")
-        return None
-    else:
-        return sentry_span
-
-
-def _begin_elastic_transaction(config: Any) -> tuple[Any, Any]:
-    """Begin an Elastic APM transaction when Elastic APM tracing is enabled."""
-    if not config.ELASTIC_APM.IS_ENABLED:
-        return None, None
-    try:
-        import elasticapm
-
-        elastic_client = elasticapm.get_client()
-        if elastic_client is None:
-            logger.warning("Elastic APM client is not initialized; skipping APM transaction.")
-            return None, None
-        elastic_client.begin_transaction(transaction_type="function")
-    except ImportError:
-        logger.debug("elasticapm is not installed, skipping Elastic APM transaction capture.")
-        return None, None
-    except Exception:
-        logger.exception("Failed to begin Elastic APM transaction")
-        return None, None
-    else:
-        return elastic_client, elasticapm
-
-
-def _finalize_elastic_transaction_success(
-    elastic_client: Any,
-    elastic_apm_module: Any,
-    transaction_name: str,
+def _apply_capture_args(
+    span: Any,
+    func: Callable[..., Any],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    capture_args: list[str] | None,
 ) -> None:
-    """Record a successful Elastic APM transaction outcome."""
-    from elasticapm.conf.constants import OUTCOME
+    """Record selected bound arguments as span attributes.
 
-    elastic_apm_module.set_transaction_outcome(OUTCOME.SUCCESS)
-    elastic_client.end_transaction(name=transaction_name, result="success")
+    Args:
+        span: The active OpenTelemetry span.
+        func: The decorated function (used for signature binding).
+        args: Positional call arguments.
+        kwargs: Keyword call arguments.
+        capture_args: Names of parameters to record, or None to skip.
+    """
+    if not capture_args:
+        return
+    bound = inspect.signature(func).bind(*args, **kwargs)
+    bound.apply_defaults()
+    for arg_name in capture_args:
+        if arg_name in bound.arguments:
+            span.set_attribute(arg_name, _coerce_attr_value(bound.arguments[arg_name]))
 
 
-def _finalize_elastic_transaction_failure(
-    elastic_client: Any,
-    elastic_apm_module: Any,
-    transaction_name: str,
-    exception: BaseException,
-) -> None:
-    """Record a failed Elastic APM transaction outcome."""
-    elastic_apm_module.set_transaction_outcome(TracingUtils.outcome_for_exception(exception))
-    elastic_client.end_transaction(name=transaction_name, result="failure")
+def _resolve_kind(kind: Any | None) -> Any:
+    """Return the span kind, defaulting to ``SpanKind.INTERNAL``.
+
+    Args:
+        kind: Explicit span kind, or None for the default.
+
+    Returns:
+        An OpenTelemetry ``SpanKind`` value.
+    """
+    if kind is not None:
+        return kind
+    from opentelemetry.trace import SpanKind
+
+    return SpanKind.INTERNAL
 
 
-def _exit_sentry_context(
-    sentry_context: Any,
-    exc_info: ExcInfo,
+def _run_traced(
+    func: Callable[..., Any],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
     *,
-    context_label: str,
-) -> None:
-    """Exit a Sentry transaction or span context manager."""
-    if sentry_context is not None:
+    span_name: str,
+    kind: Any | None,
+    attributes: dict[str, Any] | None,
+    capture_args: list[str] | None,
+    root: bool,
+) -> Any:
+    """Execute a sync function inside an OpenTelemetry span.
+
+    Args:
+        func: The function to invoke.
+        args: Positional arguments.
+        kwargs: Keyword arguments.
+        span_name: Name of the span to create.
+        kind: OpenTelemetry span kind (defaults to INTERNAL).
+        attributes: Optional static span attributes.
+        capture_args: Optional argument names to record as attributes.
+        root: When True, start the span with a fresh (detached) context.
+
+    Returns:
+        The return value of ``func``.
+    """
+    config = BaseConfig.global_config()
+    if not OtelUtils.is_otel_enabled(config):
+        return func(*args, **kwargs)
+
+    OtelUtils.init_otel_if_needed(config)
+    tracer = OtelUtils.get_tracer(__name__)
+    resolved_kind = _resolve_kind(kind)
+
+    start_kwargs: dict[str, Any] = {"kind": resolved_kind}
+    if attributes:
+        start_kwargs["attributes"] = attributes
+    if root:
+        from opentelemetry import trace
+        from opentelemetry.trace import INVALID_SPAN
+
+        start_kwargs["context"] = trace.set_span_in_context(INVALID_SPAN)
+
+    with tracer.start_as_current_span(span_name, **start_kwargs) as span:
+        _apply_capture_args(span, func, args, kwargs, capture_args)
         try:
-            sentry_context.__exit__(exc_info[0], exc_info[1], exc_info[2])
-        except Exception:
-            logger.exception("Error closing Sentry %s", context_label)
+            return func(*args, **kwargs)
+        except Exception as exc:
+            span.record_exception(exc)
+            span.set_status(OtelUtils.status_for_exception(exc))
+            raise
 
 
-def _import_elasticapm_for_span() -> Any:
-    """Import elasticapm for span capture, logging and returning None on ImportError."""
-    try:
-        import elasticapm
-    except ImportError:
-        logger.debug("elasticapm is not installed, skipping Elastic APM span capture.")
-        return None
-    else:
-        return elasticapm
-
-
-def _call_with_sentry_span_status(
-    sentry_span: Any,
-    func: Callable[..., Any],
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
-    exc_info_holder: list[ExcInfo],
-) -> Any:
-    """Invoke a sync function and update Sentry span status on success or failure."""
-    try:
-        result = func(*args, **kwargs)
-    except Exception as exception:
-        exc_info_holder[0] = (type(exception), exception, exception.__traceback__)
-        if sentry_span is not None:
-            sentry_span.set_status("internal_error")
-        raise
-    else:
-        if sentry_span is not None and sentry_span.status is None:
-            sentry_span.set_status("ok")
-        return result
-
-
-async def _call_with_sentry_span_status_async(
-    sentry_span: Any,
-    func: Callable[..., Coroutine[Any, Any, Any]],
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
-    exc_info_holder: list[ExcInfo],
-) -> Any:
-    """Invoke an async function and update Sentry span status on success or failure."""
-    try:
-        result = await func(*args, **kwargs)
-    except Exception as exception:
-        exc_info_holder[0] = (type(exception), exception, exception.__traceback__)
-        if sentry_span is not None:
-            sentry_span.set_status("internal_error")
-        raise
-    else:
-        if sentry_span is not None and sentry_span.status is None:
-            sentry_span.set_status("ok")
-        return result
-
-
-def _run_sync_transaction(
-    func: Callable[..., Any],
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
-    *,
-    transaction_name: str,
-    op: str,
-) -> Any:
-    """Execute a sync function inside Sentry and Elastic APM transaction tracing."""
-    config = BaseConfig.global_config()
-    if not TracingUtils.is_tracing_enabled(config):
-        return func(*args, **kwargs)
-
-    TracingUtils.init_tracing_if_needed(config)
-
-    sentry_transaction = _start_sentry_transaction(config, transaction_name, op)
-    elastic_client, elastic_apm_module = _begin_elastic_transaction(config)
-
-    exc_info: ExcInfo = (None, None, None)
-    try:
-        result = func(*args, **kwargs)
-    except Exception as exception:
-        exc_info = (type(exception), exception, exception.__traceback__)
-        if sentry_transaction is not None:
-            sentry_transaction.set_status("internal_error")
-        if elastic_client is not None and elastic_apm_module is not None:
-            _finalize_elastic_transaction_failure(
-                elastic_client,
-                elastic_apm_module,
-                transaction_name,
-                exception,
-            )
-        raise
-    else:
-        if sentry_transaction is not None and sentry_transaction.status is None:
-            sentry_transaction.set_status("ok")
-        if elastic_client is not None and elastic_apm_module is not None:
-            _finalize_elastic_transaction_success(elastic_client, elastic_apm_module, transaction_name)
-        return result
-    finally:
-        _exit_sentry_context(sentry_transaction, exc_info, context_label="transaction")
-
-
-async def _run_async_transaction(
-    func: Callable[..., Coroutine[Any, Any, Any]],
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
-    *,
-    transaction_name: str,
-    op: str,
-) -> Any:
-    """Execute an async function inside Sentry and Elastic APM transaction tracing."""
-    config = BaseConfig.global_config()
-    if not TracingUtils.is_tracing_enabled(config):
-        return await func(*args, **kwargs)
-
-    TracingUtils.init_tracing_if_needed(config)
-
-    sentry_transaction = _start_sentry_transaction(config, transaction_name, op)
-    elastic_client, elastic_apm_module = _begin_elastic_transaction(config)
-
-    exc_info: ExcInfo = (None, None, None)
-    try:
-        result = await func(*args, **kwargs)
-    except Exception as exception:
-        exc_info = (type(exception), exception, exception.__traceback__)
-        if sentry_transaction is not None:
-            sentry_transaction.set_status("internal_error")
-        if elastic_client is not None and elastic_apm_module is not None:
-            _finalize_elastic_transaction_failure(
-                elastic_client,
-                elastic_apm_module,
-                transaction_name,
-                exception,
-            )
-        raise
-    else:
-        if sentry_transaction is not None and sentry_transaction.status is None:
-            sentry_transaction.set_status("ok")
-        if elastic_client is not None and elastic_apm_module is not None:
-            _finalize_elastic_transaction_success(elastic_client, elastic_apm_module, transaction_name)
-        return result
-    finally:
-        _exit_sentry_context(sentry_transaction, exc_info, context_label="transaction")
-
-
-def _run_sync_span(
-    func: Callable[..., Any],
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
-    *,
-    span_name: str,
-    op: str,
-) -> Any:
-    """Execute a sync function inside Sentry and Elastic APM span tracing."""
-    config = BaseConfig.global_config()
-    if not TracingUtils.is_tracing_enabled(config):
-        return func(*args, **kwargs)
-
-    TracingUtils.init_tracing_if_needed(config)
-
-    sentry_span = _start_sentry_span(config, span_name, op)
-    exc_info_holder: list[ExcInfo] = [(None, None, None)]
-
-    try:
-        if config.ELASTIC_APM.IS_ENABLED:
-            elasticapm = _import_elasticapm_for_span()
-            if elasticapm is None:
-                return _call_with_sentry_span_status(sentry_span, func, args, kwargs, exc_info_holder)
-            with elasticapm.capture_span(span_name, span_type=op):
-                return _call_with_sentry_span_status(sentry_span, func, args, kwargs, exc_info_holder)
-        return _call_with_sentry_span_status(sentry_span, func, args, kwargs, exc_info_holder)
-    finally:
-        _exit_sentry_context(sentry_span, exc_info_holder[0], context_label="span")
-
-
-async def _run_async_span(
+async def _run_traced_async(
     func: Callable[..., Coroutine[Any, Any, Any]],
     args: tuple[Any, ...],
     kwargs: dict[str, Any],
     *,
     span_name: str,
-    op: str,
+    kind: Any | None,
+    attributes: dict[str, Any] | None,
+    capture_args: list[str] | None,
+    root: bool,
 ) -> Any:
-    """Execute an async function inside Sentry and Elastic APM span tracing."""
+    """Execute an async function inside an OpenTelemetry span.
+
+    Args:
+        func: The coroutine function to invoke.
+        args: Positional arguments.
+        kwargs: Keyword arguments.
+        span_name: Name of the span to create.
+        kind: OpenTelemetry span kind (defaults to INTERNAL).
+        attributes: Optional static span attributes.
+        capture_args: Optional argument names to record as attributes.
+        root: When True, start the span with a fresh (detached) context.
+
+    Returns:
+        The return value of ``func``.
+    """
     config = BaseConfig.global_config()
-    if not TracingUtils.is_tracing_enabled(config):
+    if not OtelUtils.is_otel_enabled(config):
         return await func(*args, **kwargs)
 
-    TracingUtils.init_tracing_if_needed(config)
+    OtelUtils.init_otel_if_needed(config)
+    tracer = OtelUtils.get_tracer(__name__)
+    resolved_kind = _resolve_kind(kind)
 
-    sentry_span = _start_sentry_span(config, span_name, op)
-    exc_info_holder: list[ExcInfo] = [(None, None, None)]
+    start_kwargs: dict[str, Any] = {"kind": resolved_kind}
+    if attributes:
+        start_kwargs["attributes"] = attributes
+    if root:
+        from opentelemetry import trace
+        from opentelemetry.trace import INVALID_SPAN
 
-    try:
-        if config.ELASTIC_APM.IS_ENABLED:
-            elasticapm = _import_elasticapm_for_span()
-            if elasticapm is None:
-                return await _call_with_sentry_span_status_async(
-                    sentry_span,
-                    func,
-                    args,
-                    kwargs,
-                    exc_info_holder,
-                )
-            async with elasticapm.async_capture_span(span_name, span_type=op):
-                return await _call_with_sentry_span_status_async(
-                    sentry_span,
-                    func,
-                    args,
-                    kwargs,
-                    exc_info_holder,
-                )
-        return await _call_with_sentry_span_status_async(
-            sentry_span,
+        start_kwargs["context"] = trace.set_span_in_context(INVALID_SPAN)
+
+    with tracer.start_as_current_span(span_name, **start_kwargs) as span:
+        _apply_capture_args(span, func, args, kwargs, capture_args)
+        try:
+            return await func(*args, **kwargs)
+        except Exception as exc:
+            span.record_exception(exc)
+            span.set_status(OtelUtils.status_for_exception(exc))
+            raise
+
+
+def trace_span[F: _Function](
+    name: str | None = None,
+    *,
+    kind: Any | None = None,
+    attributes: dict[str, Any] | None = None,
+    capture_args: list[str] | None = None,
+) -> Callable[[F], Callable[..., Any]]:
+    """Decorate a sync function with an OpenTelemetry child span.
+
+    Args:
+        name: Span name. Defaults to the function name.
+        kind: OpenTelemetry ``SpanKind``. Defaults to ``SpanKind.INTERNAL``.
+        attributes: Optional static attributes set on the span.
+        capture_args: Parameter names whose call values are recorded as attributes.
+
+    Returns:
+        A decorator that wraps the target function in a span.
+
+    Example:
+        ```python
+        @trace_span(name="load_user", capture_args=["user_id"])
+        def load_user(user_id: int) -> dict[str, Any]:
+            return {"id": user_id}
+        ```
+    """
+
+    def decorator(func: F) -> Callable[..., Any]:
+        span_name = name or func.__name__
+
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            return _run_traced(
+                func,
+                args,
+                kwargs,
+                span_name=span_name,
+                kind=kind,
+                attributes=attributes,
+                capture_args=capture_args,
+                root=False,
+            )
+
+        return wrapper
+
+    return decorator
+
+
+def async_trace_span[F: _AsyncFunction](
+    name: str | None = None,
+    *,
+    kind: Any | None = None,
+    attributes: dict[str, Any] | None = None,
+    capture_args: list[str] | None = None,
+) -> Callable[[F], Callable[..., Coroutine[Any, Any, Any]]]:
+    """Decorate an async function with an OpenTelemetry child span.
+
+    Args:
+        name: Span name. Defaults to the function name.
+        kind: OpenTelemetry ``SpanKind``. Defaults to ``SpanKind.INTERNAL``.
+        attributes: Optional static attributes set on the span.
+        capture_args: Parameter names whose call values are recorded as attributes.
+
+    Returns:
+        A decorator that wraps the target coroutine function in a span.
+
+    Raises:
+        InvalidArgumentError: If the decorated object is not a coroutine function.
+    """
+
+    def decorator(func: F) -> Callable[..., Coroutine[Any, Any, Any]]:
+        if not inspect.iscoroutinefunction(func):
+            raise InvalidArgumentError(
+                argument_name="func",
+                additional_data={
+                    "decorator": "async_trace_span",
+                    "func_name": func.__name__,
+                },
+            )
+
+        span_name = name or func.__name__
+
+        @functools.wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            return await _run_traced_async(
+                func,
+                args,
+                kwargs,
+                span_name=span_name,
+                kind=kind,
+                attributes=attributes,
+                capture_args=capture_args,
+                root=False,
+            )
+
+        return wrapper
+
+    return decorator
+
+
+def trace_root[F: _Function](
+    name: str | None = None,
+    *,
+    kind: Any | None = None,
+    attributes: dict[str, Any] | None = None,
+    capture_args: list[str] | None = None,
+) -> Callable[[F], Callable[..., Any]]:
+    """Decorate a sync function with a root OpenTelemetry span.
+
+    Starts the span with a fresh context detached from any parent span
+    (``INVALID_SPAN`` context).
+
+    Args:
+        name: Span name. Defaults to the function name.
+        kind: OpenTelemetry ``SpanKind``. Defaults to ``SpanKind.INTERNAL``.
+        attributes: Optional static attributes set on the span.
+        capture_args: Parameter names whose call values are recorded as attributes.
+
+    Returns:
+        A decorator that wraps the target function in a root span.
+    """
+
+    def decorator(func: F) -> Callable[..., Any]:
+        span_name = name or func.__name__
+
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            return _run_traced(
+                func,
+                args,
+                kwargs,
+                span_name=span_name,
+                kind=kind,
+                attributes=attributes,
+                capture_args=capture_args,
+                root=True,
+            )
+
+        return wrapper
+
+    return decorator
+
+
+def async_trace_root[F: _AsyncFunction](
+    name: str | None = None,
+    *,
+    kind: Any | None = None,
+    attributes: dict[str, Any] | None = None,
+    capture_args: list[str] | None = None,
+) -> Callable[[F], Callable[..., Coroutine[Any, Any, Any]]]:
+    """Decorate an async function with a root OpenTelemetry span.
+
+    Starts the span with a fresh context detached from any parent span
+    (``INVALID_SPAN`` context).
+
+    Args:
+        name: Span name. Defaults to the function name.
+        kind: OpenTelemetry ``SpanKind``. Defaults to ``SpanKind.INTERNAL``.
+        attributes: Optional static attributes set on the span.
+        capture_args: Parameter names whose call values are recorded as attributes.
+
+    Returns:
+        A decorator that wraps the target coroutine function in a root span.
+
+    Raises:
+        InvalidArgumentError: If the decorated object is not a coroutine function.
+    """
+
+    def decorator(func: F) -> Callable[..., Coroutine[Any, Any, Any]]:
+        if not inspect.iscoroutinefunction(func):
+            raise InvalidArgumentError(
+                argument_name="func",
+                additional_data={
+                    "decorator": "async_trace_root",
+                    "func_name": func.__name__,
+                },
+            )
+
+        span_name = name or func.__name__
+
+        @functools.wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            return await _run_traced_async(
+                func,
+                args,
+                kwargs,
+                span_name=span_name,
+                kind=kind,
+                attributes=attributes,
+                capture_args=capture_args,
+                root=True,
+            )
+
+        return wrapper
+
+    return decorator
+
+
+def _wrap_method(
+    cls: type,
+    method_name: str,
+    func: Callable[..., Any],
+    *,
+    capture_args: list[str] | None,
+) -> Callable[..., Any]:
+    """Wrap a class method with a sync or async OpenTelemetry span.
+
+    Args:
+        cls: The class that owns the method (used for span naming).
+        method_name: The method attribute name.
+        func: The underlying function to wrap.
+        capture_args: Optional argument names to record as span attributes.
+
+    Returns:
+        The wrapped callable.
+    """
+    span_name = f"{cls.__name__}.{method_name}"
+    if inspect.iscoroutinefunction(func):
+
+        @functools.wraps(func)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            return await _run_traced_async(
+                func,
+                args,
+                kwargs,
+                span_name=span_name,
+                kind=None,
+                attributes=None,
+                capture_args=capture_args,
+                root=False,
+            )
+
+        return async_wrapper
+
+    @functools.wraps(func)
+    def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+        return _run_traced(
             func,
             args,
             kwargs,
-            exc_info_holder,
+            span_name=span_name,
+            kind=None,
+            attributes=None,
+            capture_args=capture_args,
+            root=False,
         )
-    finally:
-        _exit_sentry_context(sentry_span, exc_info_holder[0], context_label="span")
+
+    return sync_wrapper
 
 
-def capture_transaction[F: _Function](
-    name: str | None = None,
+def trace_class(
     *,
-    op: str = "function",
-    description: str | None = None,
-) -> Callable[[F], Callable[..., Any]]:
-    """Decorator to capture a transaction for the decorated function.
+    exclude: list[str] | None = None,
+    capture_args: list[str] | None = None,
+) -> Callable[[type], type]:
+    """Decorate a class so public methods are wrapped with OpenTelemetry spans.
 
-    This decorator creates a transaction span around the execution of the decorated function.
-    It integrates with both Sentry and Elastic APM based on the application configuration.
+    Skips names starting with ``_``, dunder methods, and ``property`` attributes.
+    ``staticmethod`` and ``classmethod`` wrappers are preserved after wrapping
+    the underlying function. Span names use ``ClassName.method_name``.
 
     Args:
-        name: Name of the transaction. If None, uses the function name.
-        op: Operation type/category for the transaction. Defaults to "function".
-        description: Deprecated; ignored. Kept for backward compatibility.
+        exclude: Method names to leave unwrapped.
+        capture_args: Parameter names recorded as span attributes on all wrapped methods.
 
     Returns:
-        The decorated function with transaction tracing capabilities.
+        A class decorator.
 
     Example:
         ```python
-        @capture_transaction(name="user_processing", op="business_logic")
-        def process_user_data(user_id: int) -> dict[str, Any]:
-            # Your business logic here
-            return {"user_id": user_id, "status": "processed"}
-
-
-        # Transaction will be automatically captured when function is called
-        result = process_user_data(123)
+        @trace_class(exclude=["helper"], capture_args=["user_id"])
+        class UserService:
+            def get_user(self, user_id: int) -> dict[str, Any]:
+                return {"id": user_id}
         ```
     """
-    _warn_deprecated_description(description)
+    excluded = set(exclude or [])
 
-    def decorator(func: F) -> Callable[..., Any]:
-        transaction_name = name or func.__name__
+    def decorator(cls: type) -> type:
+        for method_name, attr in list(vars(cls).items()):
+            if method_name.startswith("_") or method_name in excluded:
+                continue
+            if isinstance(attr, property):
+                continue
 
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            return _run_sync_transaction(
-                func,
-                args,
-                kwargs,
-                transaction_name=transaction_name,
-                op=op,
-            )
+            if isinstance(attr, staticmethod):
+                wrapped = _wrap_method(cls, method_name, attr.__func__, capture_args=capture_args)
+                setattr(cls, method_name, staticmethod(wrapped))
+            elif isinstance(attr, classmethod):
+                wrapped = _wrap_method(cls, method_name, attr.__func__, capture_args=capture_args)
+                setattr(cls, method_name, classmethod(wrapped))
+            elif callable(attr):
+                setattr(cls, method_name, _wrap_method(cls, method_name, attr, capture_args=capture_args))
 
-        return wrapper
-
-    return decorator
-
-
-def capture_span[F: _Function](
-    name: str | None = None,
-    *,
-    op: str = "function",
-    description: str | None = None,
-) -> Callable[[F], Callable[..., Any]]:
-    """Decorator to capture a span for the decorated function.
-
-    This decorator creates a span around the execution of the decorated function.
-    Spans are child operations within a transaction and help provide detailed
-    performance insights. Works with both Sentry and Elastic APM.
-
-    Args:
-        name: Name of the span. If None, uses the function name.
-        op: Operation type/category for the span. Defaults to "function".
-        description: Deprecated; ignored. Kept for backward compatibility.
-
-    Returns:
-        The decorated function with span tracing capabilities.
-
-    Example:
-        ```python
-        @capture_transaction(name="user_processing")
-        def process_user_data(user_id: int) -> dict[str, Any]:
-            user = get_user(user_id)
-            processed_data = transform_data(user)
-            save_result(processed_data)
-            return processed_data
-
-
-        @capture_span(name="database_query", op="db")
-        def get_user(user_id: int) -> dict[str, Any]:
-            # Database query logic here
-            return {"id": user_id, "name": "John"}
-
-
-        @capture_span(name="data_transformation", op="processing")
-        def transform_data(user: dict[str, Any]) -> dict[str, Any]:
-            # Data transformation logic
-            return {"processed": True, **user}
-
-
-        @capture_span(name="save_operation", op="db")
-        def save_result(data: dict[str, Any]) -> None:
-            # Save logic here
-            pass
-        ```
-    """
-    _warn_deprecated_description(description)
-
-    def decorator(func: F) -> Callable[..., Any]:
-        span_name = name or func.__name__
-
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            return _run_sync_span(func, args, kwargs, span_name=span_name, op=op)
-
-        return wrapper
-
-    return decorator
-
-
-def async_capture_transaction[F: _AsyncFunction](
-    name: str | None = None,
-    *,
-    op: str = "function",
-) -> Callable[[F], Callable[..., Coroutine[Any, Any, Any]]]:
-    """Decorator to capture a transaction for an async function.
-
-    Explicit async-only counterpart of ``capture_transaction``.  Unlike
-    ``capture_transaction``, this decorator accepts **only** coroutine
-    functions and raises ``TypeError`` immediately at decoration time if a
-    sync function is passed, making misuse visible at import time rather than
-    at call time.
-
-    Args:
-        name: Name of the transaction. If None, uses the function name.
-        op: Operation type/category for the transaction. Defaults to "function".
-
-    Returns:
-        The decorated coroutine function with transaction tracing capabilities.
-
-    Raises:
-        TypeError: If the decorated function is not a coroutine function.
-
-    Example:
-        ```python
-        @async_capture_transaction(name="process_orders", op="business_logic")
-        async def process_orders(order_ids: list[int]) -> list[dict]:
-            # Your async business logic here
-            return [{"order_id": oid} for oid in order_ids]
-
-
-        # Transaction will be automatically captured when coroutine is awaited
-        result = await process_orders([1, 2, 3])
-        ```
-    """
-    import inspect
-
-    def decorator(func: F) -> Callable[..., Coroutine[Any, Any, Any]]:
-        if not inspect.iscoroutinefunction(func):
-            raise InvalidArgumentError(
-                argument_name="func",
-                additional_data={
-                    "decorator": "async_capture_transaction",
-                    "func_name": func.__name__,
-                },
-            )
-
-        transaction_name = name or func.__name__
-
-        @functools.wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            return await _run_async_transaction(
-                func,
-                args,
-                kwargs,
-                transaction_name=transaction_name,
-                op=op,
-            )
-
-        return wrapper
-
-    return decorator
-
-
-def async_capture_span[F: _AsyncFunction](
-    name: str | None = None,
-    *,
-    op: str = "function",
-) -> Callable[[F], Callable[..., Coroutine[Any, Any, Any]]]:
-    """Decorator to capture a span for an async function.
-
-    Explicit async-only counterpart of ``capture_span``.  Unlike
-    ``capture_span``, this decorator accepts **only** coroutine functions and
-    raises ``TypeError`` immediately at decoration time if a sync function is
-    passed.
-
-    Spans are child operations within a transaction and help provide detailed
-    performance insights.  Works with both Sentry and Elastic APM.
-
-    Args:
-        name: Name of the span. If None, uses the function name.
-        op: Operation type/category for the span. Defaults to "function".
-
-    Returns:
-        The decorated coroutine function with span tracing capabilities.
-
-    Raises:
-        TypeError: If the decorated function is not a coroutine function.
-
-    Example:
-        ```python
-        @async_capture_transaction(name="user_processing")
-        async def process_user_data(user_id: int) -> dict:
-            user = await get_user(user_id)
-            processed = await transform_data(user)
-            await save_result(processed)
-            return processed
-
-
-        @async_capture_span(name="database_query", op="db")
-        async def get_user(user_id: int) -> dict:
-            # Async database query logic here
-            return {"id": user_id, "name": "John"}
-
-
-        @async_capture_span(name="data_transformation", op="processing")
-        async def transform_data(user: dict) -> dict:
-            # Async data transformation logic
-            return {"processed": True, **user}
-
-
-        @async_capture_span(name="save_operation", op="db")
-        async def save_result(data: dict) -> None:
-            # Async save logic here
-            pass
-        ```
-    """
-    import inspect
-
-    def decorator(func: F) -> Callable[..., Coroutine[Any, Any, Any]]:
-        if not inspect.iscoroutinefunction(func):
-            raise InvalidArgumentError(
-                argument_name="func",
-                additional_data={
-                    "decorator": "async_capture_span",
-                    "func_name": func.__name__,
-                },
-            )
-
-        span_name = name or func.__name__
-
-        @functools.wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            return await _run_async_span(func, args, kwargs, span_name=span_name, op=op)
-
-        return wrapper
+        return cls
 
     return decorator

@@ -1,321 +1,196 @@
 ---
 title: Observability
-description: Adding metrics and tracing to ArchiPy applications using Prometheus interceptors, Sentry, Elastic APM interceptors, and the @capture_transaction / @capture_span decorators.
+description: OpenTelemetry traces, metrics, and logs in ArchiPy via BaseConfig.OTEL, AppUtils auto-instrumentation, and tracing/metrics decorators.
 ---
 
 # Observability
 
-ArchiPy provides built-in observability through interceptors and configuration — no manual metric registration
-or APM client wiring required. Enable the relevant extras and flip the config flags.
+ArchiPy uses **OpenTelemetry** for traces, metrics, and logs. Providers are built from
+`BaseConfig.OTEL` (pydantic-settings) — not from `OTEL_*` environment-variable autoconfiguration.
+
+Enable the relevant extras, set `OTEL__IS_ENABLED=true`, and call `AppUtils.create_fastapi_app` /
+`create_grpc_app` (or use the tracing/metrics decorators in workers and business logic).
 
 ## Installation
 
-=== "Prometheus"
+| Extra                     | Purpose                                              |
+|---------------------------|------------------------------------------------------|
+| `archipy[otel]`           | SDK, OTLP exporters, httpx + requests instrumentors  |
+| `archipy[otel-fastapi]`   | FastAPI auto-instrumentation                         |
+| `archipy[otel-grpc]`      | gRPC server/client contrib interceptors              |
+| `archipy[otel-sqlalchemy]`| SQLAlchemy instrumentation                           |
+| `archipy[otel-redis]`     | Redis instrumentation                                |
+| `archipy[otel-elasticsearch]` | Elasticsearch instrumentation                    |
+| `archipy[otel-kafka]`     | Confluent Kafka instrumentation                      |
+| `archipy[otel-scylladb]`  | Cassandra/ScyllaDB driver instrumentation            |
+| `archipy[otel-minio]`     | Botocore (MinIO/S3) instrumentation                  |
+
+=== "Core"
 
     ```bash
-    uv add "archipy[prometheus]"
+    uv add "archipy[otel]"
     ```
 
-=== "Sentry"
+=== "FastAPI + gRPC"
 
     ```bash
-    uv add "archipy[sentry]"
+    uv add "archipy[otel-fastapi,otel-grpc]"
     ```
 
-=== "Elastic APM"
+=== "Adapters"
 
     ```bash
-    uv add "archipy[elastic-apm]"
-    ```
-
-=== "All three"
-
-    ```bash
-    uv add "archipy[prometheus,sentry,elastic-apm]"
+    uv add "archipy[otel,otel-sqlalchemy,otel-redis,otel-elasticsearch,otel-kafka,otel-scylladb,otel-minio]"
     ```
 
 ---
 
-## Prometheus
+## Configuration
 
-> **Note:** Metric interceptors (`FastAPIMetricInterceptor`, gRPC metric interceptors) import `prometheus_client` when their modules load — install `archipy[prometheus]` before importing them. `start_prometheus_server_if_needed` requires the same extra when you call it; `is_prometheus_server_running` does not.
-
-### Configuration
-
-Enable Prometheus via `BaseConfig`:
+Configure OpenTelemetry through `BaseConfig.OTEL` (env prefix `OTEL__`):
 
 ```bash
 # .env
-PROMETHEUS__IS_ENABLED=true
-PROMETHEUS__SERVER_PORT=8200
+OTEL__IS_ENABLED=true
+OTEL__SERVICE_NAME=my-service
+OTEL__OTLP_ENDPOINT=http://localhost:4317
+OTEL__PROTOCOL=grpc
+OTEL__TRACES_ENABLED=true
+OTEL__METRICS_ENABLED=true
+OTEL__LOGS_ENABLED=true
+OTEL__TRACES_SAMPLE_RATIO=0.1
+OTEL__FASTAPI_EXCLUDED_URLS=health,docs,redoc,openapi.json
 ```
 
 ```python
+import logging
+
 from archipy.configs.base_config import BaseConfig
+
+logger = logging.getLogger(__name__)
 
 
 class AppConfig(BaseConfig):
-    """Application configuration with Prometheus enabled."""
+    """Application configuration with OpenTelemetry enabled."""
 
 
 config = AppConfig()
 BaseConfig.set_global(config)
+logger.info("OTel enabled=%s endpoint=%s", config.OTEL.IS_ENABLED, config.OTEL.OTLP_ENDPOINT)
 ```
 
-### Starting the Metrics Server
+> **Note:** Do not rely on `OTEL_*` SDK autoconfiguration. ArchiPy builds
+> `TracerProvider` / `MeterProvider` / `LoggerProvider` programmatically from
+> `OpentelemetryConfig` only.
 
-Use `PrometheusUtils.start_prometheus_server_if_needed` to start the Prometheus HTTP scrape endpoint once at application
-startup — it is safe to call multiple times (no-op if already running):
+### Key fields
+
+| Field                     | Default                     | Description                                      |
+|---------------------------|-----------------------------|--------------------------------------------------|
+| `IS_ENABLED`              | `false`                     | Master switch                                    |
+| `OTLP_ENDPOINT`           | `http://localhost:4317`     | OTLP collector URL                               |
+| `PROTOCOL`                | `grpc`                      | `grpc` or `http/protobuf`                        |
+| `TRACES_SAMPLE_RATIO`     | `0.1`                       | Parent-based trace ID ratio sampler              |
+| `METRIC_EXPORT_INTERVAL_MS` | `60000`                   | Periodic metric export interval                  |
+| `FASTAPI_EXCLUDED_URLS`   | `None`                      | Comma-separated URL patterns skipped by FastAPI  |
+| `RESOURCE_ATTRIBUTES`     | `{}`                        | Extra OTel resource attributes                   |
+
+---
+
+## Auto-instrumentation via AppUtils
+
+### FastAPI
+
+`AppUtils.create_fastapi_app` calls `FastAPIUtils.setup_otel` when `OTEL.IS_ENABLED` is true.
+That initializes providers (idempotent) and instruments the app with
+`FastAPIInstrumentor` (requires `archipy[otel-fastapi]`):
 
 ```python
 import logging
-from archipy.helpers.utils.prometheus_utils import PrometheusUtils
+
 from archipy.configs.base_config import BaseConfig
-
-logger = logging.getLogger(__name__)
-
-config = BaseConfig.global_config()
-if config.PROMETHEUS.IS_ENABLED:
-    PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
-    logger.info("Prometheus metrics available on port %d", config.PROMETHEUS.SERVER_PORT)
-```
-
-### FastAPI Metrics Middleware
-
-`FastAPIMetricInterceptor` automatically tracks every HTTP request — response time (histogram) and active
-request count (gauge) — with no additional code:
-
-```python
-import logging
-from fastapi import FastAPI
-from archipy.helpers.interceptors.fastapi.metric.interceptor import FastAPIMetricInterceptor
 from archipy.helpers.utils.app_utils import AppUtils
-from archipy.helpers.utils.prometheus_utils import PrometheusUtils
-from archipy.configs.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
 
 config = BaseConfig.global_config()
-app = AppUtils.create_fastapi_app()
-
-if config.PROMETHEUS.IS_ENABLED:
-    app.add_middleware(FastAPIMetricInterceptor)
-    PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
-    logger.info("Prometheus middleware registered")
+app = AppUtils.create_fastapi_app(config)
+logger.info("FastAPI app created with OTel auto-instrumentation")
 ```
 
-The middleware records these metrics automatically for every request:
+### gRPC
 
-| Metric                          | Type      | Labels                                   |
-|---------------------------------|-----------|------------------------------------------|
-| `fastapi_response_time_seconds` | Histogram | `method`, `status_code`, `path_template` |
-| `fastapi_active_requests`       | Gauge     | `method`, `path_template`                |
-
-The middleware respects `config.PROMETHEUS.IS_ENABLED` — if disabled, requests pass through unchanged.
-
----
-
-## gRPC Metrics
-
-`GrpcServerMetricInterceptor` (sync) and `AsyncGrpcServerMetricInterceptor` (async) record response time
-and active request counts per gRPC method:
+`AppUtils.create_grpc_app` / `create_async_grpc_app` insert the OpenTelemetry contrib server
+interceptor at position 0 when OTel is enabled (requires `archipy[otel-grpc]`). Order becomes:
+OTel → exception interceptor → rate-limit (if enabled) → custom interceptors.
 
 ```python
 import logging
-import grpc
-from archipy.helpers.interceptors.grpc.metric.server_interceptor import (
-    GrpcServerMetricInterceptor,
-    AsyncGrpcServerMetricInterceptor,
-)
-from archipy.helpers.utils.prometheus_utils import PrometheusUtils
+
 from archipy.configs.base_config import BaseConfig
+from archipy.helpers.utils.app_utils import AppUtils
 
 logger = logging.getLogger(__name__)
 
-
-def create_sync_grpc_server() -> grpc.Server:
-    """Create a synchronous gRPC server with Prometheus metrics.
-
-    Returns:
-        A configured gRPC server instance.
-    """
-    config = BaseConfig.global_config()
-    if config.PROMETHEUS.IS_ENABLED:
-        PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
-
-    server = grpc.server(
-        thread_pool=None,
-        interceptors=[GrpcServerMetricInterceptor()],
-    )
-    logger.info("Sync gRPC server created with Prometheus metrics interceptor")
-    return server
-
-
-async def create_async_grpc_server() -> grpc.aio.Server:
-    """Create an async gRPC server with Prometheus metrics.
-
-    Returns:
-        A configured async gRPC server instance.
-    """
-    config = BaseConfig.global_config()
-    if config.PROMETHEUS.IS_ENABLED:
-        PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
-
-    server = grpc.aio.server(interceptors=[AsyncGrpcServerMetricInterceptor()])
-    logger.info("Async gRPC server created with Prometheus metrics interceptor")
-    return server
+config = BaseConfig.global_config()
+server = AppUtils.create_grpc_app(config)
+logger.info("gRPC server created with OTel interceptor")
 ```
 
-Recorded metrics per gRPC method:
+### Library instrumentors
 
-| Metric                       | Type      | Labels                                        |
-|------------------------------|-----------|-----------------------------------------------|
-| `grpc_response_time_seconds` | Histogram | `package`, `service`, `method`, `status_code` |
-| `grpc_active_requests`       | Gauge     | `package`, `service`, `method`                |
+On first `OtelUtils.init_otel_if_needed`, ArchiPy best-effort instruments installed contrib
+packages (SQLAlchemy, Redis, Elasticsearch, Confluent Kafka, Cassandra, Botocore, httpx,
+requests) when the matching `otel-*` extras are present.
 
----
+### Client gRPC
 
-## Distributed Tracing (Sentry + Elastic APM)
-
-ArchiPy integrates Sentry and Elastic APM directly inside the gRPC trace interceptors. Both systems are
-controlled exclusively through `BaseConfig` — no manual SDK initialisation required.
-
-### Configuration
-
-```bash
-# .env — Sentry
-SENTRY__IS_ENABLED=true
-SENTRY__DSN=https://your-key@sentry.io/your-project-id
-SENTRY__TRACES_SAMPLE_RATE=0.1
-SENTRY__SAMPLE_RATE=1.0
-
-# .env — Elastic APM
-ELASTIC_APM__IS_ENABLED=true
-ELASTIC_APM__SERVER_URL=https://apm.example.com:8200
-ELASTIC_APM__SECRET_TOKEN=your-secret-token
-ELASTIC_APM__SERVICE_NAME=my-grpc-service
-ELASTIC_APM__TRANSACTION_SAMPLE_RATE=0.01
-```
-
-### gRPC Trace Interceptors
-
-`GrpcServerTraceInterceptor` (sync) and `AsyncGrpcServerTraceInterceptor` (async) handle both Sentry and
-Elastic APM automatically:
-
-- If `config.SENTRY.IS_ENABLED` is true, a Sentry transaction is started for each gRPC call and marked
-  `ok` or `internal_error` on completion.
-- If `config.ELASTIC_APM.IS_ENABLED` is true, an Elastic APM transaction is started, with support for
-  distributed trace parent propagation via gRPC metadata headers.
-- If both are disabled, the interceptor is a zero-overhead pass-through.
+For outbound gRPC clients, attach contrib interceptors explicitly:
 
 ```python
 import logging
+
 import grpc
-from archipy.helpers.interceptors.grpc.trace.server_interceptor import (
-    GrpcServerTraceInterceptor,
-    AsyncGrpcServerTraceInterceptor,
+
+from archipy.helpers.utils.otel_utils import OtelUtils
+
+logger = logging.getLogger(__name__)
+
+channel = grpc.intercept_channel(
+    grpc.insecure_channel("localhost:50051"),
+    *OtelUtils.grpc_client_interceptors(),
 )
-
-logger = logging.getLogger(__name__)
-
-
-def create_sync_grpc_server() -> grpc.Server:
-    """Create a synchronous gRPC server with distributed tracing.
-
-    Returns:
-        A configured gRPC server instance.
-    """
-    server = grpc.server(
-        thread_pool=None,
-        interceptors=[GrpcServerTraceInterceptor()],
-    )
-    logger.info("Sync gRPC server created with trace interceptor")
-    return server
-
-
-async def create_async_grpc_server() -> grpc.aio.Server:
-    """Create an async gRPC server with distributed tracing.
-
-    Returns:
-        A configured async gRPC server instance.
-    """
-    server = grpc.aio.server(interceptors=[AsyncGrpcServerTraceInterceptor()])
-    logger.info("Async gRPC server created with trace interceptor")
-    return server
+logger.info("gRPC client channel wrapped with OTel interceptors")
 ```
 
-### Combined Metrics + Tracing
-
-Stack multiple interceptors to get both Prometheus metrics and APM tracing on every gRPC call:
-
-```python
-import logging
-import grpc
-from archipy.helpers.interceptors.grpc.metric.server_interceptor import GrpcServerMetricInterceptor
-from archipy.helpers.interceptors.grpc.trace.server_interceptor import GrpcServerTraceInterceptor
-from archipy.helpers.utils.prometheus_utils import PrometheusUtils
-from archipy.configs.base_config import BaseConfig
-
-logger = logging.getLogger(__name__)
-
-
-def create_grpc_server() -> grpc.Server:
-    """Create a gRPC server with Prometheus metrics and APM tracing.
-
-    Returns:
-        A configured gRPC server instance.
-    """
-    config = BaseConfig.global_config()
-    if config.PROMETHEUS.IS_ENABLED:
-        PrometheusUtils.start_prometheus_server_if_needed(config.PROMETHEUS.SERVER_PORT)
-
-    server = grpc.server(
-        thread_pool=None,
-        interceptors=[
-            GrpcServerMetricInterceptor(),
-            GrpcServerTraceInterceptor(),
-        ],
-    )
-    logger.info("gRPC server ready with metrics + tracing interceptors")
-    return server
-```
-
-> **Note:** ArchiPy does not ship a FastAPI APM middleware. For FastAPI Elastic APM or Sentry integration, use the
-> official SDKs directly (`elasticapm.contrib.starlette.ElasticAPM` or
-`sentry_sdk.integrations.fastapi.FastApiIntegration`). ArchiPy's APM interceptors cover gRPC only.
+For async clients use `OtelUtils.async_grpc_client_interceptors()`.
 
 ---
 
-## Tracing Decorators (Pure Python)
+## Tracing Decorators
 
-For code that runs outside gRPC or FastAPI — background workers, scheduled tasks, business logic classes —
-ArchiPy provides two decorators in `archipy.helpers.decorators.tracing`:
+For code outside FastAPI/gRPC — workers, schedulers, domain logic — use decorators from
+`archipy.helpers.decorators`:
 
-| Decorator              | Purpose                                                       |
-|------------------------|---------------------------------------------------------------|
-| `@capture_transaction` | Wraps an entire function as a top-level APM transaction       |
-| `@capture_span`        | Wraps a function as a child span inside an active transaction |
-
-Both decorators read `BaseConfig` at call time — no extra setup beyond the `.env` flags.
-
-### Installation
-
-```bash
-uv add "archipy[sentry]"        # for Sentry tracing
-uv add "archipy[elastic-apm]"   # for Elastic APM tracing
-```
-
-### `@capture_transaction`
-
-Use on entry-point functions — the outermost call that defines the unit of work:
+| Decorator            | Purpose                                      |
+|----------------------|----------------------------------------------|
+| `@trace_span`        | Sync child span                              |
+| `@async_trace_span`  | Async child span                             |
+| `@trace_root`        | Sync root span (entry point)                 |
+| `@async_trace_root`  | Async root span                              |
+| `@trace_class`       | Wrap public methods of a class with spans    |
 
 ```python
-from archipy.helpers.decorators.tracing import capture_transaction
+import logging
+
+from archipy.helpers.decorators import async_trace_span, trace_root, trace_span
+
+logger = logging.getLogger(__name__)
 
 
-@capture_transaction(name="process_order", op="business_logic")
-def process_order(order_id: int) -> dict:
-    """Process a single order.
+@trace_root(name="process_order")
+def process_order(order_id: int) -> dict[str, int | float]:
+    """Process a single order end-to-end.
 
     Args:
         order_id: The order to process.
@@ -325,34 +200,11 @@ def process_order(order_id: int) -> dict:
     """
     items = fetch_order_items(order_id)
     total = calculate_total(items)
-    save_order_result(order_id, total)
-    return {"order_id": order_id, "total": total}
-```
-
-When `SENTRY__IS_ENABLED=true`, a Sentry transaction named `process_order` is started and closed
-automatically. When `ELASTIC_APM__IS_ENABLED=true`, an Elastic APM transaction is started similarly.
-Both are marked `ok` on success or `internal_error` if the function raises.
-
-### `@capture_span`
-
-Use on inner functions to produce child spans within an active transaction. Spans give per-function
-timing inside the parent transaction:
-
-```python
-from archipy.helpers.decorators.tracing import capture_transaction, capture_span
-
-
-@capture_transaction(name="process_order", op="business_logic")
-def process_order(order_id: int) -> dict:
-    """Process a single order end-to-end."""
-    items = fetch_order_items(order_id)
-    total = calculate_total(items)
-    save_order_result(order_id, total)
     return {"order_id": order_id, "total": total}
 
 
-@capture_span(name="fetch_order_items", op="db")
-def fetch_order_items(order_id: int) -> list:
+@trace_span(name="fetch_order_items", capture_args=["order_id"])
+def fetch_order_items(order_id: int) -> list[dict[str, float]]:
     """Load order items from the database.
 
     Args:
@@ -361,11 +213,12 @@ def fetch_order_items(order_id: int) -> list:
     Returns:
         List of order item dicts.
     """
-    ...  # real DB call here
+    logger.debug("Fetching items for order %d", order_id)
+    return [{"price": 10.0}]
 
 
-@capture_span(name="calculate_total", op="processing")
-def calculate_total(items: list) -> float:
+@trace_span(name="calculate_total")
+def calculate_total(items: list[dict[str, float]]) -> float:
     """Sum item prices.
 
     Args:
@@ -375,54 +228,90 @@ def calculate_total(items: list) -> float:
         Total order value.
     """
     return sum(item["price"] for item in items)
+```
+
+Decorators no-op when `OTEL.IS_ENABLED` is false. On exceptions they set span status via
+`OtelUtils.status_for_exception` (`BaseError` with HTTP status below 500 stays OK).
+
+---
+
+## Metrics Decorators
+
+| Decorator                 | Purpose                                |
+|---------------------------|----------------------------------------|
+| `@measure_duration`       | Sync duration histogram                |
+| `@async_measure_duration` | Async duration histogram               |
+| `@count_calls`            | Sync call counter                      |
+| `@async_count_calls`      | Async call counter                     |
+
+```python
+from archipy.helpers.decorators import count_calls, measure_duration
 
 
-@capture_span(name="save_order_result", op="db")
-def save_order_result(order_id: int, total: float) -> None:
-    """Persist the order total.
+@measure_duration(attributes={"layer": "logic"})
+@count_calls()
+def process_payment(amount: float) -> None:
+    """Charge a payment amount.
 
     Args:
-        order_id: The order to update.
-        total: Computed order total.
+        amount: Amount to charge.
     """
-    ...  # real DB call here
+    ...
 ```
 
-The resulting trace shows `process_order` as the transaction with three child spans —
-`fetch_order_items`, `calculate_total`, and `save_order_result` — each with its own timing.
+Instruments default to `{module}.{qualname}.duration` / `.calls` and record a `status`
+attribute (`ok` / `error`). No-op when OTel or `METRICS_ENABLED` is off.
 
-### Parameters
+---
 
-Both decorators accept the same parameters:
+## Exception Capture
 
-| Parameter     | Type          | Default       | Description                                              |
-|---------------|---------------|---------------|----------------------------------------------------------|
-| `name`        | `str \| None` | function name | Display name in the APM UI                               |
-| `op`          | `str`         | `"function"`  | Operation category (`"db"`, `"http"`, `"processing"`, …) |
-| `description` | `str \| None` | `None`        | Optional longer description shown in the APM UI          |
+`BaseUtils.capture_exception` always logs locally. When OTel is enabled and a recording span
+is active, it records the exception on the **current span** and sets span status — it does not
+send to Sentry or Elastic APM:
 
-### Configuration Reference
+```python
+from archipy.helpers.utils.base_utils import BaseUtils
+from archipy.models.errors import InternalError
 
-```bash
-# .env — Sentry
-SENTRY__IS_ENABLED=true
-SENTRY__DSN=https://your-key@sentry.io/your-project-id
-SENTRY__TRACES_SAMPLE_RATE=0.1    # fraction of transactions sampled (0.0–1.0)
-SENTRY__SAMPLE_RATE=1.0           # fraction of errors captured
 
-# .env — Elastic APM
-ELASTIC_APM__IS_ENABLED=true
-ELASTIC_APM__SERVER_URL=https://apm.example.com:8200
-ELASTIC_APM__SECRET_TOKEN=your-secret-token
-ELASTIC_APM__SERVICE_NAME=my-service
-ELASTIC_APM__TRANSACTION_SAMPLE_RATE=0.1
+try:
+    raise InternalError()
+except InternalError as exc:
+    BaseUtils.capture_exception(exc)
+    raise
 ```
+
+---
+
+## Temporal
+
+Temporal metrics and traces reuse the global OTel config:
+
+- **Metrics:** set `TEMPORAL__ENABLE_METRICS=true` **and** `OTEL__IS_ENABLED=true` with
+  `OTEL__METRICS_ENABLED=true`. The adapter builds a Temporal `Runtime` with
+  `OpenTelemetryConfig` pointing at `OTEL.OTLP_ENDPOINT` / `PROTOCOL` / `OTLP_HEADERS`.
+- **Traces:** when `OTEL.IS_ENABLED` and `TRACES_ENABLED`, the Temporal client attaches
+  `temporalio.contrib.opentelemetry.TracingInterceptor` after `OtelUtils.init_otel_if_needed`.
+
+See [Temporal adapter](adapters/temporal.md) for a full example.
+
+---
+
+## Known Gaps
+
+| Area              | Status                                                                 |
+|-------------------|------------------------------------------------------------------------|
+| **httpx2**        | Core HTTP client is `httpx2`; OTel ships `httpx`/`requests` instrumentors only — outbound httpx2 calls are not auto-instrumented |
+| **Kafka aio**     | `otel-kafka` covers Confluent Kafka sync instrumentation; async Kafka paths may not be instrumented |
+| **SMTP / email**  | No OpenTelemetry instrumentation for `smtplib` / the email adapter     |
 
 ---
 
 ## See Also
 
-- [Interceptors](helpers/interceptors.md) — FastAPI and gRPC interceptor reference (metrics, tracing, rate limiting)
-- [Security](../community/security.md) — redacting sensitive data from error reports
-- [Configuration Management](config_management.md) — loading APM and Prometheus settings from environment
-- [Installation](../getting-started/installation.md) — `prometheus`, `sentry`, `elastic-apm` extras
+- [Interceptors](helpers/interceptors.md) — gRPC exception and rate-limit interceptors; OTel via AppUtils
+- [Error Handling](error_handling.md) — recording exceptions on the current span
+- [Temporal](adapters/temporal.md) — OTLP metrics and `TracingInterceptor`
+- [Installation](../getting-started/installation.md) — `otel` and `otel-*` extras
+- [Configuration Management](config_management.md) — nested env vars (`OTEL__*`)

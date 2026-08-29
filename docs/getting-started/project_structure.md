@@ -221,8 +221,8 @@ python manage.py run --port 9000 --reload
 > **Note:** `proxy_headers` and `forwarded_allow_ips` wire `FASTAPI.PROXY_HEADERS` and
 > `FASTAPI.FORWARDED_ALLOW_IPS` into Uvicorn's `ProxyHeadersMiddleware`. When enabled, Uvicorn
 > rewrites `request.client.host` from trusted `X-Forwarded-For` headers before your application
-> runs. The deprecated `FastAPIRestRateLimitHandler` applied its own trusted-proxy logic as
-> defense-in-depth — see [Interceptor Tutorials — Client identification](../tutorials/helpers/interceptors.md#client-identification).
+> runs. For HTTP rate limiting, use [fastapi-redis-sdk](https://github.com/redis/fastapi-redis-sdk)
+> — see [Interceptors — FastAPI Rate Limiting](../tutorials/helpers/interceptors.md#fastapi-rate-limiting).
 
 ---
 

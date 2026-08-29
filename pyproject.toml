@@ -11,7 +11,7 @@ requires-python = ">=3.14,<4"
 dependencies = [
     "pydantic>=2.13.4",
     "pydantic-settings>=2.15.0",
-    "requests>=2.34.2",
+    "httpx2>=2.12.0",
     "jdatetime>=6.1.0",
 ]
 license = { file = "LICENSE" }
@@ -22,7 +22,6 @@ aiosqlite = ["aiosqlite>=0.22.1"]
 behave = ["behave>=1.3.3"]
 cache = ["cachetools>=7.1.7", "async-lru>=2.3.0"]
 dependency-injection = ["dependency-injector>=4.49.1"]
-elastic-apm = ["elastic-apm>=6.26.2"]
 elasticsearch = ["elasticsearch>=9.5.0"]
 elasticsearch-async = ["elasticsearch[async]>=9.5.0"]
 fakeredis = ["fakeredis>=2.37.1"]
@@ -37,19 +36,32 @@ parsian-ipg-async = ["zeep[async]>=4.3.3", "httpx2[socks]>=2.12.0"]
 mysql = ["pymysql>=1.2.0"]
 mysql-async = ["asyncmy2>=0.2.21"]
 postgres = ["psycopg[binary,pool]>=3.3.4"]
-prometheus = ["prometheus-client>=0.26.0"]
 redis = ["redis[hiredis]>=8.1.0"]
 saman-ipg = ["httpx2[socks]>=2.12.0"]
 scheduler = ["apscheduler>=3.11.3"]
 scylladb = ["scylla-driver>=3.29.11", "lz4>=4.4.5", "cachetools>=7.1.7", "async-lru>=2.3.0"]
-sentry = ["sentry-sdk>=2.68.0"]
 sqlalchemy = ["sqlalchemy>=2.0.52"]
 sqlalchemy-async = ["sqlalchemy[asyncio]>=2.0.52"]
 starrocks = ["starrocks>=1.3.4", "pymysql>=1.2.0"]
 starrocks-async = ["starrocks>=1.3.4", "aiomysql>=0.3.2", "asyncmy2>=0.2.21"]
-temporalio = ["temporalio>=1.31.0"]
+temporalio = ["temporalio[opentelemetry]>=1.31.0"]
 testcontainers = ["testcontainers[elasticsearch, minio, mysql, vault]>=4.15.0"]
-vault = ["hvac[parser]>=2.4.0", "cachetools>=7.1.7"]
+vault = ["hvac[parser]>=2.4.0", "requests>=2.34.2", "cachetools>=7.1.7"]
+
+otel = [
+    "opentelemetry-sdk>=1.39.0",
+    "opentelemetry-exporter-otlp>=1.39.0",
+    "opentelemetry-instrumentation-httpx>=0.60b0",
+    "opentelemetry-instrumentation-requests>=0.60b0",
+]
+otel-fastapi = ["archipy[otel]", "opentelemetry-instrumentation-fastapi>=0.60b0"]
+otel-grpc = ["archipy[otel]", "opentelemetry-instrumentation-grpc>=0.60b0"]
+otel-sqlalchemy = ["archipy[otel]", "opentelemetry-instrumentation-sqlalchemy>=0.60b0"]
+otel-redis = ["archipy[otel]", "opentelemetry-instrumentation-redis>=0.60b0"]
+otel-elasticsearch = ["archipy[otel]", "opentelemetry-instrumentation-elasticsearch>=0.60b0"]
+otel-kafka = ["archipy[otel]", "opentelemetry-instrumentation-confluent-kafka>=0.60b0"]
+otel-scylladb = ["archipy[otel]", "opentelemetry-instrumentation-cassandra>=0.60b0"]
+otel-minio = ["archipy[otel]", "opentelemetry-instrumentation-botocore>=0.60b0"]
 
 [build-system]
 requires = ["hatchling"]
@@ -217,10 +229,7 @@ docstring-code-line-length = "dynamic"
 "archipy/adapters/temporal/*" = ["ANN401", "TRY300", "RUF006", "PLC0415"]  # Allow Any types for Temporal's dynamic system, else blocks, asyncio task handling, lazy imports
 "archipy/adapters/scylladb/*" = ["S608"]  # False positives - using parameterized queries with %s placeholders
 "archipy/helpers/decorators/*" = ["ANN401", "ARG001", "PLR0913", "PLC0415"]  # Allow Any, unused args, many params, lazy imports in decorators
-"archipy/helpers/interceptors/grpc/trace/client_interceptor.py" = ["ANN401", "PLC0415"]  # Lazy imports
-"archipy/helpers/interceptors/grpc/trace/server_interceptor.py" = ["PLC0415", "ANN401"]  # Lazy imports, context proxy
-"archipy/helpers/utils/tracing_utils.py" = ["PLC0415", "ANN401"]  # Lazy optional deps; span/status union types
-"archipy/helpers/interceptors/grpc/metric/server_interceptor.py" = ["PLC0415"]  # Lazy imports
+"archipy/helpers/utils/otel_utils.py" = ["PLC0415", "ANN401"]  # Lazy optional deps; provider/instrumentor union types
 "archipy/models/errors/base_error.py" = ["PLC0415"]  # Circular import workaround
 
 # Configure McCabe complexity

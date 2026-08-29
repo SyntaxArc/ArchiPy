@@ -5,32 +5,10 @@ description: API reference for ArchiPy helper interceptors.
 
 # Interceptors
 
-The `helpers/interceptors` subpackage provides request/response interceptors for FastAPI and gRPC, covering rate
-limiting, metrics collection, exception handling, and distributed tracing.
-
-## FastAPI
-
-### metric
-
-FastAPI middleware interceptor for collecting Prometheus metrics on HTTP requests.
-
-::: archipy.helpers.interceptors.fastapi.metric.interceptor
-options:
-show_root_toc_entry: false
-heading_level: 3
-
-### rate_limit
-
-> **Deprecated:** The FastAPI rate-limit interceptor is deprecated and will be removed in a
-> future major release. Migrate to the official
-> [fastapi-redis-sdk](https://github.com/redis/fastapi-redis-sdk).
-
-FastAPI interceptor that enforces configurable rate limits on HTTP endpoints using Redis as a backend.
-
-::: archipy.helpers.interceptors.fastapi.rate_limit.fastapi_rest_rate_limit_handler
-options:
-show_root_toc_entry: false
-heading_level: 3
+The `helpers/interceptors` subpackage provides gRPC server interceptors for exception handling
+and rate limiting. FastAPI metrics middleware and gRPC metric/trace interceptors were removed in
+5.0.0 — use OpenTelemetry via `AppUtils` / `OtelUtils` instead (see
+[Observability](../../tutorials/observability.md)).
 
 ## gRPC
 
@@ -53,29 +31,6 @@ heading_level: 3
 gRPC server interceptor that catches exceptions and converts them to gRPC status codes.
 
 ::: archipy.helpers.interceptors.grpc.exception.server_interceptor
-options:
-show_root_toc_entry: false
-heading_level: 3
-
-### metric
-
-gRPC server interceptor for collecting Prometheus metrics on RPC calls.
-
-::: archipy.helpers.interceptors.grpc.metric.server_interceptor
-options:
-show_root_toc_entry: false
-heading_level: 3
-
-### trace
-
-gRPC interceptors for propagating distributed tracing context across client and server.
-
-::: archipy.helpers.interceptors.grpc.trace.client_interceptor
-options:
-show_root_toc_entry: false
-heading_level: 3
-
-::: archipy.helpers.interceptors.grpc.trace.server_interceptor
 options:
 show_root_toc_entry: false
 heading_level: 3

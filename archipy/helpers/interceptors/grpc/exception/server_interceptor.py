@@ -108,21 +108,6 @@ class GrpcServerExceptionInterceptor(BaseGrpcServerInterceptor):
             },
         ).abort_grpc_sync(context)
 
-    @staticmethod
-    def _format_validation_errors(validation_error: ValidationError) -> list[dict[str, str]]:
-        """Format Pydantic validation errors into a structured format.
-
-        Args:
-            validation_error: The validation error to format.
-
-        Returns:
-            A list of formatted validation error details.
-
-        Note:
-            This method is deprecated. Use BaseUtils.format_validation_errors instead.
-        """
-        return BaseUtils.format_validation_errors(validation_error, include_type=True)
-
 
 class AsyncGrpcServerExceptionInterceptor(BaseAsyncGrpcServerInterceptor):
     """An async gRPC server interceptor for centralized exception handling.
@@ -214,18 +199,3 @@ class AsyncGrpcServerExceptionInterceptor(BaseAsyncGrpcServerInterceptor):
                 "package": method_name_model.package,
             },
         ).abort_grpc_async(context)
-
-    @staticmethod
-    def _format_validation_errors(validation_error: ValidationError) -> list[dict[str, str]]:
-        """Format Pydantic validation errors into a structured format.
-
-        Args:
-            validation_error: The validation error to format.
-
-        Returns:
-            A list of formatted validation error details.
-
-        Note:
-            This method is deprecated. Use BaseUtils.format_validation_errors instead.
-        """
-        return BaseUtils.format_validation_errors(validation_error, include_type=True)
