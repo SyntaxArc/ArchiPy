@@ -369,13 +369,26 @@ class OtelUtils:
 
     @classmethod
     def _instrument_installed_libraries(cls) -> None:
-        """Best-effort auto-instrumentation of installed contrib packages."""
+        """Best-effort auto-instrumentation of installed contrib packages.
+
+        Each entry is ``(cache_key, module, class_name)``. Missing packages are
+        skipped via ``ImportError`` — install the matching ``archipy[otel-*]``
+        extra (or the contrib package directly) to enable them.
+
+        Driver-level DB instrumentors (psycopg/pymysql/sqlite3) are omitted:
+        ArchiPy goes through SQLAlchemy — use ``archipy[otel-sqlalchemy]``.
+        """
         instrumentors: Sequence[tuple[str, str, str]] = (
+            # Context propagation (no spans of its own)
+            ("threading", "opentelemetry.instrumentation.threading", "ThreadingInstrumentor"),
+            # Host/process metrics (included in archipy[otel])
+            ("system_metrics", "opentelemetry.instrumentation.system_metrics", "SystemMetricsInstrumentor"),
+            # Adapters / HTTP
             ("sqlalchemy", "opentelemetry.instrumentation.sqlalchemy", "SQLAlchemyInstrumentor"),
             ("redis", "opentelemetry.instrumentation.redis", "RedisInstrumentor"),
             ("elasticsearch", "opentelemetry.instrumentation.elasticsearch", "ElasticsearchInstrumentor"),
-            ("confluent_kafka", "opentelemetry.instrumentation.confluent_kafka", "ConfluentKafkaInstrumentor"),
             ("cassandra", "opentelemetry.instrumentation.cassandra", "CassandraInstrumentor"),
+            ("confluent_kafka", "opentelemetry.instrumentation.confluent_kafka", "ConfluentKafkaInstrumentor"),
             ("botocore", "opentelemetry.instrumentation.botocore", "BotocoreInstrumentor"),
             ("httpx", "opentelemetry.instrumentation.httpx", "HTTPXClientInstrumentor"),
             ("requests", "opentelemetry.instrumentation.requests", "RequestsInstrumentor"),

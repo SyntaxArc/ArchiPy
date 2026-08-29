@@ -53,6 +53,8 @@ otel = [
     "opentelemetry-exporter-otlp>=1.39.0",
     "opentelemetry-instrumentation-httpx>=0.60b0",
     "opentelemetry-instrumentation-requests>=0.60b0",
+    "opentelemetry-instrumentation-threading>=0.60b0",
+    "opentelemetry-instrumentation-system-metrics>=0.60b0",
 ]
 otel-fastapi = ["archipy[otel]", "opentelemetry-instrumentation-fastapi>=0.60b0"]
 otel-grpc = ["archipy[otel]", "opentelemetry-instrumentation-grpc>=0.60b0"]

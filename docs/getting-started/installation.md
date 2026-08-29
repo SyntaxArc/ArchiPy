@@ -83,7 +83,7 @@ ArchiPy supports modular features through optional extras — install only what 
 | Service       | `archipy[saman-ipg]`            | Payment gateway (Saman)                           |
 | Web           | `archipy[fastapi]`              | FastAPI integration with middleware and utilities |
 | Web           | `archipy[grpc]`                 | gRPC integration with interceptors                |
-| Observability | `archipy[otel]`                 | OpenTelemetry SDK, OTLP exporters, httpx/requests |
+| Observability | `archipy[otel]`                 | OpenTelemetry SDK, OTLP, httpx/requests, threading, system metrics |
 | Observability | `archipy[otel-fastapi]`         | FastAPI auto-instrumentation                      |
 | Observability | `archipy[otel-grpc]`            | gRPC server/client contrib interceptors           |
 | Observability | `archipy[otel-sqlalchemy]`      | SQLAlchemy instrumentation                        |

@@ -15,10 +15,10 @@ Enable the relevant extras, set `OTEL__IS_ENABLED=true`, and call `AppUtils.crea
 
 | Extra                     | Purpose                                              |
 |---------------------------|------------------------------------------------------|
-| `archipy[otel]`           | SDK, OTLP exporters, httpx + requests instrumentors  |
+| `archipy[otel]`           | SDK, OTLP exporters, httpx/requests, threading, system metrics |
 | `archipy[otel-fastapi]`   | FastAPI auto-instrumentation                         |
 | `archipy[otel-grpc]`      | gRPC server/client contrib interceptors              |
-| `archipy[otel-sqlalchemy]`| SQLAlchemy instrumentation                           |
+| `archipy[otel-sqlalchemy]`| SQLAlchemy instrumentation (covers Postgres/MySQL/SQLite via ORM) |
 | `archipy[otel-redis]`     | Redis instrumentation                                |
 | `archipy[otel-elasticsearch]` | Elasticsearch instrumentation                    |
 | `archipy[otel-kafka]`     | Confluent Kafka instrumentation                      |
