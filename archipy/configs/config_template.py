@@ -871,23 +871,23 @@ class OpentelemetryConfig(BaseModel):
     METRICS_ENABLED: bool = Field(default=True, description="Export metrics when OTel is enabled")
     LOGS_ENABLED: bool = Field(default=True, description="Export logs when OTel is enabled")
     SERVICE_NAME: str | None = Field(default=None, description="OTel resource service.name")
-    OTLP_ENDPOINT: str = Field(
-        default="http://localhost:4317",
+    OTLP_ENDPOINT: HttpUrl = Field(
+        default=HttpUrl("http://localhost:4317"),
         description=(
             "Default OTLP collector endpoint (gRPC port 4317; HTTP/protobuf typically 4318). "
             "For http/protobuf, signal paths (/v1/traces, /v1/metrics, /v1/logs) are appended "
             "when the URL has no path. Override per signal with TRACES/METRICS/LOGS_ENDPOINT."
         ),
     )
-    TRACES_ENDPOINT: str | None = Field(
+    TRACES_ENDPOINT: HttpUrl | None = Field(
         default=None,
         description="Optional per-signal OTLP traces endpoint (overrides OTLP_ENDPOINT)",
     )
-    METRICS_ENDPOINT: str | None = Field(
+    METRICS_ENDPOINT: HttpUrl | None = Field(
         default=None,
         description="Optional per-signal OTLP metrics endpoint (overrides OTLP_ENDPOINT)",
     )
-    LOGS_ENDPOINT: str | None = Field(
+    LOGS_ENDPOINT: HttpUrl | None = Field(
         default=None,
         description="Optional per-signal OTLP logs endpoint (overrides OTLP_ENDPOINT)",
     )
@@ -931,6 +931,27 @@ class OpentelemetryConfig(BaseModel):
             "Prefer WARNING+ in production to limit export volume."
         ),
     )
+
+    @model_validator(mode="after")
+    def validate_otel_config(self) -> Self:
+        """Validate signal switches and log level."""
+        if self.IS_ENABLED and not (self.TRACES_ENABLED or self.METRICS_ENABLED or self.LOGS_ENABLED):
+            raise ConfigurationError(
+                operation="otel",
+                reason="no_signals_enabled",
+                additional_data={
+                    "hint": "Enable at least one of TRACES_ENABLED, METRICS_ENABLED, or LOGS_ENABLED",
+                },
+            )
+
+        valid_levels = {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"}
+        if self.LOGS_LEVEL.upper() not in valid_levels:
+            raise ConfigurationError(
+                operation="otel",
+                reason="invalid_logs_level",
+                additional_data={"logs_level": self.LOGS_LEVEL, "allowed": sorted(valid_levels)},
+            )
+        return self
 
 
 class RedisConfig(BaseModel):

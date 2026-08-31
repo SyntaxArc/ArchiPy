@@ -103,7 +103,7 @@ class ErrorUtils:
         logger.exception("An exception occurred")  # noqa: LOG004
         config: Any = BaseConfig.global_config()
 
-        if not config.OTEL.IS_ENABLED:
+        if not config.OTEL.IS_ENABLED or not config.OTEL.TRACES_ENABLED:
             return
 
         try:

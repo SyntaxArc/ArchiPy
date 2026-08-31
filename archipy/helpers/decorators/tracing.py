@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import functools
 import inspect
 from typing import TYPE_CHECKING, Any, Protocol
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
 
 _ATTR_VALUE_MAX_LEN = 256
 _REDACTED_ATTR_VALUE = "***"
+_REPR_FAILURE_PLACEHOLDER = "<unreprable>"
 # Case-insensitive substring match against parameter names (PII / secrets).
 _CAPTURE_ARGS_DENYLIST: frozenset[str] = frozenset(
     {
@@ -73,13 +75,39 @@ def _coerce_attr_value(value: object) -> bool | int | float | str:
     Returns:
         A bool, int, float, or str suitable for span attributes. Non-primitive
         values are converted via ``repr`` and truncated to 256 characters.
+        Representation failures become a bounded placeholder.
     """
     if isinstance(value, bool | int | float | str):
+        if isinstance(value, str) and len(value) > _ATTR_VALUE_MAX_LEN:
+            return value[:_ATTR_VALUE_MAX_LEN]
         return value
-    text = repr(value)
+    try:
+        text = repr(value)
+    except Exception:
+        return _REPR_FAILURE_PLACEHOLDER
     if len(text) > _ATTR_VALUE_MAX_LEN:
         return text[:_ATTR_VALUE_MAX_LEN]
     return text
+
+
+def _sanitize_attributes(attributes: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Redact sensitive keys and coerce values for safe span attributes.
+
+    Args:
+        attributes: Optional static attributes from the decorator.
+
+    Returns:
+        A sanitized copy, or None when ``attributes`` is None/empty.
+    """
+    if not attributes:
+        return None
+    sanitized: dict[str, Any] = {}
+    for key, value in attributes.items():
+        if _is_sensitive_arg_name(str(key)):
+            sanitized[key] = _REDACTED_ATTR_VALUE
+        else:
+            sanitized[key] = _coerce_attr_value(value)
+    return sanitized
 
 
 def _apply_capture_args(
@@ -158,12 +186,18 @@ def _run_traced(
         The return value of ``func``.
     """
     config = BaseConfig.global_config()
-    if not OtelUtils.is_otel_enabled(config):
+    if not OtelUtils.is_traces_enabled(config):
         return func(*args, **kwargs)
 
     OtelUtils.init_otel_if_needed(config)
+    if OtelUtils.import_failed():
+        return func(*args, **kwargs)
+
     tracer = OtelUtils.get_tracer(__name__)
-    resolved_kind = _resolve_kind(kind)
+    try:
+        resolved_kind = _resolve_kind(kind)
+    except ImportError:
+        return func(*args, **kwargs)
 
     # Disable SDK auto-record/status — we handle both manually for BaseError mapping.
     start_kwargs: dict[str, Any] = {
@@ -171,8 +205,9 @@ def _run_traced(
         "record_exception": False,
         "set_status_on_exception": False,
     }
-    if attributes:
-        start_kwargs["attributes"] = attributes
+    sanitized = _sanitize_attributes(attributes)
+    if sanitized:
+        start_kwargs["attributes"] = sanitized
     if root:
         from opentelemetry import trace
         from opentelemetry.trace import INVALID_SPAN
@@ -220,12 +255,18 @@ async def _run_traced_async(
         The return value of ``func``.
     """
     config = BaseConfig.global_config()
-    if not OtelUtils.is_otel_enabled(config):
+    if not OtelUtils.is_traces_enabled(config):
         return await func(*args, **kwargs)
 
     OtelUtils.init_otel_if_needed(config)
+    if OtelUtils.import_failed():
+        return await func(*args, **kwargs)
+
     tracer = OtelUtils.get_tracer(__name__)
-    resolved_kind = _resolve_kind(kind)
+    try:
+        resolved_kind = _resolve_kind(kind)
+    except ImportError:
+        return await func(*args, **kwargs)
 
     # Disable SDK auto-record/status — we handle both manually for BaseError mapping.
     start_kwargs: dict[str, Any] = {
@@ -233,8 +274,9 @@ async def _run_traced_async(
         "record_exception": False,
         "set_status_on_exception": False,
     }
-    if attributes:
-        start_kwargs["attributes"] = attributes
+    sanitized = _sanitize_attributes(attributes)
+    if sanitized:
+        start_kwargs["attributes"] = sanitized
     if root:
         from opentelemetry import trace
         from opentelemetry.trace import INVALID_SPAN
@@ -245,6 +287,10 @@ async def _run_traced_async(
         _apply_capture_args(span, signature, args, kwargs, capture_args)
         try:
             return await func(*args, **kwargs)
+        except asyncio.CancelledError as exc:
+            span.record_exception(exc)
+            span.set_status(OtelUtils.status_for_cancellation())
+            raise
         except Exception as exc:
             span.record_exception(exc)
             status = OtelUtils.status_for_exception(exc)

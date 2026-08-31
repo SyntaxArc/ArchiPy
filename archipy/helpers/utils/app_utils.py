@@ -18,7 +18,7 @@ from archipy.models.errors import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import AsyncIterator, Callable
     from contextlib import AbstractAsyncContextManager
 
     from fastapi.routing import APIRoute
@@ -216,8 +216,61 @@ class FastAPIUtils:
         app.add_middleware(HTTPSRedirectMiddleware)  # type: ignore[arg-type]
 
     @staticmethod
+    def _fastapi_otel_instrument_kwargs(config: BaseConfig) -> dict[str, Any] | None:
+        """Build FastAPIInstrumentor kwargs with real or NoOp providers.
+
+        Returns:
+            Kwargs for ``instrument_app``, or ``None`` when instrumentation
+            should be skipped (no real providers available).
+        """
+        from opentelemetry.metrics import NoOpMeterProvider
+        from opentelemetry.trace import NoOpTracerProvider
+
+        from archipy.helpers.utils.otel_utils import OtelUtils
+
+        instrument_kwargs: dict[str, Any] = {}
+        has_real_provider = False
+
+        if config.OTEL.TRACES_ENABLED:
+            tracer_provider = OtelUtils.tracer_provider()
+            if tracer_provider is None:
+                logger.warning(
+                    "OTEL traces enabled but no tracer provider is available; skipping FastAPI trace instrumentation",
+                )
+                instrument_kwargs["tracer_provider"] = NoOpTracerProvider()
+            else:
+                instrument_kwargs["tracer_provider"] = tracer_provider
+                has_real_provider = True
+        else:
+            instrument_kwargs["tracer_provider"] = NoOpTracerProvider()
+
+        if config.OTEL.METRICS_ENABLED:
+            meter_provider = OtelUtils.meter_provider()
+            if meter_provider is None:
+                logger.warning(
+                    "OTEL metrics enabled but no meter provider is available; skipping FastAPI metric instrumentation",
+                )
+                instrument_kwargs["meter_provider"] = NoOpMeterProvider()
+            else:
+                instrument_kwargs["meter_provider"] = meter_provider
+                has_real_provider = True
+        else:
+            instrument_kwargs["meter_provider"] = NoOpMeterProvider()
+
+        if not has_real_provider:
+            return None
+
+        if config.OTEL.FASTAPI_EXCLUDED_URLS is not None:
+            instrument_kwargs["excluded_urls"] = config.OTEL.FASTAPI_EXCLUDED_URLS
+        return instrument_kwargs
+
+    @staticmethod
     def setup_otel(app: FastAPI, config: BaseConfig) -> None:
         """Configure OpenTelemetry instrumentation for a FastAPI application.
+
+        Only passes providers for enabled signals. Never passes ``None`` providers
+        (contrib instrumentors would fall back to global OTEL providers). Disabled
+        signals receive explicit NoOp providers.
 
         Args:
             app: The FastAPI application instance.
@@ -225,19 +278,21 @@ class FastAPIUtils:
         """
         if not config.OTEL.IS_ENABLED:
             return
+        if not config.OTEL.TRACES_ENABLED and not config.OTEL.METRICS_ENABLED:
+            return
 
         from archipy.helpers.utils.otel_utils import OTEL_FASTAPI_INSTALL_HINT, OtelUtils
 
         try:
             OtelUtils.init_otel_if_needed(config)
+            if OtelUtils.import_failed():
+                return
+
             from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-            instrument_kwargs: dict[str, Any] = {
-                "tracer_provider": OtelUtils.tracer_provider(),
-                "meter_provider": OtelUtils.meter_provider(),
-            }
-            if config.OTEL.FASTAPI_EXCLUDED_URLS is not None:
-                instrument_kwargs["excluded_urls"] = config.OTEL.FASTAPI_EXCLUDED_URLS
+            instrument_kwargs = FastAPIUtils._fastapi_otel_instrument_kwargs(config)
+            if instrument_kwargs is None:
+                return
 
             FastAPIInstrumentor.instrument_app(app, **instrument_kwargs)
         except ImportError:
@@ -293,6 +348,56 @@ class FastAPIUtils:
         app.add_exception_handler(Exception, generic_wrapper)
 
 
+def _install_otel_grpc_interceptor(
+    config: BaseConfig,
+    interceptors: list,
+    *,
+    async_mode: bool,
+) -> None:
+    """Insert an OpenTelemetry gRPC server interceptor at position 0.
+
+    Requires a concrete ArchiPy tracer provider. Does not pass ``None`` (which
+    would fall back to the global OTEL provider).
+
+    Args:
+        config: Application configuration containing OTel settings.
+        interceptors: Mutable list of gRPC interceptors.
+        async_mode: When True, install the aio server interceptor.
+    """
+    if not config.OTEL.IS_ENABLED or not config.OTEL.TRACES_ENABLED:
+        return
+
+    from archipy.helpers.utils.otel_utils import OTEL_GRPC_INSTALL_HINT, OtelUtils
+
+    try:
+        OtelUtils.init_otel_if_needed(config)
+        if OtelUtils.import_failed():
+            return
+
+        tracer_provider = OtelUtils.tracer_provider()
+        if tracer_provider is None:
+            logger.warning(
+                "OTEL traces enabled but no tracer provider is available; skipping gRPC OTel interceptor",
+            )
+            return
+
+        if async_mode:
+            from opentelemetry.instrumentation.grpc import aio_server_interceptor
+
+            otel_interceptor = aio_server_interceptor(tracer_provider=tracer_provider)
+        else:
+            from opentelemetry.instrumentation.grpc import server_interceptor
+
+            otel_interceptor = server_interceptor(tracer_provider=tracer_provider)
+
+        interceptors.insert(0, otel_interceptor)
+    except ImportError:
+        logger.warning("%s", OTEL_GRPC_INSTALL_HINT)
+    except Exception:
+        mode = "async gRPC" if async_mode else "gRPC"
+        logger.exception("Failed to initialize OpenTelemetry interceptor for %s", mode)
+
+
 class AsyncGrpcAPIUtils:
     """async grpc api utilities."""
 
@@ -306,23 +411,7 @@ class AsyncGrpcAPIUtils:
             config: Application configuration containing OTel settings.
             interceptors: Mutable list of gRPC interceptors.
         """
-        if not config.OTEL.IS_ENABLED:
-            return
-
-        from archipy.helpers.utils.otel_utils import OTEL_GRPC_INSTALL_HINT, OtelUtils
-
-        try:
-            OtelUtils.init_otel_if_needed(config)
-            from opentelemetry.instrumentation.grpc import aio_server_interceptor
-
-            tracer_provider = OtelUtils.tracer_provider()
-            otel_interceptor = aio_server_interceptor(tracer_provider=tracer_provider)
-
-            interceptors.insert(0, otel_interceptor)
-        except ImportError:
-            logger.warning("%s", OTEL_GRPC_INSTALL_HINT)
-        except Exception:
-            logger.exception("Failed to initialize OpenTelemetry interceptor for async gRPC")
+        _install_otel_grpc_interceptor(config, interceptors, async_mode=True)
 
     @staticmethod
     def setup_rate_limit_interceptor(config: BaseConfig, interceptors: list) -> None:
@@ -358,23 +447,7 @@ class GrpcAPIUtils:
             config: Application configuration containing OTel settings.
             interceptors: Mutable list of gRPC interceptors.
         """
-        if not config.OTEL.IS_ENABLED:
-            return
-
-        from archipy.helpers.utils.otel_utils import OTEL_GRPC_INSTALL_HINT, OtelUtils
-
-        try:
-            OtelUtils.init_otel_if_needed(config)
-            from opentelemetry.instrumentation.grpc import server_interceptor
-
-            tracer_provider = OtelUtils.tracer_provider()
-            otel_interceptor = server_interceptor(tracer_provider=tracer_provider)
-
-            interceptors.insert(0, otel_interceptor)
-        except ImportError:
-            logger.warning("%s", OTEL_GRPC_INSTALL_HINT)
-        except Exception:
-            logger.exception("Failed to initialize OpenTelemetry interceptor for gRPC")
+        _install_otel_grpc_interceptor(config, interceptors, async_mode=False)
 
     @staticmethod
     def setup_rate_limit_interceptor(config: BaseConfig, interceptors: list) -> None:
@@ -399,6 +472,47 @@ class GrpcAPIUtils:
 
 class AppUtils:
     """Utility class for creating and configuring FastAPI applications."""
+
+    @staticmethod
+    def _compose_otel_lifespan(
+        config: BaseConfig,
+        lifespan: Callable[..., AbstractAsyncContextManager] | None,
+    ) -> Callable[..., AbstractAsyncContextManager] | None:
+        """Wrap a FastAPI lifespan so OTel force-flushes on exit.
+
+        Args:
+            config: Application configuration.
+            lifespan: Optional caller-provided lifespan context manager factory.
+
+        Returns:
+            A lifespan factory that preserves the user lifespan and runs
+            ``force_flush`` afterward, or ``None`` when OTel is off and no user
+            lifespan was provided. Provider shutdown remains on process atexit.
+        """
+        if not config.OTEL.IS_ENABLED:
+            return lifespan
+
+        from contextlib import asynccontextmanager
+
+        from archipy.helpers.utils.otel_utils import OtelUtils
+
+        @asynccontextmanager
+        async def otel_lifespan(app: FastAPI) -> AsyncIterator[None]:
+            try:
+                if lifespan is not None:
+                    async with lifespan(app):
+                        yield
+                else:
+                    yield
+            finally:
+                # Flush only — do not shutdown here. Multiple apps / TestClient
+                # share process-wide OtelUtils; full shutdown stays on atexit.
+                try:
+                    OtelUtils.force_flush()
+                except Exception:
+                    logger.debug("Error during OTel force_flush in FastAPI lifespan", exc_info=True)
+
+        return otel_lifespan
 
     @classmethod
     def create_fastapi_app(
@@ -432,6 +546,8 @@ class AppUtils:
         responses_dict: dict[int | str, dict[str, Any]] | None = None
         if include_common_responses and common_responses:
             responses_dict = dict(common_responses.items())
+
+        resolved_lifespan = cls._compose_otel_lifespan(config, lifespan)
         app = FastAPI(
             title=config.FASTAPI.PROJECT_NAME,
             openapi_url=config.FASTAPI.OPENAPI_URL,
@@ -440,7 +556,7 @@ class AppUtils:
             docs_url=config.FASTAPI.DOCS_URL,
             redoc_url=config.FASTAPI.RE_DOC_URL,
             responses=responses_dict,
-            lifespan=lifespan,
+            lifespan=resolved_lifespan,
         )
 
         FastAPIUtils.setup_cors(app, config)

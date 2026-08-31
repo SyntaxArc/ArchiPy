@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import functools
 import inspect
+import threading
 import time
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -40,7 +42,7 @@ def _metrics_active(config: Any) -> bool:
     Returns:
         True if OTel is enabled and metrics export is enabled.
     """
-    return OtelUtils.is_otel_enabled(config) and bool(config.OTEL.METRICS_ENABLED)
+    return OtelUtils.is_metrics_enabled(config) and not OtelUtils.import_failed()
 
 
 def _merge_status_attributes(
@@ -51,7 +53,7 @@ def _merge_status_attributes(
 
     Args:
         attributes: Optional static attributes from the decorator.
-        status: ``"ok"`` or ``"error"``.
+        status: ``"ok"``, ``"error"``, or ``"cancelled"``.
 
     Returns:
         A new attributes dict including ``status``.
@@ -61,7 +63,8 @@ def _merge_status_attributes(
     return merged
 
 
-_HISTOGRAM_CACHE: dict[tuple[int, str, str, str], Any] = {}
+_CACHE_LOCK = threading.Lock()
+_HISTOGRAM_CACHE: dict[tuple[int, str, str, str, str], Any] = {}
 _COUNTER_CACHE: dict[tuple[int, str, str, str], Any] = {}
 
 
@@ -71,15 +74,16 @@ def clear_instrument_caches() -> None:
     Call after provider reset/re-init so instruments are rebound to the new
     ``MeterProvider``. Used by ``OtelUtils.reset_for_testing()``.
     """
-    _HISTOGRAM_CACHE.clear()
-    _COUNTER_CACHE.clear()
+    with _CACHE_LOCK:
+        _HISTOGRAM_CACHE.clear()
+        _COUNTER_CACHE.clear()
 
 
-def _instrument_cache_key(
+def _instrument_identity(
     func: Callable[..., Any],
     instrument_name: str,
 ) -> tuple[int, str, str, str]:
-    """Build a provider-aware cache key for a metric instrument.
+    """Build a provider-aware identity tuple for a metric instrument.
 
     Args:
         func: The decorated function.
@@ -112,14 +116,15 @@ def _get_or_create_histogram(
     module = getattr(func, "__module__", None) or "unknown"
     qualname = getattr(func, "__qualname__", None) or getattr(func, "__name__", None) or "unknown"
     instrument_name = name or f"{module}.{qualname}.duration"
-    cache_key = _instrument_cache_key(func, instrument_name)
-    histogram = _HISTOGRAM_CACHE.get(cache_key)
-    if histogram is not None:
+    cache_key = (*_instrument_identity(func, instrument_name), unit)
+    with _CACHE_LOCK:
+        histogram = _HISTOGRAM_CACHE.get(cache_key)
+        if histogram is not None:
+            return histogram
+        meter = OtelUtils.get_meter(module)
+        histogram = meter.create_histogram(instrument_name, unit=unit)
+        _HISTOGRAM_CACHE[cache_key] = histogram
         return histogram
-    meter = OtelUtils.get_meter(module)
-    histogram = meter.create_histogram(instrument_name, unit=unit)
-    _HISTOGRAM_CACHE[cache_key] = histogram
-    return histogram
 
 
 def _get_or_create_counter(
@@ -138,14 +143,15 @@ def _get_or_create_counter(
     module = getattr(func, "__module__", None) or "unknown"
     qualname = getattr(func, "__qualname__", None) or getattr(func, "__name__", None) or "unknown"
     instrument_name = name or f"{module}.{qualname}.calls"
-    cache_key = _instrument_cache_key(func, instrument_name)
-    counter = _COUNTER_CACHE.get(cache_key)
-    if counter is not None:
+    cache_key = _instrument_identity(func, instrument_name)
+    with _CACHE_LOCK:
+        counter = _COUNTER_CACHE.get(cache_key)
+        if counter is not None:
+            return counter
+        meter = OtelUtils.get_meter(module)
+        counter = meter.create_counter(instrument_name)
+        _COUNTER_CACHE[cache_key] = counter
         return counter
-    meter = OtelUtils.get_meter(module)
-    counter = meter.create_counter(instrument_name)
-    _COUNTER_CACHE[cache_key] = counter
-    return counter
 
 
 def measure_duration[F: _Function](
@@ -192,6 +198,9 @@ def measure_duration[F: _Function](
                 return func(*args, **kwargs)
 
             OtelUtils.init_otel_if_needed(config)
+            if OtelUtils.import_failed() or not OtelUtils.is_metrics_enabled(config):
+                return func(*args, **kwargs)
+
             histogram = _get_or_create_histogram(func, name, unit)
             start = time.perf_counter()
             status = "ok"
@@ -248,11 +257,17 @@ def async_measure_duration[F: _AsyncFunction](
                 return await func(*args, **kwargs)
 
             OtelUtils.init_otel_if_needed(config)
+            if OtelUtils.import_failed() or not OtelUtils.is_metrics_enabled(config):
+                return await func(*args, **kwargs)
+
             histogram = _get_or_create_histogram(func, name, unit)
             start = time.perf_counter()
             status = "ok"
             try:
                 return await func(*args, **kwargs)
+            except asyncio.CancelledError:
+                status = "cancelled"
+                raise
             except Exception:
                 status = "error"
                 raise
@@ -309,6 +324,9 @@ def count_calls[F: _Function](
                 return func(*args, **kwargs)
 
             OtelUtils.init_otel_if_needed(config)
+            if OtelUtils.import_failed() or not OtelUtils.is_metrics_enabled(config):
+                return func(*args, **kwargs)
+
             counter = _get_or_create_counter(func, name)
             status = "ok"
             try:
@@ -359,10 +377,16 @@ def async_count_calls[F: _AsyncFunction](
                 return await func(*args, **kwargs)
 
             OtelUtils.init_otel_if_needed(config)
+            if OtelUtils.import_failed() or not OtelUtils.is_metrics_enabled(config):
+                return await func(*args, **kwargs)
+
             counter = _get_or_create_counter(func, name)
             status = "ok"
             try:
                 return await func(*args, **kwargs)
+            except asyncio.CancelledError:
+                status = "cancelled"
+                raise
             except Exception:
                 status = "error"
                 raise

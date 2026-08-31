@@ -165,3 +165,94 @@ Feature: OpenTelemetry decorators
     Then all finished spans should share one trace id
     And a span named "/test.TestService/TestMethod" should be recorded
     And a span named "GET /from-grpc" should be recorded
+
+  Scenario: traces disabled leaves decorator as no-op
+    Given OpenTelemetry metrics-only mode for testing
+    And a sync function decorated with trace_span named "metrics_only_span"
+    When I call the traced sync function
+    Then no span named "metrics_only_span" should be recorded
+
+  Scenario: capture_args survives failing repr
+    Given a sync function decorated with trace_span that captures a broken repr arg
+    When I call the traced sync function with a broken repr object
+    Then the recorded span should have attribute "payload" equal to "<unreprable>"
+
+  Scenario: static password attribute is redacted
+    Given a sync function decorated with trace_span and static attribute password "s3cret"
+    When I call the traced sync function
+    Then the recorded span should have attribute "password" equal to "***"
+
+  @async
+  Scenario: async cancellation records cancelled metric status
+    Given an async function decorated with async_measure_duration named "test.cancel.duration"
+    When I cancel the measured async function
+    Then a histogram metric named "test.cancel.duration" should have status "cancelled"
+
+  @async
+  Scenario: async cancellation sets span ERROR status
+    Given an async function decorated with async_trace_span named "cancel_span"
+    When I cancel the traced async function
+    Then the recorded span status should be ERROR
+
+  Scenario: force_flush succeeds for in-memory providers
+    When I force flush OpenTelemetry providers
+    Then OpenTelemetry force flush should succeed
+
+  Scenario: shutdown is idempotent and clears owned providers
+    When I shut down OpenTelemetry providers twice
+    Then OpenTelemetry tracer provider should be absent
+
+  Scenario: adopted global tracer is preserved on shutdown
+    Given OpenTelemetry is configured for testing with a borrowed tracer provider
+    When I shut down OpenTelemetry providers
+    Then the borrowed TracerProvider should still be usable
+
+  Scenario: partial exporter failure does not publish providers
+    When OpenTelemetry initialization fails while creating the metric exporter
+    Then OpenTelemetry should not be marked initialized
+    And OpenTelemetry meter provider should be absent
+
+  Scenario: missing dependency is a decorator no-op
+    Given OpenTelemetry import failure is simulated
+    And a sync function decorated with trace_span named "missing_dep_span"
+    When I call the traced sync function
+    Then no span named "missing_dep_span" should be recorded
+    And the traced sync function result should be "ok"
+
+  Scenario: logs are exported through the logging handler
+    Given OpenTelemetry is configured for testing with log export
+    When I emit an INFO log message "otel-log-probe"
+    Then a log record containing "otel-log-probe" should be exported
+
+  Scenario: post-fork state rebuilds owned providers
+    Given OpenTelemetry is configured for testing
+    When I simulate a process fork after OpenTelemetry init
+    And I re-initialize OpenTelemetry after the simulated fork
+    Then OpenTelemetry should be marked initialized
+
+  Scenario: invalid OTEL config with no signals is rejected
+    When I build OpentelemetryConfig with IS_ENABLED true and all signals false
+    Then a ConfigurationError should be raised for operation "otel"
+
+  Scenario: invalid LOGS_LEVEL is rejected
+    When I build OpentelemetryConfig with LOGS_LEVEL "VERBOSE"
+    Then a ConfigurationError should be raised for operation "otel"
+
+  Scenario: concurrent histogram creation is thread-safe
+    Given a sync function decorated with measure_duration named "test.concurrent.duration"
+    When I call the measured sync function from 8 threads concurrently
+    Then a histogram metric named "test.concurrent.duration" should have datapoints
+
+  Scenario: traces disabled FastAPI request records no HTTP span
+    Given OpenTelemetry metrics-only mode for testing
+    When I create an instrumented FastAPI app and GET "/otel-ping"
+    Then no span named "GET /otel-ping" should be recorded
+
+  Scenario: missing tracer provider skips gRPC OTel interceptor
+    Given OpenTelemetry import failure is simulated
+    When I setup the gRPC OTel interceptor on a list with a sentinel interceptor
+    Then the interceptor list should contain only the sentinel
+
+  Scenario: FastAPI lifespan shutdown clears OTel providers
+    When I run FastAPI lifespan startup and shutdown
+    Then OpenTelemetry force flush should have been invoked during lifespan exit

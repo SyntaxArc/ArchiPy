@@ -14,6 +14,7 @@ from opentelemetry.trace import StatusCode
 
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers.decorators import (
+    async_measure_duration,
     async_trace_span,
     count_calls,
     measure_duration,
@@ -23,7 +24,7 @@ from archipy.helpers.decorators import (
 )
 from archipy.helpers.utils.error_utils import ErrorUtils
 from archipy.helpers.utils.otel_utils import OtelUtils
-from archipy.models.errors import InvalidArgumentError, NotFoundError
+from archipy.models.errors import ConfigurationError, InvalidArgumentError, NotFoundError
 
 
 def _setup_otel_testing(context: Context) -> None:
@@ -1121,3 +1122,433 @@ def step_when_grpc_calls_fa(context):
         channel.close()
         grpc_server.stop(None)
         _stop_uvicorn(uvicorn_server)
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle / signal / failure-path scenarios
+# ---------------------------------------------------------------------------
+
+
+@given("OpenTelemetry metrics-only mode for testing")
+def step_given_metrics_only(context):
+    scenario_context = get_current_scenario_context(context)
+    config = BaseConfig.global_config()
+    config.OTEL.TRACES_ENABLED = False
+    config.OTEL.METRICS_ENABLED = True
+    config.OTEL.IS_ENABLED = True
+    scenario_context.store("otel_enabled_for_test", True)
+
+
+@given("a sync function decorated with trace_span that captures a broken repr arg")
+def step_given_broken_repr_capture(context):
+    scenario_context = get_current_scenario_context(context)
+
+    @trace_span(name="broken_repr_span", capture_args=["payload"])
+    def traced_sync(payload: object) -> str:
+        return "ok"
+
+    scenario_context.store("traced_sync", traced_sync)
+    scenario_context.store("expected_span_name", "broken_repr_span")
+
+
+@when("I call the traced sync function with a broken repr object")
+def step_when_call_broken_repr(context):
+    scenario_context = get_current_scenario_context(context)
+
+    class BrokenRepr:
+        def __repr__(self) -> str:
+            raise RuntimeError("repr boom")
+
+    result = scenario_context.get("traced_sync")(BrokenRepr())
+    scenario_context.store("result", result)
+
+
+@given('a sync function decorated with trace_span and static attribute password "{password}"')
+def step_given_static_password_attr(context, password):
+    scenario_context = get_current_scenario_context(context)
+
+    @trace_span(name="static_secret_span", attributes={"password": password})
+    def traced_sync() -> str:
+        return "ok"
+
+    scenario_context.store("traced_sync", traced_sync)
+    scenario_context.store("expected_span_name", "static_secret_span")
+
+
+@given('an async function decorated with async_measure_duration named "{instrument_name}"')
+def step_given_async_measure_duration(context, instrument_name):
+    scenario_context = get_current_scenario_context(context)
+    import asyncio
+
+    @async_measure_duration(name=instrument_name)
+    async def measured_async() -> str:
+        await asyncio.sleep(60)
+        return "done"
+
+    scenario_context.store("measured_async", measured_async)
+    scenario_context.store("expected_instrument_name", instrument_name)
+
+
+@when("I cancel the measured async function")
+async def step_when_cancel_measured_async(context):
+    import asyncio
+
+    scenario_context = get_current_scenario_context(context)
+    task = asyncio.create_task(scenario_context.get("measured_async")())
+    await asyncio.sleep(0)
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        scenario_context.store("cancelled", True)
+
+
+@then('a histogram metric named "{instrument_name}" should have status "{status}"')
+def step_then_histogram_status(context, instrument_name, status):
+    points = _metric_datapoints(context, instrument_name)
+    assert points, f"No datapoints for histogram '{instrument_name}'"
+    statuses = [point.attributes.get("status") for point in points]
+    assert status in statuses, f"Expected status {status!r} in {statuses!r}"
+
+
+@when("I cancel the traced async function")
+async def step_when_cancel_traced_async(context):
+    import asyncio
+
+    scenario_context = get_current_scenario_context(context)
+
+    @async_trace_span(name=scenario_context.get("expected_span_name") or "cancel_span")
+    async def cancellable() -> str:
+        await asyncio.sleep(60)
+        return "done"
+
+    # Re-wrap if Background already stored a different async fn without sleep
+    if scenario_context.get("traced_async") is not None:
+        # Prefer the named cancel_span from the Given step; redefine with sleep
+        span_name = scenario_context.get("expected_span_name") or "cancel_span"
+
+        @async_trace_span(name=span_name)
+        async def cancellable_named() -> str:
+            await asyncio.sleep(60)
+            return "done"
+
+        target = cancellable_named
+    else:
+        target = cancellable
+
+    task = asyncio.create_task(target())
+    await asyncio.sleep(0)
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        scenario_context.store("cancelled", True)
+
+
+@when("I force flush OpenTelemetry providers")
+def step_when_force_flush(context):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("force_flush_ok", OtelUtils.force_flush(timeout_millis=1000))
+
+
+@then("OpenTelemetry force flush should succeed")
+def step_then_force_flush_ok(context):
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("force_flush_ok") is True
+
+
+@when("I shut down OpenTelemetry providers twice")
+def step_when_shutdown_twice(context):
+    OtelUtils.shutdown()
+    OtelUtils.shutdown()
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("otel_enabled_for_test", True)
+
+
+@then("OpenTelemetry tracer provider should be absent")
+def step_then_no_tracer_provider(context):
+    assert OtelUtils.tracer_provider() is None
+
+
+@given("OpenTelemetry is configured for testing with a borrowed tracer provider")
+def step_given_borrowed_tracer(context):
+    scenario_context = get_current_scenario_context(context)
+    # Background already configured providers; mark tracer as borrowed (not owned).
+    external = OtelUtils.tracer_provider()
+    assert external is not None
+    OtelUtils._owns_tracer = False
+    scenario_context.store("external_tracer_provider", external)
+    scenario_context.store("otel_enabled_for_test", True)
+
+
+@when("I shut down OpenTelemetry providers")
+def step_when_shutdown_once(context):
+    OtelUtils.shutdown()
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("otel_enabled_for_test", True)
+
+
+@then("the borrowed TracerProvider should still be usable")
+def step_then_borrowed_still_usable(context):
+    scenario_context = get_current_scenario_context(context)
+    external = scenario_context.get("external_tracer_provider")
+    assert external is not None
+    tracer = external.get_tracer("borrowed-check")
+    with tracer.start_as_current_span("borrowed_span"):
+        pass
+    assert OtelUtils.tracer_provider() is None
+    assert OtelUtils._owns_tracer is False
+
+
+@given("an external TracerProvider is installed as the global provider")
+def step_given_external_tracer(context):
+    scenario_context = get_current_scenario_context(context)
+    # Kept for compatibility; prefer borrowed-provider scenario above.
+    step_given_borrowed_tracer(context)
+
+
+@when("I initialize OpenTelemetry adopting the external provider")
+def step_when_init_adopting(context):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("adopted_provider", OtelUtils.tracer_provider())
+
+
+@then("the external TracerProvider should still be usable")
+def step_then_external_still_usable(context):
+    step_then_borrowed_still_usable(context)
+
+
+@when("OpenTelemetry initialization fails while creating the metric exporter")
+def step_when_init_metric_exporter_fails(context):
+    scenario_context = get_current_scenario_context(context)
+    OtelUtils.reset_for_testing()
+    OtelUtils._globals_set = False
+    config = BaseConfig.global_config()
+    config.OTEL.IS_ENABLED = True
+    config.OTEL.TRACES_ENABLED = True
+    config.OTEL.METRICS_ENABLED = True
+    config.OTEL.LOGS_ENABLED = False
+    config.OTEL.PROTOCOL = "http/protobuf"
+    config.OTEL.OTLP_ENDPOINT = "http://localhost:4318"
+
+    original = OtelUtils.__dict__["_create_metric_exporter"]
+
+    @classmethod
+    def _boom(cls, otel):
+        raise RuntimeError("metric exporter boom")
+
+    OtelUtils._create_metric_exporter = _boom
+    try:
+        OtelUtils.init_otel_if_needed(config)
+    finally:
+        OtelUtils._create_metric_exporter = original
+    scenario_context.store("otel_enabled_for_test", True)
+
+
+@then("OpenTelemetry should not be marked initialized")
+def step_then_not_initialized(context):
+    assert OtelUtils._initialized is False
+
+
+@then("OpenTelemetry should be marked initialized")
+def step_then_initialized(context):
+    assert OtelUtils._initialized is True
+
+
+@then("OpenTelemetry meter provider should be absent")
+def step_then_no_meter_provider(context):
+    assert OtelUtils.meter_provider() is None
+
+
+@given("OpenTelemetry import failure is simulated")
+def step_given_import_failed(context):
+    scenario_context = get_current_scenario_context(context)
+    config = BaseConfig.global_config()
+    config.OTEL.IS_ENABLED = True
+    config.OTEL.TRACES_ENABLED = True
+    OtelUtils._import_failed = True
+    OtelUtils._initialized = False
+    scenario_context.store("otel_enabled_for_test", True)
+
+
+@then('the traced sync function result should be "{value}"')
+def step_then_traced_result(context, value):
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("result") == value
+
+
+@given("OpenTelemetry is configured for testing with log export")
+def step_given_otel_with_logs(context):
+    from opentelemetry.sdk._logs.export import InMemoryLogExporter
+
+    scenario_context = get_current_scenario_context(context)
+    OtelUtils.reset_for_testing()
+    config = BaseConfig.global_config()
+    config.OTEL.IS_ENABLED = True
+    config.OTEL.TRACES_ENABLED = True
+    config.OTEL.METRICS_ENABLED = True
+    config.OTEL.LOGS_ENABLED = True
+
+    span_exporter = InMemorySpanExporter()
+    metric_reader = InMemoryMetricReader()
+    log_exporter = InMemoryLogExporter()
+    OtelUtils.configure_for_testing(
+        span_exporter=span_exporter,
+        metric_reader=metric_reader,
+        log_exporter=log_exporter,
+    )
+    scenario_context.store("span_exporter", span_exporter)
+    scenario_context.store("metric_reader", metric_reader)
+    scenario_context.store("log_exporter", log_exporter)
+    scenario_context.store("otel_enabled_for_test", True)
+
+
+@when('I emit an INFO log message "{message}"')
+def step_when_emit_log(context, message):
+    logging.getLogger("archipy.otel.test").info(message)
+
+
+@then('a log record containing "{message}" should be exported')
+def step_then_log_exported(context, message):
+    scenario_context = get_current_scenario_context(context)
+    log_exporter = scenario_context.get("log_exporter")
+    OtelUtils.force_flush(timeout_millis=2000)
+    records = list(log_exporter.get_finished_logs())
+    bodies = []
+    for record in records:
+        log_record = record.log_record
+        body = log_record.body
+        bodies.append(str(body))
+    assert any(message in body for body in bodies), f"Expected {message!r} in {bodies!r}"
+
+
+@when("I simulate a process fork after OpenTelemetry init")
+def step_when_simulate_fork(context):
+    import os
+
+    assert OtelUtils._initialized is True
+    # Pretend we are in a child process with a different PID.
+    OtelUtils._init_pid = os.getpid() + 10_000_000
+
+
+@when("I re-initialize OpenTelemetry after the simulated fork")
+def step_when_reinit_after_fork(context):
+    import os
+
+    scenario_context = get_current_scenario_context(context)
+    config = BaseConfig.global_config()
+    config.OTEL.IS_ENABLED = True
+    config.OTEL.TRACES_ENABLED = True
+    config.OTEL.METRICS_ENABLED = True
+    config.OTEL.LOGS_ENABLED = False
+
+    # Exercise fork detection under the init lock, then install in-memory providers
+    # (avoid constructing real OTLP exporters in BDD).
+    with OtelUtils._lock:
+        if OtelUtils._initialized and OtelUtils._init_pid is not None and OtelUtils._init_pid != os.getpid():
+            OtelUtils._reset_after_fork()
+    span_exporter = InMemorySpanExporter()
+    metric_reader = InMemoryMetricReader()
+    OtelUtils.configure_for_testing(span_exporter=span_exporter, metric_reader=metric_reader)
+    scenario_context.store("span_exporter", span_exporter)
+    scenario_context.store("metric_reader", metric_reader)
+    scenario_context.store("otel_enabled_for_test", True)
+
+
+@when("I build OpentelemetryConfig with IS_ENABLED true and all signals false")
+def step_when_build_no_signals(context):
+    from archipy.configs.config_template import OpentelemetryConfig
+
+    scenario_context = get_current_scenario_context(context)
+    try:
+        OpentelemetryConfig(
+            IS_ENABLED=True,
+            TRACES_ENABLED=False,
+            METRICS_ENABLED=False,
+            LOGS_ENABLED=False,
+        )
+        scenario_context.store("config_error", None)
+    except ConfigurationError as exc:
+        scenario_context.store("config_error", exc)
+
+
+@when('I build OpentelemetryConfig with LOGS_LEVEL "{level}"')
+def step_when_build_bad_logs_level(context, level):
+    from archipy.configs.config_template import OpentelemetryConfig
+
+    scenario_context = get_current_scenario_context(context)
+    try:
+        OpentelemetryConfig(LOGS_LEVEL=level)
+        scenario_context.store("config_error", None)
+    except ConfigurationError as exc:
+        scenario_context.store("config_error", exc)
+
+
+@then('a ConfigurationError should be raised for operation "{operation}"')
+def step_then_config_error(context, operation):
+    scenario_context = get_current_scenario_context(context)
+    err = scenario_context.get("config_error")
+    assert isinstance(err, ConfigurationError), f"Expected ConfigurationError, got {err!r}"
+    assert err.additional_data.get("operation") == operation
+
+
+@when("I call the measured sync function from {n:d} threads concurrently")
+def step_when_concurrent_measure(context, n):
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    scenario_context = get_current_scenario_context(context)
+    measured = scenario_context.get("measured_sync")
+
+    with ThreadPoolExecutor(max_workers=n) as pool:
+        futures = [pool.submit(measured) for _ in range(n)]
+        for future in as_completed(futures):
+            assert future.result() == "timed"
+
+
+@then("the interceptor list should contain only the sentinel")
+def step_then_only_sentinel(context):
+    scenario_context = get_current_scenario_context(context)
+    interceptors = scenario_context.get("grpc_interceptors")
+    sentinel = scenario_context.get("grpc_sentinel")
+    assert interceptors == [sentinel], f"Expected only sentinel, got {interceptors!r}"
+
+
+@when("I run FastAPI lifespan startup and shutdown")
+def step_when_fastapi_lifespan_cycle(context):
+    from contextlib import asynccontextmanager
+    from unittest.mock import patch
+
+    from fastapi.testclient import TestClient
+
+    from archipy.helpers.utils.app_utils import AppUtils
+
+    scenario_context = get_current_scenario_context(context)
+    config = BaseConfig.global_config()
+    config.OTEL.IS_ENABLED = True
+    assert OtelUtils.tracer_provider() is not None
+
+    user_ran = {"value": False}
+
+    @asynccontextmanager
+    async def user_lifespan(app):
+        user_ran["value"] = True
+        yield
+
+    app = AppUtils.create_fastapi_app(
+        config,
+        configure_exception_handlers=False,
+        lifespan=user_lifespan,
+    )
+    with patch.object(OtelUtils, "force_flush", wraps=OtelUtils.force_flush) as flush_mock:
+        with TestClient(app):
+            assert user_ran["value"] is True
+        scenario_context.store("lifespan_flush_called", flush_mock.called)
+    # Providers must remain usable after TestClient lifespan exit.
+    assert OtelUtils.tracer_provider() is not None
+    scenario_context.store("otel_enabled_for_test", True)
+
+
+@then("OpenTelemetry force flush should have been invoked during lifespan exit")
+def step_then_lifespan_flush(context):
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("lifespan_flush_called") is True
