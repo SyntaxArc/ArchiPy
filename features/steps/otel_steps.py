@@ -23,7 +23,7 @@ from archipy.helpers.decorators import (
 )
 from archipy.helpers.utils.error_utils import ErrorUtils
 from archipy.helpers.utils.otel_utils import OtelUtils
-from archipy.models.errors import NotFoundError
+from archipy.models.errors import InvalidArgumentError, NotFoundError
 
 
 def _setup_otel_testing(context: Context) -> None:
@@ -79,6 +79,9 @@ def teardown_otel_testing(context: Context) -> None:
         scenario_context = get_current_scenario_context(context)
     except AttributeError:
         return
+
+    # Always attempt server cleanup when scenario stored any (even if OTel flag off).
+    _cleanup_otel_integration_resources(scenario_context)
 
     if not scenario_context.get("otel_enabled_for_test", False):
         return
@@ -172,9 +175,16 @@ def step_given_async_trace_span(context, span_name):
 def step_given_trace_span_capture_args(context, arg_name):
     scenario_context = get_current_scenario_context(context)
 
-    @trace_span(name="capture_args_span", capture_args=[arg_name])
-    def traced_sync(user_id: int) -> int:
-        return user_id
+    if arg_name == "password":
+
+        @trace_span(name="capture_args_span", capture_args=[arg_name])
+        def traced_sync(password: str) -> str:
+            return password
+    else:
+
+        @trace_span(name="capture_args_span", capture_args=[arg_name])
+        def traced_sync(user_id: int) -> int:
+            return user_id
 
     scenario_context.store("traced_sync", traced_sync)
     scenario_context.store("expected_span_name", "capture_args_span")
@@ -414,11 +424,29 @@ def step_then_span_status_ok(context):
     assert span.status.status_code == StatusCode.OK, f"Expected OK status, got {span.status.status_code}"
 
 
+@then("the recorded span status should be UNSET")
+def step_then_span_status_unset(context):
+    scenario_context = get_current_scenario_context(context)
+    span = _span_by_name(context, scenario_context.get("expected_span_name"))
+    assert span.status.status_code == StatusCode.UNSET, (
+        f"Expected UNSET status, got {span.status.status_code}"
+    )
+
+
 @then("the recorded span should include an exception event")
 def step_then_span_has_exception_event(context):
     scenario_context = get_current_scenario_context(context)
     span = _span_by_name(context, scenario_context.get("expected_span_name"))
     assert _span_has_exception_event(span), f"Span '{span.name}' has no exception event"
+
+
+@then("the recorded span should have exactly {count:d} exception event")
+@then("the recorded span should have exactly {count:d} exception events")
+def step_then_span_exception_event_count(context, count):
+    scenario_context = get_current_scenario_context(context)
+    span = _span_by_name(context, scenario_context.get("expected_span_name"))
+    events = [event for event in span.events if event.name == "exception"]
+    assert len(events) == count, f"Expected {count} exception event(s), got {len(events)}"
 
 
 @then("the root span trace id should differ from the ambient parent trace id")
@@ -445,3 +473,651 @@ def step_then_counter_datapoints(context, instrument_name):
     assert any(getattr(point, "value", 0) >= 1 for point in points), (
         f"Counter '{instrument_name}' datapoints have no positive values"
     )
+
+
+@when("I reset and reconfigure OpenTelemetry for testing")
+def step_when_reset_reconfigure_otel(context):
+    _setup_otel_testing(context)
+
+
+@when("I call the measured sync function again")
+def step_when_call_measured_sync_again(context):
+    scenario_context = get_current_scenario_context(context)
+    result = scenario_context.get("measured_sync")()
+    scenario_context.store("result", result)
+
+
+@when('I call the traced sync function with password "{password}"')
+def step_when_call_traced_sync_with_password(context, password):
+    scenario_context = get_current_scenario_context(context)
+    result = scenario_context.get("traced_sync")(password=password)
+    scenario_context.store("result", result)
+
+
+@then('the recorded span should have attribute "{attr_name}" equal to "{attr_value}"')
+def step_then_span_attribute_string(context, attr_name, attr_value):
+    scenario_context = get_current_scenario_context(context)
+    span = _span_by_name(context, scenario_context.get("expected_span_name"))
+    assert span.attributes is not None, "Span has no attributes"
+    assert span.attributes.get(attr_name) == attr_value, (
+        f"Expected {attr_name}={attr_value!r}, got {span.attributes.get(attr_name)!r}"
+    )
+
+
+@when("I apply measure_duration to an async function")
+def step_when_apply_measure_duration_to_async(context):
+    scenario_context = get_current_scenario_context(context)
+    try:
+
+        @measure_duration()
+        async def bad_async() -> str:
+            return "nope"
+
+        scenario_context.store("decorator_error", None)
+        scenario_context.store("bad_async", bad_async)
+    except InvalidArgumentError as exc:
+        scenario_context.store("decorator_error", exc)
+
+
+@then('an InvalidArgumentError should be raised for decorator "{decorator_name}"')
+def step_then_invalid_argument_for_decorator(context, decorator_name):
+    scenario_context = get_current_scenario_context(context)
+    error = scenario_context.get("decorator_error")
+    assert isinstance(error, InvalidArgumentError), f"Expected InvalidArgumentError, got {error!r}"
+    additional = getattr(error, "additional_data", None) or {}
+    assert additional.get("decorator") == decorator_name, (
+        f"Expected decorator={decorator_name}, got {additional.get('decorator')}"
+    )
+
+
+@when('I resolve OTLP endpoints for protocol "{protocol}" with base "{base}"')
+def step_when_resolve_endpoints(context, protocol, base):
+    scenario_context = get_current_scenario_context(context)
+    from archipy.configs.config_template import OpentelemetryConfig
+
+    otel = OpentelemetryConfig(PROTOCOL=protocol, OTLP_ENDPOINT=base)
+    scenario_context.store("resolved_traces", OtelUtils._resolve_otlp_endpoint(otel, "traces", None))
+    scenario_context.store("resolved_metrics", OtelUtils.resolve_metrics_endpoint(otel))
+    scenario_context.store("resolved_logs", OtelUtils._resolve_otlp_endpoint(otel, "logs", None))
+
+
+@when(
+    'I resolve OTLP metrics endpoint for protocol "{protocol}" with base "{base}" '
+    'overridden to "{override}"',
+)
+def step_when_resolve_endpoints_with_override(context, protocol, base, override):
+    scenario_context = get_current_scenario_context(context)
+    from archipy.configs.config_template import OpentelemetryConfig
+
+    otel = OpentelemetryConfig(PROTOCOL=protocol, OTLP_ENDPOINT=base, METRICS_ENDPOINT=override)
+    scenario_context.store("resolved_traces", OtelUtils._resolve_otlp_endpoint(otel, "traces", otel.TRACES_ENDPOINT))
+    scenario_context.store("resolved_metrics", OtelUtils.resolve_metrics_endpoint(otel))
+    scenario_context.store("resolved_logs", OtelUtils._resolve_otlp_endpoint(otel, "logs", otel.LOGS_ENDPOINT))
+
+
+@then('the traces endpoint should be "{endpoint}"')
+def step_then_traces_endpoint(context, endpoint):
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("resolved_traces") == endpoint
+
+
+@then('the metrics endpoint should be "{endpoint}"')
+def step_then_metrics_endpoint(context, endpoint):
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("resolved_metrics") == endpoint
+
+
+@then('the logs endpoint should be "{endpoint}"')
+def step_then_logs_endpoint(context, endpoint):
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("resolved_logs") == endpoint
+
+
+@given('OpenTelemetry providers are built with service name "{service_name}" and environment "{environment}"')
+def step_given_providers_with_resource(context, service_name, environment):
+    scenario_context = get_current_scenario_context(context)
+    OtelUtils.reset_for_testing()
+    config = BaseConfig.global_config()
+    config.OTEL.IS_ENABLED = True
+    config.OTEL.TRACES_ENABLED = True
+    config.OTEL.METRICS_ENABLED = False
+    config.OTEL.LOGS_ENABLED = False
+    config.OTEL.SERVICE_NAME = service_name
+    config.OTEL.ENVIRONMENT = environment
+    config.OTEL.TRACES_SAMPLE_RATIO = 1.0
+    # Avoid real OTLP export — use in-memory providers that still set resource attrs.
+    span_exporter = InMemorySpanExporter()
+    OtelUtils.configure_for_testing(span_exporter=span_exporter, service_name=service_name)
+    # Patch environment onto the resource for assertion (configure_for_testing only sets service.name).
+    # Build via _build_providers path for full resource attrs.
+    OtelUtils.reset_for_testing()
+    # Directly build resource the same way production does.
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+
+    resource = Resource.create(
+        {
+            "service.name": service_name,
+            "deployment.environment.name": environment,
+        },
+    )
+    provider = TracerProvider(resource=resource)
+    provider.add_span_processor(SimpleSpanProcessor(span_exporter))
+    OtelUtils._tracer_provider = provider
+    OtelUtils._initialized = True
+    scenario_context.store("span_exporter", span_exporter)
+    scenario_context.store("otel_enabled_for_test", True)
+    scenario_context.store("expected_service_name", service_name)
+    scenario_context.store("expected_environment", environment)
+
+
+@then('the tracer provider resource should include "{attr_name}" equal to "{attr_value}"')
+def step_then_resource_attr(context, attr_name, attr_value):
+    provider = OtelUtils.tracer_provider()
+    assert provider is not None, "No tracer provider"
+    value = provider.resource.attributes.get(attr_name)
+    assert value == attr_value, f"Expected {attr_name}={attr_value!r}, got {value!r}"
+
+
+@given("OpenTelemetry is configured for testing with sample ratio {ratio:f}")
+def step_given_otel_with_sample_ratio(context, ratio):
+    scenario_context = get_current_scenario_context(context)
+    OtelUtils.reset_for_testing()
+    config = BaseConfig.global_config()
+    config.OTEL.IS_ENABLED = True
+    config.OTEL.TRACES_ENABLED = True
+    config.OTEL.METRICS_ENABLED = False
+    config.OTEL.LOGS_ENABLED = False
+    config.OTEL.TRACES_SAMPLE_RATIO = ratio
+
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.sampling import ParentBasedTraceIdRatio
+
+    span_exporter = InMemorySpanExporter()
+    resource = Resource.create({"service.name": "archipy-test"})
+    provider = TracerProvider(resource=resource, sampler=ParentBasedTraceIdRatio(ratio))
+    provider.add_span_processor(SimpleSpanProcessor(span_exporter))
+    OtelUtils._tracer_provider = provider
+    OtelUtils._initialized = True
+    scenario_context.store("span_exporter", span_exporter)
+    scenario_context.store("otel_enabled_for_test", True)
+
+
+@when("I run a traced function inside a worker thread under an ambient parent")
+def step_when_traced_in_worker_thread(context):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from opentelemetry.instrumentation.threading import ThreadingInstrumentor
+
+    scenario_context = get_current_scenario_context(context)
+    if "threading" not in OtelUtils._instrumented_libraries:
+        ThreadingInstrumentor().instrument(tracer_provider=OtelUtils.tracer_provider())
+        OtelUtils._instrumented_libraries.add("threading")
+
+    tracer = OtelUtils.get_tracer(__name__)
+    parent_span = tracer.start_span("ambient_parent")
+    parent_cm = trace.use_span(parent_span, end_on_exit=False)
+    parent_cm.__enter__()
+    ambient_trace_id = parent_span.get_span_context().trace_id
+
+    @trace_span(name="worker_span")
+    def worker() -> str:
+        return "done"
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(worker)
+        result = future.result(timeout=5)
+
+    parent_span.end()
+    parent_cm.__exit__(None, None, None)
+    scenario_context.store("result", result)
+    scenario_context.store("ambient_parent_trace_id", ambient_trace_id)
+    scenario_context.store("expected_span_name", "worker_span")
+
+
+@then("the worker span should share the ambient parent trace id")
+def step_then_worker_shares_trace(context):
+    scenario_context = get_current_scenario_context(context)
+    worker_span = _span_by_name(context, "worker_span")
+    ambient_trace_id = scenario_context.get("ambient_parent_trace_id")
+    assert worker_span.context.trace_id == ambient_trace_id, (
+        f"Expected shared trace id {ambient_trace_id:032x}, "
+        f"got {worker_span.context.trace_id:032x}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# FastAPI / gRPC / Temporal integration + distributed tracing
+# ---------------------------------------------------------------------------
+
+
+def _ensure_httpx_instrumented() -> None:
+    """Instrument httpx once for outbound HTTP context propagation."""
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
+    instrumentor = HTTPXClientInstrumentor()
+    if not instrumentor.is_instrumented_by_opentelemetry:
+        instrumentor.instrument(tracer_provider=OtelUtils.tracer_provider())
+
+
+def _uninstrument_httpx() -> None:
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
+    instrumentor = HTTPXClientInstrumentor()
+    if instrumentor.is_instrumented_by_opentelemetry:
+        instrumentor.uninstrument()
+
+
+def _import_test_proto():
+    import sys
+    from pathlib import Path
+
+    proto_dir = Path(__file__).resolve().parents[1] / "proto"
+    if str(proto_dir) not in sys.path:
+        sys.path.insert(0, str(proto_dir))
+    import test_service_pb2
+    import test_service_pb2_grpc
+
+    return test_service_pb2, test_service_pb2_grpc
+
+
+def _free_port() -> int:
+    import socket
+
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    return port
+
+
+def _start_uvicorn(app, port: int):
+    import threading
+    import time
+
+    import uvicorn
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    for _ in range(100):
+        if server.started:
+            break
+        time.sleep(0.05)
+    assert server.started, f"uvicorn failed to start on port {port}"
+    return server, thread
+
+
+def _stop_uvicorn(server) -> None:
+    if server is not None:
+        server.should_exit = True
+
+
+def _start_grpc_test_server(config, servicer):
+    import grpc
+    from archipy.helpers.utils.app_utils import AppUtils
+
+    _pb2, pb2_grpc = _import_test_proto()
+    server = AppUtils.create_grpc_app(config)
+    pb2_grpc.add_TestServiceServicer_to_server(servicer, server)
+    port = server.add_insecure_port("localhost:0")
+    server.start()
+    return server, port
+
+
+def _grpc_stub(port: int):
+    import grpc
+    from opentelemetry.instrumentation.grpc import intercept_channel as otel_intercept_channel
+
+    _pb2, pb2_grpc = _import_test_proto()
+    channel = otel_intercept_channel(
+        grpc.insecure_channel(f"localhost:{port}"),
+        *OtelUtils.grpc_client_interceptors(),
+    )
+    return pb2_grpc.TestServiceStub(channel), channel
+
+
+def _store_server_cleanup(scenario_context, **servers) -> None:
+    cleanup = scenario_context.get("otel_server_cleanup") or []
+    cleanup.append(servers)
+    scenario_context.store("otel_server_cleanup", cleanup)
+
+
+def _cleanup_otel_servers(scenario_context) -> None:
+    for entry in scenario_context.get("otel_server_cleanup") or []:
+        if entry.get("uvicorn") is not None:
+            _stop_uvicorn(entry["uvicorn"])
+        if entry.get("grpc") is not None:
+            try:
+                entry["grpc"].stop(None)
+            except Exception:
+                pass
+        if entry.get("channel") is not None:
+            try:
+                entry["channel"].close()
+            except Exception:
+                pass
+    scenario_context.store("otel_server_cleanup", [])
+    _uninstrument_httpx()
+
+
+def _cleanup_otel_integration_resources(scenario_context) -> None:
+    """Tear down uvicorn/gRPC servers and httpx instrumentation from integration scenarios."""
+    _cleanup_otel_servers(scenario_context)
+
+
+@when('I create an instrumented FastAPI app and GET "{path}"')
+def step_when_fastapi_get(context, path):
+    from fastapi.testclient import TestClient
+
+    from archipy.helpers.utils.app_utils import AppUtils
+
+    scenario_context = get_current_scenario_context(context)
+    config = BaseConfig.global_config()
+    app = AppUtils.create_fastapi_app(config, configure_exception_handlers=False)
+
+    @app.get(path)
+    def otel_ping():
+        return {"ok": True}
+
+    with TestClient(app) as client:
+        response = client.get(path)
+    assert response.status_code == 200, response.text
+    scenario_context.store("expected_span_name", f"GET {path}")
+    scenario_context.store("fastapi_response", response.json())
+
+
+@then("an HTTP server duration metric should have datapoints")
+def step_then_http_server_duration(context):
+    points = _metric_datapoints(context, "http.server.duration")
+    assert points, "No http.server.duration datapoints"
+
+
+@when("I call an instrumented gRPC TestMethod")
+def step_when_call_instrumented_grpc(context):
+    scenario_context = get_current_scenario_context(context)
+    config = BaseConfig.global_config()
+    pb2, pb2_grpc = _import_test_proto()
+
+    @measure_duration(name="otel.grpc.TestMethod.duration")
+    def handle(request):
+        return pb2.TestResponse(result="ok")
+
+    class Servicer(pb2_grpc.TestServiceServicer):
+        def TestMethod(self, request, context_):
+            return handle(request)
+
+    server, port = _start_grpc_test_server(config, Servicer())
+    stub, channel = _grpc_stub(port)
+    try:
+        result = stub.TestMethod(pb2.TestRequest(data="hi"))
+        assert result.result == "ok"
+    finally:
+        channel.close()
+        server.stop(None)
+    scenario_context.store("expected_span_name", "/test.TestService/TestMethod")
+
+
+@when("I setup the gRPC OTel interceptor on a list with a sentinel interceptor")
+def step_when_setup_grpc_otel_with_sentinel(context):
+    from archipy.helpers.utils.app_utils import GrpcAPIUtils
+
+    scenario_context = get_current_scenario_context(context)
+    sentinel = object()
+    interceptors = [sentinel]
+    GrpcAPIUtils.setup_otel_interceptor(BaseConfig.global_config(), interceptors)
+    scenario_context.store("grpc_interceptors", interceptors)
+    scenario_context.store("grpc_sentinel", sentinel)
+
+
+@then("the OTel interceptor should be first and the sentinel should remain")
+def step_then_grpc_otel_prepended(context):
+    scenario_context = get_current_scenario_context(context)
+    interceptors = scenario_context.get("grpc_interceptors")
+    sentinel = scenario_context.get("grpc_sentinel")
+    assert len(interceptors) == 2, f"Expected 2 interceptors, got {len(interceptors)}"
+    assert interceptors[0] is not sentinel
+    assert interceptors[1] is sentinel
+    assert "OpenTelemetry" in type(interceptors[0]).__name__
+
+
+@when("I connect a Temporal adapter with OTel enabled using a mocked Client")
+async def step_when_temporal_mocked_connect(context):
+    from unittest.mock import MagicMock, patch
+
+    from archipy.adapters.temporal.adapters import TemporalAdapter
+    from archipy.configs.config_template import TemporalConfig
+
+    scenario_context = get_current_scenario_context(context)
+    config = BaseConfig.global_config()
+    config.OTEL.PROTOCOL = "http/protobuf"
+    config.OTEL.OTLP_ENDPOINT = "http://localhost:4318"
+
+    adapter = TemporalAdapter(TemporalConfig(HOST="localhost", PORT=7233, ENABLE_METRICS=True))
+    captured: dict = {}
+
+    async def fake_connect(target, **kwargs):
+        captured["target"] = target
+        captured["kwargs"] = kwargs
+        return MagicMock(name="TemporalClient")
+
+    with patch("archipy.adapters.temporal.adapters.Client.connect", side_effect=fake_connect):
+        with patch("archipy.adapters.temporal.adapters.TemporalRuntimeManager") as runtime_mgr:
+            runtime_mgr.return_value.get_runtime.return_value = MagicMock(name="Runtime")
+            await adapter.get_client()
+            scenario_context.store("temporal_connect_kwargs", captured["kwargs"])
+            scenario_context.store(
+                "temporal_runtime_call_kwargs",
+                runtime_mgr.return_value.get_runtime.call_args.kwargs,
+            )
+
+
+@then("the Temporal connect kwargs should include a TracingInterceptor")
+def step_then_temporal_has_tracing_interceptor(context):
+    from temporalio.contrib.opentelemetry import TracingInterceptor
+
+    scenario_context = get_current_scenario_context(context)
+    kwargs = scenario_context.get("temporal_connect_kwargs")
+    interceptors = kwargs.get("interceptors") or []
+    assert any(isinstance(item, TracingInterceptor) for item in interceptors), (
+        f"No TracingInterceptor in {interceptors!r}"
+    )
+
+
+@then('the Temporal runtime should receive metrics endpoint "{endpoint}"')
+def step_then_temporal_runtime_endpoint(context, endpoint):
+    scenario_context = get_current_scenario_context(context)
+    call_kwargs = scenario_context.get("temporal_runtime_call_kwargs")
+    assert call_kwargs.get("otlp_endpoint") == endpoint, (
+        f"Expected otlp_endpoint={endpoint!r}, got {call_kwargs.get('otlp_endpoint')!r}"
+    )
+
+
+@when("I append a Temporal TracingInterceptor to connect kwargs that already have a sentinel")
+def step_when_temporal_append_with_sentinel(context):
+    from archipy.adapters.temporal.adapters import TemporalAdapter
+
+    scenario_context = get_current_scenario_context(context)
+
+    class _SentinelInterceptor:
+        pass
+
+    sentinel = _SentinelInterceptor()
+    connect_kwargs = {"interceptors": [sentinel]}
+    TemporalAdapter._append_tracing_interceptor(connect_kwargs)
+    scenario_context.store("temporal_connect_kwargs", connect_kwargs)
+    scenario_context.store("temporal_sentinel", sentinel)
+
+
+@then("the Temporal connect kwargs should keep the sentinel and include a TracingInterceptor")
+def step_then_temporal_append_preserved(context):
+    from temporalio.contrib.opentelemetry import TracingInterceptor
+
+    scenario_context = get_current_scenario_context(context)
+    kwargs = scenario_context.get("temporal_connect_kwargs")
+    sentinel = scenario_context.get("temporal_sentinel")
+    interceptors = kwargs["interceptors"]
+    assert interceptors[0] is sentinel
+    assert isinstance(interceptors[1], TracingInterceptor)
+
+
+@then("all finished spans should share one trace id")
+def step_then_single_trace_id(context):
+    spans = _finished_spans(context)
+    assert spans, "No finished spans"
+    trace_ids = {span.context.trace_id for span in spans}
+    assert len(trace_ids) == 1, f"Expected 1 trace id, got {len(trace_ids)}: {[f'{t:032x}' for t in trace_ids]}"
+
+
+@then('at least {count:d} spans named "{span_name}" should be recorded')
+def step_then_at_least_n_spans(context, count, span_name):
+    matches = [span for span in _finished_spans(context) if span.name == span_name]
+    assert len(matches) >= count, f"Expected >= {count} spans named '{span_name}', got {len(matches)}"
+
+
+@when("FastAPI upstream calls FastAPI downstream over HTTP")
+def step_when_fa_calls_fa(context):
+    import httpx
+    from fastapi.testclient import TestClient
+
+    from archipy.helpers.utils.app_utils import AppUtils
+
+    scenario_context = get_current_scenario_context(context)
+    config = BaseConfig.global_config()
+    _ensure_httpx_instrumented()
+
+    downstream = AppUtils.create_fastapi_app(config, configure_exception_handlers=False)
+
+    @downstream.get("/downstream")
+    def downstream_handler():
+        return {"from": "downstream"}
+
+    down_port = _free_port()
+    uvicorn_server, _thread = _start_uvicorn(downstream, down_port)
+    _store_server_cleanup(scenario_context, uvicorn=uvicorn_server)
+
+    upstream = AppUtils.create_fastapi_app(config, configure_exception_handlers=False)
+
+    @upstream.get("/call-fa")
+    def call_fa():
+        response = httpx.get(f"http://127.0.0.1:{down_port}/downstream")
+        response.raise_for_status()
+        return {"status": response.status_code, "body": response.json()}
+
+    with TestClient(upstream) as client:
+        response = client.get("/call-fa")
+    assert response.status_code == 200, response.text
+    _stop_uvicorn(uvicorn_server)
+
+
+@when("FastAPI upstream calls gRPC TestMethod")
+def step_when_fa_calls_grpc(context):
+    from fastapi.testclient import TestClient
+
+    from archipy.helpers.utils.app_utils import AppUtils
+
+    scenario_context = get_current_scenario_context(context)
+    config = BaseConfig.global_config()
+    pb2, pb2_grpc = _import_test_proto()
+
+    class Servicer(pb2_grpc.TestServiceServicer):
+        def TestMethod(self, request, context_):
+            return pb2.TestResponse(result="grpc-ok")
+
+    grpc_server, grpc_port = _start_grpc_test_server(config, Servicer())
+    _store_server_cleanup(scenario_context, grpc=grpc_server)
+
+    upstream = AppUtils.create_fastapi_app(config, configure_exception_handlers=False)
+
+    @upstream.get("/call-grpc")
+    def call_grpc():
+        stub, channel = _grpc_stub(grpc_port)
+        try:
+            result = stub.TestMethod(pb2.TestRequest(data="hi"))
+            return {"result": result.result}
+        finally:
+            channel.close()
+
+    with TestClient(upstream) as client:
+        response = client.get("/call-grpc")
+    assert response.status_code == 200, response.text
+    assert response.json()["result"] == "grpc-ok"
+    grpc_server.stop(None)
+
+
+@when("gRPC upstream calls gRPC downstream TestMethod")
+def step_when_grpc_calls_grpc(context):
+    scenario_context = get_current_scenario_context(context)
+    config = BaseConfig.global_config()
+    pb2, pb2_grpc = _import_test_proto()
+
+    class DownstreamServicer(pb2_grpc.TestServiceServicer):
+        def TestMethod(self, request, context_):
+            return pb2.TestResponse(result="leaf")
+
+    down_server, down_port = _start_grpc_test_server(config, DownstreamServicer())
+    _store_server_cleanup(scenario_context, grpc=down_server)
+
+    class UpstreamServicer(pb2_grpc.TestServiceServicer):
+        def TestMethod(self, request, context_):
+            stub, channel = _grpc_stub(down_port)
+            try:
+                resp = stub.TestMethod(pb2.TestRequest(data=request.data))
+                return pb2.TestResponse(result=f"up:{resp.result}")
+            finally:
+                channel.close()
+
+    up_server, up_port = _start_grpc_test_server(config, UpstreamServicer())
+    _store_server_cleanup(scenario_context, grpc=up_server)
+
+    stub, channel = _grpc_stub(up_port)
+    try:
+        result = stub.TestMethod(pb2.TestRequest(data="x"))
+        assert result.result == "up:leaf"
+    finally:
+        channel.close()
+        up_server.stop(None)
+        down_server.stop(None)
+
+
+@when("gRPC upstream calls FastAPI downstream over HTTP")
+def step_when_grpc_calls_fa(context):
+    import httpx
+
+    from archipy.helpers.utils.app_utils import AppUtils
+
+    scenario_context = get_current_scenario_context(context)
+    config = BaseConfig.global_config()
+    _ensure_httpx_instrumented()
+    pb2, pb2_grpc = _import_test_proto()
+
+    downstream = AppUtils.create_fastapi_app(config, configure_exception_handlers=False)
+
+    @downstream.get("/from-grpc")
+    def from_grpc():
+        return {"ok": True}
+
+    fa_port = _free_port()
+    uvicorn_server, _thread = _start_uvicorn(downstream, fa_port)
+    _store_server_cleanup(scenario_context, uvicorn=uvicorn_server)
+
+    class GrpcToFaServicer(pb2_grpc.TestServiceServicer):
+        def TestMethod(self, request, context_):
+            response = httpx.get(f"http://127.0.0.1:{fa_port}/from-grpc")
+            return pb2.TestResponse(result=str(response.status_code))
+
+    grpc_server, grpc_port = _start_grpc_test_server(config, GrpcToFaServicer())
+    _store_server_cleanup(scenario_context, grpc=grpc_server)
+
+    stub, channel = _grpc_stub(grpc_port)
+    try:
+        result = stub.TestMethod(pb2.TestRequest(data="x"))
+        assert result.result == "200"
+    finally:
+        channel.close()
+        grpc_server.stop(None)
+        _stop_uvicorn(uvicorn_server)

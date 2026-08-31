@@ -112,10 +112,12 @@ class TemporalAdapter(TemporalPort):
                 global_config = BaseConfig.global_config()
                 otel = global_config.OTEL
                 if self.config.ENABLE_METRICS and otel.IS_ENABLED and otel.METRICS_ENABLED:
+                    from archipy.helpers.utils.otel_utils import OtelUtils
+
                     runtime_manager = TemporalRuntimeManager()
                     runtime = runtime_manager.get_runtime(
                         otel_metrics_enabled=True,
-                        otlp_endpoint=otel.OTLP_ENDPOINT,
+                        otlp_endpoint=OtelUtils.resolve_metrics_endpoint(otel),
                         headers=dict(otel.OTLP_HEADERS),
                         use_http=(otel.PROTOCOL == "http/protobuf"),
                     )
@@ -124,12 +126,10 @@ class TemporalAdapter(TemporalPort):
 
                 # Attach OTel tracing interceptor when traces are enabled
                 if otel.IS_ENABLED and otel.TRACES_ENABLED:
-                    from temporalio.contrib.opentelemetry import TracingInterceptor
-
                     from archipy.helpers.utils.otel_utils import OtelUtils
 
                     OtelUtils.init_otel_if_needed(global_config)
-                    connect_kwargs["interceptors"] = [TracingInterceptor()]
+                    self._append_tracing_interceptor(connect_kwargs)
 
                 self._client = await Client.connect(
                     f"{self.config.HOST}:{self.config.PORT}",
@@ -145,6 +145,17 @@ class TemporalAdapter(TemporalPort):
                 ) from error
 
         return self._client
+
+    @staticmethod
+    def _append_tracing_interceptor(connect_kwargs: dict[str, Any]) -> None:
+        """Append Temporal ``TracingInterceptor`` without discarding existing ones.
+
+        Args:
+            connect_kwargs: Keyword arguments passed to ``Client.connect``.
+        """
+        from temporalio.contrib.opentelemetry import TracingInterceptor
+
+        connect_kwargs.setdefault("interceptors", []).append(TracingInterceptor())
 
     def _has_tls_config(self) -> bool:
         """Check if TLS configuration is provided.

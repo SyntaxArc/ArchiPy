@@ -873,7 +873,23 @@ class OpentelemetryConfig(BaseModel):
     SERVICE_NAME: str | None = Field(default=None, description="OTel resource service.name")
     OTLP_ENDPOINT: str = Field(
         default="http://localhost:4317",
-        description="OTLP collector endpoint (gRPC default port 4317; HTTP/protobuf typically 4318)",
+        description=(
+            "Default OTLP collector endpoint (gRPC port 4317; HTTP/protobuf typically 4318). "
+            "For http/protobuf, signal paths (/v1/traces, /v1/metrics, /v1/logs) are appended "
+            "when the URL has no path. Override per signal with TRACES/METRICS/LOGS_ENDPOINT."
+        ),
+    )
+    TRACES_ENDPOINT: str | None = Field(
+        default=None,
+        description="Optional per-signal OTLP traces endpoint (overrides OTLP_ENDPOINT)",
+    )
+    METRICS_ENDPOINT: str | None = Field(
+        default=None,
+        description="Optional per-signal OTLP metrics endpoint (overrides OTLP_ENDPOINT)",
+    )
+    LOGS_ENDPOINT: str | None = Field(
+        default=None,
+        description="Optional per-signal OTLP logs endpoint (overrides OTLP_ENDPOINT)",
     )
     PROTOCOL: Literal["grpc", "http/protobuf"] = Field(
         default="grpc",
@@ -909,7 +925,11 @@ class OpentelemetryConfig(BaseModel):
     )
     LOGS_LEVEL: str = Field(
         default="INFO",
-        description="Minimum level for the OTLP LoggingHandler attached to the root logger",
+        description=(
+            "Minimum level for the OTLP LoggingHandler on the root logger. "
+            "Records from opentelemetry.* loggers are filtered to avoid feedback loops. "
+            "Prefer WARNING+ in production to limit export volume."
+        ),
     )
 
 

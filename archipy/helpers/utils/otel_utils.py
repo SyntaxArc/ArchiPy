@@ -5,7 +5,7 @@ from __future__ import annotations
 import atexit
 import logging
 import threading
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -19,6 +19,70 @@ HTTP_SERVER_ERROR_MIN = 500
 _OTEL_INSTALL_HINT = 'OpenTelemetry requires the optional dependency. Install with: uv add "archipy[otel]"'
 _OTEL_FASTAPI_HINT = 'FastAPI OTel instrumentation requires: uv add "archipy[otel-fastapi]"'
 _OTEL_GRPC_HINT = 'gRPC OTel instrumentation requires: uv add "archipy[otel-grpc]"'
+
+
+class _NoOpSpan:
+    """Minimal span stub used when the opentelemetry package is not installed."""
+
+    def set_attribute(self, *_args: Any, **_kwargs: Any) -> None:
+        """No-op."""
+
+    def record_exception(self, *_args: Any, **_kwargs: Any) -> None:
+        """No-op."""
+
+    def set_status(self, *_args: Any, **_kwargs: Any) -> None:
+        """No-op."""
+
+    def end(self, *_args: Any, **_kwargs: Any) -> None:
+        """No-op."""
+
+    def is_recording(self) -> bool:
+        """Return False — no real span is active."""
+        return False
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        """No-op."""
+
+
+class _NoOpTracer:
+    """Minimal tracer stub used when the opentelemetry package is not installed."""
+
+    def start_as_current_span(self, *_args: Any, **_kwargs: Any) -> _NoOpSpan:
+        """Return a no-op span context manager."""
+        return _NoOpSpan()
+
+    def start_span(self, *_args: Any, **_kwargs: Any) -> _NoOpSpan:
+        """Return a no-op span."""
+        return _NoOpSpan()
+
+
+class _NoOpHistogram:
+    """Minimal histogram stub used when the opentelemetry package is not installed."""
+
+    def record(self, *_args: Any, **_kwargs: Any) -> None:
+        """No-op."""
+
+
+class _NoOpCounter:
+    """Minimal counter stub used when the opentelemetry package is not installed."""
+
+    def add(self, *_args: Any, **_kwargs: Any) -> None:
+        """No-op."""
+
+
+class _NoOpMeter:
+    """Minimal meter stub used when the opentelemetry package is not installed."""
+
+    def create_histogram(self, *_args: Any, **_kwargs: Any) -> _NoOpHistogram:
+        """Return a no-op histogram."""
+        return _NoOpHistogram()
+
+    def create_counter(self, *_args: Any, **_kwargs: Any) -> _NoOpCounter:
+        """Return a no-op counter."""
+        return _NoOpCounter()
 
 
 class OtelUtils:
@@ -37,6 +101,7 @@ class OtelUtils:
     _initialized: bool = False
     _logging_handler_attached: bool = False
     _atexit_registered: bool = False
+    _import_failed: bool = False
     _instrumented_libraries: ClassVar[set[str]] = set()
 
     _tracer_provider: Any | None = None
@@ -64,9 +129,13 @@ class OtelUtils:
             name: Instrumentation scope name.
 
         Returns:
-            An OpenTelemetry ``Tracer`` instance.
+            An OpenTelemetry ``Tracer`` instance, or a no-op stub when the
+            ``opentelemetry`` package is not installed.
         """
-        from opentelemetry import trace
+        try:
+            from opentelemetry import trace
+        except ImportError:
+            return _NoOpTracer()
 
         if cls._tracer_provider is not None:
             return cls._tracer_provider.get_tracer(name)
@@ -80,9 +149,13 @@ class OtelUtils:
             name: Instrumentation scope name.
 
         Returns:
-            An OpenTelemetry ``Meter`` instance.
+            An OpenTelemetry ``Meter`` instance, or a no-op stub when the
+            ``opentelemetry`` package is not installed.
         """
-        from opentelemetry import metrics
+        try:
+            from opentelemetry import metrics
+        except ImportError:
+            return _NoOpMeter()
 
         if cls._meter_provider is not None:
             return cls._meter_provider.get_meter(name)
@@ -99,25 +172,25 @@ class OtelUtils:
         return cls._meter_provider
 
     @staticmethod
-    def status_for_exception(exception: BaseException) -> Any:
-        """Map an exception to an OpenTelemetry ``Status``.
+    def status_for_exception(exception: BaseException) -> Any | None:
+        """Map an exception to an OpenTelemetry ``Status``, or ``None`` for UNSET.
 
-        ``BaseError`` with ``http_status`` below 500 leaves the span OK (client
-        error — server handled the request correctly). All other exceptions
+        ``BaseError`` with ``http_status`` below 500 leaves status UNSET (handled
+        client error — OTel spec recommends not forcing OK). All other exceptions
         become ``StatusCode.ERROR``.
 
         Args:
             exception: The exception raised during a span.
 
         Returns:
-            An OpenTelemetry ``Status`` instance.
+            An OpenTelemetry ``Status`` instance, or ``None`` to leave status UNSET.
         """
         from opentelemetry.trace import Status, StatusCode
 
         from archipy.models.errors.base_error import BaseError
 
         if isinstance(exception, BaseError) and exception.http_status < HTTP_SERVER_ERROR_MIN:
-            return Status(StatusCode.OK)
+            return None
         return Status(StatusCode.ERROR, description=str(exception))
 
     @classmethod
@@ -127,11 +200,11 @@ class OtelUtils:
         Args:
             config: Application configuration.
         """
-        if not config.OTEL.IS_ENABLED or cls._initialized:
+        if not config.OTEL.IS_ENABLED or cls._initialized or cls._import_failed:
             return
 
         with cls._lock:
-            if not config.OTEL.IS_ENABLED or cls._initialized:
+            if not config.OTEL.IS_ENABLED or cls._initialized or cls._import_failed:
                 return
             try:
                 cls._build_providers(config)
@@ -139,7 +212,11 @@ class OtelUtils:
                 cls._register_atexit()
                 cls._initialized = True
             except ImportError:
-                logger.debug("%s", _OTEL_INSTALL_HINT)
+                cls._import_failed = True
+                logger.warning(
+                    "OTEL.IS_ENABLED is True but OpenTelemetry is not installed; telemetry disabled. %s",
+                    _OTEL_INSTALL_HINT,
+                )
             except Exception:
                 logger.exception("Failed to initialize OpenTelemetry")
 
@@ -211,7 +288,14 @@ class OtelUtils:
             cls._meter_provider = None
             cls._logger_provider = None
             cls._initialized = False
+            cls._import_failed = False
             cls._instrumented_libraries.clear()
+            # Lazy import — otel_utils must not import decorators at module level.
+            from archipy.helpers.decorators.metrics import (
+                clear_instrument_caches,
+            )
+
+            clear_instrument_caches()
 
     @classmethod
     def grpc_client_interceptors(cls) -> list[Any]:
@@ -256,7 +340,7 @@ class OtelUtils:
         if otel.SERVICE_NAME:
             resource_attrs["service.name"] = otel.SERVICE_NAME
         if otel.ENVIRONMENT is not None:
-            resource_attrs["deployment.environment"] = str(otel.ENVIRONMENT)
+            resource_attrs["deployment.environment.name"] = str(otel.ENVIRONMENT)
         resource = Resource.create(resource_attrs)
 
         if otel.TRACES_ENABLED:
@@ -311,50 +395,98 @@ class OtelUtils:
         set_logger_provider(provider)
         return provider
 
+    @staticmethod
+    def _resolve_otlp_endpoint(
+        otel: Any,
+        signal: str,
+        override: str | None,
+    ) -> str:
+        """Resolve the OTLP endpoint for a signal.
+
+        Prefer a per-signal override. For ``http/protobuf``, append
+        ``/v1/{signal}`` when the base URL has no path (or only ``/``).
+        gRPC uses the base endpoint as-is.
+
+        Args:
+            otel: OpenTelemetry config section.
+            signal: One of ``traces``, ``metrics``, or ``logs``.
+            override: Optional per-signal endpoint override.
+
+        Returns:
+            The resolved endpoint URL.
+        """
+        from urllib.parse import urlparse, urlunparse
+
+        if override:
+            return override
+        base = otel.OTLP_ENDPOINT
+        if otel.PROTOCOL != "http/protobuf":
+            return base
+        parsed = urlparse(base)
+        path = (parsed.path or "").rstrip("/")
+        if path:
+            return base
+        return urlunparse(parsed._replace(path=f"/v1/{signal}"))
+
+    @classmethod
+    def resolve_metrics_endpoint(cls, otel: Any) -> str:
+        """Return the resolved OTLP metrics endpoint for Temporal / callers.
+
+        Args:
+            otel: OpenTelemetry config section.
+
+        Returns:
+            The resolved metrics endpoint URL.
+        """
+        return cls._resolve_otlp_endpoint(otel, "metrics", getattr(otel, "METRICS_ENDPOINT", None))
+
     @classmethod
     def _create_span_exporter(cls, otel: Any) -> Any:
         headers = dict(otel.OTLP_HEADERS) or None
+        endpoint = cls._resolve_otlp_endpoint(otel, "traces", getattr(otel, "TRACES_ENDPOINT", None))
         if otel.PROTOCOL == "http/protobuf":
             from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
                 OTLPSpanExporter,
             )
 
-            return OTLPSpanExporter(endpoint=otel.OTLP_ENDPOINT, headers=headers, timeout=otel.TIMEOUT)
+            return OTLPSpanExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT)
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
             OTLPSpanExporter,
         )
 
-        return OTLPSpanExporter(endpoint=otel.OTLP_ENDPOINT, headers=headers, timeout=otel.TIMEOUT)
+        return OTLPSpanExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT)
 
     @classmethod
     def _create_metric_exporter(cls, otel: Any) -> Any:
         headers = dict(otel.OTLP_HEADERS) or None
+        endpoint = cls.resolve_metrics_endpoint(otel)
         if otel.PROTOCOL == "http/protobuf":
             from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
                 OTLPMetricExporter,
             )
 
-            return OTLPMetricExporter(endpoint=otel.OTLP_ENDPOINT, headers=headers, timeout=otel.TIMEOUT)
+            return OTLPMetricExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT)
         from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
             OTLPMetricExporter,
         )
 
-        return OTLPMetricExporter(endpoint=otel.OTLP_ENDPOINT, headers=headers, timeout=otel.TIMEOUT)
+        return OTLPMetricExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT)
 
     @classmethod
     def _create_log_exporter(cls, otel: Any) -> Any:
         headers = dict(otel.OTLP_HEADERS) or None
+        endpoint = cls._resolve_otlp_endpoint(otel, "logs", getattr(otel, "LOGS_ENDPOINT", None))
         if otel.PROTOCOL == "http/protobuf":
             from opentelemetry.exporter.otlp.proto.http._log_exporter import (
                 OTLPLogExporter,
             )
 
-            return OTLPLogExporter(endpoint=otel.OTLP_ENDPOINT, headers=headers, timeout=otel.TIMEOUT)
+            return OTLPLogExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT)
         from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
             OTLPLogExporter,
         )
 
-        return OTLPLogExporter(endpoint=otel.OTLP_ENDPOINT, headers=headers, timeout=otel.TIMEOUT)
+        return OTLPLogExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT)
 
     @classmethod
     def _attach_logging_handler(cls, otel: Any) -> None:
@@ -362,8 +494,15 @@ class OtelUtils:
             return
         from opentelemetry.sdk._logs import LoggingHandler
 
+        class _DropOtelInternalLogs(logging.Filter):
+            """Drop records from ``opentelemetry.*`` to avoid export feedback loops."""
+
+            def filter(self, record: logging.LogRecord) -> bool:
+                return not record.name.startswith("opentelemetry")
+
         level = getattr(logging, otel.LOGS_LEVEL.upper(), logging.INFO)
         handler = LoggingHandler(level=level, logger_provider=cls._logger_provider)
+        handler.addFilter(_DropOtelInternalLogs())
         logging.getLogger().addHandler(handler)
         cls._logging_handler_attached = True
 

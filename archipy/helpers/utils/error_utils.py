@@ -114,7 +114,9 @@ class ErrorUtils:
             span = trace.get_current_span()
             if span.is_recording():
                 span.record_exception(exception)
-                span.set_status(OtelUtils.status_for_exception(exception))
+                status = OtelUtils.status_for_exception(exception)
+                if status is not None:
+                    span.set_status(status)
         except ImportError:
             logger.debug("opentelemetry is not installed, cannot record exception on span.")
 

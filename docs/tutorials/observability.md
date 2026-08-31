@@ -88,12 +88,34 @@ logger.info("OTel enabled=%s endpoint=%s", config.OTEL.IS_ENABLED, config.OTEL.O
 | Field                     | Default                     | Description                                      |
 |---------------------------|-----------------------------|--------------------------------------------------|
 | `IS_ENABLED`              | `false`                     | Master switch                                    |
-| `OTLP_ENDPOINT`           | `http://localhost:4317`     | OTLP collector URL                               |
+| `OTLP_ENDPOINT`           | `http://localhost:4317`     | Default OTLP collector URL                       |
+| `TRACES_ENDPOINT`         | `None`                      | Optional per-signal traces URL override          |
+| `METRICS_ENDPOINT`        | `None`                      | Optional per-signal metrics URL override         |
+| `LOGS_ENDPOINT`           | `None`                      | Optional per-signal logs URL override            |
 | `PROTOCOL`                | `grpc`                      | `grpc` or `http/protobuf`                        |
 | `TRACES_SAMPLE_RATIO`     | `0.1`                       | Parent-based trace ID ratio sampler              |
 | `METRIC_EXPORT_INTERVAL_MS` | `60000`                   | Periodic metric export interval                  |
 | `FASTAPI_EXCLUDED_URLS`   | `None`                      | Comma-separated URL patterns skipped by FastAPI  |
 | `RESOURCE_ATTRIBUTES`     | `{}`                        | Extra OTel resource attributes                   |
+| `LOGS_LEVEL`              | `INFO`                      | Minimum level for the root-logger OTLP handler   |
+
+> **Note (HTTP endpoints):** With `PROTOCOL=http/protobuf`, each signal needs its own
+> path (`/v1/traces`, `/v1/metrics`, `/v1/logs`). When `OTLP_ENDPOINT` has no path
+> (e.g. `http://localhost:4318`), ArchiPy appends the correct `/v1/{signal}` suffix
+> automatically. Set `TRACES_ENDPOINT` / `METRICS_ENDPOINT` / `LOGS_ENDPOINT` to
+> override a single signal. gRPC mode uses one shared endpoint and needs no path.
+
+> **Warning (logs cost):** When `LOGS_ENABLED=true`, a `LoggingHandler` is attached to
+> the **root** logger at `LOGS_LEVEL`. Every matching record from every library
+> (httpx, sqlalchemy, urllib3, …) is exported to OTLP. Prefer a higher level
+> (e.g. `WARNING`) in production. Records from `opentelemetry.*` loggers are
+> filtered out to avoid exporter feedback loops.
+
+> **Note (provider globals):** ArchiPy sets the global tracer/meter provider once
+> (`_globals_set`). If another library already installed a global provider first,
+> FastAPI/gRPC/Temporal interceptors (global) and ArchiPy decorators (owned
+> provider) may emit to different backends. Initialize ArchiPy OTel early via
+> `AppUtils` or `OtelUtils.init_otel_if_needed`.
 
 ---
 
@@ -275,7 +297,14 @@ def calculate_total(items: list[dict[str, float]]) -> float:
 ```
 
 Decorators no-op when `OTEL.IS_ENABLED` is false. On exceptions they set span status via
-`OtelUtils.status_for_exception` (`BaseError` with HTTP status below 500 stays OK).
+`OtelUtils.status_for_exception` (`BaseError` with HTTP status below 500 leaves status
+**UNSET** per the OTel spec for handled client errors; other exceptions become ERROR).
+
+> **Warning (`capture_args`):** Prefer non-sensitive identifiers (`user_id`,
+> `order_id`). Names matching a denylist (`password`, `token`, `secret`,
+> `authorization`, `api_key`, …) are recorded as `***`. The denylist is
+> substring-based and case-insensitive — still avoid capturing free-form blobs
+> that may embed secrets.
 
 ---
 

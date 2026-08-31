@@ -14,6 +14,25 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
 _ATTR_VALUE_MAX_LEN = 256
+_REDACTED_ATTR_VALUE = "***"
+# Case-insensitive substring match against parameter names (PII / secrets).
+_CAPTURE_ARGS_DENYLIST: frozenset[str] = frozenset(
+    {
+        "password",
+        "passwd",
+        "secret",
+        "token",
+        "authorization",
+        "api_key",
+        "apikey",
+        "credential",
+        "credentials",
+        "private_key",
+        "session",
+        "cookie",
+        "csrf",
+    },
+)
 
 
 class _Function(Protocol):
@@ -30,6 +49,19 @@ class _AsyncFunction(Protocol):
     __name__: str
 
     def __call__(self, *args: Any, **kwargs: Any) -> Coroutine[Any, Any, Any]: ...
+
+
+def _is_sensitive_arg_name(arg_name: str) -> bool:
+    """Return True when ``arg_name`` matches the capture_args denylist.
+
+    Args:
+        arg_name: Parameter name to check.
+
+    Returns:
+        True if the name should be redacted.
+    """
+    lowered = arg_name.lower()
+    return any(token in lowered for token in _CAPTURE_ARGS_DENYLIST)
 
 
 def _coerce_attr_value(value: object) -> bool | int | float | str:
@@ -52,26 +84,32 @@ def _coerce_attr_value(value: object) -> bool | int | float | str:
 
 def _apply_capture_args(
     span: Any,
-    func: Callable[..., Any],
+    signature: inspect.Signature,
     args: tuple[Any, ...],
     kwargs: dict[str, Any],
     capture_args: list[str] | None,
 ) -> None:
     """Record selected bound arguments as span attributes.
 
+    Sensitive parameter names (passwords, tokens, …) are masked as ``***``.
+
     Args:
         span: The active OpenTelemetry span.
-        func: The decorated function (used for signature binding).
+        signature: Pre-cached ``inspect.Signature`` of the decorated function.
         args: Positional call arguments.
         kwargs: Keyword call arguments.
         capture_args: Names of parameters to record, or None to skip.
     """
     if not capture_args:
         return
-    bound = inspect.signature(func).bind(*args, **kwargs)
+    bound = signature.bind(*args, **kwargs)
     bound.apply_defaults()
     for arg_name in capture_args:
-        if arg_name in bound.arguments:
+        if arg_name not in bound.arguments:
+            continue
+        if _is_sensitive_arg_name(arg_name):
+            span.set_attribute(arg_name, _REDACTED_ATTR_VALUE)
+        else:
             span.set_attribute(arg_name, _coerce_attr_value(bound.arguments[arg_name]))
 
 
@@ -100,6 +138,7 @@ def _run_traced(
     kind: Any | None,
     attributes: dict[str, Any] | None,
     capture_args: list[str] | None,
+    signature: inspect.Signature,
     root: bool,
 ) -> Any:
     """Execute a sync function inside an OpenTelemetry span.
@@ -112,6 +151,7 @@ def _run_traced(
         kind: OpenTelemetry span kind (defaults to INTERNAL).
         attributes: Optional static span attributes.
         capture_args: Optional argument names to record as attributes.
+        signature: Pre-cached signature for ``capture_args`` binding.
         root: When True, start the span with a fresh (detached) context.
 
     Returns:
@@ -125,7 +165,12 @@ def _run_traced(
     tracer = OtelUtils.get_tracer(__name__)
     resolved_kind = _resolve_kind(kind)
 
-    start_kwargs: dict[str, Any] = {"kind": resolved_kind}
+    # Disable SDK auto-record/status — we handle both manually for BaseError mapping.
+    start_kwargs: dict[str, Any] = {
+        "kind": resolved_kind,
+        "record_exception": False,
+        "set_status_on_exception": False,
+    }
     if attributes:
         start_kwargs["attributes"] = attributes
     if root:
@@ -135,12 +180,14 @@ def _run_traced(
         start_kwargs["context"] = trace.set_span_in_context(INVALID_SPAN)
 
     with tracer.start_as_current_span(span_name, **start_kwargs) as span:
-        _apply_capture_args(span, func, args, kwargs, capture_args)
+        _apply_capture_args(span, signature, args, kwargs, capture_args)
         try:
             return func(*args, **kwargs)
         except Exception as exc:
             span.record_exception(exc)
-            span.set_status(OtelUtils.status_for_exception(exc))
+            status = OtelUtils.status_for_exception(exc)
+            if status is not None:
+                span.set_status(status)
             raise
 
 
@@ -153,6 +200,7 @@ async def _run_traced_async(
     kind: Any | None,
     attributes: dict[str, Any] | None,
     capture_args: list[str] | None,
+    signature: inspect.Signature,
     root: bool,
 ) -> Any:
     """Execute an async function inside an OpenTelemetry span.
@@ -165,6 +213,7 @@ async def _run_traced_async(
         kind: OpenTelemetry span kind (defaults to INTERNAL).
         attributes: Optional static span attributes.
         capture_args: Optional argument names to record as attributes.
+        signature: Pre-cached signature for ``capture_args`` binding.
         root: When True, start the span with a fresh (detached) context.
 
     Returns:
@@ -178,7 +227,12 @@ async def _run_traced_async(
     tracer = OtelUtils.get_tracer(__name__)
     resolved_kind = _resolve_kind(kind)
 
-    start_kwargs: dict[str, Any] = {"kind": resolved_kind}
+    # Disable SDK auto-record/status — we handle both manually for BaseError mapping.
+    start_kwargs: dict[str, Any] = {
+        "kind": resolved_kind,
+        "record_exception": False,
+        "set_status_on_exception": False,
+    }
     if attributes:
         start_kwargs["attributes"] = attributes
     if root:
@@ -188,13 +242,36 @@ async def _run_traced_async(
         start_kwargs["context"] = trace.set_span_in_context(INVALID_SPAN)
 
     with tracer.start_as_current_span(span_name, **start_kwargs) as span:
-        _apply_capture_args(span, func, args, kwargs, capture_args)
+        _apply_capture_args(span, signature, args, kwargs, capture_args)
         try:
             return await func(*args, **kwargs)
         except Exception as exc:
             span.record_exception(exc)
-            span.set_status(OtelUtils.status_for_exception(exc))
+            status = OtelUtils.status_for_exception(exc)
+            if status is not None:
+                span.set_status(status)
             raise
+
+
+def _reject_coroutine_function(func: _Function, decorator_name: str) -> None:
+    """Raise when a sync decorator is applied to an async function.
+
+    Args:
+        func: The candidate function.
+        decorator_name: Name of the sync decorator for the error payload.
+
+    Raises:
+        InvalidArgumentError: If ``func`` is a coroutine function.
+    """
+    if inspect.iscoroutinefunction(func):
+        raise InvalidArgumentError(
+            argument_name="func",
+            additional_data={
+                "decorator": decorator_name,
+                "func_name": func.__name__,
+                "hint": f"Use the async_* variant instead of {decorator_name}",
+            },
+        )
 
 
 def trace_span[F: _Function](
@@ -211,9 +288,13 @@ def trace_span[F: _Function](
         kind: OpenTelemetry ``SpanKind``. Defaults to ``SpanKind.INTERNAL``.
         attributes: Optional static attributes set on the span.
         capture_args: Parameter names whose call values are recorded as attributes.
+            Sensitive names (password, token, …) are redacted to ``***``.
 
     Returns:
         A decorator that wraps the target function in a span.
+
+    Raises:
+        InvalidArgumentError: If the decorated object is a coroutine function.
 
     Example:
         ```python
@@ -224,7 +305,9 @@ def trace_span[F: _Function](
     """
 
     def decorator(func: F) -> Callable[..., Any]:
+        _reject_coroutine_function(func, "trace_span")
         span_name = name or func.__name__
+        signature = inspect.signature(func)
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -236,6 +319,7 @@ def trace_span[F: _Function](
                 kind=kind,
                 attributes=attributes,
                 capture_args=capture_args,
+                signature=signature,
                 root=False,
             )
 
@@ -258,6 +342,7 @@ def async_trace_span[F: _AsyncFunction](
         kind: OpenTelemetry ``SpanKind``. Defaults to ``SpanKind.INTERNAL``.
         attributes: Optional static attributes set on the span.
         capture_args: Parameter names whose call values are recorded as attributes.
+            Sensitive names (password, token, …) are redacted to ``***``.
 
     Returns:
         A decorator that wraps the target coroutine function in a span.
@@ -277,6 +362,7 @@ def async_trace_span[F: _AsyncFunction](
             )
 
         span_name = name or func.__name__
+        signature = inspect.signature(func)
 
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -288,6 +374,7 @@ def async_trace_span[F: _AsyncFunction](
                 kind=kind,
                 attributes=attributes,
                 capture_args=capture_args,
+                signature=signature,
                 root=False,
             )
 
@@ -313,13 +400,19 @@ def trace_root[F: _Function](
         kind: OpenTelemetry ``SpanKind``. Defaults to ``SpanKind.INTERNAL``.
         attributes: Optional static attributes set on the span.
         capture_args: Parameter names whose call values are recorded as attributes.
+            Sensitive names (password, token, …) are redacted to ``***``.
 
     Returns:
         A decorator that wraps the target function in a root span.
+
+    Raises:
+        InvalidArgumentError: If the decorated object is a coroutine function.
     """
 
     def decorator(func: F) -> Callable[..., Any]:
+        _reject_coroutine_function(func, "trace_root")
         span_name = name or func.__name__
+        signature = inspect.signature(func)
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -331,6 +424,7 @@ def trace_root[F: _Function](
                 kind=kind,
                 attributes=attributes,
                 capture_args=capture_args,
+                signature=signature,
                 root=True,
             )
 
@@ -356,6 +450,7 @@ def async_trace_root[F: _AsyncFunction](
         kind: OpenTelemetry ``SpanKind``. Defaults to ``SpanKind.INTERNAL``.
         attributes: Optional static attributes set on the span.
         capture_args: Parameter names whose call values are recorded as attributes.
+            Sensitive names (password, token, …) are redacted to ``***``.
 
     Returns:
         A decorator that wraps the target coroutine function in a root span.
@@ -375,6 +470,7 @@ def async_trace_root[F: _AsyncFunction](
             )
 
         span_name = name or func.__name__
+        signature = inspect.signature(func)
 
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -386,6 +482,7 @@ def async_trace_root[F: _AsyncFunction](
                 kind=kind,
                 attributes=attributes,
                 capture_args=capture_args,
+                signature=signature,
                 root=True,
             )
 
@@ -413,6 +510,7 @@ def _wrap_method(
         The wrapped callable.
     """
     span_name = f"{cls.__name__}.{method_name}"
+    signature = inspect.signature(func)
     if inspect.iscoroutinefunction(func):
 
         @functools.wraps(func)
@@ -425,6 +523,7 @@ def _wrap_method(
                 kind=None,
                 attributes=None,
                 capture_args=capture_args,
+                signature=signature,
                 root=False,
             )
 
@@ -440,6 +539,7 @@ def _wrap_method(
             kind=None,
             attributes=None,
             capture_args=capture_args,
+            signature=signature,
             root=False,
         )
 
@@ -460,6 +560,7 @@ def trace_class(
     Args:
         exclude: Method names to leave unwrapped.
         capture_args: Parameter names recorded as span attributes on all wrapped methods.
+            Sensitive names (password, token, …) are redacted to ``***``.
 
     Returns:
         A class decorator.

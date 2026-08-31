@@ -61,8 +61,37 @@ def _merge_status_attributes(
     return merged
 
 
-_HISTOGRAM_CACHE: dict[int, Any] = {}
-_COUNTER_CACHE: dict[int, Any] = {}
+_HISTOGRAM_CACHE: dict[tuple[int, str, str, str], Any] = {}
+_COUNTER_CACHE: dict[tuple[int, str, str, str], Any] = {}
+
+
+def clear_instrument_caches() -> None:
+    """Clear cached histogram and counter instruments.
+
+    Call after provider reset/re-init so instruments are rebound to the new
+    ``MeterProvider``. Used by ``OtelUtils.reset_for_testing()``.
+    """
+    _HISTOGRAM_CACHE.clear()
+    _COUNTER_CACHE.clear()
+
+
+def _instrument_cache_key(
+    func: Callable[..., Any],
+    instrument_name: str,
+) -> tuple[int, str, str, str]:
+    """Build a provider-aware cache key for a metric instrument.
+
+    Args:
+        func: The decorated function.
+        instrument_name: Resolved instrument name.
+
+    Returns:
+        Tuple of ``(provider_id, module, qualname, instrument_name)``.
+    """
+    provider = OtelUtils.meter_provider()
+    module = getattr(func, "__module__", None) or "unknown"
+    qualname = getattr(func, "__qualname__", None) or getattr(func, "__name__", None) or "unknown"
+    return (id(provider), module, qualname, instrument_name)
 
 
 def _get_or_create_histogram(
@@ -73,21 +102,21 @@ def _get_or_create_histogram(
     """Return a cached duration histogram for ``func``, creating it if needed.
 
     Args:
-        func: The decorated function (cache key is ``id(func)``).
+        func: The decorated function.
         name: Explicit instrument name, or None for the default.
         unit: Histogram unit (default ``"s"``).
 
     Returns:
         An OpenTelemetry histogram instrument.
     """
-    cache_key = id(func)
+    module = getattr(func, "__module__", None) or "unknown"
+    qualname = getattr(func, "__qualname__", None) or getattr(func, "__name__", None) or "unknown"
+    instrument_name = name or f"{module}.{qualname}.duration"
+    cache_key = _instrument_cache_key(func, instrument_name)
     histogram = _HISTOGRAM_CACHE.get(cache_key)
     if histogram is not None:
         return histogram
-    meter = OtelUtils.get_meter(__name__)
-    module = getattr(func, "__module__", "unknown")
-    qualname = getattr(func, "__qualname__", getattr(func, "__name__", "unknown"))
-    instrument_name = name or f"{module}.{qualname}.duration"
+    meter = OtelUtils.get_meter(module)
     histogram = meter.create_histogram(instrument_name, unit=unit)
     _HISTOGRAM_CACHE[cache_key] = histogram
     return histogram
@@ -100,20 +129,20 @@ def _get_or_create_counter(
     """Return a cached call counter for ``func``, creating it if needed.
 
     Args:
-        func: The decorated function (cache key is ``id(func)``).
+        func: The decorated function.
         name: Explicit instrument name, or None for the default.
 
     Returns:
         An OpenTelemetry counter instrument.
     """
-    cache_key = id(func)
+    module = getattr(func, "__module__", None) or "unknown"
+    qualname = getattr(func, "__qualname__", None) or getattr(func, "__name__", None) or "unknown"
+    instrument_name = name or f"{module}.{qualname}.calls"
+    cache_key = _instrument_cache_key(func, instrument_name)
     counter = _COUNTER_CACHE.get(cache_key)
     if counter is not None:
         return counter
-    meter = OtelUtils.get_meter(__name__)
-    module = getattr(func, "__module__", "unknown")
-    qualname = getattr(func, "__qualname__", getattr(func, "__name__", "unknown"))
-    instrument_name = name or f"{module}.{qualname}.calls"
+    meter = OtelUtils.get_meter(module)
     counter = meter.create_counter(instrument_name)
     _COUNTER_CACHE[cache_key] = counter
     return counter
@@ -128,8 +157,8 @@ def measure_duration[F: _Function](
     """Decorate a sync function to record execution duration as a histogram.
 
     Instrument name defaults to ``{module}.{qualname}.duration``. The histogram
-    is cached in a module-level map keyed by ``id(func)``. Each recording
-    includes a ``status`` attribute of ``ok`` or ``error``.
+    is cached in a module-level map keyed by provider id + instrument name. Each
+    recording includes a ``status`` attribute of ``ok`` or ``error``.
 
     No-ops when OTel is disabled or ``config.OTEL.METRICS_ENABLED`` is False.
 
@@ -140,9 +169,22 @@ def measure_duration[F: _Function](
 
     Returns:
         A decorator that records duration around the target function.
+
+    Raises:
+        InvalidArgumentError: If the decorated object is a coroutine function.
     """
 
     def decorator(func: F) -> Callable[..., Any]:
+        if inspect.iscoroutinefunction(func):
+            raise InvalidArgumentError(
+                argument_name="func",
+                additional_data={
+                    "decorator": "measure_duration",
+                    "func_name": func.__name__,
+                    "hint": "Use async_measure_duration instead of measure_duration",
+                },
+            )
+
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             config = BaseConfig.global_config()
@@ -233,8 +275,8 @@ def count_calls[F: _Function](
     """Decorate a sync function to increment a call counter.
 
     Instrument name defaults to ``{module}.{qualname}.calls``. The counter is
-    cached in a module-level map keyed by ``id(func)``. Each increment includes a
-    ``status`` attribute of ``ok`` or ``error``.
+    cached in a module-level map keyed by provider id + instrument name. Each
+    increment includes a ``status`` attribute of ``ok`` or ``error``.
 
     No-ops when OTel is disabled or ``config.OTEL.METRICS_ENABLED`` is False.
 
@@ -244,9 +286,22 @@ def count_calls[F: _Function](
 
     Returns:
         A decorator that counts invocations of the target function.
+
+    Raises:
+        InvalidArgumentError: If the decorated object is a coroutine function.
     """
 
     def decorator(func: F) -> Callable[..., Any]:
+        if inspect.iscoroutinefunction(func):
+            raise InvalidArgumentError(
+                argument_name="func",
+                additional_data={
+                    "decorator": "count_calls",
+                    "func_name": func.__name__,
+                    "hint": "Use async_count_calls instead of count_calls",
+                },
+            )
+
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             config = BaseConfig.global_config()
