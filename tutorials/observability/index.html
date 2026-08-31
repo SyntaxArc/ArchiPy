@@ -3695,7 +3695,22 @@
 <tr>
 <td><code>OTLP_ENDPOINT</code></td>
 <td><code>http://localhost:4317</code></td>
-<td>OTLP collector URL</td>
+<td>Default OTLP collector URL</td>
+</tr>
+<tr>
+<td><code>TRACES_ENDPOINT</code></td>
+<td><code>None</code></td>
+<td>Optional per-signal traces URL override</td>
+</tr>
+<tr>
+<td><code>METRICS_ENDPOINT</code></td>
+<td><code>None</code></td>
+<td>Optional per-signal metrics URL override</td>
+</tr>
+<tr>
+<td><code>LOGS_ENDPOINT</code></td>
+<td><code>None</code></td>
+<td>Optional per-signal logs URL override</td>
 </tr>
 <tr>
 <td><code>PROTOCOL</code></td>
@@ -3722,8 +3737,30 @@
 <td><code>{}</code></td>
 <td>Extra OTel resource attributes</td>
 </tr>
+<tr>
+<td><code>LOGS_LEVEL</code></td>
+<td><code>INFO</code></td>
+<td>Minimum level for the root-logger OTLP handler</td>
+</tr>
 </tbody>
 </table>
+<blockquote>
+<p><strong>Note (HTTP endpoints):</strong> With <code>PROTOCOL=http/protobuf</code>, each signal needs its own
+path (<code>/v1/traces</code>, <code>/v1/metrics</code>, <code>/v1/logs</code>). When <code>OTLP_ENDPOINT</code> has no path
+(e.g. <code>http://localhost:4318</code>), ArchiPy appends the correct <code>/v1/{signal}</code> suffix
+automatically. Set <code>TRACES_ENDPOINT</code> / <code>METRICS_ENDPOINT</code> / <code>LOGS_ENDPOINT</code> to
+override a single signal. gRPC mode uses one shared endpoint and needs no path.</p>
+<p><strong>Warning (logs cost):</strong> When <code>LOGS_ENABLED=true</code>, a <code>LoggingHandler</code> is attached to
+the <strong>root</strong> logger at <code>LOGS_LEVEL</code>. Every matching record from every library
+(httpx, sqlalchemy, urllib3, …) is exported to OTLP. Prefer a higher level
+(e.g. <code>WARNING</code>) in production. Records from <code>opentelemetry.*</code> loggers are
+filtered out to avoid exporter feedback loops.</p>
+<p><strong>Note (provider globals):</strong> ArchiPy sets the global tracer/meter provider once
+(<code>_globals_set</code>). If another library already installed a global provider first,
+FastAPI/gRPC/Temporal interceptors (global) and ArchiPy decorators (owned
+provider) may emit to different backends. Initialize ArchiPy OTel early via
+<code>AppUtils</code> or <code>OtelUtils.init_otel_if_needed</code>.</p>
+</blockquote>
 <hr />
 <h2 id="initialization-order">Initialization Order<a class="headerlink" href="#initialization-order" title="Permanent link">&para;</a></h2>
 <p>Call <code>OtelUtils.init_otel_if_needed(config)</code> at bootstrap — <strong>before</strong> your DI container builds
@@ -3899,7 +3936,15 @@ requests) when the matching <code>otel-*</code> extras are present.</p>
 </span><span id="__span-9-47"><a id="__codelineno-9-47" name="__codelineno-9-47" href="#__codelineno-9-47"></a>    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"price"</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Decorators no-op when <code>OTEL.IS_ENABLED</code> is false. On exceptions they set span status via
-<code>OtelUtils.status_for_exception</code> (<code>BaseError</code> with HTTP status below 500 stays OK).</p>
+<code>OtelUtils.status_for_exception</code> (<code>BaseError</code> with HTTP status below 500 leaves status
+<strong>UNSET</strong> per the OTel spec for handled client errors; other exceptions become ERROR).</p>
+<blockquote>
+<p><strong>Warning (<code>capture_args</code>):</strong> Prefer non-sensitive identifiers (<code>user_id</code>,
+<code>order_id</code>). Names matching a denylist (<code>password</code>, <code>token</code>, <code>secret</code>,
+<code>authorization</code>, <code>api_key</code>, …) are recorded as <code>***</code>. The denylist is
+substring-based and case-insensitive — still avoid capturing free-form blobs
+that may embed secrets.</p>
+</blockquote>
 <hr />
 <h2 id="metrics-decorators">Metrics Decorators<a class="headerlink" href="#metrics-decorators" title="Permanent link">&para;</a></h2>
 <table>
