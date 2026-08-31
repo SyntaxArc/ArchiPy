@@ -10,6 +10,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                              |
 |-------------------|------------|--------------------------------------------------------------------------------------|
+| [5.0.4](5.0.4.md) | 2026-08-31 | OTel: atomic lifecycle, signal gates, FastAPI/gRPC wiring, fork/ownership safety     |
 | [5.0.3](5.0.3.md) | 2026-08-31 | OTel: fix duplicate exceptions, metric cache, HTTP endpoints, distributed BDD        |
 | [5.0.2](5.0.2.md) | 2026-08-31 | Docs: OTel initialization order before DI adapter construction                       |
 | [5.0.1](5.0.1.md) | 2026-08-29 | OTel: threading context propagation and system metrics in default `otel` extra       |
