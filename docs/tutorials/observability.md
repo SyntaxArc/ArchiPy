@@ -97,6 +97,50 @@ logger.info("OTel enabled=%s endpoint=%s", config.OTEL.IS_ENABLED, config.OTEL.O
 
 ---
 
+## Initialization Order
+
+Call `OtelUtils.init_otel_if_needed(config)` at bootstrap — **before** your DI container builds
+adapters — right after `BaseConfig.set_global(config)`:
+
+```python
+import logging
+
+from archipy.configs.base_config import BaseConfig
+from archipy.helpers.utils.otel_utils import OtelUtils
+
+logger = logging.getLogger(__name__)
+
+
+class AppConfig(BaseConfig):
+    """Application configuration with OpenTelemetry enabled."""
+
+
+config = AppConfig()
+BaseConfig.set_global(config)
+OtelUtils.init_otel_if_needed(config)
+logger.info("OTel initialized before adapter construction")
+
+# Only now build the DI container / adapters
+```
+
+The call is idempotent and thread-safe — `AppUtils.create_fastapi_app` / `create_grpc_app`
+invoke it again safely.
+
+> **Warning:** If adapters are constructed before OTel initialization, some telemetry is lost
+> permanently:
+>
+> - **SQLAlchemy** — engines created before `SQLAlchemyInstrumentor` runs are never traced
+>   (only future `create_engine` calls are wrapped).
+> - **Confluent Kafka** — producers/consumers instantiated before instrumentation stay unwrapped.
+> - **Cassandra/ScyllaDB** — sessions created early miss span wrapping.
+> - **Logs** — records emitted before init bypass the OTLP logging handler.
+>
+> Tracers and meters obtained via `OtelUtils.get_tracer` / `get_meter` before init recover
+> automatically (the global proxy provider resolves once providers are set), as do Redis,
+> requests, httpx, and Elasticsearch clients — their instrumentors patch at class level.
+
+---
+
 ## Auto-instrumentation via AppUtils
 
 ### FastAPI
