@@ -1,10 +1,12 @@
 """StarRocks SQLAlchemy session manager implementations."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, override
 
 from sqlalchemy import URL
 from sqlalchemy.exc import SQLAlchemyError
-from starrocks.dialect import StarRocksSQLCompiler, StarRocksTypeCompiler
+from starrocks.dialect import StarRocksDialect, StarRocksSQLCompiler, StarRocksTypeCompiler
 
 from archipy.adapters.base.sqlalchemy.session_managers import (
     AsyncBaseSQLAlchemySessionManager,
@@ -18,8 +20,12 @@ from archipy.models.errors import DatabaseConnectionError
 if TYPE_CHECKING:
     from sqlalchemy.dialects.mysql.base import MySQLTypeCompiler
     from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
+    from sqlalchemy.engine.interfaces import DBAPIConnection
     from sqlalchemy.sql.compiler import SQLCompiler
     from sqlalchemy.sql.functions import Function
+
+# Pin SQL transactions so BEGIN/COMMIT/ROLLBACK are not no-ops (StarRocks 4.x session var).
+_STARROCKS_ENABLE_SQL_TRANSACTION = "SET enable_sql_transaction = TRUE"
 
 
 # Patch the StarRocks type compiler to map UUID to VARCHAR at module level
@@ -68,9 +74,35 @@ def _patch_starrocks_now_function() -> None:
     StarRocksSQLCompiler.visit_function = visit_function
 
 
+def _patch_starrocks_do_begin() -> None:
+    """Patch StarRocksDialect.do_begin to emit an explicit BEGIN.
+
+    The MySQL dialect inherited by StarRocks leaves ``do_begin`` as a no-op and
+    relies on implicit transactions when autocommit is False. StarRocks requires
+    an explicit ``BEGIN`` / ``START TRANSACTION`` for SQL transactions; without
+    it each DML auto-commits and later ``ROLLBACK`` is a no-op.
+
+    When the DBAPI connection is in autocommit mode (used for DDL, which StarRocks
+    forbids inside an explicit transaction), skip emitting ``BEGIN``.
+    """
+
+    def do_begin(self: StarRocksDialect, dbapi_connection: DBAPIConnection) -> None:
+        """Start an explicit StarRocks SQL transaction when not in autocommit."""
+        if self.detect_autocommit_setting(dbapi_connection):
+            return
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("BEGIN")
+        finally:
+            cursor.close()
+
+    StarRocksDialect.do_begin = do_begin  # ty: ignore[invalid-assignment]
+
+
 # Apply the patches when the module is imported
 _patch_starrocks_uuid_mapping()
 _patch_starrocks_now_function()
+_patch_starrocks_do_begin()
 
 
 class StarRocksSQlAlchemySessionManager(BaseSQLAlchemySessionManager[StarRocksSQLAlchemyConfig], metaclass=Singleton):
@@ -115,12 +147,15 @@ class StarRocksSQlAlchemySessionManager(BaseSQLAlchemySessionManager[StarRocksSQ
         """Return connection arguments for StarRocks to ensure proper transaction support.
 
         StarRocks (using MySQL protocol) requires autocommit to be explicitly disabled
-        to ensure transactions work properly with rollback support.
+        and ``enable_sql_transaction`` enabled so BEGIN/COMMIT/ROLLBACK are not no-ops.
 
         Returns:
-            A dictionary with autocommit=False and connect_timeout from config.
+            A dictionary with autocommit=False, init_command, and connect_timeout from config.
         """
-        connect_args = {}
+        connect_args: dict[str, object] = {
+            "autocommit": False,
+            "init_command": _STARROCKS_ENABLE_SQL_TRANSACTION,
+        }
 
         # Add connect_timeout if configured
         if (
@@ -129,9 +164,6 @@ class StarRocksSQlAlchemySessionManager(BaseSQLAlchemySessionManager[StarRocksSQ
             and self._configs.CONNECT_TIMEOUT is not None
         ):
             connect_args["connect_timeout"] = self._configs.CONNECT_TIMEOUT
-
-        # Add StarRocks-specific setting for transaction support
-        connect_args["autocommit"] = False
 
         return connect_args
 
@@ -238,16 +270,20 @@ class AsyncStarRocksSQlAlchemySessionManager(
     def _get_connect_args(self) -> dict:
         """Return connection arguments for async StarRocks to ensure proper transaction support.
 
-        StarRocks (using MySQL protocol via asyncmy) requires autocommit to be explicitly disabled
-        to ensure transactions work properly with rollback support.
+        StarRocks (using MySQL protocol via asyncmy) requires autocommit to be explicitly
+        disabled and ``enable_sql_transaction`` enabled so BEGIN/COMMIT/ROLLBACK are not
+        no-ops.
 
         Note: asyncmy driver only supports connect_timeout, not read_timeout/write_timeout.
         These socket-level timeouts are handled differently in async drivers.
 
         Returns:
-            A dictionary with autocommit=False and connect_timeout (no read/write timeouts for asyncmy).
+            A dictionary with autocommit=False, init_command, and connect_timeout.
         """
-        connect_args = {}
+        connect_args: dict[str, object] = {
+            "autocommit": False,
+            "init_command": _STARROCKS_ENABLE_SQL_TRANSACTION,
+        }
 
         # Add connect_timeout if configured
         if (
@@ -256,8 +292,5 @@ class AsyncStarRocksSQlAlchemySessionManager(
             and self._configs.CONNECT_TIMEOUT is not None
         ):
             connect_args["connect_timeout"] = self._configs.CONNECT_TIMEOUT
-
-        # Add StarRocks async-specific setting for transaction support
-        connect_args["autocommit"] = False
 
         return connect_args

@@ -1,4 +1,4 @@
-@needs-postgres @needs-mysql
+@needs-postgres @needs-mysql @needs-starrocks
 Feature: SQLAlchemy Atomic Transactions
 
   Scenario Outline: Create and retrieve entity in atomic transaction
@@ -8,10 +8,11 @@ Feature: SQLAlchemy Atomic Transactions
     Then the entity should be retrievable
 
     Examples:
-      | db_type |
-      | postgres|
-      | sqlite  |
-      | mysql   |
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
 
   Scenario Outline: Handle transaction rollback on exception
     Given the application database is initialized for <db_type>
@@ -21,10 +22,11 @@ Feature: SQLAlchemy Atomic Transactions
     And the database session should remain usable
 
     Examples:
-      | db_type |
-      | postgres|
-      | sqlite  |
-      | mysql   |
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
 
   Scenario Outline: Support nested atomic transactions
     Given the application database is initialized for <db_type>
@@ -109,10 +111,11 @@ Feature: SQLAlchemy Atomic Transactions
     Then the async entity should be retrievable
 
     Examples:
-      | db_type |
-      | postgres|
-      | sqlite  |
-      | mysql   |
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
 
   @async
   Scenario Outline: Handle transaction rollback in async atomic transaction
@@ -123,10 +126,11 @@ Feature: SQLAlchemy Atomic Transactions
     And the async database session should remain usable
 
     Examples:
-      | db_type |
-      | postgres|
-      | sqlite  |
-      | mysql   |
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
 
   @async
   Scenario Outline: Create multiple entities in async atomic transaction
@@ -153,3 +157,27 @@ Feature: SQLAlchemy Atomic Transactions
       | postgres|
       | sqlite  |
       | mysql   |
+
+  # StarRocks SQL transaction limitations (shared-nothing allin1): nested ArchiPy
+  # blocks share one txn and hit multi-insert; no multiple same-table inserts;
+  # no further DML on a table already modified in the same txn.
+  Scenario: StarRocks rejects nested atomic transactions
+    Given the application database is initialized for starrocks
+    And test entities are defined
+    When nested atomic transactions are attempted on StarRocks
+    Then a StarRocks transaction limitation error should be raised
+    And the database session should remain usable
+
+  Scenario: StarRocks rejects multiple inserts into the same table in one transaction
+    Given the application database is initialized for starrocks
+    And test entities are defined
+    When multiple inserts into the same table are attempted in one StarRocks transaction
+    Then a StarRocks transaction limitation error should be raised
+    And the database session should remain usable
+
+  Scenario: StarRocks rejects insert after update on the same table in one transaction
+    Given the application database is initialized for starrocks
+    And test entities are defined
+    When an insert after update on the same table is attempted in one StarRocks transaction
+    Then a StarRocks transaction limitation error should be raised
+    And the database session should remain usable

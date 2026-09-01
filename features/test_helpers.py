@@ -64,6 +64,44 @@ async def async_schema_setup(async_adapter):
         await conn.run_sync(BaseEntity.metadata.create_all)
 
 
+def sync_schema_setup_autocommit(adapter):
+    """Create schema without emitting StarRocks BEGIN (DDL cannot run in a SQL txn).
+
+    StarRocks forbids DDL inside an explicit SQL transaction. SQLAlchemy still calls
+    ``do_begin`` during ``create_all`` with autocommit temporarily False, so we
+    briefly restore a no-op ``do_begin`` for schema setup only.
+    """
+    from starrocks.dialect import StarRocksDialect
+
+    def _noop_begin(self, dbapi_connection) -> None:  # noqa: ARG001
+        return None
+
+    patched_do_begin = StarRocksDialect.do_begin
+    StarRocksDialect.do_begin = _noop_begin
+    try:
+        BaseEntity.metadata.drop_all(adapter.session_manager.engine)
+        BaseEntity.metadata.create_all(adapter.session_manager.engine)
+    finally:
+        StarRocksDialect.do_begin = patched_do_begin
+
+
+async def async_schema_setup_autocommit(async_adapter):
+    """Create async schema without emitting StarRocks BEGIN (DDL cannot run in a SQL txn)."""
+    from starrocks.dialect import StarRocksDialect
+
+    def _noop_begin(self, dbapi_connection) -> None:  # noqa: ARG001
+        return None
+
+    patched_do_begin = StarRocksDialect.do_begin
+    StarRocksDialect.do_begin = _noop_begin
+    try:
+        async with async_adapter.session_manager.engine.begin() as conn:
+            await conn.run_sync(BaseEntity.metadata.drop_all)
+            await conn.run_sync(BaseEntity.metadata.create_all)
+    finally:
+        StarRocksDialect.do_begin = patched_do_begin
+
+
 # Temporal-specific helper functions
 def wait_for_temporal_condition(condition_func, max_retries: int = 10, delay: float = 0.5) -> bool:
     """Wait for a Temporal condition to be met with retries.

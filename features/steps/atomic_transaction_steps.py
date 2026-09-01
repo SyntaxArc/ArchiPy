@@ -24,25 +24,34 @@ from archipy.adapters.postgres.sqlalchemy.adapters import (
 from archipy.adapters.postgres.sqlalchemy.session_manager_registry import PostgresSessionManagerRegistry
 from archipy.adapters.sqlite.sqlalchemy.adapters import AsyncSQLiteSQLAlchemyAdapter, SQLiteSQLAlchemyAdapter
 from archipy.adapters.sqlite.sqlalchemy.session_manager_registry import SQLiteSessionManagerRegistry
+from archipy.adapters.starrocks.sqlalchemy.adapters import (
+    AsyncStarrocksSQLAlchemyAdapter,
+    StarrocksSQLAlchemyAdapter,
+)
+from archipy.adapters.starrocks.sqlalchemy.session_manager_registry import StarRocksSessionManagerRegistry
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import SQLiteSQLAlchemyConfig
 from archipy.helpers.decorators.sqlalchemy_atomic import (
     async_mysql_sqlalchemy_atomic_decorator,
     async_postgres_sqlalchemy_atomic_decorator,
     async_sqlite_sqlalchemy_atomic_decorator,
+    async_starrocks_sqlalchemy_atomic_decorator,
     mysql_sqlalchemy_atomic_decorator,
     postgres_sqlalchemy_atomic_decorator,
     sqlite_sqlalchemy_atomic_decorator,
+    starrocks_sqlalchemy_atomic_decorator,
 )
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
-from archipy.models.errors import InternalError
+from archipy.models.errors import DatabaseError, InternalError
 from features.test_entity import RelatedTestEntity, TestAdminEntity, TestEntity, TestManagerEntity
 from features.test_entity_factory import TestEntityFactory
 from features.test_helpers import (
     async_schema_setup,
+    async_schema_setup_autocommit,
     get_adapter,
     get_async_adapter,
     get_current_scenario_context,
+    sync_schema_setup_autocommit,
 )
 from sqlalchemy import select
 
@@ -98,6 +107,8 @@ def _get_db_type(context) -> str:
             return "postgres"
         if "needs-mysql" in tags:
             return "mysql"
+        if "needs-starrocks" in tags:
+            return "starrocks"
 
     return "sqlite"
 
@@ -106,7 +117,7 @@ def _get_atomic_decorator(db_type: str, is_async: bool = False):
     """Get the appropriate atomic decorator for the database type.
 
     Args:
-        db_type: Database type ('postgres', 'sqlite', or 'mysql')
+        db_type: Database type ('postgres', 'sqlite', 'mysql', or 'starrocks')
         is_async: Whether to return async decorator
 
     Returns:
@@ -116,6 +127,8 @@ def _get_atomic_decorator(db_type: str, is_async: bool = False):
         return async_postgres_sqlalchemy_atomic_decorator if is_async else postgres_sqlalchemy_atomic_decorator
     if db_type == "mysql":
         return async_mysql_sqlalchemy_atomic_decorator if is_async else mysql_sqlalchemy_atomic_decorator
+    if db_type == "starrocks":
+        return async_starrocks_sqlalchemy_atomic_decorator if is_async else starrocks_sqlalchemy_atomic_decorator
     return async_sqlite_sqlalchemy_atomic_decorator if is_async else sqlite_sqlalchemy_atomic_decorator
 
 
@@ -123,7 +136,7 @@ def _get_session_registry(db_type: str):
     """Get the appropriate session manager registry for the database type.
 
     Args:
-        db_type: Database type ('postgres', 'sqlite', or 'mysql')
+        db_type: Database type ('postgres', 'sqlite', 'mysql', or 'starrocks')
 
     Returns:
         The appropriate session manager registry class
@@ -132,6 +145,8 @@ def _get_session_registry(db_type: str):
         return PostgresSessionManagerRegistry
     if db_type == "mysql":
         return MySQLSessionManagerRegistry
+    if db_type == "starrocks":
+        return StarRocksSessionManagerRegistry
     return SQLiteSessionManagerRegistry
 
 
@@ -139,7 +154,7 @@ def _get_adapter_classes(db_type: str):
     """Get the appropriate adapter classes for the database type.
 
     Args:
-        db_type: Database type ('postgres', 'sqlite', or 'mysql')
+        db_type: Database type ('postgres', 'sqlite', 'mysql', or 'starrocks')
 
     Returns:
         Tuple of (sync_adapter_class, async_adapter_class)
@@ -148,6 +163,8 @@ def _get_adapter_classes(db_type: str):
         return PostgresSQLAlchemyAdapter, AsyncPostgresSQLAlchemyAdapter
     if db_type == "mysql":
         return MySQLSQLAlchemyAdapter, AsyncMySQLSQLAlchemyAdapter
+    if db_type == "starrocks":
+        return StarrocksSQLAlchemyAdapter, AsyncStarrocksSQLAlchemyAdapter
     return SQLiteSQLAlchemyAdapter, AsyncSQLiteSQLAlchemyAdapter
 
 
@@ -157,7 +174,7 @@ async def step_given_database_initialized(context, db_type: str):
 
     Args:
         context: Behave context
-        db_type: Database type ('postgres', 'sqlite', or 'mysql')
+        db_type: Database type ('postgres', 'sqlite', 'mysql', or 'starrocks')
     """
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
 
@@ -240,6 +257,42 @@ async def step_given_database_initialized(context, db_type: str):
                 logger.info("Async MySQL adapter and schema setup completed")
             except Exception as e:
                 logger.exception(f"Error setting up async MySQL adapter: {e}")
+
+    elif db_type == "starrocks":
+        # Use StarRocks container connection details
+        global_config = BaseConfig.global_config()
+        starrocks_config = global_config.STARROCKS_SQLALCHEMY
+
+        logger.info(
+            f"Creating StarRocks adapter with host: {starrocks_config.HOST}, port: {starrocks_config.PORT}",
+        )
+
+        # Create sync adapter
+        adapter = sync_adapter_class(orm_config=starrocks_config)
+        session_registry.set_sync_manager(adapter.session_manager)
+        scenario_context.adapter = adapter
+
+        # Set up database schema with sync adapter (DDL must use AUTOCOMMIT on StarRocks)
+        logger.info("Creating database schema with sync StarRocks adapter")
+        sync_schema_setup_autocommit(adapter)
+
+        # For async tests, create and set up the async adapter
+        if any("async" in tag.lower() for tag in context.scenario.tags):
+            logger.info("Creating async StarRocks adapter")
+
+            try:
+                # Create async adapter with same config
+                async_adapter = async_adapter_class(orm_config=starrocks_config)
+                session_registry.set_async_manager(async_adapter.session_manager)
+                scenario_context.async_adapter = async_adapter
+
+                # Create schema with async adapter (AUTOCOMMIT for DDL)
+                logger.info("Creating database schema with async StarRocks adapter")
+                await async_schema_setup_autocommit(async_adapter)
+
+                logger.info("Async StarRocks adapter and schema setup completed")
+            except Exception as e:
+                logger.exception(f"Error setting up async StarRocks adapter: {e}")
 
     else:  # sqlite
         # Use file-based SQLite database
@@ -490,6 +543,135 @@ def step_then_session_should_remain_usable(context):
     # Execute the function and verify the result
     result = verify_session_usable()
     assert result, "Session is not usable after transaction rollback"
+
+
+@when("nested atomic transactions are attempted on StarRocks")
+def step_when_nested_atomic_attempted_on_starrocks(context):
+    """Attempt nested StarRocks atomic blocks and capture the limitation error."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    atomic_decorator = _get_atomic_decorator("starrocks", is_async=False)
+
+    try:
+
+        @atomic_decorator
+        def outer_atomic():
+            adapter = get_adapter(context)
+            outer_entity = TestEntityFactory.create_test_entity(
+                description="Outer entity for StarRocks nested limitation",
+            )
+            adapter.create(outer_entity)
+
+            @atomic_decorator
+            def inner_atomic():
+                adapter = get_adapter(context)
+                inner_entity = TestEntityFactory.create_test_entity(
+                    description="Inner entity for StarRocks nested limitation",
+                )
+                adapter.create(inner_entity)
+                return inner_entity
+
+            return inner_atomic()
+
+        outer_atomic()
+    except Exception as e:
+        logger.info(f"Caught expected StarRocks nested limitation: {type(e).__name__}")
+        scenario_context.store("starrocks_limitation_exception", e)
+    else:
+        assert False, "Nested StarRocks atomic transactions should raise a limitation error"
+
+
+@when("multiple inserts into the same table are attempted in one StarRocks transaction")
+def step_when_multiple_same_table_inserts_on_starrocks(context):
+    """Attempt multiple same-table inserts in one StarRocks transaction."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    atomic_decorator = _get_atomic_decorator("starrocks", is_async=False)
+
+    try:
+
+        @atomic_decorator
+        def create_multiple_same_table():
+            adapter = get_adapter(context)
+            for index in range(2):
+                entity = TestEntityFactory.create_test_entity(
+                    description=f"StarRocks multi-insert entity {index + 1}",
+                )
+                adapter.create(entity)
+
+        create_multiple_same_table()
+    except Exception as e:
+        logger.info(f"Caught expected StarRocks multi-insert limitation: {type(e).__name__}")
+        scenario_context.store("starrocks_limitation_exception", e)
+    else:
+        assert False, "Multiple same-table inserts in one StarRocks transaction should fail"
+
+
+@when("an insert after update on the same table is attempted in one StarRocks transaction")
+def step_when_insert_after_update_on_starrocks(context):
+    """Attempt UPDATE then INSERT on the same table in one StarRocks transaction.
+
+    StarRocks forbids further DML against a table already modified earlier in the
+    same SQL transaction (error 5303).
+    """
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    atomic_decorator = _get_atomic_decorator("starrocks", is_async=False)
+
+    # Seed entity in its own committed transaction first
+    seed_uuid = uuid.uuid4()
+
+    @atomic_decorator
+    def seed_entity():
+        adapter = get_adapter(context)
+        entity = TestEntityFactory.create_test_entity(
+            test_uuid=seed_uuid,
+            description="StarRocks entity before update-then-insert",
+        )
+        adapter.create(entity)
+        return entity
+
+    seed_entity()
+    scenario_context.entity_ids["starrocks_update_entity"] = str(seed_uuid)
+
+    try:
+
+        @atomic_decorator
+        def update_then_insert():
+            adapter = get_adapter(context)
+            session = adapter.get_session()
+            entity = session.get(TestEntity, seed_uuid)
+            assert entity is not None, "Seed entity missing before StarRocks update-then-insert"
+            entity.description = "Updated on StarRocks"
+            entity.updated_at = datetime.now()
+            session.flush()
+
+            follow_up = TestEntityFactory.create_test_entity(
+                description="Insert after update on same StarRocks table",
+            )
+            adapter.create(follow_up)
+
+        update_then_insert()
+    except Exception as e:
+        logger.info(f"Caught expected StarRocks update-then-insert limitation: {type(e).__name__}")
+        scenario_context.store("starrocks_limitation_exception", e)
+    else:
+        assert False, "INSERT after UPDATE on the same StarRocks table in one transaction should fail"
+
+
+@then("a StarRocks transaction limitation error should be raised")
+def step_then_starrocks_limitation_error_raised(context):
+    """Verify StarRocks rejected an unsupported transactional operation."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+
+    exception = scenario_context.get("starrocks_limitation_exception")
+    assert exception is not None, "Expected a StarRocks transaction limitation error"
+    assert isinstance(
+        exception,
+        DatabaseError | InternalError,
+    ), f"Unexpected limitation error type: {type(exception)}"
+    logger.info(f"Verified StarRocks limitation error: {type(exception).__name__}")
 
 
 @when("nested atomic transactions are executed")
