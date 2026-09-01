@@ -10,6 +10,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                              |
 |-------------------|------------|--------------------------------------------------------------------------------------|
+| [5.0.7](5.0.7.md) | 2026-09-01 | StarRocks real SQLAlchemy BEGIN/ROLLBACK; expand atomic BDD coverage                 |
 | [5.0.6](5.0.6.md) | 2026-09-01 | Clear global Ruff ignores; narrow adapter exceptions; cap ES testcontainer heap      |
 | [5.0.5](5.0.5.md) | 2026-08-31 | Raise dep floors to lock; bump Vault 2.0.4 and Keycloak 26.7.3 test images           |
 | [5.0.4](5.0.4.md) | 2026-08-31 | OTel: atomic lifecycle, signal gates, FastAPI/gRPC wiring, fork/ownership safety     |
