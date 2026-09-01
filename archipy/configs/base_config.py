@@ -16,6 +16,7 @@ import importlib
 import os
 from typing import TypeVar
 
+from pydantic.fields import ModelPrivateAttr
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -252,8 +253,6 @@ class BaseConfig[R](BaseSettings):
         config_not_set_error = "You should set global configs with BaseConfig.set_global(MyConfig())"
         global_config = cls.__global_config
         # Pydantic wraps unset private attrs in ModelPrivateAttr; ``is None`` alone never fires.
-        from pydantic.fields import ModelPrivateAttr  # noqa: PLC0415
-
         if global_config is None or isinstance(global_config, ModelPrivateAttr):
             raise AssertionError(config_not_set_error)
         return global_config

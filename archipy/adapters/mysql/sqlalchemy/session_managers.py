@@ -1,6 +1,6 @@
 """MySQL SQLAlchemy session manager implementations."""
 
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, override
 
 from sqlalchemy import URL
 from sqlalchemy.dialects.mysql.base import MySQLTypeCompiler
@@ -27,7 +27,7 @@ def _patch_mysql_uuid_mapping() -> None:
     This is patched at module level to ensure it is applied before engine creation.
     """
 
-    def visit_UUID(self: MySQLTypeCompiler, type_: PostgresUUID, **kw: Any) -> str:  # noqa: ARG001, ANN401
+    def visit_UUID(self: MySQLTypeCompiler, type_: PostgresUUID, **kw: object) -> str:  # noqa: ARG001
         """Map PostgreSQL UUID to VARCHAR(36) for MySQL."""
         return "VARCHAR(36)"
 

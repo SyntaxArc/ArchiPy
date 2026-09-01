@@ -40,7 +40,6 @@ class _StatusCodePlaceholder:
 try:
     from http import HTTPStatus
 
-    from fastapi import Request  # noqa: F401
     from fastapi.responses import JSONResponse
 
     HTTP_AVAILABLE = True
@@ -102,7 +101,10 @@ class ErrorUtils:
             exception (BaseException): The exception to capture and report.
         """
         # Always log the exception locally
-        logger.exception("An exception occurred")  # noqa: LOG004
+        logger.error(
+            "An exception occurred",
+            exc_info=(type(exception), exception, exception.__traceback__),
+        )
         config: Any = BaseConfig.global_config()
 
         if not config.OTEL.IS_ENABLED or not config.OTEL.TRACES_ENABLED:

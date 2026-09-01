@@ -1,6 +1,6 @@
 """StarRocks SQLAlchemy session manager implementations."""
 
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, override
 
 from sqlalchemy import URL
 from sqlalchemy.exc import SQLAlchemyError
@@ -16,8 +16,10 @@ from archipy.helpers.metaclasses.singleton import Singleton
 from archipy.models.errors import DatabaseConnectionError
 
 if TYPE_CHECKING:
+    from sqlalchemy.dialects.mysql.base import MySQLTypeCompiler
     from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
-    from sqlalchemy.sql.functions import GenericFunction
+    from sqlalchemy.sql.compiler import SQLCompiler
+    from sqlalchemy.sql.functions import Function
 
 
 # Patch the StarRocks type compiler to map UUID to VARCHAR at module level
@@ -29,12 +31,12 @@ def _patch_starrocks_uuid_mapping() -> None:
     This is patched at module level to ensure it's applied before engine creation.
     """
 
-    def visit_UUID(self: StarRocksTypeCompiler, type_: PostgresUUID, **kw: Any) -> str:  # noqa: ARG001, ANN401
+    def visit_UUID(self: MySQLTypeCompiler, type_: PostgresUUID, **kw: object) -> str:  # noqa: ARG001
         """Map PostgreSQL UUID to VARCHAR(36) for StarRocks."""
         return "VARCHAR(36)"
 
-    # Monkey-patch: StarRocks stubs disagree with MySQLTypeCompiler self type
-    StarRocksTypeCompiler.visit_UUID = visit_UUID  # ty: ignore[invalid-assignment]
+    # Patch the type compiler class
+    StarRocksTypeCompiler.visit_UUID = visit_UUID
 
 
 def _patch_starrocks_now_function() -> None:
@@ -46,19 +48,24 @@ def _patch_starrocks_now_function() -> None:
     # Store original visit_function if it exists
     original_visit_function = getattr(StarRocksSQLCompiler, "visit_function", None)
 
-    def visit_function(self: StarRocksSQLCompiler, func_: GenericFunction, **kw: Any) -> str:  # noqa: ANN401
+    def visit_function(
+        self: SQLCompiler,
+        func: Function,
+        add_to_result_map: object | None = None,
+        **kw: object,
+    ) -> str:
         """Map func.now() to CURRENT_TIMESTAMP for StarRocks."""
         # Check if this is func.now()
-        if func_.name == "now":
+        if func.name == "now":
             return "CURRENT_TIMESTAMP"
         # For other functions, use the original handler if it exists
         if original_visit_function:
-            return original_visit_function(self, func_, **kw)
+            return original_visit_function(self, func, add_to_result_map=add_to_result_map, **kw)
         # Fallback to default behavior
-        return f"{func_.name}()"
+        return f"{func.name}()"
 
-    # Monkey-patch: StarRocks visit_function arity differs from SQLAlchemy stub
-    StarRocksSQLCompiler.visit_function = visit_function  # ty: ignore[invalid-assignment]
+    # Patch the SQL compiler class
+    StarRocksSQLCompiler.visit_function = visit_function
 
 
 # Apply the patches when the module is imported

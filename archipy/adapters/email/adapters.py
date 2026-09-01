@@ -191,18 +191,17 @@ class AttachmentHandler:
             return source
         if isinstance(source, BinaryIO):
             return source.read()
-        if hasattr(source, "read"):
-            read_method = source.read
-            if callable(read_method):
-                result = cast("Callable[[], object]", read_method)()
-                if isinstance(result, bytes):
-                    return result
-                if isinstance(result, str):
-                    return result.encode("utf-8")
-                raise InvalidArgumentError(
-                    argument_name="read_result",
-                    additional_data={"got": type(result).__name__},
-                )
+        read = getattr(source, "read", None)
+        if callable(read):
+            result = cast("Callable[[], object]", read)()
+            if isinstance(result, bytes):
+                return result
+            if isinstance(result, str):
+                return result.encode("utf-8")
+            raise InvalidArgumentError(
+                argument_name="read_result",
+                additional_data={"got": type(result).__name__},
+            )
         raise InvalidArgumentError(
             argument_name="source",
             additional_data={"got": type(source).__name__},
