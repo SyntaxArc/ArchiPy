@@ -49,10 +49,11 @@ Feature: SQLAlchemy Atomic Transactions
     Then the entity properties should reflect the updates
 
     Examples:
-      | db_type |
-      | postgres|
-      | sqlite  |
-      | mysql   |
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
 
   Scenario Outline: Create entities with relationships in atomic transaction
     Given the application database is initialized for <db_type>
@@ -73,10 +74,11 @@ Feature: SQLAlchemy Atomic Transactions
     Then all entity types should be retrievable
 
     Examples:
-      | db_type |
-      | postgres|
-      | sqlite  |
-      | mysql   |
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
 
   Scenario Outline: Test error handling in atomic transactions
     Given the application database is initialized for <db_type>
@@ -86,10 +88,11 @@ Feature: SQLAlchemy Atomic Transactions
     And the transaction should be rolled back
 
     Examples:
-      | db_type |
-      | postgres|
-      | sqlite  |
-      | mysql   |
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
 
   Scenario Outline: Verify session consistency across multiple atomic blocks
     Given the application database is initialized for <db_type>
@@ -124,6 +127,50 @@ Feature: SQLAlchemy Atomic Transactions
     When a new async entity creation fails within an atomic transaction
     Then no async entity should exist in the database
     And the async database session should remain usable
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
+
+  @async
+  Scenario Outline: Update entities in async atomic transaction
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And an async entity exists in the database
+    When the entity is updated within an async atomic transaction
+    Then the async entity properties should reflect the updates
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
+
+  @async
+  Scenario Outline: Support different entity types in async atomic transactions
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    When different types of entities are created in an async atomic transaction
+    Then all async entity types should be retrievable
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
+
+  @async
+  Scenario Outline: Test error handling in async atomic transactions
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    When an error is triggered within an async atomic transaction
+    Then the appropriate error should be raised
+    And the async transaction should be rolled back
 
     Examples:
       | db_type   |

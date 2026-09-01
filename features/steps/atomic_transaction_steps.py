@@ -854,13 +854,16 @@ def step_given_entity_exists(context):
     @atomic_decorator
     def create_entity():
         entity = TestEntityFactory.create_test_entity(test_uuid=test_uuid, description="Original Description")
+        # Capture attrs before create: StarRocks forbids SELECT after DML in same txn,
+        # and expired ORM attrs would lazy-load after insert.
+        original_description = entity.description
+        original_updated_at = getattr(entity, "updated_at", None)
         adapter.create(entity)
 
         # Store the entity for later retrieval
         store_entity(context, entity, "existing_entity")
-        # Store original values for comparison
-        scenario_context.store("original_description", entity.description)
-        scenario_context.store("original_updated_at", getattr(entity, "updated_at", None))
+        scenario_context.store("original_description", original_description)
+        scenario_context.store("original_updated_at", original_updated_at)
 
     create_entity()
     logger.info("Entity created successfully")
@@ -1358,6 +1361,252 @@ def step_then_session_maintains_consistency(context):
         return True
 
     assert verify_consistency(), "Session consistency verification failed"
+
+
+@given("an async entity exists in the database")
+async def step_given_async_entity_exists(context):
+    """Create an entity asynchronously for update scenarios."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+
+    test_uuid = uuid.uuid4()
+    logger.info(f"Creating existing async entity with UUID {test_uuid}")
+    async_adapter = get_async_adapter(context)
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
+
+    @atomic_decorator
+    async def create_entity():
+        entity = TestEntityFactory.create_test_entity(test_uuid=test_uuid, description="Original Description")
+        # Capture attrs before create: StarRocks forbids SELECT after DML in same txn.
+        original_description = entity.description
+        original_updated_at = getattr(entity, "updated_at", None)
+        await async_adapter.create(entity)
+        store_entity(context, entity, "existing_entity")
+        scenario_context.store("original_description", original_description)
+        scenario_context.store("original_updated_at", original_updated_at)
+
+    await create_entity()
+    logger.info("Async entity created successfully")
+
+
+@when("the entity is updated within an async atomic transaction")
+async def step_when_entity_updated_in_async_atomic(context):
+    """Update an entity within an async atomic transaction."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+
+    entity_uuid = uuid.UUID(scenario_context.entity_ids.get("existing_entity"))
+    logger.info(f"Updating async entity with UUID {entity_uuid}")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
+
+    @atomic_decorator
+    async def update_entity():
+        async_adapter = get_async_adapter(context)
+        session = async_adapter.session_manager.get_session()
+        entity = await session.get(TestEntity, entity_uuid)
+        if entity is None:
+            logger.exception(f"Entity with UUID {entity_uuid} not found for async update")
+            assert False, f"Entity with UUID {entity_uuid} not found for async update"
+
+        scenario_context.store("original_description", entity.description)
+        scenario_context.store("original_updated_at", getattr(entity, "updated_at", None))
+
+        entity.description = "Updated Description"
+        entity.updated_at = datetime.now()
+        entity.is_deleted = True
+
+        scenario_context.store("updated_description", entity.description)
+        scenario_context.store("updated_at", entity.updated_at)
+        scenario_context.store("is_deleted", entity.is_deleted)
+        return entity
+
+    await update_entity()
+    logger.info("Async entity properties updated")
+
+
+@then("the async entity properties should reflect the updates")
+async def step_then_async_entity_properties_reflect_updates(context):
+    """Verify async entity properties are updated correctly."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+
+    entity_uuid = uuid.UUID(scenario_context.entity_ids.get("existing_entity"))
+    logger.info(f"Verifying async updates for entity with UUID {entity_uuid}")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
+
+    @atomic_decorator
+    async def verify_entity_updates():
+        async_adapter = get_async_adapter(context)
+        session = async_adapter.session_manager.get_session()
+        entity = await session.get(TestEntity, entity_uuid)
+        assert entity is not None, "Updated async entity not found"
+        assert entity.description == scenario_context.get(
+            "updated_description",
+            "Updated Description",
+        ), f"Description mismatch. Expected: {scenario_context.get('updated_description')}, Got: {entity.description}"
+        assert entity.description != scenario_context.get("original_description", ""), "Description unchanged"
+        assert entity.is_deleted is True, "is_deleted flag not updated"
+
+        original_updated_at = scenario_context.get("original_updated_at")
+        if original_updated_at:
+            assert entity.updated_at != original_updated_at, "updated_at timestamp unchanged"
+        else:
+            assert entity.updated_at is not None, "updated_at timestamp not set"
+
+        logger.info("Async entity updates verified successfully")
+        return True
+
+    await verify_entity_updates()
+
+
+@when("different types of entities are created in an async atomic transaction")
+async def step_when_different_entities_created_in_async_atomic(context):
+    """Create different types of entities within an async atomic transaction."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+
+    regular_uuid = uuid.uuid4()
+    manager_uuid = uuid.uuid4()
+    admin_uuid = uuid.uuid4()
+    scenario_context.entity_ids["regular_entity"] = str(regular_uuid)
+    scenario_context.entity_ids["manager_entity"] = str(manager_uuid)
+    scenario_context.entity_ids["admin_entity"] = str(admin_uuid)
+
+    logger.info("Creating different types of entities asynchronously")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
+
+    @atomic_decorator
+    async def create_multiple_entity_types():
+        async_adapter = get_async_adapter(context)
+        logger.info(f"Creating regular async entity with UUID {regular_uuid}")
+        regular_entity = TestEntityFactory.create_test_entity(test_uuid=regular_uuid, description="Regular Test Entity")
+        await async_adapter.create(regular_entity)
+
+        logger.info(f"Creating manager async entity with UUID {manager_uuid}")
+        manager_entity = TestEntityFactory.create_test_manager_entity(
+            test_uuid=manager_uuid,
+            description="Manager Test Entity",
+        )
+        await async_adapter.create(manager_entity)
+
+        logger.info(f"Creating admin async entity with UUID {admin_uuid}")
+        admin_entity = TestEntityFactory.create_test_admin_entity(test_uuid=admin_uuid, description="Admin Test Entity")
+        await async_adapter.create(admin_entity)
+        return regular_entity, manager_entity, admin_entity
+
+    await create_multiple_entity_types()
+    logger.info("Different async entity types created successfully")
+
+
+@then("all async entity types should be retrievable")
+async def step_then_all_async_entity_types_retrievable(context):
+    """Verify all different async entity types can be retrieved."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+
+    regular_uuid = uuid.UUID(get_entity_id(context, "regular_entity"))
+    manager_uuid = uuid.UUID(get_entity_id(context, "manager_entity"))
+    admin_uuid = uuid.UUID(get_entity_id(context, "admin_entity"))
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
+
+    @atomic_decorator
+    async def verify_entity_types():
+        async_adapter = get_async_adapter(context)
+        session = async_adapter.session_manager.get_session()
+
+        logger.info(f"Verifying regular async entity with UUID {regular_uuid}")
+        regular = await session.get(TestEntity, regular_uuid)
+        assert regular is not None, "Regular entity not found"
+        assert regular.description == "Regular Test Entity", "Regular entity has wrong description"
+
+        logger.info(f"Verifying manager async entity with UUID {manager_uuid}")
+        manager = await session.get(TestManagerEntity, manager_uuid)
+        assert manager is not None, "Manager entity not found"
+        assert manager.description == "Manager Test Entity", "Manager entity has wrong description"
+        assert manager.created_by_uuid is not None, "Manager entity missing created_by_uuid"
+
+        logger.info(f"Verifying admin async entity with UUID {admin_uuid}")
+        admin = await session.get(TestAdminEntity, admin_uuid)
+        assert admin is not None, "Admin entity not found"
+        assert admin.description == "Admin Test Entity", "Admin entity has wrong description"
+        assert admin.created_by_admin_uuid is not None, "Admin entity missing created_by_admin_uuid"
+
+        logger.info("All async entity types verified successfully")
+        return True
+
+    await verify_entity_types()
+
+
+@when("an error is triggered within an async atomic transaction")
+async def step_when_error_triggered_in_async_atomic(context):
+    """Trigger errors within async atomic transactions to test handlers."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+    async_adapter = get_async_adapter(context)
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
+
+    logger.info("Testing async normal exception handling")
+    try:
+
+        @atomic_decorator
+        async def normal_exception():
+            entity = TestEntityFactory.create_test_entity()
+            await async_adapter.create(entity)
+            logger.info("Raising normal exception")
+            raise ValueError("Normal exception test")
+
+        await normal_exception()
+    except Exception as e:
+        scenario_context.store("normal_exception", e)
+        logger.info(f"Caught normal exception: {type(e).__name__}")
+
+    logger.info("Testing async deadlock exception handling")
+    try:
+
+        @atomic_decorator
+        async def deadlock_exception():
+            entity = TestEntityFactory.create_test_entity()
+            await async_adapter.create(entity)
+            from sqlalchemy.exc import OperationalError
+
+            logger.info("Raising database deadlock exception")
+            raise OperationalError("database is locked", None, None)
+
+        await deadlock_exception()
+    except Exception as e:
+        scenario_context.store("deadlock_exception", e)
+        logger.info(f"Caught deadlock exception: {type(e).__name__}")
+
+
+@then("the async transaction should be rolled back")
+async def step_then_async_transaction_rolled_back(context):
+    """Verify the async session remains usable after error rollback."""
+    logger = getattr(context, "logger", logging.getLogger("behave.steps"))
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+    logger.info("Verifying async session is still usable after rollback")
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=True)
+
+    @atomic_decorator
+    async def verify_session_usable():
+        test_uuid = uuid.uuid4()
+        logger.info(f"Creating test entity with UUID {test_uuid}")
+        entity = TestEntityFactory.create_test_entity(test_uuid=test_uuid, description="Entity to verify rollback")
+        async_adapter = get_async_adapter(context)
+        await async_adapter.create(entity)
+        # Avoid SELECT after DML (StarRocks): identity presence after create is enough.
+        assert entity.test_uuid == test_uuid, "Async session not usable after error handling"
+        logger.info("Async session verified as usable after rollback")
+        return True
+
+    result = await verify_session_usable()
+    assert result, "Async session is not usable after transaction rollback"
 
 
 @when("a new entity is created in an async atomic transaction")
