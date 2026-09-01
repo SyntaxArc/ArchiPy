@@ -1,5 +1,7 @@
+"""DTOs for Redis Search queries."""
+
 from archipy.models.dtos.base_dtos import BaseDTO
-from archipy.models.types.redis_search_types import (  # noqa: TC001
+from archipy.models.types.redis_search_types import (
     UseSearchHistory,
     VectorHybridPolicy,
 )

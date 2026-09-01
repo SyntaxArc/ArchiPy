@@ -33,7 +33,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
         """Get all authentication flows."""
         return self._call_keycloak(
             "get_authentication_flows",
-            lambda: self.admin_adapter.get_authentication_flows(),
+            self.admin_adapter.get_authentication_flows,
         )
 
     def get_authentication_flow_for_id(self, flow_id: str) -> dict[str, Any]:
@@ -116,7 +116,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
         """Get available authenticator providers."""
         return self._call_keycloak(
             "get_authenticator_providers",
-            lambda: self.admin_adapter.get_authenticator_providers(),
+            self.admin_adapter.get_authenticator_providers,
         )
 
     def get_authenticator_provider_config_description(self, provider_id: str) -> dict[str, Any]:
@@ -178,7 +178,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
         """Get all authentication flows."""
         return await self._async_call_keycloak(
             "get_authentication_flows",
-            lambda: self.admin_adapter.a_get_authentication_flows(),
+            self.admin_adapter.a_get_authentication_flows,
         )
 
     async def get_authentication_flow_for_id(self, flow_id: str) -> dict[str, Any]:
@@ -272,7 +272,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
         """Get available authenticator providers."""
         return await self._async_call_keycloak(
             "get_authenticator_providers",
-            lambda: self.admin_adapter.a_get_authenticator_providers(),
+            self.admin_adapter.a_get_authenticator_providers,
         )
 
     async def get_authenticator_provider_config_description(self, provider_id: str) -> dict[str, Any]:

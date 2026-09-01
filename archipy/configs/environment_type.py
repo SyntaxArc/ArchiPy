@@ -1,3 +1,5 @@
+"""Environment type enumeration for ArchiPy configs."""
+
 import enum
 from enum import StrEnum
 from logging import DEBUG, INFO, WARNING

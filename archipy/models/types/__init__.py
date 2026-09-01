@@ -1,3 +1,5 @@
+"""Domain type definitions and enumerations."""
+
 from .base_types import FilterOperationType
 from .language_type import LanguageType
 from .sort_order_type import SortOrderType

@@ -1,3 +1,5 @@
+"""DTOs for email operations."""
+
 import mimetypes
 from typing import BinaryIO, Self
 

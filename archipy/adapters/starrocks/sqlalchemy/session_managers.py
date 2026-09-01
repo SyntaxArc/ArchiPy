@@ -1,3 +1,5 @@
+"""StarRocks SQLAlchemy session manager implementations."""
+
 from typing import TYPE_CHECKING, Any, override
 
 from sqlalchemy import URL
@@ -31,7 +33,7 @@ def _patch_starrocks_uuid_mapping() -> None:
         """Map PostgreSQL UUID to VARCHAR(36) for StarRocks."""
         return "VARCHAR(36)"
 
-    # Patch the type compiler class
+    # Monkey-patch: StarRocks stubs disagree with MySQLTypeCompiler self type
     StarRocksTypeCompiler.visit_UUID = visit_UUID  # ty: ignore[invalid-assignment]
 
 
@@ -55,7 +57,7 @@ def _patch_starrocks_now_function() -> None:
         # Fallback to default behavior
         return f"{func_.name}()"
 
-    # Patch the SQL compiler class
+    # Monkey-patch: StarRocks visit_function arity differs from SQLAlchemy stub
     StarRocksSQLCompiler.visit_function = visit_function  # ty: ignore[invalid-assignment]
 
 
@@ -114,9 +116,12 @@ class StarRocksSQlAlchemySessionManager(BaseSQLAlchemySessionManager[StarRocksSQ
         connect_args = {}
 
         # Add connect_timeout if configured
-        if hasattr(self, "_configs"):
-            if hasattr(self._configs, "CONNECT_TIMEOUT") and self._configs.CONNECT_TIMEOUT is not None:
-                connect_args["connect_timeout"] = self._configs.CONNECT_TIMEOUT
+        if (
+            hasattr(self, "_configs")
+            and hasattr(self._configs, "CONNECT_TIMEOUT")
+            and self._configs.CONNECT_TIMEOUT is not None
+        ):
+            connect_args["connect_timeout"] = self._configs.CONNECT_TIMEOUT
 
         # Add StarRocks-specific setting for transaction support
         connect_args["autocommit"] = False
@@ -238,9 +243,12 @@ class AsyncStarRocksSQlAlchemySessionManager(
         connect_args = {}
 
         # Add connect_timeout if configured
-        if hasattr(self, "_configs"):
-            if hasattr(self._configs, "CONNECT_TIMEOUT") and self._configs.CONNECT_TIMEOUT is not None:
-                connect_args["connect_timeout"] = self._configs.CONNECT_TIMEOUT
+        if (
+            hasattr(self, "_configs")
+            and hasattr(self._configs, "CONNECT_TIMEOUT")
+            and self._configs.CONNECT_TIMEOUT is not None
+        ):
+            connect_args["connect_timeout"] = self._configs.CONNECT_TIMEOUT
 
         # Add StarRocks async-specific setting for transaction support
         connect_args["autocommit"] = False

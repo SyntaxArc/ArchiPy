@@ -1,3 +1,5 @@
+"""Password hashing and validation utilities."""
+
 # src/helpers/password_helper.py
 import hashlib
 import hmac
@@ -24,7 +26,8 @@ class PasswordUtils:
 
         Args:
             password (str): The password to hash.
-            auth_config (AuthConfig | None): Optional auth configuration override. If not provided, uses the global config.
+            auth_config (AuthConfig | None): Optional auth configuration override.
+                If not provided, uses the global config.
 
         Returns:
             str: A base64-encoded string containing the salt and hash in the format "salt:hash".
@@ -43,7 +46,8 @@ class PasswordUtils:
         Args:
             password (str): The password to verify.
             stored_password (str): The stored password hash to compare against.
-            auth_config (AuthConfig | None): Optional auth configuration override. If not provided, uses the global config.
+            auth_config (AuthConfig | None): Optional auth configuration override.
+                If not provided, uses the global config.
 
         Returns:
             bool: True if the password matches the stored hash, False otherwise.
@@ -74,7 +78,8 @@ class PasswordUtils:
 
         Args:
             password (str): The password to validate.
-            auth_config (AuthConfig | None): Optional auth configuration override. If not provided, uses the global config.
+            auth_config (AuthConfig | None): Optional auth configuration override.
+                If not provided, uses the global config.
 
         Raises:
             InvalidPasswordError: If the password does not meet the policy requirements.
@@ -105,7 +110,8 @@ class PasswordUtils:
         """Generates a random password that meets the policy requirements.
 
         Args:
-            auth_config (AuthConfig | None): Optional auth configuration override. If not provided, uses the global config.
+            auth_config (AuthConfig | None): Optional auth configuration override.
+                If not provided, uses the global config.
 
         Returns:
             str: A randomly generated password that meets the policy requirements.
@@ -154,7 +160,8 @@ class PasswordUtils:
         Args:
             new_password (str): The new password to validate.
             password_history (list[str]): A list of previous password hashes.
-            auth_config (AuthConfig | None): Optional auth configuration override. If not provided, uses the global config.
+            auth_config (AuthConfig | None): Optional auth configuration override.
+                If not provided, uses the global config.
             lang (LanguageType): The language to use for error messages. Defaults to Persian.
 
         Raises:

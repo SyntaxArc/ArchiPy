@@ -1,3 +1,5 @@
+"""System-level error types."""
+
 from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:

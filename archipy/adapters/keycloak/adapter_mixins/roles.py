@@ -339,7 +339,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             if role_name in client_roles:
                 return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("Role check failed: %s", e)
             return False
         else:
@@ -372,7 +372,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             if role_names.intersection(client_roles):
                 return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("Role check failed: %s", e)
             return False
         else:
@@ -408,7 +408,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             # Check if all required roles are present
             return role_names.issubset(all_roles)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("All roles check failed: %s", e)
             return False
 
@@ -803,7 +803,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             if role_name in client_roles:
                 return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("Role check failed: %s", e)
             return False
         else:
@@ -836,7 +836,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             if role_names.intersection(client_roles):
                 return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("Role check failed: %s", e)
             return False
         else:
@@ -872,7 +872,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             # Check if all required roles are present
             return role_names.issubset(all_roles)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("All roles check failed: %s", e)
             return False
 

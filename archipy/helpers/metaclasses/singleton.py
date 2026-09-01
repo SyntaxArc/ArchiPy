@@ -1,3 +1,5 @@
+"""Singleton metaclass helpers."""
+
 import threading
 from typing import Any, ClassVar
 

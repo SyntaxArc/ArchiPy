@@ -1,3 +1,5 @@
+"""Parsian IPG adapter package."""
+
 from archipy.adapters.internet_payment_gateways.ir.parsian.adapters import (
     AsyncParsianShaparakPaymentAdapter,
     ParsianShaparakPaymentAdapter,

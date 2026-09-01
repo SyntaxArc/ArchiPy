@@ -1,3 +1,5 @@
+"""Validation error types."""
+
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:

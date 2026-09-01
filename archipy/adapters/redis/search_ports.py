@@ -1,3 +1,5 @@
+"""Port interfaces for Redis Search operations."""
+
 from __future__ import annotations
 
 from abc import abstractmethod

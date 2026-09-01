@@ -1,3 +1,5 @@
+"""Base gRPC client interceptor."""
+
 import abc
 from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar
 

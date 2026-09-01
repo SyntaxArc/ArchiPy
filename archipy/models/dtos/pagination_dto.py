@@ -1,3 +1,5 @@
+"""DTOs for pagination inputs and outputs."""
+
 from enum import Enum
 from typing import ClassVar, Self, TypeVar
 

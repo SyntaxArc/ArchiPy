@@ -1,3 +1,5 @@
+"""DTOs for generic search inputs."""
+
 from enum import Enum
 from typing import TypeVar
 

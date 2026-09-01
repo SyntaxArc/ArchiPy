@@ -1,3 +1,5 @@
+"""Base protobuf-backed DTO definitions."""
+
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from archipy.models.dtos.base_dtos import BaseDTO
@@ -24,7 +26,7 @@ class BaseProtobufDTO(BaseDTO):
 
     _proto_class: ClassVar[type[Message] | None] = None
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
         """Initialize BaseProtobufDTO."""
         # Add a check at runtime when someone tries to use the class
         if not PROTOBUF_AVAILABLE:

@@ -1,1 +1,1 @@
-
+"""MySQL adapter package."""

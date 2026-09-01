@@ -1,3 +1,5 @@
+"""PostgreSQL SQLAlchemy adapter implementations."""
+
 from typing import override
 
 from archipy.adapters.base.sqlalchemy.adapters import AsyncBaseSQLAlchemyAdapter, BaseSQLAlchemyAdapter

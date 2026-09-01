@@ -1,3 +1,5 @@
+"""DTOs for numeric and date range values."""
+
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import ClassVar, Protocol, Self, TypeVar, cast

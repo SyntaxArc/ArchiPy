@@ -1,3 +1,5 @@
+"""DTOs for Parsian IPG operations."""
+
 from pydantic import Field, HttpUrl
 
 from archipy.models.dtos.base_dtos import BaseDTO

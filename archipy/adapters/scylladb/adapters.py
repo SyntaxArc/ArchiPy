@@ -8,12 +8,19 @@ import asyncio
 import logging
 import re
 import time
-from typing import Any, NoReturn, override
+from typing import Any, NoReturn, TypedDict, override
 
 from async_lru import alru_cache
-from cassandra import ConsistencyLevel
+from cassandra import (
+    AuthenticationFailed,
+    ConsistencyLevel,
+    DriverException,
+    InvalidRequest,
+    OperationTimedOut,
+    Unavailable,
+)
 from cassandra.auth import PlainTextAuthProvider
-from cassandra.cluster import Cluster, ResultSet
+from cassandra.cluster import Cluster, NoHostAvailable, ResultSet
 from cassandra.policies import (
     AddressTranslator,
     DCAwareRoundRobinPolicy,
@@ -44,6 +51,14 @@ logger = logging.getLogger(__name__)
 _CQL_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
+class _HostPoolStat(TypedDict):
+    """Per-host connection pool statistics for ScyllaDB monitoring."""
+
+    host: str
+    open_connections: int
+    in_flight_queries: int
+
+
 class _FixedAddressTranslator(AddressTranslator):
     """Translates all discovered node addresses to a fixed host address.
 
@@ -63,17 +78,6 @@ class ScyllaDBExceptionHandlerMixin:
     @classmethod
     def _raise_for_cassandra_driver_exception(cls, exception: Exception, error_msg: str, operation: str) -> None:
         """Map known cassandra-driver exceptions when applicable."""
-        try:
-            from cassandra import (
-                AuthenticationFailed,
-                InvalidRequest,
-                OperationTimedOut,
-                Unavailable,
-            )
-            from cassandra.cluster import NoHostAvailable
-        except ImportError:
-            return
-
         if isinstance(exception, Unavailable) or "unavailable" in error_msg:
             raise ServiceUnavailableError(service="ScyllaDB") from exception
 
@@ -199,7 +203,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             if self.config.KEYSPACE:
                 self._session.set_keyspace(self.config.KEYSPACE)
 
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "connect")
             raise
 
@@ -307,7 +311,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         session = self.get_session()
         try:
             result = session.execute(query, params) if params else session.execute(query)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "execute")
             raise
         else:
@@ -332,7 +336,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                     return cached_method(query)
             # Direct prepare without cache
             prepared = session.prepare(query)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "prepare")
             raise
         else:
@@ -347,7 +351,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 session = self.get_session()
                 try:
                     prepared = session.prepare(query)
-                except Exception as e:
+                except (DriverException, NoHostAvailable) as e:
                     self._handle_scylladb_exception(e, "prepare")
                     raise
                 else:
@@ -375,7 +379,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         session = self.get_session()
         try:
             result = session.execute(statement, params) if params else session.execute(statement)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "execute_prepared")
             raise
         else:
@@ -410,7 +414,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             """
         try:
             self.execute(query)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "create_keyspace")
             raise
 
@@ -425,7 +429,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"DROP KEYSPACE IF EXISTS {keyspace}"
         try:
             self.execute(query)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "drop_keyspace")
             raise
 
@@ -440,7 +444,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             keyspace = self._validate_cql_identifier(keyspace, "keyspace")
             session.set_keyspace(keyspace)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "use_keyspace")
             raise
 
@@ -453,7 +457,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         try:
             self.execute(table_schema)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "create_table")
             raise
 
@@ -468,7 +472,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"DROP TABLE IF EXISTS {table}"
         try:
             self.execute(query)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "drop_table")
             raise
 
@@ -497,7 +501,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         try:
             self.execute(query, tuple(data.values()))
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "insert")
             raise
 
@@ -532,7 +536,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             result = self.execute(query, params)
             return list(result)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "select")
             raise
 
@@ -563,7 +567,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         try:
             self.execute(query, params)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "update")
             raise
 
@@ -582,7 +586,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         try:
             self.execute(query, tuple(conditions.values()))
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "delete")
             raise
 
@@ -601,7 +605,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 batch.add(SimpleStatement(stmt))
 
             session.execute(batch)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "batch_execute")
             raise
 
@@ -634,7 +638,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 self._session.shutdown()
             if hasattr(self, "_cluster") and self._cluster is not None:
                 self._cluster.shutdown()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
             # Ignore errors during cleanup, but log them
             logger.debug("Error during ScyllaDB adapter cleanup: %s", e)
 
@@ -642,7 +646,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """Destructor to ensure resources are cleaned up."""
         try:
             self.close()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
             # Ignore errors during destructor cleanup
             logger.debug("Error in ScyllaDB adapter destructor: %s", e)
 
@@ -670,7 +674,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             finally:
                 session.default_timeout = original_timeout
             latency_ms = (time.time() - start_time) * 1000
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
             return {
                 "status": "unhealthy",
                 "latency_ms": 0.0,
@@ -707,7 +711,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             result = self.execute(query, params)
             row = result.one()
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "count")
             raise
         else:
@@ -732,7 +736,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             result = self.execute(query, tuple(conditions.values()))
             row = result.one()
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "exists")
             raise
         else:
@@ -758,28 +762,24 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             cluster = self._cluster
 
             # Get pool state for each host
-            hosts_stats = []
+            hosts_stats: list[_HostPoolStat] = []
             for host in cluster.metadata.all_hosts():
                 host_pool = session.get_pool_state(host)
                 if host_pool:
                     hosts_stats.append(
                         {
                             "host": str(host),
-                            "open_connections": host_pool.get("open_count", 0),
-                            "in_flight_queries": host_pool.get("in_flight", 0),
+                            "open_connections": int(host_pool.get("open_count", 0) or 0),
+                            "in_flight_queries": int(host_pool.get("in_flight", 0) or 0),
                         },
                     )
 
             stats["hosts"] = hosts_stats
             stats["total_hosts"] = len(hosts_stats)
-            stats["total_open_connections"] = sum(  # ty: ignore[no-matching-overload]
-                h.get("open_connections", 0) for h in hosts_stats
-            )
-            stats["total_in_flight_queries"] = sum(  # ty: ignore[no-matching-overload]
-                h.get("in_flight_queries", 0) for h in hosts_stats
-            )
+            stats["total_open_connections"] = sum(h["open_connections"] for h in hosts_stats)
+            stats["total_in_flight_queries"] = sum(h["in_flight_queries"] for h in hosts_stats)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
             stats["error"] = str(e)
 
         return stats
@@ -819,7 +819,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             if self.config.KEYSPACE:
                 self._session.set_keyspace(self.config.KEYSPACE)
 
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "connect")
             raise
 
@@ -958,7 +958,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             future = session.execute_async(query, params) if params else session.execute_async(query)
             result = await self._await_future(future)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "execute")
             raise
         else:
@@ -983,7 +983,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                     return await cached_method(query)
             # Direct prepare without cache
             prepared = session.prepare(query)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "prepare")
             raise
         else:
@@ -998,7 +998,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 session = await self.get_session()
                 try:
                     prepared = session.prepare(query)
-                except Exception as e:
+                except (DriverException, NoHostAvailable) as e:
                     self._handle_scylladb_exception(e, "prepare")
                     raise
                 else:
@@ -1027,7 +1027,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             future = session.execute_async(statement, params) if params else session.execute_async(statement)
             result = await self._await_future(future)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "execute_prepared")
             raise
         else:
@@ -1062,7 +1062,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             """
         try:
             await self.execute(query)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "create_keyspace")
             raise
 
@@ -1077,7 +1077,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"DROP KEYSPACE IF EXISTS {keyspace}"
         try:
             await self.execute(query)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "drop_keyspace")
             raise
 
@@ -1092,7 +1092,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             keyspace = self._validate_cql_identifier(keyspace, "keyspace")
             session.set_keyspace(keyspace)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "use_keyspace")
             raise
 
@@ -1105,7 +1105,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         try:
             await self.execute(table_schema)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "create_table")
             raise
 
@@ -1120,7 +1120,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"DROP TABLE IF EXISTS {table}"
         try:
             await self.execute(query)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "drop_table")
             raise
 
@@ -1155,7 +1155,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         try:
             await self.execute(query, tuple(data.values()))
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "insert")
             raise
 
@@ -1190,7 +1190,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             result = await self.execute(query, params)
             return list(result)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "select")
             raise
 
@@ -1227,7 +1227,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         try:
             await self.execute(query, params)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "update")
             raise
 
@@ -1246,7 +1246,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         try:
             await self.execute(query, tuple(conditions.values()))
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "delete")
             raise
 
@@ -1266,7 +1266,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
             future = session.execute_async(batch)
             await self._await_future(future)
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "batch_execute")
             raise
 
@@ -1300,7 +1300,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 self._session.shutdown()
             if hasattr(self, "_cluster") and self._cluster is not None:
                 self._cluster.shutdown()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
             # Ignore errors during cleanup, but log them
             logger.debug("Error during async ScyllaDB adapter cleanup: %s", e)
 
@@ -1311,7 +1311,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 self._session.shutdown()
             if hasattr(self, "_cluster") and self._cluster is not None:
                 self._cluster.shutdown()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
             # Ignore errors during destructor cleanup
             logger.debug("Error in async ScyllaDB adapter destructor: %s", e)
 
@@ -1340,7 +1340,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             finally:
                 session.default_timeout = original_timeout
             latency_ms = (time.time() - start_time) * 1000
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
             return {
                 "status": "unhealthy",
                 "latency_ms": 0.0,
@@ -1377,7 +1377,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             result = await self.execute(query, params)
             row = result.one()
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "count")
             raise
         else:
@@ -1402,7 +1402,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             result = await self.execute(query, tuple(conditions.values()))
             row = result.one()
-        except Exception as e:
+        except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "exists")
             raise
         else:
@@ -1428,28 +1428,24 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             cluster = self._cluster
 
             # Get pool state for each host
-            hosts_stats = []
+            hosts_stats: list[_HostPoolStat] = []
             for host in cluster.metadata.all_hosts():
                 host_pool = session.get_pool_state(host)
                 if host_pool:
                     hosts_stats.append(
                         {
                             "host": str(host),
-                            "open_connections": host_pool.get("open_count", 0),
-                            "in_flight_queries": host_pool.get("in_flight", 0),
+                            "open_connections": int(host_pool.get("open_count", 0) or 0),
+                            "in_flight_queries": int(host_pool.get("in_flight", 0) or 0),
                         },
                     )
 
             stats["hosts"] = hosts_stats
             stats["total_hosts"] = len(hosts_stats)
-            stats["total_open_connections"] = sum(  # ty: ignore[no-matching-overload]
-                h.get("open_connections", 0) for h in hosts_stats
-            )
-            stats["total_in_flight_queries"] = sum(  # ty: ignore[no-matching-overload]
-                h.get("in_flight_queries", 0) for h in hosts_stats
-            )
+            stats["total_open_connections"] = sum(h["open_connections"] for h in hosts_stats)
+            stats["total_in_flight_queries"] = sum(h["in_flight_queries"] for h in hosts_stats)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
             stats["error"] = str(e)
 
         return stats

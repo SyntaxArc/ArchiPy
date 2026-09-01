@@ -1,5 +1,7 @@
+"""Keycloak-related error types."""
+
 import json
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from http import HTTPStatus
@@ -155,7 +157,7 @@ def get_error_message(keycloak_error: KeycloakError) -> str:
     return error_message
 
 
-def handle_keycloak_error(keycloak_error: KeycloakError, **additional_data: Any) -> BaseError:
+def handle_keycloak_error(keycloak_error: KeycloakError, **additional_data: object) -> BaseError:
     """Convert Keycloak error to appropriate custom error."""
     error_message = get_error_message(keycloak_error)
     response_code = getattr(keycloak_error, "response_code", None)

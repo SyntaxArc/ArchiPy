@@ -83,7 +83,7 @@ def _coerce_attr_value(value: object) -> bool | int | float | str:
         return value
     try:
         text = repr(value)
-    except Exception:
+    except Exception:  # noqa: BLE001  # repr()/callback boundary; arbitrary values
         return _REPR_FAILURE_PLACEHOLDER
     if len(text) > _ATTR_VALUE_MAX_LEN:
         return text[:_ATTR_VALUE_MAX_LEN]
@@ -218,7 +218,7 @@ def _run_traced(
         _apply_capture_args(span, signature, args, kwargs, capture_args)
         try:
             return func(*args, **kwargs)
-        except Exception as exc:
+        except Exception as exc:  # repr()/callback boundary; arbitrary values
             span.record_exception(exc)
             status = OtelUtils.status_for_exception(exc)
             if status is not None:
@@ -291,7 +291,7 @@ async def _run_traced_async(
             span.record_exception(exc)
             span.set_status(OtelUtils.status_for_cancellation())
             raise
-        except Exception as exc:
+        except Exception as exc:  # repr()/callback boundary; arbitrary values
             span.record_exception(exc)
             status = OtelUtils.status_for_exception(exc)
             if status is not None:

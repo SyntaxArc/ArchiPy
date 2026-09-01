@@ -1,3 +1,5 @@
+"""Mock Redis adapters for testing."""
+
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
 
@@ -5,6 +7,7 @@ import fakeredis
 
 from archipy.adapters.redis.adapters import AsyncRedisAdapter, RedisAdapter
 from archipy.adapters.redis.ports import AsyncRedisPort
+from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import RedisConfig, RedisMode
 
 if TYPE_CHECKING:
@@ -61,8 +64,6 @@ class RedisMock(RedisAdapter):
     def __init__(self, redis_config: RedisConfig | None = None) -> None:
         """Initialize RedisMock."""
         # Skip the parent's __init__ which would create real Redis connections
-        from archipy.configs.base_config import BaseConfig
-
         self.config = redis_config or BaseConfig.global_config().REDIS
         self._configs = self.config
         self._search_client: Redis | RedisCluster | None = None
@@ -102,8 +103,6 @@ class AsyncRedisMock(AsyncRedisAdapter):
     def __init__(self, redis_config: RedisConfig | None = None) -> None:
         """Initialize AsyncRedisMock."""
         # Skip the parent's __init__ which would create real Redis connections
-        from archipy.configs.base_config import BaseConfig
-
         self.config = redis_config or BaseConfig.global_config().REDIS
         self._configs = self.config
         self._search_client: AsyncRedis | AsyncRedisCluster | None = None
@@ -141,8 +140,8 @@ class AsyncRedisMock(AsyncRedisAdapter):
                 (10923, 16383, ["127.0.0.1", 7002]),
             ]
             self.client.cluster_keyslot.side_effect = lambda key: hash(key) % 16384
-            self.client.cluster_countkeysinslot.side_effect = lambda slot: 0
-            self.client.cluster_get_keys_in_slot.side_effect = lambda slot, count: []
+            self.client.cluster_countkeysinslot.side_effect = lambda _slot: 0
+            self.client.cluster_get_keys_in_slot.side_effect = lambda _slot, _count: []
 
     def _set_clients(self, configs: RedisConfig) -> None:
         # Override to prevent actual connection setup

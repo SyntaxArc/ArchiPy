@@ -1,7 +1,10 @@
+"""Base SQLAlchemy adapter implementations."""
+
 from enum import Enum
 from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, override
 
 from sqlalchemy import Delete, Executable, Result, ScalarResult, Update, func, select
+from sqlalchemy.exc import SQLAlchemyError
 
 from archipy.adapters.base.sqlalchemy.ports import AnyExecuteParams, AsyncSQLAlchemyPort, SQLAlchemyPort
 from archipy.configs.config_template import SQLAlchemyConfig
@@ -307,7 +310,7 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
                 results = list(result_set.scalars().all())
             count_query = select(func.count()).select_from(query.subquery())
             total_count = session.execute(count_query).scalar_one()
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
@@ -356,7 +359,7 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             session = self.get_session()
             session.add(entity)
             session.flush()
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
@@ -391,7 +394,7 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             session = self.get_session()
             session.add_all(entities)
             session.flush()
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
@@ -425,7 +428,7 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
         try:
             session = self.get_session()
             result = session.get(entity_type, entity_uuid)
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
@@ -460,7 +463,7 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             session = self.get_session()
             session.delete(entity)
             session.flush()
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
 
     @override
@@ -490,7 +493,7 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             for entity in entities:
                 session.delete(entity)
             session.flush()
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
 
     @override
@@ -513,7 +516,7 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
         try:
             session = self.get_session()
             result = session.execute(statement, params or {})
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
@@ -539,7 +542,7 @@ class BaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
         try:
             session = self.get_session()
             result = session.scalars(statement, params or {})
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
@@ -638,7 +641,7 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             count_query = select(func.count()).select_from(query.subquery())
             total_count_result = await session.execute(count_query)
             total_count = total_count_result.scalar_one()
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
@@ -687,7 +690,7 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             session = self.get_session()
             session.add(entity)
             await session.flush()
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
@@ -722,7 +725,7 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             session = self.get_session()
             session.add_all(entities)
             await session.flush()
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
@@ -756,7 +759,7 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
         try:
             session = self.get_session()
             result = await session.get(entity_type, entity_uuid)
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
@@ -791,7 +794,7 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             session = self.get_session()
             await session.delete(entity)
             await session.flush()
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
 
     @override
@@ -821,7 +824,7 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
             for entity in entities:
                 await session.delete(entity)
             await session.flush()
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
 
     @override
@@ -844,7 +847,7 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
         try:
             session = self.get_session()
             result = await session.execute(statement, params or {})
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:
@@ -870,7 +873,7 @@ class AsyncBaseSQLAlchemyAdapter[ConfigT: SQLAlchemyConfig](
         try:
             session = self.get_session()
             result = await session.scalars(statement, params or {})
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._handle_db_exception(e, self.session_manager._get_database_name())
             raise  # This will never be reached, but satisfies MyPy
         else:

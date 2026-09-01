@@ -1,3 +1,5 @@
+"""Sort order type enumeration."""
+
 from enum import Enum
 
 

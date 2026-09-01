@@ -128,7 +128,7 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
             self._client = create_vault_client(self.configs)
         except ConfigurationError:
             raise
-        except Exception as e:
+        except (hvac.exceptions.VaultError, RequestsConnectionError, RequestsTimeout, OSError, ValueError) as e:
             raise ConfigurationError(operation="vault_connect", reason=str(e)) from e
 
         self.token_renew_count = 0
@@ -164,7 +164,7 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
             return fn()
         except BaseError:
             raise
-        except Exception as e:
+        except (hvac.exceptions.VaultError, RequestsConnectionError, RequestsTimeout, OSError, ValueError) as e:
             self._handle_vault_exception(e, operation)
 
     def _maybe_renew_token(self) -> None:
@@ -178,7 +178,7 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
                 self._client.auth.token.renew_self()
                 self.token_renew_count += 1
                 logger.debug("Renewed Vault token (previous TTL=%s)", ttl)
-        except Exception as e:
+        except (hvac.exceptions.VaultError, RequestsConnectionError, RequestsTimeout, OSError, ValueError) as e:
             self._handle_vault_exception(e, "renew_token")
 
     def clear_secret_cache(self) -> None:

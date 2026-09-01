@@ -1,3 +1,5 @@
+"""Reusable decorator helpers for ArchiPy."""
+
 from typing import TYPE_CHECKING
 
 from archipy.models.errors import ConfigurationError, InvalidArgumentError

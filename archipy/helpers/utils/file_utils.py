@@ -1,3 +1,5 @@
+"""File system utility helpers."""
+
 import base64
 import hashlib
 from pathlib import Path
@@ -21,7 +23,8 @@ class FileUtils:
         Args:
             path (str): The file path to generate the hash for.
             expires_at (float): The expiration timestamp for the link.
-            file_config (FileConfig | None): Optional file configuration object. If not provided, uses the global config.
+            file_config (FileConfig | None): Optional file configuration object.
+                If not provided, uses the global config.
 
         Returns:
             str: A base64-encoded secure hash for the file link.
@@ -49,8 +52,10 @@ class FileUtils:
 
         Args:
             path (str): The file path to create a secure link for.
-            minutes (int | None): Number of minutes until link expiration. Defaults to the config's `DEFAULT_EXPIRY_MINUTES`.
-            file_config (FileConfig | None): Optional file configuration object. If not provided, uses the global config.
+            minutes (int | None): Number of minutes until link expiration.
+                Defaults to the config's `DEFAULT_EXPIRY_MINUTES`.
+            file_config (FileConfig | None): Optional file configuration object.
+                If not provided, uses the global config.
 
         Returns:
             str: A secure link with a hash and expiration timestamp.
@@ -83,7 +88,8 @@ class FileUtils:
 
         Args:
             file_name (str): The file name to validate.
-            file_config (FileConfig | None): Optional file configuration object. If not provided, uses the global config.
+            file_config (FileConfig | None): Optional file configuration object.
+                If not provided, uses the global config.
 
         Returns:
             bool: `True` if the file name has an allowed extension, `False` otherwise.

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Mapping
 
 from archipy.adapters.redis.adapter_mixins._shared import AsyncRedisMixinBase, SyncRedisMixinBase
 from archipy.models.errors import InternalError
@@ -213,8 +213,6 @@ class AsyncRedisHashesMixin(AsyncRedisMixinBase):
                 return {}
             if isinstance(awaited_result, dict):
                 return {str(k): v for k, v in awaited_result.items()}
-            from collections.abc import Mapping
-
             if isinstance(awaited_result, Mapping):
                 return {str(k): v for k, v in awaited_result.items()}
             return {}
@@ -222,8 +220,6 @@ class AsyncRedisHashesMixin(AsyncRedisMixinBase):
             return {}
         if isinstance(result, dict):
             return {str(k): v for k, v in result.items()}
-        from collections.abc import Mapping
-
         if isinstance(result, Mapping):
             return {str(k): v for k, v in result.items()}
         return {}

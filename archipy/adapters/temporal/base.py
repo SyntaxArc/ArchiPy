@@ -246,11 +246,11 @@ class BaseActivity[T, R]:
             # Post-execution hook
             await self._after_execute(activity_input, result)
 
-            return result
-
         except Exception as error:
             await self._handle_error(activity_input, error)
             raise
+        else:
+            return result
 
     @abstractmethod
     async def _do_execute(self, activity_input: T) -> R:

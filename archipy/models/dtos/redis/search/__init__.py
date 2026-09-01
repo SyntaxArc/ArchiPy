@@ -1,3 +1,5 @@
+"""Redis Search DTO package."""
+
 from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
 from archipy.models.dtos.redis.search.document_dto import HashDocumentUpsertDTO, JsonDocumentUpsertDTO
 from archipy.models.dtos.redis.search.index_schema_dto import (

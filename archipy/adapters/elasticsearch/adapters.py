@@ -1,3 +1,5 @@
+"""Elasticsearch adapter implementations for ArchiPy."""
+
 import logging
 from typing import TYPE_CHECKING, Any, override
 

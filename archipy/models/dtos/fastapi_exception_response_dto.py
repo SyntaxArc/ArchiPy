@@ -1,3 +1,5 @@
+"""DTOs for FastAPI exception responses."""
+
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 

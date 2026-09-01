@@ -1,3 +1,5 @@
+"""Time interval unit type enumeration."""
+
 from enum import StrEnum
 
 

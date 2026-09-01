@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Iterable
 from typing import TYPE_CHECKING, Any
 
 from redis import RedisCluster, Sentinel
 from redis.asyncio import RedisCluster as AsyncRedisCluster, Sentinel as AsyncSentinel
 from redis.asyncio.client import Pipeline as AsyncPipeline, Redis as AsyncRedis
-from redis.asyncio.cluster import ClusterPipeline as AsyncClusterPipeline
+from redis.asyncio.cluster import (
+    ClusterNode as AsyncClusterNode,
+    ClusterPipeline as AsyncClusterPipeline,
+    LoadBalancingStrategy as AsyncLoadBalancingStrategy,
+)
 from redis.client import Pipeline, Redis
+from redis.cluster import ClusterNode, LoadBalancingStrategy
 
 from archipy.adapters.redis.adapter_mixins._shared import (
     AsyncRedisMixinBase,
@@ -86,8 +91,6 @@ class RedisConnectionMixin(SyncRedisMixinBase):
         Args:
             configs (RedisConfig): Configuration settings for Redis cluster.
         """
-        from redis.cluster import ClusterNode, LoadBalancingStrategy
-
         startup_nodes = []
         for node in configs.CLUSTER_NODES:
             if ":" in node:
@@ -172,8 +175,6 @@ class RedisConnectionMixin(SyncRedisMixinBase):
                 reason=f"RediSearch does not support sentinel mode, got {configs.MODE.value}",
             )
         if configs.MODE == RedisMode.CLUSTER:
-            from redis.cluster import ClusterNode, LoadBalancingStrategy
-
             startup_nodes = []
             for node in configs.CLUSTER_NODES:
                 if ":" in node:
@@ -335,19 +336,17 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
         Args:
             configs (RedisConfig): Configuration settings for Redis cluster.
         """
-        from redis.asyncio.cluster import ClusterNode, LoadBalancingStrategy
-
         startup_nodes = []
         for node in configs.CLUSTER_NODES:
             if ":" in node:
                 host, port = node.split(":", 1)
-                startup_nodes.append(ClusterNode(host, int(port)))
+                startup_nodes.append(AsyncClusterNode(host, int(port)))
             else:
-                startup_nodes.append(ClusterNode(node, configs.PORT))
+                startup_nodes.append(AsyncClusterNode(node, configs.PORT))
 
         cluster_kwargs: dict[str, Any] = {}
         if configs.CLUSTER_READ_FROM_REPLICAS:
-            cluster_kwargs["load_balancing_strategy"] = LoadBalancingStrategy.ROUND_ROBIN
+            cluster_kwargs["load_balancing_strategy"] = AsyncLoadBalancingStrategy.ROUND_ROBIN
 
         cluster_client = AsyncRedisCluster(
             startup_nodes=startup_nodes,
@@ -421,19 +420,17 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
                 reason=f"RediSearch does not support sentinel mode, got {configs.MODE.value}",
             )
         if configs.MODE == RedisMode.CLUSTER:
-            from redis.asyncio.cluster import ClusterNode, LoadBalancingStrategy
-
             startup_nodes = []
             for node in configs.CLUSTER_NODES:
                 if ":" in node:
                     host, port = node.split(":", 1)
-                    startup_nodes.append(ClusterNode(host, int(port)))
+                    startup_nodes.append(AsyncClusterNode(host, int(port)))
                 else:
-                    startup_nodes.append(ClusterNode(node, configs.PORT))
+                    startup_nodes.append(AsyncClusterNode(node, configs.PORT))
 
             cluster_kwargs: dict[str, Any] = {}
             if configs.CLUSTER_READ_FROM_REPLICAS:
-                cluster_kwargs["load_balancing_strategy"] = LoadBalancingStrategy.ROUND_ROBIN
+                cluster_kwargs["load_balancing_strategy"] = AsyncLoadBalancingStrategy.ROUND_ROBIN
 
             return AsyncRedisCluster(
                 startup_nodes=startup_nodes,
@@ -513,8 +510,6 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             if isinstance(result, list):
                 return result
             # Type narrowing: result is iterable but not a list
-            from collections.abc import Iterable
-
             if isinstance(result, Iterable):
                 return list(result)
             return []
@@ -523,8 +518,6 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
         if isinstance(value, list):
             return value
         # Type narrowing: value is iterable but not a list
-        from collections.abc import Iterable
-
         if isinstance(value, Iterable):
             return list(value)
         return []

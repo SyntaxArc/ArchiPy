@@ -1,3 +1,5 @@
+"""Base DTO definitions for ArchiPy."""
+
 from enum import Enum
 from typing import TypeVar
 

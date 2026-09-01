@@ -1,3 +1,5 @@
+"""Port interfaces for email operations."""
+
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 

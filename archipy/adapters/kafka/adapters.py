@@ -1,8 +1,19 @@
+"""Kafka adapter implementations for ArchiPy."""
+
 import contextlib
 import logging
 from typing import TYPE_CHECKING, NoReturn, override
 
-from confluent_kafka import Consumer, KafkaError, Message, Producer, TopicPartition
+from confluent_kafka import (
+    ConcurrentModificationException,
+    Consumer,
+    IllegalStateException,
+    KafkaError,
+    KafkaException,
+    Message,
+    Producer,
+    TopicPartition,
+)
 from confluent_kafka.admin import AdminClient, ClusterMetadata, NewTopic
 from confluent_kafka.aio import AIOConsumer, AIOProducer
 
@@ -29,6 +40,18 @@ if TYPE_CHECKING:
     from archipy.configs.config_template import KafkaConfig
 
 logger = logging.getLogger(__name__)
+
+
+# Library/runtime failures observed at the Kafka client boundary.
+_KAFKA_CLIENT_ERRORS: tuple[type[Exception], ...] = (
+    KafkaException,
+    BufferError,
+    ConcurrentModificationException,
+    IllegalStateException,
+    ValueError,
+    TypeError,
+    OSError,
+)
 
 
 class KafkaExceptionHandlerMixin:
@@ -126,7 +149,7 @@ class KafkaAdminAdapter(KafkaAdminPort, KafkaExceptionHandlerMixin):
                 config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
                 config["ssl.endpoint.identification.algorithm"] = "none"
             self.adapter: AdminClient = AdminClient(config)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "KafkaAdmin_init")
 
     @override
@@ -146,7 +169,7 @@ class KafkaAdminAdapter(KafkaAdminPort, KafkaExceptionHandlerMixin):
         try:
             new_topic = NewTopic(topic, num_partitions, replication_factor)
             self.adapter.create_topics([new_topic])
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "create_topic")
 
     @override
@@ -164,7 +187,7 @@ class KafkaAdminAdapter(KafkaAdminPort, KafkaExceptionHandlerMixin):
         try:
             self.adapter.delete_topics(topics)
             logger.debug("Deleted topics: %s", topics)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "delete_topic")
 
     @override
@@ -186,7 +209,7 @@ class KafkaAdminAdapter(KafkaAdminPort, KafkaExceptionHandlerMixin):
         """
         try:
             result = self.adapter.list_topics(topic=topic, timeout=timeout)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "list_topics")
             raise  # Exception handler always raises, but type checker needs this to be explicit
         else:
@@ -280,7 +303,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
                 config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
                 config["ssl.endpoint.identification.algorithm"] = "none"
             consumer = Consumer(config)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             cls._handle_kafka_exception(e, "KafkaConsumer_init")
         else:
             return consumer
@@ -312,7 +335,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
                 logger.debug("Message consumed: %s", message)
                 message.set_value(message.value())
                 result_list.append(message)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "batch_consume")
             raise  # Exception handler always raises, but type checker needs this to be explicit
         else:
@@ -344,7 +367,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
                 return None
             logger.debug("Message consumed: %s", message)
             message.set_value(message.value())
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "poll")
         else:
             return message
@@ -376,7 +399,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
                 result = self._adapter.commit(message=message, asynchronous=False)
             else:
                 result = self._adapter.commit(asynchronous=False)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "commit")
         else:
             return result
@@ -395,7 +418,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
         """
         try:
             self._adapter.subscribe(topic_list)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "subscribe")
 
     @override
@@ -412,7 +435,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
         """
         try:
             self._adapter.assign(partition_list)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "assign")
 
     @override
@@ -426,7 +449,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
         try:
             self._adapter.close()
             logger.debug("Consumer closed")
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "close")
 
 
@@ -495,7 +518,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
                 config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
                 config["ssl.endpoint.identification.algorithm"] = "none"
             producer = Producer(config)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             cls._handle_kafka_exception(e, "KafkaProducer_init")
         else:
             return producer
@@ -555,7 +578,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
                 callback=self._delivery_callback,
                 key=processed_key,
             )
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_producer_exception(e, "produce")
 
     @override
@@ -574,7 +597,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             remaining_messages = self._adapter.flush(timeout=timeout if timeout is not None else -1)
             if remaining_messages > 0:
                 logger.warning("%d messages left in the queue after flush", remaining_messages)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "flush")
 
     @override
@@ -586,7 +609,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
         """
         try:
             self.list_topics(timeout=1)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             raise UnavailableError(resource_type="Kafka") from e
 
     @override
@@ -608,7 +631,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
         """
         try:
             result = self._adapter.list_topics(topic=topic, timeout=timeout)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "list_topics")
             raise  # Exception handler always raises, but type checker needs this to be explicit
         else:
@@ -628,7 +651,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
         try:
             self._adapter.flush()
             logger.debug("Producer flushed and closed")
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "close")
 
 
@@ -712,7 +735,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
                     batch_size=self._configs.PRODUCER_BATCH_SIZE,
                     buffer_timeout=self._configs.PRODUCER_BUFFER_TIMEOUT,
                 )
-            except Exception as e:
+            except _KAFKA_CLIENT_ERRORS as e:
                 self._handle_kafka_exception(e, "AsyncKafkaProducer_init")
         return self._adapter
 
@@ -752,7 +775,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
                 value=processed_message,
                 key=processed_key,
             )
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_producer_exception(e, "produce")
 
     @override
@@ -770,7 +793,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
         try:
             adapter = await self._get_adapter()
             await adapter.flush()
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "flush")
 
     @override
@@ -782,7 +805,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
         """
         try:
             await self.list_topics(timeout=1)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             raise UnavailableError(resource_type="Kafka") from e
 
     @override
@@ -805,7 +828,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
         try:
             adapter = await self._get_adapter()
             result = await adapter.list_topics(topic=topic, timeout=timeout)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "list_topics")
             raise
         else:
@@ -826,7 +849,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
                 await self._adapter.close()
                 self._adapter = None
                 logger.debug("Async producer closed")
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "close")
 
 
@@ -927,7 +950,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
                     await self._adapter.subscribe(self._topic_list)
                 elif self._partition_list:
                     await self._adapter.assign(self._partition_list)
-            except Exception as e:
+            except _KAFKA_CLIENT_ERRORS as e:
                 self._handle_kafka_exception(e, "AsyncKafkaConsumer_init")
         return self._adapter
 
@@ -959,7 +982,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
                 logger.debug("Async message consumed: %s", message)
                 message.set_value(message.value())
                 result_list.append(message)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "batch_consume")
             raise
         else:
@@ -991,7 +1014,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
                 return None
             logger.debug("Async message consumed: %s", message)
             message.set_value(message.value())
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "poll")
         else:
             return message
@@ -1015,7 +1038,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
         try:
             adapter = await self._get_adapter()
             result = await adapter.commit(message=message, asynchronous=asynchronous)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "commit")
         else:
             return result
@@ -1035,7 +1058,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
         try:
             adapter = await self._get_adapter()
             await adapter.subscribe(topic_list)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "subscribe")
 
     @override
@@ -1053,7 +1076,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
         try:
             adapter = await self._get_adapter()
             await adapter.assign(partition_list)
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "assign")
 
     @override
@@ -1069,5 +1092,5 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
                 await self._adapter.close()
                 self._adapter = None
                 logger.debug("Async consumer closed")
-        except Exception as e:
+        except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "close")

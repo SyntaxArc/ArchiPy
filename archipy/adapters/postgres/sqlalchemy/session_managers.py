@@ -1,3 +1,5 @@
+"""PostgreSQL SQLAlchemy session manager implementations."""
+
 from typing import override
 
 from sqlalchemy import URL

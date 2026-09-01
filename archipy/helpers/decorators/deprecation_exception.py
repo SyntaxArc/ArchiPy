@@ -1,3 +1,5 @@
+"""Decorators that raise on deprecated usage."""
+
 from functools import wraps
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 

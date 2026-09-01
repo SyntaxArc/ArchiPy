@@ -1,3 +1,5 @@
+"""MinIO adapter implementations for ArchiPy."""
+
 import logging
 import urllib.parse
 from collections.abc import Callable
@@ -5,7 +7,12 @@ from typing import Any, BinaryIO, NoReturn, TypeVar, override
 
 import boto3
 from botocore.client import Config
-from botocore.exceptions import ClientError, ConnectionError as BotocoreConnectionError, EndpointConnectionError
+from botocore.exceptions import (
+    BotoCoreError,
+    ClientError,
+    ConnectionError as BotocoreConnectionError,
+    EndpointConnectionError,
+)
 
 from archipy.adapters.minio.ports import (
     MinioBucketType,
@@ -37,6 +44,11 @@ T = TypeVar("T")  # Return type
 F = TypeVar("F", bound=Callable[..., Any])  # Function type
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_invalid_argument(argument_name: str) -> NoReturn:
+    """Raise InvalidArgumentError outside try bodies (TRY301)."""
+    raise InvalidArgumentError(argument_name=argument_name)
 
 
 class MinioExceptionHandlerMixin:
@@ -144,16 +156,16 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 # First get global config, then extract MINIO config
                 global_config = BaseConfig.global_config()
                 if not hasattr(global_config, "MINIO"):
-                    raise InvalidArgumentError(argument_name="MINIO")
+                    _raise_invalid_argument("MINIO")
                 minio_config = getattr(global_config, "MINIO", None)
                 if not isinstance(minio_config, MinioConfig):
-                    raise InvalidArgumentError(argument_name="MINIO")
+                    _raise_invalid_argument("MINIO")
                 self.configs = minio_config
 
             # Ensure we have a valid endpoint value
             endpoint = str(self.configs.ENDPOINT or "")
             if not endpoint:
-                raise InvalidArgumentError(argument_name="endpoint")
+                _raise_invalid_argument("endpoint")
 
             # Determine SSL usage (USE_SSL overrides SECURE if set)
             use_ssl = self.configs.USE_SSL if self.configs.USE_SSL is not None else self.configs.SECURE
@@ -199,7 +211,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 raise InternalError(additional_data={"component": "S3"}) from e
         except (BotocoreConnectionError, EndpointConnectionError) as e:
             raise NetworkError(service="S3") from e
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             raise InternalError(additional_data={"component": "S3"}) from e
 
     def clear_all_caches(self) -> None:
@@ -234,7 +246,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name:
-                raise InvalidArgumentError(argument_name="bucket_name")
+                _raise_invalid_argument("bucket_name")
             self._client.head_bucket(Bucket=bucket_name)
         except InvalidArgumentError:
             # Pass through our custom errors
@@ -248,7 +260,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "bucket_exists")
             raise
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "bucket_exists")
             raise
         else:
@@ -270,7 +282,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name:
-                raise InvalidArgumentError(argument_name="bucket_name")
+                _raise_invalid_argument("bucket_name")
 
             # Handle region-specific bucket creation
             create_bucket_config = {}
@@ -290,7 +302,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "make_bucket")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "make_bucket")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "make_bucket")
 
     @override
@@ -309,7 +321,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name:
-                raise InvalidArgumentError(argument_name="bucket_name")
+                _raise_invalid_argument("bucket_name")
             self._client.delete_bucket(Bucket=bucket_name)
             self.clear_all_caches()
         except InvalidArgumentError:
@@ -319,7 +331,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "remove_bucket")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "remove_bucket")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "remove_bucket")
 
     @override
@@ -343,7 +355,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "list_buckets")
             raise
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "list_buckets")
             raise
         else:
@@ -381,16 +393,14 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not object_name or not file_path:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name, object_name or file_path"
-                        if not all([bucket_name, object_name, file_path])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "object_name"
-                        if not object_name
-                        else "file_path"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name, object_name or file_path"
+                    if not all([bucket_name, object_name, file_path])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "object_name"
+                    if not object_name
+                    else "file_path",
                 )
             extra_args: dict[str, Any] = {}
             if tags:
@@ -404,7 +414,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "put_object")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "put_object")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "put_object")
 
     @override
@@ -425,16 +435,14 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not object_name or not file_path:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name, object_name or file_path"
-                        if not all([bucket_name, object_name, file_path])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "object_name"
-                        if not object_name
-                        else "file_path"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name, object_name or file_path"
+                    if not all([bucket_name, object_name, file_path])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "object_name"
+                    if not object_name
+                    else "file_path",
                 )
             self._client.download_file(bucket_name, object_name, file_path)
         except InvalidArgumentError:
@@ -444,7 +452,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "get_object")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "get_object")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "get_object")
 
     @override
@@ -464,14 +472,12 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not object_name:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name or object_name"
-                        if not all([bucket_name, object_name])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "object_name"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name or object_name"
+                    if not all([bucket_name, object_name])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "object_name",
                 )
             self._client.delete_object(Bucket=bucket_name, Key=object_name)
             self._clear_object_caches()
@@ -482,7 +488,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "remove_object")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "remove_object")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "remove_object")
 
     @override
@@ -501,9 +507,9 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name:
-                raise InvalidArgumentError(argument_name="bucket_name")
+                _raise_invalid_argument("bucket_name")
             if not object_names:
-                raise InvalidArgumentError(argument_name="object_names")
+                _raise_invalid_argument("object_names")
 
             delete_payload = {"Objects": [{"Key": name} for name in object_names], "Quiet": True}
             self._client.delete_objects(Bucket=bucket_name, Delete=delete_payload)
@@ -514,7 +520,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "remove_objects")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "remove_objects")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "remove_objects")
 
     @override
@@ -536,14 +542,12 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not object_name:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name or object_name"
-                        if not all([bucket_name, object_name])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "object_name"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name or object_name"
+                    if not all([bucket_name, object_name])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "object_name",
                 )
             self._client.head_object(Bucket=bucket_name, Key=object_name)
         except InvalidArgumentError:
@@ -557,7 +561,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "object_exists")
             raise
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "object_exists")
             raise
         else:
@@ -591,7 +595,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name:
-                raise InvalidArgumentError(argument_name="bucket_name")
+                _raise_invalid_argument("bucket_name")
 
             # Build list_objects_v2 parameters
             params = {"Bucket": bucket_name}
@@ -621,7 +625,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "list_objects")
             raise
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "list_objects")
             raise
         else:
@@ -648,14 +652,12 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not object_name:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name or object_name"
-                        if not all([bucket_name, object_name])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "object_name"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name or object_name"
+                    if not all([bucket_name, object_name])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "object_name",
                 )
             response = self._client.head_object(Bucket=bucket_name, Key=object_name)
         except InvalidArgumentError:
@@ -667,7 +669,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "stat_object")
             raise
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "stat_object")
             raise
         else:
@@ -701,14 +703,12 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not object_name:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name or object_name"
-                        if not all([bucket_name, object_name])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "object_name"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name or object_name"
+                    if not all([bucket_name, object_name])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "object_name",
                 )
             url = self._client.generate_presigned_url(
                 "get_object",
@@ -724,7 +724,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "presigned_get_object")
             raise
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "presigned_get_object")
             raise
         else:
@@ -752,14 +752,12 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not object_name:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name or object_name"
-                        if not all([bucket_name, object_name])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "object_name"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name or object_name"
+                    if not all([bucket_name, object_name])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "object_name",
                 )
             url = self._client.generate_presigned_url(
                 "put_object",
@@ -775,7 +773,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "presigned_put_object")
             raise
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "presigned_put_object")
             raise
         else:
@@ -799,14 +797,12 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not policy:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name or policy"
-                        if not all([bucket_name, policy])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "policy"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name or policy"
+                    if not all([bucket_name, policy])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "policy",
                 )
             self._client.put_bucket_policy(Bucket=bucket_name, Policy=policy)
         except InvalidArgumentError:
@@ -816,7 +812,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "set_bucket_policy")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "set_bucket_policy")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "set_bucket_policy")
 
     @override
@@ -839,7 +835,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name:
-                raise InvalidArgumentError(argument_name="bucket_name")
+                _raise_invalid_argument("bucket_name")
             response = self._client.get_bucket_policy(Bucket=bucket_name)
             policy = response.get("Policy", "{}")
         except InvalidArgumentError:
@@ -851,7 +847,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "get_bucket_policy")
             raise
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "get_bucket_policy")
             raise
         else:
@@ -884,18 +880,16 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not src_bucket_name or not src_object_name or not dest_bucket_name or not dest_object_name:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "src_bucket_name, src_object_name, dest_bucket_name or dest_object_name"
-                        if not all([src_bucket_name, src_object_name, dest_bucket_name, dest_object_name])
-                        else "src_bucket_name"
-                        if not src_bucket_name
-                        else "src_object_name"
-                        if not src_object_name
-                        else "dest_bucket_name"
-                        if not dest_bucket_name
-                        else "dest_object_name"
-                    ),
+                _raise_invalid_argument(
+                    "src_bucket_name, src_object_name, dest_bucket_name or dest_object_name"
+                    if not all([src_bucket_name, src_object_name, dest_bucket_name, dest_object_name])
+                    else "src_bucket_name"
+                    if not src_bucket_name
+                    else "src_object_name"
+                    if not src_object_name
+                    else "dest_bucket_name"
+                    if not dest_bucket_name
+                    else "dest_object_name",
                 )
             self._client.copy_object(
                 Bucket=dest_bucket_name,
@@ -910,7 +904,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "copy_object")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "copy_object")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "copy_object")
 
     @override
@@ -948,14 +942,12 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not object_name:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name or object_name"
-                        if not all([bucket_name, object_name])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "object_name"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name or object_name"
+                    if not all([bucket_name, object_name])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "object_name",
                 )
 
             kwargs: dict[str, Any] = {
@@ -981,7 +973,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "put_object_stream")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "put_object_stream")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "put_object_stream")
 
     @override
@@ -1007,14 +999,12 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not object_name:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name or object_name"
-                        if not all([bucket_name, object_name])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "object_name"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name or object_name"
+                    if not all([bucket_name, object_name])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "object_name",
                 )
             response = self._client.get_object(Bucket=bucket_name, Key=object_name)
         except InvalidArgumentError:
@@ -1025,7 +1015,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "get_object_stream")
             raise
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "get_object_stream")
             raise
         else:
@@ -1054,14 +1044,12 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not object_name:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name or object_name"
-                        if not all([bucket_name, object_name])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "object_name"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name or object_name"
+                    if not all([bucket_name, object_name])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "object_name",
                 )
             tag_set = [{"Key": k, "Value": v} for k, v in tags.items()]
             self._client.put_object_tagging(
@@ -1075,7 +1063,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "set_object_tags")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "set_object_tags")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "set_object_tags")
 
     @override
@@ -1094,14 +1082,12 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not object_name:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name or object_name"
-                        if not all([bucket_name, object_name])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "object_name"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name or object_name"
+                    if not all([bucket_name, object_name])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "object_name",
                 )
             self._client.delete_object_tagging(Bucket=bucket_name, Key=object_name)
         except InvalidArgumentError:
@@ -1110,7 +1096,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "remove_object_tags")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "remove_object_tags")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "remove_object_tags")
 
     @override
@@ -1132,14 +1118,12 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not object_name:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name or object_name"
-                        if not all([bucket_name, object_name])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "object_name"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name or object_name"
+                    if not all([bucket_name, object_name])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "object_name",
                 )
             response = self._client.get_object_tagging(Bucket=bucket_name, Key=object_name)
         except InvalidArgumentError:
@@ -1150,7 +1134,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "get_object_tags")
             raise
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "get_object_tags")
             raise
         else:
@@ -1191,9 +1175,9 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name:
-                raise InvalidArgumentError(argument_name="bucket_name")
+                _raise_invalid_argument("bucket_name")
             if not rules:
-                raise InvalidArgumentError(argument_name="rules")
+                _raise_invalid_argument("rules")
             self._client.put_bucket_lifecycle_configuration(
                 Bucket=bucket_name,
                 LifecycleConfiguration={"Rules": rules},
@@ -1204,7 +1188,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "set_bucket_lifecycle")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "set_bucket_lifecycle")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "set_bucket_lifecycle")
 
     @override
@@ -1226,7 +1210,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name:
-                raise InvalidArgumentError(argument_name="bucket_name")
+                _raise_invalid_argument("bucket_name")
             response = self._client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
         except InvalidArgumentError:
             raise
@@ -1238,7 +1222,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "get_bucket_lifecycle")
             raise
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "get_bucket_lifecycle")
             raise
         else:
@@ -1263,7 +1247,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name:
-                raise InvalidArgumentError(argument_name="bucket_name")
+                _raise_invalid_argument("bucket_name")
             self._client.delete_bucket_lifecycle(Bucket=bucket_name)
         except InvalidArgumentError:
             raise
@@ -1271,7 +1255,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "delete_bucket_lifecycle")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "delete_bucket_lifecycle")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "delete_bucket_lifecycle")
 
     @override
@@ -1290,7 +1274,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name:
-                raise InvalidArgumentError(argument_name="bucket_name")
+                _raise_invalid_argument("bucket_name")
             status = "Enabled" if enabled else "Suspended"
             self._client.put_bucket_versioning(
                 Bucket=bucket_name,
@@ -1302,7 +1286,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "set_bucket_versioning")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "set_bucket_versioning")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "set_bucket_versioning")
 
     @override
@@ -1324,7 +1308,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name:
-                raise InvalidArgumentError(argument_name="bucket_name")
+                _raise_invalid_argument("bucket_name")
             response = self._client.get_bucket_versioning(Bucket=bucket_name)
         except InvalidArgumentError:
             raise
@@ -1334,7 +1318,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "get_bucket_versioning")
             raise
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "get_bucket_versioning")
             raise
         else:
@@ -1365,7 +1349,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name:
-                raise InvalidArgumentError(argument_name="bucket_name")
+                _raise_invalid_argument("bucket_name")
 
             params: dict[str, str] = {"Bucket": bucket_name}
             if prefix:
@@ -1404,7 +1388,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "list_object_versions")
             raise
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "list_object_versions")
             raise
         else:
@@ -1427,16 +1411,14 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         """
         try:
             if not bucket_name or not object_name or not version_id:
-                raise InvalidArgumentError(
-                    argument_name=(
-                        "bucket_name, object_name or version_id"
-                        if not all([bucket_name, object_name, version_id])
-                        else "bucket_name"
-                        if not bucket_name
-                        else "object_name"
-                        if not object_name
-                        else "version_id"
-                    ),
+                _raise_invalid_argument(
+                    "bucket_name, object_name or version_id"
+                    if not all([bucket_name, object_name, version_id])
+                    else "bucket_name"
+                    if not bucket_name
+                    else "object_name"
+                    if not object_name
+                    else "version_id",
                 )
             self._client.delete_object(Bucket=bucket_name, Key=object_name, VersionId=version_id)
             self._clear_object_caches()
@@ -1446,5 +1428,5 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_client_exception(e, "remove_object_version")
         except (ConnectionError, EndpointConnectionError) as e:
             self._handle_connection_exception(e, "remove_object_version")
-        except Exception as e:
+        except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "remove_object_version")

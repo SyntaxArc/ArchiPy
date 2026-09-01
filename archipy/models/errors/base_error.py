@@ -1,3 +1,5 @@
+"""Base error types for ArchiPy."""
+
 import json
 from typing import TYPE_CHECKING, Any, ClassVar, NoReturn
 

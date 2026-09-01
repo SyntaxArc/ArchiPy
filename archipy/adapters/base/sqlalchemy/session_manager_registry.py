@@ -1,13 +1,13 @@
-from typing import TYPE_CHECKING, ClassVar
+"""Base SQLAlchemy session manager registry for ArchiPy adapters."""
 
+from typing import ClassVar
+
+from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort, SessionManagerPort
 from archipy.models.errors import (
     InternalError,
     InvalidArgumentError,
     InvalidEntityTypeError,
 )
-
-if TYPE_CHECKING:
-    from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort, SessionManagerPort
 
 
 class SessionManagerRegistry:
@@ -57,7 +57,6 @@ class SessionManagerRegistry:
         """
         if manager is None:
             raise InvalidArgumentError(argument_name="session_manager")
-        from archipy.adapters.base.sqlalchemy.session_manager_ports import SessionManagerPort
 
         if not isinstance(manager, SessionManagerPort):
             raise InvalidEntityTypeError(
@@ -94,7 +93,6 @@ class SessionManagerRegistry:
         """
         if manager is None:
             raise InvalidArgumentError(argument_name="session_manager")
-        from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort
 
         if not isinstance(manager, AsyncSessionManagerPort):
             raise InvalidEntityTypeError(

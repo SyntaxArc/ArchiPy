@@ -14,6 +14,7 @@ from uuid import uuid4
 from temporalio.worker import Worker
 
 from archipy.configs.base_config import BaseConfig
+from archipy.configs.config_template import TemporalConfig
 from archipy.models.errors.temporal_errors import WorkerConnectionError, WorkerShutdownError
 
 from .adapters import TemporalAdapter
@@ -23,8 +24,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from temporalio.client import Client
-
-    from archipy.configs.config_template import TemporalConfig
 
 
 class WorkerHandle(PortWorkerHandle):
@@ -117,7 +116,7 @@ class WorkerHandle(PortWorkerHandle):
                 },
             )
 
-        except Exception as error:
+        except Exception as error:  # worker lifecycle; temporal/runtime may raise broadly
             raise WorkerConnectionError(
                 additional_data={
                     "message": f"Failed to start worker for task queue '{self.task_queue}'",
@@ -175,7 +174,7 @@ class WorkerHandle(PortWorkerHandle):
                     "grace_period": grace_period,
                 },
             ) from error
-        except Exception as error:
+        except Exception as error:  # worker lifecycle; temporal/runtime may raise broadly
             raise WorkerShutdownError(
                 additional_data={
                     "message": f"Failed to stop worker for task queue '{self.task_queue}'",
@@ -244,7 +243,6 @@ class TemporalWorkerManager(WorkerPort):
                 self.config = global_config.TEMPORAL
             else:
                 # Create a default config if none exists
-                from archipy.configs.config_template import TemporalConfig
 
                 self.config = TemporalConfig()
         else:
@@ -357,9 +355,7 @@ class TemporalWorkerManager(WorkerPort):
                 },
             )
 
-            return worker_handle
-
-        except Exception as error:
+        except Exception as error:  # worker lifecycle; temporal/runtime may raise broadly
             raise WorkerConnectionError(
                 additional_data={
                     "message": f"Failed to start worker for task queue '{task_queue}'",
@@ -369,6 +365,8 @@ class TemporalWorkerManager(WorkerPort):
                     "error": str(error),
                 },
             ) from error
+        else:
+            return worker_handle
 
     @override
     async def stop_worker(self, worker_handle: PortWorkerHandle) -> None:
@@ -395,7 +393,7 @@ class TemporalWorkerManager(WorkerPort):
                 },
             )
 
-        except Exception:
+        except Exception:  # worker lifecycle; temporal/runtime may raise broadly
             # Remove from tracking even if shutdown failed
             if worker_handle.worker_id in self._workers:
                 del self._workers[worker_handle.worker_id]
@@ -428,7 +426,7 @@ class TemporalWorkerManager(WorkerPort):
         for worker_handle in workers_to_stop:
             try:
                 await self.stop_worker(worker_handle)
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001  # worker lifecycle; temporal/runtime may raise broadly
                 shutdown_errors.append(
                     {
                         "worker_id": worker_handle.worker_id,

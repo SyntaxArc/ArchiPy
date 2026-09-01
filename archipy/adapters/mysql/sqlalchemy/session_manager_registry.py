@@ -1,11 +1,13 @@
-from typing import TYPE_CHECKING
+"""Registry for MySQL SQLAlchemy session managers."""
 
+from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort, SessionManagerPort
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
+from archipy.adapters.mysql.sqlalchemy.session_managers import (
+    AsyncMySQLSQlAlchemySessionManager,
+    MySQLSQlAlchemySessionManager,
+)
 from archipy.helpers.metaclasses.singleton import Singleton
 from archipy.models.errors import DatabaseConnectionError, InvalidArgumentError, InvalidEntityTypeError
-
-if TYPE_CHECKING:
-    from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort, SessionManagerPort
 
 
 class MySQLSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):
@@ -34,8 +36,6 @@ class MySQLSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):
         """
         if cls._sync_instance is None:
             try:
-                from archipy.adapters.mysql.sqlalchemy.session_managers import MySQLSQlAlchemySessionManager
-
                 cls._sync_instance = MySQLSQlAlchemySessionManager()
             except Exception as e:
                 raise DatabaseConnectionError(
@@ -56,7 +56,6 @@ class MySQLSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):
         """
         if manager is None:
             raise InvalidArgumentError(argument_name="mysql_session_manager")
-        from archipy.adapters.base.sqlalchemy.session_manager_ports import SessionManagerPort
 
         if not isinstance(manager, SessionManagerPort):
             raise InvalidEntityTypeError(
@@ -79,10 +78,6 @@ class MySQLSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):
         """
         if cls._async_instance is None:
             try:
-                from archipy.adapters.mysql.sqlalchemy.session_managers import (
-                    AsyncMySQLSQlAlchemySessionManager,
-                )
-
                 cls._async_instance = AsyncMySQLSQlAlchemySessionManager()
             except Exception as e:
                 raise DatabaseConnectionError(
@@ -103,7 +98,6 @@ class MySQLSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):
         """
         if manager is None:
             raise InvalidArgumentError(argument_name="mysql_async_session_manager")
-        from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort
 
         if not isinstance(manager, AsyncSessionManagerPort):
             raise InvalidEntityTypeError(

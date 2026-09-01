@@ -1,3 +1,5 @@
+"""Shared base utility helpers."""
+
 import re
 
 from archipy.helpers.utils.datetime_utils import DatetimeUtils
@@ -27,7 +29,9 @@ class BaseUtils(ErrorUtils, DatetimeUtils, PasswordUtils, JWTUtils, TOTPUtils, F
 
     @staticmethod
     def sanitize_iranian_landline_or_phone_number(landline_or_phone_number: str) -> str:
-        """Sanitizes an Iranian landline or mobile phone number by removing non-numeric characters and standardizing the format.
+        """Sanitize an Iranian landline or mobile phone number.
+
+        Removes non-numeric characters and standardizes the format.
 
         Args:
             landline_or_phone_number (str): The phone number to sanitize.

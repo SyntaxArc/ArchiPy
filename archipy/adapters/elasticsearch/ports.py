@@ -1,3 +1,5 @@
+"""Port interfaces for Elasticsearch operations."""
+
 from abc import abstractmethod
 from collections.abc import AsyncIterator, Awaitable, Iterable
 from typing import Any

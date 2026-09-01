@@ -1,3 +1,5 @@
+"""Redis Search type definitions."""
+
 from enum import StrEnum
 
 

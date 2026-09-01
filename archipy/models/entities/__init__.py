@@ -1,3 +1,5 @@
+"""Domain entity models for ArchiPy."""
+
 from archipy.models.entities.sqlalchemy.base_entities import (
     AdminEntity,
     BaseEntity,

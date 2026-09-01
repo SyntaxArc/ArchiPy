@@ -21,7 +21,10 @@ class KeycloakRealmsPort:
 
     @abstractmethod
     def update_realm(self, realm_name: str, **kwargs: Any) -> dict[str, Any] | None:
-        """Update a realm. Kwargs are RealmRepresentation top-level attributes (e.g. displayName, organizationsEnabled)."""
+        """Update a realm.
+
+        Kwargs are RealmRepresentation top-level attributes (e.g. displayName, organizationsEnabled).
+        """
         raise NotImplementedError
 
 
@@ -40,5 +43,8 @@ class AsyncKeycloakRealmsPort:
 
     @abstractmethod
     async def update_realm(self, realm_name: str, **kwargs: Any) -> dict[str, Any] | None:
-        """Update a realm. Kwargs are RealmRepresentation top-level attributes (e.g. displayName, organizationsEnabled)."""
+        """Update a realm.
+
+        Kwargs are RealmRepresentation top-level attributes (e.g. displayName, organizationsEnabled).
+        """
         raise NotImplementedError

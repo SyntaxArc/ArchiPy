@@ -1,11 +1,13 @@
-from typing import TYPE_CHECKING
+"""Registry for PostgreSQL SQLAlchemy session managers."""
 
+from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort, SessionManagerPort
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
+from archipy.adapters.postgres.sqlalchemy.session_managers import (
+    AsyncPostgresSQlAlchemySessionManager,
+    PostgresSQlAlchemySessionManager,
+)
 from archipy.helpers.metaclasses.singleton import Singleton
 from archipy.models.errors import DatabaseConnectionError, InvalidArgumentError, InvalidEntityTypeError
-
-if TYPE_CHECKING:
-    from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort, SessionManagerPort
 
 
 class PostgresSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):
@@ -34,8 +36,6 @@ class PostgresSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton
         """
         if cls._sync_instance is None:
             try:
-                from archipy.adapters.postgres.sqlalchemy.session_managers import PostgresSQlAlchemySessionManager
-
                 cls._sync_instance = PostgresSQlAlchemySessionManager()
             except Exception as e:
                 raise DatabaseConnectionError(
@@ -56,7 +56,6 @@ class PostgresSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton
         """
         if manager is None:
             raise InvalidArgumentError(argument_name="postgres_session_manager")
-        from archipy.adapters.base.sqlalchemy.session_manager_ports import SessionManagerPort
 
         if not isinstance(manager, SessionManagerPort):
             raise InvalidEntityTypeError(
@@ -79,8 +78,6 @@ class PostgresSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton
         """
         if cls._async_instance is None:
             try:
-                from archipy.adapters.postgres.sqlalchemy.session_managers import AsyncPostgresSQlAlchemySessionManager
-
                 cls._async_instance = AsyncPostgresSQlAlchemySessionManager()
             except Exception as e:
                 raise DatabaseConnectionError(
@@ -101,7 +98,6 @@ class PostgresSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton
         """
         if manager is None:
             raise InvalidArgumentError(argument_name="postgres_async_session_manager")
-        from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort
 
         if not isinstance(manager, AsyncSessionManagerPort):
             raise InvalidEntityTypeError(

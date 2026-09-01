@@ -8,7 +8,7 @@ import base64
 import hmac
 import secrets  # Using secrets instead of random for cryptographic operations
 import struct
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NoReturn
 from uuid import UUID
 
 from archipy.configs.base_config import BaseConfig
@@ -23,6 +23,11 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from archipy.configs.config_template import AuthConfig
+
+
+def _raise_missing_totp_secret() -> NoReturn:
+    """Raise InvalidArgumentError outside try bodies (TRY301)."""
+    raise InvalidArgumentError(argument_name="TOTP_SECRET_KEY")
 
 
 class TOTPUtils:
@@ -179,11 +184,7 @@ class TOTPUtils:
 
             # Check if TOTP secret key is configured
             if not configs.TOTP_SECRET_KEY:
-                # Disable linter for this specific case since we're already in a try-except block
-                # and creating nested functions would reduce code readability
-                raise InvalidArgumentError(
-                    argument_name="TOTP_SECRET_KEY",
-                )
+                _raise_missing_totp_secret()
 
             master_key = configs.TOTP_SECRET_KEY.get_secret_value().encode("utf-8")
 

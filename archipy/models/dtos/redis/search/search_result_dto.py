@@ -1,3 +1,5 @@
+"""DTOs for Redis Search results."""
+
 from pydantic import Field
 
 from archipy.models.dtos.base_dtos import BaseDTO

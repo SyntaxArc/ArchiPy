@@ -1,3 +1,5 @@
+"""Date and time utility helpers."""
+
 import time
 from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any, ClassVar

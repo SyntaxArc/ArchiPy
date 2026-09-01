@@ -1,11 +1,13 @@
-from typing import TYPE_CHECKING
+"""Registry for StarRocks SQLAlchemy session managers."""
 
+from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort, SessionManagerPort
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
+from archipy.adapters.starrocks.sqlalchemy.session_managers import (
+    AsyncStarRocksSQlAlchemySessionManager,
+    StarRocksSQlAlchemySessionManager,
+)
 from archipy.helpers.metaclasses.singleton import Singleton
 from archipy.models.errors import DatabaseConnectionError, InvalidArgumentError, InvalidEntityTypeError
-
-if TYPE_CHECKING:
-    from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort, SessionManagerPort
 
 
 class StarRocksSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):
@@ -34,8 +36,6 @@ class StarRocksSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleto
         """
         if cls._sync_instance is None:
             try:
-                from archipy.adapters.starrocks.sqlalchemy.session_managers import StarRocksSQlAlchemySessionManager
-
                 cls._sync_instance = StarRocksSQlAlchemySessionManager()
             except Exception as e:
                 raise DatabaseConnectionError(
@@ -56,7 +56,6 @@ class StarRocksSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleto
         """
         if manager is None:
             raise InvalidArgumentError(argument_name="starrocks_session_manager")
-        from archipy.adapters.base.sqlalchemy.session_manager_ports import SessionManagerPort
 
         if not isinstance(manager, SessionManagerPort):
             raise InvalidEntityTypeError(
@@ -79,10 +78,6 @@ class StarRocksSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleto
         """
         if cls._async_instance is None:
             try:
-                from archipy.adapters.starrocks.sqlalchemy.session_managers import (
-                    AsyncStarRocksSQlAlchemySessionManager,
-                )
-
                 cls._async_instance = AsyncStarRocksSQlAlchemySessionManager()
             except Exception as e:
                 raise DatabaseConnectionError(
@@ -103,7 +98,6 @@ class StarRocksSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleto
         """
         if manager is None:
             raise InvalidArgumentError(argument_name="starrocks_async_session_manager")
-        from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort
 
         if not isinstance(manager, AsyncSessionManagerPort):
             raise InvalidEntityTypeError(

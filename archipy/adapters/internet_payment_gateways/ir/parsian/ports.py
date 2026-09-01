@@ -1,3 +1,5 @@
+"""Port interfaces for Parsian IPG operations."""
+
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Awaitable, Iterator
+from collections.abc import AsyncIterator, Awaitable, Iterable, Iterator
 
 from archipy.adapters.redis.adapter_mixins._shared import AsyncRedisMixinBase, SyncRedisMixinBase, _set
 from archipy.models.errors import InternalError, InvalidArgumentError
@@ -250,8 +250,6 @@ class AsyncRedisSetsMixin(AsyncRedisMixinBase):
             return set()
         if isinstance(result, set):
             return result
-        from collections.abc import Iterable
-
         if isinstance(result, Iterable):
             return set(result)
         return set()
@@ -310,8 +308,6 @@ class AsyncRedisSetsMixin(AsyncRedisMixinBase):
             return set()
         if isinstance(result, set):
             return result
-        from collections.abc import Iterable
-
         if isinstance(result, Iterable):
             return set(result)
         return set()

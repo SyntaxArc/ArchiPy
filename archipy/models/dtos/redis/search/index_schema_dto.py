@@ -1,3 +1,5 @@
+"""DTOs for Redis Search index schemas."""
+
 from typing import Literal
 
 from pydantic import model_validator

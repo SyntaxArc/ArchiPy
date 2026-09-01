@@ -1,3 +1,5 @@
+"""Singleton decorator helpers."""
+
 import threading
 from typing import TYPE_CHECKING, Any
 

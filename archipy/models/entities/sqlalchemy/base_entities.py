@@ -1,3 +1,5 @@
+"""Base SQLAlchemy entity definitions."""
+
 from datetime import datetime
 from typing import ClassVar
 

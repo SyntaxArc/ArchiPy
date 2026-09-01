@@ -1,3 +1,5 @@
+"""Temporal workflow adapter package."""
+
 from .adapters import TemporalAdapter
 from .base import AtomicActivity, BaseActivity, BaseWorkflow, LogicIntegratedActivity
 from .ports import TemporalPort, WorkerPort

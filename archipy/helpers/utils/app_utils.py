@@ -1,3 +1,5 @@
+"""Application bootstrap and lifecycle utilities."""
+
 from __future__ import annotations
 
 import logging
@@ -76,11 +78,11 @@ class FastAPIExceptionHandler:
         return JSONResponse(status_code=status_code, content=exception.to_dict())
 
     @staticmethod
-    async def custom_exception_handler(request: Request, exception: BaseError) -> JSONResponse:
+    async def custom_exception_handler(_request: Request, exception: BaseError) -> JSONResponse:
         """Handles custom errors.
 
         Args:
-            request (Request): The incoming request.
+            _request (Request): The incoming request.
             exception (BaseError): The custom exception to handle.
 
         Returns:
@@ -89,12 +91,12 @@ class FastAPIExceptionHandler:
         return FastAPIExceptionHandler.create_error_response(exception)
 
     @staticmethod
-    async def generic_exception_handler(request: Request, exception: Exception) -> JSONResponse:
+    async def generic_exception_handler(_request: Request, _exception: Exception) -> JSONResponse:
         """Handles generic errors.
 
         Args:
-            request (Request): The incoming request.
-            exception (Exception): The generic exception to handle.
+            _request (Request): The incoming request.
+            _exception (Exception): The generic exception to handle.
 
         Returns:
             JSONResponse: A JSON response containing the exception details.
@@ -103,13 +105,13 @@ class FastAPIExceptionHandler:
 
     @staticmethod
     async def validation_exception_handler(
-        request: Request,
+        _request: Request,
         exception: ValidationError,
     ) -> JSONResponse:
         """Handles validation errors.
 
         Args:
-            request (Request): The incoming request.
+            _request (Request): The incoming request.
             exception (ValidationError): The validation exception to handle.
 
         Returns:
@@ -151,7 +153,7 @@ class FastAPIUtils:
         # Use app.add_middleware with CORSMiddleware directly
         # CORSMiddleware is compatible with FastAPI's middleware system at runtime
         app.add_middleware(
-            CORSMiddleware,  # type: ignore[arg-type]
+            CORSMiddleware,
             allow_origins=origins,
             allow_credentials=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_CREDENTIALS,
             allow_methods=config.FASTAPI.CORS_MIDDLEWARE_ALLOW_METHODS,
@@ -173,7 +175,7 @@ class FastAPIUtils:
             return
 
         app.add_middleware(
-            GZipMiddleware,  # type: ignore[arg-type]
+            GZipMiddleware,
             minimum_size=config.FASTAPI.GZIP_MIDDLEWARE_MINIMUM_SIZE,
             compresslevel=config.FASTAPI.GZIP_MIDDLEWARE_COMPRESSLEVEL,
         )
@@ -197,7 +199,7 @@ class FastAPIUtils:
             return
 
         app.add_middleware(
-            TrustedHostMiddleware,  # type: ignore[arg-type]
+            TrustedHostMiddleware,
             allowed_hosts=allowed_hosts,
             www_redirect=config.FASTAPI.TRUSTED_HOST_MIDDLEWARE_WWW_REDIRECT,
         )
@@ -213,7 +215,7 @@ class FastAPIUtils:
         if not config.FASTAPI.HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED:
             return
 
-        app.add_middleware(HTTPSRedirectMiddleware)  # type: ignore[arg-type]
+        app.add_middleware(HTTPSRedirectMiddleware)
 
     @staticmethod
     def _fastapi_otel_instrument_kwargs(config: BaseConfig) -> dict[str, Any] | None:
@@ -527,11 +529,12 @@ class AppUtils:
 
         Args:
             config (BaseConfig | None, optional): Custom configuration. If not provided, uses global config.
-            configure_exception_handlers (bool, optional): Whether to configure exception handlers. Defaults to True.
-            include_common_responses (bool, optional): Whether to configure common response definitions for all endpoints.
-                                                Defaults to True.
-            lifespan (Callable[..., AbstractAsyncContextManager] | None, optional): Custom lifespan context manager for the app.
-                                                                          Defaults to None.
+            configure_exception_handlers (bool, optional): Whether to configure exception handlers.
+                Defaults to True.
+            include_common_responses (bool, optional): Whether to configure common response definitions
+                for all endpoints. Defaults to True.
+            lifespan (Callable[..., AbstractAsyncContextManager] | None, optional): Custom lifespan
+                context manager for the app. Defaults to None.
 
         Returns:
             FastAPI: The configured FastAPI application instance.

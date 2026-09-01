@@ -1,3 +1,5 @@
+"""Base type definitions for ArchiPy."""
+
 from enum import Enum
 from typing import Self
 

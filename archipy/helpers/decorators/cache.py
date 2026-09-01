@@ -1,3 +1,5 @@
+"""Caching decorator helpers."""
+
 from functools import wraps
 from typing import TYPE_CHECKING, Any
 

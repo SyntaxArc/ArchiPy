@@ -1,8 +1,10 @@
+"""Keycloak utility helpers."""
+
 import functools
 import logging
 from contextvars import ContextVar
 from functools import cache
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -34,6 +36,16 @@ security = HTTPBearer(scheme_name="OAuth2", description="OAuth2 Access Token", a
 DEFAULT_LANG = LanguageType.FA
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_unauthenticated(lang: LanguageType) -> NoReturn:
+    """Raise UnauthenticatedError outside try bodies (TRY301)."""
+    raise UnauthenticatedError(lang=lang)
+
+
+def _raise_invalid_argument(argument_name: str, lang: LanguageType) -> NoReturn:
+    """Raise InvalidArgumentError outside try bodies (TRY301)."""
+    raise InvalidArgumentError(argument_name=argument_name, lang=lang)
 
 
 @cache
@@ -472,7 +484,7 @@ class KeycloakUtils:
                 try:
                     token_str = cls._extract_token_from_metadata(context)
                     if not token_str:
-                        raise UnauthenticatedError(lang=lang)
+                        _raise_unauthenticated(lang)
 
                     keycloak = cls._get_keycloak_adapter()
 
@@ -480,7 +492,7 @@ class KeycloakUtils:
                     if resource_attribute_name:
                         resource_uuid = getattr(request, resource_attribute_name, None)
                         if not resource_uuid:
-                            raise InvalidArgumentError(argument_name=resource_attribute_name, lang=lang)
+                            _raise_invalid_argument(resource_attribute_name, lang)
 
                     user_info, _token_info, user_roles = _authorize_sync(
                         keycloak,
@@ -551,7 +563,7 @@ class KeycloakUtils:
                 try:
                     token_str = cls._extract_token_from_metadata(context)
                     if not token_str:
-                        raise UnauthenticatedError(lang=lang)
+                        _raise_unauthenticated(lang)
 
                     keycloak = cls._get_async_keycloak_adapter()
 
@@ -559,7 +571,7 @@ class KeycloakUtils:
                     if resource_attribute_name:
                         resource_uuid = getattr(request, resource_attribute_name, None)
                         if not resource_uuid:
-                            raise InvalidArgumentError(argument_name=resource_attribute_name, lang=lang)
+                            _raise_invalid_argument(resource_attribute_name, lang)
 
                     user_info, _token_info, user_roles = await _authorize_async(
                         keycloak,

@@ -1,3 +1,5 @@
+"""DTOs for Saman IPG operations."""
+
 from typing import Self
 
 from pydantic import Field, HttpUrl, model_validator

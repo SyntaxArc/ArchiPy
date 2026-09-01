@@ -19,7 +19,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
         """Get all client scopes."""
         return self._call_keycloak(
             "get_client_scopes",
-            lambda: self.admin_adapter.get_client_scopes(),
+            self.admin_adapter.get_client_scopes,
         )
 
     def get_client_scope(self, client_scope_id: str) -> dict[str, Any]:
@@ -187,7 +187,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
         """Get realm default client scopes."""
         return self._call_keycloak(
             "get_default_default_client_scopes",
-            lambda: self.admin_adapter.get_default_default_client_scopes(),
+            self.admin_adapter.get_default_default_client_scopes,
         )
 
     def add_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
@@ -210,7 +210,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
         """Get realm optional default client scopes."""
         return self._call_keycloak(
             "get_default_optional_client_scopes",
-            lambda: self.admin_adapter.get_default_optional_client_scopes(),
+            self.admin_adapter.get_default_optional_client_scopes,
         )
 
     def add_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:
@@ -237,7 +237,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         """Get all client scopes."""
         return await self._async_call_keycloak(
             "get_client_scopes",
-            lambda: self.admin_adapter.a_get_client_scopes(),
+            self.admin_adapter.a_get_client_scopes,
         )
 
     async def get_client_scope(self, client_scope_id: str) -> dict[str, Any]:
@@ -425,7 +425,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         """Get realm default client scopes."""
         return await self._async_call_keycloak(
             "get_default_default_client_scopes",
-            lambda: self.admin_adapter.a_get_default_default_client_scopes(),
+            self.admin_adapter.a_get_default_default_client_scopes,
         )
 
     async def add_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
@@ -448,7 +448,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         """Get realm optional default client scopes."""
         return await self._async_call_keycloak(
             "get_default_optional_client_scopes",
-            lambda: self.admin_adapter.a_get_default_optional_client_scopes(),
+            self.admin_adapter.a_get_default_optional_client_scopes,
         )
 
     async def add_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:

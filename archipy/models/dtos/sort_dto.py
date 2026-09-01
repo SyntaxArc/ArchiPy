@@ -1,3 +1,5 @@
+"""DTOs for sort field and direction."""
+
 from enum import Enum
 from typing import TypeVar
 

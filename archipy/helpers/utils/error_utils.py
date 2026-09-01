@@ -1,3 +1,5 @@
+"""Error handling utility helpers."""
+
 import logging
 from typing import TYPE_CHECKING, Any, Protocol
 

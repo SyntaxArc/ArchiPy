@@ -1,3 +1,5 @@
+"""Constants for string utility helpers."""
+
 import re
 from re import compile as re_compile
 
@@ -19,7 +21,7 @@ class StringUtilsConstants:
 
     arabic_vowel_translate_table = str.maketrans(
         dict.fromkeys(
-            "\u064e\u064f\u0650\u0652\u0651\u0653\u064b\u064c\u0621\u064d\u0670"  # Normal vowels (Fatha, Damma, Kasra, etc)
+            "\u064e\u064f\u0650\u0652\u0651\u0653\u064b\u064c\u0621\u064d\u0670"  # Normal vowels (Fatha, Damma, etc)
             "\u06d6\u06d7\u06d8\u06d9\u06da\u06db",  # Quranic marks
             "",
         ),

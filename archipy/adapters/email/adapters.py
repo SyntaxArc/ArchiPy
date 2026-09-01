@@ -1,3 +1,5 @@
+"""Email adapter implementations for ArchiPy."""
+
 import base64
 import logging
 import os
@@ -11,7 +13,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from queue import Queue
-from typing import TYPE_CHECKING, BinaryIO, override
+from typing import TYPE_CHECKING, BinaryIO, cast, override
 
 import httpx2
 from jinja2 import Template
@@ -26,6 +28,8 @@ from archipy.models.errors import InvalidArgumentError
 from archipy.models.types.email_types import EmailAttachmentDispositionType, EmailAttachmentType
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from archipy.configs.config_template import EmailConfig
 
 logger = logging.getLogger(__name__)
@@ -57,7 +61,7 @@ class EmailConnectionManager:
             if self.config.USERNAME and self.config.PASSWORD:
                 self.smtp_connection.login(self.config.USERNAME, self.config.PASSWORD)
             self.last_used = datetime.now()
-        except Exception as e:
+        except (smtplib.SMTPException, OSError, TimeoutError) as e:
             BaseUtils.capture_exception(e)
             self.smtp_connection = None
 
@@ -67,7 +71,7 @@ class EmailConnectionManager:
             if self.smtp_connection:
                 self.smtp_connection.quit()
                 self.smtp_connection = None
-        except Exception as e:
+        except (smtplib.SMTPException, OSError, TimeoutError) as e:
             BaseUtils.capture_exception(e)
         finally:
             self.smtp_connection = None
@@ -138,7 +142,7 @@ class AttachmentHandler:
                 attachment_type=attachment_type,
                 max_size=max_size,
             )
-        except Exception as exception:
+        except (smtplib.SMTPException, OSError, TimeoutError) as exception:
             raise InvalidArgumentError(
                 argument_name="attachment",
                 additional_data={"reason": "create_failed", "detail": str(exception)},
@@ -190,7 +194,7 @@ class AttachmentHandler:
         if hasattr(source, "read"):
             read_method = source.read
             if callable(read_method):
-                result = read_method()  # ty: ignore[call-top-callable]
+                result = cast("Callable[[], object]", read_method)()
                 if isinstance(result, bytes):
                     return result
                 if isinstance(result, str):
@@ -311,12 +315,12 @@ class EmailAdapter(EmailPort):
                         return
                     else:
                         connection.connect()
-                except Exception as e:
+                except (smtplib.SMTPException, OSError, TimeoutError) as e:
                     if attempt == self.config.MAX_RETRIES - 1:
                         BaseUtils.capture_exception(e)
                     connection.connect()  # Retry with fresh connection
 
-        except Exception as e:
+        except (smtplib.SMTPException, OSError, TimeoutError) as e:
             BaseUtils.capture_exception(e)
         finally:
             if connection:

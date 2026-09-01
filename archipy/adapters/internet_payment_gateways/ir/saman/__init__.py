@@ -1,3 +1,5 @@
+"""Saman IPG adapter package."""
+
 from archipy.adapters.internet_payment_gateways.ir.saman.adapters import (
     AsyncSamanNeoPgShaparakPaymentAdapter,
     AsyncSamanShaparakPaymentAdapter,

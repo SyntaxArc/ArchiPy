@@ -1,6 +1,14 @@
+"""Registry for SQLite SQLAlchemy session managers."""
+
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
+from archipy.adapters.sqlite.sqlalchemy.session_managers import (
+    AsyncSQLiteSQLAlchemySessionManager,
+    SQLiteSQLAlchemySessionManager,
+)
 from archipy.helpers.metaclasses.singleton import Singleton
 from archipy.models.errors import DatabaseConnectionError
 
@@ -34,8 +42,6 @@ class SQLiteSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):
         """
         if cls._sync_instance is None:
             try:
-                from archipy.adapters.sqlite.sqlalchemy.session_managers import SQLiteSQLAlchemySessionManager
-
                 cls._sync_instance = SQLiteSQLAlchemySessionManager()
             except Exception as e:
                 raise DatabaseConnectionError(
@@ -66,8 +72,6 @@ class SQLiteSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):
         """
         if cls._async_instance is None:
             try:
-                from archipy.adapters.sqlite.sqlalchemy.session_managers import AsyncSQLiteSQLAlchemySessionManager
-
                 cls._async_instance = AsyncSQLiteSQLAlchemySessionManager()
             except Exception as e:
                 raise DatabaseConnectionError(

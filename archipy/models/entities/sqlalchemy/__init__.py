@@ -1,3 +1,5 @@
+"""SQLAlchemy entity model package."""
+
 from archipy.models.entities.sqlalchemy.base_entities import (
     AdminEntity,
     BaseEntity,

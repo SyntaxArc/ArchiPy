@@ -1,3 +1,5 @@
+"""Base gRPC server interceptor."""
+
 import abc
 from typing import TYPE_CHECKING
 

@@ -1,3 +1,5 @@
+"""Redis Search adapter implementations."""
+
 from __future__ import annotations
 
 import struct
@@ -453,6 +455,7 @@ def _build_aggregate_request(aggregation: AggregationDTO) -> AggregateRequest:
     if aggregation.sort_by:
         sort_field = _normalize_search_field_ref(aggregation.sort_by)
         sort_cls = Asc if aggregation.sort_direction.upper() == "ASC" else Desc
+        # Asc|Desc redis-py stubs do not match AggregateRequest.sort_by overloads
         request.sort_by(sort_cls(sort_field))  # ty: ignore[invalid-argument-type]
     if aggregation.limit is not None:
         request.limit(0, aggregation.limit)

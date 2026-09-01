@@ -1,3 +1,5 @@
+"""Base SQLAlchemy session manager implementations."""
+
 from abc import abstractmethod
 from asyncio import current_task
 from typing import TypeVar, override

@@ -1,3 +1,5 @@
+"""String manipulation utility helpers."""
+
 import re
 from re import compile as re_compile
 
@@ -441,7 +443,8 @@ class StringUtils(StringUtilsConstants):
             number_mask (str | None): The mask to replace numbers with. Defaults to `None`.
             clean_spacing (bool): Whether to clean up spacing issues. Defaults to `True`.
             remove_punctuation (bool): Whether to remove punctuation marks. Defaults to `False`.
-            normalize_punctuation_spacing (bool): Whether to apply proper spacing around punctuation marks. Defaults to `False`.
+            normalize_punctuation_spacing (bool): Whether to apply proper spacing around
+                punctuation marks. Defaults to `False`.
 
         Returns:
             str: The normalized text.

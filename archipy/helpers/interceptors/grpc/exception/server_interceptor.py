@@ -1,3 +1,5 @@
+"""gRPC server interceptor for exception mapping."""
+
 from typing import TYPE_CHECKING
 
 from pydantic import ValidationError

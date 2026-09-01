@@ -88,9 +88,12 @@ class ElasticsearchConfig(BaseModel):
     @model_validator(mode="after")
     def validate_sniffing_settings(self) -> Self:
         """Warn if sniffing is enabled with a load balancer."""
-        if any([self.SNIFF_ON_START, self.SNIFF_BEFORE_REQUESTS, self.SNIFF_ON_NODE_FAILURE]):
-            if len(self.HOSTS) == 1 and "localhost" not in self.HOSTS[0]:
-                logger.warning("Warning: Sniffing may bypass load balancers or proxies, ensure this is intended.")
+        if (
+            any([self.SNIFF_ON_START, self.SNIFF_BEFORE_REQUESTS, self.SNIFF_ON_NODE_FAILURE])
+            and len(self.HOSTS) == 1
+            and "localhost" not in self.HOSTS[0]
+        ):
+            logger.warning("Warning: Sniffing may bypass load balancers or proxies, ensure this is intended.")
         return self
 
 
@@ -409,12 +412,12 @@ class KafkaConfig(BaseModel):
         Raises:
             ValueError: If SASL authentication is incomplete.
         """
-        if self.SECURITY_PROTOCOL in ["SASL_PLAINTEXT", "SASL_SSL"]:
-            if not (self.SASL_MECHANISM and self.USERNAME and self.PASSWORD):
-                raise ConfigurationError(operation="kafka_validate", reason="sasl_auth_incomplete")
-        if self.SECURITY_PROTOCOL == "SSL":
-            if not (self.SSL_CA_FILE or self.SSL_CERT_FILE or self.SSL_KEY_FILE):
-                logger.warning("SSL enabled but no SSL certificates provided; this may cause connection issues.")
+        if self.SECURITY_PROTOCOL in ["SASL_PLAINTEXT", "SASL_SSL"] and not (
+            self.SASL_MECHANISM and self.USERNAME and self.PASSWORD
+        ):
+            raise ConfigurationError(operation="kafka_validate", reason="sasl_auth_incomplete")
+        if self.SECURITY_PROTOCOL == "SSL" and not (self.SSL_CA_FILE or self.SSL_CERT_FILE or self.SSL_KEY_FILE):
+            logger.warning("SSL enabled but no SSL certificates provided; this may cause connection issues.")
         return self
 
     @model_validator(mode="after")
@@ -1431,10 +1434,14 @@ class ScyllaDBConfig(BaseModel):
     )
     ADDRESS_TRANSLATION_ENABLED: bool = Field(
         default=False,
-        description="Enable address translation to redirect all discovered node connections to the first contact point. "
-        "In Docker/Testcontainer/NAT environments, ScyllaDB nodes advertise their internal container IPs "
-        "via gossip, which are unreachable from the host. When enabled, the driver translates all discovered "
-        "addresses to the first configured contact point, allowing connections through Docker's port mapping.",
+        description=(
+            "Enable address translation to redirect all discovered node connections "
+            "to the first contact point. In Docker/Testcontainer/NAT environments, "
+            "ScyllaDB nodes advertise their internal container IPs via gossip, which "
+            "are unreachable from the host. When enabled, the driver translates all "
+            "discovered addresses to the first configured contact point, allowing "
+            "connections through Docker's port mapping."
+        ),
     )
     RETRY_POLICY: Literal["EXPONENTIAL_BACKOFF", "FALLTHROUGH"] = Field(
         default="EXPONENTIAL_BACKOFF",

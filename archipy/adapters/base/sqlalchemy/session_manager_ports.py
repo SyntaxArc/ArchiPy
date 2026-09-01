@@ -1,3 +1,5 @@
+"""Port interfaces for SQLAlchemy session managers."""
+
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 

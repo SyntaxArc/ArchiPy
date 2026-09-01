@@ -1,3 +1,5 @@
+"""Base SQLAlchemy port interfaces."""
+
 from abc import abstractmethod
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any

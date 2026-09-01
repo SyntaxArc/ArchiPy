@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Iterable
 
 from archipy.adapters.redis.adapter_mixins._shared import AsyncRedisMixinBase, SyncRedisMixinBase
 from archipy.models.errors import InternalError
@@ -178,8 +178,6 @@ class AsyncRedisListsMixin(AsyncRedisMixinBase):
             return []
         if isinstance(result, list):
             return result
-        from collections.abc import Iterable
-
         if isinstance(result, Iterable):
             return list(result)
         return []

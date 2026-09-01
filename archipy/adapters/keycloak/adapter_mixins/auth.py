@@ -7,6 +7,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from async_lru import alru_cache
+from jwcrypto import jwk
 from keycloak.exceptions import (
     KeycloakError,
 )
@@ -63,14 +64,12 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             InternalError: If there's an internal error processing the public key
         """
         try:
-            from jwcrypto import jwk
-
             keys_info = self._openid_adapter.public_key()
             key = f"-----BEGIN PUBLIC KEY-----\n{keys_info}\n-----END PUBLIC KEY-----"
             return jwk.JWK.from_pem(key.encode("utf-8"))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_public_key")
-        except Exception as e:
+        except Exception as e:  # soft-fail authz/role checks; JWT/Keycloak libs
             raise InternalError(additional_data={"operation": "get_public_key", "error": str(e)}) from e
 
     def get_token(self, username: str, password: str) -> KeycloakTokenType | None:
@@ -130,7 +129,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         try:
             # Let the underlying adapter handle key selection to align with expected types
             self._openid_adapter.decode_token(token)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("Token validation failed: %s", e)
             return False
         else:
@@ -357,7 +356,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             logger.debug("Permission check failed with Keycloak error: %s", e)
             return False
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("Permission check failed with unexpected error: %s", e)
             return False
         else:
@@ -379,14 +378,12 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             InternalError: If there's an internal error processing the public key
         """
         try:
-            from jwcrypto import jwk
-
             keys_info = await self.openid_adapter.a_public_key()
             key = f"-----BEGIN PUBLIC KEY-----\n{keys_info}\n-----END PUBLIC KEY-----"
             return jwk.JWK.from_pem(key.encode("utf-8"))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_public_key")
-        except Exception as e:
+        except Exception as e:  # soft-fail authz/role checks; JWT/Keycloak libs
             raise InternalError(additional_data={"operation": "get_public_key", "error": str(e)}) from e
 
     async def get_token(self, username: str, password: str) -> KeycloakTokenType | None:
@@ -448,7 +445,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
                 token,
                 key=await self.get_public_key(),
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("Token validation failed: %s", e)
             return False
         else:
@@ -663,7 +660,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         except KeycloakError as e:
             logger.debug("Permission check failed with Keycloak error: %s", e)
             return False
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("Permission check failed with unexpected error: %s", e)
             return False
         else:

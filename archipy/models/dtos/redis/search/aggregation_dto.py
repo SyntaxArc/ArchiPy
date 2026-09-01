@@ -1,3 +1,5 @@
+"""DTOs for Redis Search aggregations."""
+
 from archipy.models.dtos.base_dtos import BaseDTO
 
 
