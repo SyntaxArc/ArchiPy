@@ -4,9 +4,11 @@ This module contains step definitions for both synchronous and asynchronous
 atomic transaction scenarios.
 """
 
+import asyncio
 import logging
 import os
 import tempfile
+import time
 import uuid
 from datetime import datetime
 
@@ -898,6 +900,7 @@ def step_when_entity_updated_in_atomic(context):
 
         # Update properties
         entity.description = "Updated Description"
+        time.sleep(1)
         entity.updated_at = datetime.now()
         entity.is_deleted = True
 
@@ -1414,6 +1417,7 @@ async def step_when_entity_updated_in_async_atomic(context):
         scenario_context.store("original_updated_at", getattr(entity, "updated_at", None))
 
         entity.description = "Updated Description"
+        await asyncio.sleep(1)
         entity.updated_at = datetime.now()
         entity.is_deleted = True
 

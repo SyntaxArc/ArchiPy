@@ -4,8 +4,10 @@ This module contains step definitions for simplified synchronous and asynchronou
 Redis mock scenarios as defined in the Redis Mock Testing feature.
 """
 
+import asyncio
 import json
 import logging
+import time
 
 from behave import given, then, use_step_matcher, when
 from features.test_containers import ContainerManager
@@ -33,6 +35,29 @@ from archipy.models.types.redis_search_types import (
 
 # Use regex matcher to avoid ambiguity between "configured {adapter_type}" and "configured async {adapter_type}"
 use_step_matcher("re")
+
+SEARCH_INDEX_TIMEOUT_SECONDS = 2.0
+SEARCH_INDEX_POLL_INTERVAL_SECONDS = 0.02
+
+
+def _search_until_indexed(search):
+    """Retry a synchronous search while Redis indexes a recent write."""
+    deadline = time.monotonic() + SEARCH_INDEX_TIMEOUT_SECONDS
+    result = search()
+    while not result.hits and time.monotonic() < deadline:
+        time.sleep(SEARCH_INDEX_POLL_INTERVAL_SECONDS)
+        result = search()
+    return result
+
+
+async def _async_search_until_indexed(search):
+    """Retry an asynchronous search while Redis indexes a recent write."""
+    deadline = time.monotonic() + SEARCH_INDEX_TIMEOUT_SECONDS
+    result = await search()
+    while not result.hits and time.monotonic() < deadline:
+        await asyncio.sleep(SEARCH_INDEX_POLL_INTERVAL_SECONDS)
+        result = await search()
+    return result
 
 
 def store_result(context, key, value):
@@ -2957,9 +2982,8 @@ def step_when_upsert_json_document(context, doc_id, payload):
 def step_when_knn_search(context, index_name, vector, k):
     """Run a KNN search against a search index."""
     handle = get_current_scenario_context(context).adapter.search_index(index_name)
-    result = handle.search(
-        SearchQueryDTO.from_knn(_parse_search_vector(vector), k=int(k), return_fields=["title"]),
-    )
+    query = SearchQueryDTO.from_knn(_parse_search_vector(vector), k=int(k), return_fields=["title"])
+    result = _search_until_indexed(lambda: handle.search(query))
     store_result(context, "search_result", result)
 
 
@@ -2969,9 +2993,8 @@ def step_when_knn_search(context, index_name, vector, k):
 async def step_when_knn_search_async(context, index_name, vector, k):
     """Run a KNN search asynchronously."""
     handle = get_current_scenario_context(context).async_adapter.search_index(index_name)
-    result = await handle.search(
-        SearchQueryDTO.from_knn(_parse_search_vector(vector), k=int(k), return_fields=["title"]),
-    )
+    query = SearchQueryDTO.from_knn(_parse_search_vector(vector), k=int(k), return_fields=["title"])
+    result = await _async_search_until_indexed(lambda: handle.search(query))
     store_result(context, "async_search_result", result)
 
 
@@ -2982,14 +3005,13 @@ async def step_when_knn_search_async(context, index_name, vector, k):
 def step_when_hybrid_search(context, index_name, text_query, vector, k):
     """Run a hybrid text and vector search."""
     handle = get_current_scenario_context(context).adapter.search_index(index_name)
-    result = handle.search(
-        SearchQueryDTO.from_hybrid(
-            text_query,
-            _parse_search_vector(vector),
-            k=int(k),
-            return_fields=["title"],
-        ),
+    query = SearchQueryDTO.from_hybrid(
+        text_query,
+        _parse_search_vector(vector),
+        k=int(k),
+        return_fields=["title"],
     )
+    result = _search_until_indexed(lambda: handle.search(query))
     store_result(context, "search_result", result)
 
 
