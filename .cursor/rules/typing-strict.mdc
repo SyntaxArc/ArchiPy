@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Strict Typing
 
-ArchiPy enforces strict type checking via `ty` (configured in `pyproject.toml` under `[tool.ty.rules]`).
+ArchiPy enforces strict type checking via `ty` (configured in `pyproject.toml` under `[tool.ty.rules]`). Modern union / builtin syntax lives in `python-code-style.mdc` — this rule covers annotations, `Any`, and exemptions only.
 
 ## Annotations Required
 
@@ -22,22 +22,9 @@ def get_user(user_id: int) -> User:
     ...
 ```
 
-## Modern Union Syntax
-
-Use Python 3.14+ union syntax throughout:
-
-```python
-# ❌ BAD
-from typing import Optional, Union
-def process(value: Optional[str]) -> Union[int, str]: ...
-
-# ✅ GOOD
-def process(value: str | None) -> int | str: ...
-```
-
 ## Avoid `Any`
 
-`Any` is prohibited in production code except in explicitly exempted files (ports interfaces, gRPC message types, Redis mocks). When `Any` is genuinely needed, add a `# noqa: ANN401` comment with a justification.
+`Any` is prohibited in production code except where `pyproject.toml` grants `ANN401` (ports, mixins, gRPC message types, Redis mocks, Temporal, etc.). When `Any` is genuinely needed outside an exempted file, add `# noqa: ANN401` with a short justification.
 
 ## `TYPE_CHECKING` Guard
 
@@ -55,18 +42,18 @@ class MyModel(BaseModel):
     user: UserEntity  # must be importable at runtime
 ```
 
-## Exemptions (per pyproject.toml)
+## Exemptions
 
-These files have `ANN401` (Any) exemptions due to interface constraints:
-- `archipy/adapters/orm/sqlalchemy/ports.py`
-- `archipy/adapters/elasticsearch/ports.py`
-- `archipy/adapters/keycloak/ports.py`
-- `archipy/adapters/redis/ports.py`
-- `archipy/adapters/scylladb/ports.py`
-- `archipy/helpers/decorators/*`
-- `archipy/helpers/interceptors/grpc/base/client_interceptor.py`
+**Source of truth:** `[tool.ruff.lint.per-file-ignores]` in `pyproject.toml`. Keep this rule aligned when exemptions change.
 
-BDD step files (`features/steps/*`) are exempt from `ANN001` and `ANN201`.
+Current `ANN401` / related hotspots include (non-exhaustive):
+
+- Ports / mixins: Elasticsearch, Keycloak, Redis, ScyllaDB, Email, MinIO
+- Redis mocks / search, Temporal adapters
+- gRPC client interceptor base, helper decorators / selected utils
+- BDD steps under `features/steps/*` — exempt from step function annotations (`ANN001` / `ANN201`); see `testing-bdd.mdc`
+
+Do not invent new exemptions without updating `pyproject.toml` first.
 
 ## Running the Type Checker
 

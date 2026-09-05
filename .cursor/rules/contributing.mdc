@@ -1,0 +1,47 @@
+---
+description: Commits, branches, PRs/MRs, checks, and handoff to changelog/release
+alwaysApply: true
+---
+
+# Contributing Workflow
+
+Canonical owner for day-to-day git collaboration. Changelog format: `changelog.mdc`. Tagging / GitHub releases: `github-release.mdc`.
+
+## Commits
+
+- Use **conventional commits**: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `ci`.
+- Subject: imperative, concise; body explains why when non-obvious.
+- Reference issues when applicable (GitHub `#123` / GitLab `#123`).
+- Keep commits focused — do not mix unrelated refactors with feature work.
+
+## Branches
+
+- One purpose per branch (single feature, fix, or chore).
+- Prefer short names: `feat/<topic>`, `fix/<topic>`, `chore/<topic>`.
+- Rebase or merge from the default branch before opening/updating a PR/MR when history is noisy.
+
+## Pull / Merge Requests
+
+- Small, reviewable diffs with a clear purpose.
+- Description: what changed, why, how to test; link issues.
+- Update the description when behavior changes during review.
+- Do not include secrets, large generated artifacts, or unrelated lockfile churn unless the change requires it.
+
+## Required checks before ask-to-merge
+
+Prefer locally:
+
+```bash
+make format
+make lint
+make behave   # or targeted feature files
+make security # when touching adapters, auth, crypto, or network code
+```
+
+Or `make check` / `make ci` for the full gate.
+
+## Changelog & release handoff
+
+- User-facing changes need a changelog update per `changelog.mdc` before release.
+- Do **not** create version tags or GitHub releases until the changelog draft is accepted — then follow `github-release.mdc`.
+- Docs-only or internal chore changes may skip changelog when they are not consumer-visible; ask if unsure.

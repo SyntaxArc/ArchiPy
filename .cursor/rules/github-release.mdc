@@ -5,7 +5,7 @@ alwaysApply: false
 
 # GitHub Release Workflow
 
-Use when the user asks to create a release, tag, or publish. Changelog writing stays in `changelog.mdc` — this rule covers tagging and `gh release` only.
+Use when the user asks to create a release, tag, or publish. Changelog writing stays in `changelog.mdc`; commit/PR conventions in `contributing.mdc`. This rule covers tagging and `gh release` only.
 
 ## Prerequisites
 

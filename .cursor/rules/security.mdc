@@ -1,0 +1,34 @@
+---
+description: Security expectations — Bandit, secrets, and justified suppressions
+alwaysApply: true
+---
+
+# Security
+
+Canonical owner for security scanning expectations and suppression policy. Tooling commands: `tooling-workflow.mdc`.
+
+## Defaults
+
+- Run `make security` (Bandit → `bandit-report.json`) before releases and as part of `make check` / `make ci`.
+- No hardcoded secrets, tokens, passwords, or private keys in source, docs examples, or tests. Use env / Vault / secret files via `BaseConfig` (`helpers-configs.mdc`).
+- Prefer parameterized queries / bound CQL; do not concatenate untrusted input into SQL/CQL strings.
+- Do not log credentials, session tokens, or full authorization headers.
+
+## Suppressions (`# nosec`, Ruff `S` / Bandit)
+
+Suppressions are **narrow and justified**:
+
+1. Prefer fixing the finding over silencing it.
+2. If a false positive is unavoidable (e.g. ScyllaDB parameterized CQL triggering `S608`), suppress the **smallest** scope and document why in a comment or in `pyproject.toml` per-file ignores.
+3. Never blanket-disable Bandit or security Ruff rules for an entire new package without review.
+4. `# nosec` / `# noqa: Sxxx` must name the rule and reason on the same line or immediately above.
+
+```python
+# ✅ GOOD — documented false positive
+session.execute(query, params)  # nosec B608 — params bound; query uses %s placeholders
+```
+
+## Dependencies
+
+- Add packages with `uv add` only; prefer optional extras for heavy integrations.
+- Treat new network-facing adapters as security-sensitive: validate inputs at the port boundary and map failures to domain errors without leaking internals.

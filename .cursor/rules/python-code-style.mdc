@@ -6,10 +6,12 @@ alwaysApply: true
 # Python Code Style
 
 ## Strings & Quotes
+
 - Always use **double quotes** for all strings (inline and multiline).
 - `ruff format` enforces this automatically — never use single quotes.
 
 ## Docstrings
+
 - **Google-style** docstrings required on all public functions, classes, and methods.
 - `__init__` methods do not require docstrings (D107 is ignored).
 
@@ -30,16 +32,21 @@ def fetch_user(user_id: int) -> User:
 ```
 
 ## Line Length & Formatting
+
 - Max line length: **120 characters**.
 - Indentation: **4 spaces** (no tabs).
 - Every file must end with a **newline character**.
 
 ## Type Hints
+
 - Use Python 3.14+ syntax: `X | Y` instead of `Union[X, Y]`, `X | None` instead of `Optional[X]`.
 - Use lowercase built-ins: `list[str]`, `dict[str, int]`, `tuple[int, ...]`.
+- Strict typing / `Any` / ty details: `typing-strict.mdc`.
 
 ## Import Order
+
 Strictly follow this section order (enforced by Ruff/isort):
+
 1. `from __future__ import ...`
 2. Standard library
 3. Third-party packages
@@ -59,8 +66,10 @@ from archipy.models.errors import NotFoundError
 ```
 
 ## Error Handling
-- Always use **specific exception types** — never bare `except:` or `except Exception:` at top level.
+
+- Prefer **specific** exception types — never bare `except:`.
 - Preserve context with `raise ... from e`.
+- Broad `except Exception` (`BLE001`) is allowed **only** at adapter infrastructure boundaries when converting to domain errors — see `adapter-conventions.mdc`. Do not use it in helpers, models, or configs.
 
 ```python
 # ❌ BAD
@@ -77,5 +86,6 @@ except KeyError as e:
 ```
 
 ## Complexity
+
 - Keep McCabe complexity **below 10** per function.
 - Max 5 function arguments (use dataclasses/DTOs for more).

@@ -1,0 +1,72 @@
+---
+description: Models layer — entities, DTOs, types, and BaseError hierarchy
+globs: archipy/models/**/*.py
+alwaysApply: false
+---
+
+# Models & Errors
+
+Canonical owner for `archipy/models/`. Layer summary: `architecture-patterns.mdc`.
+
+## Data-only layer
+
+- Models contain **data structures only** — no I/O, no adapter calls, no business workflows.
+- Prefer composition of DTOs/entities over logic in model methods (validators and formatting helpers on errors are OK when they stay pure).
+
+## Layout
+
+```
+archipy/models/
+├── entities/     # Persistence / domain entities (SQLAlchemy under entities/sqlalchemy/)
+├── dtos/         # Pydantic BaseModel / BaseDTO transfer objects
+├── errors/       # BaseError subclasses by domain
+└── types/        # Enums and shared type aliases
+```
+
+## Entities
+
+- Live under `entities/` (SQLAlchemy bases in `entities/sqlalchemy/`).
+- Represent persisted or domain state — not transport payloads.
+- Do not import adapters or helpers that perform I/O.
+
+## DTOs
+
+- Prefer subclassing `archipy.models.dtos.base_dtos.BaseDTO` (frozen, strip whitespace, `from_attributes`).
+- Name by purpose: `*DTO`, search/query/result variants under domain folders (e.g. `dtos/redis/search/`).
+- Keep DTOs free of infrastructure clients.
+
+## Types
+
+- Enums and shared aliases under `models/types/`.
+- Export public types from `types/__init__.py` when part of the stable API.
+
+## Errors (`BaseError`)
+
+All custom errors subclass `archipy.models.errors.base_error.BaseError`.
+
+Subclasses define class attributes:
+
+- `code` — stable machine identifier (e.g. `INVALID_ARGUMENT`)
+- `message_en` / `message_fa` — localized templates (`{variable}` placeholders OK)
+- `http_status` / `grpc_status` — transport mapping on the error type
+
+Organize new errors in the matching module:
+
+| Module | Use for |
+|---|---|
+| `validation_errors.py` | Bad input, invalid arguments |
+| `resource_errors.py` | Not found, conflicts |
+| `auth_errors.py` | AuthN / AuthZ |
+| `database_errors.py` | DB connectivity / integrity |
+| `network_errors.py` | Remote network failures |
+| `business_errors.py` | Domain rule violations |
+| `system_errors.py` | Internal / config / unavailable |
+| `keycloak_errors.py`, `temporal_errors.py`, … | Adapter-specific domains |
+
+### Rules
+
+- Prefer an existing error over inventing a near-duplicate.
+- Pass context via constructor kwargs / `additional_data`, not by mutating `code` ad hoc.
+- Adapters catch infrastructure exceptions and re-raise domain errors with `raise ... from e` (`adapter-conventions.mdc`).
+- Transport (HTTP/gRPC) mapping belongs on the error class / helper utilities — not scattered in adapters.
+- Export new public errors from `archipy/models/errors/__init__.py` when consumers need them.

@@ -1,21 +1,36 @@
 ---
-description: graphify knowledge graph context
+description: graphify knowledge graph context for codebase exploration
 alwaysApply: true
 ---
 
-This project has a graphify knowledge graph at graphify-out/.
+# Graphify Knowledge Graph
 
-**MANDATORY: Before using Read, Grep, Glob, or Bash to explore the codebase, you MUST run graphify first:**
+This project may have a graphify knowledge graph at `graphify-out/`.
+
+## When graphify is mandatory
+
+Before using Read, Grep, Glob, or Bash to **explore indexed application code** (`archipy/`, `features/` step implementations, cross-file architecture questions), run graphify first:
+
 - `graphify query "<question>"` — scoped subgraph for any codebase or architecture question
 - `graphify path "<A>" "<B>"` — dependency path between two symbols
 - `graphify explain "<concept>"` — all nodes related to a concept
 
-This applies to YOU and to every subagent you spawn. Include this rule explicitly in every subagent prompt that involves code exploration. Do not skip graphify because files are "already known" or because you are executing a plan — the graph surfaces cross-file dependencies and INFERRED edges that grep and Read cannot find.
+This applies to YOU and to every subagent you spawn for **code exploration**. Include this rule explicitly in those subagent prompts. Do not skip graphify because files are "already known" or because you are executing a plan — the graph surfaces cross-file dependencies and INFERRED edges that grep and Read cannot find.
 
-Only use Read/Grep/Glob directly when:
-1. graphify has already oriented you and you need to modify or debug specific lines
-2. `graphify-out/graph.json` does not exist yet
+After oriented by graphify, use Read/Grep/Glob for specific lines and edits.
 
-- If `graphify-out/wiki/index.md` exists, navigate it instead of reading raw files
+## Explicit bypasses (skip graphify)
+
+Use Read/Grep/Glob/Bash directly when:
+
+1. Working only on Cursor rules (`.cursor/rules/**`), `AGENTS.md`, skills, or plans — graphify does **not** index `.mdc` / agent docs reliably
+2. Working only on Markdown docs under `docs/` (follow `documentation.mdc` / `changelog.mdc`)
+3. Editing config-only files (`pyproject.toml`, `Makefile`, `.pre-commit-config.yaml`, lockfiles) without architecture questions
+4. `graphify-out/graph.json` does not exist yet
+5. Graphify already oriented you for this task and you need to modify or debug specific lines
+
+## After code changes
+
+- If `graphify-out/wiki/index.md` exists, prefer it for navigation over raw dumps
 - Read `graphify-out/GRAPH_REPORT.md` only for broad architecture review when query/path/explain do not surface enough context
-- After modifying code files, run `graphify update .` to keep the graph current (AST-only, no API cost)
+- After modifying Python code files, run `graphify update .` to keep the graph current (AST-only, no API cost)

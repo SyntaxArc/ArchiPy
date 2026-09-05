@@ -27,9 +27,9 @@ uv add --group dev <package>
 | `make install-dev` | Install all deps + pre-commit hooks |
 | `make format` | Ruff formatter (fixes in place) |
 | `make lint` | Ruff linter + ty type checker |
-| `make behave` | Run all BDD tests |
+| `make behave` | Run all BDD tests (sequential scenarios) |
 | `make check` | format + lint + security + tests |
-| `make security` | Bandit scan → `bandit-report.json` |
+| `make security` | Bandit scan → `bandit-report.json` (policy: `security.mdc`) |
 | `make pre-commit` | Run all pre-commit hooks manually |
 | `make clean` | Remove build artifacts and caches |
 | `make build` | Build distribution packages |

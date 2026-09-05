@@ -46,11 +46,11 @@ H1 + intro prose → `## Ports`, `## Adapters`, `## Mocks`, each with an mkdocst
 
 ## Code Example Standards
 
+Follow `python-code-style.mdc` for quotes, Google-style docstrings, type syntax, and exception chaining. Additionally for docs examples:
+
 - Always use `import logging` and `logger = logging.getLogger(__name__)`. Never use `print()`.
-- Full Python 3.14+ type hints: `list[str]`, `dict[str, Any]`, `X | Y` — never `Optional[X]` or `Union[X, Y]`.
-- Google-style docstrings on every defined function or class.
-- Catch specific exception types only; always chain with `raise ... from e`.
 - Every fenced code block must have a language tag (`python` or `bash`).
+- New adapter docs checklist below; code/extra/BDD checklist: `adapter-conventions.mdc`.
 
 ```python
 # ✅ GOOD

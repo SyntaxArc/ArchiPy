@@ -1,0 +1,52 @@
+---
+description: Helpers, interceptors, decorators, and configuration conventions
+globs: archipy/helpers/**/*.py,archipy/configs/**/*.py
+alwaysApply: false
+---
+
+# Helpers & Configs
+
+Canonical owner for `archipy/helpers/` and `archipy/configs/`. Layer summary: `architecture-patterns.mdc`.
+
+## Helpers layout
+
+```
+archipy/helpers/
+├── utils/          # Pure / mostly-pure utility classes and functions
+├── decorators/     # Cross-cutting decorators (atomic, retry, etc.)
+├── interceptors/   # Framework interceptors (e.g. gRPC)
+└── metaclasses/    # Shared metaclasses (e.g. Singleton)
+```
+
+## Purity and dependencies
+
+- Helpers must not open DB connections or own long-lived infrastructure clients as module globals.
+- Decorators and interceptors must **not** import concrete adapter modules at module level.
+- Prefer ports / config / lazy imports inside functions when a helper must touch an optional integration.
+- Documented edge case: some interceptors (e.g. gRPC rate limit) may lazy-import an adapter **inside** a method to avoid import cycles — keep that rare, lazy, and justified.
+
+## Lazy imports (helpers)
+
+Lazy imports (`PLC0415`) are allowed in helpers for optional extras and circular-import breakers — typically inside functions/methods. Prefer function-scoped imports; module-level lazy imports only where existing decorator packages already require them per `pyproject.toml`.
+
+```python
+# ✅ GOOD — lazy import inside a helper utility function
+def encode_jwt(payload: dict) -> str:
+    import jwt  # noqa: PLC0415
+    return jwt.encode(payload, ...)
+```
+
+Adapters: do not use this pattern to guard extras — see `adapter-conventions.mdc`.
+
+## Configs
+
+- Application config extends `archipy.configs.base_config.BaseConfig` (itself a `pydantic_settings.BaseSettings` subclass).
+- Service-specific settings live as nested models in `archipy/configs/config_template.py` (e.g. `RedisConfig`, `TemporalConfig`).
+- Call `BaseConfig.set_global(config)` once at bootstrap; read via `BaseConfig.global_config()`.
+- Source priority is defined on `BaseConfig` (secrets → Vault → pyproject → TOML → env → `.env` → defaults). Do not invent a conflicting order.
+- Nested settings use pydantic-settings env nesting (typically `__` delimiter). Document new required vars in `.env.example` / docs — **never** hardcode secrets.
+- Vault / file secret sources stay in configs (`vault_settings_source.py`); adapters consume resolved config only.
+
+## Errors from helpers/configs
+
+Raise `archipy.models.errors` types (e.g. `ConfigurationError`, `InvalidArgumentError`). Do not invent ad-hoc `Exception` subclasses in helpers.

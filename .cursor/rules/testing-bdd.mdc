@@ -1,26 +1,28 @@
 ---
-description: BDD/Behave testing conventions for ArchiPy feature files and step implementations
+description: BDD/Behave testing — Gherkin at public seams, red-green loop, ArchiPy step conventions
 globs: features/**/*.py,features/**/*.feature
 alwaysApply: false
 ---
 
 # Testing with BDD (Behave)
 
-ArchiPy uses the **Behave** BDD framework (v1.3.3). Tests are written as Gherkin scenarios.
+ArchiPy uses **Behave** (Gherkin). Scenarios are the spec. They verify **observable behavior through public interfaces**, not internals. Code may change entirely; scenarios should not.
 
-## Directory Structure
+Before writing a scenario, name the **seam** (the public boundary under test). Default seams:
 
-```
-features/
-├── *.feature                    # Gherkin scenario files
-├── environment.py               # Global setup/teardown hooks
-├── scenario_context.py          # Per-scenario state container
-├── test_helpers.py              # Shared async/sync utilities
-└── steps/
-    └── *.py                     # Step implementations (Given/When/Then)
-```
+- Adapter **ports** (`archipy/adapters/<svc>/ports.py`) — mock + container/cluster via `Scenario Outline`
+- Helper / config **public APIs** (`archipy/helpers/**`, `archipy/configs/**`, `archipy/models/errors/**`)
+- Transport surface when that is the product (FastAPI/gRPC error mapping)
 
-## Running Tests
+No scenario at an unconfirmed seam. Ask: "Which port or public function is the seam?"
+
+## Red → green loop
+
+Work in **vertical slices**. One scenario → fail → enough production code to pass → next scenario. Do not write all scenarios first (horizontal slicing). Do not add speculative steps or APIs for later examples.
+
+1. **Red.** Add one scenario. Run it. Confirm it fails for the right reason (undefined step or assertion), not import/setup noise.
+2. **Green.** Implement only enough port/helper behavior to pass. Reuse existing steps when the language already fits.
+3. **Do not refactor during the loop.** Cleanup after green. Do not rewrite passing scenarios to match a new implementation.
 
 ```bash
 make behave
@@ -28,53 +30,93 @@ uv run --extra behave behave features/file_name.feature
 uv run --extra behave behave features/file_name.feature:42
 ```
 
-## Writing Feature Files
+`make behave` runs scenarios **sequentially** (one after another — not parallel workers). That is independent of the red→green workflow, which still means **one new failing scenario at a time** while implementing.
 
-- Keep `.feature` files **declarative** — describe behavior, not implementation.
-- Use `@tags` to categorize scenarios for selective runs.
+No mutable globals across scenarios — `get_current_scenario_context(context)` / `ScenarioContext` only.
+
+## What a good scenario is
+
+Reads like a capability: store/retrieve, remove, hash field round-trip. Uses the seam only. Expected values are **independent literals** (or Examples tables), never recomputed the same way as production code.
 
 ```gherkin
-# ✅ GOOD
+# ✅ GOOD — behavior at CachePort; expected is a literal
 @redis @cache
 Feature: Cache adapter
-  Scenario: Store and retrieve a value
-    Given a running Redis instance
+  Scenario Outline: Store and retrieve a value
+    Given a configured <adapter_type>
     When I store "hello" under key "greeting"
     Then I can retrieve "hello" from key "greeting"
+    Examples:
+      | adapter_type |
+      | mock         |
+      | container    |
 ```
 
-## Writing Step Files
+```gherkin
+# ❌ BAD — implementation / HOW
+Scenario: set() calls redis.setex with nx=False
+  When I store a value
+  Then the client setex method was called once
+```
 
-- Step functions are exempt from: `ANN001`, `ANN201`, `ARG001`, `PLR0913`, `F811`.
-- Step redefinition (`F811`) is allowed — Behave reuses steps across features.
-- Use `get_current_scenario_context(context)` to share state between steps.
+## Seams and doubles
 
-## Async Steps
+Mock **system boundaries** only: in-memory `mocks.py` that implement the **same port** as the real adapter. Prefer testcontainers for the real extra. Do not mock ArchiPy's own helpers or private adapter methods.
 
-Behave 1.3.3 supports `async def` step functions **natively** — no `asyncio.run()` or `@async_run_until_complete` wrapper needed. Always declare async steps with `async def` and use `await` directly.
+- Assert through the port (`get` after `set`), not Redis CLI / SQL / S3 listing as a side channel.
+- `mocks.py` is optional — only when BDD needs an in-memory double (see `adapter-conventions.mdc`).
+
+## Container tags (`@needs-*`)
+
+Authoritative map: `TAG_CONTAINER_MAP` in `features/test_containers.py`. Use these tags so environments start the right containers:
+
+| Tag | Container |
+|---|---|
+| `@needs-postgres` | postgres |
+| `@needs-mysql` | mysql |
+| `@needs-kafka` | kafka |
+| `@needs-elasticsearch` | elasticsearch |
+| `@needs-minio` | minio |
+| `@needs-keycloak` | keycloak |
+| `@needs-redis` | redis |
+| `@needs-redis-cluster` | redis-cluster |
+| `@needs-scylladb` | scylladb |
+| `@needs-starrocks` | starrocks |
+| `@needs-temporal` | temporal |
+| `@needs-vault` | vault |
+
+Also use descriptive tags (`@async`, `@unit`, service names) as needed. Do not invent `@needs-*` tags without updating `TAG_CONTAINER_MAP`.
+
+## Anti-patterns
+
+- **Implementation-coupled:** spy on private methods, call counts, or internals. Tell: scenario breaks on refactor with no behavior change.
+- **Tautological:** Then step rebuilds the expected value with the same algorithm as the code (`sum(items)` vs `calculate_total(items)`). Use a known literal.
+- **Horizontal slicing:** dump a full `.feature` then implement. One failing scenario at a time.
+- **Step soup:** Given/When that describe Python types, kwargs, or class names. Keep Gherkin declarative.
+
+## Layout and steps
+
+```
+features/
+├── *.feature
+├── environment.py
+├── scenario_context.py
+├── test_helpers.py
+└── steps/*.py
+```
+
+- Feature files: declarative + `@tags` (`@needs-redis`, `@async`, `@unit`).
+- Steps: exempt `ANN001`, `ANN201`, `ARG001`, `PLR0913`, `F811` (step reuse). No type annotations on step functions (`features/` is Ruff-excluded).
+- **Async:** Behave 1.3.3 native `async def` — never `asyncio.run()` inside a step. Mixed sync/async branches → whole step `async def`. `asyncio.run()` only in non-step callbacks (e.g. `scenario_context.py` cleanup).
 
 ```python
-# ❌ BAD — never use asyncio.run() inside a step
+# ❌ BAD
 @when("something async happens")
 def step_impl(context):
     result = asyncio.run(some_async_call())
 
-# ✅ GOOD — declare the step as async def and await directly
+# ✅ GOOD
 @when("something async happens")
 async def step_impl(context):
     result = await some_async_call()
 ```
-
-Sync operations work fine inside `async def` steps, so steps with mixed sync/async branches (e.g. if/elif over frameworks) should be converted to `async def` entirely.
-
-The only place `asyncio.run()` is acceptable is in **non-step** callbacks (e.g. `scenario_context.py` cleanup methods) that may be called from outside an event loop.
-
-## Test Execution Model
-
-`make behave` uses stock Behave, which runs **sequentially** (one scenario at a time).
-
-Steps must not share mutable global state across scenarios — use `get_current_scenario_context(context)` and `ScenarioContext` for per-scenario isolation.
-
-## Linting Exclusions
-
-`features/` and `scripts/` are excluded from Ruff linting. Do not add type annotations to step functions.

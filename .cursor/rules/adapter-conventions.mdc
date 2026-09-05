@@ -1,10 +1,12 @@
 ---
-description: ArchiPy adapter layer conventions — ports, mocks, session managers, lazy imports
+description: ArchiPy adapter layer conventions — ports, mocks, session managers, lazy imports, new-adapter checklist
 globs: archipy/adapters/**/*.py
 alwaysApply: false
 ---
 
 # Adapter Conventions
+
+Canonical owner for all adapter layout, mocks, extras, boundary exceptions, and lazy-import exceptions. Layer summary lives in `architecture-patterns.mdc`.
 
 ## Required Files per Adapter
 
@@ -17,7 +19,7 @@ archipy/adapters/<service>/
 └── adapters.py     # Concrete implementation
 ```
 
-A `mocks.py` is **optional** — only add it when the adapter is used directly in BDD tests and an in-memory test double is needed (e.g., Redis, Kafka). Do not create mocks for adapters that are tested via real instances or testcontainers.
+A `mocks.py` is **optional** — only add it when the adapter is used directly in BDD tests and an in-memory test double is needed (e.g., Redis). Do not create mocks for adapters that are tested via real instances or testcontainers.
 
 ## Ports (Abstract Interfaces)
 
@@ -35,21 +37,18 @@ class CachePort(ABC):
     def set(self, key: str, value: str, ttl: int | None = None) -> None: ...
 ```
 
-- `ANN401` (Any) is allowed in ports for `**kwargs` parameters.
+- `ANN401` (`Any`) is allowed in ports for `**kwargs` parameters when listed in `pyproject.toml`.
 - `ARG002` (unused arguments) is allowed — interface stubs may not use all params.
 
 ## Mocks (Test Doubles) — Optional
 
-Add `mocks.py` only when an in-memory test double is genuinely needed for BDD tests. When present, mocks are exempt from:
-- `ARG001`, `ARG002`, `ARG004`, `ARG005` — unused arguments common in mock signatures
-- `ANN401` — Any types for compatibility
-- `PLR0913` — mock constructors may accept many params
+Add `mocks.py` only when an in-memory test double is genuinely needed for BDD. When present, mocks are exempt from the ARG/ANN/PLR rules configured in `pyproject.toml` for that file.
 
-For adapters tested via real service instances (e.g., using `testcontainers`), skip `mocks.py` entirely.
+For adapters tested via real service instances (testcontainers), skip `mocks.py` entirely.
 
 ## Session Managers
 
-Database adapters use `session_manager_registry.py` for managing SQLAlchemy sessions. These files use lazy imports (`PLC0415`) to break circular import chains — this is intentional and expected.
+Database adapters may use `session_manager_registry.py` for SQLAlchemy sessions. These files may use lazy imports (`PLC0415`) to break circular import chains — intentional and expected.
 
 ```python
 # ✅ GOOD — lazy import in session registry
@@ -60,13 +59,12 @@ def get_session_manager() -> SessionManager:
 
 ## Async vs Sync Adapters
 
-- Async variants are declared as separate `optional-dependencies` extras (e.g., `sqlalchemy-async`, `starrocks-async`).
-- Async adapters use `asyncio` and `sqlalchemy[asyncio]`.
+- Async variants are separate optional-dependency extras (e.g., `sqlalchemy-async`, `starrocks-async`).
 - Sync and async implementations are separate classes — do not mix `async def` into sync adapter classes.
 
 ## Exception Handling at Boundaries
 
-Adapters at the infrastructure boundary (Kafka, Redis, ScyllaDB) may use broad `except Exception` (`BLE001`) only at the outermost boundary where converting to domain errors:
+Adapters at the infrastructure boundary may use broad `except Exception` (`BLE001`) **only** at the outermost boundary when converting to domain errors. Preserve context with `raise ... from e`. Application and helper code must still use specific exceptions (`python-code-style.mdc`).
 
 ```python
 # ✅ GOOD — broad catch only at adapter boundary, then re-raise as domain error
@@ -78,6 +76,24 @@ except Exception as e:  # noqa: BLE001
 
 ## Optional Dependency Imports
 
-Adapters rely on their optional extra being installed — do **not** use lazy imports to guard third-party dependencies inside adapter classes. If the extra is not installed, the import at module level will fail with a clear `ImportError`, which is the expected behavior.
+Adapters rely on their optional extra being installed — do **not** use lazy imports to guard third-party dependencies inside adapter classes. Missing extras should fail at import time with a clear `ImportError`.
 
-Lazy imports (`PLC0415`) are only permitted in `session_manager_registry.py` files to break circular import chains, and in `archipy/helpers/` for optional utility dependencies.
+### Allowed `PLC0415` exceptions in adapters
+
+1. `session_manager_registry.py` — circular import breakers.
+2. `archipy/adapters/temporal/*` — optional cross-extra imports (OpenTelemetry / SQLAlchemy), as allowed in `pyproject.toml`.
+3. Nowhere else in adapters unless `pyproject.toml` explicitly adds a per-file ignore with a comment justifying it.
+
+Helpers lazy-import policy: `helpers-configs.mdc`.
+
+## New Adapter Checklist (code)
+
+When adding a new adapter:
+
+1. Package under `archipy/adapters/<service>/` with `ports.py` + `adapters.py` (+ optional `mocks.py`).
+2. Config template fields in `archipy/configs/config_template.py` if settings are needed.
+3. Optional extra in `pyproject.toml` `[project.optional-dependencies]`; keep sync/async extras split when both exist.
+4. Ruff/ty per-file ignores only when required; document why in `pyproject.toml` comments.
+5. BDD: `features/<service>_adapter.feature` + steps; tag with the correct `@needs-*` from `testing-bdd.mdc`.
+6. Docs: example + API pages per `documentation.mdc`; changelog entry when user-facing.
+7. Export public symbols from the package `__init__.py` only when intentional for consumers.

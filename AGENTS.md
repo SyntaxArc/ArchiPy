@@ -3,51 +3,47 @@
 ## Quick Commands
 
 ```bash
-make format   # Ruff formatter (fixes in place)
-make lint    # Ruff linter + ty type checker
-make behave  # Run all BDD tests
-make check   # format + lint + security + tests
-make ci      # Full CI pipeline locally
+make format        # Ruff formatter (fixes in place)
+make lint          # Ruff linter + ty type checker
+make behave        # Run all BDD tests
+make check         # format + lint + security + tests
+make ci            # Full CI pipeline locally
+make install-dev   # Install all deps + pre-commit hooks
+make pre-commit    # Run hooks manually
+```
+
+Single feature:
+
+```bash
+uv run --extra behave behave features/redis_adapter.feature
+uv run --extra behave behave features/redis_adapter.feature:42
 ```
 
 ## Essential Facts
 
-- **Python 3.14+ required** — not 3.x
-- Package manager: **UV** (never `pip install` directly)
-- Tests: **Behave** BDD framework (not pytest)
-- Run single test file: `uv run --extra behave behave features/redis_adapter.feature`
+- **Python 3.14+** required
+- Package manager: **`uv`** (never `pip install` directly)
+- Tests: **Behave** BDD (not pytest)
+- Import direction: `configs ← models ← helpers ← adapters`
 
-## Architecture
+## Rule Index
 
-```
-archipy/
-├── models/      # Domain layer — entities, DTOs, errors
-├── adapters/    # Infrastructure — external integrations
-├── helpers/    # Utilities, decorators, interceptors
-└── configs/    # pydantic-settings config
-```
+Canonical policies live in `.cursor/rules/`. Start with `rules-index.mdc` for ownership and precedence.
 
-Import direction (one-way): `configs ← models ← helpers ← adapters`
-
-## Key Conventions
-
-- **Double quotes only** — Ruff enforces this
-- **Google-style docstrings** on public functions
-- Max line length: 120 characters
-- McCabe complexity: max 10 per function
-
-## Testing
-
-- BDD steps use native `async def` (no `asyncio.run()` wrapper)
-- Sequential execution (`make behave` runs one scenario at a time)
-- Steps must not share mutable global state across scenarios
-
-## Dev Setup
-
-```bash
-make install-dev   # Install all deps + pre-commit hooks
-make pre-commit  # Run hooks manually
-```
+| Need                       | Rule                                                       |
+|----------------------------|------------------------------------------------------------|
+| Layers / imports           | `architecture-patterns.mdc`                                |
+| Adapters                   | `adapter-conventions.mdc`                                  |
+| Models / errors            | `models-errors.mdc`                                        |
+| Helpers / configs          | `helpers-configs.mdc`                                      |
+| Style                      | `python-code-style.mdc`                                    |
+| Typing                     | `typing-strict.mdc`                                        |
+| BDD                        | `testing-bdd.mdc`                                          |
+| Security                   | `security.mdc`                                             |
+| Commits / PRs              | `contributing.mdc`                                         |
+| Tooling                    | `tooling-workflow.mdc`                                     |
+| Docs / changelog / release | `documentation.mdc`, `changelog.mdc`, `github-release.mdc` |
+| Code exploration           | `graphify.mdc`                                             |
 
 ## Linting Exclusions
 

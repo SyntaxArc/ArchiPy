@@ -6,6 +6,8 @@ alwaysApply: false
 
 # Changelog Standards
 
+See also: tagging and GitHub releases in `github-release.mdc`; commit/PR triggers in `contributing.mdc`.
+
 ## File & Directory Structure
 
 - Major version folder: `docs/community/changelog/<MAJOR>/`

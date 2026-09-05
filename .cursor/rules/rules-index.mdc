@@ -1,0 +1,34 @@
+---
+description: Canonical ownership and precedence for ArchiPy Cursor rules
+alwaysApply: true
+---
+
+# Rules Index & Precedence
+
+When guidance conflicts, prefer the **canonical owner** for that topic. More specific scoped rules beat general always-on summaries.
+
+## Canonical Owners
+
+| Topic | Canonical rule | Activation |
+|---|---|---|
+| Layer map & import direction | `architecture-patterns.mdc` | always |
+| Adapters (ports, mocks, extras, boundary `except`) | `adapter-conventions.mdc` | `archipy/adapters/**` |
+| Models, DTOs, entities, errors | `models-errors.mdc` | `archipy/models/**` |
+| Helpers, interceptors, configs, secrets in settings | `helpers-configs.mdc` | `archipy/helpers/**`, `archipy/configs/**` |
+| Python style (quotes, docs, imports, complexity) | `python-code-style.mdc` | always |
+| Strict typing / `Any` / ty | `typing-strict.mdc` | `archipy/**/*.py` |
+| BDD / Behave / containers | `testing-bdd.mdc` | `features/**` |
+| Docs pages & MkDocs | `documentation.mdc` | `docs/**/*.md` |
+| Changelog format | `changelog.mdc` | `docs/community/changelog/**` |
+| GitHub release / tags / PyPI | `github-release.mdc` | agent-requestable |
+| Security / Bandit / nosec | `security.mdc` | always |
+| Commits, branches, PRs/MRs | `contributing.mdc` | always |
+| uv / Make / pre-commit | `tooling-workflow.mdc` | always |
+| Code exploration via graphify | `graphify.mdc` | always |
+| Agent quick start | `AGENTS.md` (repo root) | always (manual) |
+
+## Conflict Resolution
+
+1. **Scoped rule wins** over always-on summary for the same topic (e.g. adapter boundary exceptions in `adapter-conventions` override the general “no bare `except Exception`” in `python-code-style`).
+2. **`pyproject.toml` and Ruff/ty config win** over any stale exemption list in a rule — update the rule to match the tool config.
+3. **Do not duplicate** full policy in `AGENTS.md`; keep it as an index + essential commands only.
