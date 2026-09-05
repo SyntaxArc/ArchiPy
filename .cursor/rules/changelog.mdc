@@ -6,7 +6,9 @@ alwaysApply: false
 
 # Changelog Standards
 
-See also: tagging and GitHub releases in `github-release.mdc`; commit/PR triggers in `contributing.mdc`.
+**When to use:** only if the user explicitly asks for a changelog, version notes, or release prep. Not every session. Default skip policy: `contributing.mdc`.
+
+See also: tagging and GitHub releases in `github-release.mdc`.
 
 ## File & Directory Structure
 

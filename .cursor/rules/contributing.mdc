@@ -42,6 +42,7 @@ Or `make check` / `make ci` for the full gate.
 
 ## Changelog & release handoff
 
-- User-facing changes need a changelog update per `changelog.mdc` before release.
-- Do **not** create version tags or GitHub releases until the changelog draft is accepted — then follow `github-release.mdc`.
-- Docs-only or internal chore changes may skip changelog when they are not consumer-visible; ask if unsure.
+- **Do not** update changelog every session, commit, or PR by default.
+- Skip changelog for Cursor rules, `AGENTS.md`, internal chores, tests-only, and non-consumer docs unless the user says otherwise.
+- Write or edit changelog **only** when the user explicitly asks for a changelog, version bump, or release.
+- When asked: follow `changelog.mdc`. Do **not** create tags / GitHub releases until the draft is accepted — then `github-release.mdc`.
