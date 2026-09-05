@@ -6,13 +6,13 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Release notes for ArchiPy 5.0.7">
+        <meta name="description" content="Release notes for ArchiPy 5.1.0">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.0.7/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.1.0/">
       
       
       
@@ -25,7 +25,7 @@
     
     
       
-        <title>Changelog 5.0.7 - ArchiPy</title>
+        <title>Changelog 5.1.0 - ArchiPy</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#507-2026-09-01" class="md-skip">
+        <a href="#510-2026-09-05" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Changelog 5.0.7
+              Changelog 5.1.0
             
           </span>
         </div>
@@ -3132,34 +3132,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Fixed
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Fixed">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#adapters-starrocks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adapters - StarRocks
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3172,10 +3144,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#adapters-helpers-configs-typing" class="md-nav__link">
+  <a href="#adapters-redis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adapters / Helpers / Configs - Typing
+        Adapters - Redis
       
     </span>
   </a>
@@ -3200,10 +3172,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tests-atomic-transactions" class="md-nav__link">
+  <a href="#tests-integration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tests - Atomic Transactions
+        Tests - Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tests-redis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests - Redis
       
     </span>
   </a>
@@ -3212,6 +3195,45 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chore
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chore">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#chore-agent-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chore - Agent Rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
   
 </li>
       
@@ -3232,7 +3254,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/5/5.0.7.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/5/5.1.0.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3240,34 +3262,64 @@
   
 
 
-<h1 id="507-2026-09-01">5.0.7 — 2026-09-01<a class="headerlink" href="#507-2026-09-01" title="Permanent link">&para;</a></h1>
-<p><a href="../5.1.0/">← 5.1.0</a> | <a href="../5.0.6/">5.0.6 →</a> | <a href="../">↑ 5.x series</a></p>
-<h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
-<h3 id="adapters-starrocks">Adapters - StarRocks<a class="headerlink" href="#adapters-starrocks" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Real SQLAlchemy BEGIN/ROLLBACK</strong> - StarRocks atomic transactions no longer auto-commit each DML when using SQLAlchemy.<ul>
-<li>Patched <code>StarRocksDialect.do_begin</code> to emit explicit <code>BEGIN</code> (skipped under autocommit for DDL)</li>
-<li>Sync and async connect args set <code>autocommit=False</code> and <code>init_command="SET enable_sql_transaction = TRUE"</code></li>
-</ul>
-</li>
-</ul>
+<h1 id="510-2026-09-05">5.1.0 — 2026-09-05<a class="headerlink" href="#510-2026-09-05" title="Permanent link">&para;</a></h1>
+<p><a href="../5.0.7/">← 5.0.7</a> | <a href="../">↑ 5.x series</a></p>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
-<h3 id="adapters-helpers-configs-typing">Adapters / Helpers / Configs - Typing<a class="headerlink" href="#adapters-helpers-configs-typing" title="Permanent link">&para;</a></h3>
+<h3 id="adapters-redis">Adapters - Redis<a class="headerlink" href="#adapters-redis" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Drop Leftover Ty Suppressions</strong> - Cleared remaining type-checker suppressions after the 5.0.6 lint cleanup.<ul>
-<li>Aligned StarRocks and MySQL session-manager patch signatures</li>
-<li>Simplified email binary reads, hoisted <code>ModelPrivateAttr</code>, and logged exceptions with explicit <code>exc_info</code></li>
+<li><strong>Native FakeAsyncRedis Mock</strong> - <code>AsyncRedisMock</code> now uses fakeredis <code>FakeAsyncRedis</code> instead of wrapping sync <code>FakeRedis</code> with <code>AsyncMock</code>.<ul>
+<li>Async commands, pub/sub, and pipelines work through the real async client API</li>
+<li>CLUSTER mode uses <code>FakeAsyncRedisClusterWrapper</code> with the same cluster helpers as the sync mock</li>
+<li>Sync and async mocks share a <code>FakeServer</code> across write, read, and search clients</li>
+<li>Both mocks respect <code>DECODE_RESPONSES</code> from config</li>
 </ul>
 </li>
 </ul>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
-<h3 id="tests-atomic-transactions">Tests - Atomic Transactions<a class="headerlink" href="#tests-atomic-transactions" title="Permanent link">&para;</a></h3>
+<h3 id="tests-integration">Tests - Integration<a class="headerlink" href="#tests-integration" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>StarRocks Atomic BDD Coverage</strong> - Expanded sync and async atomic scenarios for StarRocks where shared-nothing SQL transactions are supported.<ul>
-<li>Added StarRocks to update, different entity types, and error-handling outlines (sync and async)</li>
-<li>Documented shared-nothing limits: nested blocks, multi same-table insert, insert-after-update</li>
-<li>Capture ORM attrs before insert so expired lazy-loads do not trigger StarRocks error 5307</li>
-<li>Schema helpers temporarily no-op <code>do_begin</code> during DDL under autocommit</li>
+<li><strong>Flaky Scenario Stabilization</strong> - Aligned assertions with implementation and waited for eventual visibility in integration steps.<ul>
+<li>Atomic updates sleep 1s before writing <code>updated_at</code> so database timestamps differ</li>
+<li>Error-handling steps patch <code>logger.error</code> instead of <code>logger.exception</code></li>
+<li>Redis KNN and hybrid search poll until RediSearch indexes a recent write</li>
+</ul>
+</li>
+</ul>
+<h3 id="tests-redis">Tests - Redis<a class="headerlink" href="#tests-redis" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Async Mock Pub/Sub and Pipeline</strong> - Added <code>mock</code> rows to async subscribe and pipeline scenario outlines.<ul>
+<li>Async pub/sub channels are unique per <code>adapter_type</code> so mock and container runs do not collide</li>
+</ul>
+</li>
+</ul>
+<h2 id="chore">Chore<a class="headerlink" href="#chore" title="Permanent link">&para;</a></h2>
+<h3 id="chore-agent-rules">Chore - Agent Rules<a class="headerlink" href="#chore-agent-rules" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Cursor Agent Guidance</strong> - Strengthened workspace rules so agents follow one owner per topic instead of conflicting summaries.<ul>
+<li>Added <code>rules-index.mdc</code> plus canonical <code>models-errors.mdc</code>, <code>helpers-configs.mdc</code>, <code>security.mdc</code>, and <code>contributing.mdc</code></li>
+<li>Resolved adapter, lazy-import, and boundary-exception policy into <code>adapter-conventions.mdc</code></li>
+<li>Expanded BDD seam/red-green guidance in <code>testing-bdd.mdc</code>; slimmed <code>AGENTS.md</code> to commands and a rule index</li>
+<li>Changelog writes are opt-in: skip Cursor rules, <code>AGENTS.md</code>, chores, tests-only, and non-consumer docs unless the user asks</li>
+</ul>
+</li>
+</ul>
+<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Lockfile</strong> - Regenerated <code>uv.lock</code> to the latest compatible versions.<ul>
+<li><code>boto3</code> / <code>botocore</code> / <code>boto3-stubs</code>: <code>1.43.83</code> → <code>1.43.89</code></li>
+<li><code>cachetools</code>: <code>7.1.7</code> → <code>7.1.8</code></li>
+<li><code>protobuf</code>: <code>7.36.0</code> → <code>7.36.1</code></li>
+<li><code>psycopg</code>: <code>3.3.4</code> → <code>3.3.5</code></li>
+<li><code>alembic</code>: <code>1.19.1</code> → <code>1.19.2</code></li>
+<li><code>anyio</code>: <code>4.14.2</code> → <code>4.15.0</code></li>
+<li><code>lxml</code>: <code>6.1.2</code> → <code>6.1.3</code></li>
+</ul>
+</li>
+<li><strong>Dev / docs</strong> - Updated development and typing stubs.<ul>
+<li><code>ruff</code>: <code>0.16.5</code> → <code>0.16.6</code></li>
+<li><code>ty</code>: <code>0.0.76</code> → <code>0.0.78</code></li>
+<li><code>types-regex</code>: <code>2026.8.31.20260831</code> → <code>2026.9.3.20260903</code></li>
+<li><code>mkdocstrings-python</code>: <code>2.0.7</code> → <code>2.0.8</code></li>
 </ul>
 </li>
 </ul>
