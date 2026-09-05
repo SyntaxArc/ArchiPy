@@ -782,12 +782,13 @@ Feature: Redis Testing
   @async
   Scenario Outline: Subscribe and receive published message asynchronously
     Given a configured async <adapter_type>
-    When I subscribe to channel "bdd-a-pubsub-container-channel" in async <adapter_type>
-    And I publish "greeting" to channel "bdd-a-pubsub-container-channel" in async <adapter_type>
+    When I subscribe to channel "bdd-a-pubsub-<adapter_type>-channel" in async <adapter_type>
+    And I publish "greeting" to channel "bdd-a-pubsub-<adapter_type>-channel" in async <adapter_type>
     Then the async subscribed message should be "greeting"
 
     Examples: Adapter Types
       | adapter_type |
+      | mock         |
       | container    |
 
   @async
@@ -800,6 +801,7 @@ Feature: Redis Testing
 
     Examples: Pipeline keys
       | adapter_type | pipe_tag       |
+      | mock         | bdd-a-p-mock   |
       | container    | bdd-a-p-cont   |
       | cluster      | bdd-a-p-clust  |
 
