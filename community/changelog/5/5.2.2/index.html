@@ -6,13 +6,13 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Release notes for ArchiPy 5.2.1">
+        <meta name="description" content="Release notes for ArchiPy 5.2.2">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.2.1/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.2.2/">
       
       
       
@@ -25,7 +25,7 @@
     
     
       
-        <title>Changelog 5.2.1 - ArchiPy</title>
+        <title>Changelog 5.2.2 - ArchiPy</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#521-2026-09-07" class="md-skip">
+        <a href="#522-2026-09-07" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Changelog 5.2.1
+              Changelog 5.2.2
             
           </span>
         </div>
@@ -3132,15 +3132,43 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#added" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fixed
+        Added
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Fixed">
+    <nav class="md-nav" aria-label="Added">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#helpers-opentelemetry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helpers - OpenTelemetry
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tests">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -3148,6 +3176,34 @@
     <span class="md-ellipsis">
       
         Tests - OpenTelemetry
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Docs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docs-observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docs - Observability
       
     </span>
   </a>
@@ -3176,7 +3232,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/5/5.2.1.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/5/5.2.2.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3184,14 +3240,29 @@
   
 
 
-<h1 id="521-2026-09-07">5.2.1 — 2026-09-07<a class="headerlink" href="#521-2026-09-07" title="Permanent link">&para;</a></h1>
-<p><a href="../5.2.2/">← 5.2.2</a> | <a href="../5.2.0/">5.2.0 →</a> | <a href="../">↑ 5.x series</a></p>
-<h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
+<h1 id="522-2026-09-07">5.2.2 — 2026-09-07<a class="headerlink" href="#522-2026-09-07" title="Permanent link">&para;</a></h1>
+<p><a href="../5.2.1/">← 5.2.1</a> | <a href="../">↑ 5.x series</a></p>
+<h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
+<h3 id="helpers-opentelemetry">Helpers - OpenTelemetry<a class="headerlink" href="#helpers-opentelemetry" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Explicit W3C textmap propagator</strong> - <code>OtelUtils</code> installs a TraceContext +
+  Baggage composite via <code>set_global_textmap</code> on init and test configure
+  (idempotent), locking <code>traceparent</code> / <code>tracestate</code> / <code>baggage</code> carriers.</li>
+</ul>
+<h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="tests-opentelemetry">Tests - OpenTelemetry<a class="headerlink" href="#tests-opentelemetry" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Exporter config leak across BDD scenarios</strong> - Reset <code>METRICS_EXPORTER</code> /
-  <code>LOGS_EXPORTER</code> and related OTEL fields between scenarios so pull-metrics
-  setup cannot make the partial-exporter-failure case succeed incorrectly.</li>
+<li><strong>Async gRPC metrics BDD</strong> - <code>@async</code> coverage for <code>create_async_grpc_app</code>
+  <code>rpc.server.duration</code>, prepend order, and metrics-only mode</li>
+<li><strong>Parent-chain BDD</strong> - FastAPI → gRPC hop asserts RPC span descends from
+  <code>GET /call-grpc</code></li>
+<li><strong>Log ↔ trace BDD</strong> - Exported log records carry ambient <code>trace_id</code> / <code>span_id</code></li>
+</ul>
+<h2 id="docs">Docs<a class="headerlink" href="#docs" title="Permanent link">&para;</a></h2>
+<h3 id="docs-observability">Docs - Observability<a class="headerlink" href="#docs-observability" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Propagator note</strong> - Document W3C TraceContext + Baggage install on
+  <code>init_otel_if_needed</code></li>
 </ul>
 
 
