@@ -3642,7 +3642,7 @@ consistent access patterns across your application.</p>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">AppConfig</span><span class="p">(</span><span class="n">BaseConfig</span><span class="p">):</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="c1"># Application settings</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="c1"># Built-in application identity (synced to OTEL / FastAPI / Auth / Temporal)</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">APP_NAME</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"MyService"</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">DEBUG</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
@@ -3666,6 +3666,11 @@ consistent access patterns across your application.</p>
 </span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>    <span class="c1"># Logging</span>
 </span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>    <span class="n">LOG_LEVEL</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"INFO"</span>
 </span></code></pre></div>
+<blockquote>
+<p><strong>Note:</strong> <code>APP_NAME</code> is defined on <code>BaseConfig</code>. Setting it (or <code>APP_NAME</code> in the environment)
+fills nested defaults: <code>OTEL.SERVICE_NAME</code>, <code>FASTAPI.PROJECT_NAME</code>, <code>AUTH.JWT_ISSUER</code>, and
+<code>TEMPORAL.CLIENT_IDENTITY</code> when <code>BaseConfig.set_global()</code> runs <code>customize()</code>.</p>
+</blockquote>
 <h3 id="using-the-configuration">Using the Configuration<a class="headerlink" href="#using-the-configuration" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Create and set as global configuration</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">config</span> <span class="o">=</span> <span class="n">AppConfig</span><span class="p">()</span>

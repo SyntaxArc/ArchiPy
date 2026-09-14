@@ -6,37 +6,33 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="The four-layer Clean Architecture used by ArchiPy, import rules, the Ports & Adapters pattern, and the Unit of Work boundary.">
+        <meta name="description" content="Release notes for ArchiPy 5.3.0">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/getting-started/concepts/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.3.0/">
       
       
-        <link rel="prev" href="../quickstart/">
-      
-      
-        <link rel="next" href="../project_structure/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/logo.jpg">
+      <link rel="icon" href="../../../../assets/logo.jpg">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Concepts - ArchiPy</title>
+        <title>Changelog 5.3.0 - ArchiPy</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -55,9 +51,9 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -82,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#concepts" class="md-skip">
+        <a href="#530-2026-09-14" class="md-skip">
           Skip to content
         </a>
       
@@ -102,9 +98,9 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="ArchiPy" class="md-header__button md-logo" aria-label="ArchiPy" data-md-component="logo">
+    <a href="../../../.." title="ArchiPy" class="md-header__button md-logo" aria-label="ArchiPy" data-md-component="logo">
       
-  <img src="../../assets/logo.jpg" alt="logo">
+  <img src="../../../../assets/logo.jpg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -121,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Concepts
+              Changelog 5.3.0
             
           </span>
         </div>
@@ -224,13 +220,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../.." class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../../.." class="md-tabs__link">
           
   
   
@@ -252,7 +246,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../tutorials/" class="md-tabs__link">
+        <a href="../../../../tutorials/" class="md-tabs__link">
           
   
   
@@ -274,7 +268,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../api_reference/" class="md-tabs__link">
+        <a href="../../../../api_reference/" class="md-tabs__link">
           
   
   
@@ -296,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../community/contributing/" class="md-tabs__link">
+        <a href="../../../contributing/" class="md-tabs__link">
           
   
   
@@ -338,9 +332,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="ArchiPy" class="md-nav__button md-logo" aria-label="ArchiPy" data-md-component="logo">
+    <a href="../../../.." title="ArchiPy" class="md-nav__button md-logo" aria-label="ArchiPy" data-md-component="logo">
       
-  <img src="../../assets/logo.jpg" alt="logo">
+  <img src="../../../../assets/logo.jpg" alt="logo">
 
     </a>
     ArchiPy
@@ -364,8 +358,6 @@
       
   
   
-    
-  
   
   
     
@@ -389,23 +381,22 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../.." class="md-nav__link ">
+            <a href="../../../.." class="md-nav__link ">
               
   
   
@@ -423,13 +414,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="">
+              <label class="md-nav__link " for="__nav_1" id="__nav_1_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_1">
             <span class="md-nav__icon md-icon"></span>
             
@@ -449,7 +440,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
+      <a href="../../../../getting-started/installation/" class="md-nav__link">
         
   
   
@@ -477,7 +468,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quickstart/" class="md-nav__link">
+      <a href="../../../../getting-started/quickstart/" class="md-nav__link">
         
   
   
@@ -502,37 +493,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Concepts
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../../../getting-started/concepts/" class="md-nav__link">
         
   
   
@@ -548,153 +512,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#the-four-layers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The Four Layers
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#layer-details" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Layer Details
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Layer Details">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#configs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configs
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#models" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Models
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#helpers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Helpers
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#adapters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adapters
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#architectural-flow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Architectural Flow
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ports-adapters-in-practice" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ports &amp; Adapters in Practice
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#unit-of-work" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Unit of Work
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#design-philosophy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Design Philosophy
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See Also
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -707,7 +524,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../project_structure/" class="md-nav__link">
+      <a href="../../../../getting-started/project_structure/" class="md-nav__link">
         
   
   
@@ -735,7 +552,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../complete_user_example/" class="md-nav__link">
+      <a href="../../../../getting-started/complete_user_example/" class="md-nav__link">
         
   
   
@@ -811,7 +628,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../tutorials/" class="md-nav__link ">
+            <a href="../../../../tutorials/" class="md-nav__link ">
               
   
   
@@ -908,7 +725,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../tutorials/adapters/" class="md-nav__link ">
+            <a href="../../../../tutorials/adapters/" class="md-nav__link ">
               
   
   
@@ -952,7 +769,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/redis/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/redis/" class="md-nav__link">
         
   
   
@@ -980,7 +797,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/postgres/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/postgres/" class="md-nav__link">
         
   
   
@@ -1008,7 +825,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/mysql/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/mysql/" class="md-nav__link">
         
   
   
@@ -1036,7 +853,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/sqlite/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/sqlite/" class="md-nav__link">
         
   
   
@@ -1064,7 +881,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/starrocks/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/starrocks/" class="md-nav__link">
         
   
   
@@ -1092,7 +909,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/kafka/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/kafka/" class="md-nav__link">
         
   
   
@@ -1120,7 +937,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/keycloak/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/keycloak/" class="md-nav__link">
         
   
   
@@ -1148,7 +965,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/minio/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/minio/" class="md-nav__link">
         
   
   
@@ -1176,7 +993,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/scylladb/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/scylladb/" class="md-nav__link">
         
   
   
@@ -1204,7 +1021,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/elasticsearch/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/elasticsearch/" class="md-nav__link">
         
   
   
@@ -1232,7 +1049,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/temporal/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/temporal/" class="md-nav__link">
         
   
   
@@ -1260,7 +1077,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/vault/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/vault/" class="md-nav__link">
         
   
   
@@ -1288,7 +1105,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/email/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/email/" class="md-nav__link">
         
   
   
@@ -1316,7 +1133,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/adapters/payment_gateways/" class="md-nav__link">
+      <a href="../../../../tutorials/adapters/payment_gateways/" class="md-nav__link">
         
   
   
@@ -1385,7 +1202,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../tutorials/helpers/" class="md-nav__link ">
+            <a href="../../../../tutorials/helpers/" class="md-nav__link ">
               
   
   
@@ -1429,7 +1246,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/helpers/decorators/" class="md-nav__link">
+      <a href="../../../../tutorials/helpers/decorators/" class="md-nav__link">
         
   
   
@@ -1457,7 +1274,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/helpers/interceptors/" class="md-nav__link">
+      <a href="../../../../tutorials/helpers/interceptors/" class="md-nav__link">
         
   
   
@@ -1485,7 +1302,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/helpers/metaclasses/" class="md-nav__link">
+      <a href="../../../../tutorials/helpers/metaclasses/" class="md-nav__link">
         
   
   
@@ -1513,7 +1330,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/helpers/utils/" class="md-nav__link">
+      <a href="../../../../tutorials/helpers/utils/" class="md-nav__link">
         
   
   
@@ -1549,7 +1366,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/config_management/" class="md-nav__link">
+      <a href="../../../../tutorials/config_management/" class="md-nav__link">
         
   
   
@@ -1577,7 +1394,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/testing_strategy/" class="md-nav__link">
+      <a href="../../../../tutorials/testing_strategy/" class="md-nav__link">
         
   
   
@@ -1605,7 +1422,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/error_handling/" class="md-nav__link">
+      <a href="../../../../tutorials/error_handling/" class="md-nav__link">
         
   
   
@@ -1633,7 +1450,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/dependency_injection/" class="md-nav__link">
+      <a href="../../../../tutorials/dependency_injection/" class="md-nav__link">
         
   
   
@@ -1661,7 +1478,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/observability/" class="md-nav__link">
+      <a href="../../../../tutorials/observability/" class="md-nav__link">
         
   
   
@@ -1747,7 +1564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/models/protobuf_dtos/" class="md-nav__link">
+      <a href="../../../../tutorials/models/protobuf_dtos/" class="md-nav__link">
         
   
   
@@ -1823,7 +1640,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../api_reference/" class="md-nav__link ">
+            <a href="../../../../api_reference/" class="md-nav__link ">
               
   
   
@@ -1922,7 +1739,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../api_reference/adapters/" class="md-nav__link ">
+            <a href="../../../../api_reference/adapters/" class="md-nav__link ">
               
   
   
@@ -1966,7 +1783,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/base/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/base/" class="md-nav__link">
         
   
   
@@ -1994,7 +1811,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/redis/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/redis/" class="md-nav__link">
         
   
   
@@ -2022,7 +1839,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/postgres/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/postgres/" class="md-nav__link">
         
   
   
@@ -2050,7 +1867,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/mysql/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/mysql/" class="md-nav__link">
         
   
   
@@ -2078,7 +1895,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/sqlite/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/sqlite/" class="md-nav__link">
         
   
   
@@ -2106,7 +1923,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/starrocks/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/starrocks/" class="md-nav__link">
         
   
   
@@ -2134,7 +1951,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/kafka/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/kafka/" class="md-nav__link">
         
   
   
@@ -2162,7 +1979,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/keycloak/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/keycloak/" class="md-nav__link">
         
   
   
@@ -2190,7 +2007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/minio/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/minio/" class="md-nav__link">
         
   
   
@@ -2218,7 +2035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/scylladb/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/scylladb/" class="md-nav__link">
         
   
   
@@ -2246,7 +2063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/elasticsearch/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/elasticsearch/" class="md-nav__link">
         
   
   
@@ -2274,7 +2091,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/temporal/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/temporal/" class="md-nav__link">
         
   
   
@@ -2302,7 +2119,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/vault/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/vault/" class="md-nav__link">
         
   
   
@@ -2330,7 +2147,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/email/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/email/" class="md-nav__link">
         
   
   
@@ -2358,7 +2175,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/adapters/payment_gateways/" class="md-nav__link">
+      <a href="../../../../api_reference/adapters/payment_gateways/" class="md-nav__link">
         
   
   
@@ -2394,7 +2211,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/configs/" class="md-nav__link">
+      <a href="../../../../api_reference/configs/" class="md-nav__link">
         
   
   
@@ -2455,7 +2272,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../api_reference/helpers/" class="md-nav__link ">
+            <a href="../../../../api_reference/helpers/" class="md-nav__link ">
               
   
   
@@ -2499,7 +2316,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/helpers/decorators/" class="md-nav__link">
+      <a href="../../../../api_reference/helpers/decorators/" class="md-nav__link">
         
   
   
@@ -2527,7 +2344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/helpers/interceptors/" class="md-nav__link">
+      <a href="../../../../api_reference/helpers/interceptors/" class="md-nav__link">
         
   
   
@@ -2555,7 +2372,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/helpers/metaclasses/" class="md-nav__link">
+      <a href="../../../../api_reference/helpers/metaclasses/" class="md-nav__link">
         
   
   
@@ -2583,7 +2400,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/helpers/utils/" class="md-nav__link">
+      <a href="../../../../api_reference/helpers/utils/" class="md-nav__link">
         
   
   
@@ -2652,7 +2469,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../api_reference/models/" class="md-nav__link ">
+            <a href="../../../../api_reference/models/" class="md-nav__link ">
               
   
   
@@ -2696,7 +2513,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/models/dtos/" class="md-nav__link">
+      <a href="../../../../api_reference/models/dtos/" class="md-nav__link">
         
   
   
@@ -2724,7 +2541,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/models/entities/" class="md-nav__link">
+      <a href="../../../../api_reference/models/entities/" class="md-nav__link">
         
   
   
@@ -2752,7 +2569,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/models/errors/" class="md-nav__link">
+      <a href="../../../../api_reference/models/errors/" class="md-nav__link">
         
   
   
@@ -2780,7 +2597,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api_reference/models/types/" class="md-nav__link">
+      <a href="../../../../api_reference/models/types/" class="md-nav__link">
         
   
   
@@ -2891,7 +2708,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/contributing/" class="md-nav__link">
+      <a href="../../../contributing/" class="md-nav__link">
         
   
   
@@ -2919,7 +2736,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/code_of_conduct/" class="md-nav__link">
+      <a href="../../../code_of_conduct/" class="md-nav__link">
         
   
   
@@ -2947,7 +2764,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/faq/" class="md-nav__link">
+      <a href="../../../faq/" class="md-nav__link">
         
   
   
@@ -2975,7 +2792,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/security/" class="md-nav__link">
+      <a href="../../../security/" class="md-nav__link">
         
   
   
@@ -3040,7 +2857,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../community/changelog/" class="md-nav__link ">
+            <a href="../../" class="md-nav__link ">
               
   
   
@@ -3084,7 +2901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/changelog/5/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -3112,7 +2929,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/changelog/4/" class="md-nav__link">
+      <a href="../../4/" class="md-nav__link">
         
   
   
@@ -3140,7 +2957,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/changelog/3/" class="md-nav__link">
+      <a href="../../3/" class="md-nav__link">
         
   
   
@@ -3168,7 +2985,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/changelog/2/" class="md-nav__link">
+      <a href="../../2/" class="md-nav__link">
         
   
   
@@ -3196,7 +3013,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/changelog/1/" class="md-nav__link">
+      <a href="../../1/" class="md-nav__link">
         
   
   
@@ -3224,7 +3041,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/changelog/0/" class="md-nav__link">
+      <a href="../../0/" class="md-nav__link">
         
   
   
@@ -3260,7 +3077,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/license/" class="md-nav__link">
+      <a href="../../../license/" class="md-nav__link">
         
   
   
@@ -3315,66 +3132,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-four-layers" class="md-nav__link">
+  <a href="#added" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Four Layers
+        Added
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#layer-details" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Layer Details
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Layer Details">
+    <nav class="md-nav" aria-label="Added">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#configs" class="md-nav__link">
+  <a href="#configs-baseconfig" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configs
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#models" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Models
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#helpers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Helpers
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#adapters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adapters
+        Configs - BaseConfig
       
     </span>
   </a>
@@ -3387,57 +3160,30 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#architectural-flow" class="md-nav__link">
+  <a href="#tests" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Architectural Flow
+        Tests
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tests">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tests-configs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests - Configs
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#ports-adapters-in-practice" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ports &amp; Adapters in Practice
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#unit-of-work" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Unit of Work
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#design-philosophy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Design Philosophy
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See Also
-      
-    </span>
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -3458,7 +3204,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/getting-started/concepts.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/5/5.3.0.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3466,273 +3212,27 @@
   
 
 
-<h1 id="concepts">Concepts<a class="headerlink" href="#concepts" title="Permanent link">&para;</a></h1>
-<p>ArchiPy organises every application into four strictly separated layers. Understanding these layers — and their
-import rules — is the foundation for writing maintainable, testable services.</p>
-<h2 id="the-four-layers">The Four Layers<a class="headerlink" href="#the-four-layers" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>graph LR
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    adapters --&gt;|imports| helpers
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    adapters --&gt;|imports| models
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    adapters --&gt;|imports| configs
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    helpers --&gt;|imports| models
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    helpers --&gt;|imports| configs
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    models --&gt;|imports| configs
-</span></code></pre></div>
-<table>
-<thead>
-<tr>
-<th>Layer</th>
-<th>Directory</th>
-<th>Responsibility</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Configs</strong></td>
-<td><code>configs/</code></td>
-<td>Type-safe, environment-based configuration via <code>pydantic_settings.BaseSettings</code></td>
-</tr>
-<tr>
-<td><strong>Models</strong></td>
-<td><code>models/</code></td>
-<td>Entities (SQLAlchemy), DTOs (Pydantic), Errors, Types — data structures only</td>
-</tr>
-<tr>
-<td><strong>Helpers</strong></td>
-<td><code>helpers/</code></td>
-<td>Pure utilities: decorators, interceptors, JWT, password, datetime</td>
-</tr>
-<tr>
-<td><strong>Adapters</strong></td>
-<td><code>adapters/</code></td>
-<td>External service integrations: databases, caches, queues, APIs</td>
-</tr>
-</tbody>
-</table>
-<blockquote>
-<p><strong>Warning:</strong> Imports flow inward only — <code>configs ← models ← helpers ← adapters</code>. Inner layers never import from outer
-layers. Violating this rule breaks testability and creates circular dependencies.</p>
-</blockquote>
-<hr />
-<h2 id="layer-details">Layer Details<a class="headerlink" href="#layer-details" title="Permanent link">&para;</a></h2>
-<h3 id="configs">Configs<a class="headerlink" href="#configs" title="Permanent link">&para;</a></h3>
-<p>All configuration classes extend <code>pydantic_settings.BaseSettings</code>. Values are loaded from environment
-variables or <code>.env</code> files and validated at startup:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">AppConfig</span><span class="p">(</span><span class="n">BaseConfig</span><span class="p">):</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="sd">"""Application-specific configuration.</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="sd">    APP_NAME is a built-in BaseConfig field. After set_global(), customize()</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="sd">    fills OTEL.SERVICE_NAME, FASTAPI.PROJECT_NAME, AUTH.JWT_ISSUER, and</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="sd">    TEMPORAL.CLIENT_IDENTITY when those nested fields are still defaults.</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="sd">    """</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">APP_NAME</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"my-service"</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">DEBUG</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">config</span> <span class="o">=</span> <span class="n">AppConfig</span><span class="p">()</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="n">BaseConfig</span><span class="o">.</span><span class="n">set_global</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-</span></code></pre></div>
-<h3 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h3>
-<p>The models layer contains <strong>data structures only</strong> — no I/O, no business logic.</p>
+<h1 id="530-2026-09-14">5.3.0 — 2026-09-14<a class="headerlink" href="#530-2026-09-14" title="Permanent link">&para;</a></h1>
+<p><a href="../5.2.4/">5.2.4 →</a> | <a href="../">↑ 5.x series</a></p>
+<h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
+<h3 id="configs-baseconfig">Configs - BaseConfig<a class="headerlink" href="#configs-baseconfig" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Entities</strong> — SQLAlchemy domain model objects (<code>BaseEntity</code>)</li>
-<li><strong>DTOs</strong> — Pydantic <code>BaseModel</code> for data transfer across layer boundaries</li>
-<li><strong>Errors</strong> — Custom exception types extending <code>BaseError</code></li>
-<li><strong>Types</strong> — Enumerations and type aliases</li>
+<li><strong>APP_NAME identity field</strong> - Top-level <code>APP_NAME</code> is now a built-in
+  <code>BaseConfig</code> setting (env: <code>APP_NAME</code>). On <code>set_global()</code>, <code>customize()</code>
+  fills nested identity defaults when they are still unset or placeholders:<ul>
+<li><code>OTEL.SERVICE_NAME</code> when <code>None</code></li>
+<li><code>FASTAPI.PROJECT_NAME</code> when <code>"project_name"</code></li>
+<li><code>AUTH.JWT_ISSUER</code> when <code>"your-app-name"</code></li>
+<li><code>TEMPORAL.CLIENT_IDENTITY</code> when <code>None</code></li>
+<li>Explicit nested env values (<code>OTEL__SERVICE_NAME</code>, etc.) always win</li>
 </ul>
-<p>DTOs are divided into two groups:</p>
-<table>
-<thead>
-<tr>
-<th>Group</th>
-<th>Purpose</th>
-<th>Location</th>
-<th>Versioned?</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Domain DTOs</strong></td>
-<td>Cross the service boundary (client ↔ service)</td>
-<td><code>dtos/{domain}/domain/v{n}/</code></td>
-<td>Yes</td>
-</tr>
-<tr>
-<td><strong>Repository DTOs</strong></td>
-<td>Internal (logic ↔ repository ↔ adapter)</td>
-<td><code>dtos/{domain}/repository/</code></td>
-<td>No</td>
-</tr>
-</tbody>
-</table>
-<h3 id="helpers">Helpers<a class="headerlink" href="#helpers" title="Permanent link">&para;</a></h3>
-<p>The helpers layer contains pure utilities with no direct external I/O:</p>
-<table>
-<thead>
-<tr>
-<th>Sub-package</th>
-<th>Contents</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>helpers/utils/</code></td>
-<td>JWT, password, TOTP, datetime, string, file, OpenTelemetry</td>
-</tr>
-<tr>
-<td><code>helpers/decorators/</code></td>
-<td><code>@atomic</code>, <code>@ttl_cache</code>, <code>@retry</code>, <code>@singleton</code>, <code>@timeout</code>, <code>@timing</code>, <code>@trace_*</code>, metrics</td>
-</tr>
-<tr>
-<td><code>helpers/interceptors/</code></td>
-<td>gRPC exception handling and rate limiting (OTel via AppUtils)</td>
-</tr>
-<tr>
-<td><code>helpers/metaclasses/</code></td>
-<td><code>SingletonMeta</code> and other meta-programming utilities</td>
-</tr>
-</tbody>
-</table>
-<h3 id="adapters">Adapters<a class="headerlink" href="#adapters" title="Permanent link">&para;</a></h3>
-<p>Adapters follow the <strong>Ports &amp; Adapters</strong> (Hexagonal Architecture) pattern. Every adapter directory contains:</p>
-<ul>
-<li><code>ports.py</code> — abstract interface (<code>ABC</code>) describing what the adapter can do</li>
-<li><code>adapters.py</code> — concrete implementation against a real external service</li>
-<li><code>mocks.py</code> (where available) — in-memory test double for unit tests</li>
-</ul>
-<p>Your business logic imports only from <code>ports.py</code>. This means you can swap the implementation (real adapter
-→ mock) without changing any business code.</p>
-<hr />
-<h2 id="architectural-flow">Architectural Flow<a class="headerlink" href="#architectural-flow" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>flowchart TD
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    Client["Client (HTTP / gRPC / CLI)"]
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    Container["configs/containers.py (DI wiring)"]
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    Service["services/ (FastAPI endpoints)"]
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    Logic["logics/ (Business rules + Unit of Work)"]
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    Repository["repositories/ (Data access)"]
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    DomainAdapter["adapters/ (Domain-specific, delegates to ArchiPy)"]
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    ArchiPyAdapter["ArchiPy Adapters (DB, Cache, etc.)"]
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    Models["models/ (Entities, DTOs, Errors)"]
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    Configs["configs/app_config.py (BaseConfig)"]
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    Client --&gt; Service
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    Container --&gt;|injects| Service
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    Service --&gt; Logic
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    Logic --&gt;|may call| Logic
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    Logic --&gt; Repository
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    Repository --&gt; DomainAdapter
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>    DomainAdapter --&gt; ArchiPyAdapter
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    ArchiPyAdapter --&gt; Models
-</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>    ArchiPyAdapter --&gt; Configs
-</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>    Logic --&gt; Models
-</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>    Service --&gt; Models
-</span></code></pre></div>
-<hr />
-<h2 id="ports-adapters-in-practice">Ports &amp; Adapters in Practice<a class="headerlink" href="#ports-adapters-in-practice" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Production:  UserRepository → PostgresSQLAlchemyAdapter (real Postgres)
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>Test:        UserRepository → InMemorySQLAlchemyMock   (no Docker needed)
-</span></code></pre></div>
-<p>Your logic layer depends on the abstract port:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.redis.ports</span><span class="w"> </span><span class="kn">import</span> <span class="n">RedisPort</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">NotFoundError</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">UserSessionService</span><span class="p">:</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="sd">"""Manages user sessions using a cache.</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="sd">    Args:</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="sd">        cache: Any implementation of RedisPort (real or mock).</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="sd">    """</span>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cache</span><span class="p">:</span> <span class="n">RedisPort</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span> <span class="o">=</span> <span class="n">cache</span>
-</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">        </span><span class="sd">"""Retrieve a session by ID.</span>
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>
-</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="sd">        Args:</span>
-</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="sd">            session_id: The session identifier.</span>
-</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>
-</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="sd">        Returns:</span>
-</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="sd">            Serialised session data.</span>
-</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>
-</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="sd">        Raises:</span>
-</span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="sd">            NotFoundError: If the session does not exist.</span>
-</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="sd">        """</span>
-</span><span id="__span-4-27"><a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">"session:</span><span class="si">{</span><span class="n">session_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>            <span class="k">raise</span> <span class="n">NotFoundError</span><span class="p">(</span><span class="n">resource_type</span><span class="o">=</span><span class="s2">"session"</span><span class="p">)</span>
-</span><span id="__span-4-30"><a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>        <span class="k">return</span> <span class="n">value</span>
-</span></code></pre></div>
-<p>In tests, inject <code>RedisMock</code> instead of <code>RedisAdapter</code> — no Redis server needed.</p>
-<hr />
-<h2 id="unit-of-work">Unit of Work<a class="headerlink" href="#unit-of-work" title="Permanent link">&para;</a></h2>
-<p>The <strong>logic layer</strong> is the unit of work boundary. Every public method on a logic class is decorated with
-<code>@postgres_sqlalchemy_atomic_decorator</code>, which opens a SQLAlchemy session, commits on success, and rolls back
-on any exception:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Service  →  Logic (@atomic)  →  Repository  →  Adapter  →  DB
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>                 ↑___________commit / rollback____________↑
-</span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators.sqlalchemy_atomic</span><span class="w"> </span><span class="kn">import</span> <span class="n">postgres_sqlalchemy_atomic_decorator</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">models.dtos.user.domain.v1.user_dtos</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserRegistrationInputDTO</span><span class="p">,</span> <span class="n">UserRegistrationOutputDTO</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">UserRegistrationLogic</span><span class="p">:</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="sd">"""Handles user registration within a single database transaction."""</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="nd">@postgres_sqlalchemy_atomic_decorator</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">register_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_dto</span><span class="p">:</span> <span class="n">UserRegistrationInputDTO</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">UserRegistrationOutputDTO</span><span class="p">:</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">        </span><span class="sd">"""Validate uniqueness and create a new user.</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="sd">        Args:</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="sd">            input_dto: Registration data from the service layer.</span>
-</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>
-</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="sd">        Returns:</span>
-</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="sd">            Output DTO for the newly created user.</span>
-</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="sd">        """</span>
-</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>        <span class="o">...</span>
-</span></code></pre></div>
-<blockquote>
-<p><strong>Note:</strong> Logic layer collaboration rules:</p>
-<ul>
-<li>Logic classes <strong>may call other logic classes</strong> — nested <code>@atomic</code> calls reuse the open session.</li>
-<li>
-<p>Logic classes <strong>must never import or call a repository from another domain directly</strong>.
-    &gt; Cross-domain reads must go through the other domain's logic class.</p>
-<blockquote>
-<div class="language-text highlight"><pre><span></span><code>```
-</code></pre></div>
-<p>✅  OrderCreationLogic  →  UserQueryLogic  →  UserRepository
-❌  OrderCreationLogic  →  UserRepository  (bypasses domain boundary)
-```</p>
-</blockquote>
 </li>
 </ul>
-</blockquote>
-<hr />
-<h2 id="design-philosophy">Design Philosophy<a class="headerlink" href="#design-philosophy" title="Permanent link">&para;</a></h2>
-<p>ArchiPy provides standardised building blocks rather than enforcing a single architectural style. The same
-components work across:</p>
+<h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
+<h3 id="tests-configs">Tests - Configs<a class="headerlink" href="#tests-configs" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Layered Architecture</li>
-<li>Hexagonal Architecture (Ports &amp; Adapters)</li>
-<li>Clean Architecture</li>
-<li>Domain-Driven Design</li>
-<li>Service-Oriented Architecture</li>
-</ul>
-<p>Teams maintain consistent practices while choosing the pattern that best fits their domain.</p>
-<hr />
-<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../quickstart/">Quickstart</a> — five-minute "hello world" example</li>
-<li><a href="../project_structure/">Project Structure</a> — recommended folder layout</li>
-<li><a href="../../tutorials/config_management/">Configuration Management</a> — loading from <code>.env</code> files</li>
-<li><a href="../../tutorials/dependency_injection/">Dependency Injection</a> — wiring the full object graph</li>
-<li><a href="../../tutorials/testing_strategy/">Testing Strategy</a> — unit and integration test patterns</li>
-<li><a href="../../api_reference/">API Reference</a> — full reference for all public classes</li>
+<li><strong>APP_NAME sync BDD</strong> - Scenarios assert nested identity fill on
+  <code>set_global</code> and that explicit <code>OTEL.SERVICE_NAME</code> overrides are kept.</li>
 </ul>
 
 
@@ -3810,10 +3310,10 @@ components work across:</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "content.code.copy", "content.tabs.link", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "content.code.copy", "content.tabs.link", "content.action.edit"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
