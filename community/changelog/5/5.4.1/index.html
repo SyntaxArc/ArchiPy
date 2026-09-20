@@ -6,13 +6,13 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Release notes for ArchiPy 5.4.0">
+        <meta name="description" content="Release notes for ArchiPy 5.4.1">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.4.0/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.4.1/">
       
       
       
@@ -25,7 +25,7 @@
     
     
       
-        <title>Changelog 5.4.0 - ArchiPy</title>
+        <title>Changelog 5.4.1 - ArchiPy</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#540-2026-09-14" class="md-skip">
+        <a href="#541-2026-09-20" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Changelog 5.4.0
+              Changelog 5.4.1
             
           </span>
         </div>
@@ -3132,73 +3132,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Added
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Added">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#configs-opentelemetry" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configs - OpenTelemetry
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#helpers-opentelemetry" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Helpers - OpenTelemetry
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Fixed
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Fixed">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#helpers-opentelemetry_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Helpers - OpenTelemetry
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#tests" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3211,10 +3144,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tests-opentelemetry" class="md-nav__link">
+  <a href="#tests-redis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tests - OpenTelemetry
+        Tests - Redis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tests-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests - Configuration
       
     </span>
   </a>
@@ -3223,6 +3167,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
   
 </li>
       
@@ -3243,7 +3198,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/5/5.4.0.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/5/5.4.1.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3251,40 +3206,55 @@
   
 
 
-<h1 id="540-2026-09-14">5.4.0 — 2026-09-14<a class="headerlink" href="#540-2026-09-14" title="Permanent link">&para;</a></h1>
-<p><a href="../5.4.1/">← 5.4.1</a> | <a href="../5.3.0/">5.3.0 →</a> | <a href="../">↑ 5.x series</a></p>
-<h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
-<h3 id="configs-opentelemetry">Configs - OpenTelemetry<a class="headerlink" href="#configs-opentelemetry" title="Permanent link">&para;</a></h3>
+<h1 id="541-2026-09-20">5.4.1 — 2026-09-20<a class="headerlink" href="#541-2026-09-20" title="Permanent link">&para;</a></h1>
+<p><a href="../5.4.0/">5.4.0 →</a> | <a href="../">↑ 5.x series</a></p>
+<h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
+<h3 id="tests-redis">Tests - Redis<a class="headerlink" href="#tests-redis" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Prometheus Pushgateway exporter</strong> - <code>METRICS_EXPORTER=pushgateway</code> pushes
-  Prometheus text to a Pushgateway with no local scrape server.<ul>
-<li><code>METRICS_PUSHGATEWAY_URL</code> is required when the exporter is <code>pushgateway</code></li>
-<li><code>METRICS_PUSHGATEWAY_JOB</code> defaults to <code>SERVICE_NAME</code></li>
-<li>Interval, timeout, grouping key (<code>max_length=16</code>), and delete-on-shutdown
-  are configurable via <code>METRICS_PUSHGATEWAY_*</code></li>
+<li><strong>Vector range search uses FLAT</strong> - Radius KNN BDD builds the index with
+  <code>VectorAlgorithm.FLAT</code> instead of the default HNSW.<ul>
+<li>Optional <code>and algorithm FLAT|HNSW|SVS-VAMANA</code> on the given-index step</li>
+<li>Matches RediSearch / fakeredis 2.38 range-query behavior</li>
 </ul>
 </li>
 </ul>
-<h3 id="helpers-opentelemetry">Helpers - OpenTelemetry<a class="headerlink" href="#helpers-opentelemetry" title="Permanent link">&para;</a></h3>
+<h3 id="tests-configuration">Tests - Configuration<a class="headerlink" href="#tests-configuration" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Pushgateway push loop</strong> - Daemon thread calls <code>push_to_gateway</code> on the
-  configured interval; failures are logged and never roll back providers</li>
-<li><strong><code>metrics_registry()</code></strong> - Public accessor for the Prometheus
-  <code>CollectorRegistry</code> used by <code>pull</code> and <code>pushgateway</code></li>
+<li><strong>Keycloak test image</strong> - Updated <code>KEYCLOAK__IMAGE</code> from <code>keycloak/keycloak:26.7.3</code>
+  to <code>keycloak/keycloak:26.7.4</code>.</li>
+<li><strong>Elasticsearch test image</strong> - Updated <code>ELASTIC__IMAGE</code> from
+  <code>elastic/elasticsearch:9.5.3</code> to <code>elastic/elasticsearch:9.5.4</code>.</li>
 </ul>
-<h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
-<h3 id="helpers-opentelemetry_1">Helpers - OpenTelemetry<a class="headerlink" href="#helpers-opentelemetry_1" title="Permanent link">&para;</a></h3>
+<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Pull scrape bind isolation</strong> - A busy <code>METRICS_PULL_PORT</code> logs a warning
-  and continues. Traces, logs, and metrics providers stay active instead of
-  being shut down by an optional scrape side-channel.</li>
+<li><strong>Core / extras</strong> - Raised <code>pyproject.toml</code> lower bounds to match <code>uv.lock</code>.<ul>
+<li><code>httpx2</code>: <code>&gt;=2.12.0</code> → <code>&gt;=2.13.0</code></li>
+<li><code>cachetools</code>: <code>&gt;=7.1.7</code> → <code>&gt;=7.2.0</code></li>
+<li><code>elasticsearch</code> / <code>elasticsearch-async</code>: <code>&gt;=9.5.0</code> → <code>&gt;=9.5.1</code></li>
+<li><code>fakeredis</code>: <code>&gt;=2.37.1</code> → <code>&gt;=2.38.0</code></li>
+<li><code>grpcio</code> / <code>grpcio-health-checking</code>: <code>&gt;=1.83.1</code> → <code>&gt;=1.84.0</code></li>
+<li><code>protobuf</code>: <code>&gt;=7.36.0</code> → <code>&gt;=7.36.2</code></li>
+<li><code>pyjwt</code>: <code>&gt;=2.13.0</code> → <code>&gt;=2.14.0</code></li>
+<li><code>confluent-kafka</code>: <code>&gt;=2.15.0</code> → <code>&gt;=2.15.1</code></li>
+<li><code>boto3</code> (minio extra): <code>&gt;=1.43.83</code> → <code>&gt;=1.43.98</code></li>
+<li><code>pymysql</code>: <code>&gt;=1.2.0</code> → <code>&gt;=1.2.3</code></li>
+<li><code>psycopg</code>: <code>&gt;=3.3.4</code> → <code>&gt;=3.3.6</code></li>
+<li><code>sqlalchemy</code> / <code>sqlalchemy-async</code>: <code>&gt;=2.0.52</code> → <code>&gt;=2.0.54</code></li>
+<li><code>temporalio</code>: <code>&gt;=1.32.0</code> → <code>&gt;=1.33.0</code></li>
+<li><code>opentelemetry-exporter-prometheus</code>: <code>&gt;=0.55b0</code> → <code>&gt;=0.64b0</code></li>
 </ul>
-<h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
-<h3 id="tests-opentelemetry">Tests - OpenTelemetry<a class="headerlink" href="#tests-opentelemetry" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Pushgateway and scrape isolation BDD</strong> - Scenarios cover bind failure
-  keeping providers, stubbed push/delete, and push failure not clearing
-  telemetry.</li>
+</li>
+<li><strong>Dev / docs</strong> - Updated development and typing stubs.<ul>
+<li><code>boto3-stubs</code>: <code>&gt;=1.43.83</code> → <code>&gt;=1.43.98</code></li>
+<li><code>ruff</code>: <code>&gt;=0.16.5</code> → <code>&gt;=0.16.8</code></li>
+<li><code>ty</code>: <code>&gt;=0.0.76</code> → <code>&gt;=0.0.82</code></li>
+<li><code>types-protobuf</code>: <code>&gt;=7.35.1.20260827</code> → <code>&gt;=7.35.1.20260906</code></li>
+<li><code>types-regex</code>: <code>&gt;=2026.8.31.20260831</code> → <code>&gt;=2026.9.10.20260911</code></li>
+<li><code>types-requests</code>: <code>&gt;=2.33.0.20260712</code> → <code>&gt;=2.33.0.20260906</code></li>
+<li><code>mkdocstrings-python</code>: <code>&gt;=2.0.7</code> → <code>&gt;=2.0.8</code></li>
+<li><code>pymdown-extensions</code>: <code>&gt;=11.0.2</code> → <code>&gt;=12.0.1</code></li>
+</ul>
+</li>
 </ul>
 
 
