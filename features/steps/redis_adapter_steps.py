@@ -2799,16 +2799,22 @@ def _get_search_document(context, doc_id: str, index_name: str) -> dict:
 
 
 @given(
-    r'search index "(?P<index_name>[^"]+)" exists with prefix "(?P<prefix>[^"]+)" for (?P<index_type>HASH|JSON) documents',
+    r'search index "(?P<index_name>[^"]+)" exists with prefix "(?P<prefix>[^"]+)"'
+    r'(?: and algorithm (?P<algorithm>FLAT|HNSW|SVS-VAMANA))? for (?P<index_type>HASH|JSON) documents',
 )
-def step_given_search_index_exists(context, index_name, prefix, index_type):
+def step_given_search_index_exists(context, index_name, prefix, index_type, algorithm=None):
     """Create a search index if it does not already exist."""
     scenario_context = get_current_scenario_context(context)
     adapter = scenario_context.adapter
     handle = adapter.search_index(index_name)
     resolved_type = _parse_index_type(index_type)
+    vector_algorithm = VectorAlgorithm(algorithm) if algorithm else VectorAlgorithm.HNSW
     if index_name not in adapter.list_search_indexes():
-        handle.create_index(_search_schema(resolved_type), prefix=prefix, index_type=resolved_type)
+        handle.create_index(
+            _search_schema(resolved_type, algorithm=vector_algorithm),
+            prefix=prefix,
+            index_type=resolved_type,
+        )
     scenario_context.store("last_index_name", index_name)
     scenario_context.store("last_index_type", index_type)
 

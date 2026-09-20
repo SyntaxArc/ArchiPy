@@ -1135,7 +1135,7 @@ Feature: Redis Testing
 
   Scenario Outline: Vector range search synchronously
     Given a configured <adapter_type>
-    And search index "<index_name>" exists with prefix "<prefix>:" for HASH documents
+    And search index "<index_name>" exists with prefix "<prefix>:" and algorithm FLAT for HASH documents
     And search document "<doc1>" exists with title "Near Doc" and vector "[1.0, 0.0, 0.0]" for HASH documents
     And search document "<doc2>" exists with title "Far Doc" and vector "[0.0, 1.0, 0.0]" for HASH documents
     When I search index "<index_name>" for vectors within radius <radius> of "[0.95, 0.05, 0.0]"
