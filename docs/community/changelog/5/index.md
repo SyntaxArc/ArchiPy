@@ -10,6 +10,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                              |
 |-------------------|------------|--------------------------------------------------------------------------------------|
+| [5.4.1](5.4.1.md) | 2026-09-20 | Raise extras floors to lock; Redis range BDD FLAT; Keycloak 26.7.4 and ES 9.5.4 |
 | [5.4.0](5.4.0.md) | 2026-09-14 | Prometheus Pushgateway metrics exporter; scrape bind no longer kills traces/logs |
 | [5.3.0](5.3.0.md) | 2026-09-14 | BaseConfig `APP_NAME` with OTEL / FastAPI / Auth / Temporal identity sync            |
 | [5.2.4](5.2.4.md) | 2026-09-13 | MySQL session manager 3.14 DI wire NameError; Keycloak userinfo cache maxsize 200    |
