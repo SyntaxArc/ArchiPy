@@ -41,7 +41,7 @@ CONTAINER_MEM_LIMITS: dict[str, str] = {
     "minio": "256m",
     "starrocks": "1280m",
     "redis": "64m",
-    "kafka": "512m",
+    "kafka": "1024m",
     "temporal": "384m",
 }
 
@@ -53,7 +53,7 @@ POSTGRES_LOW_MEMORY_COMMAND: str = (
 # Keycloak otherwise sizes its heap at 70% of the container limit.
 KEYCLOAK_HEAP_OPTS: str = "-Xms64m -Xmx256m"
 # kafka-server-start.sh defaults to a fixed 1 GiB heap when this is unset.
-KAFKA_HEAP_OPTS: str = "-Xms256m -Xmx256m"
+KAFKA_HEAP_OPTS: str = "-Xms512m -Xmx512m"
 # The image ships an 8 GiB FE heap and lets the BE claim 90% of the memory it can see.
 STARROCKS_LOW_MEMORY_COMMAND: list[str] = [
     "bash",
