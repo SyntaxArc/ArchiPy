@@ -36,10 +36,10 @@ Feature: SQLAlchemy Atomic Transactions
     And operations from failed nested transactions should be rolled back
 
     Examples:
-      | db_type |
-      | postgres|
-      | sqlite  |
-      | mysql   |
+      | db_type  |
+      | postgres |
+      | sqlite   |
+      | mysql    |
 
   Scenario Outline: Update entities in atomic transaction
     Given the application database is initialized for <db_type>
@@ -62,10 +62,10 @@ Feature: SQLAlchemy Atomic Transactions
     Then the entity and its relationships should be retrievable
 
     Examples:
-      | db_type |
-      | postgres|
-      | sqlite  |
-      | mysql   |
+      | db_type  |
+      | postgres |
+      | sqlite   |
+      | mysql    |
 
   Scenario Outline: Support different entity types in atomic transactions
     Given the application database is initialized for <db_type>
@@ -101,10 +101,10 @@ Feature: SQLAlchemy Atomic Transactions
     Then session should maintain consistency across atomic blocks
 
     Examples:
-      | db_type |
-      | postgres|
-      | sqlite  |
-      | mysql   |
+      | db_type  |
+      | postgres |
+      | sqlite   |
+      | mysql    |
 
   @async
   Scenario Outline: Create and retrieve entity in async atomic transaction
@@ -187,10 +187,10 @@ Feature: SQLAlchemy Atomic Transactions
     Then all async entities should be retrievable
 
     Examples:
-      | db_type |
-      | postgres|
-      | sqlite  |
-      | mysql   |
+      | db_type  |
+      | postgres |
+      | sqlite   |
+      | mysql    |
 
   @async
   Scenario Outline: Create and manage complex entity relationships asynchronously
@@ -200,10 +200,10 @@ Feature: SQLAlchemy Atomic Transactions
     Then all related entities should be accessible
 
     Examples:
-      | db_type |
-      | postgres|
-      | sqlite  |
-      | mysql   |
+      | db_type  |
+      | postgres |
+      | sqlite   |
+      | mysql    |
 
   @unit
   Scenario Outline: SQLAlchemy session manager callables stay inspectable at runtime

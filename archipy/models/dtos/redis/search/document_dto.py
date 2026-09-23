@@ -1,6 +1,7 @@
 """DTOs for Redis Search documents."""
 
 from archipy.models.dtos.base_dtos import BaseDTO
+from archipy.models.types import JsonValue
 
 
 class HashDocumentUpsertDTO(BaseDTO):
@@ -16,5 +17,5 @@ class JsonDocumentUpsertDTO(BaseDTO):
     """Payload for upserting a JSON-backed RediSearch document."""
 
     doc_id: str
-    payload: dict[str, str | int | float | list[float]]
+    payload: dict[str, JsonValue]
     json_path: str = "$"

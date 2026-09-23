@@ -6,11 +6,11 @@ Feature: Base Utilities
     Then the sanitized output should be "<expected_output>"
 
     Examples:
-      | input_number | expected_output |
-      | +989123456789 | 09123456789 |
-      | 00989123456789 | 09123456789 |
-      | 912-345-6789 | 09123456789 |
-      | 021-12345678 | 02112345678 |
+      | input_number   | expected_output |
+      | +989123456789  | 09123456789     |
+      | 00989123456789 | 09123456789     |
+      | 912-345-6789   | 09123456789     |
+      | 021-12345678   | 02112345678     |
 
   Scenario: Validate a correct Iranian mobile number
     Given a valid mobile phone number "09123456789"

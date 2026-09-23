@@ -244,10 +244,10 @@ Feature: Temporal Adapter Operations
   Scenario: Data processing workflow
     Given a worker is started for task queue "test-queue" with DataProcessingWorkflow
     When I execute workflow "DataProcessingWorkflow" with data:
-      | key   | value |
-      | name  | Alice |
-      | age   | 30    |
-      | city  | NYC   |
+      | key  | value |
+      | name | Alice |
+      | age  | 30    |
+      | city | NYC   |
     Then the workflow result should contain processed data
     And the processed data should have item count 3
 

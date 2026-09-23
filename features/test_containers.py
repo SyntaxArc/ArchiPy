@@ -33,6 +33,41 @@ from archipy.helpers.metaclasses.singleton import Singleton
 
 logger = logging.getLogger(__name__)
 
+# Each limit sits a little above the process sizing below: the JVM heaps and Go/Postgres/StarRocks
+# memory settings are what keep actual usage down, the limits only stop a runaway container.
+CONTAINER_MEM_LIMITS: dict[str, str] = {
+    "postgres": "256m",
+    "keycloak": "768m",
+    "minio": "256m",
+    "starrocks": "1280m",
+    "redis": "64m",
+    "kafka": "512m",
+    "temporal": "384m",
+}
+
+# Test data is tiny and throwaway: small buffers, and no durability work.
+POSTGRES_LOW_MEMORY_COMMAND: str = (
+    "postgres -c shared_buffers=32MB -c work_mem=2MB -c maintenance_work_mem=16MB"
+    " -c fsync=off -c synchronous_commit=off -c full_page_writes=off"
+)
+# Keycloak otherwise sizes its heap at 70% of the container limit.
+KEYCLOAK_HEAP_OPTS: str = "-Xms64m -Xmx256m"
+# kafka-server-start.sh defaults to a fixed 1 GiB heap when this is unset.
+KAFKA_HEAP_OPTS: str = "-Xms256m -Xmx256m"
+# The image ships an 8 GiB FE heap and lets the BE claim 90% of the memory it can see.
+STARROCKS_LOW_MEMORY_COMMAND: list[str] = [
+    "bash",
+    "-c",
+    "sed -i 's/-Xmx8192m/-Xmx512m/' /data/deploy/starrocks/fe/conf/fe.conf"
+    " && echo 'mem_limit = 512M' >> /data/deploy/starrocks/be/conf/be.conf"
+    " && exec ./entrypoint.sh",
+]
+# No RDB/AOF persistence: a background save forks and can double Redis memory.
+REDIS_LOW_MEMORY_COMMAND: str = "redis-server --save '' --appendonly no"
+# Soft limit for the Go runtimes (MinIO, Temporal dev server) so they collect before the hard limit.
+MINIO_GOMEMLIMIT: str = "192MiB"
+TEMPORAL_GOMEMLIMIT: str = "256MiB"
+
 # Mapping of feature tags to container names
 TAG_CONTAINER_MAP: dict[str, str] = {
     "needs-postgres": "postgres",
@@ -207,6 +242,8 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
         self._container = RedisContainer(self.image)
         if self.config.PASSWORD:
             self._container.with_env("REDIS_PASSWORD", self.config.PASSWORD)
+        self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["redis"])
+        self._container.with_command(REDIS_LOW_MEMORY_COMMAND)
 
     def start(self) -> RedisContainer:
         """Start the Redis container."""
@@ -218,6 +255,8 @@ class RedisTestContainer(metaclass=Singleton, thread_safe=True):
             self._container = RedisContainer(self.image)
             if self.config.PASSWORD:
                 self._container.with_env("REDIS_PASSWORD", self.config.PASSWORD)
+            self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["redis"])
+            self._container.with_command(REDIS_LOW_MEMORY_COMMAND)
 
         self._container.start()
         self._is_running = True
@@ -377,6 +416,8 @@ class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
             username=username,
             password=password,
         )
+        self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["postgres"])
+        self._container.with_command(POSTGRES_LOW_MEMORY_COMMAND)
 
     def start(self) -> PostgresContainer:
         """Start the PostgreSQL container."""
@@ -395,6 +436,8 @@ class PostgresTestContainer(metaclass=Singleton, thread_safe=True):
                 username=username,
                 password=password,
             )
+            self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["postgres"])
+            self._container.with_command(POSTGRES_LOW_MEMORY_COMMAND)
 
         self._container.start()
         self._is_running = True
@@ -537,6 +580,8 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
         )
         # enable Organizations feature for Keycloak 25+
         self._container.with_command("start-dev --features organization")
+        self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["keycloak"])
+        self._container.with_env("JAVA_OPTS_KC_HEAP", KEYCLOAK_HEAP_OPTS)
 
     def start(self) -> KeycloakContainer:
         """Start the Keycloak container."""
@@ -555,6 +600,8 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
             )
             # enable Organizations feature for Keycloak 25+
             self._container.with_command("start-dev --features organization")
+            self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["keycloak"])
+            self._container.with_env("JAVA_OPTS_KC_HEAP", KEYCLOAK_HEAP_OPTS)
 
         self._container.start()
         self._is_running = True
@@ -682,6 +729,8 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
             .with_env("KAFKA_LOG_DIRS", "/var/lib/kafka/data")
             .with_env("KAFKA_ENABLE_KRAFT", "true")
             .with_env("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "true")
+            .with_env("KAFKA_HEAP_OPTS", KAFKA_HEAP_OPTS)
+            .with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["kafka"])
         )
 
         temp_container.start()
@@ -712,6 +761,8 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
             .with_env("KAFKA_LOG_DIRS", "/var/lib/kafka/data")
             .with_env("KAFKA_ENABLE_KRAFT", "true")
             .with_env("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "true")
+            .with_env("KAFKA_HEAP_OPTS", KAFKA_HEAP_OPTS)
+            .with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["kafka"])
         )
 
         self._container.start()
@@ -768,6 +819,8 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
             access_key=self.access_key,
             secret_key=self.secret_key,
         )
+        self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["minio"])
+        self._container.with_env("GOMEMLIMIT", MINIO_GOMEMLIMIT)
 
     def start(self) -> MinioContainer:
         if self._is_running:
@@ -779,6 +832,8 @@ class MinioTestContainer(metaclass=Singleton, thread_safe=True):
                 access_key=self.access_key,
                 secret_key=self.secret_key,
             )
+            self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["minio"])
+            self._container.with_env("GOMEMLIMIT", MINIO_GOMEMLIMIT)
 
         self._container.start()
         self._is_running = True
@@ -969,6 +1024,8 @@ class StarRocksTestContainer(metaclass=Singleton, thread_safe=True):
         # Expose ports: 9030 (MySQL protocol), 8030 (FE HTTP), 8040 (BE HTTP)
         # These will be mapped to random available host ports automatically
         self._container.with_exposed_ports(9030, 8030, 8040)
+        self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["starrocks"])
+        self._container.with_command(STARROCKS_LOW_MEMORY_COMMAND)
 
     def start(self) -> DockerContainer:
         """Start the StarRocks container.
@@ -985,6 +1042,8 @@ class StarRocksTestContainer(metaclass=Singleton, thread_safe=True):
             # Expose ports: 9030 (MySQL protocol), 8030 (FE HTTP), 8040 (BE HTTP)
             # These will be mapped to random available host ports automatically
             self._container.with_exposed_ports(9030, 8030, 8040)
+            self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["starrocks"])
+            self._container.with_command(STARROCKS_LOW_MEMORY_COMMAND)
 
         # Start the container
         self._container.start()
@@ -1091,6 +1150,8 @@ class TemporalContainer(metaclass=Singleton, thread_safe=True):
         self._container.with_command(
             "server start-dev --namespace default --db-filename /tmp/temporal.db --ip 0.0.0.0",
         )
+        self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["temporal"])
+        self._container.with_env("GOMEMLIMIT", TEMPORAL_GOMEMLIMIT)
 
         self._is_running = False
         self.host: str | None = None
@@ -1119,6 +1180,8 @@ class TemporalContainer(metaclass=Singleton, thread_safe=True):
             self._container.with_command(
                 "server start-dev --namespace default --db-filename /tmp/temporal.db --ip 0.0.0.0",
             )
+            self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["temporal"])
+            self._container.with_env("GOMEMLIMIT", TEMPORAL_GOMEMLIMIT)
 
         # Start Temporal development server
         logger.info("Starting Temporal development server...")

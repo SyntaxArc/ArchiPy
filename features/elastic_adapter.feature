@@ -58,11 +58,11 @@ Feature: Elasticsearch Operations Testing
     And index "test-index" exists
     And a document exists in "test-index" with id "1" and content '{"title": "Test Document", "content": "This is a test"}'
     When I perform a bulk operation with:
-      | action  | id | index       | document                                  |
-      | index   | 2  | test-index  | {"title": "Doc 2", "content": "Second"}  |
-      | index   | 3  | test-index  | {"title": "Doc 3", "content": "Third"}   |
-      | update  | 1  | test-index  | {"doc": {"content": "Bulk updated"}}     |
-      | delete  | 2  | test-index  |                                          |
+      | action | id | index      | document                                |
+      | index  | 2  | test-index | {"title": "Doc 2", "content": "Second"} |
+      | index  | 3  | test-index | {"title": "Doc 3", "content": "Third"}  |
+      | update | 1  | test-index | {"doc": {"content": "Bulk updated"}}    |
+      | delete | 2  | test-index |                                         |
     Then the bulk operation should succeed
     And all operations should be reflected in the index
 
@@ -130,11 +130,11 @@ Feature: Elasticsearch Operations Testing
     And index "test-index" exists
     And a document exists in "test-index" with id "10" and content '{"title": "Async Doc", "content": "Async test"}'
     When I perform a bulk operation with:
-      | action  | id | index            | document                                  |
-      | index   | 20 | test-index       | {"title": "Async 2", "content": "Second"} |
-      | index   | 30 | test-index       | {"title": "Async 3", "content": "Third"}  |
-      | update  | 10 | test-index       | {"doc": {"content": "Bulk async update"}} |
-      | delete  | 20 | test-index       |                                          |
+      | action | id | index      | document                                  |
+      | index  | 20 | test-index | {"title": "Async 2", "content": "Second"} |
+      | index  | 30 | test-index | {"title": "Async 3", "content": "Third"}  |
+      | update | 10 | test-index | {"doc": {"content": "Bulk async update"}} |
+      | delete | 20 | test-index |                                           |
     Then the bulk operation should succeed
     And all operations should be reflected in the index
 

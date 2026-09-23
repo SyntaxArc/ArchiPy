@@ -83,7 +83,12 @@ repos:
         pass_filenames: false
       - id: ty
         name: ty
-        entry: uv run ty check
+        entry: uv run ty check --fix
         files: \.(py|pyi)$
         language: system
         exclude: ^(features|scripts|\.agents)/
+      - id: gherkin-format
+        name: gherkin-format
+        entry: uv run gherkin-formatter
+        files: ^features/.*\.feature$
+        language: system

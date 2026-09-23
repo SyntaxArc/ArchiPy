@@ -13,9 +13,9 @@ Feature: Keycloak Authentication Testing
     And the realm should have display name "<realm_display_name>"
 
     Examples:
-      | adapter_type | realm_name      | realm_display_name | client_name      |
-      | sync         | test-realm      | Test Realm         | test-client      |
-      | async        | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | realm_name       | realm_display_name | client_name       |
+      | sync         | test-realm       | Test Realm         | test-client       |
+      | async        | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Realm update
     Given a configured <adapter_type> Keycloak adapter
@@ -25,9 +25,9 @@ Feature: Keycloak Authentication Testing
     Then the realm "<realm_name>" should have display name "<new_display_name>"
 
     Examples:
-      | adapter_type | realm_name        | realm_display_name | new_display_name   |
-      | sync         | update-realm      | Original           | Updated Display    |
-      | async        | async-update-realm| Async Original     | Async Updated Name |
+      | adapter_type | realm_name         | realm_display_name | new_display_name   |
+      | sync         | update-realm       | Original           | Updated Display    |
+      | async        | async-update-realm | Async Original     | Async Updated Name |
 
   Scenario Outline: User authentication flow
     Given a configured <adapter_type> Keycloak adapter
@@ -40,9 +40,9 @@ Feature: Keycloak Authentication Testing
     And the <adapter_type> token response should contain "access_token" and "refresh_token"
 
     Examples:
-      | adapter_type | username | password | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Token operations
     Given a configured <adapter_type> Keycloak adapter
@@ -55,9 +55,9 @@ Feature: Keycloak Authentication Testing
     And the <adapter_type> token response should contain "access_token" and "refresh_token"
 
     Examples:
-      | adapter_type | username | password | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: User information operations
     Given a configured <adapter_type> Keycloak adapter
@@ -70,9 +70,9 @@ Feature: Keycloak Authentication Testing
     And the <adapter_type> user info should contain "sub" and "preferred_username"
 
     Examples:
-      | adapter_type | username | password | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Token validation
     Given a configured <adapter_type> Keycloak adapter
@@ -84,9 +84,9 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> token validation should succeed
 
     Examples:
-      | adapter_type | username | password | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: User retrieval operations
     Given a configured <adapter_type> Keycloak adapter
@@ -98,9 +98,9 @@ Feature: Keycloak Authentication Testing
     And the user should have username "<username>"
 
     Examples:
-      | adapter_type | username | password | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Email-based user retrieval
     Given a configured <adapter_type> Keycloak adapter
@@ -112,9 +112,9 @@ Feature: Keycloak Authentication Testing
     And the user should have email "<email>"
 
     Examples:
-      | adapter_type | username | email              | password | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | test@example.com   | pass123  | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async@example.com  | async123 | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | email             | password | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | test@example.com  | pass123  | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async@example.com | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Realm role management
     Given a configured <adapter_type> Keycloak adapter
@@ -128,9 +128,9 @@ Feature: Keycloak Authentication Testing
     And the user "<username>" should have realm role "<role_name>"
 
     Examples:
-      | adapter_type | username | password | role_name    | role_description | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | test-role    | Test Role        | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | async-test-role| Async Test Role | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | role_name       | role_description | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Client role management
     Given a configured <adapter_type> Keycloak adapter
@@ -144,9 +144,9 @@ Feature: Keycloak Authentication Testing
     And the user "<username>" should have client role "<client_role_name>" for client "<client_name>"
 
     Examples:
-      | adapter_type | username | password | client_role_name | client_role_description | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | client-role      | Client Role             | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | async-client-role| Async Client Role       | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | client_role_name  | client_role_description | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | client-role       | Client Role             | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | async-client-role | Async Client Role       | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: User search operations
     Given a configured <adapter_type> Keycloak adapter
@@ -159,9 +159,9 @@ Feature: Keycloak Authentication Testing
     And the search results should contain 2 users
 
     Examples:
-      | adapter_type | search_user1   | search_user2   | search_query | password | realm_name      | realm_display_name | client_name      |
-      | sync         | searchuser1    | searchuser2    | searchuser   | pass123  | test-realm      | Test Realm         | test-client      |
-      | async        | asynctestuser4 | asynctestuser5 | asynctestuser| async123 | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | search_user1   | search_user2   | search_query  | password | realm_name       | realm_display_name | client_name       |
+      | sync         | searchuser1    | searchuser2    | searchuser    | pass123  | test-realm       | Test Realm         | test-client       |
+      | async        | asynctestuser4 | asynctestuser5 | asynctestuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: User update operations
     Given a configured <adapter_type> Keycloak adapter
@@ -173,9 +173,9 @@ Feature: Keycloak Authentication Testing
     And the user "<username>" should have first name "<first_name>" and last name "<last_name>"
 
     Examples:
-      | adapter_type | username | password | first_name | last_name | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | John       | Doe       | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | Async      | User      | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | first_name | last_name | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | John       | Doe       | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | Async      | User      | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Password reset operations
     Given a configured <adapter_type> Keycloak adapter
@@ -187,9 +187,9 @@ Feature: Keycloak Authentication Testing
     And I should be able to get token with username "<username>" and password "<new_password>" using <adapter_type> adapter
 
     Examples:
-      | adapter_type | username | password | new_password | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | newpass456   | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | newasync456  | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | new_password | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | newpass456   | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | newasync456  | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Session management
     Given a configured <adapter_type> Keycloak adapter
@@ -201,9 +201,9 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> session clearing should succeed
 
     Examples:
-      | adapter_type | username | password | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Logout operations
     Given a configured <adapter_type> Keycloak adapter
@@ -215,9 +215,9 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> logout operation should succeed
 
     Examples:
-      | adapter_type | username | password | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Client credentials token
     Given a configured <adapter_type> Keycloak adapter
@@ -228,9 +228,9 @@ Feature: Keycloak Authentication Testing
     And the <adapter_type> token response should contain "access_token"
 
     Examples:
-      | adapter_type | realm_name      | realm_display_name | client_name      |
-      | sync         | test-realm      | Test Realm         | test-client      |
-      | async        | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | realm_name       | realm_display_name | client_name       |
+      | sync         | test-realm       | Test Realm         | test-client       |
+      | async        | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Token introspection
     Given a configured <adapter_type> Keycloak adapter
@@ -243,9 +243,9 @@ Feature: Keycloak Authentication Testing
     And the introspection result should indicate active token
 
     Examples:
-      | adapter_type | username | password | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Token info retrieval
     Given a configured <adapter_type> Keycloak adapter
@@ -258,9 +258,9 @@ Feature: Keycloak Authentication Testing
     And the token info should contain user claims
 
     Examples:
-      | adapter_type | username | password | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Role permission checking
     Given a configured <adapter_type> Keycloak adapter
@@ -275,9 +275,9 @@ Feature: Keycloak Authentication Testing
     And the user should have the role "<role_name>"
 
     Examples:
-      | adapter_type | username | password | role_name    | role_description | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | test-role    | Test Role        | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | async-test-role| Async Test Role | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | role_name       | role_description | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: Role removal operations
     Given a configured <adapter_type> Keycloak adapter
@@ -291,9 +291,9 @@ Feature: Keycloak Authentication Testing
     And the user "<username>" should not have realm role "<role_name>"
 
     Examples:
-      | adapter_type | username | password | role_name    | role_description | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | test-role    | Test Role        | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser| async123 | async-test-role| Async Test Role | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | role_name       | role_description | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm | Async Test Realm   | async-test-client |
 
   Scenario Outline: User deletion operations
     Given a configured <adapter_type> Keycloak adapter
@@ -303,10 +303,11 @@ Feature: Keycloak Authentication Testing
     When I delete user "<username>" using <adapter_type> adapter
     Then the <adapter_type> user deletion should succeed
     And the user "<username>" should not exist
+
     Examples:
-      | adapter_type | username | password | realm_name      | realm_display_name | client_name      |
-      | sync         | testuser | pass123  | test-realm      | Test Realm         | test-client      |
-      | async        | asyncuser6| async123| async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username   | password | realm_name       | realm_display_name | client_name       |
+      | sync         | testuser   | pass123  | test-realm       | Test Realm         | test-client       |
+      | async        | asyncuser6 | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
   @organizations
   Scenario Outline: Organization create get update and delete
@@ -329,9 +330,9 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> organization deletion should succeed
 
     Examples:
-      | adapter_type | org_name      | org_alias     | org_display_name | realm_name      | realm_display_name | client_name      |
-      | sync         | test-org      | test-org-alias| Test Org Display | test-realm  | Test Realm         | test-client      |
-      | async        | async-test-org| async-org-alias| Async Org Display| test-realm  | Async Test Realm   | async-test-client|
+      | adapter_type | org_name       | org_alias       | org_display_name  | realm_name | realm_display_name | client_name       |
+      | sync         | test-org       | test-org-alias  | Test Org Display  | test-realm | Test Realm         | test-client       |
+      | async        | async-test-org | async-org-alias | Async Org Display | test-realm | Async Test Realm   | async-test-client |
 
   @organizations
   Scenario Outline: Organization members add and remove
@@ -355,9 +356,9 @@ Feature: Keycloak Authentication Testing
     Then the user organizations list should not contain organization "<org_name>"
 
     Examples:
-      | adapter_type | username | password | org_name | org_alias | realm_name     | realm_display_name | client_name      |
-      | sync         | orguser  | pass123  | test-org1 | test-alias1| test-realm | Test Realm         | test-client      |
-      | async        | asyncorguser| async123| async-org1| async-alias1| test-realm | Async Test Realm   | async-test-client|
+      | adapter_type | username     | password | org_name   | org_alias    | realm_name | realm_display_name | client_name       |
+      | sync         | orguser      | pass123  | test-org1  | test-alias1  | test-realm | Test Realm         | test-client       |
+      | async        | asyncorguser | async123 | async-org1 | async-alias1 | test-realm | Async Test Realm   | async-test-client |
 
   @groups
   Scenario Outline: Group CRUD hierarchy membership and roles
@@ -416,9 +417,9 @@ Feature: Keycloak Authentication Testing
     Then deleting the parent group with the <adapter_type> adapter should succeed
 
     Examples:
-      | adapter_type | username | password | group_name | realm_name      | realm_display_name | client_name      |
-      | sync         | groupuser| pass123  | test-group | test-realm      | Test Realm         | test-client      |
-      | async        | asyncgrp | async123 | async-group| async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | username  | password | group_name  | realm_name       | realm_display_name | client_name       |
+      | sync         | groupuser | pass123  | test-group  | test-realm       | Test Realm         | test-client       |
+      | async        | asyncgrp  | async123 | async-group | async-test-realm | Async Test Realm   | async-test-client |
 
   @authflows
   Scenario Outline: Create and manage authentication flows
@@ -461,9 +462,9 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> authentication flow deletion should succeed
 
     Examples:
-      | adapter_type | realm_name      | realm_display_name | client_name      |
-      | sync         | test-realm      | Test Realm         | test-client      |
-      | async        | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | realm_name       | realm_display_name | client_name       |
+      | sync         | test-realm       | Test Realm         | test-client       |
+      | async        | async-test-realm | Async Test Realm   | async-test-client |
 
   @clientscopes
   Scenario Outline: Client scope CRUD mappers and assignments
@@ -524,9 +525,9 @@ Feature: Keycloak Authentication Testing
     Then deleting the coverage client scope with the <adapter_type> adapter should succeed
 
     Examples:
-      | adapter_type | realm_name      | realm_display_name | client_name      |
-      | sync         | test-realm      | Test Realm         | test-client      |
-      | async        | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | realm_name       | realm_display_name | client_name       |
+      | sync         | test-realm       | Test Realm         | test-client       |
+      | async        | async-test-realm | Async Test Realm   | async-test-client |
 
   @authz
   Scenario Outline: Authorization settings retrieval
@@ -538,9 +539,9 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> authorization settings request should succeed
 
     Examples:
-      | adapter_type | realm_name      | realm_display_name | client_name      |
-      | sync         | test-realm      | Test Realm         | test-client      |
-      | async        | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | realm_name       | realm_display_name | client_name       |
+      | sync         | test-realm       | Test Realm         | test-client       |
+      | async        | async-test-realm | Async Test Realm   | async-test-client |
 
   @components
   Scenario Outline: Component listing
@@ -551,6 +552,6 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> components request should succeed
 
     Examples:
-      | adapter_type | realm_name      | realm_display_name | client_name      |
-      | sync         | test-realm      | Test Realm         | test-client      |
-      | async        | async-test-realm| Async Test Realm   | async-test-client|
+      | adapter_type | realm_name       | realm_display_name | client_name       |
+      | sync         | test-realm       | Test Realm         | test-client       |
+      | async        | async-test-realm | Async Test Realm   | async-test-client |

@@ -27,7 +27,7 @@ from archipy.models.dtos.redis.search.index_schema_dto import (
 )
 from archipy.models.dtos.redis.search.search_result_dto import SearchHitDTO, SearchResultDTO
 from archipy.models.errors import InvalidArgumentError
-from archipy.models.types.redis_search_types import RedisIndexType
+from archipy.models.types import JsonValue, RedisIndexType
 
 if TYPE_CHECKING:
     from redis.asyncio.client import Redis as AsyncRedis
@@ -595,7 +595,7 @@ class RedisSearchHandle(RedisSearchHandlePort):
     def upsert_json(
         self,
         doc_id: str,
-        payload: dict[str, str | int | float | list[float]],
+        payload: dict[str, JsonValue],
         json_path: str = "$",
     ) -> bool:
         """Upsert a JSON document."""
@@ -792,7 +792,7 @@ class AsyncRedisSearchHandle(AsyncRedisSearchHandlePort):
     async def upsert_json(
         self,
         doc_id: str,
-        payload: dict[str, str | int | float | list[float]],
+        payload: dict[str, JsonValue],
         json_path: str = "$",
     ) -> bool:
         """Upsert a JSON document asynchronously."""

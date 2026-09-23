@@ -1,6 +1,9 @@
 """Redis Search type definitions."""
 
+from collections.abc import Mapping
 from enum import StrEnum
+
+type JsonValue = str | int | float | bool | Mapping[str, JsonValue] | list[JsonValue] | None
 
 
 class VectorDistanceMetric(StrEnum):

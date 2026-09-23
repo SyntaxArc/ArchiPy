@@ -4,6 +4,8 @@ UV := uv
 PRE_COMMIT := uv run pre-commit
 PROJECT_NAME := archipy
 PYTHON_FILES := $(PROJECT_NAME) features/steps scripts
+# Collect git-changed Python files (staged + unstaged, existing files only)
+GIT_CHANGED_PY_FILES := $(shell git diff --name-only HEAD -- '*.py' | grep '^$(PROJECT_NAME)/' | xargs -r ls -d 2>/dev/null)
 
 # Colors for terminal output
 BLUE := \033[1;34m
@@ -69,14 +71,17 @@ clean: ## Remove build artifacts and cache directories
 	find . -type f -name "*.pyc" -delete
 
 .PHONY: format
-format: ## Format code using ruff
+format: ## Format code using ruff and gherkin-formatter
 	@echo "${BLUE}Formatting code...${NC}"
 	$(PYTHON) ruff format --config pyproject.toml $(PYTHON_FILES)
+	@echo "${BLUE}Formatting Gherkin feature files...${NC}"
+	$(PYTHON) gherkin-formatter features/
 
 .PHONY: lint
 lint: ## Run all linters
 	@echo "${BLUE}Running linters...${NC}"
-	$(PYTHON) ruff check --config pyproject.toml  $(PYTHON_FILES)
+	$(PYTHON) ruff check --config pyproject.toml $(PYTHON_FILES)
+	$(PYTHON) ruff check --config pyproject.toml --exclude '' --select F features scripts
 	$(PYTHON) ty check --fix $(PYTHON_FILES)
 
 .PHONY: security
@@ -131,6 +136,60 @@ ci: ## Run CI pipeline locally
 	$(MAKE) security
 	$(MAKE) behave
 	$(MAKE) build
+
+.PHONY: format-changes
+format-changes: ## Format only git-changed Python and Gherkin files
+	@echo "${BLUE}Formatting changed files...${NC}"
+	@if [ -z "$(GIT_CHANGED_PY_FILES)" ]; then \
+		echo "${YELLOW}No changed Python files found.${NC}"; \
+	else \
+		echo "$(GIT_CHANGED_PY_FILES)" | tr ' ' '\n'; \
+		$(PYTHON) ruff format --config pyproject.toml $(GIT_CHANGED_PY_FILES); \
+	fi
+	@CHANGED_FEATURES=$$(git diff --name-only HEAD -- 'features/*.feature' | xargs -r ls -d 2>/dev/null); \
+	if [ -z "$$CHANGED_FEATURES" ]; then \
+		echo "${YELLOW}No changed Gherkin feature files found.${NC}"; \
+	else \
+		echo "$$CHANGED_FEATURES" | tr ' ' '\n'; \
+		$(PYTHON) gherkin-formatter $$CHANGED_FEATURES; \
+	fi
+
+.PHONY: lint-changes
+lint-changes: ## Lint only git-changed Python files
+	@echo "${BLUE}Linting changed files...${NC}"
+	@if [ -z "$(GIT_CHANGED_PY_FILES)" ]; then \
+		echo "${YELLOW}No changed Python files found.${NC}"; \
+	else \
+		echo "$(GIT_CHANGED_PY_FILES)" | tr ' ' '\n'; \
+		$(PYTHON) ruff check --config pyproject.toml $(GIT_CHANGED_PY_FILES); \
+		$(PYTHON) ty check $$(echo "$(GIT_CHANGED_PY_FILES)" | tr ' ' '\n' | grep '^$(PROJECT_NAME)/' | tr '\n' ' '); \
+	fi
+
+.PHONY: security-changes
+security-changes: ## Run security scan only on git-changed Python files
+	@echo "${BLUE}Running security scan on changed files...${NC}"
+	@if [ -z "$(GIT_CHANGED_PY_FILES)" ]; then \
+		echo "${YELLOW}No changed Python files found.${NC}"; \
+	else \
+		echo "$(GIT_CHANGED_PY_FILES)" | tr ' ' '\n'; \
+		$(PYTHON) bandit -c pyproject.toml $(GIT_CHANGED_PY_FILES) || true; \
+	fi
+
+.PHONY: check-changes
+check-changes: format-changes lint-changes security-changes ## Run format, lint, and security only on git-changed files
+
+# BASE defaults to master; use e.g. make check-mr BASE=main to diff vs main
+BASE ?= master
+.PHONY: check-mr
+check-mr: ## Run pre-commit only on files changed vs BASE (default master), e.g. make check-mr BASE=main
+	@BASE="$(BASE)"; \
+	CHANGED=$$(git diff --name-only "$$BASE" -- 2>/dev/null | tr '\n' ' '); \
+	if [ -z "$$CHANGED" ]; then \
+	  echo "${YELLOW}No changed files vs $$BASE${NC}"; \
+	  exit 0; \
+	fi; \
+	echo "${BLUE}Running pre-commit on files changed vs $$BASE...${NC}"; \
+	$(PRE_COMMIT) run --files $$CHANGED
 
 .PHONY: docs-serve
 docs-serve: ## Serve MkDocs documentation locally (balanced mode)

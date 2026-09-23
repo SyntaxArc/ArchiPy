@@ -13,7 +13,7 @@ Feature: FastAPI MinIO large file upload
     And the object "<object>" in bucket "uploads-bucket" should have size of at least <size_mb> MB
 
     Examples:
-      | size_mb | object          |
-      | 50      | file-50mb.bin   |
-      | 75      | file-75mb.bin   |
-      | 100     | file-100mb.bin  |
+      | size_mb | object         |
+      | 50      | file-50mb.bin  |
+      | 75      | file-75mb.bin  |
+      | 100     | file-100mb.bin |

@@ -32,13 +32,13 @@ Feature: App Utilities
     Then the response should NOT have access-control-allow-origin header
 
     Examples:
-      | origin                           |
-      | https://malicious.com            |
-      | https://subdomain.example.com    |
-      | https://example.com:8080        |
-      | http://example.com               |
-      | null                             |
-      | https://attacker.org             |
+      | origin                        |
+      | https://malicious.com         |
+      | https://subdomain.example.com |
+      | https://example.com:8080      |
+      | http://example.com            |
+      | null                          |
+      | https://attacker.org          |
 
   Scenario Outline: CORS should reject requests with disallowed HTTP methods
     Given a FastAPI app with CORS configuration
@@ -59,12 +59,12 @@ Feature: App Utilities
     Then the custom header should NOT be in access-control-expose-headers
 
     Examples:
-      | header          |
-      | X-Custom-Token  |
-      | X-Api-Key       |
-      | X-Debug         |
-      | Cookie          |
-      | X-Requested-With|
+      | header           |
+      | X-Custom-Token   |
+      | X-Api-Key        |
+      | X-Debug          |
+      | Cookie           |
+      | X-Requested-With |
 
   Scenario Outline: CORS preflight should reject disallowed methods
     Given a FastAPI app with CORS configuration
@@ -72,11 +72,11 @@ Feature: App Utilities
     Then the response should NOT have access-control-allow-methods header
 
     Examples:
-      | method  |
-      | PUT     |
-      | DELETE  |
-      | PATCH   |
-      | TRACE   |
+      | method |
+      | PUT    |
+      | DELETE |
+      | PATCH  |
+      | TRACE  |
 
   Scenario Outline: CORS preflight should reject disallowed headers
     Given a FastAPI app with CORS configuration
@@ -84,11 +84,11 @@ Feature: App Utilities
     Then the response should NOT have access-control-allow-headers header
 
     Examples:
-      | header          |
-      | X-Custom-Token  |
-      | X-Api-Key       |
-      | X-Debug         |
-      | Cookie          |
+      | header         |
+      | X-Custom-Token |
+      | X-Api-Key      |
+      | X-Debug        |
+      | Cookie         |
 
   Scenario Outline: CORS should reject wrong Content-Type
     Given a FastAPI app with CORS configuration
@@ -97,7 +97,7 @@ Feature: App Utilities
 
     Examples:
       | content_type    |
-      | application/xml  |
+      | application/xml |
       | text/plain      |
       | multipart/form  |
 
@@ -107,10 +107,10 @@ Feature: App Utilities
     Then the response should NOT have access-control-allow-methods header
 
     Examples:
-      | preflight_type                                  |
-      | without Origin header                           |
-      | without Access-Control-Request-Method header   |
-      | with invalid Origin                            |
+      | preflight_type                               |
+      | without Origin header                        |
+      | without Access-Control-Request-Method header |
+      | with invalid Origin                          |
 
   Scenario: Default app should not register optional middleware
     When a FastAPI app is created

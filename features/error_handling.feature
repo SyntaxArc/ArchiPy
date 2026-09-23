@@ -48,7 +48,6 @@ Feature: Error Handling
     Then all constructor signatures resolve without NameError
 
   # === FastAPI Error Handling ===
-
   @fastapi
   Scenario Outline: FastAPI handles custom BaseError exceptions
     When an endpoint raises "<error_type>" error
@@ -132,7 +131,6 @@ Feature: Error Handling
       | InvalidNationalCodeError | 1234567890    | INVALID_NATIONAL_CODE | کد ملی                | FA   |
 
   # === gRPC Error Handling ===
-
   @grpc
   Scenario Outline: Sync gRPC handles custom BaseError exceptions
     When a sync gRPC method raises "<error_type>" error

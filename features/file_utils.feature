@@ -21,10 +21,10 @@ Feature: File Utilities
     Then the validation should <expected_result>
 
     Examples:
-      | file_name      | expected_result |
-      | image.jpg      | succeed         |
-      | picture.png    | succeed         |
-      | document.pdf   | succeed         |
-      | notes.txt      | succeed         |
-      | script.exe     | fail            |
-      | archive.zip    | fail            |
+      | file_name    | expected_result |
+      | image.jpg    | succeed         |
+      | picture.png  | succeed         |
+      | document.pdf | succeed         |
+      | notes.txt    | succeed         |
+      | script.exe   | fail            |
+      | archive.zip  | fail            |

@@ -51,19 +51,19 @@ Feature: Vault Adapter
     Then a Vault InvalidArgumentError should be raised for "<argument>"
 
     Examples:
-      | operation                              | argument    |
-      | read_secret empty path                 | path        |
-      | write_secret empty path                | path        |
-      | write_secret empty payload             | secret      |
-      | delete_secret empty path               | path        |
-      | renew_lease empty id                   | lease_id    |
-      | revoke_lease empty id                  | lease_id    |
-      | encrypt empty key                      | key_name    |
-      | encrypt empty plaintext                | plaintext   |
-      | decrypt empty key                      | key_name    |
-      | decrypt empty ciphertext               | ciphertext  |
-      | get_dynamic_credentials empty mount    | mount_point |
-      | get_dynamic_credentials empty role     | role        |
+      | operation                           | argument    |
+      | read_secret empty path              | path        |
+      | write_secret empty path             | path        |
+      | write_secret empty payload          | secret      |
+      | delete_secret empty path            | path        |
+      | renew_lease empty id                | lease_id    |
+      | revoke_lease empty id               | lease_id    |
+      | encrypt empty key                   | key_name    |
+      | encrypt empty plaintext             | plaintext   |
+      | decrypt empty key                   | key_name    |
+      | decrypt empty ciphertext            | ciphertext  |
+      | get_dynamic_credentials empty mount | mount_point |
+      | get_dynamic_credentials empty role  | role        |
 
   @needs-postgres
   Scenario: Generate renew and revoke dynamic database credentials

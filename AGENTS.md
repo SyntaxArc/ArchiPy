@@ -3,7 +3,7 @@
 ## Quick Commands
 
 ```bash
-make format        # Ruff formatter (fixes in place)
+make format        # Ruff + gherkin-formatter (fixes in place)
 make lint          # Ruff linter + ty type checker
 make behave        # Run all BDD tests
 make check         # format + lint + security + tests

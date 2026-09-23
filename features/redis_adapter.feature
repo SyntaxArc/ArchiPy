@@ -15,10 +15,10 @@ Feature: Redis Testing
     Then the sync retrieved value should be "12345"
 
     Examples: Adapter Types
-      | adapter_type    |
-      | mock            |
-      | container       |
-      | cluster         |
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
 
   Scenario Outline: Remove a key
     Given a configured <adapter_type>
@@ -30,10 +30,10 @@ Feature: Redis Testing
     Then the sync key should not exist
 
     Examples: Adapter Types
-      | adapter_type    |
-      | mock            |
-      | container       |
-      | cluster         |
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
 
   Scenario Outline: Manage a list of items
     Given a configured <adapter_type>
@@ -43,10 +43,10 @@ Feature: Redis Testing
     Then the sync list "fruits" should contain "apple, banana, orange"
 
     Examples: Adapter Types
-      | adapter_type    |
-      | mock            |
-      | container       |
-      | cluster         |
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
 
   Scenario Outline: Handle a hash structure
     Given a configured <adapter_type>
@@ -56,10 +56,10 @@ Feature: Redis Testing
     Then the sync retrieved field value should be "Alice"
 
     Examples: Adapter Types
-      | adapter_type    |
-      | mock            |
-      | container       |
-      | cluster         |
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
 
   Scenario Outline: Manage a set of colors
     Given a configured <adapter_type>
@@ -69,10 +69,10 @@ Feature: Redis Testing
     Then the sync set "colors" should contain "red, blue, green"
 
     Examples: Adapter Types
-      | adapter_type    |
-      | mock            |
-      | container       |
-      | cluster         |
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
 
   @async
   Scenario Outline: Store and retrieve a key-value pair asynchronously
@@ -83,10 +83,10 @@ Feature: Redis Testing
     Then the async retrieved value should be "67890"
 
     Examples: Adapter Types
-      | adapter_type    |
-      | mock            |
-      | container       |
-      | cluster         |
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
 
   @async
   Scenario Outline: Remove a key asynchronously
@@ -99,10 +99,10 @@ Feature: Redis Testing
     Then the async key should not exist
 
     Examples: Adapter Types
-      | adapter_type    |
-      | mock            |
-      | container       |
-      | cluster         |
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
 
   @async
   Scenario Outline: Manage a list of tasks asynchronously
@@ -113,10 +113,10 @@ Feature: Redis Testing
     Then the async list "tasks" should contain "task1, task2, task3"
 
     Examples: Adapter Types
-      | adapter_type    |
-      | mock            |
-      | container       |
-      | cluster         |
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
 
   @async
   Scenario Outline: Handle a hash structure asynchronously
@@ -127,10 +127,10 @@ Feature: Redis Testing
     Then the async retrieved field value should be "bob@example.com"
 
     Examples: Adapter Types
-      | adapter_type    |
-      | mock            |
-      | container       |
-      | cluster         |
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
 
   @async
   Scenario Outline: Manage a set of tags asynchronously
@@ -141,10 +141,10 @@ Feature: Redis Testing
     Then the async set "tags" should contain "tag1, tag2, tag3"
 
     Examples: Adapter Types
-      | adapter_type    |
-      | mock            |
-      | container       |
-      | cluster         |
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
 
   Scenario: Cluster reports healthy state
     Given a configured cluster
@@ -168,9 +168,9 @@ Feature: Redis Testing
     Then the slot should be between 0 and 16383
 
     Examples: Keys
-      | key        |
-      | {user}:1   |
-      | order:99   |
+      | key      |
+      | {user}:1 |
+      | order:99 |
 
   Scenario: Cluster topology has 3 masters and 3 replicas
     Given a configured cluster
@@ -183,9 +183,9 @@ Feature: Redis Testing
     Then both keys should share the same slot
 
     Examples: Hash-tagged key pairs
-      | key1       | key2       |
-      | {user}:1   | {user}:2   |
-      | {order}:1  | {order}:2  |
+      | key1      | key2      |
+      | {user}:1  | {user}:2  |
+      | {order}:1 | {order}:2 |
 
   Scenario Outline: Slot key inspection on cluster
     Given a configured cluster
@@ -224,9 +224,9 @@ Feature: Redis Testing
     Then the slot should be between 0 and 16383
 
     Examples: Keys
-      | key        |
-      | {user}:1   |
-      | order:99   |
+      | key      |
+      | {user}:1 |
+      | order:99 |
 
   @async
   Scenario: Cluster topology has 3 masters and 3 replicas asynchronously
@@ -241,9 +241,9 @@ Feature: Redis Testing
     Then both keys should share the same slot
 
     Examples: Hash-tagged key pairs
-      | key1       | key2       |
-      | {user}:1   | {user}:2   |
-      | {order}:1  | {order}:2  |
+      | key1      | key2      |
+      | {user}:1  | {user}:2  |
+      | {order}:1 | {order}:2 |
 
   @async
   Scenario Outline: Slot key inspection on cluster asynchronously
@@ -800,10 +800,10 @@ Feature: Redis Testing
     Then the async retrieved value should be "v"
 
     Examples: Pipeline keys
-      | adapter_type | pipe_tag       |
-      | mock         | bdd-a-p-mock   |
-      | container    | bdd-a-p-cont   |
-      | cluster      | bdd-a-p-clust  |
+      | adapter_type | pipe_tag      |
+      | mock         | bdd-a-p-mock  |
+      | container    | bdd-a-p-cont  |
+      | cluster      | bdd-a-p-clust |
 
   # Redis 8.8 — Array data structure
   Scenario Outline: Store and retrieve array elements
@@ -972,11 +972,11 @@ Feature: Redis Testing
     Then search index "<index_name>" should exist
 
     Examples: Redis index types
-      | adapter_type | index_type | index_name              | prefix   |
-      | container    | HASH       | products-hash           | product  |
-      | container    | JSON       | products-json           | json     |
-      | cluster      | HASH       | cluster-products-hash   | {srch-h} |
-      | cluster      | JSON       | cluster-products-json   | {srch-j} |
+      | adapter_type | index_type | index_name            | prefix   |
+      | container    | HASH       | products-hash         | product  |
+      | container    | JSON       | products-json         | json     |
+      | cluster      | HASH       | cluster-products-hash | {srch-h} |
+      | cluster      | JSON       | cluster-products-json | {srch-j} |
 
   Scenario Outline: Upsert and KNN search documents synchronously
     Given a configured <adapter_type>
@@ -988,11 +988,11 @@ Feature: Redis Testing
     And the top hit id should be "<doc1>"
 
     Examples: Redis index types
-      | adapter_type | index_type | index_name        | prefix | doc1       | doc2       |
-      | container    | HASH       | products-knn      | item   | item:1     | item:2     |
-      | container    | JSON       | products-knn-j    | jsonk  | jsonk:1    | jsonk:2    |
-      | cluster      | HASH       | cluster-knn       | {srch} | {srch}:1   | {srch}:2   |
-      | cluster      | JSON       | cluster-knn-j     | {srch} | {srch}:j1  | {srch}:j2  |
+      | adapter_type | index_type | index_name     | prefix | doc1      | doc2      |
+      | container    | HASH       | products-knn   | item   | item:1    | item:2    |
+      | container    | JSON       | products-knn-j | jsonk  | jsonk:1   | jsonk:2   |
+      | cluster      | HASH       | cluster-knn    | {srch} | {srch}:1  | {srch}:2  |
+      | cluster      | JSON       | cluster-knn-j  | {srch} | {srch}:j1 | {srch}:j2 |
 
   Scenario Outline: Create index upsert and verify document fields synchronously
     Given a configured <adapter_type>
@@ -1002,11 +1002,11 @@ Feature: Redis Testing
     And document "<doc_id>" in search index "<index_name>" should have title "JSON Book"
 
     Examples: Redis index types
-      | adapter_type | index_type | index_name              | prefix | doc_id      |
-      | container    | HASH       | products-fields-h       | fldh   | fldh:1      |
-      | container    | JSON       | products-fields-j       | fldj   | fldj:1      |
-      | cluster      | HASH       | cluster-products-fields | {fld}  | {fld}:1     |
-      | cluster      | JSON       | cluster-products-fields-j | {fld} | {fld}:j1  |
+      | adapter_type | index_type | index_name                | prefix | doc_id   |
+      | container    | HASH       | products-fields-h         | fldh   | fldh:1   |
+      | container    | JSON       | products-fields-j         | fldj   | fldj:1   |
+      | cluster      | HASH       | cluster-products-fields   | {fld}  | {fld}:1  |
+      | cluster      | JSON       | cluster-products-fields-j | {fld}  | {fld}:j1 |
 
   Scenario Outline: Hybrid search synchronously
     Given a configured <adapter_type>
@@ -1016,11 +1016,11 @@ Feature: Redis Testing
     Then the search should return at least 1 hits
 
     Examples: Redis index types
-      | adapter_type | index_type | index_name              | prefix  | doc_id       |
-      | container    | HASH       | products-hybrid         | hybrid  | hybrid:1     |
-      | container    | JSON       | products-hybrid-j       | hybridj | hybridj:1    |
-      | cluster      | HASH       | cluster-products-hybrid | {hyb}   | {hyb}:1      |
-      | cluster      | JSON       | cluster-products-hybrid-j | {hyb} | {hyb}:j1   |
+      | adapter_type | index_type | index_name                | prefix  | doc_id    |
+      | container    | HASH       | products-hybrid           | hybrid  | hybrid:1  |
+      | container    | JSON       | products-hybrid-j         | hybridj | hybridj:1 |
+      | cluster      | HASH       | cluster-products-hybrid   | {hyb}   | {hyb}:1   |
+      | cluster      | JSON       | cluster-products-hybrid-j | {hyb}   | {hyb}:j1  |
 
   Scenario Outline: Aggregate documents synchronously
     Given a configured <adapter_type>
@@ -1031,11 +1031,11 @@ Feature: Redis Testing
     Then the aggregation should return at least 1 row
 
     Examples: Redis index types
-      | adapter_type | index_type | index_name         | prefix | doc1      | doc2      |
-      | container    | HASH       | products-agg       | agg    | agg:1     | agg:2     |
-      | container    | JSON       | products-agg-j     | aggj   | aggj:1    | aggj:2    |
-      | cluster      | HASH       | cluster-products-agg | {agg}  | {agg}:1   | {agg}:2   |
-      | cluster      | JSON       | cluster-products-agg-j | {agg} | {agg}:j1 | {agg}:j2 |
+      | adapter_type | index_type | index_name             | prefix | doc1     | doc2     |
+      | container    | HASH       | products-agg           | agg    | agg:1    | agg:2    |
+      | container    | JSON       | products-agg-j         | aggj   | aggj:1   | aggj:2   |
+      | cluster      | HASH       | cluster-products-agg   | {agg}  | {agg}:1  | {agg}:2  |
+      | cluster      | JSON       | cluster-products-agg-j | {agg}  | {agg}:j1 | {agg}:j2 |
 
   Scenario Outline: Drop search index synchronously
     Given a configured <adapter_type>
@@ -1044,11 +1044,11 @@ Feature: Redis Testing
     Then search index "<index_name>" should not exist
 
     Examples: Redis index types
-      | adapter_type | index_type | index_name            | prefix |
-      | container    | HASH       | products-drop         | drop   |
-      | container    | JSON       | products-drop-j       | dropj  |
-      | cluster      | HASH       | cluster-products-drop | {drp}  |
-      | cluster      | JSON       | cluster-products-drop-j | {drp} |
+      | adapter_type | index_type | index_name              | prefix |
+      | container    | HASH       | products-drop           | drop   |
+      | container    | JSON       | products-drop-j         | dropj  |
+      | cluster      | HASH       | cluster-products-drop   | {drp}  |
+      | cluster      | JSON       | cluster-products-drop-j | {drp}  |
 
   @async
   Scenario Outline: Upsert and KNN search documents asynchronously
@@ -1059,11 +1059,11 @@ Feature: Redis Testing
     Then the async search should return at least 1 hit
 
     Examples: Redis index types
-      | adapter_type | index_type | index_name               | prefix     | doc_id         |
-      | container    | HASH       | async-products-knn       | async-item | async-item:1   |
-      | container    | JSON       | async-products-knn-j     | async-json | async-json:1   |
-      | cluster      | HASH       | cluster-async-products-knn | {asrch}  | {asrch}:1      |
-      | cluster      | JSON       | cluster-async-products-knn-j | {asrch} | {asrch}:j1 |
+      | adapter_type | index_type | index_name                   | prefix     | doc_id       |
+      | container    | HASH       | async-products-knn           | async-item | async-item:1 |
+      | container    | JSON       | async-products-knn-j         | async-json | async-json:1 |
+      | cluster      | HASH       | cluster-async-products-knn   | {asrch}    | {asrch}:1    |
+      | cluster      | JSON       | cluster-async-products-knn-j | {asrch}    | {asrch}:j1   |
 
   Scenario Outline: Alter index schema and verify new field
     Given a configured <adapter_type>
@@ -1072,11 +1072,11 @@ Feature: Redis Testing
     Then search index "<index_name>" should have field "price"
 
     Examples: Redis index types
-      | adapter_type | index_type | index_name              | prefix |
-      | container    | HASH       | products-alter          | alter  |
-      | container    | JSON       | products-alter-j        | alterj |
-      | cluster      | HASH       | cluster-products-alter  | {alt}  |
-      | cluster      | JSON       | cluster-products-alter-j | {alt} |
+      | adapter_type | index_type | index_name               | prefix |
+      | container    | HASH       | products-alter           | alter  |
+      | container    | JSON       | products-alter-j         | alterj |
+      | cluster      | HASH       | cluster-products-alter   | {alt}  |
+      | cluster      | JSON       | cluster-products-alter-j | {alt}  |
 
   Scenario Outline: Add alias and search through it
     Given a configured <adapter_type>
@@ -1090,11 +1090,11 @@ Feature: Redis Testing
     Then the alias operation should succeed
 
     Examples: Redis index types
-      | adapter_type | index_type | index_name              | prefix | doc_id      | alias                     |
-      | container    | HASH       | products-alias          | alias  | alias:1     | products-alias-view       |
-      | container    | JSON       | products-alias-j        | aliasj | aliasj:1    | products-alias-j-view     |
-      | cluster      | HASH       | cluster-products-alias  | {als}  | {als}:1     | cluster-products-alias-v  |
-      | cluster      | JSON       | cluster-products-alias-j | {als} | {als}:j1    | cluster-products-alias-jv |
+      | adapter_type | index_type | index_name               | prefix | doc_id   | alias                     |
+      | container    | HASH       | products-alias           | alias  | alias:1  | products-alias-view       |
+      | container    | JSON       | products-alias-j         | aliasj | aliasj:1 | products-alias-j-view     |
+      | cluster      | HASH       | cluster-products-alias   | {als}  | {als}:1  | cluster-products-alias-v  |
+      | cluster      | JSON       | cluster-products-alias-j | {als}  | {als}:j1 | cluster-products-alias-jv |
 
   Scenario Outline: Delete document from search index
     Given a configured <adapter_type>
@@ -1104,11 +1104,11 @@ Feature: Redis Testing
     Then document "<doc_id>" should not exist in search index "<index_name>"
 
     Examples: Redis index types
-      | adapter_type | index_type | index_name               | prefix | doc_id     |
-      | container    | HASH       | products-delete          | del    | del:1      |
-      | container    | JSON       | products-delete-j        | delj   | delj:1     |
-      | cluster      | HASH       | cluster-products-delete  | {del}  | {del}:1    |
-      | cluster      | JSON       | cluster-products-delete-j | {del} | {del}:j1   |
+      | adapter_type | index_type | index_name                | prefix | doc_id   |
+      | container    | HASH       | products-delete           | del    | del:1    |
+      | container    | JSON       | products-delete-j         | delj   | delj:1   |
+      | cluster      | HASH       | cluster-products-delete   | {del}  | {del}:1  |
+      | cluster      | JSON       | cluster-products-delete-j | {del}  | {del}:j1 |
 
   Scenario Outline: Upsert document via DTO helper
     Given a configured <adapter_type>
@@ -1117,11 +1117,11 @@ Feature: Redis Testing
     Then document "<doc_id>" in search index "<index_name>" should have title "<title>"
 
     Examples: Redis index types
-      | adapter_type | index_type | index_name                | prefix | doc_id      | title           | vector          |
-      | container    | HASH       | products-dto-hash         | dto-h  | dto-h:1     | DTO Book        | [1.0, 0.0, 0.0] |
-      | container    | JSON       | products-dto-json         | dto-j  | dto-j:1     | DTO JSON Book   | [0.0, 0.0, 1.0] |
-      | cluster      | HASH       | cluster-products-dto-hash | {dto}  | {dto}:1     | DTO Cluster     | [1.0, 0.0, 0.0] |
-      | cluster      | JSON       | cluster-products-dto-json | {dto}  | {dto}:j1    | DTO Cluster JSON | [0.0, 0.0, 1.0] |
+      | adapter_type | index_type | index_name                | prefix | doc_id   | title            | vector          |
+      | container    | HASH       | products-dto-hash         | dto-h  | dto-h:1  | DTO Book         | [1.0, 0.0, 0.0] |
+      | container    | JSON       | products-dto-json         | dto-j  | dto-j:1  | DTO JSON Book    | [0.0, 0.0, 1.0] |
+      | cluster      | HASH       | cluster-products-dto-hash | {dto}  | {dto}:1  | DTO Cluster      | [1.0, 0.0, 0.0] |
+      | cluster      | JSON       | cluster-products-dto-json | {dto}  | {dto}:j1 | DTO Cluster JSON | [0.0, 0.0, 1.0] |
 
   Scenario Outline: Create SVS-VAMANA search index synchronously
     Given a configured <adapter_type>
@@ -1129,9 +1129,9 @@ Feature: Redis Testing
     Then search index "<index_name>" should exist
 
     Examples: SVS-VAMANA index
-      | adapter_type | index_name        | prefix |
-      | container    | products-svs      | svs    |
-      | cluster      | cluster-products-svs | {svs} |
+      | adapter_type | index_name           | prefix |
+      | container    | products-svs         | svs    |
+      | cluster      | cluster-products-svs | {svs}  |
 
   Scenario Outline: Vector range search synchronously
     Given a configured <adapter_type>
@@ -1143,9 +1143,9 @@ Feature: Redis Testing
     And the top hit id should be "<doc1>"
 
     Examples: Vector range query
-      | adapter_type | index_name            | prefix | doc1      | doc2      | radius |
-      | container    | products-range        | rng    | rng:1     | rng:2     | 0.5    |
-      | cluster      | cluster-products-range | {rng} | {rng}:1   | {rng}:2   | 0.5    |
+      | adapter_type | index_name             | prefix | doc1    | doc2    | radius |
+      | container    | products-range         | rng    | rng:1   | rng:2   | 0.5    |
+      | cluster      | cluster-products-range | {rng}  | {rng}:1 | {rng}:2 | 0.5    |
 
   Scenario Outline: KNN search with shard ratio on cluster
     Given a configured <adapter_type>
@@ -1155,5 +1155,5 @@ Feature: Redis Testing
     Then the search should return at least 1 hits
 
     Examples: Cluster shard ratio
-      | adapter_type | index_name            | prefix | doc_id    | ratio |
-      | cluster      | cluster-shard-knn     | {srch} | {srch}:1  | 0.5   |
+      | adapter_type | index_name        | prefix | doc_id   | ratio |
+      | cluster      | cluster-shard-knn | {srch} | {srch}:1 | 0.5   |

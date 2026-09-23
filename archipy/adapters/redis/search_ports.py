@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from archipy.models.dtos.redis.search.index_schema_dto import IndexFieldConfig, IndexSchemaDTO
     from archipy.models.dtos.redis.search.search_query_dto import SearchQueryDTO
     from archipy.models.dtos.redis.search.search_result_dto import SearchResultDTO
-    from archipy.models.types.redis_search_types import RedisIndexType
+    from archipy.models.types import JsonValue, RedisIndexType
 
 
 class RedisSearchHandlePort:
@@ -70,7 +70,7 @@ class RedisSearchHandlePort:
     def upsert_json(
         self,
         doc_id: str,
-        payload: dict[str, str | int | float | list[float]],
+        payload: dict[str, JsonValue],
         json_path: str = "$",
     ) -> bool:
         """Upsert a JSON document."""
@@ -173,7 +173,7 @@ class AsyncRedisSearchHandlePort:
     async def upsert_json(
         self,
         doc_id: str,
-        payload: dict[str, str | int | float | list[float]],
+        payload: dict[str, JsonValue],
         json_path: str = "$",
     ) -> bool:
         """Upsert a JSON document asynchronously."""

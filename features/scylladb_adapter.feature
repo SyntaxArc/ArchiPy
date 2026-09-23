@@ -38,10 +38,10 @@ Feature: ScyllaDB Adapter
     And a keyspace "test_ks" with replication factor 1 exists
     And a table "employees" with schema "CREATE TABLE IF NOT EXISTS employees (id int PRIMARY KEY, name text, department text)"
     And data exists in table "employees":
-      | id | name    | department |
-      | 1  | John    | IT         |
-      | 2  | Jane    | HR         |
-      | 3  | Bob     | IT         |
+      | id | name | department |
+      | 1  | John | IT         |
+      | 2  | Jane | HR         |
+      | 3  | Bob  | IT         |
     When I select from table "employees" where id equals 2
     Then the result should contain 1 row
     And the result row should have name "Jane" and department "HR"
@@ -139,10 +139,10 @@ Feature: ScyllaDB Adapter
     And a keyspace "test_ks" with replication factor 1 exists
     And a table "items" with schema "CREATE TABLE IF NOT EXISTS items (id int PRIMARY KEY, name text, category text)"
     And data exists in table "items":
-      | id | name    | category |
-      | 1  | Item A  | cat1     |
-      | 2  | Item B  | cat1     |
-      | 3  | Item C  | cat2     |
+      | id | name   | category |
+      | 1  | Item A | cat1     |
+      | 2  | Item B | cat1     |
+      | 3  | Item C | cat2     |
     When I count rows in table "items"
     Then the count result should be 3
     When I count rows in table "items" with conditions category "cat1"
@@ -198,8 +198,8 @@ Feature: ScyllaDB Adapter
     And a keyspace "test_ks" with replication factor 1 exists
     And a table "sessions_ttl" with schema "CREATE TABLE IF NOT EXISTS sessions_ttl (session_id text PRIMARY KEY, data text)"
     And data exists in table "sessions_ttl":
-      | session_id | data        |
-      | sess1      | old_data    |
+      | session_id | data     |
+      | sess1      | old_data |
     When I update table "sessions_ttl" setting data to "new_data" with ttl 7200 where session_id equals "sess1"
     And I select from table "sessions_ttl" where session_id equals "sess1"
     Then the result row should have data "new_data"

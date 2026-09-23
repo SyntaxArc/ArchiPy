@@ -25,12 +25,15 @@ uv add --group dev <package>
 | Command | What it does |
 |---|---|
 | `make install-dev` | Install all deps + pre-commit hooks |
-| `make format` | Ruff formatter (fixes in place) |
+| `make format` | Ruff + gherkin-formatter (fixes in place) |
 | `make lint` | Ruff linter + ty type checker |
 | `make behave` | Run all BDD tests (sequential scenarios) |
 | `make check` | format + lint + security + tests |
 | `make security` | Bandit scan → `bandit-report.json` (policy: `security.mdc`) |
 | `make pre-commit` | Run all pre-commit hooks manually |
+| `make format-changes` | Format only git-changed Python/Gherkin files |
+| `make check-changes` | Format/lint/security on git-changed files |
+| `make check-mr` | Pre-commit on files changed vs `BASE` (default `master`) |
 | `make clean` | Remove build artifacts and caches |
 | `make build` | Build distribution packages |
 | `make ci` | Full CI pipeline locally |
@@ -45,7 +48,8 @@ Hooks run automatically on `git commit`. They include (in order):
 5. `codespell` — catches common typos in `.py`/`.pyi` files
 6. `ruff-format` → `ruff check --fix` → `add-trailing-comma`
 7. `validate-pyproject` — validates `pyproject.toml`
-8. `ty check` — strict type checking
+8. `ty check --fix` — strict type checking
+9. `gherkin-format` — formats `features/*.feature`
 
 Run manually:
 ```bash

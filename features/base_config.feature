@@ -17,12 +17,12 @@ Feature: Base Configuration System
     Then the attribute "<attribute>" should exist
 
     Examples:
-      | attribute  |
-      | APP_NAME   |
-      | AUTH       |
-      | ELASTIC    |
-      | REDIS      |
-      | FASTAPI    |
+      | attribute |
+      | APP_NAME  |
+      | AUTH      |
+      | ELASTIC   |
+      | REDIS     |
+      | FASTAPI   |
 
   Scenario: Ensure .env settings override BaseConfig's defaults
     Given an env file with key "ENVIRONMENT" and value "PRODUCTION"
