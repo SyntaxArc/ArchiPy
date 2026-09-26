@@ -751,11 +751,11 @@ def _ensure_httpx_instrumented() -> None:
 
 
 def _uninstrument_httpx() -> None:
-    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+    from opentelemetry.instrumentation.httpx import HTTPX2ClientInstrumentor, HTTPXClientInstrumentor
 
-    instrumentor = HTTPXClientInstrumentor()
-    if instrumentor.is_instrumented_by_opentelemetry:
-        instrumentor.uninstrument()
+    for instrumentor in (HTTPXClientInstrumentor(), HTTPX2ClientInstrumentor()):
+        if instrumentor.is_instrumented_by_opentelemetry:
+            instrumentor.uninstrument()
 
 
 def _import_test_proto():
@@ -805,7 +805,6 @@ def _stop_uvicorn(server) -> None:
 
 
 def _start_grpc_test_server(config, servicer):
-    import grpc
     from archipy.helpers.utils.app_utils import AppUtils
 
     _pb2, pb2_grpc = _import_test_proto()
@@ -2194,3 +2193,88 @@ def step_then_pushgateway_delete(context, job):
     deletes = scenario_context.get("pushgateway_deletes")
     assert deletes, "Expected at least one Pushgateway delete"
     assert deletes[0]["job"] == job
+
+
+# ---------------------------------------------------------------------------
+# Auto-instrumentation of installed libraries (httpx / httpx2)
+# ---------------------------------------------------------------------------
+
+
+class _ErrorRecordCollector(logging.Handler):
+    """Collect ERROR+ records emitted by the OTel instrumentor logger."""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.ERROR)
+        self.records: list[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.records.append(record)
+
+
+def _run_auto_instrumentation(scenario_context) -> None:
+    instrumentor_logger = logging.getLogger("opentelemetry.instrumentation.instrumentor")
+    collector = _ErrorRecordCollector()
+    instrumentor_logger.addHandler(collector)
+    try:
+        OtelUtils._instrument_installed_libraries(BaseConfig.global_config())
+    finally:
+        instrumentor_logger.removeHandler(collector)
+    scenario_context.store("instrumentor_error_records", collector.records)
+
+
+@given("the httpx instrumentor reports its target library as missing")
+def step_given_httpx_dependency_missing(context):
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
+    scenario_context = get_current_scenario_context(context)
+    _uninstrument_httpx()
+    original = HTTPXClientInstrumentor._instrumentation_dependencies
+    HTTPXClientInstrumentor._instrumentation_dependencies = ("archipy-missing-httpx-dist >= 0.18.0",)
+    scenario_context.store("httpx_original_dependencies", original)
+
+
+@when("I run auto-instrumentation of installed libraries")
+def step_when_run_auto_instrumentation(context):
+    scenario_context = get_current_scenario_context(context)
+    _uninstrument_httpx()
+    OtelUtils._instrumented_libraries.discard("httpx")
+    OtelUtils._instrumented_libraries.discard("httpx2")
+    try:
+        _run_auto_instrumentation(scenario_context)
+    finally:
+        original = scenario_context.get("httpx_original_dependencies")
+        if original is not None:
+            from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
+            HTTPXClientInstrumentor._instrumentation_dependencies = original
+
+
+@then('the library "{key}" should be auto-instrumented')
+def step_then_library_instrumented(context, key):
+    assert key in OtelUtils._instrumented_libraries, (
+        f"Expected '{key}' in instrumented libraries, got {sorted(OtelUtils._instrumented_libraries)}"
+    )
+
+
+@then('the library "{key}" should not be auto-instrumented')
+def step_then_library_not_instrumented(context, key):
+    assert key not in OtelUtils._instrumented_libraries, (
+        f"Did not expect '{key}' in instrumented libraries, got {sorted(OtelUtils._instrumented_libraries)}"
+    )
+
+
+@then("httpx2 transports should be wrapped by OpenTelemetry")
+def step_then_httpx2_transports_wrapped(context):
+    import httpx2
+
+    assert hasattr(httpx2.HTTPTransport.handle_request, "__wrapped__"), "httpx2.HTTPTransport not instrumented"
+    assert hasattr(httpx2.AsyncHTTPTransport.handle_async_request, "__wrapped__"), (
+        "httpx2.AsyncHTTPTransport not instrumented"
+    )
+
+
+@then("no OpenTelemetry instrumentor error should be logged")
+def step_then_no_instrumentor_error(context):
+    scenario_context = get_current_scenario_context(context)
+    records = scenario_context.get("instrumentor_error_records") or []
+    assert not records, f"Unexpected instrumentor errors: {[r.getMessage() for r in records]}"

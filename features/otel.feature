@@ -363,3 +363,16 @@ Feature: OpenTelemetry decorators
   Scenario: FastAPI lifespan shutdown clears OTel providers
     When I run FastAPI lifespan startup and shutdown
     Then OpenTelemetry force flush should have been invoked during lifespan exit
+
+  Scenario: auto-instrumentation covers httpx2 clients
+    When I run auto-instrumentation of installed libraries
+    Then the library "httpx2" should be auto-instrumented
+    And httpx2 transports should be wrapped by OpenTelemetry
+    And no OpenTelemetry instrumentor error should be logged
+
+  Scenario: missing instrumented library is skipped without error log
+    Given the httpx instrumentor reports its target library as missing
+    When I run auto-instrumentation of installed libraries
+    Then the library "httpx" should not be auto-instrumented
+    And the library "httpx2" should be auto-instrumented
+    And no OpenTelemetry instrumentor error should be logged

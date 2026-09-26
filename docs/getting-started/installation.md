@@ -88,7 +88,6 @@ ArchiPy supports modular features through optional extras — install only what 
 | Observability | `archipy[otel-grpc]`            | gRPC server/client contrib interceptors           |
 | Observability | `archipy[otel-sqlalchemy]`      | SQLAlchemy instrumentation                        |
 | Observability | `archipy[otel-redis]`           | Redis instrumentation                             |
-| Observability | `archipy[otel-elasticsearch]`   | Elasticsearch instrumentation                     |
 | Observability | `archipy[otel-kafka]`           | Confluent Kafka instrumentation                   |
 | Observability | `archipy[otel-scylladb]`        | Cassandra/ScyllaDB instrumentation                |
 | Observability | `archipy[otel-minio]`           | Botocore (MinIO/S3) instrumentation               |

@@ -20,7 +20,6 @@ Enable the relevant extras, set `OTEL__IS_ENABLED=true`, and call `AppUtils.crea
 | `archipy[otel-grpc]`      | gRPC server/client contrib interceptors              |
 | `archipy[otel-sqlalchemy]`| SQLAlchemy instrumentation (covers Postgres/MySQL/SQLite via ORM) |
 | `archipy[otel-redis]`     | Redis instrumentation                                |
-| `archipy[otel-elasticsearch]` | Elasticsearch instrumentation                    |
 | `archipy[otel-kafka]`     | Confluent Kafka instrumentation                      |
 | `archipy[otel-scylladb]`  | Cassandra/ScyllaDB driver instrumentation            |
 | `archipy[otel-minio]`     | Botocore (MinIO/S3) instrumentation                  |
@@ -40,7 +39,7 @@ Enable the relevant extras, set `OTEL__IS_ENABLED=true`, and call `AppUtils.crea
 === "Adapters"
 
     ```bash
-    uv add "archipy[otel,otel-sqlalchemy,otel-redis,otel-elasticsearch,otel-kafka,otel-scylladb,otel-minio]"
+    uv add "archipy[otel,otel-sqlalchemy,otel-redis,otel-kafka,otel-scylladb,otel-minio]"
     ```
 
 ---
@@ -245,7 +244,7 @@ invoke it again safely.
 >
 > Tracers and meters obtained via `OtelUtils.get_tracer` / `get_meter` before init recover
 > automatically (the global proxy provider resolves once providers are set), as do Redis,
-> requests, httpx, and Elasticsearch clients — their instrumentors patch at class level.
+> requests, httpx, and httpx2 clients — their instrumentors patch at class level.
 
 ---
 
@@ -299,8 +298,11 @@ logger.info("gRPC server created with OTel interceptor")
 ### Library instrumentors
 
 On first `OtelUtils.init_otel_if_needed`, ArchiPy best-effort instruments installed contrib
-packages (SQLAlchemy, Redis, Elasticsearch, Confluent Kafka, Cassandra, Botocore, httpx,
-requests, threading) when the matching `otel-*` extras are present.
+packages (SQLAlchemy, Redis, Confluent Kafka, Cassandra, Botocore, httpx, httpx2,
+requests, threading) when the matching `otel-*` extras are present. Instrumentors whose
+target library is not installed (e.g. `httpx` when only `httpx2` is present) are skipped
+silently. Elasticsearch needs no instrumentor — the `elasticsearch` client emits OTel
+spans natively.
 `SystemMetricsInstrumentor` runs only when `METRICS_ENABLED` and
 `SYSTEM_METRICS_ENABLED` are both true.
 ### Client gRPC
@@ -472,7 +474,6 @@ See [Temporal adapter](adapters/temporal.md) for a full example.
 
 | Area              | Status                                                                 |
 |-------------------|------------------------------------------------------------------------|
-| **httpx2**        | Core HTTP client is `httpx2`; OTel ships `httpx`/`requests` instrumentors only — outbound httpx2 calls are not auto-instrumented |
 | **Kafka aio**     | `otel-kafka` covers Confluent Kafka sync instrumentation; async Kafka paths may not be instrumented |
 | **SMTP / email**  | No OpenTelemetry instrumentation for `smtplib` / the email adapter     |
 

@@ -1287,7 +1287,10 @@ class OtelUtils:
 
         Each entry is ``(cache_key, module, class_name)``. Missing packages are
         skipped via ``ImportError`` — install the matching ``archipy[otel-*]``
-        extra (or the contrib package directly) to enable them.
+        extra (or the contrib package directly) to enable them. Instrumentors
+        whose target library is absent (e.g. ``httpx`` when only ``httpx2`` is
+        installed) raise ``DependencyConflictError`` and are skipped at debug
+        level instead of OTel logging the conflict as an error.
 
         Driver-level DB instrumentors (psycopg/pymysql/sqlite3) are omitted:
         ArchiPy goes through SQLAlchemy — use ``archipy[otel-sqlalchemy]``.
@@ -1297,13 +1300,18 @@ class OtelUtils:
             ("system_metrics", "opentelemetry.instrumentation.system_metrics", "SystemMetricsInstrumentor"),
             ("sqlalchemy", "opentelemetry.instrumentation.sqlalchemy", "SQLAlchemyInstrumentor"),
             ("redis", "opentelemetry.instrumentation.redis", "RedisInstrumentor"),
-            ("elasticsearch", "opentelemetry.instrumentation.elasticsearch", "ElasticsearchInstrumentor"),
             ("cassandra", "opentelemetry.instrumentation.cassandra", "CassandraInstrumentor"),
             ("confluent_kafka", "opentelemetry.instrumentation.confluent_kafka", "ConfluentKafkaInstrumentor"),
             ("botocore", "opentelemetry.instrumentation.botocore", "BotocoreInstrumentor"),
             ("httpx", "opentelemetry.instrumentation.httpx", "HTTPXClientInstrumentor"),
+            ("httpx2", "opentelemetry.instrumentation.httpx", "HTTPX2ClientInstrumentor"),
             ("requests", "opentelemetry.instrumentation.requests", "RequestsInstrumentor"),
         )
+        try:
+            from opentelemetry.instrumentation.dependencies import DependencyConflictError
+        except ImportError:
+            logger.debug("Skipping OTel auto-instrumentation (opentelemetry-instrumentation not installed)")
+            return
         otel = config.OTEL
         for key, module_name, class_name in instrumentors:
             if key in cls._instrumented_libraries:
@@ -1321,22 +1329,29 @@ class OtelUtils:
                     cls._instrumented_libraries.add(key)
                     logger.debug("Skipping already-instrumented library: %s", key)
                     continue
-                kwargs: dict[str, Any] = {}
-                if cls._tracer_provider is not None:
-                    kwargs["tracer_provider"] = cls._tracer_provider
-                if cls._meter_provider is not None:
-                    kwargs["meter_provider"] = cls._meter_provider
-                try:
-                    instrumentor.instrument(**kwargs)
-                except TypeError:
-                    kwargs.pop("meter_provider", None)
-                    instrumentor.instrument(**kwargs)
+                cls._instrument_with_providers(instrumentor)
                 cls._instrumented_libraries.add(key)
                 logger.debug("Instrumented library: %s", key)
             except ImportError:
                 logger.debug("Skipping OTel instrumentation for %s (package not installed)", key)
+            except DependencyConflictError as e:
+                logger.debug("Skipping OTel instrumentation for %s (%s)", key, e.conflict)
             except Exception:
                 logger.debug("Failed to instrument %s", key, exc_info=True)
+
+    @classmethod
+    def _instrument_with_providers(cls, instrumentor: Any) -> None:
+        """Instrument with ArchiPy's providers; raise ``DependencyConflictError`` on a missing target library."""
+        kwargs: dict[str, Any] = {"raise_exception_on_conflict": True}
+        if cls._tracer_provider is not None:
+            kwargs["tracer_provider"] = cls._tracer_provider
+        if cls._meter_provider is not None:
+            kwargs["meter_provider"] = cls._meter_provider
+        try:
+            instrumentor.instrument(**kwargs)
+        except TypeError:
+            kwargs.pop("meter_provider", None)
+            instrumentor.instrument(**kwargs)
 
     @classmethod
     def _register_atexit(cls) -> None:
