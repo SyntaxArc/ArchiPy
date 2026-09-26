@@ -5083,8 +5083,8 @@ re-indexing).</p>
 <p>The Elasticsearch <strong>adapter</strong> (<code>ElasticsearchAdapter</code> / <code>AsyncElasticsearchAdapter</code>) is unchanged
 in 5.0.0. Elastic APM (<code>ElasticsearchAPMConfig</code> / <code>ELASTIC_APM</code>) was removed — use OpenTelemetry
 instead.</p>
-<p>Install the contrib instrumentor and enable OTel:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[otel-elasticsearch]"</span>
+<p>The <code>elasticsearch</code> client emits OTel spans natively — no extra instrumentor needed. Install <code>archipy[otel]</code> and enable OTel:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[otel]"</span>
 </span></code></pre></div>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="nv">OTEL__IS_ENABLED</span><span class="o">=</span><span class="nb">true</span>
 </span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="nv">OTEL__OTLP_ENDPOINT</span><span class="o">=</span>http://localhost:4317

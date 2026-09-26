@@ -3654,10 +3654,6 @@
 <td>Redis instrumentation</td>
 </tr>
 <tr>
-<td><code>archipy[otel-elasticsearch]</code></td>
-<td>Elasticsearch instrumentation</td>
-</tr>
-<tr>
 <td><code>archipy[otel-kafka]</code></td>
 <td>Confluent Kafka instrumentation</td>
 </tr>
@@ -3682,7 +3678,7 @@
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[otel,otel-sqlalchemy,otel-redis,otel-elasticsearch,otel-kafka,otel-scylladb,otel-minio]"</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[otel,otel-sqlalchemy,otel-redis,otel-kafka,otel-scylladb,otel-minio]"</span>
 </span></code></pre></div>
 </div>
 </div>
@@ -3998,7 +3994,7 @@ permanently:</p>
 </ul>
 <p>Tracers and meters obtained via <code>OtelUtils.get_tracer</code> / <code>get_meter</code> before init recover
 automatically (the global proxy provider resolves once providers are set), as do Redis,
-requests, httpx, and Elasticsearch clients — their instrumentors patch at class level.</p>
+requests, httpx, and httpx2 clients — their instrumentors patch at class level.</p>
 </blockquote>
 <hr />
 <h2 id="auto-instrumentation-via-apputils">Auto-instrumentation via AppUtils<a class="headerlink" href="#auto-instrumentation-via-apputils" title="Permanent link">&para;</a></h2>
@@ -4041,8 +4037,11 @@ interceptors when OTel is enabled (requires <code>archipy[otel-grpc]</code> for 
 </span></code></pre></div>
 <h3 id="library-instrumentors">Library instrumentors<a class="headerlink" href="#library-instrumentors" title="Permanent link">&para;</a></h3>
 <p>On first <code>OtelUtils.init_otel_if_needed</code>, ArchiPy best-effort instruments installed contrib
-packages (SQLAlchemy, Redis, Elasticsearch, Confluent Kafka, Cassandra, Botocore, httpx,
-requests, threading) when the matching <code>otel-*</code> extras are present.
+packages (SQLAlchemy, Redis, Confluent Kafka, Cassandra, Botocore, httpx, httpx2,
+requests, threading) when the matching <code>otel-*</code> extras are present. Instrumentors whose
+target library is not installed (e.g. <code>httpx</code> when only <code>httpx2</code> is present) are skipped
+silently. Elasticsearch needs no instrumentor — the <code>elasticsearch</code> client emits OTel
+spans natively.
 <code>SystemMetricsInstrumentor</code> runs only when <code>METRICS_ENABLED</code> and
 <code>SYSTEM_METRICS_ENABLED</code> are both true.</p>
 <h3 id="client-grpc">Client gRPC<a class="headerlink" href="#client-grpc" title="Permanent link">&para;</a></h3>
@@ -4236,10 +4235,6 @@ send to Sentry or Elastic APM:</p>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td><strong>httpx2</strong></td>
-<td>Core HTTP client is <code>httpx2</code>; OTel ships <code>httpx</code>/<code>requests</code> instrumentors only — outbound httpx2 calls are not auto-instrumented</td>
-</tr>
 <tr>
 <td><strong>Kafka aio</strong></td>
 <td><code>otel-kafka</code> covers Confluent Kafka sync instrumentation; async Kafka paths may not be instrumented</td>
