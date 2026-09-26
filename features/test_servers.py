@@ -1,7 +1,9 @@
 """Test server utilities for FastAPI and gRPC error handling tests."""
 
+import asyncio
 import json
 import socket
+import threading
 from typing import Any
 
 from archipy.configs.base_config import BaseConfig
@@ -88,8 +90,6 @@ def stop_async_grpc_server_gracefully(
         loop: The event loop running the server.
         timeout: Maximum time to wait for graceful shutdown in seconds.
     """
-    import asyncio
-    import threading
     import logging
 
     if not loop.is_running():
@@ -401,8 +401,6 @@ def start_async_grpc_server_sync(server: async_server, servicer: TestServiceAsyn
     Returns:
         Tuple of (server, port, thread, loop): The server, port, thread, and event loop.
     """
-    import asyncio
-    import threading
     import time
 
     if not GRPC_AVAILABLE:

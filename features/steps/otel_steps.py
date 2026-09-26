@@ -1424,7 +1424,6 @@ def step_then_borrowed_still_usable(context):
 
 @given("an external TracerProvider is installed as the global provider")
 def step_given_external_tracer(context):
-    scenario_context = get_current_scenario_context(context)
     # Kept for compatibility; prefer borrowed-provider scenario above.
     step_given_borrowed_tracer(context)
 

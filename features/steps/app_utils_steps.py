@@ -242,8 +242,6 @@ def step_then_methods_not_allowed(context):
     scenario_context = get_current_scenario_context(context)
     response = scenario_context.get("response")
 
-    test_config = BaseConfig.global_config()
-    allowed_methods = test_config.FASTAPI.CORS_MIDDLEWARE_ALLOW_METHODS
     methods_header = response.headers.get("access-control-allow-methods", "")
 
     for method in ["PUT", "DELETE", "PATCH", "TRACE", "CONNECT"]:

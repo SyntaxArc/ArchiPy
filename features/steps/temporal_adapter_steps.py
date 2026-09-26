@@ -1312,7 +1312,7 @@ def step_schedule_should_have_executed(context, schedule_id, count):
 
     async def run():
         # List workflows created by this schedule
-        workflows = await adapter.list_workflows(query=f"WorkflowType='ScheduledWorkflow'")
+        workflows = await adapter.list_workflows(query="WorkflowType='ScheduledWorkflow'")
         return workflows
 
     workflows = run_async(context, run())

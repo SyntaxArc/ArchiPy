@@ -16,12 +16,10 @@ from temporalio.common import RetryPolicy
 with workflow.unsafe.imports_passed_through():
     from features.test_workflows.temporal_activities import (
         calculation_activity,
-        counter_activity,
         data_processing_activity,
         failing_activity,
         greeting_activity,
         long_running_activity,
-        status_activity,
     )
 
 

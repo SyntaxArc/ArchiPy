@@ -11,7 +11,6 @@ from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
 from archipy.configs.base_config import BaseConfig
-from keycloak.uma_permissions import UMAPermission
 
 
 async def _adapter_call(

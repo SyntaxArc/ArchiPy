@@ -37,7 +37,7 @@ def _admin_client() -> hvac.Client:
 
 @given("a configured Vault adapter")
 def step_configured_vault_adapter(context):
-    adapter = get_vault_adapter(context)
+    get_vault_adapter(context)
     # Ensure KV v2 is available at the default mount (dev mode usually has it)
     client = _admin_client()
     mounts = client.sys.list_mounted_secrets_engines()

@@ -1023,7 +1023,7 @@ def step_insert_with_if_not_exists(
 
 
 @when('I async insert data into table "{table}" with id {id:d}, item "{item}", quantity {quantity:d}')
-async def step_insert_with_if_not_exists(context: Context, table: str, id: int, item: str, quantity: int) -> None:
+async def step_async_insert_with_if_not_exists(context: Context, table: str, id: int, item: str, quantity: int) -> None:
     """Insert data in a table with if not exists asynchronously.
 
     Args:

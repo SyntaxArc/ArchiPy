@@ -11,7 +11,6 @@ from archipy.models.errors import ConfigurationError
 
 @given("a custom BaseConfig instance")
 def step_given_custom_base_config(context):
-    scenario_context = get_current_scenario_context(context)
     config = TestConfig()
     BaseConfig.set_global(config)
 
@@ -27,7 +26,6 @@ def step_when_set_global_config(context):
 
 @then("retrieving global configuration should return the same instance")
 def step_then_check_global_config(context):
-    scenario_context = get_current_scenario_context(context)
     test_config = BaseConfig.global_config()
     assert BaseConfig.global_config() is test_config
 
@@ -78,14 +76,12 @@ def step_given_env_file_override(context, key, value):
 
 @when("BaseConfig is initialized")
 def step_when_initialize_base_config(context):
-    scenario_context = get_current_scenario_context(context)
     config = TestConfig()
     BaseConfig.set_global(config)
 
 
 @then('the ENVIRONMENT should be "{expected_value}"')
 def step_then_check_environment_variable(context, expected_value):
-    scenario_context = get_current_scenario_context(context)
     test_config = BaseConfig.global_config()
     assert (
         test_config.ENVIRONMENT.name == expected_value

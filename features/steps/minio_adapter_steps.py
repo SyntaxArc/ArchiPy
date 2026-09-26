@@ -159,7 +159,7 @@ def step_bucket_list_includes(context, bucket_name):
 
 
 @then('the object "{object_name}" should exist in bucket "{bucket_name}"')
-def step_object_exists(context, object_name, bucket_name):
+def step_then_object_exists(context, object_name, bucket_name):
     adapter = get_minio_adapter(context)
     objects = adapter.list_objects(bucket_name)
     object_names = [obj["object_name"] for obj in objects]

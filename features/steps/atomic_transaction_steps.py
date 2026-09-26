@@ -497,7 +497,7 @@ def step_then_no_entity_should_exist(context):
     db_type = scenario_context.get("db_type", "sqlite")
 
     # Get a fresh session to verify rollback
-    adapter = get_adapter(context)
+    get_adapter(context)
     atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
     @atomic_decorator

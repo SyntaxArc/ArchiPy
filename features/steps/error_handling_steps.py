@@ -1,7 +1,6 @@
 """Step definitions for error handling tests."""
 
 import inspect
-from http import HTTPStatus
 from typing import ClassVar
 from unittest.mock import patch
 
@@ -35,9 +34,7 @@ from features.grpc_test_utils import (
 )
 from features.test_helpers import get_current_scenario_context
 from features.test_servers import (
-    create_test_async_grpc_servicer,
     create_test_fastapi_app,
-    create_test_grpc_servicer,
     parse_grpc_metadata,
 )
 
@@ -127,7 +124,6 @@ def step_given_raised_error(context, error_type, message):
 def step_given_create_error_detail(context, code, message_en, message_fa):
     scenario_context = get_current_scenario_context(context)
 
-    from typing import ClassVar
 
     error_code = code
     error_msg_en = message_en
@@ -731,7 +727,7 @@ def step_then_check_grpc_status(context, grpc_status):
 
 
 @then("the response should have HTTP status code {http_status}")
-def step_then_check_http_status(context, http_status: str):
+def step_then_check_response_http_status(context, http_status: str):
     scenario_context = get_current_scenario_context(context)
     response = scenario_context.get("response")
     expected_status = int(http_status)
@@ -971,7 +967,7 @@ def step_then_check_message_contains(context, expected_message_part: str):
 
 
 @then("the gRPC call should fail with status code {grpc_status}")
-def step_then_check_grpc_status(context, grpc_status: str):
+def step_then_check_grpc_call_status(context, grpc_status: str):
     scenario_context = get_current_scenario_context(context)
     grpc_error = scenario_context.get("grpc_rpc_error")
     error = scenario_context.get("grpc_error")

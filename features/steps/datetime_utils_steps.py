@@ -290,8 +290,6 @@ def step_when_check_holiday_with_cache_verification(context: Context) -> None:
         scenario_context.store("result", result)
 
         date_str = target_date.strftime("%Y-%m-%d")
-        utc_today = DatetimeUtils.get_datetime_utc_now().date()
-        is_historical = target_date <= utc_today
         cache_entry = DatetimeUtils._holiday_cache.get(date_str)
         scenario_context.store("cache_entry", cache_entry)
 
