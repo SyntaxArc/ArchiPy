@@ -206,6 +206,7 @@ docstring-code-line-length = "dynamic"
 "archipy/helpers/decorators/*" = ["ANN401", "PLR0913", "PLC0415", "PLR0917"]  # Allow Any, many params, lazy imports in decorators
 "archipy/helpers/utils/otel_utils.py" = ["PLC0415", "ANN401", "PLR0913", "PLR0917"]  # Lazy optional deps; provider/instrumentor union types
 "archipy/helpers/interceptors/grpc/otel_metrics/server_interceptor.py" = ["ANN401"]  # OTel histogram handle is dynamically typed
+"archipy/adapters/base/sqlalchemy/session_managers.py" = ["PLC0415"]  # Lazy sqlalchemy.ext.asyncio (needs greenlet via sqlalchemy-async)
 "archipy/models/errors/base_error.py" = ["PLC0415"]  # Circular import workaround
 "archipy/helpers/utils/string_utils_constants.py" = ["RUF003"]  # Intentional Persian/Arabic glyph documentation in comments
 "archipy/adapters/email/ports.py" = ["PLR0913", "PLR0917"]  # Email port mirrors SMTP send arity

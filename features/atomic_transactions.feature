@@ -217,6 +217,32 @@ Feature: SQLAlchemy Atomic Transactions
       | mysql     |
       | starrocks |
 
+  @unit
+  Scenario Outline: Sync SQLAlchemy session manager modules do not load the asyncio extension
+    When I import the <db_type> SQLAlchemy session manager module in a fresh interpreter
+    Then sqlalchemy.ext.asyncio should not be loaded
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
+
+  @unit
+  Scenario Outline: SQLite adapters accept either driver and in-memory databases
+    When a <mode> SQLite adapter runs a query with driver "<driver>" on database "<database>"
+    Then the SQLite query should return 1
+
+    Examples:
+      | mode  | driver           | database |
+      | sync  | sqlite           | :memory: |
+      | sync  | sqlite+aiosqlite | :memory: |
+      | sync  | sqlite+aiosqlite | file     |
+      | async | sqlite           | :memory: |
+      | async | sqlite           | file     |
+      | async | sqlite+aiosqlite | :memory: |
+
   # StarRocks SQL transaction limitations (shared-nothing allin1): nested ArchiPy
   # blocks share one txn and hit multi-insert; no multiple same-table inserts;
   # no further DML on a table already modified in the same txn.

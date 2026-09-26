@@ -9,6 +9,8 @@ import importlib
 import inspect
 import logging
 import os
+import subprocess
+import sys
 import tempfile
 import time
 import uuid
@@ -573,6 +575,63 @@ def step_then_session_manager_signatures_resolve(context):
     scenario_context = get_current_scenario_context(context)
     failures = scenario_context.get("session_manager_inspect_failures")
     assert not failures, "Session manager annotation inspection failed:\n" + "\n".join(failures)
+
+
+_SQLITE_QUERY_SCRIPT = """
+import asyncio, sys
+from sqlalchemy import text
+from archipy.adapters.sqlite.sqlalchemy.adapters import AsyncSQLiteSQLAlchemyAdapter, SQLiteSQLAlchemyAdapter
+from archipy.configs.config_template import SQLiteSQLAlchemyConfig
+mode, driver, database = sys.argv[1:]
+config = SQLiteSQLAlchemyConfig(DRIVER_NAME=driver, DATABASE=database)
+if mode == "sync":
+    result = SQLiteSQLAlchemyAdapter(config).execute(text("SELECT 1")).scalar()
+else:
+    result = asyncio.run(AsyncSQLiteSQLAlchemyAdapter(config).execute(text("SELECT 1"))).scalar()
+print(result)
+"""
+
+
+@when("I import the {db_type} SQLAlchemy session manager module in a fresh interpreter")
+def step_when_import_session_manager_module_fresh(context, db_type):
+    scenario_context = get_current_scenario_context(context)
+    script = (
+        f"import sys, archipy.adapters.{db_type}.sqlalchemy.session_managers; "
+        "print('sqlalchemy.ext.asyncio' in sys.modules)"
+    )
+    completed = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, check=False)
+    scenario_context.store("fresh_import_result", completed)
+
+
+@then("sqlalchemy.ext.asyncio should not be loaded")
+def step_then_asyncio_extension_not_loaded(context):
+    scenario_context = get_current_scenario_context(context)
+    completed = scenario_context.get("fresh_import_result")
+    assert completed.returncode == 0, f"Import failed:\n{completed.stderr}"
+    assert completed.stdout.strip() == "False", "sqlalchemy.ext.asyncio was imported on the sync path"
+
+
+@when('a {mode} SQLite adapter runs a query with driver "{driver}" on database "{database}"')
+def step_when_sqlite_adapter_runs_query(context, mode, driver, database):
+    scenario_context = get_current_scenario_context(context)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        db_path = database if database == ":memory:" else os.path.join(temp_dir, "driver_check.sqlite")
+        # Session managers are singletons, so each configuration runs in its own interpreter.
+        completed = subprocess.run(
+            [sys.executable, "-c", _SQLITE_QUERY_SCRIPT, mode, driver, db_path],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    scenario_context.store("sqlite_query_result", completed)
+
+
+@then("the SQLite query should return 1")
+def step_then_sqlite_query_returns_one(context):
+    scenario_context = get_current_scenario_context(context)
+    completed = scenario_context.get("sqlite_query_result")
+    assert completed.returncode == 0, f"SQLite query failed:\n{completed.stderr}"
+    assert completed.stdout.strip().splitlines()[-1] == "1"
 
 
 @when("nested atomic transactions are attempted on StarRocks")

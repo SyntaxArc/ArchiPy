@@ -1,18 +1,13 @@
 """Base SQLAlchemy session manager implementations."""
 
+from __future__ import annotations
+
 from abc import abstractmethod
 from asyncio import current_task
-from typing import TypeVar, override
+from typing import TYPE_CHECKING, Any, TypeVar, override
 
 from sqlalchemy import URL, Engine, create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import (
-    AsyncEngine,
-    AsyncSession,
-    async_scoped_session,
-    async_sessionmaker,
-    create_async_engine,
-)
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort, SessionManagerPort
@@ -23,6 +18,10 @@ from archipy.models.errors import (
     DatabaseError,
     InvalidArgumentError,
 )
+
+if TYPE_CHECKING:
+    # sqlalchemy.ext.asyncio requires greenlet (sqlalchemy-async extra); keep it off the sync import path.
+    from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_scoped_session
 
 # Generic type variable for SQLAlchemy configurations
 ConfigT = TypeVar("ConfigT", bound=SQLAlchemyConfig)
@@ -122,15 +121,9 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
                 echo_pool=configs.ECHO_POOL,
                 enable_from_linting=configs.ENABLE_FROM_LINTING,
                 hide_parameters=configs.HIDE_PARAMETERS,
-                pool_pre_ping=configs.POOL_PRE_PING,
-                pool_size=configs.POOL_SIZE,
-                pool_recycle=configs.POOL_RECYCLE_SECONDS,
-                pool_reset_on_return=configs.POOL_RESET_ON_RETURN,
-                pool_timeout=configs.POOL_TIMEOUT,
-                pool_use_lifo=configs.POOL_USE_LIFO,
                 query_cache_size=configs.QUERY_CACHE_SIZE,
-                max_overflow=configs.POOL_MAX_OVERFLOW,
                 connect_args=self._get_connect_args(),
+                **self._get_pool_kwargs(configs),
             )
         except SQLAlchemyError as e:
             if "configuration" in str(e).lower():
@@ -148,6 +141,27 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
             A dictionary of connection arguments (default is empty).
         """
         return {}
+
+    def _get_pool_kwargs(self, configs: ConfigT) -> dict[str, Any]:
+        """Return connection pool arguments for the engine.
+
+        Override when the dialect picks a pool class that rejects queue-pool arguments.
+
+        Args:
+            configs: SQLAlchemy configuration.
+
+        Returns:
+            A dictionary of pool-related keyword arguments for engine creation.
+        """
+        return {
+            "pool_pre_ping": configs.POOL_PRE_PING,
+            "pool_size": configs.POOL_SIZE,
+            "pool_recycle": configs.POOL_RECYCLE_SECONDS,
+            "pool_reset_on_return": configs.POOL_RESET_ON_RETURN,
+            "pool_timeout": configs.POOL_TIMEOUT,
+            "pool_use_lifo": configs.POOL_USE_LIFO,
+            "max_overflow": configs.POOL_MAX_OVERFLOW,
+        }
 
     def _get_session_generator(self) -> scoped_session:
         """Create a scoped session factory for synchronous sessions.
@@ -300,6 +314,8 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
             DatabaseConnectionError: If there's an error creating the engine.
             DatabaseConfigurationError: If there's an error in the database configuration.
         """
+        from sqlalchemy.ext.asyncio import create_async_engine
+
         try:
             url = self._create_url(configs)
             return create_async_engine(
@@ -309,15 +325,9 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
                 echo_pool=configs.ECHO_POOL,
                 enable_from_linting=configs.ENABLE_FROM_LINTING,
                 hide_parameters=configs.HIDE_PARAMETERS,
-                pool_pre_ping=configs.POOL_PRE_PING,
-                pool_size=configs.POOL_SIZE,
-                pool_recycle=configs.POOL_RECYCLE_SECONDS,
-                pool_reset_on_return=configs.POOL_RESET_ON_RETURN,
-                pool_timeout=configs.POOL_TIMEOUT,
-                pool_use_lifo=configs.POOL_USE_LIFO,
                 query_cache_size=configs.QUERY_CACHE_SIZE,
-                max_overflow=configs.POOL_MAX_OVERFLOW,
                 connect_args=self._get_connect_args(),
+                **self._get_pool_kwargs(configs),
             )
         except SQLAlchemyError as e:
             if "configuration" in str(e).lower():
@@ -336,6 +346,27 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
         """
         return {}
 
+    def _get_pool_kwargs(self, configs: ConfigT) -> dict[str, Any]:
+        """Return connection pool arguments for the engine.
+
+        Override when the dialect picks a pool class that rejects queue-pool arguments.
+
+        Args:
+            configs: SQLAlchemy configuration.
+
+        Returns:
+            A dictionary of pool-related keyword arguments for engine creation.
+        """
+        return {
+            "pool_pre_ping": configs.POOL_PRE_PING,
+            "pool_size": configs.POOL_SIZE,
+            "pool_recycle": configs.POOL_RECYCLE_SECONDS,
+            "pool_reset_on_return": configs.POOL_RESET_ON_RETURN,
+            "pool_timeout": configs.POOL_TIMEOUT,
+            "pool_use_lifo": configs.POOL_USE_LIFO,
+            "max_overflow": configs.POOL_MAX_OVERFLOW,
+        }
+
     def _get_session_generator(self) -> async_scoped_session:
         """Create an async scoped session factory.
 
@@ -345,6 +376,8 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
         Raises:
             DatabaseConfigurationError: If there's an error in the database configuration.
         """
+        from sqlalchemy.ext.asyncio import async_scoped_session, async_sessionmaker
+
         try:
             session_maker = async_sessionmaker(self.engine)
             return async_scoped_session(session_maker, scopefunc=current_task)
