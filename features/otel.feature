@@ -145,6 +145,175 @@ Feature: OpenTelemetry decorators
     When I setup the async gRPC OTel interceptor on a list with a sentinel interceptor
     Then the OTel interceptor should be first and the sentinel should remain
 
+  Scenario Outline: Server-streaming RPC delivers every message
+    Given a <mode> gRPC server using the <stack> interceptor stack
+    When a server-streaming RPC is invoked requesting 3 messages
+    Then the gRPC stream should deliver messages "0,1,2"
+    And the gRPC stream should finish with status OK
+
+    Examples: Sync interceptor stacks
+      | mode | stack     |
+      | sync | exception |
+      | sync | metrics   |
+      | sync | full      |
+
+    @async
+    Examples: Async interceptor stacks
+      | mode  | stack     |
+      | async | exception |
+      | async | metrics   |
+      | async | full      |
+
+  Scenario Outline: Bidirectional streaming RPC echoes every message
+    Given a <mode> gRPC server using the <stack> interceptor stack
+    When a bidirectional RPC is invoked sending "a,b,c"
+    Then the gRPC stream should deliver messages "a,b,c"
+    And the gRPC stream should finish with status OK
+
+    Examples: Sync interceptor stacks
+      | mode | stack     |
+      | sync | exception |
+      | sync | metrics   |
+      | sync | full      |
+
+    @async
+    Examples: Async interceptor stacks
+      | mode  | stack     |
+      | async | exception |
+      | async | metrics   |
+      | async | full      |
+
+  Scenario Outline: Client-streaming RPC aggregates every message
+    Given a <mode> gRPC server using the <stack> interceptor stack
+    When a client-streaming RPC is invoked sending "1,2,3"
+    Then the gRPC unary response should be "6"
+
+    Examples: Sync interceptor stacks
+      | mode | stack     |
+      | sync | exception |
+      | sync | metrics   |
+      | sync | full      |
+
+    @async
+    Examples: Async interceptor stacks
+      | mode  | stack     |
+      | async | exception |
+      | async | metrics   |
+      | async | full      |
+
+  Scenario Outline: Error raised mid-stream is mapped to a gRPC status
+    Given a <mode> gRPC server using the <stack> interceptor stack
+    When a server-streaming RPC is invoked that fails after 1 message
+    Then the gRPC stream should deliver messages "0"
+    And the gRPC stream should finish with status INVALID_ARGUMENT
+
+    Examples: Sync interceptor stacks
+      | mode | stack     |
+      | sync | exception |
+      | sync | full      |
+
+    @async
+    Examples: Async interceptor stacks
+      | mode  | stack     |
+      | async | exception |
+      | async | full      |
+
+  Scenario Outline: Sync handler returning a plain iterator streams every message
+    Given a <mode> gRPC server using the <stack> interceptor stack
+    When a server-streaming RPC returning a plain iterator is invoked requesting 3 messages
+    Then the gRPC stream should deliver messages "0,1,2"
+    And the gRPC stream should finish with status OK
+
+    Examples: Sync interceptor stacks
+      | mode | stack     |
+      | sync | exception |
+      | sync | metrics   |
+      | sync | full      |
+
+  Scenario Outline: Error raised mid-stream by a plain iterator is mapped to a gRPC status
+    Given a <mode> gRPC server using the <stack> interceptor stack
+    When a server-streaming RPC returning a plain iterator is invoked that fails after 1 message
+    Then the gRPC stream should deliver messages "0"
+    And the gRPC stream should finish with status INVALID_ARGUMENT
+
+    Examples: Sync interceptor stacks
+      | mode | stack     |
+      | sync | exception |
+      | sync | full      |
+
+  Scenario Outline: Async coroutine-style stream handler writes every message
+    Given a <mode> gRPC server using the <stack> interceptor stack
+    When a coroutine-style streaming RPC is invoked requesting 3 messages
+    Then the gRPC stream should deliver messages "0,1,2"
+    And the gRPC stream should finish with status OK
+
+    @async
+    Examples: Async interceptor stacks
+      | mode  | stack     |
+      | async | exception |
+      | async | metrics   |
+      | async | full      |
+
+  Scenario Outline: Error raised by a coroutine-style stream handler is mapped to a gRPC status
+    Given a <mode> gRPC server using the <stack> interceptor stack
+    When a coroutine-style streaming RPC is invoked that fails after 1 message
+    Then the gRPC stream should deliver messages "0"
+    And the gRPC stream should finish with status INVALID_ARGUMENT
+
+    @async
+    Examples: Async interceptor stacks
+      | mode  | stack     |
+      | async | exception |
+      | async | full      |
+
+  Scenario Outline: Stream duration is recorded once the stream completes
+    Given a <mode> gRPC server using the <stack> interceptor stack
+    When a server-streaming RPC is invoked requesting 3 messages
+    Then the gRPC stream should deliver messages "0,1,2"
+    And a histogram metric named "rpc.server.duration" should have status "ok"
+    And the "rpc.server.duration" histogram should have 1 datapoint for method "Count"
+
+    Examples: Sync interceptor stacks
+      | mode | stack   |
+      | sync | metrics |
+      | sync | full    |
+
+    @async
+    Examples: Async interceptor stacks
+      | mode  | stack   |
+      | async | metrics |
+      | async | full    |
+
+  Scenario Outline: Stream duration is recorded with error status when the stream crashes
+    Given a <mode> gRPC server using the <stack> interceptor stack
+    When a server-streaming RPC is invoked that crashes after 1 message
+    Then the gRPC stream should deliver messages "0"
+    And the gRPC stream should finish with status UNKNOWN
+    And a histogram metric named "rpc.server.duration" should have status "error"
+
+    Examples: Sync interceptor stacks
+      | mode | stack   |
+      | sync | metrics |
+
+    @async
+    Examples: Async interceptor stacks
+      | mode  | stack   |
+      | async | metrics |
+
+  Scenario Outline: Unary RPC still works with the full interceptor stack
+    Given a <mode> gRPC server using the full interceptor stack
+    When a unary RPC is invoked
+    Then the gRPC unary response should be "pong"
+
+    Examples: Sync interceptor stack
+      | mode |
+      | sync |
+
+    @async
+    Examples: Async interceptor stack
+      | mode  |
+      | async |
+
   Scenario: metrics-only gRPC records RPC duration without span
     Given OpenTelemetry metrics-only mode for testing
     When I call an instrumented gRPC TestMethod

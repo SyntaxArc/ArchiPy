@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from archipy.helpers.interceptors.grpc.base.server_interceptor import (
     BaseAsyncGrpcServerInterceptor,
     BaseGrpcServerInterceptor,
     MethodName,
+    iterate_stream_result,
 )
 from archipy.helpers.utils.otel_utils import DURATION_HISTOGRAM_BUCKETS_S, OtelUtils
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import AsyncIterator, Callable
 
     import grpc
 
@@ -106,9 +108,38 @@ class GrpcServerOtelMetricsInterceptor(BaseGrpcServerInterceptor):
             return method(request, context)
 
         start = time.perf_counter()
+        try:
+            result = method(request, context)
+        except Exception as exc:
+            _record_rpc_duration(histogram, start, method_name_model, OtelUtils.metric_status_for_exception(exc))
+            raise
+        if isinstance(result, Iterator):
+            # Response-streaming handler: the RPC only finishes once the stream is consumed.
+            return self._time_stream(result, histogram, start, method_name_model)
+        _record_rpc_duration(histogram, start, method_name_model, "ok")
+        return result
+
+    @staticmethod
+    def _time_stream(
+        stream: Iterator[object],
+        histogram: Any,
+        start: float,
+        method_name_model: MethodName,
+    ) -> Iterator[object]:
+        """Relay a sync response stream and record the duration once it ends.
+
+        Args:
+            stream: The response iterator returned by the handler.
+            histogram: The RPC duration histogram.
+            start: ``time.perf_counter()`` value taken when the call began.
+            method_name_model: Parsed package/service/method components.
+
+        Yields:
+            Each response message.
+        """
         status = "ok"
         try:
-            return method(request, context)
+            yield from stream
         except Exception as exc:
             status = OtelUtils.metric_status_for_exception(exc)
             raise
@@ -145,6 +176,41 @@ class AsyncGrpcServerOtelMetricsInterceptor(BaseAsyncGrpcServerInterceptor):
         status = "ok"
         try:
             return await method(request, context)
+        except Exception as exc:
+            status = OtelUtils.metric_status_for_exception(exc)
+            raise
+        finally:
+            _record_rpc_duration(histogram, start, method_name_model, status)
+
+    async def intercept_stream(
+        self,
+        method: Callable,
+        request: object,
+        context: grpc.aio.ServicerContext,
+        method_name_model: MethodName,
+    ) -> AsyncIterator[object]:
+        """Time an async streaming gRPC handler across the whole stream and record duration.
+
+        Args:
+            method: The async streaming gRPC method being intercepted.
+            request: The request object passed to the method.
+            context: The context of the async gRPC call.
+            method_name_model: Parsed package/service/method components.
+
+        Yields:
+            Each response message produced by the method.
+        """
+        histogram = _RpcDurationHistogram.get()
+        if histogram is None:
+            async for item in iterate_stream_result(method(request, context)):
+                yield item
+            return
+
+        start = time.perf_counter()
+        status = "ok"
+        try:
+            async for item in iterate_stream_result(method(request, context)):
+                yield item
         except Exception as exc:
             status = OtelUtils.metric_status_for_exception(exc)
             raise

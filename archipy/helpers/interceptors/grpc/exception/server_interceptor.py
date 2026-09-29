@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
@@ -10,13 +11,14 @@ from archipy.helpers.interceptors.grpc.base.server_interceptor import (
     BaseAsyncGrpcServerInterceptor,
     BaseGrpcServerInterceptor,
     MethodName,
+    iterate_stream_result,
 )
 from archipy.helpers.utils.base_utils import BaseUtils
 from archipy.models.errors import InternalError, InvalidArgumentError
 from archipy.models.errors.base_error import BaseError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import AsyncIterator, Callable
 
     import grpc
 
@@ -55,22 +57,52 @@ class GrpcServerExceptionInterceptor(BaseGrpcServerInterceptor):
             # Execute the gRPC method
             result = method(request, context)
 
-        except ValidationError as validation_error:
-            BaseUtils.capture_exception(validation_error)
-            self._handle_validation_error(validation_error, context)
-            raise  # This will never be reached, but satisfies MyPy
-
-        except BaseError as base_error:
-            BaseUtils.capture_exception(base_error)
-            base_error.abort_grpc_sync(context)
-            raise  # This will never be reached, but satisfies MyPy
-
-        except Exception as unexpected_error:
-            BaseUtils.capture_exception(unexpected_error)
-            self._handle_unexpected_error(unexpected_error, context, method_name_model)
+        except Exception as error:
+            self._abort_for_error(error, context, method_name_model)
             raise  # This will never be reached, but satisfies MyPy
         else:
+            if isinstance(result, Iterator):
+                # Response-streaming handler: errors surface while iterating, so keep guarding.
+                return self._guard_stream(result, context, method_name_model)
             return result
+
+    def _guard_stream(
+        self,
+        stream: Iterator[object],
+        context: grpc.ServicerContext,
+        method_name_model: MethodName,
+    ) -> Iterator[object]:
+        """Relay a sync response stream, mapping exceptions raised while iterating.
+
+        Args:
+            stream: The response iterator returned by the handler.
+            context: The context of the sync gRPC call.
+            method_name_model: The parsed method name.
+
+        Yields:
+            object: Each response message.
+        """
+        try:
+            yield from stream
+        except Exception as error:
+            self._abort_for_error(error, context, method_name_model)
+            raise  # This will never be reached, but satisfies MyPy
+
+    def _abort_for_error(self, error: Exception, context: grpc.ServicerContext, method_name_model: MethodName) -> None:
+        """Capture ``error`` and abort the context with the matching gRPC status.
+
+        Args:
+            error: The exception raised by the handler.
+            context: The gRPC context to abort.
+            method_name_model: The method name information for better error tracking.
+        """
+        BaseUtils.capture_exception(error)
+        if isinstance(error, ValidationError):
+            self._handle_validation_error(error, context)
+        elif isinstance(error, BaseError):
+            error.abort_grpc_sync(context)
+        else:
+            self._handle_unexpected_error(error, context, method_name_model)
 
     @staticmethod
     def _handle_validation_error(validation_error: ValidationError, context: grpc.ServicerContext) -> None:
@@ -163,6 +195,43 @@ class AsyncGrpcServerExceptionInterceptor(BaseAsyncGrpcServerInterceptor):
             raise  # This will never be reached, but satisfies MyPy
         else:
             return result
+
+    async def intercept_stream(
+        self,
+        method: Callable,
+        request: object,
+        context: grpc.aio.ServicerContext,
+        method_name_model: MethodName,
+    ) -> AsyncIterator[object]:
+        """Intercepts an async streaming gRPC call and handles exceptions raised while streaming.
+
+        Args:
+            method: The async streaming gRPC method being intercepted.
+            request: The request object passed to the method.
+            context: The context of the async gRPC call.
+            method_name_model: The parsed method name containing package, service, and method components.
+
+        Yields:
+            object: Each response message produced by the method.
+        """
+        try:
+            async for item in iterate_stream_result(method(request, context)):
+                yield item
+
+        except ValidationError as validation_error:
+            BaseUtils.capture_exception(validation_error)
+            await self._handle_validation_error(validation_error, context)
+            raise  # This will never be reached, but satisfies MyPy
+
+        except BaseError as base_error:
+            BaseUtils.capture_exception(base_error)
+            await base_error.abort_grpc_async(context)
+            raise  # This will never be reached, but satisfies MyPy
+
+        except Exception as unexpected_error:
+            BaseUtils.capture_exception(unexpected_error)
+            await self._handle_unexpected_error(unexpected_error, context, method_name_model)
+            raise  # This will never be reached, but satisfies MyPy
 
     @staticmethod
     async def _handle_validation_error(validation_error: ValidationError, context: grpc.aio.ServicerContext) -> None:

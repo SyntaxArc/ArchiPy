@@ -1333,6 +1333,13 @@ def step_then_histogram_status(context, instrument_name, status):
     assert status in statuses, f"Expected status {status!r} in {statuses!r}"
 
 
+@then('the "{instrument_name}" histogram should have {expected:d} datapoint for method "{method}"')
+def step_then_histogram_datapoint_count_for_method(context, instrument_name, expected, method):
+    points = [p for p in _metric_datapoints(context, instrument_name) if p.attributes.get("rpc.method") == method]
+    recorded = sum(point.count for point in points)
+    assert recorded == expected, f"Expected {expected} recording(s) for method {method!r}, got {recorded}"
+
+
 @when("I cancel the traced async function")
 async def step_when_cancel_traced_async(context):
     import asyncio

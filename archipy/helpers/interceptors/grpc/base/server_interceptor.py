@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING
+import functools
+import inspect
+from typing import TYPE_CHECKING, cast
 
 import grpc
 
@@ -11,7 +13,7 @@ from archipy.models.dtos.base_dtos import BaseDTO
 from archipy.models.errors import InternalError
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import AsyncIterator, Awaitable, Callable
 
 
 def _get_factory_and_method(
@@ -38,6 +40,26 @@ def _get_factory_and_method(
         return grpc.stream_stream_rpc_method_handler, rpc_handler.stream_stream
     # pragma: no cover
     raise InternalError(error_code="RPC_HANDLER_NOT_FOUND")
+
+
+async def iterate_stream_result(result: object) -> AsyncIterator[object]:
+    """Iterate the outcome of invoking a response-streaming async gRPC handler.
+
+    Handlers are either async generators (yield responses) or coroutines that push
+    responses through ``context.write`` and return ``None``.
+
+    Args:
+        result: The value returned by calling the handler.
+
+    Yields:
+        object: Each response message produced by the handler.
+    """
+    if inspect.isawaitable(result) and not hasattr(result, "__aiter__"):
+        result = await result
+    if result is None:
+        return
+    async for item in cast("AsyncIterator[object]", result):
+        yield item
 
 
 class MethodName(BaseDTO):
@@ -169,6 +191,38 @@ class BaseAsyncGrpcServerInterceptor(grpc.aio.ServerInterceptor, metaclass=abc.A
         """
         return await method(request, context)
 
+    async def intercept_stream(
+        self,
+        method: Callable,
+        request: object,
+        context: grpc.aio.ServicerContext,
+        method_name_model: MethodName,
+    ) -> AsyncIterator[object]:
+        """Intercepts an async gRPC call whose response is a stream.
+
+        Response-streaming handlers must stay async generators, so they cannot go through
+        the coroutine-based ``intercept``. The default runs ``intercept`` around the handler
+        *invocation* (enough for pre-call checks) and then relays the produced stream.
+        Override to wrap the iteration itself (e.g. for error handling or metrics).
+
+        Args:
+            method (Callable): The streaming method to be intercepted.
+            request (object): The request object (or async iterator for stream requests).
+            context (grpc.aio.ServicerContext): The context of the RPC call.
+            method_name_model (MethodName): The parsed method name.
+
+        Yields:
+            object: Each response message.
+        """
+
+        @functools.wraps(method)
+        async def start_stream(req: object, ctx: grpc.aio.ServicerContext) -> object:
+            return method(req, ctx)
+
+        result = await self.intercept(start_stream, request, context, method_name_model)
+        async for item in iterate_stream_result(result):
+            yield item
+
     async def intercept_service(
         self,
         continuation: Callable[[grpc.HandlerCallDetails], Awaitable[grpc.RpcMethodHandler | None]],
@@ -206,8 +260,25 @@ class BaseAsyncGrpcServerInterceptor(grpc.aio.ServerInterceptor, metaclass=abc.A
             method_name_model = parse_method_name(handler_call_details.method)
             return await self.intercept(next_handler_method, request, context, method_name_model)
 
+        async def invoke_intercept_stream(
+            request: object,
+            context: grpc.aio.ServicerContext,
+        ) -> AsyncIterator[object]:
+            """Invokes the intercepted async streaming method as an async generator.
+
+            Args:
+                request (object): The request object.
+                context (grpc.aio.ServicerContext): The context of the async RPC call.
+
+            Yields:
+                object: Each response message.
+            """
+            method_name_model = parse_method_name(handler_call_details.method)
+            async for item in self.intercept_stream(next_handler_method, request, context, method_name_model):
+                yield item
+
         return handler_factory(
-            invoke_intercept_method,
+            invoke_intercept_stream if next_handler.response_streaming else invoke_intercept_method,
             request_deserializer=getattr(next_handler, "request_deserializer", None),
             response_serializer=getattr(next_handler, "response_serializer", None),
         )
