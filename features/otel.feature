@@ -136,6 +136,30 @@ Feature: OpenTelemetry decorators
     Then a span named "/test.TestService/TestMethod" should be recorded
     And a histogram metric named "rpc.server.duration" should have datapoints
 
+  Scenario: Instrumented FastAPI server-sent events endpoint is traced and streams incrementally
+    Given an instrumented FastAPI app with a server-sent events endpoint
+    When the client reads 3 server-sent events
+    Then the client should have received the events "event-0,event-1,event-2"
+    And the first event should have arrived before the stream finished
+    And a span named "GET /events" should be recorded
+
+  Scenario: Instrumented FastAPI server-sent events endpoint records HTTP server duration
+    Given an instrumented FastAPI app with a server-sent events endpoint
+    When the client reads 3 server-sent events
+    Then an HTTP server duration metric should have datapoints
+
+  Scenario: Instrumented FastAPI server-sent events stream that fails mid-stream is traced
+    Given an instrumented FastAPI app with a server-sent events endpoint
+    When the client reads a server-sent events stream that fails after the first event
+    Then the client should have received the events "event-0"
+    And a span named "GET /events-fail" should be recorded
+
+  Scenario: Instrumented FastAPI server-sent events stream is traced when the client disconnects
+    Given an instrumented FastAPI app with a server-sent events endpoint
+    When the client reads 2 of an endless server-sent events stream and disconnects
+    Then the server should stop producing events
+    And a span named "GET /events" should be recorded
+
   Scenario: gRPC OTel interceptor is prepended without dropping existing interceptors
     When I setup the gRPC OTel interceptor on a list with a sentinel interceptor
     Then the OTel interceptor should be first and the sentinel should remain

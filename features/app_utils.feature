@@ -158,3 +158,64 @@ Feature: App Utilities
     When I request the test endpoint
     Then the response should return status code 200
     And the app should not have HTTPS redirect middleware
+
+  Scenario: Server-sent events are delivered as an event stream
+    Given a FastAPI app with a server-sent events endpoint
+    When the client reads 3 server-sent events
+    Then the response should be an event stream
+    And the client should have received the events "event-0,event-1,event-2"
+
+  Scenario: Server-sent events are flushed incrementally
+    Given a FastAPI app with a server-sent events endpoint
+    When the client reads 3 server-sent events
+    Then the first event should have arrived before the stream finished
+
+  Scenario: GZip middleware does not compress or buffer server-sent events
+    Given a FastAPI app with GZip middleware enabled and a server-sent events endpoint
+    When the client reads 3 server-sent events
+    Then the client should have received the events "event-0,event-1,event-2"
+    And the response should not be compressed
+    And the first event should have arrived before the stream finished
+
+  Scenario: A failure mid-stream keeps events already delivered
+    Given a FastAPI app with a server-sent events endpoint
+    When the client reads a server-sent events stream that fails after the first event
+    Then the client should have received the events "event-0"
+
+  Scenario: Server-sent events stop when the client disconnects
+    Given a FastAPI app with a server-sent events endpoint
+    When the client reads 2 of an endless server-sent events stream and disconnects
+    Then the server should stop producing events
+
+  Scenario: Concurrent clients each receive the full event stream
+    Given a FastAPI app with a server-sent events endpoint
+    When 5 clients read 3 server-sent events concurrently
+    Then every client should have received the events "event-0,event-1,event-2"
+
+  Scenario: Server-sent events carry CORS headers for allowed origins
+    Given a FastAPI app with a server-sent events endpoint
+    When the client reads 2 server-sent events from origin "https://example.com"
+    Then the client should have received the events "event-0,event-1"
+    And the response should allow origin "https://example.com"
+
+  Scenario: Server-sent events omit CORS headers for disallowed origins
+    Given a FastAPI app with a server-sent events endpoint
+    When the client reads 2 server-sent events from origin "https://evil.example"
+    Then the response should not allow any origin
+
+  Scenario: TrustedHost middleware allows server-sent events for a configured host
+    Given a FastAPI app with TrustedHost middleware enabled for "127.0.0.1" and a server-sent events endpoint
+    When the client reads 2 server-sent events with host "127.0.0.1"
+    Then the client should have received the events "event-0,event-1"
+
+  Scenario: TrustedHost middleware rejects server-sent events for an invalid host
+    Given a FastAPI app with TrustedHost middleware enabled for "127.0.0.1" and a server-sent events endpoint
+    When the client reads 2 server-sent events with host "evil.com"
+    Then the event stream request should return status code 400
+    And the client should have received no events
+
+  Scenario: An error raised before the stream starts is mapped to an HTTP status
+    Given a FastAPI app with a server-sent events endpoint
+    When the client reads a server-sent events stream that is rejected before it starts
+    Then the event stream request should return status code 400
+    And the client should have received no events
