@@ -6,13 +6,13 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Release notes for ArchiPy 5.5.1">
+        <meta name="description" content="Release notes for ArchiPy 5.5.2">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.5.1/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.5.2/">
       
       
       
@@ -25,7 +25,7 @@
     
     
       
-        <title>Changelog 5.5.1 - ArchiPy</title>
+        <title>Changelog 5.5.2 - ArchiPy</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#551-2026-09-26" class="md-skip">
+        <a href="#552-2026-09-29" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Changelog 5.5.1
+              Changelog 5.5.2
             
           </span>
         </div>
@@ -3144,21 +3144,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#adapters-sqlalchemy" class="md-nav__link">
+  <a href="#helpers-grpc-interceptors" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adapters - SQLAlchemy
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#adapters-sqlite" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adapters - SQLite
+        Helpers - gRPC Interceptors
       
     </span>
   </a>
@@ -3183,10 +3172,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tests-sqlalchemy" class="md-nav__link">
+  <a href="#tests-grpc" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tests - SQLAlchemy
+        Tests - gRPC
       
     </span>
   </a>
@@ -3194,10 +3183,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tests-configuration" class="md-nav__link">
+  <a href="#tests-fastapi" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tests - Configuration
+        Tests - FastAPI
       
     </span>
   </a>
@@ -3206,6 +3195,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
   
 </li>
       
@@ -3226,7 +3226,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/5/5.5.1.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/5/5.5.2.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3234,50 +3234,58 @@
   
 
 
-<h1 id="551-2026-09-26">5.5.1 — 2026-09-26<a class="headerlink" href="#551-2026-09-26" title="Permanent link">&para;</a></h1>
-<p><a href="../5.5.2/">← 5.5.2</a> | <a href="../5.5.0/">5.5.0 →</a> | <a href="../">↑ 5.x series</a></p>
+<h1 id="552-2026-09-29">5.5.2 — 2026-09-29<a class="headerlink" href="#552-2026-09-29" title="Permanent link">&para;</a></h1>
+<p><a href="../5.5.1/">← 5.5.1</a> | <a href="../">↑ 5.x series</a></p>
 <h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
-<h3 id="adapters-sqlalchemy">Adapters - SQLAlchemy<a class="headerlink" href="#adapters-sqlalchemy" title="Permanent link">&para;</a></h3>
+<h3 id="helpers-grpc-interceptors">Helpers - gRPC Interceptors<a class="headerlink" href="#helpers-grpc-interceptors" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Sync path no longer requires greenlet</strong> - <code>archipy[postgres,sqlalchemy]</code> (and the MySQL, SQLite, and StarRocks
-  equivalents) failed on import with SQLAlchemy 2.1, which no longer installs <code>greenlet</code> by default.<ul>
-<li>The base session manager imported <code>sqlalchemy.ext.asyncio</code> at module level; async names are now
-  <code>TYPE_CHECKING</code>-only and imported lazily inside the async engine and session factory methods</li>
-<li>Async adapters still need the <code>sqlalchemy-async</code> extra and raise SQLAlchemy's install hint without it</li>
+<li><strong>Streaming RPCs with OpenTelemetry</strong> - Response-streaming RPCs failed under the async server with
+  <code>'async for' requires an object with __aiter__ method, got coroutine</code>.<ul>
+<li><code>BaseAsyncGrpcServerInterceptor</code> wrapped every RPC type in a coroutine; <code>unary_stream</code> and <code>stream_stream</code>
+  handlers are now wrapped in an async generator</li>
+<li>Added an overridable <code>intercept_stream</code> hook; the default runs <code>intercept</code> around handler invocation and
+  relays the stream, so existing subclasses keep working</li>
+<li>Added <code>iterate_stream_result</code>, which handles async-generator handlers and coroutine-style handlers that
+  push responses through <code>context.write</code></li>
 </ul>
 </li>
-<li><strong>Pool arguments hook</strong> - Added <code>_get_pool_kwargs()</code> to both base session managers so dialects can adjust
-  pool arguments for the pool class SQLAlchemy selects.</li>
-</ul>
-<h3 id="adapters-sqlite">Adapters - SQLite<a class="headerlink" href="#adapters-sqlite" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Driver matches adapter mode</strong> - Sync and async SQLite adapters share <code>SQLiteSQLAlchemyConfig</code>, whose default
-  <code>DRIVER_NAME</code> is <code>sqlite+aiosqlite</code>, so the sync adapter needed <code>aiosqlite</code> installed.<ul>
-<li>The sync session manager swaps <code>sqlite+aiosqlite</code> for <code>sqlite</code></li>
-<li>The async session manager swaps <code>sqlite</code> / <code>sqlite+pysqlite</code> for <code>sqlite+aiosqlite</code></li>
-<li>Other explicitly configured drivers are used unchanged</li>
+<li><strong>Mid-stream error mapping</strong> - <code>AsyncGrpcServerExceptionInterceptor</code> and <code>GrpcServerExceptionInterceptor</code> now map
+  errors raised while a stream is being consumed to gRPC statuses instead of <code>UNKNOWN</code>.<ul>
+<li>The sync interceptor guards any returned iterator, not only generators</li>
 </ul>
 </li>
-<li><strong>In-memory databases</strong> - <code>:memory:</code>, empty, and <code>mode=memory</code> URI databases no longer fail with
-  <code>Invalid argument(s) 'pool_timeout','pool_use_lifo','max_overflow'</code>.<ul>
-<li>Queue-pool-only arguments are dropped because SQLAlchemy uses <code>SingletonThreadPool</code> / <code>StaticPool</code> there</li>
+<li><strong>Stream duration metrics</strong> - <code>rpc.server.duration</code> is now recorded when a stream finishes, with the status of
+  any mid-stream error.<ul>
+<li>The sync metrics interceptor previously recorded duration as soon as the stream was created</li>
+<li>Added <code>AsyncGrpcServerOtelMetricsInterceptor.intercept_stream</code></li>
 </ul>
 </li>
 </ul>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
-<h3 id="tests-sqlalchemy">Tests - SQLAlchemy<a class="headerlink" href="#tests-sqlalchemy" title="Permanent link">&para;</a></h3>
+<h3 id="tests-grpc">Tests - gRPC<a class="headerlink" href="#tests-grpc" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Greenlet-free import scenarios</strong> - Added BDD scenarios asserting that importing each sync session manager
-  module (Postgres, SQLite, MySQL, StarRocks) does not load <code>sqlalchemy.ext.asyncio</code>.</li>
-<li><strong>SQLite driver and in-memory scenarios</strong> - Added BDD scenarios running sync and async SQLite adapters with
-  either driver on in-memory and file databases.</li>
+<li><strong>Streaming interceptor scenarios</strong> - Added BDD scenarios in <code>otel.feature</code> running a real local gRPC server, sync
+  and async, with the exception, metrics, and full (contrib OTel, metrics, exception) interceptor stacks.<ul>
+<li>Unary, server-streaming, client-streaming, and bidirectional RPCs</li>
+<li>Mid-stream error mapping, coroutine-style stream handlers, and sync plain-iterator handlers</li>
+<li>Stream duration datapoints and status</li>
 </ul>
-<h3 id="tests-configuration">Tests - Configuration<a class="headerlink" href="#tests-configuration" title="Permanent link">&para;</a></h3>
+</li>
+</ul>
+<h3 id="tests-fastapi">Tests - FastAPI<a class="headerlink" href="#tests-fastapi" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>MinIO test image</strong> - Switched the MinIO testcontainer image to <code>pgsty/minio</code>; MinIO no longer publishes
-  public images on Docker Hub and <code>quay.io</code> requires authentication.</li>
-<li><strong>Feature step lint</strong> - Resolved Ruff <code>F</code> errors in feature steps (duplicate step function names, unused imports
-  and locals).</li>
+<li><strong>Server-sent events scenarios</strong> - Added BDD scenarios in <code>app_utils.feature</code> and <code>otel.feature</code> that serve real
+  ArchiPy FastAPI apps with uvicorn and stream <code>text/event-stream</code> responses.<ul>
+<li>Event delivery, incremental flushing (also with GZip enabled), and events kept after a mid-stream failure</li>
+<li>Client disconnect, concurrent clients, CORS, TrustedHost, and pre-stream error mapping</li>
+<li>OpenTelemetry server spans and HTTP server duration metrics for streamed responses</li>
+</ul>
+</li>
+</ul>
+<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Dependency floors</strong> - Raised lower bounds to the locked versions: <code>pyjwt</code> 2.15.1, <code>boto3</code> and <code>boto3-stubs</code>
+  1.43.104, <code>scylla-driver</code> 3.29.12, <code>types-grpcio</code> 1.84.0.20260928.</li>
 </ul>
 
 
