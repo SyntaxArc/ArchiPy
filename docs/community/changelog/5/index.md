@@ -10,6 +10,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                              |
 |-------------------|------------|--------------------------------------------------------------------------------------|
+| [5.6.0](5.6.0.md) | 2026-09-30 | Native FastAPI OTel telemetry; `setup_otel` removed; `FASTAPI_OPERATION_SPANS_ENABLED` |
 | [5.5.2](5.5.2.md) | 2026-09-29 | Async gRPC streaming RPCs work with OTel interceptors; mid-stream errors and stream metrics |
 | [5.5.1](5.5.1.md) | 2026-09-26 | Sync SQLAlchemy path works without greenlet; SQLite driver and in-memory pool fixes |
 | [5.5.0](5.5.0.md) | 2026-09-26 | httpx2 OTel auto-instrumentation; drop `otel-elasticsearch` extra; `JsonValue` RediSearch payloads |
