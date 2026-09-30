@@ -15,7 +15,7 @@ metrics come from OpenTelemetry contrib instrumentors configured via `BaseConfig
 
 | Stack   | Wiring                                                                 |
 |---------|------------------------------------------------------------------------|
-| FastAPI | `AppUtils.create_fastapi_app` → `FastAPIUtils.setup_otel` (`FastAPIInstrumentor`) |
+| FastAPI | `AppUtils.create_fastapi_app` → `FastAPIUtils.build_otel_telemetry_config` (native FastAPI telemetry) |
 | gRPC    | `AppUtils.create_grpc_app` / `create_async_grpc_app` → contrib server interceptor at index 0 |
 | Client gRPC | `OtelUtils.grpc_client_interceptors()` / `async_grpc_client_interceptors()` |
 

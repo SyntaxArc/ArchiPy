@@ -25,7 +25,7 @@ dependency-injection = ["dependency-injector>=4.49.1"]
 elasticsearch = ["elasticsearch>=9.5.1"]
 elasticsearch-async = ["elasticsearch[async]>=9.5.1"]
 fakeredis = ["fakeredis>=2.38.0"]
-fastapi = ["fastapi[all]>=0.141.1"]
+fastapi = ["fastapi[all]>=0.142.2"]
 grpc = ["grpcio>=1.84.0", "grpcio-health-checking>=1.84.0", "protobuf>=7.36.2"]
 jwt = ["pyjwt>=2.15.1"]
 kafka = ["confluent-kafka>=2.15.1"]
@@ -57,7 +57,7 @@ otel = [
     "opentelemetry-instrumentation-system-metrics>=0.66b0",
     "opentelemetry-exporter-prometheus>=0.66b0",
 ]
-otel-fastapi = ["archipy[otel]", "opentelemetry-instrumentation-fastapi>=0.66b0"]
+otel-fastapi = ["archipy[otel]", "fastapi>=0.142.2"]
 otel-grpc = ["archipy[otel]", "opentelemetry-instrumentation-grpc>=0.66b0"]
 otel-sqlalchemy = ["archipy[otel]", "opentelemetry-instrumentation-sqlalchemy>=0.66b0"]
 otel-redis = ["archipy[otel]", "opentelemetry-instrumentation-redis>=0.66b0"]

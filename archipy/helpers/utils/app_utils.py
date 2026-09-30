@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from concurrent import futures
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
@@ -20,10 +21,11 @@ from archipy.models.errors import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable
+    from collections.abc import AsyncIterator, Callable, MutableMapping
     from contextlib import AbstractAsyncContextManager
 
     from fastapi.routing import APIRoute
+    from fastapi.telemetry import TelemetryConfig
     from grpc import aio as grpc_aio
     from grpc.aio import Server as GrpcAioServer
 
@@ -218,89 +220,85 @@ class FastAPIUtils:
         app.add_middleware(HTTPSRedirectMiddleware)
 
     @staticmethod
-    def _fastapi_otel_instrument_kwargs(config: BaseConfig) -> dict[str, Any] | None:
-        """Build FastAPIInstrumentor kwargs with real or NoOp providers.
-
-        Returns:
-            Kwargs for ``instrument_app``, or ``None`` when instrumentation
-            should be skipped (no real providers available).
-        """
-        from opentelemetry.metrics import NoOpMeterProvider
-        from opentelemetry.trace import NoOpTracerProvider
-
-        from archipy.helpers.utils.otel_utils import OtelUtils
-
-        instrument_kwargs: dict[str, Any] = {}
-        has_real_provider = False
-
-        if config.OTEL.TRACES_ENABLED:
-            tracer_provider = OtelUtils.tracer_provider()
-            if tracer_provider is None:
-                logger.warning(
-                    "OTEL traces enabled but no tracer provider is available; skipping FastAPI trace instrumentation",
-                )
-                instrument_kwargs["tracer_provider"] = NoOpTracerProvider()
-            else:
-                instrument_kwargs["tracer_provider"] = tracer_provider
-                has_real_provider = True
-        else:
-            instrument_kwargs["tracer_provider"] = NoOpTracerProvider()
-
-        if config.OTEL.METRICS_ENABLED:
-            meter_provider = OtelUtils.meter_provider()
-            if meter_provider is None:
-                logger.warning(
-                    "OTEL metrics enabled but no meter provider is available; skipping FastAPI metric instrumentation",
-                )
-                instrument_kwargs["meter_provider"] = NoOpMeterProvider()
-            else:
-                instrument_kwargs["meter_provider"] = meter_provider
-                has_real_provider = True
-        else:
-            instrument_kwargs["meter_provider"] = NoOpMeterProvider()
-
-        if not has_real_provider:
-            return None
-
-        if config.OTEL.FASTAPI_EXCLUDED_URLS is not None:
-            instrument_kwargs["excluded_urls"] = config.OTEL.FASTAPI_EXCLUDED_URLS
-        return instrument_kwargs
-
-    @staticmethod
-    def setup_otel(app: FastAPI, config: BaseConfig) -> None:
-        """Configure OpenTelemetry instrumentation for a FastAPI application.
-
-        Only passes providers for enabled signals. Never passes ``None`` providers
-        (contrib instrumentors would fall back to global OTEL providers). Disabled
-        signals receive explicit NoOp providers.
+    def _fastapi_otel_excluded(patterns: str | None) -> Callable[[MutableMapping[str, Any]], bool] | None:
+        """Build a native-telemetry ``exclude`` callable from comma-separated URL patterns.
 
         Args:
-            app: The FastAPI application instance.
-            config: Application configuration containing OTel settings.
-        """
-        if not config.OTEL.IS_ENABLED:
-            return
-        if not config.OTEL.TRACES_ENABLED and not config.OTEL.METRICS_ENABLED:
-            return
+            patterns: Comma-separated regular expressions searched against the request path.
 
+        Returns:
+            A callable receiving the ASGI scope, or ``None`` when no patterns are configured.
+        """
+        compiled = [re.compile(item.strip()) for item in (patterns or "").split(",") if item.strip()]
+        if not compiled:
+            return None
+
+        def exclude(scope: MutableMapping[str, Any]) -> bool:
+            path = scope.get("path", "")
+            return any(pattern.search(path) for pattern in compiled)
+
+        return exclude
+
+    @staticmethod
+    def build_otel_telemetry_config(config: BaseConfig) -> TelemetryConfig:
+        """Build the ``telemetry`` argument for ``FastAPI(...)`` from ArchiPy OTel settings.
+
+        FastAPI instruments requests natively, so the config must be passed to the constructor.
+        Providers come from ``OtelUtils`` and are never replaced by globals. Signals without a
+        real provider are disabled. ``auto_configure`` is off because ArchiPy owns the exporters,
+        and FastAPI log records (which carry stack traces) stay off.
+
+        Args:
+            config: Application configuration containing OTel settings.
+
+        Returns:
+            Telemetry settings for ``FastAPI(telemetry=...)``.
+        """
         from archipy.helpers.utils.otel_utils import OTEL_FASTAPI_INSTALL_HINT, OtelUtils
+
+        disabled: TelemetryConfig = {
+            "tracing": False,
+            "metrics": False,
+            "logs": False,
+            "operation_spans": False,
+            "auto_configure": False,
+        }
+        if not config.OTEL.IS_ENABLED:
+            return disabled
 
         try:
             OtelUtils.init_otel_if_needed(config)
             if OtelUtils.import_failed():
-                return
-
-            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
-            instrument_kwargs = FastAPIUtils._fastapi_otel_instrument_kwargs(config)
-            if instrument_kwargs is None:
-                return
-
-            FastAPIInstrumentor.instrument_app(app, **instrument_kwargs)
+                return disabled
+            tracer_provider = OtelUtils.tracer_provider() if config.OTEL.TRACES_ENABLED else None
+            meter_provider = OtelUtils.meter_provider() if config.OTEL.METRICS_ENABLED else None
         except ImportError:
             logger.warning("%s", OTEL_FASTAPI_INSTALL_HINT)
+            return disabled
         except Exception:
             logger.exception("Failed to initialize OpenTelemetry for FastAPI")
+            return disabled
+
+        if config.OTEL.TRACES_ENABLED and tracer_provider is None:
+            logger.warning("OTEL traces enabled but no tracer provider is available; skipping FastAPI tracing")
+        if config.OTEL.METRICS_ENABLED and meter_provider is None:
+            logger.warning("OTEL metrics enabled but no meter provider is available; skipping FastAPI metrics")
+
+        telemetry: TelemetryConfig = {
+            "tracing": tracer_provider is not None,
+            "metrics": meter_provider is not None,
+            "logs": False,
+            "operation_spans": tracer_provider is not None and config.OTEL.FASTAPI_OPERATION_SPANS_ENABLED,
+            "auto_configure": False,
+        }
+        if tracer_provider is not None:
+            telemetry["tracer_provider"] = tracer_provider
+        if meter_provider is not None:
+            telemetry["meter_provider"] = meter_provider
+        exclude = FastAPIUtils._fastapi_otel_excluded(config.OTEL.FASTAPI_EXCLUDED_URLS)
+        if exclude is not None:
+            telemetry["exclude"] = exclude
+        return telemetry
 
     @staticmethod
     def setup_exception_handlers(app: FastAPI) -> None:
@@ -595,13 +593,13 @@ class AppUtils:
             redoc_url=config.FASTAPI.RE_DOC_URL,
             responses=responses_dict,
             lifespan=resolved_lifespan,
+            telemetry=FastAPIUtils.build_otel_telemetry_config(config),
         )
 
         FastAPIUtils.setup_cors(app, config)
         FastAPIUtils.setup_gzip(app, config)
         FastAPIUtils.setup_https_redirect(app, config)
         FastAPIUtils.setup_trusted_host(app, config)
-        FastAPIUtils.setup_otel(app, config)
 
         if configure_exception_handlers:
             FastAPIUtils.setup_exception_handlers(app)

@@ -16,7 +16,7 @@ Enable the relevant extras, set `OTEL__IS_ENABLED=true`, and call `AppUtils.crea
 | Extra                     | Purpose                                              |
 |---------------------------|------------------------------------------------------|
 | `archipy[otel]`           | SDK, OTLP exporters, httpx/requests, threading, system metrics |
-| `archipy[otel-fastapi]`   | FastAPI auto-instrumentation                         |
+| `archipy[otel-fastapi]`   | FastAPI native telemetry (FastAPI 0.142.2+)          |
 | `archipy[otel-grpc]`      | gRPC server/client contrib interceptors              |
 | `archipy[otel-sqlalchemy]`| SQLAlchemy instrumentation (covers Postgres/MySQL/SQLite via ORM) |
 | `archipy[otel-redis]`     | Redis instrumentation                                |
@@ -112,6 +112,7 @@ logger.info("OTel enabled=%s endpoint=%s", config.OTEL.IS_ENABLED, config.OTEL.O
 | `LOGS_ENABLED`            | `true`                      | Enable log export when OTel is on                |
 | `LOGS_EXPORTER`           | `console`                   | Unique logs exporter: `console` or `otlp`        |
 | `FASTAPI_EXCLUDED_URLS`   | `None`                      | Comma-separated URL patterns skipped by FastAPI  |
+| `FASTAPI_OPERATION_SPANS_ENABLED` | `true`              | FastAPI child spans (dependencies, endpoint, serialization, background tasks) |
 | `RESOURCE_ATTRIBUTES`     | `{}`                        | Extra OTel resource attributes                   |
 | `LOGS_LEVEL`              | `INFO`                      | Minimum level for the root-logger handler        |
 
@@ -252,9 +253,16 @@ invoke it again safely.
 
 ### FastAPI
 
-`AppUtils.create_fastapi_app` calls `FastAPIUtils.setup_otel` when `OTEL.IS_ENABLED` is true.
-That initializes providers (idempotent) and instruments the app with
-`FastAPIInstrumentor` (requires `archipy[otel-fastapi]`):
+`AppUtils.create_fastapi_app` passes `FastAPIUtils.build_otel_telemetry_config(config)` to
+`FastAPI(telemetry=...)`. That initializes providers (idempotent) and enables FastAPI's built-in
+OpenTelemetry support (requires `archipy[otel-fastapi]`, FastAPI 0.142.2+). Traces and metrics use
+ArchiPy's providers; FastAPI log records and OTLP auto-configuration are off. The HTTP duration
+metric is `http.server.request.duration` (seconds). If you build the app yourself, pass the same
+config to the constructor:
+
+```python
+app = FastAPI(telemetry=FastAPIUtils.build_otel_telemetry_config(config))
+```
 
 ```python
 import logging

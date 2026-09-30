@@ -883,8 +883,8 @@ def step_when_fastapi_get(context, path):
 
 @then("an HTTP server duration metric should have datapoints")
 def step_then_http_server_duration(context):
-    points = _metric_datapoints(context, "http.server.duration")
-    assert points, "No http.server.duration datapoints"
+    points = _metric_datapoints(context, "http.server.request.duration")
+    assert points, "No http.server.request.duration datapoints"
 
 
 @when("I call an instrumented gRPC TestMethod")

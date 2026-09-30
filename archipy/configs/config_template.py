@@ -999,6 +999,13 @@ class OpentelemetryConfig(BaseModel):
         default=None,
         description="Comma-separated URL patterns skipped by FastAPI instrumentation (e.g. health,docs)",
     )
+    FASTAPI_OPERATION_SPANS_ENABLED: bool = Field(
+        default=True,
+        description=(
+            "Record FastAPI child spans (dependencies, endpoint, serialization, background tasks) "
+            "under the request span when TRACES_ENABLED is true"
+        ),
+    )
     LOGS_LEVEL: str = Field(
         default="INFO",
         description=(
