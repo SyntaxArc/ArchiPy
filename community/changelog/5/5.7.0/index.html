@@ -6,13 +6,13 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Release notes for ArchiPy 5.5.2">
+        <meta name="description" content="Release notes for ArchiPy 5.7.0">
       
       
         <meta name="author" content="Hossein Nejati, Mehdi Einali">
       
       
-        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.5.2/">
+        <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.7.0/">
       
       
       
@@ -25,7 +25,7 @@
     
     
       
-        <title>Changelog 5.5.2 - ArchiPy</title>
+        <title>Changelog 5.7.0 - ArchiPy</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#552-2026-09-29" class="md-skip">
+        <a href="#570-2026-10-03" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Changelog 5.5.2
+              Changelog 5.7.0
             
           </span>
         </div>
@@ -3132,22 +3132,55 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#added" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fixed
+        Added
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Fixed">
+    <nav class="md-nav" aria-label="Added">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#helpers-grpc-interceptors" class="md-nav__link">
+  <a href="#models-dtos" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Helpers - gRPC Interceptors
+        Models - DTOs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#models-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models - Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#helpers-keycloak" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helpers - Keycloak
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adapters-keycloak" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapters - Keycloak
       
     </span>
   </a>
@@ -3160,33 +3193,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tests" class="md-nav__link">
+  <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tests
+        Changed
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Tests">
+    <nav class="md-nav" aria-label="Changed">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tests-grpc" class="md-nav__link">
+  <a href="#models-dtos_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tests - gRPC
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tests-fastapi" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tests - FastAPI
+        Models - DTOs
       
     </span>
   </a>
@@ -3226,7 +3248,7 @@
 
 
   
-    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/5/5.5.2.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SyntaxArc/ArchiPy/edit/master/docs/community/changelog/5/5.7.0.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3234,58 +3256,59 @@
   
 
 
-<h1 id="552-2026-09-29">5.5.2 — 2026-09-29<a class="headerlink" href="#552-2026-09-29" title="Permanent link">&para;</a></h1>
-<p><a href="../5.6.0/">← 5.6.0</a> | <a href="../5.5.1/">5.5.1 →</a> | <a href="../">↑ 5.x series</a></p>
-<h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
-<h3 id="helpers-grpc-interceptors">Helpers - gRPC Interceptors<a class="headerlink" href="#helpers-grpc-interceptors" title="Permanent link">&para;</a></h3>
+<h1 id="570-2026-10-03">5.7.0 — 2026-10-03<a class="headerlink" href="#570-2026-10-03" title="Permanent link">&para;</a></h1>
+<p><a href="../5.6.0/">← 5.6.0</a> | <a href="../">↑ 5.x series</a></p>
+<h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
+<h3 id="models-dtos">Models - DTOs<a class="headerlink" href="#models-dtos" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Streaming RPCs with OpenTelemetry</strong> - Response-streaming RPCs failed under the async server with
-  <code>'async for' requires an object with __aiter__ method, got coroutine</code>.<ul>
-<li><code>BaseAsyncGrpcServerInterceptor</code> wrapped every RPC type in a coroutine; <code>unary_stream</code> and <code>stream_stream</code>
-  handlers are now wrapped in an async generator</li>
-<li>Added an overridable <code>intercept_stream</code> hook; the default runs <code>intercept</code> around handler invocation and
-  relays the stream, so existing subclasses keep working</li>
-<li>Added <code>iterate_stream_result</code>, which handles async-generator handlers and coroutine-style handlers that
-  push responses through <code>context.write</code></li>
-</ul>
-</li>
-<li><strong>Mid-stream error mapping</strong> - <code>AsyncGrpcServerExceptionInterceptor</code> and <code>GrpcServerExceptionInterceptor</code> now map
-  errors raised while a stream is being consumed to gRPC statuses instead of <code>UNKNOWN</code>.<ul>
-<li>The sync interceptor guards any returned iterator, not only generators</li>
-</ul>
-</li>
-<li><strong>Stream duration metrics</strong> - <code>rpc.server.duration</code> is now recorded when a stream finishes, with the status of
-  any mid-stream error.<ul>
-<li>The sync metrics interceptor previously recorded duration as soon as the stream was created</li>
-<li>Added <code>AsyncGrpcServerOtelMetricsInterceptor.intercept_stream</code></li>
+<li><strong><code>AuthenticatedUserDTO</code> and <code>ActorDTO</code></strong> - Added Keycloak DTOs describing the authenticated caller and the acting
+  parties behind a token.<ul>
+<li><code>ActorDTO</code> carries an actor <code>id</code> and <code>type</code> (<code>ActorType.USER</code> or <code>ActorType.CLIENT</code>)</li>
+<li><code>AuthenticatedUserDTO</code> exposes <code>actor_chain</code>, <code>current_actor</code>, <code>is_impersonated</code>, and <code>propagation_headers()</code></li>
+<li>The bearer token is stored as a <code>SecretStr</code> and masked in <code>repr</code> and logs</li>
+<li><code>AuthContext</code> in <code>keycloak_utils</code> remains as an alias of <code>AuthenticatedUserDTO</code></li>
 </ul>
 </li>
 </ul>
-<h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
-<h3 id="tests-grpc">Tests - gRPC<a class="headerlink" href="#tests-grpc" title="Permanent link">&para;</a></h3>
+<h3 id="models-types">Models - Types<a class="headerlink" href="#models-types" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Streaming interceptor scenarios</strong> - Added BDD scenarios in <code>otel.feature</code> running a real local gRPC server, sync
-  and async, with the exception, metrics, and full (contrib OTel, metrics, exception) interceptor stacks.<ul>
-<li>Unary, server-streaming, client-streaming, and bidirectional RPCs</li>
-<li>Mid-stream error mapping, coroutine-style stream handlers, and sync plain-iterator handlers</li>
-<li>Stream duration datapoints and status</li>
+<li><strong><code>ActorType</code></strong> - Added <code>ActorType</code> enum (<code>USER</code>, <code>CLIENT</code>) for RFC 8693 <code>act</code> claim entries.</li>
 </ul>
-</li>
-</ul>
-<h3 id="tests-fastapi">Tests - FastAPI<a class="headerlink" href="#tests-fastapi" title="Permanent link">&para;</a></h3>
+<h3 id="helpers-keycloak">Helpers - Keycloak<a class="headerlink" href="#helpers-keycloak" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Server-sent events scenarios</strong> - Added BDD scenarios in <code>app_utils.feature</code> and <code>otel.feature</code> that serve real
-  ArchiPy FastAPI apps with uvicorn and stream <code>text/event-stream</code> responses.<ul>
-<li>Event delivery, incremental flushing (also with GZip enabled), and events kept after a mid-stream failure</li>
-<li>Client disconnect, concurrent clients, CORS, TrustedHost, and pre-stream error mapping</li>
-<li>OpenTelemetry server spans and HTTP server duration metrics for streamed responses</li>
+<li><strong>Impersonation tracking</strong> - Request authentication now parses the RFC 8693 <code>act</code> claim emitted by Keycloak 26.8.<ul>
+<li>Nested <code>act</code> claims are flattened into an actor chain, outermost (current) actor first, capped at 8 entries</li>
+<li>gRPC auth decorators set the actor chain on the auth context; FastAPI dependencies set
+  <code>request.state.actor_chain</code></li>
+<li>Impersonated requests are logged at <code>INFO</code> with the subject and the full actor chain</li>
+<li><code>propagation_headers()</code> forwards the same bearer token so downstream services see the same <code>act</code> claim</li>
 </ul>
 </li>
+</ul>
+<h3 id="adapters-keycloak">Adapters - Keycloak<a class="headerlink" href="#adapters-keycloak" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Token exchange</strong> - Added <code>exchange_token</code> to the sync and async Keycloak adapters and ports.<ul>
+<li>Pass <code>requested_subject</code> to impersonate a user via RFC 8693 token exchange</li>
+</ul>
+</li>
+</ul>
+<h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
+<h3 id="models-dtos_1">Models - DTOs<a class="headerlink" href="#models-dtos_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Constrained Pydantic types</strong> - DTO numeric fields now use <code>PositiveInt</code>, <code>NonNegativeInt</code>, and
+  <code>NonNegativeFloat</code> instead of bare numbers with manual bounds.<ul>
+<li>Applies to Parsian and Saman IPG, pagination, rate-limit window, Vault lease, email attachment, and Redis Search
+  DTOs</li>
+<li>Redis <code>KnnQueryDTO.k</code> and the vector field <code>dim</code> must be positive; <code>SearchQueryDTO.offset</code> and <code>limit</code> must be
+  non-negative</li>
+</ul>
+</li>
+<li><strong><code>SortDTO</code> and <code>SearchInputDTO</code> base class</strong> - Both now extend <code>BaseDTO</code>, so they are frozen and support
+  <code>from_attributes</code> like other DTOs.</li>
 </ul>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Dependency floors</strong> - Raised lower bounds to the locked versions: <code>pyjwt</code> 2.15.1, <code>boto3</code> and <code>boto3-stubs</code>
-  1.43.104, <code>scylla-driver</code> 3.29.12, <code>types-grpcio</code> 1.84.0.20260928.</li>
+<li><strong><code>pydantic-extra-types</code></strong> - Added <code>pydantic-extra-types&gt;=2.11.1</code> as a direct dependency.</li>
 </ul>
 
 

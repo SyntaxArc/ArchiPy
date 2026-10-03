@@ -3437,7 +3437,7 @@ metrics come from OpenTelemetry contrib instrumentors configured via <code>BaseC
 <tbody>
 <tr>
 <td>FastAPI</td>
-<td><code>AppUtils.create_fastapi_app</code> → <code>FastAPIUtils.setup_otel</code> (<code>FastAPIInstrumentor</code>)</td>
+<td><code>AppUtils.create_fastapi_app</code> → <code>FastAPIUtils.build_otel_telemetry_config</code> (native FastAPI telemetry)</td>
 </tr>
 <tr>
 <td>gRPC</td>
