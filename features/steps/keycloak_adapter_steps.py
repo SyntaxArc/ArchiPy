@@ -11,6 +11,8 @@ from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
 from archipy.configs.base_config import BaseConfig
+from archipy.helpers.utils.keycloak_utils import _build_auth_context
+from archipy.models.types.actor_type import ActorType
 
 
 async def _adapter_call(
@@ -4076,3 +4078,44 @@ def step_components_request_succeed(context: Context, adapter_type: str) -> None
     components = scenario_context.get("components_list")
     assert components is not None, "No components_list in context"
     context.logger.info(f"{adapter_type} components request succeeded")
+
+
+_USER_INFO = {"sub": "user-1", "preferred_username": "alice", "email": "a@example.com"}
+
+
+@given("a decoded token without an act claim")
+def step_no_act(context: Context) -> None:
+    context.token_info = {"sub": "user-1"}
+
+
+@given('a decoded token with act sub "{sub}" nested under act client "{client}"')
+def step_nested_act(context: Context, sub: str, client: str) -> None:
+    context.token_info = {"sub": "user-1", "act": {"sub": sub, "act": {"client_id": client}}}
+
+
+@when("the auth context is built")
+def step_build(context: Context) -> None:
+    context.auth_context = _build_auth_context(_USER_INFO, "tok-123", set(), context.token_info)
+
+
+@then("the auth context is not impersonated")
+def step_not_impersonated(context: Context) -> None:
+    assert not context.auth_context.is_impersonated
+    assert context.auth_context.current_actor is None
+
+
+@then('the auth context is impersonated by "{sub}"')
+def step_impersonated(context: Context, sub: str) -> None:
+    assert context.auth_context.is_impersonated
+    assert context.auth_context.current_actor.id == sub
+    assert context.auth_context.current_actor.type == ActorType.USER
+
+
+@then("the actor chain has {count:d} entries")
+def step_chain(context: Context, count: int) -> None:
+    assert len(context.auth_context.actor_chain) == count
+
+
+@then("the propagation headers carry the bearer token")
+def step_headers(context: Context) -> None:
+    assert context.auth_context.propagation_headers() == {"Authorization": "Bearer tok-123"}

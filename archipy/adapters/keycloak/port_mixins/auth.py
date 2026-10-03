@@ -77,6 +77,20 @@ class KeycloakAuthPort:
         raise NotImplementedError
 
     @abstractmethod
+    def exchange_token(
+        self,
+        subject_token: str,
+        requested_subject: str | None = None,
+        audience: str | None = None,
+        scope: str = "openid",
+    ) -> KeycloakTokenType | None:
+        """Exchange a token (RFC 8693); with ``requested_subject`` this impersonates that user.
+
+        Keycloak 26.8+ adds the ``act`` claim to the issued token so downstream services can identify the impersonator.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def check_permissions(self, token: str, resource: str, scope: str) -> bool:
         """Check if a user has permission to access a resource with the specified scope."""
         raise NotImplementedError
@@ -152,6 +166,20 @@ class AsyncKeycloakAuthPort:
     @abstractmethod
     async def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenType | None:
         """Exchange authorization code for token."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def exchange_token(
+        self,
+        subject_token: str,
+        requested_subject: str | None = None,
+        audience: str | None = None,
+        scope: str = "openid",
+    ) -> KeycloakTokenType | None:
+        """Exchange a token (RFC 8693); with ``requested_subject`` this impersonates that user.
+
+        Keycloak 26.8+ adds the ``act`` claim to the issued token so downstream services can identify the impersonator.
+        """
         raise NotImplementedError
 
     @abstractmethod

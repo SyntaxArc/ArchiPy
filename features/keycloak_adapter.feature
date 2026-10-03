@@ -555,3 +555,17 @@ Feature: Keycloak Authentication Testing
       | adapter_type | realm_name       | realm_display_name | client_name       |
       | sync         | test-realm       | Test Realm         | test-client       |
       | async        | async-test-realm | Async Test Realm   | async-test-client |
+
+  @impersonation
+  Scenario: Token without act claim is not impersonated
+    Given a decoded token without an act claim
+    When the auth context is built
+    Then the auth context is not impersonated
+
+  @impersonation
+  Scenario: Token with nested act claim exposes the actor chain
+    Given a decoded token with act sub "admin-1" nested under act client "agent-app"
+    When the auth context is built
+    Then the auth context is impersonated by "admin-1"
+    And the actor chain has 2 entries
+    And the propagation headers carry the bearer token

@@ -241,6 +241,39 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_client_credentials_token")
 
+    def exchange_token(
+        self,
+        subject_token: str,
+        requested_subject: str | None = None,
+        audience: str | None = None,
+        scope: str = "openid",
+    ) -> KeycloakTokenType | None:
+        """Exchange a token per RFC 8693, optionally impersonating another user.
+
+        Args:
+            subject_token: Access token of the caller (e.g. an admin or service account).
+            requested_subject: User ID or username to impersonate. When set, Keycloak 26.8+
+                adds the ``act`` claim to the issued token.
+            audience: Target client for the new token.
+            scope: Requested scope.
+
+        Returns:
+            Token response
+
+        Raises:
+            Various application errors mapped from the Keycloak response (e.g. when exchange is not permitted).
+        """
+        try:
+            return self._openid_adapter.exchange_token(
+                subject_token,
+                audience=audience,
+                subject=requested_subject,
+                requested_token_type="urn:ietf:params:oauth:token-type:access_token",  # noqa: S106
+                scope=scope,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "exchange_token")
+
     def logout(self, refresh_token: str) -> None:
         """Logout user by invalidating their refresh token.
 
@@ -542,6 +575,39 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             return await self.openid_adapter.a_token(grant_type="client_credentials")
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_client_credentials_token")
+
+    async def exchange_token(
+        self,
+        subject_token: str,
+        requested_subject: str | None = None,
+        audience: str | None = None,
+        scope: str = "openid",
+    ) -> KeycloakTokenType | None:
+        """Exchange a token per RFC 8693, optionally impersonating another user.
+
+        Args:
+            subject_token: Access token of the caller (e.g. an admin or service account).
+            requested_subject: User ID or username to impersonate. When set, Keycloak 26.8+
+                adds the ``act`` claim to the issued token.
+            audience: Target client for the new token.
+            scope: Requested scope.
+
+        Returns:
+            Token response
+
+        Raises:
+            Various application errors mapped from the Keycloak response (e.g. when exchange is not permitted).
+        """
+        try:
+            return await self.openid_adapter.a_exchange_token(
+                subject_token,
+                audience=audience,
+                subject=requested_subject,
+                requested_token_type="urn:ietf:params:oauth:token-type:access_token",  # noqa: S106
+                scope=scope,
+            )
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "exchange_token")
 
     async def logout(self, refresh_token: str) -> None:
         """Logout user by invalidating their refresh token.

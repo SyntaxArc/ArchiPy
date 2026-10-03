@@ -13,9 +13,9 @@ if TYPE_CHECKING:
 
 from fastapi import Depends, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
+from archipy.models.dtos.keycloak_dtos import ActorDTO, AuthenticatedUserDTO
 from archipy.models.errors import (
     BaseError,
     InternalError,
@@ -29,6 +29,7 @@ from archipy.models.errors.base_error import (
     AsyncServicerContext,
     ServicerContext,
 )
+from archipy.models.types.actor_type import ActorType
 from archipy.models.types.language_type import LanguageType
 
 # Enhanced security scheme with OpenAPI documentation
@@ -38,6 +39,9 @@ security = HTTPBearer(scheme_name="OAuth2", description="OAuth2 Access Token", a
 DEFAULT_LANG = LanguageType.FA
 
 logger = logging.getLogger(__name__)
+
+# Guard against pathological nested ``act`` claims.
+_MAX_ACTOR_DEPTH = 8
 
 
 def _raise_unauthenticated(lang: LanguageType) -> NoReturn:
@@ -225,46 +229,72 @@ async def _authorize_async(
     return user_info, token_info, user_roles
 
 
-class AuthContext(BaseModel):
-    """Authentication context passed to business logic."""
+def _parse_actor_chain(token_info: dict[str, Any] | None) -> list[ActorDTO]:
+    """Flatten the nested RFC 8693 ``act`` claim, outermost (current) actor first.
 
-    user_id: str
-    username: str
-    email: str
-    roles: list[str]
-    token: str
-    raw_user_info: dict[str, Any]
+    Per RFC 8693 §4.1 only the outermost actor is the current acting party; inner
+    entries are informational history of earlier delegations.
+    """
+    chain: list[ActorDTO] = []
+    act = (token_info or {}).get("act")
+    while isinstance(act, dict):
+        if len(chain) >= _MAX_ACTOR_DEPTH:
+            logger.info("Actor chain truncated at %d entries", _MAX_ACTOR_DEPTH)
+            break
+        if user_id := act.get("sub"):
+            chain.append(ActorDTO(id=user_id, type=ActorType.USER))
+        elif client_id := act.get("client_id") or act.get("azp"):
+            chain.append(ActorDTO(id=client_id, type=ActorType.CLIENT))
+        act = act.get("act")
+    return chain
 
 
-def _build_auth_context(user_info: dict[str, Any], token_str: str, user_roles: set[str]) -> AuthContext:
-    """Build an :class:`AuthContext` from UserInfo claims."""
+def _build_auth_context(
+    user_info: dict[str, Any],
+    token_str: str,
+    user_roles: set[str],
+    token_info: dict[str, Any] | None = None,
+) -> AuthenticatedUserDTO:
+    """Build an :class:`AuthContext` from UserInfo and decoded token claims."""
     user_id = user_info.get("sub")
     if not user_id:
         raise UnauthenticatedError()
-    return AuthContext(
+    actors = _parse_actor_chain(token_info)
+    if actors:
+        logger.info(
+            "Impersonated request: subject=%s actors=%s",
+            user_id,
+            [a.id for a in actors],
+        )
+    return AuthenticatedUserDTO(
         user_id=user_id,
         username=user_info.get("preferred_username", ""),
         email=user_info.get("email", ""),
         roles=list(user_roles),
         token=token_str,
         raw_user_info=user_info,
+        actor_chain=actors,
     )
 
 
+# Backward-compatible alias for the previous public name.
+AuthContext = AuthenticatedUserDTO
+
+
 # Solution 1: Using contextvars (Recommended)
-_auth_context_var: ContextVar[AuthContext | None] = ContextVar("auth_context", default=None)
+_auth_context_var: ContextVar[AuthenticatedUserDTO | None] = ContextVar("auth_context", default=None)
 
 
 class AuthContextManager:
     """Manager for handling auth context in gRPC services."""
 
     @staticmethod
-    def set_auth_context(auth_context: AuthContext) -> None:
+    def set_auth_context(auth_context: AuthenticatedUserDTO) -> None:
         """Set the auth context for the current request."""
         _auth_context_var.set(auth_context)
 
     @staticmethod
-    def get_auth_context() -> AuthContext | None:
+    def get_auth_context() -> AuthenticatedUserDTO | None:
         """Get the auth context for the current request."""
         return _auth_context_var.get()
 
@@ -344,6 +374,7 @@ class KeycloakUtils:
 
             request.state.user_info = user_info
             request.state.token_info = token_info
+            request.state.actor_chain = _parse_actor_chain(token_info)
             request.state.user_roles = user_roles
             return user_info
 
@@ -407,6 +438,7 @@ class KeycloakUtils:
 
             request.state.user_info = user_info
             request.state.token_info = token_info
+            request.state.actor_chain = _parse_actor_chain(token_info)
             request.state.user_roles = user_roles
             return user_info
 
@@ -496,7 +528,7 @@ class KeycloakUtils:
                         if not resource_uuid:
                             _raise_invalid_argument(resource_attribute_name, lang)
 
-                    user_info, _token_info, user_roles = _authorize_sync(
+                    user_info, token_info, user_roles = _authorize_sync(
                         keycloak,
                         token_str,
                         resource_uuid,
@@ -507,7 +539,7 @@ class KeycloakUtils:
                         lang,
                     )
 
-                    auth_context = _build_auth_context(user_info, token_str, user_roles)
+                    auth_context = _build_auth_context(user_info, token_str, user_roles, token_info)
                     AuthContextManager.set_auth_context(auth_context)
 
                     return func(self, request, context)
@@ -575,7 +607,7 @@ class KeycloakUtils:
                         if not resource_uuid:
                             _raise_invalid_argument(resource_attribute_name, lang)
 
-                    user_info, _token_info, user_roles = await _authorize_async(
+                    user_info, token_info, user_roles = await _authorize_async(
                         keycloak,
                         token_str,
                         resource_uuid,
@@ -586,7 +618,7 @@ class KeycloakUtils:
                         lang,
                     )
 
-                    auth_context = _build_auth_context(user_info, token_str, user_roles)
+                    auth_context = _build_auth_context(user_info, token_str, user_roles, token_info)
                     AuthContextManager.set_auth_context(auth_context)
 
                     return await func(self, request, context)
