@@ -11,6 +11,7 @@ requires-python = ">=3.14,<4"
 dependencies = [
     "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",
+    "pydantic-extra-types>=2.11.1",
     "httpx2>=2.13.1",
     "jdatetime>=6.1.0",
 ]
