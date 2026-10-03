@@ -3,7 +3,7 @@
 from enum import Enum
 from typing import ClassVar, Self, TypeVar
 
-from pydantic import Field, model_validator
+from pydantic import Field, PositiveInt, model_validator
 
 from archipy.models.dtos.base_dtos import BaseDTO
 from archipy.models.errors import OutOfRangeError
@@ -40,8 +40,8 @@ class PaginationDTO(BaseDTO):
         ...     return db.execute(query).scalars().all()
     """
 
-    page: int = Field(default=1, ge=1, description="Page number (1-indexed)")
-    page_size: int = Field(default=10, ge=1, le=100, description="Number of items per page")
+    page: PositiveInt = Field(default=1, description="Page number (1-indexed)")
+    page_size: PositiveInt = Field(default=10, le=100, description="Number of items per page")
 
     MAX_ITEMS: ClassVar = 10000
 

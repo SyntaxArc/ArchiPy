@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import PositiveInt, model_validator
 
 from archipy.models.dtos.base_dtos import BaseDTO
 from archipy.models.types.redis_search_types import (
@@ -41,7 +41,7 @@ class VectorFieldConfig(BaseDTO):
 
     field_type: Literal["vector"] = "vector"
     name: str
-    dim: int
+    dim: PositiveInt
     distance_metric: VectorDistanceMetric = VectorDistanceMetric.COSINE
     algorithm: VectorAlgorithm = VectorAlgorithm.HNSW
     vector_type: VectorType = VectorType.FLOAT32

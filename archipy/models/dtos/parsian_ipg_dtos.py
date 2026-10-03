@@ -1,6 +1,6 @@
 """DTOs for Parsian IPG operations."""
 
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, PositiveInt
 
 from archipy.models.dtos.base_dtos import BaseDTO
 
@@ -8,8 +8,8 @@ from archipy.models.dtos.base_dtos import BaseDTO
 class PaymentRequestDTO(BaseDTO):
     """DTO for initiating a payment request."""
 
-    amount: int = Field(..., gt=0, description="Transaction amount in IRR")
-    order_id: int = Field(..., gt=0, description="Unique order identifier")
+    amount: PositiveInt = Field(..., description="Transaction amount in IRR")
+    order_id: PositiveInt = Field(..., description="Unique order identifier")
     callback_url: HttpUrl = Field(..., description="URL to redirect after payment")
     additional_data: str | None = Field(None, description="Additional transaction data")
     originator: str | None = Field(None, description="Transaction originator")
@@ -26,7 +26,7 @@ class PaymentResponseDTO(BaseDTO):
 class ConfirmRequestDTO(BaseDTO):
     """DTO for confirming a payment."""
 
-    token: int = Field(..., gt=0, description="Transaction token")
+    token: PositiveInt = Field(..., description="Transaction token")
 
 
 class ConfirmResponseDTO(BaseDTO):
@@ -41,9 +41,9 @@ class ConfirmResponseDTO(BaseDTO):
 class ConfirmWithAmountRequestDTO(BaseDTO):
     """DTO for confirming a payment with amount and order verification."""
 
-    token: int = Field(..., gt=0, description="Transaction token")
-    order_id: int = Field(..., gt=0, description="Unique order identifier")
-    amount: int = Field(..., gt=0, description="Transaction amount in IRR")
+    token: PositiveInt = Field(..., description="Transaction token")
+    order_id: PositiveInt = Field(..., description="Unique order identifier")
+    amount: PositiveInt = Field(..., description="Transaction amount in IRR")
 
 
 class ConfirmWithAmountResponseDTO(BaseDTO):
@@ -58,7 +58,7 @@ class ConfirmWithAmountResponseDTO(BaseDTO):
 class ReverseRequestDTO(BaseDTO):
     """DTO for reversing a payment."""
 
-    token: int = Field(..., gt=0, description="Transaction token")
+    token: PositiveInt = Field(..., description="Transaction token")
 
 
 class ReverseResponseDTO(BaseDTO):

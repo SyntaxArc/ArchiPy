@@ -2,7 +2,7 @@
 
 from typing import Self
 
-from pydantic import Field, HttpUrl, model_validator
+from pydantic import Field, HttpUrl, PositiveInt, model_validator
 
 from archipy.models.dtos.base_dtos import BaseDTO
 from archipy.models.errors import FailedPreconditionError
@@ -11,7 +11,7 @@ from archipy.models.errors import FailedPreconditionError
 class PaymentRequestDTO(BaseDTO):
     """Request for getting payment token."""
 
-    amount: int = Field(..., gt=0, description="مبلغ به ریال")
+    amount: PositiveInt = Field(..., description="مبلغ به ریال")
     res_num: str = Field(..., description="شماره سفارش یکتا (ResNum)")
     redirect_url: HttpUrl = Field(..., description="آدرس صفحه بازگشت")
     cell_number: str | None = Field(None, description="شماره موبایل خریدار")

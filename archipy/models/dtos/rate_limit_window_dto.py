@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import Field, PositiveInt
 
 from archipy.models.dtos.base_dtos import BaseDTO
 
@@ -15,8 +15,8 @@ class RateLimitWindowDTO(BaseDTO):
         window_ms: Window duration in milliseconds.
     """
 
-    calls_count: int = Field(ge=1, description="Maximum allowed requests within the window.")
-    window_ms: int = Field(gt=0, description="Window duration in milliseconds.")
+    calls_count: PositiveInt = Field(description="Maximum allowed requests within the window.")
+    window_ms: PositiveInt = Field(description="Window duration in milliseconds.")
 
     @property
     def key_suffix(self) -> str:

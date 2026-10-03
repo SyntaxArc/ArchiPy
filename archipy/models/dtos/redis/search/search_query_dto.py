@@ -1,5 +1,7 @@
 """DTOs for Redis Search queries."""
 
+from pydantic import NonNegativeInt, PositiveInt
+
 from archipy.models.dtos.base_dtos import BaseDTO
 from archipy.models.types.redis_search_types import (
     UseSearchHistory,
@@ -25,7 +27,7 @@ class KnnQueryDTO(BaseDTO):
 
     vector: list[float]
     vector_field: str = "embedding"
-    k: int = 10
+    k: PositiveInt = 10
     filter_expr: str | None = None
     return_fields: list[str] | None = None
     score_field: str = "score"
@@ -49,8 +51,8 @@ class SearchQueryDTO(BaseDTO):
 
     query: str = "*"
     return_fields: list[str] | None = None
-    offset: int = 0
-    limit: int = 10
+    offset: NonNegativeInt = 0
+    limit: NonNegativeInt = 10
     text_scorer: str | None = None
     knn: KnnQueryDTO | None = None
     range: RangeQueryDTO | None = None

@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import Field
+from pydantic import Field, NonNegativeInt
 
 from archipy.models.dtos.base_dtos import BaseDTO
 
@@ -18,6 +18,6 @@ class VaultLeaseDTO(BaseDTO):
     """
 
     lease_id: str = Field(description="Unique lease identifier")
-    lease_duration: int = Field(description="Lease TTL in seconds")
+    lease_duration: NonNegativeInt = Field(description="Lease TTL in seconds")
     renewable: bool = Field(description="Whether the lease can be renewed")
     data: dict[str, Any] = Field(default_factory=dict, description="Secret payload for the lease")

@@ -1,6 +1,6 @@
 """DTOs for Redis Search results."""
 
-from pydantic import Field
+from pydantic import Field, NonNegativeFloat, NonNegativeInt
 
 from archipy.models.dtos.base_dtos import BaseDTO
 
@@ -16,7 +16,7 @@ class SearchHitDTO(BaseDTO):
 class SearchResultDTO(BaseDTO):
     """Normalized RediSearch query result."""
 
-    total: int
+    total: NonNegativeInt
     hits: list[SearchHitDTO]
-    duration_ms: float | None = None
+    duration_ms: NonNegativeFloat | None = None
     warnings: list[str] = Field(default_factory=list)

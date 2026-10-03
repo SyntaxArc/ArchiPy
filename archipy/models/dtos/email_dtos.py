@@ -3,7 +3,7 @@
 import mimetypes
 from typing import BinaryIO, Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, PositiveInt, model_validator
 
 from archipy.models.dtos.base_dtos import BaseDTO
 from archipy.models.types.email_types import EmailAttachmentDispositionType, EmailAttachmentType
@@ -18,7 +18,7 @@ class EmailAttachmentDTO(BaseDTO):
     content_disposition: EmailAttachmentDispositionType = Field(default=EmailAttachmentDispositionType.ATTACHMENT)
     content_id: str | None = Field(default=None)
     attachment_type: EmailAttachmentType
-    max_size: int
+    max_size: PositiveInt
 
     @model_validator(mode="after")
     def validate_attachment(self) -> Self:
