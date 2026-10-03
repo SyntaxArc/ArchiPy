@@ -25,13 +25,13 @@ cache = ["cachetools>=7.2.0", "async-lru>=2.3.0"]
 dependency-injection = ["dependency-injector>=4.49.1"]
 elasticsearch = ["elasticsearch>=9.5.1"]
 elasticsearch-async = ["elasticsearch[async]>=9.5.1"]
-fakeredis = ["fakeredis>=2.38.0"]
+fakeredis = ["fakeredis>=2.39.0"]
 fastapi = ["fastapi[all]>=0.142.2"]
 grpc = ["grpcio>=1.84.0", "grpcio-health-checking>=1.84.0", "protobuf>=7.36.2"]
 jwt = ["pyjwt>=2.15.1"]
 kafka = ["confluent-kafka>=2.15.1"]
 keycloak = ["python-keycloak>=7.1.1", "cachetools>=7.2.0", "async-lru>=2.3.0"]
-minio = ["boto3>=1.43.104", "cachetools>=7.2.0", "async-lru>=2.3.0"]
+minio = ["boto3>=1.43.108", "cachetools>=7.2.0", "async-lru>=2.3.0"]
 parsian-ipg = ["zeep>=4.3.3", "requests[socks]>=2.34.2"]
 parsian-ipg-async = ["zeep[async]>=4.3.3", "httpx2[socks]>=2.13.1"]
 mysql = ["pymysql>=1.2.3"]
@@ -41,11 +41,11 @@ redis = ["redis[hiredis]>=8.1.0"]
 saman-ipg = ["httpx2[socks]>=2.13.1"]
 scheduler = ["apscheduler>=3.11.3"]
 scylladb = ["scylla-driver>=3.29.12", "lz4>=4.4.5", "cachetools>=7.2.0", "async-lru>=2.3.0"]
-sqlalchemy = ["sqlalchemy>=2.1.1"]
-sqlalchemy-async = ["sqlalchemy[asyncio]>=2.1.1"]
+sqlalchemy = ["sqlalchemy>=2.1.3"]
+sqlalchemy-async = ["sqlalchemy[asyncio]>=2.1.3"]
 starrocks = ["starrocks>=1.3.4", "pymysql>=1.2.3"]
 starrocks-async = ["starrocks>=1.3.4", "aiomysql>=0.3.2", "asyncmy2>=0.2.21"]
-temporalio = ["temporalio[opentelemetry]>=1.33.0"]
+temporalio = ["temporalio[opentelemetry]>=1.34.0"]
 testcontainers = ["testcontainers[elasticsearch, minio, mysql, vault]>=4.15.0"]
 vault = ["hvac[parser]>=2.4.0", "requests>=2.34.2", "cachetools>=7.2.0"]
 
@@ -74,12 +74,12 @@ build-backend = "hatchling.build"
 dev = [
     "add-trailing-comma>=4.0.0",
     "bandit>=1.9.4",
-    "boto3-stubs>=1.43.104",
+    "boto3-stubs>=1.43.108",
     "codespell>=2.4.3",
     "gherkin-formatter>=0.1.3",
     "pre-commit-hooks>=6.0.0",
     "pre-commit>=4.6.2",
-    "ruff>=0.16.9",
+    "ruff>=0.16.10",
     "ty>=0.0.84",
     "types-cachetools>=7.0.0.20260713",
     "types-grpcio>=1.84.0.20260928",
