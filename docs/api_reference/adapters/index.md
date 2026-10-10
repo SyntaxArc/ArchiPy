@@ -31,7 +31,7 @@ implementation).
 
 ## Source Code
 
-📁 Location: `archipy/adapters/`
+📁 Location: `archipy/adapters/` (core: `base`, `email`) and `packages/<name>/archipy/adapters/<name>/` (one installable package per adapter)
 
 🔗 [Browse Source](https://github.com/SyntaxArc/ArchiPy/tree/master/archipy/adapters)
 

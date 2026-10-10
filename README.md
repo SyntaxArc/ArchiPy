@@ -119,6 +119,8 @@ pip install archipy[fastapi]      # FastAPI framework
 pip install archipy[postgres]     # PostgreSQL support
 ```
 
+Each adapter extra installs its own package (`archipy[redis]` → `archipy-redis`), so only the adapters you ask for are installed. Imports are unchanged (`archipy.adapters.redis`).
+
 [See the documentation for all available options and examples](https://syntaxarc.github.io/ArchiPy/usage)
 
 ---

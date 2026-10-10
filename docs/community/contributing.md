@@ -189,11 +189,13 @@ New adapters follow a consistent checklist. Use this as your guide when contribu
 1. **Create the adapter package**
 
    ```
-   archipy/adapters/<name>/
-   ├── __init__.py
-   ├── ports.py      # Abstract interface (plain class with @abstractmethod)
-   ├── adapters.py   # Concrete implementation
-   └── mocks.py      # In-memory test double
+   packages/<name>/
+   ├── pyproject.toml   # dist `archipy-<name>`, depends on `archipy==<version>` + the client library
+   └── archipy/adapters/<name>/
+       ├── __init__.py
+       ├── ports.py      # Abstract interface (plain class with @abstractmethod)
+       ├── adapters.py   # Concrete implementation
+       └── mocks.py      # In-memory test double
    ```
 
 2. **Define the port** (`ports.py`)

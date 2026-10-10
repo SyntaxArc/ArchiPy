@@ -1,6 +1,6 @@
 ---
 description: ArchiPy adapter layer conventions — ports, mocks, session managers, lazy imports, new-adapter checklist
-globs: archipy/adapters/**/*.py
+globs: archipy/adapters/**/*.py, packages/**/archipy/adapters/**/*.py
 alwaysApply: false
 ---
 
@@ -13,7 +13,7 @@ Canonical owner for all adapter layout, mocks, extras, boundary exceptions, and 
 Every adapter package must contain at minimum:
 
 ```
-archipy/adapters/<service>/
+packages/<service>/archipy/adapters/<service>/
 ├── __init__.py
 ├── ports.py        # Abstract interface (ABC)
 └── adapters.py     # Concrete implementation
@@ -81,7 +81,7 @@ Adapters rely on their optional extra being installed — do **not** use lazy im
 ### Allowed `PLC0415` exceptions in adapters
 
 1. `session_manager_registry.py` — circular import breakers.
-2. `archipy/adapters/temporal/*` — optional cross-extra imports (OpenTelemetry / SQLAlchemy), as allowed in `pyproject.toml`.
+2. `packages/temporal/archipy/adapters/temporal/*` — optional cross-extra imports (OpenTelemetry / SQLAlchemy), as allowed in `pyproject.toml`.
 3. Nowhere else in adapters unless `pyproject.toml` explicitly adds a per-file ignore with a comment justifying it.
 
 Helpers lazy-import policy: `helpers-configs.mdc`.
@@ -90,9 +90,9 @@ Helpers lazy-import policy: `helpers-configs.mdc`.
 
 When adding a new adapter:
 
-1. Package under `archipy/adapters/<service>/` with `ports.py` + `adapters.py` (+ optional `mocks.py`).
+1. Workspace package `packages/<service>/` (own `pyproject.toml`, dist `archipy-<service>`, `archipy==<ver>` dep) holding `archipy/adapters/<service>/` with `ports.py` + `adapters.py` (+ optional `mocks.py`).
 2. Config template fields in `archipy/configs/config_template.py` if settings are needed.
-3. Optional extra in `pyproject.toml` `[project.optional-dependencies]`; keep sync/async extras split when both exist.
+3. Root extra in `pyproject.toml` pointing at `archipy-<service>==<ver>` (register it under `[tool.uv.sources]`); keep sync/async split via the package's own `sync`/`async` extras. Do not add `__init__.py` to `archipy/` or `archipy/adapters/` (namespace packages).
 4. Ruff/ty per-file ignores only when required; document why in `pyproject.toml` comments.
 5. BDD: `features/<service>_adapter.feature` + steps; tag with the correct `@needs-*` from `testing-bdd.mdc`.
 6. Docs: example + API pages per `documentation.mdc`; changelog entry when user-facing.
