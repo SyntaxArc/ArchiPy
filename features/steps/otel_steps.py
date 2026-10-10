@@ -44,6 +44,7 @@ def _reset_otel_config_defaults() -> None:
     config.OTEL.METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN = True
     config.OTEL.LOGS_ENABLED = False
     config.OTEL.LOGS_LEVEL = "INFO"
+    config.OTEL.FASTAPI_LOGS_ENABLED = False
 
 
 def _setup_otel_testing(context: Context) -> None:
@@ -2284,3 +2285,87 @@ def step_then_no_instrumentor_error(context):
     scenario_context = get_current_scenario_context(context)
     records = scenario_context.get("instrumentor_error_records") or []
     assert not records, f"Unexpected instrumentor errors: {[r.getMessage() for r in records]}"
+
+
+@given("FastAPI log records are {state} with a logger provider")
+def step_given_fastapi_logs(context, state):
+    from opentelemetry.sdk._logs import LoggerProvider
+
+    config = BaseConfig.global_config()
+    config.OTEL.FASTAPI_LOGS_ENABLED = state == "enabled"
+    OtelUtils._logger_provider = LoggerProvider()
+
+
+@when("I build the FastAPI telemetry config")
+def step_when_build_fastapi_telemetry(context):
+    from archipy.helpers.utils.app_utils import FastAPIUtils
+
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("fastapi_telemetry", FastAPIUtils.build_otel_telemetry_config(BaseConfig.global_config()))
+
+
+@then("the FastAPI telemetry config should have logs {state}")
+def step_then_fastapi_telemetry_logs(context, state):
+    telemetry = get_current_scenario_context(context).get("fastapi_telemetry")
+    assert telemetry["logs"] is (state == "on"), telemetry
+    assert ("logger_provider" in telemetry) is (state == "on"), telemetry
+    assert telemetry["auto_configure"] is False, telemetry
+
+
+@given("FastAPI log records are enabled with an in-memory log exporter")
+def step_given_fastapi_logs_in_memory(context):
+    from opentelemetry.sdk._logs import LoggerProvider
+    from opentelemetry.sdk._logs.export import InMemoryLogRecordExporter, SimpleLogRecordProcessor
+
+    scenario_context = get_current_scenario_context(context)
+    exporter = InMemoryLogRecordExporter()
+    provider = LoggerProvider()
+    provider.add_log_record_processor(SimpleLogRecordProcessor(exporter))
+    BaseConfig.global_config().OTEL.FASTAPI_LOGS_ENABLED = True
+    OtelUtils._logger_provider = provider
+    scenario_context.store("log_exporter", exporter)
+
+
+@when('I create an instrumented FastAPI app whose endpoint "{path}" raises')
+def step_when_fastapi_raises(context, path):
+    from fastapi.testclient import TestClient
+
+    from archipy.helpers.utils.app_utils import AppUtils
+
+    app = AppUtils.create_fastapi_app(BaseConfig.global_config(), configure_exception_handlers=False)
+
+    @app.get(path)
+    def otel_boom():
+        raise RuntimeError("otel boom")
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get(path)
+    assert response.status_code == 500, response.text
+
+
+@then("an OTel log record should be exported")
+def step_then_log_record_exported(context):
+    exporter = get_current_scenario_context(context).get("log_exporter")
+    logs = exporter.get_finished_logs()
+    assert logs, "FastAPI emitted no OTel log record for the unhandled exception"
+
+
+def _histogram_metric(context: Context, instrument_name: str):
+    reader: InMemoryMetricReader = get_current_scenario_context(context).get("metric_reader")
+    metrics_data = reader.get_metrics_data()
+    for resource_metrics in metrics_data.resource_metrics:
+        for scope_metrics in resource_metrics.scope_metrics:
+            for metric in scope_metrics.metrics:
+                if metric.name == instrument_name:
+                    return metric
+    raise AssertionError(f"No metric named {instrument_name!r}")
+
+
+@then('the "{first}" and "{second}" histograms should have the same unit and buckets')
+def step_then_histograms_similar(context, first, second):
+    a = _histogram_metric(context, first)
+    b = _histogram_metric(context, second)
+    assert a.unit == b.unit == "s", f"Units differ: {a.unit!r} vs {b.unit!r}"
+    bounds_a = a.data.data_points[0].explicit_bounds
+    bounds_b = b.data.data_points[0].explicit_bounds
+    assert bounds_a == bounds_b, f"Buckets differ: {bounds_a} vs {bounds_b}"

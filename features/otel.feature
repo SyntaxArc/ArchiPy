@@ -125,6 +125,26 @@ Feature: OpenTelemetry decorators
     Then a span named "GET /otel-ping" should be recorded
     And an HTTP server duration metric should have datapoints
 
+  Scenario: FastAPI log records are off by default
+    Given FastAPI log records are disabled with a logger provider
+    When I build the FastAPI telemetry config
+    Then the FastAPI telemetry config should have logs off
+
+  Scenario: FastAPI log records use the ArchiPy logger provider when enabled
+    Given FastAPI log records are enabled with a logger provider
+    When I build the FastAPI telemetry config
+    Then the FastAPI telemetry config should have logs on
+
+  Scenario: FastAPI unhandled exception is exported as an OTel log record when enabled
+    Given FastAPI log records are enabled with an in-memory log exporter
+    When I create an instrumented FastAPI app whose endpoint "/otel-boom" raises
+    Then an OTel log record should be exported
+
+  Scenario: FastAPI and gRPC duration histograms share unit and buckets
+    When I create an instrumented FastAPI app and GET "/otel-ping"
+    And I call an instrumented gRPC TestMethod
+    Then the "http.server.request.duration" and "rpc.server.duration" histograms should have the same unit and buckets
+
   Scenario: gRPC request records RPC span and handler metrics
     When I call an instrumented gRPC TestMethod
     Then a span named "/test.TestService/TestMethod" should be recorded

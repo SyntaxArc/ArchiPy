@@ -113,6 +113,7 @@ logger.info("OTel enabled=%s endpoint=%s", config.OTEL.IS_ENABLED, config.OTEL.O
 | `LOGS_EXPORTER`           | `console`                   | Unique logs exporter: `console` or `otlp`        |
 | `FASTAPI_EXCLUDED_URLS`   | `None`                      | Comma-separated URL patterns skipped by FastAPI  |
 | `FASTAPI_OPERATION_SPANS_ENABLED` | `true`              | FastAPI child spans (dependencies, endpoint, serialization, background tasks) |
+| `FASTAPI_LOGS_ENABLED`    | `false`                     | FastAPI log records for validation failures and unhandled exceptions (includes stack traces) |
 | `RESOURCE_ATTRIBUTES`     | `{}`                        | Extra OTel resource attributes                   |
 | `LOGS_LEVEL`              | `INFO`                      | Minimum level for the root-logger handler        |
 
@@ -256,7 +257,9 @@ invoke it again safely.
 `AppUtils.create_fastapi_app` passes `FastAPIUtils.build_otel_telemetry_config(config)` to
 `FastAPI(telemetry=...)`. That initializes providers (idempotent) and enables FastAPI's built-in
 OpenTelemetry support (requires `archipy[otel-fastapi]`, FastAPI 0.142.2+). Traces and metrics use
-ArchiPy's providers; FastAPI log records and OTLP auto-configuration are off. The HTTP duration
+ArchiPy's providers; OTLP auto-configuration is always off. FastAPI log records (validation failures and
+unhandled exceptions, with stack traces) are opt-in via `OTEL__FASTAPI_LOGS_ENABLED=true` and use ArchiPy's
+logger provider. The HTTP duration
 metric is `http.server.request.duration` (seconds). If you build the app yourself, pass the same
 config to the constructor:
 

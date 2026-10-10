@@ -1006,6 +1006,13 @@ class OpentelemetryConfig(BaseModel):
             "under the request span when TRACES_ENABLED is true"
         ),
     )
+    FASTAPI_LOGS_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Let FastAPI emit OTel log records for validation failures and unhandled exceptions "
+            "(includes exception messages and stack traces; requires LOGS_ENABLED)"
+        ),
+    )
     LOGS_LEVEL: str = Field(
         default="INFO",
         description=(
