@@ -10,6 +10,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                              |
 |-------------------|------------|--------------------------------------------------------------------------------------|
+| [5.8.0](5.8.0.md) | 2026-10-10 | Adapters ship as per-extra packages (`archipy[redis]` → `archipy-redis`); async extras no longer pull sync drivers |
 | [5.7.1](5.7.1.md) | 2026-10-03 | Test container images bumped; dependency floors raised to locked versions |
 | [5.7.0](5.7.0.md) | 2026-10-03 | Keycloak impersonation tracking via `act` claim; `exchange_token`; constrained Pydantic types in DTOs |
 | [5.6.0](5.6.0.md) | 2026-09-30 | Native FastAPI OTel telemetry; `setup_otel` removed; `FASTAPI_OPERATION_SPANS_ENABLED` |
