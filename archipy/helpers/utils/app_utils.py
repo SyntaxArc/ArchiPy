@@ -21,7 +21,7 @@ from archipy.models.errors import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable, MutableMapping
+    from collections.abc import AsyncGenerator, Callable, MutableMapping
     from contextlib import AbstractAsyncContextManager
 
     from fastapi.routing import APIRoute
@@ -532,7 +532,7 @@ class AppUtils:
         from archipy.helpers.utils.otel_utils import OtelUtils
 
         @asynccontextmanager
-        async def otel_lifespan(app: FastAPI) -> AsyncIterator[None]:
+        async def otel_lifespan(app: FastAPI) -> AsyncGenerator[None]:
             try:
                 if lifespan is not None:
                     async with lifespan(app):
