@@ -11,7 +11,7 @@ dependencies = [
     "archipy==0.1.0", # Pinned to core version on publish flow!
     "scylla-driver>=3.29.12",
     "lz4>=4.4.5",
-    "cachetools>=7.2.0",
+    "cachetools>=7.2.1",
     "async-lru>=2.3.0",
 ]
 license = "Apache-2.0"

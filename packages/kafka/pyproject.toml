@@ -9,7 +9,7 @@ version = "0.1.0" # This version is set on publish flow!
 requires-python = ">=3.14,<4"
 dependencies = [
     "archipy==0.1.0", # Pinned to core version on publish flow!
-    "confluent-kafka>=2.15.1",
+    "confluent-kafka>=2.16.0",
 ]
 license = "Apache-2.0"
 
