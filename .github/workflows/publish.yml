@@ -26,12 +26,14 @@ jobs:
       run: |
         # Extract version from tag
         VERSION=${GITHUB_REF#refs/tags/}
-        # Update version in pyproject.toml
-        sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+        # Update version and archipy-* pins in core and every workspace package
+        for f in pyproject.toml packages/*/pyproject.toml; do
+          sed -i -E "s/^version = \"[^\"]*\"/version = \"$VERSION\"/; s/\"archipy(-[a-z-]+)?(\[[a-z]+\])?==[^\"]*\"/\"archipy\1\2==$VERSION\"/" "$f"
+        done
 
     - name: Build and Publish to PyPI
       env:
         UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
       run: |
-        uv build
+        uv build --all-packages
         uv publish

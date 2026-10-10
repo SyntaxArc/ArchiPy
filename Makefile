@@ -40,8 +40,13 @@ install: ## Install project dependencies
 .PHONY: install-dev
 install-dev: ## Install project dependencies with dev extras
 	@echo "${BLUE}Installing project dependencies with dev extras...${NC}"
-	$(UV) sync --all-extras --all-groups --upgrade
+	$(UV) sync --all-extras --all-packages --all-groups --upgrade
 	$(PRE_COMMIT) install
+
+.PHONY: install-package
+install-package: ## Install core + one adapter package (usage: make install-package PKG=redis)
+	@echo "${BLUE}Installing archipy-$(PKG)...${NC}"
+	$(UV) sync --package archipy-$(PKG) --group dev
 
 .PHONY: update
 update: ## Update dependencies to their latest versions
@@ -56,7 +61,7 @@ update-all: ## Aggressively update all dependencies to latest versions
 	$(UV) python upgrade
 	$(UV) python update-shell
 	$(UV) lock --upgrade
-	$(UV) sync --all-extras --all-groups --upgrade
+	$(UV) sync --all-extras --all-packages --all-groups --upgrade
 
 .PHONY: clean
 clean: ## Remove build artifacts and cache directories
@@ -87,7 +92,7 @@ lint: ## Run all linters
 .PHONY: security
 security: ## Run security scan with Bandit
 	@echo "${BLUE}Running security scan...${NC}"
-	$(PYTHON) bandit -c pyproject.toml -r archipy/ -f json -o bandit-report.json || true
+	$(PYTHON) bandit -c pyproject.toml -r archipy/ packages/ -f json -o bandit-report.json || true
 
 .PHONY: behave
 behave: ## Run tests with behave

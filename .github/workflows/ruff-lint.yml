@@ -21,13 +21,13 @@ jobs:
         uses: astral-sh/ruff-action@v3
         with:
           args: check --output-format=github
-          src: "archipy features/steps scripts"
+          src: "archipy packages features/steps scripts"
 
       - name: Run Ruff format check
         uses: astral-sh/ruff-action@v3
         with:
           args: format --check
-          src: "archipy features/steps scripts"
+          src: "archipy packages features/steps scripts"
 
       - name: Set up Python 3.14
         uses: actions/setup-python@v6
