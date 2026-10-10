@@ -1,1 +1,0 @@
-"""Internet payment gateway adapters."""

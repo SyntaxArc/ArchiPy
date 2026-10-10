@@ -1,0 +1,26 @@
+[project]
+name = "archipy-vault"
+description = "ArchiPy vault adapter."
+authors = [
+    { name = "Hossein Nejati", email = "hosseinnejati14@gmail.com" },
+]
+readme = "README.md"
+version = "0.1.0" # This version is set on publish flow!
+requires-python = ">=3.14,<4"
+dependencies = [
+    "archipy==0.1.0", # Pinned to core version on publish flow!
+    "hvac[parser]>=2.4.0",
+    "requests>=2.34.2",
+    "cachetools>=7.2.0",
+]
+license = "Apache-2.0"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["archipy"]
+
+[tool.uv.sources]
+archipy = { workspace = true }

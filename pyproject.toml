@@ -3,7 +3,6 @@ name = "archipy"
 description = "Architecture + Python – Perfect for structured design."
 authors = [
     { name = "Hossein Nejati", email = "hosseinnejati14@gmail.com" },
-    { name = "Mehdi Einali", email = "einali@gmail.com" },
 ]
 readme = "README.md"
 version = "0.1.0" # This vesrion set on publish flow!
@@ -19,35 +18,35 @@ license = { file = "LICENSE" }
 
 [project.optional-dependencies]
 # Core optional dependencies
-aiosqlite = ["aiosqlite>=0.22.1"]
+aiosqlite = ["archipy-sqlite==0.1.0"]  # Pinned to core version on publish flow!
 behave = ["behave>=1.3.3"]
 cache = ["cachetools>=7.2.0", "async-lru>=2.3.0"]
 dependency-injection = ["dependency-injector>=4.49.1"]
-elasticsearch = ["elasticsearch>=9.5.1"]
-elasticsearch-async = ["elasticsearch[async]>=9.5.1"]
+elasticsearch = ["archipy-elasticsearch==0.1.0"]  # Pinned to core version on publish flow!
+elasticsearch-async = ["archipy-elasticsearch==0.1.0", "elasticsearch[async]>=9.5.1"]  # Pinned to core version on publish flow!
 fakeredis = ["fakeredis>=2.39.0"]
 fastapi = ["fastapi[all]>=0.142.2"]
 grpc = ["grpcio>=1.84.0", "grpcio-health-checking>=1.84.0", "protobuf>=7.36.2"]
 jwt = ["pyjwt>=2.15.1"]
-kafka = ["confluent-kafka>=2.15.1"]
-keycloak = ["python-keycloak>=7.1.1", "cachetools>=7.2.0", "async-lru>=2.3.0"]
-minio = ["boto3>=1.43.108", "cachetools>=7.2.0", "async-lru>=2.3.0"]
-parsian-ipg = ["zeep>=4.3.3", "requests[socks]>=2.34.2"]
-parsian-ipg-async = ["zeep[async]>=4.3.3", "httpx2[socks]>=2.13.1"]
-mysql = ["pymysql>=1.2.3"]
-mysql-async = ["asyncmy2>=0.2.21"]
-postgres = ["psycopg[binary,pool]>=3.3.6"]
-redis = ["redis[hiredis]>=8.1.0"]
-saman-ipg = ["httpx2[socks]>=2.13.1"]
+kafka = ["archipy-kafka==0.1.0"]  # Pinned to core version on publish flow!
+keycloak = ["archipy-keycloak==0.1.0"]  # Pinned to core version on publish flow!
+minio = ["archipy-minio==0.1.0"]  # Pinned to core version on publish flow!
+parsian-ipg = ["archipy-parsian-ipg[sync]==0.1.0"]  # Pinned to core version on publish flow!
+parsian-ipg-async = ["archipy-parsian-ipg[async]==0.1.0"]  # Pinned to core version on publish flow!
+mysql = ["archipy-mysql[sync]==0.1.0"]  # Pinned to core version on publish flow!
+mysql-async = ["archipy-mysql[async]==0.1.0"]  # Pinned to core version on publish flow!
+postgres = ["archipy-postgres==0.1.0"]  # Pinned to core version on publish flow!
+redis = ["archipy-redis==0.1.0"]  # Pinned to core version on publish flow!
+saman-ipg = ["archipy-saman-ipg==0.1.0"]  # Pinned to core version on publish flow!
 scheduler = ["apscheduler>=3.11.3"]
-scylladb = ["scylla-driver>=3.29.12", "lz4>=4.4.5", "cachetools>=7.2.0", "async-lru>=2.3.0"]
+scylladb = ["archipy-scylladb==0.1.0"]  # Pinned to core version on publish flow!
 sqlalchemy = ["sqlalchemy>=2.1.3"]
 sqlalchemy-async = ["sqlalchemy[asyncio]>=2.1.3"]
-starrocks = ["starrocks>=1.3.4", "pymysql>=1.2.3"]
-starrocks-async = ["starrocks>=1.3.4", "aiomysql>=0.3.2", "asyncmy2>=0.2.21"]
-temporalio = ["temporalio[opentelemetry]>=1.34.0"]
+starrocks = ["archipy-starrocks[sync]==0.1.0"]  # Pinned to core version on publish flow!
+starrocks-async = ["archipy-starrocks[async]==0.1.0"]  # Pinned to core version on publish flow!
+temporalio = ["archipy-temporal==0.1.0"]  # Pinned to core version on publish flow!
 testcontainers = ["testcontainers[elasticsearch, minio, mysql, vault]>=4.15.0"]
-vault = ["hvac[parser]>=2.4.0", "requests>=2.34.2", "cachetools>=7.2.0"]
+vault = ["archipy-vault==0.1.0"]  # Pinned to core version on publish flow!
 
 otel = [
     "opentelemetry-sdk>=1.45.0",
@@ -69,6 +68,28 @@ otel-minio = ["archipy[otel]", "opentelemetry-instrumentation-botocore>=0.66b0"]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["archipy"]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+archipy-redis = { workspace = true }
+archipy-elasticsearch = { workspace = true }
+archipy-kafka = { workspace = true }
+archipy-keycloak = { workspace = true }
+archipy-minio = { workspace = true }
+archipy-scylladb = { workspace = true }
+archipy-temporal = { workspace = true }
+archipy-vault = { workspace = true }
+archipy-postgres = { workspace = true }
+archipy-mysql = { workspace = true }
+archipy-sqlite = { workspace = true }
+archipy-starrocks = { workspace = true }
+archipy-parsian-ipg = { workspace = true }
+archipy-saman-ipg = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -155,7 +176,7 @@ lint.select = [
 lint.ignore = []
 
 # Define source directories
-src = ["archipy"]
+src = ["archipy", "packages/redis", "packages/elasticsearch", "packages/kafka", "packages/keycloak", "packages/minio", "packages/scylladb", "packages/temporal", "packages/vault", "packages/postgres", "packages/mysql", "packages/sqlite", "packages/starrocks", "packages/parsian-ipg", "packages/saman-ipg"]
 
 exclude = [
     "features/*",
@@ -191,19 +212,19 @@ docstring-code-line-length = "dynamic"
 "archipy/helpers/utils/app_utils.py" = ["PLC0415"]  # Allow lazy imports for optional dependencies
 "archipy/helpers/utils/jwt_utils.py" = ["PLC0415"]  # Allow lazy imports for optional dependencies
 "archipy/helpers/utils/error_utils.py" = ["PLC0415"]  # Allow lazy imports for optional dependencies
-"archipy/adapters/elasticsearch/ports.py" = ["ANN401"]  # Allow Any type for **kwargs parameters
-"archipy/adapters/keycloak/port_mixins/*" = ["ANN401", "PLR0913", "PLR0917"]  # Port mixins inherit ports.py ANN401 exemption
-"archipy/adapters/redis/port_mixins/*" = ["ANN401", "ARG002", "PLR0913", "PLR0917"]  # Port mixins: Any types and unused interface params
-"archipy/adapters/scylladb/ports.py" = ["ANN401"]  # Allow Any type for CQL parameters
-"archipy/adapters/temporal/base.py" = ["ARG002"]  # Override hooks may leave cache_key unused in default impl
-"archipy/adapters/redis/adapter_mixins/*" = ["ANN401", "PLR0913", "PLR0917"]  # Adapter mixins: Any types and arity
-"archipy/adapters/redis/search.py" = ["ANN401"]  # redis-py search result objects use dynamic shapes
-"archipy/adapters/redis/search_ports.py" = ["ANN401"]  # Port escape hatch kwargs
-"archipy/adapters/redis/mocks.py" = ["ARG002", "ARG004", "ANN401"]  # Override unused args; ARG005 fixed via _prefix
-"archipy/adapters/scylladb/adapters.py" = ["ANN401"]  # Allow Any types
-"archipy/adapters/keycloak/adapter_mixins/*" = ["ANN401", "PLR0913", "PLR0917"]  # Adapter mixins: Any types and arity
-"archipy/adapters/temporal/*" = ["ANN401", "PLC0415", "PLR0913", "PLR0917"]  # OTel/SQLAlchemy optional cross-extra lazy imports; Any/arity
-"archipy/adapters/scylladb/*" = ["S608"]  # False positives - parameterized CQL with %s placeholders (also # nosec B608)
+"packages/elasticsearch/archipy/adapters/elasticsearch/ports.py" = ["ANN401"]  # Allow Any type for **kwargs parameters
+"packages/keycloak/archipy/adapters/keycloak/port_mixins/*" = ["ANN401", "PLR0913", "PLR0917"]  # Port mixins inherit ports.py ANN401 exemption
+"packages/redis/archipy/adapters/redis/port_mixins/*" = ["ANN401", "ARG002", "PLR0913", "PLR0917"]  # Port mixins: Any types and unused interface params
+"packages/scylladb/archipy/adapters/scylladb/ports.py" = ["ANN401"]  # Allow Any type for CQL parameters
+"packages/temporal/archipy/adapters/temporal/base.py" = ["ARG002"]  # Override hooks may leave cache_key unused in default impl
+"packages/redis/archipy/adapters/redis/adapter_mixins/*" = ["ANN401", "PLR0913", "PLR0917"]  # Adapter mixins: Any types and arity
+"packages/redis/archipy/adapters/redis/search.py" = ["ANN401"]  # redis-py search result objects use dynamic shapes
+"packages/redis/archipy/adapters/redis/search_ports.py" = ["ANN401"]  # Port escape hatch kwargs
+"packages/redis/archipy/adapters/redis/mocks.py" = ["ARG002", "ARG004", "ANN401"]  # Override unused args; ARG005 fixed via _prefix
+"packages/scylladb/archipy/adapters/scylladb/adapters.py" = ["ANN401"]  # Allow Any types
+"packages/keycloak/archipy/adapters/keycloak/adapter_mixins/*" = ["ANN401", "PLR0913", "PLR0917"]  # Adapter mixins: Any types and arity
+"packages/temporal/archipy/adapters/temporal/*" = ["ANN401", "PLC0415", "PLR0913", "PLR0917"]  # OTel/SQLAlchemy optional cross-extra lazy imports; Any/arity
+"packages/scylladb/archipy/adapters/scylladb/*" = ["S608"]  # False positives - parameterized CQL with %s placeholders (also # nosec B608)
 "archipy/helpers/decorators/*" = ["ANN401", "PLR0913", "PLC0415", "PLR0917"]  # Allow Any, many params, lazy imports in decorators
 "archipy/helpers/utils/otel_utils.py" = ["PLC0415", "ANN401", "PLR0913", "PLR0917"]  # Lazy optional deps; provider/instrumentor union types
 "archipy/helpers/interceptors/grpc/otel_metrics/server_interceptor.py" = ["ANN401"]  # OTel histogram handle is dynamically typed
@@ -212,7 +233,7 @@ docstring-code-line-length = "dynamic"
 "archipy/helpers/utils/string_utils_constants.py" = ["RUF003"]  # Intentional Persian/Arabic glyph documentation in comments
 "archipy/adapters/email/ports.py" = ["PLR0913", "PLR0917"]  # Email port mirrors SMTP send arity
 "archipy/adapters/email/adapters.py" = ["PLR0913", "PLR0917"]  # Email adapter mirrors SMTP send arity
-"archipy/adapters/minio/ports.py" = ["PLR0913", "PLR0917"]  # MinIO/S3 port mirrors boto operation arity
+"packages/minio/archipy/adapters/minio/ports.py" = ["PLR0913", "PLR0917"]  # MinIO/S3 port mirrors boto operation arity
 "archipy/helpers/utils/datetime_utils.py" = ["PLR0913", "PLR0917"]  # Datetime helper public API arity
 "archipy/helpers/utils/string_utils.py" = ["PLR0913"]  # Persian normalization flag arity
 "archipy/helpers/utils/rate_limit_utils.py" = ["PLR0913", "PLR0917"]  # Rate-limit window computation arity
@@ -234,6 +255,7 @@ max-statements = 75  # Maximum number of statements in a function (increased for
 [tool.ruff.lint.isort]
 combine-as-imports = true  # Combine `import` and `from ... import` statements
 known-first-party = ["archipy"]  # Treat `archipy` as a first-party module
+known-third-party = ["redis", "starrocks", "keycloak", "elasticsearch", "kafka", "minio", "vault", "temporalio"]  # Workspace package dirs share names with third-party libs
 section-order = [
     "future", # `__future__` imports
     "standard-library", # Standard library imports
@@ -281,7 +303,7 @@ python-version = "3.14"
 
 [tool.ty.src]
 # Include source directories
-include = ["archipy"]
+include = ["archipy", "packages"]
 # Exclude directories from type checking
 exclude = ["features", "scripts", ".agents"]
 
