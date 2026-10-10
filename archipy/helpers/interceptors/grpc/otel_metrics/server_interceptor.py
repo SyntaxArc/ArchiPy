@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     import grpc
 
-_RPC_DURATION_INSTRUMENT = "rpc.server.duration"
+_RPC_DURATION_INSTRUMENT = "rpc.server.request.duration"
 _RPC_ACTIVE_INSTRUMENT = "rpc.server.active_requests"
 _RPC_METER_NAME = "archipy.grpc"
 
@@ -27,7 +27,7 @@ _RPC_METER_NAME = "archipy.grpc"
 class _RpcDurationHistogram:
     """Lazy, process-wide RPC instruments bound to the current meter.
 
-    Holds the ``rpc.server.duration`` histogram and the ``rpc.server.active_requests`` counter,
+    Holds the ``rpc.server.request.duration`` histogram and the ``rpc.server.active_requests`` counter,
     mirroring FastAPI's ``http.server.request.duration`` / ``http.server.active_requests`` pair.
     """
 
@@ -115,7 +115,7 @@ class _RpcCallRecorder:
 
 
 class GrpcServerOtelMetricsInterceptor(BaseGrpcServerInterceptor):
-    """Sync gRPC interceptor that records ``rpc.server.duration`` and ``rpc.server.active_requests``."""
+    """Sync gRPC interceptor that records ``rpc.server.request.duration`` and ``rpc.server.active_requests``."""
 
     def intercept(
         self,
@@ -175,7 +175,7 @@ class GrpcServerOtelMetricsInterceptor(BaseGrpcServerInterceptor):
 
 
 class AsyncGrpcServerOtelMetricsInterceptor(BaseAsyncGrpcServerInterceptor):
-    """Async gRPC interceptor that records ``rpc.server.duration`` and ``rpc.server.active_requests``."""
+    """Async gRPC interceptor that records ``rpc.server.request.duration`` and ``rpc.server.active_requests``."""
 
     async def intercept(
         self,

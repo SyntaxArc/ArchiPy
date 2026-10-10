@@ -147,18 +147,18 @@ Feature: OpenTelemetry decorators
   Scenario: FastAPI and gRPC duration histograms share unit and buckets
     When I create an instrumented FastAPI app and GET "/otel-ping"
     And I call an instrumented gRPC TestMethod
-    Then the "http.server.request.duration" and "rpc.server.duration" histograms should have the same unit and buckets
+    Then the "http.server.request.duration" and "rpc.server.request.duration" histograms should have the same unit and buckets
 
   Scenario: gRPC request records RPC span and handler metrics
     When I call an instrumented gRPC TestMethod
     Then a span named "/test.TestService/TestMethod" should be recorded
-    And a histogram metric named "rpc.server.duration" should have datapoints
+    And a histogram metric named "rpc.server.request.duration" should have datapoints
 
   @async
   Scenario: async gRPC request records RPC span and handler metrics
     When I call an instrumented async gRPC TestMethod
     Then a span named "/test.TestService/TestMethod" should be recorded
-    And a histogram metric named "rpc.server.duration" should have datapoints
+    And a histogram metric named "rpc.server.request.duration" should have datapoints
 
   Scenario: Instrumented FastAPI server-sent events endpoint is traced and streams incrementally
     Given an instrumented FastAPI app with a server-sent events endpoint
@@ -318,8 +318,8 @@ Feature: OpenTelemetry decorators
     Given a <mode> gRPC server using the <stack> interceptor stack
     When a server-streaming RPC is invoked requesting 3 messages
     Then the gRPC stream should deliver messages "0,1,2"
-    And a histogram metric named "rpc.server.duration" should have status "ok"
-    And the "rpc.server.duration" histogram should have 1 datapoint for method "Count"
+    And a histogram metric named "rpc.server.request.duration" should have status "ok"
+    And the "rpc.server.request.duration" histogram should have 1 datapoint for method "Count"
 
     Examples: Sync interceptor stacks
       | mode | stack   |
@@ -337,7 +337,7 @@ Feature: OpenTelemetry decorators
     When a server-streaming RPC is invoked that crashes after 1 message
     Then the gRPC stream should deliver messages "0"
     And the gRPC stream should finish with status UNKNOWN
-    And a histogram metric named "rpc.server.duration" should have status "error"
+    And a histogram metric named "rpc.server.request.duration" should have status "error"
 
     Examples: Sync interceptor stacks
       | mode | stack   |
@@ -366,14 +366,14 @@ Feature: OpenTelemetry decorators
     Given OpenTelemetry metrics-only mode for testing
     When I call an instrumented gRPC TestMethod
     Then no span named "/test.TestService/TestMethod" should be recorded
-    And a histogram metric named "rpc.server.duration" should have datapoints
+    And a histogram metric named "rpc.server.request.duration" should have datapoints
 
   @async
   Scenario: metrics-only async gRPC records RPC duration without span
     Given OpenTelemetry metrics-only mode for testing
     When I call an instrumented async gRPC TestMethod
     Then no span named "/test.TestService/TestMethod" should be recorded
-    And a histogram metric named "rpc.server.duration" should have datapoints
+    And a histogram metric named "rpc.server.request.duration" should have datapoints
 
   Scenario: measure_duration records ok status for client BaseError
     Given a sync function decorated with measure_duration named "test.notfound.duration" that raises NotFoundError

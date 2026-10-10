@@ -287,7 +287,7 @@ interceptors when OTel is enabled (requires `archipy[otel-grpc]` for traces):
 
 - **Traces** — contrib `server_interceptor` / `aio_server_interceptor` when
   `TRACES_ENABLED`
-- **Metrics** — ArchiPy `rpc.server.duration` histogram (seconds, same buckets as FastAPI's
+- **Metrics** — ArchiPy `rpc.server.request.duration` histogram (seconds, same buckets as FastAPI's
   `http.server.request.duration`) and `rpc.server.active_requests` up-down counter (in-flight calls,
   like `http.server.active_requests`) when `METRICS_ENABLED` (works in metrics-only mode; no handler decorators required)
 
