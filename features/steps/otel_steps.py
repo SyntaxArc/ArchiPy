@@ -2369,3 +2369,10 @@ def step_then_histograms_similar(context, first, second):
     bounds_a = a.data.data_points[0].explicit_bounds
     bounds_b = b.data.data_points[0].explicit_bounds
     assert bounds_a == bounds_b, f"Buckets differ: {bounds_a} vs {bounds_b}"
+
+
+@then('an up-down counter metric named "{instrument_name}" should net to 0 with datapoints')
+def step_then_up_down_counter_zero(context, instrument_name):
+    points = _metric_datapoints(context, instrument_name)
+    assert points, f"No datapoints for up-down counter '{instrument_name}'"
+    assert sum(point.value for point in points) == 0, [point.value for point in points]

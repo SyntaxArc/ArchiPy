@@ -140,6 +140,10 @@ Feature: OpenTelemetry decorators
     When I create an instrumented FastAPI app whose endpoint "/otel-boom" raises
     Then an OTel log record should be exported
 
+  Scenario: gRPC request tracks active requests and returns to zero
+    When I call an instrumented gRPC TestMethod
+    Then an up-down counter metric named "rpc.server.active_requests" should net to 0 with datapoints
+
   Scenario: FastAPI and gRPC duration histograms share unit and buckets
     When I create an instrumented FastAPI app and GET "/otel-ping"
     And I call an instrumented gRPC TestMethod
