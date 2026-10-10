@@ -59,8 +59,8 @@ def before_all(context: Context) -> None:
     Args:
         context: The behave context object
     """
-    # Configure logging for tests
-    logging.basicConfig(level=logging.INFO)
+    # No logging.basicConfig here: its stderr handler bypasses behave's log capture,
+    # so logs would print even for passing scenarios.
     context.logger = logging.getLogger("behave.tests")
     context.logger.info("Starting test suite")
 

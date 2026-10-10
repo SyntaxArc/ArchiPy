@@ -468,6 +468,7 @@ capture = true
 capture_stdout = true
 capture_stderr = true
 capture_log = true
+logging_clear_handlers = true
 
 # Test execution
 stop = false
