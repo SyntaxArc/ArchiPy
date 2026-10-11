@@ -3843,6 +3843,11 @@
 <td>FastAPI child spans (dependencies, endpoint, serialization, background tasks)</td>
 </tr>
 <tr>
+<td><code>FASTAPI_LOGS_ENABLED</code></td>
+<td><code>false</code></td>
+<td>FastAPI log records for validation failures and unhandled exceptions (includes stack traces)</td>
+</tr>
+<tr>
 <td><code>RESOURCE_ATTRIBUTES</code></td>
 <td><code>{}</code></td>
 <td>Extra OTel resource attributes</td>
@@ -4007,7 +4012,9 @@ requests, httpx, and httpx2 clients — their instrumentors patch at class level
 <p><code>AppUtils.create_fastapi_app</code> passes <code>FastAPIUtils.build_otel_telemetry_config(config)</code> to
 <code>FastAPI(telemetry=...)</code>. That initializes providers (idempotent) and enables FastAPI's built-in
 OpenTelemetry support (requires <code>archipy[otel-fastapi]</code>, FastAPI 0.142.2+). Traces and metrics use
-ArchiPy's providers; FastAPI log records and OTLP auto-configuration are off. The HTTP duration
+ArchiPy's providers; OTLP auto-configuration is always off. FastAPI log records (validation failures and
+unhandled exceptions, with stack traces) are opt-in via <code>OTEL__FASTAPI_LOGS_ENABLED=true</code> and use ArchiPy's
+logger provider. The HTTP duration
 metric is <code>http.server.request.duration</code> (seconds). If you build the app yourself, pass the same
 config to the constructor:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span><span class="n">telemetry</span><span class="o">=</span><span class="n">FastAPIUtils</span><span class="o">.</span><span class="n">build_otel_telemetry_config</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
@@ -4029,8 +4036,9 @@ interceptors when OTel is enabled (requires <code>archipy[otel-grpc]</code> for 
 <ul>
 <li><strong>Traces</strong> — contrib <code>server_interceptor</code> / <code>aio_server_interceptor</code> when
   <code>TRACES_ENABLED</code></li>
-<li><strong>Metrics</strong> — ArchiPy <code>rpc.server.duration</code> histogram interceptor when
-  <code>METRICS_ENABLED</code> (works in metrics-only mode; no handler decorators required)</li>
+<li><strong>Metrics</strong> — ArchiPy <code>rpc.server.request.duration</code> histogram (seconds, same buckets as FastAPI's
+  <code>http.server.request.duration</code>) and <code>rpc.server.active_requests</code> up-down counter (in-flight calls,
+  like <code>http.server.active_requests</code>) when <code>METRICS_ENABLED</code> (works in metrics-only mode; no handler decorators required)</li>
 </ul>
 <p>Order becomes: OTel traces (if any) → OTel metrics (if any) → exception interceptor
 → rate-limit (if enabled) → custom interceptors.</p>
