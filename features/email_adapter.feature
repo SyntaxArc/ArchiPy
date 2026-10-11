@@ -83,13 +83,13 @@ Feature: Email adapter
 
   Scenario: Reject an attachment larger than the explicit maximum size
     When I try to create a BINARY attachment "big.bin" of 20 bytes with a maximum size of 10 bytes
-    Then the attachment is rejected for exceeding the maximum size
+    Then the attachment is rejected as an invalid argument for exceeding the maximum size
 
   Scenario: Reject an attachment larger than the configured maximum size
     Given an SMTP server "smtp.test.local" that accepts mail
     And the configured attachment maximum size is 16 bytes
     When I try to create a BINARY attachment "big.bin" of 32 bytes with the configured maximum size
-    Then the attachment is rejected for exceeding the maximum size
+    Then the attachment is rejected as an invalid argument for exceeding the maximum size
 
   Scenario: Sending without an SMTP server configured is rejected
     Given no SMTP server is configured
@@ -97,26 +97,31 @@ Feature: Email adapter
     When I try to send an email to "alice@example.com" with subject "Hello" and body "Hi there"
     Then an invalid argument error is raised for "SMTP_SERVER"
 
-  Scenario: Connection failure does not raise and nothing is delivered
+  Scenario: Connection failure raises an unavailable error and nothing is delivered
     Given an SMTP server "smtp.test.local" that refuses connections
     And an email adapter
     When I try to send an email to "alice@example.com" with subject "Hello" and body "Hi there"
-    Then no error is raised
+    Then an unavailable error is raised for "SMTP"
+    And the unavailable error was caused by a connection error
     And the SMTP server received 0 emails
 
-  Scenario: Persistent send failure does not raise and nothing is delivered
+  Scenario: Persistent send failure raises an unavailable error and nothing is delivered
     Given an SMTP server "smtp.test.local" that fails the next 3 sends
     And an email adapter
     When I try to send an email to "alice@example.com" with subject "Hello" and body "Hi there"
-    Then no error is raised
+    Then an unavailable error is raised for "SMTP"
+    And the unavailable error was caused by a dropped SMTP session
     And the SMTP server received 0 emails
+    And every opened SMTP session was closed
 
-  Scenario: Transient send failure is retried on a fresh connection
+  Scenario: Transient send failure closes the broken session and retries on a new one
     Given an SMTP server "smtp.test.local" that fails the next 1 sends
     And an email adapter
     When I send an email to "alice@example.com" with subject "Hello" and body "Hi there"
     Then the SMTP server received 1 email
     And the SMTP server opened 2 sessions
+    And the first SMTP session was closed
+    And the delivered email was sent over the second SMTP session
 
   Scenario: A pooled connection is reused and returned to the pool
     Given an SMTP server "smtp.test.local" that accepts mail

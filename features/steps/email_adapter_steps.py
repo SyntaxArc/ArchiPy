@@ -12,7 +12,7 @@ from archipy.adapters.email.adapters import AttachmentHandler, EmailAdapter, Ema
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import EmailConfig
 from archipy.helpers.utils.datetime_utils import DatetimeUtils
-from archipy.models.errors import InvalidArgumentError
+from archipy.models.errors import InvalidArgumentError, UnavailableError
 from archipy.models.types.email_types import EmailAttachmentType
 from features.test_helpers import get_current_scenario_context
 
@@ -23,6 +23,7 @@ class SmtpRecorder:
     def __init__(self):
         self.sessions = []
         self.delivered = []
+        self.delivered_by = []
         self.refuse_connections = False
         self.send_failures = 0
 
@@ -52,6 +53,7 @@ class SmtpRecorder:
                     recorder.send_failures -= 1
                     raise smtplib.SMTPServerDisconnected("server went away")
                 recorder.delivered.append((msg, list(to_addrs or [])))
+                recorder.delivered_by.append(self)
 
             def quit(self):
                 self.closed = True
@@ -427,11 +429,44 @@ def step_then_url_downloaded(context, url):
     assert get_current_scenario_context(context).get("requested_urls") == [url]
 
 
-@then("the attachment is rejected for exceeding the maximum size")
+@then("the attachment is rejected as an invalid argument for exceeding the maximum size")
 def step_then_attachment_rejected(context):
     error = get_current_scenario_context(context).get("error")
-    assert isinstance(error, ValidationError), repr(error)
-    assert "exceeds maximum allowed size" in str(error)
+    assert isinstance(error, InvalidArgumentError), repr(error)
+    assert isinstance(error.__cause__, ValidationError), repr(error.__cause__)
+    assert "exceeds maximum allowed size" in str(error.__cause__)
+
+
+@then('an unavailable error is raised for "{resource}"')
+def step_then_unavailable(context, resource):
+    error = get_current_scenario_context(context).get("error")
+    assert isinstance(error, UnavailableError), repr(error)
+    assert error.additional_data["resource_type"] == resource, error.additional_data
+
+
+@then("the unavailable error was caused by a connection error")
+def step_then_unavailable_cause_connection(context):
+    error = get_current_scenario_context(context).get("error")
+    assert isinstance(error.__cause__, ConnectionRefusedError), repr(error.__cause__)
+
+
+@then("the unavailable error was caused by a dropped SMTP session")
+def step_then_unavailable_cause_dropped(context):
+    error = get_current_scenario_context(context).get("error")
+    assert isinstance(error.__cause__, smtplib.SMTPServerDisconnected), repr(error.__cause__)
+
+
+@then("every opened SMTP session was closed")
+def step_then_every_session_closed(context):
+    recorder = get_current_scenario_context(context).get("smtp")
+    assert recorder.sessions, "no session was opened"
+    assert all(session.closed for session in recorder.sessions)
+
+
+@then("the delivered email was sent over the second SMTP session")
+def step_then_delivered_over_second_session(context):
+    recorder = get_current_scenario_context(context).get("smtp")
+    assert recorder.delivered_by == [recorder.sessions[1]]
 
 
 @then('an invalid argument error is raised for "{argument}"')

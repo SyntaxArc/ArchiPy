@@ -127,7 +127,7 @@ Feature: Saman Shaparak payment gateway adapter
       | sync Neo-PG  | {"status": 1}    |
       | async Neo-PG | {"status": -1}   |
 
-  Scenario Outline: Gateway HTTP error or unreadable body during initiation is reported as internal error
+  Scenario Outline: Gateway client error or unreadable body during initiation is reported as internal error
     Given a <kind> Saman adapter with terminal "13579"
     And the Saman "token" endpoint answers <http_status> with raw body "<body>"
     When I initiate a Saman payment of 75000 for reservation "RES-1" redirecting to "https://shop.example.com/return"
@@ -135,12 +135,27 @@ Feature: Saman Shaparak payment gateway adapter
 
     Examples:
       | kind         | http_status | body     |
-      | sync         | 500         | oops     |
-      | async        | 500         | oops     |
+      | sync         | 400         | bad      |
+      | async        | 400         | bad      |
       | sync         | 200         | not json |
       | async        | 200         | not json |
-      | sync Neo-PG  | 503         | down     |
+      | sync Neo-PG  | 404         | missing  |
       | async Neo-PG | 200         | not json |
+
+  Scenario Outline: Gateway server error during initiation is reported as unavailable
+    Given a <kind> Saman adapter with terminal "13579"
+    And the Saman "token" endpoint answers <http_status> with raw body "<body>"
+    When I initiate a Saman payment of 75000 for reservation "RES-1" redirecting to "https://shop.example.com/return"
+    Then the Saman call fails with "UnavailableError"
+    And the Saman failure carries resource type "<resource>"
+
+    Examples:
+      | kind         | http_status | body | resource                   |
+      | sync         | 500         | oops | Saman Token Service        |
+      | async        | 500         | oops | Saman Token Service        |
+      | sync         | 503         | down | Saman Token Service        |
+      | sync Neo-PG  | 503         | down | Saman Neo-PG Token Service |
+      | async Neo-PG | 502         | down | Saman Neo-PG Token Service |
 
   Scenario Outline: Unreachable gateway during initiation is reported as unavailable
     Given a <kind> Saman adapter with terminal "13579"
@@ -240,8 +255,10 @@ Feature: Saman Shaparak payment gateway adapter
       | async | fails with a connection error       | UnavailableError |
       | sync  | fails with a timeout                | UnavailableError |
       | async | fails with a timeout                | UnavailableError |
-      | sync  | answers 500 with raw body "bad"     | InternalError    |
-      | async | answers 500 with raw body "bad"     | InternalError    |
+      | sync  | answers 500 with raw body "bad"     | UnavailableError |
+      | async | answers 500 with raw body "bad"     | UnavailableError |
+      | sync  | answers 400 with raw body "bad"     | InternalError    |
+      | async | answers 400 with raw body "bad"     | InternalError    |
       | sync  | answers 200 with raw body "garbage" | InternalError    |
       | async | answers 200 with raw body "garbage" | InternalError    |
 
@@ -256,10 +273,10 @@ Feature: Saman Shaparak payment gateway adapter
       | sync  |
       | async |
 
-  Scenario Outline: Verify with a non-numeric terminal id is reported as internal error
+  Scenario Outline: Verify with a non-numeric terminal id is rejected as invalid argument
     Given a <kind> Saman adapter with terminal "TERM-X"
     When I verify Saman reference "REF-1"
-    Then the Saman call fails with "InternalError"
+    Then the Saman call fails with "InvalidArgumentError"
 
     Examples:
       | kind  |
@@ -331,11 +348,33 @@ Feature: Saman Shaparak payment gateway adapter
       | sync  | fails with a connection error | UnavailableError | Saman Reverse Service |
       | async | fails with a connection error | UnavailableError | Saman Reverse Service |
 
-  Scenario Outline: Reverse HTTP error is reported as internal error
+  Scenario Outline: Reverse server error is reported as unavailable
     Given a <kind> Saman adapter with terminal "13579"
     And the Saman "reverse" endpoint answers 502 with raw body "bad gateway"
     When I reverse Saman reference "REF-9"
+    Then the Saman call fails with "UnavailableError"
+    And the Saman failure carries resource type "Saman Reverse Service"
+
+    Examples:
+      | kind  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Reverse client error is reported as internal error
+    Given a <kind> Saman adapter with terminal "13579"
+    And the Saman "reverse" endpoint answers 400 with raw body "bad request"
+    When I reverse Saman reference "REF-9"
     Then the Saman call fails with "InternalError"
+
+    Examples:
+      | kind  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Reverse with a non-numeric terminal id is rejected as invalid argument
+    Given a <kind> Saman adapter with terminal "TERM-X"
+    When I reverse Saman reference "REF-9"
+    Then the Saman call fails with "InvalidArgumentError"
 
     Examples:
       | kind  |

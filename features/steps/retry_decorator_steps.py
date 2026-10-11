@@ -123,3 +123,9 @@ def step_then_retry_elapsed_max(context, seconds):
 def step_then_retry_name(context, name):
     func = get_current_scenario_context(context).get("retry_function")
     assert func.__name__ == name
+
+
+@then("the retry error is chained from the last {name} raised by the function")
+def step_then_retry_chained(context, name):
+    error = get_current_scenario_context(context).get("retry_error")
+    assert type(error.__cause__) is _EXCEPTIONS[name], f"Got cause {error.__cause__!r}"

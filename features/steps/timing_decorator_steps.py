@@ -41,22 +41,30 @@ def step_given_timing_raising_function(context):
     sc.store("timing_function", slow_work)
 
 
-@given("the root logging level is {level}")
-def step_given_timing_root_level(context, level):
+def _attach_handler(context, target, level):
     sc = get_current_scenario_context(context)
-    root = logging.getLogger()
     timing_logger = logging.getLogger(_TIMING_LOGGER)
     handler = _ListHandler()
-    previous_level = root.level
+    previous_level = target.level
     timing_logger.addHandler(handler)
-    root.setLevel(getattr(logging, level))
+    target.setLevel(getattr(logging, level))
 
     def restore():
-        root.setLevel(previous_level)
+        target.setLevel(previous_level)
         timing_logger.removeHandler(handler)
 
     context.add_cleanup(restore)
     sc.store("timing_handler", handler)
+
+
+@given("the root logging level is {level}")
+def step_given_timing_root_level(context, level):
+    _attach_handler(context, logging.getLogger(), level)
+
+
+@given("the timing logger level is {level}")
+def step_given_timing_logger_level(context, level):
+    _attach_handler(context, logging.getLogger(_TIMING_LOGGER), level)
 
 
 def _run(context, *args):

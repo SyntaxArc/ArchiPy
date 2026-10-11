@@ -19,17 +19,29 @@ def _build(context, behavior, limit):
     sc.store("timeout_function", slow_function)
 
 
-@given("a timeout-decorated function that sleeps {sleep:f} seconds with a {limit:d} second limit")
+@given("a timeout-decorated function that sleeps {sleep:f} seconds with a {limit:f} second limit")
 def step_given_timeout_sleeping(context, sleep, limit):
     _build(context, lambda: time.sleep(sleep), limit)
 
 
-@given("a timeout-decorated function that raises ValueError with a {limit:d} second limit")
+@given("a timeout-decorated function that raises ValueError with a {limit:f} second limit")
 def step_given_timeout_raising(context, limit):
     def fail():
         raise ValueError("boom")
 
     _build(context, fail, limit)
+
+
+def _marker_handler(_signum, _frame):
+    """Sentinel SIGALRM handler used to verify the decorator restores the previous handler."""
+
+
+@given("a custom SIGALRM handler is installed")
+def step_given_custom_sigalrm_handler(context):
+    sc = get_current_scenario_context(context)
+    original = signal.signal(signal.SIGALRM, _marker_handler)
+    context.add_cleanup(signal.signal, signal.SIGALRM, original)
+    sc.store("timeout_marker_handler", _marker_handler)
 
 
 def _run(context, *args):
@@ -86,7 +98,7 @@ def step_then_timeout_code(context, code):
     assert error.code == code
 
 
-@then("the timeout-decorated function was interrupted before {seconds:d} seconds")
+@then("the timeout-decorated function was interrupted before {seconds:f} seconds")
 def step_then_timeout_interrupted(context, seconds):
     elapsed = get_current_scenario_context(context).get("timeout_elapsed")
     assert elapsed < seconds, f"Elapsed {elapsed}"
@@ -100,3 +112,15 @@ def step_then_timeout_no_alarm(context):
 @then('the timeout-decorated function keeps its name "{name}"')
 def step_then_timeout_name(context, name):
     assert get_current_scenario_context(context).get("timeout_function").__name__ == name
+
+
+@then("the previously installed SIGALRM handler is restored")
+def step_then_timeout_handler_restored(context):
+    marker = get_current_scenario_context(context).get("timeout_marker_handler")
+    assert signal.getsignal(signal.SIGALRM) is marker, f"Got {signal.getsignal(signal.SIGALRM)!r}"
+
+
+@then("the timeout error carries timeout {seconds:f}")
+def step_then_timeout_value(context, seconds):
+    error = get_current_scenario_context(context).get("timeout_error")
+    assert error.additional_data.get("timeout") == seconds, f"Got {error.additional_data!r}"
