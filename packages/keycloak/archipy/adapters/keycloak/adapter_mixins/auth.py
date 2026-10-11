@@ -128,7 +128,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         # Not caching validation results as tokens are time-sensitive
         try:
             # Let the underlying adapter handle key selection to align with expected types
-            self._openid_adapter.decode_token(token)
+            self._openid_adapter.decode_token(token, leeway=self.configs.TOKEN_LEEWAY_SECONDS)
         except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("Token validation failed: %s", e)
             return False
@@ -319,7 +319,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         """
         try:
             # Let the underlying adapter handle key selection to align with expected types
-            return self._openid_adapter.decode_token(token)
+            return self._openid_adapter.decode_token(token, leeway=self.configs.TOKEN_LEEWAY_SECONDS)
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token_info")
 
@@ -477,6 +477,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             await self.openid_adapter.a_decode_token(
                 token,
                 key=await self.get_public_key(),
+                leeway=self.configs.TOKEN_LEEWAY_SECONDS,
             )
         except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("Token validation failed: %s", e)

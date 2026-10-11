@@ -83,7 +83,11 @@ async def _abort_grpc_async_if_servicer_context(error: BaseError, context: objec
 
 
 def _extract_roles(user_info: dict[str, Any], client_id: str | None) -> set[str]:
-    """Collect realm and client roles from a UserInfo response."""
+    """Collect realm and client roles from a UserInfo response.
+
+    Requires the Keycloak "realm roles" / "client roles" mappers to have "Add to userinfo" enabled,
+    otherwise stock Keycloak omits ``realm_access`` and ``resource_access`` from UserInfo.
+    """
     roles: set[str] = set(user_info.get("realm_access", {}).get("roles", []) or [])
     if client_id:
         roles.update(user_info.get("resource_access", {}).get(client_id, {}).get("roles", []) or [])

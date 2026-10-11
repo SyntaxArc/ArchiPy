@@ -29,6 +29,7 @@ KEYCLOAK__CLIENT_ID=my-client
 KEYCLOAK__CLIENT_SECRET_KEY=client-secret
 KEYCLOAK__VERIFY_SSL=true
 KEYCLOAK__TIMEOUT=10
+KEYCLOAK__TOKEN_LEEWAY_SECONDS=0  # clock-skew tolerance when validating token expiry
 ```
 
 ### Direct Configuration
@@ -539,6 +540,10 @@ async_keycloak.clear_all_caches()
 - The adapter automatically refreshes admin tokens before they expire.
 - Write operations (like user creation/updates) automatically clear relevant caches.
 - For production use, prefer the authorization code flow over direct username/password authentication.
+- `KeycloakUtils` role checks read `realm_access` and `resource_access` from the UserInfo response. Stock Keycloak
+  omits them there, so enable "Add to userinfo" on the realm roles and client roles mappers of the `roles` client scope.
+- Token expiry is checked locally with `KEYCLOAK__TOKEN_LEEWAY_SECONDS` (default `0`) of clock-skew tolerance; raise it
+  only if your servers' clocks drift.
 
 ## See Also
 

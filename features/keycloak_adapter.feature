@@ -635,9 +635,7 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
-  # The local JWT check allows 60s of clock leeway, so a token that expired seconds ago still passes it and is
-  # rejected by the UserInfo endpoint instead.
-  Scenario Outline: Utils FastAPI dependency rejects an expired token on the server side
+  Scenario Outline: Utils FastAPI dependency rejects an expired token
     Given a configured sync Keycloak adapter
     And I create a realm named "utils-expiry-realm" with display name "Utils Expiry Realm" using sync adapter
     And the keycloak utils realm "utils-expiry-realm" has an access token lifespan of 1 seconds
@@ -646,7 +644,7 @@ Feature: Keycloak Authentication Testing
     And the keycloak utils access token of user "utilsexpiring" is obtained with password "pass123"
     When the keycloak utils access token lifespan has elapsed
     And the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsexpiring"
-    Then the keycloak utils call fails with error code "INVALID_CREDENTIALS"
+    Then the keycloak utils call fails with error code "TOKEN_EXPIRED"
 
     Examples:
       | mode  |
