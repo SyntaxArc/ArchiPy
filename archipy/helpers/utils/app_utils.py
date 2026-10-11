@@ -300,6 +300,7 @@ class FastAPIUtils:
         except ImportError:
             logger.warning("%s", OTEL_FASTAPI_INSTALL_HINT)
             return disabled
+        # Observability is optional: a failed init must not stop the app.
         except Exception:
             logger.exception("Failed to initialize OpenTelemetry for FastAPI")
             return disabled
@@ -450,6 +451,7 @@ def _install_otel_grpc_interceptor(
             _prepend_otel_grpc_traces_interceptor(interceptors, async_mode=async_mode)
     except ImportError:
         logger.warning("%s", OTEL_GRPC_INSTALL_HINT)
+    # Optional interceptor: a failed init must not stop server startup.
     except Exception:
         mode = "async gRPC" if async_mode else "gRPC"
         logger.exception("Failed to initialize OpenTelemetry interceptor for %s", mode)
@@ -487,6 +489,7 @@ class AsyncGrpcAPIUtils:
             )
 
             interceptors.append(AsyncGrpcServerRateLimitInterceptor(rate_limit_config=config.GRPC_RATE_LIMIT))
+        # Optional interceptor: a failed init must not stop server startup.
         except Exception:
             logger.exception("Failed to initialize Rate Limit Interceptor")
 
@@ -523,6 +526,7 @@ class GrpcAPIUtils:
             )
 
             interceptors.append(GrpcServerRateLimitInterceptor(rate_limit_config=config.GRPC_RATE_LIMIT))
+        # Optional interceptor: a failed init must not stop server startup.
         except Exception:
             logger.exception("Failed to initialize Rate Limit Interceptor")
 
@@ -566,6 +570,7 @@ class AppUtils:
                 # share process-wide OtelUtils; full shutdown stays on atexit.
                 try:
                     OtelUtils.force_flush()
+                # Best-effort flush on shutdown: never block app teardown.
                 except Exception:
                     logger.debug("Error during OTel force_flush in FastAPI lifespan", exc_info=True)
 

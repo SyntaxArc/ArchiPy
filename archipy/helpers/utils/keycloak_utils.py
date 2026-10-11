@@ -544,6 +544,7 @@ class KeycloakUtils:
 
                     return func(self, request, context)
 
+                # Re-raised as a domain error (or the original) so callers see a typed failure.
                 except Exception as e:
                     if isinstance(e, BaseError):
                         _abort_grpc_sync_if_servicer_context(e, context)
@@ -623,6 +624,7 @@ class KeycloakUtils:
 
                     return await func(self, request, context)
 
+                # Re-raised as a domain error (or the original) so callers see a typed failure.
                 except Exception as e:
                     grpc_ctx = context
                     if grpc_ctx is None:

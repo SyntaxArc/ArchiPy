@@ -198,4 +198,4 @@ class TOTPUtils:
             return base64.b32encode(hmac_obj.digest()).decode("utf-8")
         except Exception as e:
             # Convert any errors to our custom errors
-            raise InternalError() from e
+            raise InternalError(additional_data={"operation": "generate_secret_key_for_totp"}) from e

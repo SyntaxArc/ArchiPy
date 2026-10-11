@@ -456,7 +456,7 @@ def _build_aggregate_request(aggregation: AggregationDTO) -> AggregateRequest:
         sort_field = _normalize_search_field_ref(aggregation.sort_by)
         sort_cls = Asc if aggregation.sort_direction.upper() == "ASC" else Desc
         # redis-py stubs declare *fields: str; runtime accepts Asc|Desc sort directives.
-        request.sort_by(sort_cls(sort_field))  # ty: ignore[invalid-argument-type]
+        request.sort_by(sort_cls(sort_field))  # ty: ignore[invalid-argument-type]  # redis-py stub gap, see comment above
     if aggregation.limit is not None:
         request.limit(0, aggregation.limit)
     return request

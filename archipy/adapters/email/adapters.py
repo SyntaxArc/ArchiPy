@@ -6,7 +6,6 @@ import base64
 import logging
 import os
 import smtplib
-from datetime import datetime
 from email import encoders
 from email.mime.audio import MIMEAudio
 from email.mime.base import MIMEBase
@@ -25,12 +24,14 @@ from archipy.adapters.email.ports import EmailPort
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers.decorators.tracing import trace_span
 from archipy.helpers.utils.base_utils import BaseUtils
+from archipy.helpers.utils.datetime_utils import DatetimeUtils
 from archipy.models.dtos.email_dtos import EmailAttachmentDTO
 from archipy.models.errors import InvalidArgumentError
 from archipy.models.types.email_types import EmailAttachmentDispositionType, EmailAttachmentType
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from datetime import datetime
 
     from archipy.configs.config_template import EmailConfig
 
@@ -62,7 +63,7 @@ class EmailConnectionManager:
             self.smtp_connection.starttls()
             if self.config.USERNAME and self.config.PASSWORD:
                 self.smtp_connection.login(self.config.USERNAME, self.config.PASSWORD)
-            self.last_used = datetime.now()
+            self.last_used = DatetimeUtils.get_datetime_now()
         except (smtplib.SMTPException, OSError, TimeoutError) as e:
             BaseUtils.capture_exception(e)
             self.smtp_connection = None
@@ -84,7 +85,7 @@ class EmailConnectionManager:
             self.connect()
             return
 
-        time_diff = (datetime.now() - self.last_used).total_seconds()
+        time_diff = (DatetimeUtils.get_datetime_now() - self.last_used).total_seconds()
         if time_diff > TOKEN_REFRESH_SECONDS:  # Refresh after 5 minutes
             self.disconnect()
             self.connect()
@@ -112,7 +113,7 @@ class EmailConnectionPool:
 
     def return_connection(self, connection: EmailConnectionManager) -> None:
         """Return a connection to the pool."""
-        connection.last_used = datetime.now()
+        connection.last_used = DatetimeUtils.get_datetime_now()
         self.pool.put(connection)
 
 

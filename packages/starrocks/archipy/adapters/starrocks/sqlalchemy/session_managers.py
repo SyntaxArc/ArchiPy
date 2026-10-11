@@ -96,7 +96,7 @@ def _patch_starrocks_do_begin() -> None:
         finally:
             cursor.close()
 
-    StarRocksDialect.do_begin = do_begin  # ty: ignore[invalid-assignment]
+    StarRocksDialect.do_begin = do_begin  # ty: ignore[invalid-assignment]  # monkey-patching the dialect hook is intentional
 
 
 # Apply the patches when the module is imported
