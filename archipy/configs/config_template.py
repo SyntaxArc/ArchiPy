@@ -1184,6 +1184,11 @@ class EmailConfig(BaseModel):
     PASSWORD: str | None = Field(default=None, description="SMTP password")
     POOL_SIZE: int = Field(default=5, description="Connection pool size")
     CONNECTION_TIMEOUT: int = Field(default=30, description="Connection timeout in seconds")
+    CONNECTION_REFRESH_SECONDS: int = Field(
+        default=300,
+        ge=1,
+        description="Idle seconds after which a pooled SMTP connection is reconnected",
+    )
     MAX_RETRIES: int = Field(default=3, description="Maximum retry attempts")
     ATTACHMENT_MAX_SIZE: int = Field(default=5 * 1024 * 1024, description="Maximum attachment size in bytes")
 

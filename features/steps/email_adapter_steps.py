@@ -1,7 +1,13 @@
 import base64
+import json
 import smtplib
+import socket
+import ssl
 import tempfile
-from datetime import timedelta
+import threading
+import time
+import urllib.request
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from unittest import mock
 
@@ -11,54 +17,30 @@ from pydantic import ValidationError
 from archipy.adapters.email.adapters import AttachmentHandler, EmailAdapter, EmailConnectionPool
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import EmailConfig
-from archipy.helpers.utils.datetime_utils import DatetimeUtils
 from archipy.models.errors import InvalidArgumentError, UnavailableError
 from archipy.models.types.email_types import EmailAttachmentType
+from features.test_containers import ContainerManager
 from features.test_helpers import get_current_scenario_context
 
 
-class SmtpRecorder:
-    """In-memory stand-in for an SMTP server, installed in place of smtplib.SMTP."""
+MAILPIT_NAMES = ("mailpit", "mailpit-plain")
+_active_mailpit = {"name": "mailpit"}
 
-    def __init__(self):
-        self.sessions = []
-        self.delivered = []
-        self.delivered_by = []
-        self.refuse_connections = False
-        self.send_failures = 0
 
-    def smtp_class(self):
-        recorder = self
+def _mailpit(name=None):
+    instance = ContainerManager._container_instances.get(name or _active_mailpit["name"])
+    assert instance is not None, "Mailpit container is not running"
+    return instance
 
-        class FakeSMTP:
-            def __init__(self, host, port, timeout=None):
-                if recorder.refuse_connections:
-                    raise ConnectionRefusedError("connection refused")
-                self.host = host
-                self.port = port
-                self.timeout = timeout
-                self.started_tls = False
-                self.login_args = None
-                self.closed = False
-                recorder.sessions.append(self)
 
-            def starttls(self):
-                self.started_tls = True
+def _api(method, path, name=None):
+    request = urllib.request.Request(f"{_mailpit(name).api_url}{path}", method=method)
+    with urllib.request.urlopen(request, timeout=10) as response:
+        return response.read()
 
-            def login(self, username, password):
-                self.login_args = (username, password)
 
-            def send_message(self, msg, to_addrs=None):
-                if recorder.send_failures > 0:
-                    recorder.send_failures -= 1
-                    raise smtplib.SMTPServerDisconnected("server went away")
-                recorder.delivered.append((msg, list(to_addrs or [])))
-                recorder.delivered_by.append(self)
-
-            def quit(self):
-                self.closed = True
-
-        return FakeSMTP
+def _api_json(path):
+    return json.loads(_api("GET", path))
 
 
 def _install_email_config(context, **overrides):
@@ -83,22 +65,23 @@ def _install_email_config(context, **overrides):
     return config.EMAIL
 
 
-def _install_smtp(context, scenario_context):
-    recorder = SmtpRecorder()
-    patcher = mock.patch.object(smtplib, "SMTP", recorder.smtp_class())
+def _inject_send_failures(context, scenario_context, count):
+    """Fault injection: make the next ``count`` smtplib send_message calls drop the session, then work normally."""
+    original = smtplib.SMTP.send_message
+    state = {"remaining": count, "failed_sessions": [], "used_sessions": []}
+
+    def flaky(self, msg, *args, **kwargs):
+        if state["remaining"] > 0:
+            state["remaining"] -= 1
+            state["failed_sessions"].append(self)
+            raise smtplib.SMTPServerDisconnected("server went away")
+        state["used_sessions"].append(self)
+        return original(self, msg, *args, **kwargs)
+
+    patcher = mock.patch.object(smtplib.SMTP, "send_message", flaky)
     patcher.start()
     context.add_cleanup(patcher.stop)
-    scenario_context.store("smtp", recorder)
-    return recorder
-
-
-def _configure_server(context, server, refuse=False, send_failures=0):
-    scenario_context = get_current_scenario_context(context)
-    recorder = _install_smtp(context, scenario_context)
-    recorder.refuse_connections = refuse
-    recorder.send_failures = send_failures
-    _install_email_config(context, SMTP_SERVER=server)
-    scenario_context.store("smtp_server", server)
+    scenario_context.store("faults", state)
 
 
 def _split(addresses):
@@ -125,25 +108,51 @@ def _send(context, to_email, subject, body, **kwargs):
         scenario_context.store("error", exception)
 
 
-@given('an SMTP server "{server}" that accepts mail')
-def step_given_smtp_accepts(context, server):
-    _configure_server(context, server)
+def _configure_mailpit(context, name):
+    _active_mailpit["name"] = name
+    mailpit = _mailpit(name)
+    _install_email_config(
+        context,
+        SMTP_SERVER=mailpit.host,
+        SMTP_PORT=mailpit.smtp_port,
+        USERNAME=mailpit.USERNAME,
+        PASSWORD=mailpit.PASSWORD,
+    )
 
 
-@given('an SMTP server "{server}" that refuses connections')
-def step_given_smtp_refuses(context, server):
-    _configure_server(context, server, refuse=True)
+@given("an empty Mailpit mailbox")
+def step_given_empty_mailbox(context):
+    _active_mailpit["name"] = "mailpit"
+    for name in MAILPIT_NAMES:
+        if name in ContainerManager._container_instances:
+            _api("DELETE", "/api/v1/messages", name)
 
 
-@given('an SMTP server "{server}" that fails the next {count:d} sends')
-def step_given_smtp_fails_sends(context, server, count):
-    _configure_server(context, server, send_failures=count)
+@given("the Mailpit SMTP server is configured")
+def step_given_mailpit_configured(context):
+    _configure_mailpit(context, "mailpit")
+
+
+@given("the plain Mailpit SMTP server is configured")
+def step_given_plain_mailpit_configured(context):
+    _configure_mailpit(context, "mailpit-plain")
+
+
+@given("an SMTP endpoint on a closed port")
+def step_given_closed_port(context):
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    _install_email_config(context, SMTP_SERVER="127.0.0.1", SMTP_PORT=port)
+
+
+@given("the next {count:d} SMTP sends fail")
+def step_given_sends_fail(context, count):
+    _inject_send_failures(context, get_current_scenario_context(context), count)
 
 
 @given("no SMTP server is configured")
 def step_given_no_smtp_server(context):
-    scenario_context = get_current_scenario_context(context)
-    _install_smtp(context, scenario_context)
     _install_email_config(context)
 
 
@@ -222,25 +231,36 @@ def step_given_binary_attachment(context, filename, content):
     scenario_context.store("attachment", attachment)
 
 
-@given('a URL attachment "{filename}" served with content "{content}"')
+@given('a URL attachment "{filename}" served with content "{content}" by a local HTTP server')
 def step_given_url_attachment(context, filename, content):
     scenario_context = get_current_scenario_context(context)
-    url = f"https://files.test.local/{filename}"
     requested = []
 
-    def fake_get(request_url, **kwargs):
-        requested.append(request_url)
-        response = mock.Mock()
-        response.content = content.encode()
-        response.raise_for_status.return_value = None
-        return response
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            requested.append(self.path)
+            payload = content.encode()
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
 
-    patcher = mock.patch("archipy.adapters.email.adapters.httpx2.get", side_effect=fake_get)
-    patcher.start()
-    context.add_cleanup(patcher.stop)
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    def stop_server():
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    context.add_cleanup(stop_server)
     scenario_context.store("requested_urls", requested)
     attachment = AttachmentHandler.create_attachment(
-        source=url,
+        source=f"http://127.0.0.1:{server.server_port}/{filename}",
         filename=filename,
         attachment_type=EmailAttachmentType.URL,
     )
@@ -320,6 +340,9 @@ def step_when_take_connection(context):
     history = scenario_context.get("connections", [])
     history.append(connection)
     scenario_context.store("connections", history)
+    sessions = scenario_context.get("sessions", [])
+    sessions.append(connection.smtp_connection)
+    scenario_context.store("sessions", sessions)
 
 
 @when("I return the connection to the pool")
@@ -328,105 +351,81 @@ def step_when_return_connection(context):
     scenario_context.get("pool").return_connection(scenario_context.get("connections")[-1])
 
 
-@when("{seconds:d} seconds pass")
-def step_when_time_passes(context, seconds):
-    real_now = DatetimeUtils.get_datetime_now()
-    patcher = mock.patch.object(
-        DatetimeUtils,
-        "get_datetime_now",
-        side_effect=lambda: real_now + timedelta(seconds=seconds),
-    )
-    patcher.start()
-    context.add_cleanup(patcher.stop)
+@given("the connection refresh interval is {seconds:d} seconds")
+def step_given_refresh_interval(context, seconds):
+    BaseConfig.global_config().EMAIL.CONNECTION_REFRESH_SECONDS = seconds
 
 
-@then("the SMTP server received {count:d} email")
-@then("the SMTP server received {count:d} emails")
+@when("I wait {seconds:f} seconds")
+def step_when_wait(context, seconds):
+    time.sleep(seconds)
+
+
+@then("Mailpit holds {count:d} email")
+@then("Mailpit holds {count:d} emails")
 def step_then_received_count(context, count):
-    recorder = get_current_scenario_context(context).get("smtp")
-    assert len(recorder.delivered) == count, f"expected {count}, got {len(recorder.delivered)}"
+    actual = _api_json("/api/v1/messages")["messages_count"]
+    assert actual == count, f"expected {count}, got {actual}"
 
 
-@then("the SMTP server opened {count:d} sessions")
-def step_then_sessions_count(context, count):
-    recorder = get_current_scenario_context(context).get("smtp")
-    assert len(recorder.sessions) == count, f"expected {count}, got {len(recorder.sessions)}"
+def _delivered(context):
+    messages = _api_json("/api/v1/messages")["messages"]
+    assert messages, "no email was delivered"
+    return _api_json(f"/api/v1/message/{messages[0]['ID']}")
+
+
+def _addresses(entries):
+    return ", ".join(entry["Address"] for entry in entries)
 
 
 @then('the delivered email has subject "{subject}"')
 def step_then_subject(context, subject):
-    msg, _ = _delivered(context)
-    assert msg["Subject"] == subject
+    assert _delivered(context)["Subject"] == subject
 
 
 @then('the delivered email is addressed to "{to_email}"')
 def step_then_addressed_to(context, to_email):
-    msg, _ = _delivered(context)
-    assert msg["To"] == to_email
+    assert _addresses(_delivered(context)["To"]) == to_email
 
 
 @then('the delivered email has cc "{cc}"')
 def step_then_cc(context, cc):
-    msg, _ = _delivered(context)
-    assert msg["Cc"] == cc
+    assert _addresses(_delivered(context)["Cc"]) == cc
+
+
+@then('the delivered email has bcc "{bcc}"')
+def step_then_bcc(context, bcc):
+    assert _addresses(_delivered(context)["Bcc"]) == bcc
 
 
 @then('the delivered email is sent from "{sender}"')
 def step_then_sender(context, sender):
-    msg, _ = _delivered(context)
-    assert msg["From"] == sender
-
-
-@then('the SMTP envelope recipients are "{recipients}"')
-def step_then_envelope(context, recipients):
-    _, to_addrs = _delivered(context)
-    assert to_addrs == _split(recipients), to_addrs
-
-
-def _body_part(msg):
-    return msg.get_payload(0)
+    assert _delivered(context)["From"]["Address"] == sender
 
 
 @then('the delivered email body is plain text "{body}"')
 def step_then_plain_body(context, body):
-    msg, _ = _delivered(context)
-    part = _body_part(msg)
-    assert part.get_content_subtype() == "plain"
-    assert part.get_payload(decode=True).decode() == body
+    assert _delivered(context)["Text"].strip() == body
 
 
 @then('the delivered email body is HTML "{body}"')
 def step_then_html_body(context, body):
-    msg, _ = _delivered(context)
-    part = _body_part(msg)
-    assert part.get_content_subtype() == "html"
-    assert part.get_payload(decode=True).decode() == body
-
-
-@then("the SMTP session used TLS")
-def step_then_tls(context):
-    recorder = get_current_scenario_context(context).get("smtp")
-    assert recorder.sessions[0].started_tls
-
-
-@then('the SMTP session logged in as "{username}" with password "{password}"')
-def step_then_login(context, username, password):
-    recorder = get_current_scenario_context(context).get("smtp")
-    assert recorder.sessions[0].login_args == (username, password)
+    assert _delivered(context)["HTML"].strip() == body
 
 
 @then('the delivered email has attachment "{filename}" of type "{content_type}" with content "{content}"')
 def step_then_attachment(context, filename, content_type, content):
-    msg, _ = _delivered(context)
-    parts = [part for part in msg.get_payload() if part.get_filename() == filename]
-    assert len(parts) == 1, f"expected one attachment named {filename}"
-    assert parts[0].get_content_type() == content_type
-    assert parts[0].get_payload(decode=True).decode() == content
+    message = _delivered(context)
+    parts = [part for part in message["Attachments"] if part["FileName"] == filename]
+    assert len(parts) == 1, f"expected one attachment named {filename}, got {message['Attachments']}"
+    assert parts[0]["ContentType"].split(";")[0] == content_type, parts[0]["ContentType"]
+    body = _api("GET", f"/api/v1/message/{message['ID']}/part/{parts[0]['PartID']}")
+    assert body.decode() == content, body
 
 
-@then('the URL "{url}" was downloaded')
-def step_then_url_downloaded(context, url):
-    assert get_current_scenario_context(context).get("requested_urls") == [url]
+@then('the local HTTP server was asked for "{path}"')
+def step_then_url_downloaded(context, path):
+    assert get_current_scenario_context(context).get("requested_urls") == [path]
 
 
 @then("the attachment is rejected as an invalid argument for exceeding the maximum size")
@@ -456,17 +455,47 @@ def step_then_unavailable_cause_dropped(context):
     assert isinstance(error.__cause__, smtplib.SMTPServerDisconnected), repr(error.__cause__)
 
 
-@then("every opened SMTP session was closed")
-def step_then_every_session_closed(context):
-    recorder = get_current_scenario_context(context).get("smtp")
-    assert recorder.sessions, "no session was opened"
-    assert all(session.closed for session in recorder.sessions)
+@then("the unavailable error was caused by an authentication failure")
+def step_then_unavailable_cause_auth(context):
+    error = get_current_scenario_context(context).get("error")
+    assert isinstance(error.__cause__, smtplib.SMTPAuthenticationError), repr(error.__cause__)
 
 
-@then("the delivered email was sent over the second SMTP session")
-def step_then_delivered_over_second_session(context):
-    recorder = get_current_scenario_context(context).get("smtp")
-    assert recorder.delivered_by == [recorder.sessions[1]]
+def _adapter_socket(context):
+    adapter = get_current_scenario_context(context).get("email_adapter")
+    session = adapter.connection_pool.pool.queue[0].smtp_connection
+    assert session is not None, "adapter holds no SMTP session"
+    return session.sock
+
+
+@then("the adapter session is encrypted with TLS")
+def step_then_session_tls(context):
+    assert isinstance(_adapter_socket(context), ssl.SSLSocket)
+
+
+@then("the adapter session is not encrypted with TLS")
+def step_then_session_not_tls(context):
+    assert not isinstance(_adapter_socket(context), ssl.SSLSocket)
+
+
+@then("every failed SMTP session was closed")
+def step_then_failed_sessions_closed(context):
+    failed = get_current_scenario_context(context).get("faults")["failed_sessions"]
+    assert failed, "no session failed"
+    assert all(session.sock is None for session in failed)
+
+
+@then("the adapter holds no open SMTP session")
+def step_then_adapter_no_session(context):
+    adapter = get_current_scenario_context(context).get("email_adapter")
+    assert all(connection.smtp_connection is None for connection in adapter.connection_pool.pool.queue)
+
+
+@then("the delivered email was sent over a new SMTP session")
+def step_then_delivered_over_new_session(context):
+    faults = get_current_scenario_context(context).get("faults")
+    assert len(faults["used_sessions"]) == 1
+    assert faults["used_sessions"][0] is not faults["failed_sessions"][0]
 
 
 @then('an invalid argument error is raised for "{argument}"')
@@ -493,8 +522,22 @@ def step_then_same_connection(context):
     assert connections[0] is connections[-1]
 
 
+@then("the same SMTP session was kept")
+def step_then_same_session(context):
+    connections = get_current_scenario_context(context).get("sessions")
+    assert connections[0] is connections[-1]
+    assert connections[0].sock is not None
+
+
+@then("the SMTP session was replaced {replaced}")
+def step_then_session_replaced(context, replaced):
+    sessions = get_current_scenario_context(context).get("sessions")
+    assert (sessions[0] is not sessions[-1]) == (replaced == "yes")
+
+
 @then("the first SMTP session was closed")
 def step_then_first_session_closed(context):
-    recorder = get_current_scenario_context(context).get("smtp")
-    assert recorder.sessions[0].closed
-    assert not recorder.sessions[-1].closed
+    sessions = get_current_scenario_context(context).get("sessions")
+    assert sessions[0] is not sessions[-1]
+    assert sessions[0].sock is None
+    assert sessions[-1].sock is not None

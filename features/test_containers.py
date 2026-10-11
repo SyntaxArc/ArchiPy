@@ -1,6 +1,8 @@
 """Container manager for test containers"""
 
+import datetime
 import logging
+import tempfile
 import time
 from pathlib import Path
 
@@ -43,6 +45,7 @@ CONTAINER_MEM_LIMITS: dict[str, str] = {
     "redis": "64m",
     "kafka": "1024m",
     "temporal": "384m",
+    "mailpit": "64m",
 }
 
 # Test data is tiny and throwaway: small buffers, and no durability work.
@@ -82,6 +85,8 @@ TAG_CONTAINER_MAP: dict[str, str] = {
     "needs-starrocks": "starrocks",
     "needs-temporal": "temporal",
     "needs-vault": "vault",
+    "needs-mailpit": "mailpit",
+    "needs-mailpit-plain": "mailpit-plain",
 }
 
 
@@ -1298,3 +1303,135 @@ class VaultTestContainer(metaclass=Singleton, thread_safe=True):
         self.addr = None
 
         logger.info("Vault container stopped")
+
+
+def _write_self_signed_certificate(directory: Path) -> None:
+    """Write a throwaway self-signed ``cert.pem``/``key.pem`` pair into ``directory`` (world-readable)."""
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "localhost")])
+    now = datetime.datetime.now(datetime.UTC)
+    certificate = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - datetime.timedelta(minutes=1))
+        .not_valid_after(now + datetime.timedelta(days=1))
+        .sign(key, hashes.SHA256())
+    )
+    (directory / "cert.pem").write_bytes(certificate.public_bytes(serialization.Encoding.PEM))
+    (directory / "key.pem").write_bytes(
+        key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.TraditionalOpenSSL,
+            serialization.NoEncryption(),
+        ),
+    )
+    directory.chmod(0o755)
+    (directory / "cert.pem").chmod(0o644)
+    (directory / "key.pem").chmod(0o644)
+
+
+@ContainerManager.register("mailpit")
+class MailpitTestContainer(metaclass=Singleton, thread_safe=True):
+    """Test container for Mailpit, a real SMTP server with an HTTP API to inspect delivered mail.
+
+    SMTP runs with a self-signed certificate (so STARTTLS is advertised) and requires real credentials
+    (``USERNAME``/``PASSWORD``). ``PlainMailpitTestContainer`` is the same server without TLS.
+    """
+
+    SMTP_PORT = 1025
+    API_PORT = 8025
+    USERNAME = "mailer@example.com"
+    PASSWORD = "s3cret"
+    WITH_TLS = True
+    NAME = "mailpit"
+
+    def __init__(self, image: str | None = None) -> None:
+        """Initialize Mailpit test container.
+
+        Args:
+            image: Docker image override. Defaults to MAILPIT__IMAGE from TestConfig.
+        """
+        self.name = self.NAME
+        self.image = image or BaseConfig.global_config().MAILPIT__IMAGE
+        self._container: DockerContainer | None = None
+        self._cert_dir: tempfile.TemporaryDirectory | None = None
+        self._is_running = False
+        self.host: str | None = None
+        self.smtp_port: int | None = None
+        self.api_url: str | None = None
+
+    def _build(self) -> DockerContainer:
+        container = (
+            DockerContainer(self.image)
+            .with_exposed_ports(self.SMTP_PORT, self.API_PORT)
+            .with_env("MP_SMTP_AUTH", f"{self.USERNAME}:{self.PASSWORD}")
+            .with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["mailpit"])
+        )
+        if self.WITH_TLS:
+            self._cert_dir = tempfile.TemporaryDirectory()
+            cert_path = Path(self._cert_dir.name)
+            _write_self_signed_certificate(cert_path)
+            container = (
+                container.with_volume_mapping(str(cert_path), "/certs", "ro")
+                .with_env("MP_SMTP_TLS_CERT", "/certs/cert.pem")
+                .with_env("MP_SMTP_TLS_KEY", "/certs/key.pem")
+            )
+        else:
+            # Without TLS Mailpit only offers AUTH on an insecure connection when told to.
+            container = container.with_env("MP_SMTP_AUTH_ALLOW_INSECURE", "1")
+        return container
+
+    def start(self) -> DockerContainer:
+        """Start Mailpit and wait until its SMTP and HTTP listeners are up."""
+        if self._is_running:
+            return self._container
+
+        if self._container is None:
+            self._container = self._build()
+
+        self._container.start()
+        wait_for_logs(self._container, r"\[http\] accessible via", timeout=60)
+        wait_for_logs(self._container, r"\[smtpd\] starting on", timeout=60)
+        self._is_running = True
+
+        self.host = self._container.get_container_host_ip()
+        self.smtp_port = int(self._container.get_exposed_port(self.SMTP_PORT))
+        self.api_url = f"http://{self.host}:{self._container.get_exposed_port(self.API_PORT)}"
+
+        logger.info("Mailpit container started: SMTP %s:%s, API %s", self.host, self.smtp_port, self.api_url)
+        return self._container
+
+    def stop(self) -> None:
+        """Stop the Mailpit container."""
+        if not self._is_running:
+            return
+
+        if self._container:
+            self._container.stop()
+        if self._cert_dir:
+            self._cert_dir.cleanup()
+
+        self._container = None
+        self._cert_dir = None
+        self._is_running = False
+        self.host = None
+        self.smtp_port = None
+        self.api_url = None
+
+        logger.info("Mailpit container stopped")
+
+
+@ContainerManager.register("mailpit-plain")
+class PlainMailpitTestContainer(MailpitTestContainer):
+    """Mailpit without TLS: the server does not advertise STARTTLS."""
+
+    WITH_TLS = False
+    NAME = "mailpit-plain"

@@ -38,6 +38,7 @@ class TestConfig(BaseConfig):
     STARROCKS__IMAGE: str
     TEMPORAL__IMAGE: str
     VAULT__IMAGE: str
+    MAILPIT__IMAGE: str
     TESTCONTAINERS_RYUK_CONTAINER_IMAGE: str | None = None
 
     def __init__(self, **kwargs) -> None:

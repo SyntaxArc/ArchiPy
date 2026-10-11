@@ -37,8 +37,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-TOKEN_REFRESH_SECONDS = 300
-
 
 class EmailConnectionManager:
     """Manages SMTP connections with connection pooling and timeout handling."""
@@ -51,8 +49,9 @@ class EmailConnectionManager:
         self.last_error: Exception | None = None
 
     def connect(self) -> None:
-        """Establish SMTP connection with authentication.
+        """Establish SMTP connection with optional STARTTLS and authentication.
 
+        STARTTLS is negotiated only when the server advertises it, so plain SMTP relays work too.
         Failures are captured and leave ``smtp_connection`` as ``None``; the cause is kept in ``last_error``.
 
         Raises:
@@ -67,7 +66,10 @@ class EmailConnectionManager:
                 self.config.SMTP_PORT,
                 timeout=self.config.CONNECTION_TIMEOUT,
             )
-            self.smtp_connection.starttls()
+            self.smtp_connection.ehlo()
+            if self.smtp_connection.has_extn("starttls"):
+                self.smtp_connection.starttls()
+                self.smtp_connection.ehlo()
             if self.config.USERNAME and self.config.PASSWORD:
                 self.smtp_connection.login(self.config.USERNAME, self.config.PASSWORD)
             self.last_used = DatetimeUtils.get_datetime_now()
@@ -95,7 +97,7 @@ class EmailConnectionManager:
             return
 
         time_diff = (DatetimeUtils.get_datetime_now() - self.last_used).total_seconds()
-        if time_diff > TOKEN_REFRESH_SECONDS:  # Refresh after 5 minutes
+        if time_diff > self.config.CONNECTION_REFRESH_SECONDS:
             self.disconnect()
             self.connect()
 

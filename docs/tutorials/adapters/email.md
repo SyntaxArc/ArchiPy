@@ -27,6 +27,7 @@ EMAIL__USERNAME=your-username
 EMAIL__PASSWORD=your-password
 EMAIL__POOL_SIZE=5
 EMAIL__CONNECTION_TIMEOUT=30
+EMAIL__CONNECTION_REFRESH_SECONDS=300  # reconnect pooled connections idle longer than this
 ```
 
 ### Direct Configuration
