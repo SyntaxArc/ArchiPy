@@ -74,7 +74,9 @@ else:
 
 ## Timeout Decorator
 
-The timeout decorator ensures a function doesn't run longer than a specified duration.
+The timeout decorator ensures a function doesn't run longer than a specified duration. The limit may be a float
+(e.g. `0.5`). It uses `SIGALRM`, so it works on Unix and only from the main thread; the previous signal handler is
+restored after the call.
 
 ```python
 import logging

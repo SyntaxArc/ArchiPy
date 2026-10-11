@@ -81,6 +81,10 @@ class EmailPort:
         Returns:
             None
 
+        Raises:
+            InvalidArgumentError: If the adapter is misconfigured or an attachment is invalid.
+            UnavailableError: If the email cannot be delivered because the mail service is unavailable.
+
         Examples:
             >>> # Simple text email
             >>> adapter.send_email(to_email="user@example.com", subject="Hello", body="This is a test email")

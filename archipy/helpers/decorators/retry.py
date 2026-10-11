@@ -67,6 +67,7 @@ def retry_decorator(
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             retries = 0
+            last_exception: Exception | None = None
             while retries < max_retries:
                 try:
                     result = func(*args, **kwargs)
@@ -74,6 +75,7 @@ def retry_decorator(
                         logger.info("Attempt %d succeeded.", retries + 1)
                 except Exception as e:
                     retries += 1
+                    last_exception = e
                     # Check if the exception should be ignored
                     if ignore and isinstance(e, ignore):
                         raise
@@ -85,7 +87,7 @@ def retry_decorator(
                         time.sleep(delay)
                     continue
                 return result
-            raise ResourceExhaustedError(resource_type=resource_type)
+            raise ResourceExhaustedError(resource_type=resource_type) from last_exception
 
         return wrapper
 

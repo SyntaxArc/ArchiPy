@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import signal
+import time
 from functools import wraps
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
@@ -16,14 +17,22 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def timeout_decorator(seconds: int) -> Callable[[Callable[P, R]], Callable[P, R]]:
+def timeout_decorator(seconds: float) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """A decorator that adds a timeout to a function.
 
     If the function takes longer than the specified number of seconds to execute,
-    a DeadlineExceededException is raised.
+    a `DeadlineExceededError` is raised. The timeout is implemented with
+    `signal.setitimer(signal.ITIMER_REAL, ...)`, so fractional seconds are supported.
+    After the call, the previous SIGALRM handler is restored and any timer that was
+    pending before the call is re-armed with its remaining time.
+
+    Limitations:
+        Relies on `SIGALRM`, so it works only on Unix and only when the decorated function
+        is called from the main thread of the main interpreter. It cannot interrupt
+        blocking C calls that do not return to the interpreter.
 
     Args:
-        seconds (int): The maximum number of seconds the function is allowed to run.
+        seconds (float): The maximum number of seconds the function is allowed to run.
 
     Returns:
         Callable: The decorated function with a timeout.
@@ -40,13 +49,8 @@ def timeout_decorator(seconds: int) -> Callable[[Callable[P, R]], Callable[P, R]
 
         try:
             result = long_running_function()
-        except DeadlineExceededException as e:
-            print(e)  # Output: "Function long_running_function timed out after 3 seconds."
-        ```
-
-        Output:
-        ```
-        DeadlineExceededException: Function long_running_function timed out after 3 seconds.
+        except DeadlineExceededError as e:
+            print(e.additional_data)  # {"timeout": 3, "operation": "long_running_function"}
         ```
     """
 
@@ -57,18 +61,21 @@ def timeout_decorator(seconds: int) -> Callable[[Callable[P, R]], Callable[P, R]
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             def handle_timeout(_signum: int, _frame: Any) -> None:
-                raise DeadlineExceededError(operation=func_name)
+                raise DeadlineExceededError(timeout=seconds, operation=func_name)
 
-            # Set the signal handler and alarm
-            signal.signal(signal.SIGALRM, handle_timeout)
-            signal.alarm(seconds)
+            previous_handler = signal.signal(signal.SIGALRM, handle_timeout)
+            started = time.monotonic()
+            previous_remaining, previous_interval = signal.setitimer(signal.ITIMER_REAL, seconds)
 
             try:
-                result = func(*args, **kwargs)
+                return func(*args, **kwargs)
             finally:
-                # Disable the alarm
-                signal.alarm(0)
-            return result
+                # Disable our timer, restore the previous handler and any timer that was pending
+                signal.setitimer(signal.ITIMER_REAL, 0)
+                signal.signal(signal.SIGALRM, previous_handler)
+                if previous_remaining > 0:
+                    remaining = max(previous_remaining - (time.monotonic() - started), 1e-6)
+                    signal.setitimer(signal.ITIMER_REAL, remaining, previous_interval)
 
         return wrapper
 

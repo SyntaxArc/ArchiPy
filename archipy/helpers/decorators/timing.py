@@ -13,13 +13,15 @@ logger = logging.getLogger(__name__)
 
 
 def timing_decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
-    """A decorator that measures the execution time of a function and logs it if the logging level is DEBUG.
+    """A decorator that measures the execution time of a function and logs it when DEBUG logging is enabled.
+
+    The duration is also logged when the function raises an exception.
 
     Args:
         func (Callable): The function to be decorated.
 
     Returns:
-        Callable: The wrapped function which logs the execution time if the logging level is DEBUG.
+        Callable: The wrapped function which logs the execution time when DEBUG logging is enabled.
 
     Example:
         To use this decorator, simply apply it to any function. For example:
@@ -34,7 +36,7 @@ def timing_decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
         result = example_function(2)
         ```
 
-        Output (if logging level is DEBUG):
+        Output (if DEBUG logging is enabled):
         ```
         2023-10-10 12:00:00,000 - DEBUG - example_function took 2.0001 seconds to execute.
         Slept for 2 seconds
@@ -47,13 +49,12 @@ def timing_decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
 
     @wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        if logging.getLogger().level == logging.DEBUG:
-            start_time = time.time()
-            result = func(*args, **kwargs)
-            end_time = time.time()
-            logger.debug("%s took %.4f seconds to execute.", func_name, end_time - start_time)
-        else:
-            result = func(*args, **kwargs)
-        return result
+        if not logger.isEnabledFor(logging.DEBUG):
+            return func(*args, **kwargs)
+        start_time = time.perf_counter()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            logger.debug("%s took %.4f seconds to execute.", func_name, time.perf_counter() - start_time)
 
     return wrapper

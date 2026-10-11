@@ -52,7 +52,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
                 the PROXIES field.
 
         Raises:
-            ValueError: If LOGIN_ACCOUNT is not a valid string.
+            InvalidArgumentError: If LOGIN_ACCOUNT is not a valid string.
         """
         configs = BaseConfig.global_config().PARSIAN_SHAPARAK if config is None else config
         if not configs.LOGIN_ACCOUNT or not isinstance(configs.LOGIN_ACCOUNT, str):
@@ -226,7 +226,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
                 the PROXIES field.
 
         Raises:
-            ValueError: If LOGIN_ACCOUNT is not a valid string.
+            InvalidArgumentError: If LOGIN_ACCOUNT is not a valid string.
         """
         configs = BaseConfig.global_config().PARSIAN_SHAPARAK if config is None else config
         if not configs.LOGIN_ACCOUNT or not isinstance(configs.LOGIN_ACCOUNT, str):

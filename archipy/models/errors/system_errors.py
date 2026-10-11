@@ -261,7 +261,7 @@ class DeadlineExceededError(BaseError):
 
     def __init__(
         self,
-        timeout: int | None = None,
+        timeout: float | None = None,
         operation: str | None = None,
         lang: LanguageType | None = None,
         additional_data: dict[str, Any] | None = None,

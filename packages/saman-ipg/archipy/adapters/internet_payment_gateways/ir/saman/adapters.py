@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 import httpx2
@@ -37,7 +38,14 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
     """
 
     def __init__(self, config: SamanShaparakConfig | None = None) -> None:
-        """Initialize SamanShaparakPaymentAdapter."""
+        """Initialize SamanShaparakPaymentAdapter.
+
+        Args:
+            config: Optional Saman Shaparak config; defaults to the global config.
+
+        Raises:
+            InvalidArgumentError: If TERMINAL_ID is not configured.
+        """
         configs = BaseConfig.global_config().SAMAN_SHAPARAK if config is None else config
 
         if not configs.TERMINAL_ID:
@@ -59,6 +67,20 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
             return None
         return proxies.get("https") or proxies.get("http") or proxies.get("socks5") or proxies.get("socks5h")
 
+    def _get_terminal_number(self) -> int:
+        """Convert the configured terminal ID to the numeric form required by verify/reverse.
+
+        Returns:
+            int: Numeric terminal number.
+
+        Raises:
+            InvalidArgumentError: If TERMINAL_ID is not numeric.
+        """
+        try:
+            return int(self.terminal_id)
+        except ValueError as e:
+            raise InvalidArgumentError(argument_name="TERMINAL_ID") from e
+
     def initiate_payment(self, request: PaymentRequestDTO) -> PaymentResponseDTO:
         """Step 1: Request payment token.
 
@@ -69,7 +91,7 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
             PaymentResponseDTO: Response containing token, status, etc.
 
         Raises:
-            UnavailableError: If the payment service is unavailable.
+            UnavailableError: If the payment service is unavailable or returns HTTP 5xx.
             InternalError: If an unexpected error occurs.
         """
         try:
@@ -99,6 +121,10 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
             )
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Token Service") from e
+        except httpx2.HTTPStatusError as e:
+            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+                raise UnavailableError(resource_type="Saman Token Service") from e
+            raise InternalError() from e
         except Exception as e:
             raise InternalError() from e
 
@@ -112,11 +138,13 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
             VerifyResponseDTO: Response containing transaction details.
 
         Raises:
-            UnavailableError: If the verify service is unavailable.
+            InvalidArgumentError: If TERMINAL_ID is not numeric.
+            UnavailableError: If the verify service is unavailable or returns HTTP 5xx.
             InternalError: If an unexpected error occurs.
         """
+        terminal_number = self._get_terminal_number()
         try:
-            payload = {"RefNum": request.reference_number, "TerminalNumber": int(self.terminal_id)}
+            payload = {"RefNum": request.reference_number, "TerminalNumber": terminal_number}
 
             resp = self.client.post(self.verify_url, json=payload)
             resp.raise_for_status()
@@ -137,6 +165,10 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
             )
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Verify Service") from e
+        except httpx2.HTTPStatusError as e:
+            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+                raise UnavailableError(resource_type="Saman Verify Service") from e
+            raise InternalError() from e
         except Exception as e:
             raise InternalError() from e
 
@@ -150,11 +182,13 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
             ReverseResponseDTO: Response containing reversal result.
 
         Raises:
-            UnavailableError: If the reverse service is unavailable.
+            InvalidArgumentError: If TERMINAL_ID is not numeric.
+            UnavailableError: If the reverse service is unavailable or returns HTTP 5xx.
             InternalError: If an unexpected error occurs.
         """
+        terminal_number = self._get_terminal_number()
         try:
-            payload = {"RefNum": request.reference_number, "TerminalNumber": int(self.terminal_id)}
+            payload = {"RefNum": request.reference_number, "TerminalNumber": terminal_number}
             resp = self.client.post(self.reverse_url, json=payload)
             resp.raise_for_status()
             data = resp.json()
@@ -166,6 +200,10 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
             )
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Reverse Service") from e
+        except httpx2.HTTPStatusError as e:
+            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+                raise UnavailableError(resource_type="Saman Reverse Service") from e
+            raise InternalError() from e
         except Exception as e:
             raise InternalError() from e
 
@@ -187,7 +225,7 @@ class SamanNeoPgShaparakPaymentAdapter(SamanShaparakPaymentAdapter):
             PaymentResponseDTO: Response containing token, status, and IPG URL.
 
         Raises:
-            UnavailableError: If the payment service is unavailable.
+            UnavailableError: If the payment service is unavailable or returns HTTP 5xx.
             InternalError: If an unexpected error occurs.
         """
         try:
@@ -219,6 +257,10 @@ class SamanNeoPgShaparakPaymentAdapter(SamanShaparakPaymentAdapter):
             )
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Neo-PG Token Service") from e
+        except httpx2.HTTPStatusError as e:
+            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+                raise UnavailableError(resource_type="Saman Neo-PG Token Service") from e
+            raise InternalError() from e
         except Exception as e:
             raise InternalError() from e
 
@@ -232,7 +274,14 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
     """
 
     def __init__(self, config: SamanShaparakConfig | None = None) -> None:
-        """Initialize AsyncSamanShaparakPaymentAdapter."""
+        """Initialize AsyncSamanShaparakPaymentAdapter.
+
+        Args:
+            config: Optional Saman Shaparak config; defaults to the global config.
+
+        Raises:
+            InvalidArgumentError: If TERMINAL_ID is not configured.
+        """
         configs = BaseConfig.global_config().SAMAN_SHAPARAK if config is None else config
 
         if not configs.TERMINAL_ID:
@@ -254,6 +303,20 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
             return None
         return proxies.get("https") or proxies.get("http") or proxies.get("socks5") or proxies.get("socks5h")
 
+    def _get_terminal_number(self) -> int:
+        """Convert the configured terminal ID to the numeric form required by verify/reverse.
+
+        Returns:
+            int: Numeric terminal number.
+
+        Raises:
+            InvalidArgumentError: If TERMINAL_ID is not numeric.
+        """
+        try:
+            return int(self.terminal_id)
+        except ValueError as e:
+            raise InvalidArgumentError(argument_name="TERMINAL_ID") from e
+
     async def initiate_payment(self, request: PaymentRequestDTO) -> PaymentResponseDTO:
         """Step 1: Request payment token (async).
 
@@ -264,7 +327,7 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
             PaymentResponseDTO: Response containing token, status, etc.
 
         Raises:
-            UnavailableError: If the payment service is unavailable.
+            UnavailableError: If the payment service is unavailable or returns HTTP 5xx.
             InternalError: If an unexpected error occurs.
         """
         try:
@@ -294,6 +357,10 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
             )
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Token Service") from e
+        except httpx2.HTTPStatusError as e:
+            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+                raise UnavailableError(resource_type="Saman Token Service") from e
+            raise InternalError() from e
         except Exception as e:
             raise InternalError() from e
 
@@ -307,11 +374,13 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
             VerifyResponseDTO: Response containing transaction details.
 
         Raises:
-            UnavailableError: If the verify service is unavailable.
+            InvalidArgumentError: If TERMINAL_ID is not numeric.
+            UnavailableError: If the verify service is unavailable or returns HTTP 5xx.
             InternalError: If an unexpected error occurs.
         """
+        terminal_number = self._get_terminal_number()
         try:
-            payload = {"RefNum": request.reference_number, "TerminalNumber": int(self.terminal_id)}
+            payload = {"RefNum": request.reference_number, "TerminalNumber": terminal_number}
 
             resp = await self.client.post(self.verify_url, json=payload)
             resp.raise_for_status()
@@ -332,6 +401,10 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
             )
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Verify Service") from e
+        except httpx2.HTTPStatusError as e:
+            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+                raise UnavailableError(resource_type="Saman Verify Service") from e
+            raise InternalError() from e
         except Exception as e:
             raise InternalError() from e
 
@@ -345,11 +418,13 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
             ReverseResponseDTO: Response containing reversal result.
 
         Raises:
-            UnavailableError: If the reverse service is unavailable.
+            InvalidArgumentError: If TERMINAL_ID is not numeric.
+            UnavailableError: If the reverse service is unavailable or returns HTTP 5xx.
             InternalError: If an unexpected error occurs.
         """
+        terminal_number = self._get_terminal_number()
         try:
-            payload = {"RefNum": request.reference_number, "TerminalNumber": int(self.terminal_id)}
+            payload = {"RefNum": request.reference_number, "TerminalNumber": terminal_number}
             resp = await self.client.post(self.reverse_url, json=payload)
             resp.raise_for_status()
             data = resp.json()
@@ -361,6 +436,10 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
             )
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Reverse Service") from e
+        except httpx2.HTTPStatusError as e:
+            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+                raise UnavailableError(resource_type="Saman Reverse Service") from e
+            raise InternalError() from e
         except Exception as e:
             raise InternalError() from e
 
@@ -382,7 +461,7 @@ class AsyncSamanNeoPgShaparakPaymentAdapter(AsyncSamanShaparakPaymentAdapter):
             PaymentResponseDTO: Response containing token, status, and IPG URL.
 
         Raises:
-            UnavailableError: If the payment service is unavailable.
+            UnavailableError: If the payment service is unavailable or returns HTTP 5xx.
             InternalError: If an unexpected error occurs.
         """
         try:
@@ -414,5 +493,9 @@ class AsyncSamanNeoPgShaparakPaymentAdapter(AsyncSamanShaparakPaymentAdapter):
             )
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Neo-PG Token Service") from e
+        except httpx2.HTTPStatusError as e:
+            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+                raise UnavailableError(resource_type="Saman Neo-PG Token Service") from e
+            raise InternalError() from e
         except Exception as e:
             raise InternalError() from e

@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, BinaryIO, cast, override
 
 import httpx2
 from jinja2 import Template
-from pydantic import EmailStr, HttpUrl
+from pydantic import EmailStr, HttpUrl, ValidationError
 
 from archipy.adapters.email.ports import EmailPort
 from archipy.configs.base_config import BaseConfig
@@ -26,7 +26,7 @@ from archipy.helpers.decorators.tracing import trace_span
 from archipy.helpers.utils.base_utils import BaseUtils
 from archipy.helpers.utils.datetime_utils import DatetimeUtils
 from archipy.models.dtos.email_dtos import EmailAttachmentDTO
-from archipy.models.errors import InvalidArgumentError
+from archipy.models.errors import InvalidArgumentError, UnavailableError
 from archipy.models.types.email_types import EmailAttachmentDispositionType, EmailAttachmentType
 
 if TYPE_CHECKING:
@@ -48,9 +48,16 @@ class EmailConnectionManager:
         self.config = config
         self.smtp_connection: smtplib.SMTP | None = None
         self.last_used: datetime | None = None
+        self.last_error: Exception | None = None
 
     def connect(self) -> None:
-        """Establish SMTP connection with authentication."""
+        """Establish SMTP connection with authentication.
+
+        Failures are captured and leave ``smtp_connection`` as ``None``; the cause is kept in ``last_error``.
+
+        Raises:
+            InvalidArgumentError: If no SMTP server is configured.
+        """
         if not self.config.SMTP_SERVER:
             raise InvalidArgumentError(argument_name="SMTP_SERVER")
 
@@ -64,9 +71,11 @@ class EmailConnectionManager:
             if self.config.USERNAME and self.config.PASSWORD:
                 self.smtp_connection.login(self.config.USERNAME, self.config.PASSWORD)
             self.last_used = DatetimeUtils.get_datetime_now()
+            self.last_error = None
         except (smtplib.SMTPException, OSError, TimeoutError) as e:
             BaseUtils.capture_exception(e)
             self.smtp_connection = None
+            self.last_error = e
 
     def disconnect(self) -> None:
         """Close SMTP connection safely."""
@@ -130,7 +139,24 @@ class AttachmentHandler:
         content_id: str | None = None,
         max_size: int | None = None,
     ) -> EmailAttachmentDTO:
-        """Create an attachment with validation."""
+        """Create an attachment with validation.
+
+        Args:
+            source: Attachment content, file path, base64 string, URL or binary stream.
+            filename: Name shown to the recipient.
+            attachment_type: How ``source`` must be interpreted.
+            content_type: Optional MIME type of the attachment.
+            content_disposition: Whether the attachment is inline or a regular attachment.
+            content_id: Optional Content-ID for inline attachments.
+            max_size: Maximum size in bytes; defaults to the configured ``ATTACHMENT_MAX_SIZE``.
+
+        Returns:
+            EmailAttachmentDTO: The validated attachment.
+
+        Raises:
+            InvalidArgumentError: If the source cannot be read or the attachment fails validation
+                (for example it exceeds the maximum size).
+        """
         if max_size is None:
             max_size = BaseConfig.global_config().EMAIL.ATTACHMENT_MAX_SIZE
         try:
@@ -149,6 +175,11 @@ class AttachmentHandler:
             raise InvalidArgumentError(
                 argument_name="attachment",
                 additional_data={"reason": "create_failed", "detail": str(exception)},
+            ) from exception
+        except ValidationError as exception:
+            raise InvalidArgumentError(
+                argument_name="attachment",
+                additional_data={"reason": "validation_failed", "detail": str(exception)},
             ) from exception
 
     @staticmethod
@@ -291,7 +322,24 @@ class EmailAdapter(EmailPort):
         template: str | None = None,
         template_vars: dict | None = None,
     ) -> None:
-        """Send email with advanced features and connection pooling."""
+        """Send email with advanced features and connection pooling.
+
+        Args:
+            to_email: Primary recipient(s) of the email.
+            subject: Email subject line.
+            body: Email body content (plain text or HTML).
+            cc: Carbon copy recipient(s).
+            bcc: Blind carbon copy recipient(s).
+            attachments: List of file paths or EmailAttachmentDTO objects.
+            html: If True, treats body as HTML content, otherwise plain text.
+            template: A template string to render using template_vars.
+            template_vars: Variables to use when rendering the template.
+
+        Raises:
+            InvalidArgumentError: If no SMTP server is configured or an attachment is invalid.
+            UnavailableError: If the SMTP server cannot be reached or the email cannot be sent
+                after ``MAX_RETRIES`` attempts.
+        """
         connection: EmailConnectionManager | None = None
         try:
             connection = self.connection_pool.get_connection()
@@ -309,21 +357,25 @@ class EmailAdapter(EmailPort):
 
             recipients = self._get_all_recipients(to_email, cc, bcc)
 
-            for attempt in range(self.config.MAX_RETRIES):
+            last_error: Exception | None = None
+            for _ in range(self.config.MAX_RETRIES):
                 try:
+                    if not connection.smtp_connection:
+                        connection.connect()
                     if connection.smtp_connection:
                         connection.smtp_connection.send_message(msg, to_addrs=recipients)
                         logger.debug("Email sent successfully to %s", to_email)
                         return
-                    else:
-                        connection.connect()
+                    last_error = connection.last_error
                 except (smtplib.SMTPException, OSError, TimeoutError) as e:
-                    if attempt == self.config.MAX_RETRIES - 1:
-                        BaseUtils.capture_exception(e)
-                    connection.connect()  # Retry with fresh connection
+                    BaseUtils.capture_exception(e)
+                    last_error = e
+                    connection.disconnect()  # Close the broken session; reconnect on next attempt
 
+            raise UnavailableError(resource_type="SMTP") from last_error
         except (smtplib.SMTPException, OSError, TimeoutError) as e:
             BaseUtils.capture_exception(e)
+            raise UnavailableError(resource_type="SMTP") from e
         finally:
             if connection:
                 self.connection_pool.return_connection(connection)

@@ -31,7 +31,11 @@ class PaymentResponseDTO(BaseDTO):
 
     @model_validator(mode="after")
     def validate_status(self) -> Self:
-        """Validate TLS-related settings to ensure compatibility."""
+        """Validate that the response fields are consistent with its status.
+
+        Raises:
+            FailedPreconditionError: If status is 1 without a token, or -1 without an error code.
+        """
         if (self.status == 1 and self.token is None) or (self.status == -1 and self.error_code is None):
             raise FailedPreconditionError()
         return self
