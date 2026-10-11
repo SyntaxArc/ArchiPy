@@ -4,7 +4,7 @@ import logging
 import uuid
 from typing import Any
 
-from behave import given, then, when
+from behave import given, step, then, when
 from behave.runner import Context
 from features.scenario_context import ScenarioContext
 from features.test_helpers import get_current_scenario_context
@@ -754,7 +754,7 @@ async def step_create_realm_role(context: Context, role_name: str, description: 
         context.logger.exception("Realm role creation failed")
 
 
-@when(
+@step(
     'I create a client role named "{role_name}" for client "{client_id}" with description "{description}" using {adapter_type} adapter',
 )
 async def step_create_client_role(
@@ -812,7 +812,7 @@ async def step_assign_realm_role(context: Context, role_name: str, username: str
         context.logger.exception("Role assignment failed")
 
 
-@when('I assign client role "{role_name}" of client "{client_id}" to user "{username}" using {adapter_type} adapter')
+@step('I assign client role "{role_name}" of client "{client_id}" to user "{username}" using {adapter_type} adapter')
 async def step_assign_client_role(
     context: Context,
     role_name: str,
