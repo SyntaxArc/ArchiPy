@@ -2288,12 +2288,15 @@ def step_then_no_instrumentor_error(context):
 
 
 @given("FastAPI log records are {state} with a logger provider")
-def step_given_fastapi_logs(context, state):
+def step_given_fastapi_logs(context: Context, state: str) -> None:
     from opentelemetry.sdk._logs import LoggerProvider
 
+    scenario_context = get_current_scenario_context(context)
     config = BaseConfig.global_config()
     config.OTEL.FASTAPI_LOGS_ENABLED = state == "enabled"
     OtelUtils._logger_provider = LoggerProvider()
+    # Ensures teardown_otel_testing resets the provider and config flag.
+    scenario_context.store("otel_enabled_for_test", True)
 
 
 @when("I build the FastAPI telemetry config")
@@ -2313,7 +2316,7 @@ def step_then_fastapi_telemetry_logs(context, state):
 
 
 @given("FastAPI log records are enabled with an in-memory log exporter")
-def step_given_fastapi_logs_in_memory(context):
+def step_given_fastapi_logs_in_memory(context: Context) -> None:
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk._logs.export import InMemoryLogRecordExporter, SimpleLogRecordProcessor
 
@@ -2324,6 +2327,8 @@ def step_given_fastapi_logs_in_memory(context):
     BaseConfig.global_config().OTEL.FASTAPI_LOGS_ENABLED = True
     OtelUtils._logger_provider = provider
     scenario_context.store("log_exporter", exporter)
+    # Ensures teardown_otel_testing resets the provider and config flag.
+    scenario_context.store("otel_enabled_for_test", True)
 
 
 @when('I create an instrumented FastAPI app whose endpoint "{path}" raises')

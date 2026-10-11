@@ -24,7 +24,7 @@ _RPC_ACTIVE_INSTRUMENT = "rpc.server.active_requests"
 _RPC_METER_NAME = "archipy.grpc"
 
 
-class _RpcDurationHistogram:
+class _RpcInstruments:
     """Lazy, process-wide RPC instruments bound to the current meter.
 
     Holds the ``rpc.server.request.duration`` histogram and the ``rpc.server.active_requests`` counter,
@@ -93,20 +93,27 @@ class _RpcCallRecorder:
             "rpc.service": method_name_model.service,
             "rpc.method": method_name_model.method,
         }
+        self._finished = False
         self._active.add(1, self._active_attributes)
         self._start = time.perf_counter()
 
     @classmethod
     def start(cls, method_name_model: MethodName) -> _RpcCallRecorder | None:
         """Begin tracking a call, or return ``None`` when metrics are unavailable."""
-        instruments = _RpcDurationHistogram.get()
+        instruments = _RpcInstruments.get()
         if instruments is None:
             return None
         histogram, active = instruments
         return cls(histogram, active, method_name_model)
 
     def finish(self, status: str) -> None:
-        """Decrement active requests and record elapsed seconds with the call status."""
+        """Decrement active requests and record elapsed seconds with the call status.
+
+        Idempotent: only the first call records, so a termination callback and the normal path cannot double count.
+        """
+        if self._finished:
+            return
+        self._finished = True
         self._active.add(-1, self._active_attributes)
         self._histogram.record(
             time.perf_counter() - self._start,
@@ -145,7 +152,10 @@ class GrpcServerOtelMetricsInterceptor(BaseGrpcServerInterceptor):
             recorder.finish(OtelUtils.metric_status_for_exception(exc))
             raise
         if isinstance(result, Iterator):
-            # Response-streaming handler: the RPC only finishes once the stream is consumed.
+            # Response-streaming handler: the RPC only finishes once the stream is consumed. If the client
+            # cancels or the stream is never iterated, the generator's ``finally`` never runs, so also finish
+            # on RPC termination to keep the active-requests counter balanced.
+            context.add_callback(lambda: recorder.finish("cancelled"))
             return self._time_stream(result, recorder)
         recorder.finish("ok")
         return result

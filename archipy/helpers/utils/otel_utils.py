@@ -596,11 +596,11 @@ class OtelUtils:
         """Clear decorator and gRPC metric instrument caches after provider reset."""
         from archipy.helpers.decorators.metrics import clear_instrument_caches
         from archipy.helpers.interceptors.grpc.otel_metrics.server_interceptor import (
-            _RpcDurationHistogram,
+            _RpcInstruments,
         )
 
         clear_instrument_caches()
-        _RpcDurationHistogram.clear()
+        _RpcInstruments.clear()
 
     @classmethod
     def _force_flush_unlocked(cls, timeout_millis: int) -> bool:
