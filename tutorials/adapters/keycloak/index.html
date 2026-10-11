@@ -3647,6 +3647,7 @@ authorization. ArchiPy offers both synchronous and asynchronous implementations.
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">KEYCLOAK__CLIENT_SECRET_KEY</span><span class="o">=</span>client-secret
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nv">KEYCLOAK__VERIFY_SSL</span><span class="o">=</span><span class="nb">true</span>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nv">KEYCLOAK__TIMEOUT</span><span class="o">=</span><span class="m">10</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nv">KEYCLOAK__TOKEN_LEEWAY_SECONDS</span><span class="o">=</span><span class="m">0</span><span class="w">  </span><span class="c1"># clock-skew tolerance when validating token expiry</span>
 </span></code></pre></div>
 <h3 id="direct-configuration">Direct Configuration<a class="headerlink" href="#direct-configuration" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.config_template</span><span class="w"> </span><span class="kn">import</span> <span class="n">KeycloakConfig</span>
@@ -4120,6 +4121,10 @@ configured for each method based on how frequently the data typically changes:</
 <li>The adapter automatically refreshes admin tokens before they expire.</li>
 <li>Write operations (like user creation/updates) automatically clear relevant caches.</li>
 <li>For production use, prefer the authorization code flow over direct username/password authentication.</li>
+<li><code>KeycloakUtils</code> role checks read <code>realm_access</code> and <code>resource_access</code> from the UserInfo response. Stock Keycloak
+  omits them there, so enable "Add to userinfo" on the realm roles and client roles mappers of the <code>roles</code> client scope.</li>
+<li>Token expiry is checked locally with <code>KEYCLOAK__TOKEN_LEEWAY_SECONDS</code> (default <code>0</code>) of clock-skew tolerance; raise it
+  only if your servers' clocks drift.</li>
 </ul>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>

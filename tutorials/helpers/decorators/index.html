@@ -3495,7 +3495,9 @@
 </span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Request succeeded: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="timeout-decorator">Timeout Decorator<a class="headerlink" href="#timeout-decorator" title="Permanent link">&para;</a></h2>
-<p>The timeout decorator ensures a function doesn't run longer than a specified duration.</p>
+<p>The timeout decorator ensures a function doesn't run longer than a specified duration. The limit may be a float
+(e.g. <code>0.5</code>). It uses <code>SIGALRM</code>, so it works on Unix and only from the main thread; the previous signal handler is
+restored after the call.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
