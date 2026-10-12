@@ -5,7 +5,7 @@ from behave import given, then, when
 
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers.utils.jwt_utils import JWTUtils
-from archipy.models.errors import InvalidTokenError, TokenExpiredError
+from archipy.models.errors import InvalidArgumentError, InvalidTokenError, TokenExpiredError
 from features.test_helpers import get_current_scenario_context
 
 
@@ -125,3 +125,112 @@ def step_then_invalid_token_exception_raised(context):
     decode_error = scenario_context.get("decode_error")
 
     assert isinstance(decode_error, InvalidTokenError)
+
+
+def _try_create(scenario_context, **kwargs):
+    try:
+        JWTUtils.create_access_token(scenario_context.get("user_uuid"), **kwargs)
+        scenario_context.store("claims_error", None)
+    except InvalidArgumentError as e:
+        scenario_context.store("claims_error", e)
+
+
+@when('an access token is created with the additional claim "{claim}"')
+def step_when_token_with_additional_claim(context, claim):
+    scenario_context = get_current_scenario_context(context)
+    _try_create(scenario_context, additional_claims={claim: "forged"}, auth_config=BaseConfig.global_config().AUTH)
+
+
+@when('an access token is created with the signing algorithm "{algorithm}"')
+def step_when_token_with_algorithm(context, algorithm):
+    scenario_context = get_current_scenario_context(context)
+    auth = BaseConfig.global_config().AUTH.model_copy(update={"HASH_ALGORITHM": algorithm})
+    _try_create(scenario_context, auth_config=auth)
+
+
+@then("a token claims error should be raised")
+def step_then_token_claims_error(context):
+    error = get_current_scenario_context(context).get("claims_error")
+    assert isinstance(error, InvalidArgumentError), repr(error)
+
+
+@given("an access token that expired {seconds:d} seconds ago")
+def step_given_token_expired_seconds_ago(context, seconds):
+    scenario_context = get_current_scenario_context(context)
+    token = JWTUtils.create_access_token(
+        scenario_context.get("user_uuid"),
+        additional_claims={"exp": int(time.time()) - seconds},
+        auth_config=BaseConfig.global_config().AUTH,
+    )
+    scenario_context.store("token", token)
+
+
+def _decode(scenario_context, **kwargs):
+    auth = BaseConfig.global_config().AUTH
+    leeway = kwargs.pop("leeway", None)
+    if leeway is not None:
+        auth = auth.model_copy(update={"JWT_LEEWAY": leeway})
+    try:
+        payload = JWTUtils.decode_token(scenario_context.get("token"), auth_config=auth, **kwargs)
+        scenario_context.store("decode_success", True)
+        scenario_context.store("decoded_payload", payload)
+    except Exception as e:
+        scenario_context.store("decode_success", False)
+        scenario_context.store("decode_error", e)
+
+
+@when("the token is decoded with a leeway of {leeway:d} seconds")
+def step_when_decoded_with_leeway(context, leeway):
+    _decode(get_current_scenario_context(context), leeway=leeway)
+
+
+@when("the token is decoded requiring an empty token type")
+def step_when_decoded_requiring_empty_type(context):
+    _decode(get_current_scenario_context(context), verify_type="")
+
+
+@when("an authentication configuration is built with a leeway of {leeway:d}")
+def step_when_auth_config_leeway(context, leeway):
+    from pydantic import ValidationError
+
+    from archipy.configs.config_template import AuthConfig
+
+    scenario_context = get_current_scenario_context(context)
+    try:
+        AuthConfig(JWT_LEEWAY=leeway)
+        scenario_context.store("config_error", None)
+    except ValidationError as e:
+        scenario_context.store("config_error", e)
+
+
+@then("the configuration is rejected")
+def step_then_configuration_rejected(context):
+    assert get_current_scenario_context(context).get("config_error") is not None
+
+
+@when('an access token is created with a {length:d} byte signing key and the algorithm "{algorithm}"')
+def step_when_token_with_key_length(context, length, algorithm):
+    from pydantic import SecretStr
+
+    auth = BaseConfig.global_config().AUTH.model_copy(
+        update={"SECRET_KEY": SecretStr("k" * length), "HASH_ALGORITHM": algorithm},
+    )
+    _try_create(get_current_scenario_context(context), auth_config=auth)
+
+
+@then("no token error is raised")
+def step_then_no_token_error(context):
+    assert get_current_scenario_context(context).get("claims_error") is None
+
+
+@when("the token is decoded with a {length:d} byte signing key")
+def step_when_decoded_with_short_key(context, length):
+    from pydantic import SecretStr
+
+    scenario_context = get_current_scenario_context(context)
+    auth = BaseConfig.global_config().AUTH.model_copy(update={"SECRET_KEY": SecretStr("k" * length)})
+    try:
+        JWTUtils.decode_token(scenario_context.get("token"), auth_config=auth)
+        scenario_context.store("claims_error", None)
+    except InvalidArgumentError as e:
+        scenario_context.store("claims_error", e)

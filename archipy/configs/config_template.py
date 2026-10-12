@@ -1140,6 +1140,11 @@ class AuthConfig(BaseModel):
     JWT_ISSUER: str = Field(default="your-app-name", description="JWT issuer claim")
     JWT_AUDIENCE: str = Field(default="your-app-audience", description="JWT audience claim")
     TOKEN_VERSION: int = Field(default=1, description="JWT token version")
+    JWT_LEEWAY: int = Field(
+        default=0,
+        ge=0,
+        description="Clock-skew tolerance in seconds applied to exp, nbf and iat when verifying tokens",
+    )
 
     # TOTP Settings
     TOTP_SECRET_KEY: SecretStr | None = Field(default=None, description="TOTP master key")
@@ -1160,7 +1165,11 @@ class AuthConfig(BaseModel):
     PASSWORD_RESET_RATE_LIMIT: int = Field(default=3, description="Maximum password reset requests per hour")
 
     # Password Policy
-    HASH_ITERATIONS: int = Field(default=100000, description="Password hash iterations")
+    HASH_ITERATIONS: int = Field(
+        default=600000,
+        ge=1,
+        description="Password hash iterations (PBKDF2-HMAC-SHA256); stored hashes record their own count",
+    )
     MIN_LENGTH: int = Field(default=12, ge=8, description="Minimum password length")
     REQUIRE_DIGIT: bool = Field(default=True, description="Whether password requires digits")
     REQUIRE_LOWERCASE: bool = Field(default=True, description="Whether password requires lowercase")
@@ -1168,7 +1177,11 @@ class AuthConfig(BaseModel):
     REQUIRE_UPPERCASE: bool = Field(default=True, description="Whether password requires uppercase")
     SALT_LENGTH: int = Field(default=16, description="Password salt length")
     SPECIAL_CHARACTERS: set[str] = Field(default=set("!@#$%^&*()-_+="), description="Set of allowed special characters")
-    PASSWORD_HISTORY_SIZE: int = Field(default=3, description="Number of previous passwords to remember")
+    PASSWORD_HISTORY_SIZE: int = Field(
+        default=3,
+        ge=0,
+        description="Number of previous passwords to remember (0 disables the history check)",
+    )
 
     # Token Security
     ENABLE_JTI_CLAIM: bool = Field(default=True, description="Enable JWT ID claim for token tracking")

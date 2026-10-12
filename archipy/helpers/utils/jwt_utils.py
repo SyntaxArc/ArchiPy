@@ -17,6 +17,34 @@ if TYPE_CHECKING:
     from archipy.configs.config_template import AuthConfig
 
 
+# Identity claims that additional_claims must not redefine (time claims stay overridable, e.g. for short-lived tokens)
+_PROTECTED_CLAIMS = frozenset({"iss", "aud", "jti"})
+
+
+def _validated_algorithm(configs: AuthConfig) -> str:
+    """Return the configured signing algorithm, refusing the unsigned ``none`` algorithm."""
+    algorithm = configs.HASH_ALGORITHM
+    if not algorithm or algorithm.lower() == "none":
+        raise InvalidArgumentError("HASH_ALGORITHM")
+    return algorithm
+
+
+# RFC 7518 section 3.2: an HMAC key must be at least as long as the hash output
+_MIN_HMAC_KEY_BYTES = {"HS256": 32, "HS384": 48, "HS512": 64}
+
+
+def _validated_secret(configs: AuthConfig) -> str:
+    """Return the signing key, refusing a missing key or one too short for the configured HMAC algorithm."""
+    secret_key = configs.SECRET_KEY
+    if secret_key is None:
+        raise InvalidArgumentError("SECRET_KEY")
+    value = secret_key.get_secret_value()
+    minimum = _MIN_HMAC_KEY_BYTES.get(configs.HASH_ALGORITHM.upper(), 0)
+    if len(value.encode("utf-8")) < minimum:
+        raise InvalidArgumentError("SECRET_KEY", additional_data={"detail": f"at least {minimum} bytes required"})
+    return value
+
+
 class JWTUtils:
     """Utility class for JWT token operations with enhanced security and datetime handling."""
 
@@ -33,7 +61,9 @@ class JWTUtils:
         Args:
             data (dict[str, Any]): Base claims data to include in the token.
             expires_in (int): Token expiration time in seconds.
-            additional_claims (dict[str, Any] | None): Optional additional claims to include in the token.
+            additional_claims (dict[str, Any] | None): Optional additional claims to include in the token. They
+                cannot redefine ``iss``, ``aud``, ``jti`` or any key already present in ``data`` (for example
+                ``sub``, ``type`` and ``token_version`` of access and refresh tokens); time claims may be overridden.
             auth_config (AuthConfig | None): Optional auth configuration override.
                 If not provided, uses the global config.
 
@@ -41,7 +71,9 @@ class JWTUtils:
             str: The encoded JWT token.
 
         Raises:
-            ValueError: If data is empty or expiration is invalid
+            InvalidArgumentError: If data is empty, the expiration is invalid, ``additional_claims`` collides with
+                reserved claims, the secret key is missing or too short for the algorithm (HS256 needs 32 bytes,
+                HS384 48, HS512 64), or the algorithm is not configured.
         """
         import jwt
 
@@ -56,6 +88,8 @@ class JWTUtils:
             raise InvalidArgumentError(arg_data)
         if expires_in <= 0:
             raise InvalidArgumentError(arg_expires_in)
+        if additional_claims and (reserved := (_PROTECTED_CLAIMS | data.keys()) & additional_claims.keys()):
+            raise InvalidArgumentError("additional_claims", additional_data={"reserved_claims": sorted(reserved)})
 
         to_encode = data.copy()
         expire = DatetimeUtils.get_datetime_after_given_datetime_or_now(seconds=expires_in, datetime_given=current_time)
@@ -81,10 +115,8 @@ class JWTUtils:
             to_encode.update(additional_claims)
 
         # Validate SECRET_KEY
-        secret_key = configs.SECRET_KEY
-        if secret_key is None:
-            raise InvalidArgumentError("SECRET_KEY")
-        return jwt.encode(to_encode, secret_key.get_secret_value(), algorithm=configs.HASH_ALGORITHM)
+        algorithm = _validated_algorithm(configs)
+        return jwt.encode(to_encode, _validated_secret(configs), algorithm=algorithm)
 
     @classmethod
     def create_access_token(
@@ -171,13 +203,7 @@ class JWTUtils:
             InvalidTokenError: If the token is invalid (e.g., invalid signature, audience, issuer, or type).
         """
         import jwt
-        from jwt.exceptions import (
-            ExpiredSignatureError,
-            InvalidAudienceError,
-            InvalidIssuerError,
-            InvalidSignatureError,
-            InvalidTokenError as JWTInvalidTokenError,
-        )
+        from jwt.exceptions import ExpiredSignatureError, InvalidTokenError as JWTInvalidTokenError
 
         configs = auth_config or BaseConfig.global_config().AUTH
         required_claims = ["exp", "iat", "nbf", "aud", "iss", "sub", "type", "token_version"]
@@ -186,14 +212,11 @@ class JWTUtils:
 
         try:
             # Validate SECRET_KEY
-            secret_key = configs.SECRET_KEY
-            if secret_key is None:
-                raise InvalidArgumentError("SECRET_KEY")
-
+            algorithm = _validated_algorithm(configs)
             payload = jwt.decode(
                 token,
-                secret_key.get_secret_value(),
-                algorithms=[configs.HASH_ALGORITHM],
+                _validated_secret(configs),
+                algorithms=[algorithm],
                 options={
                     "verify_signature": True,
                     "verify_exp": True,
@@ -205,10 +228,11 @@ class JWTUtils:
                 },
                 audience=configs.JWT_AUDIENCE,
                 issuer=configs.JWT_ISSUER,
+                leeway=configs.JWT_LEEWAY,
             )
 
             # Verify token type
-            if verify_type and payload.get("type") != verify_type:
+            if verify_type is not None and payload.get("type") != verify_type:
                 raise InvalidTokenError
 
             # Verify token version
@@ -220,13 +244,8 @@ class JWTUtils:
 
         except ExpiredSignatureError as exception:
             raise TokenExpiredError from exception
-        except InvalidSignatureError as exception:
-            raise InvalidTokenError from exception
-        except InvalidAudienceError as exception:
-            raise InvalidTokenError from exception
-        except InvalidIssuerError as exception:
-            raise InvalidTokenError from exception
         except JWTInvalidTokenError as exception:
+            # Signature, audience, issuer, nbf/iat and malformed-token errors all derive from this class
             raise InvalidTokenError from exception
 
     @classmethod
@@ -242,8 +261,8 @@ class JWTUtils:
             dict[str, Any]: The decoded access token payload.
 
         Raises:
-            InvalidTokenException: If the token is invalid or not an access token.
-            TokenExpiredException: If the token has expired.
+            InvalidTokenError: If the token is invalid or not an access token.
+            TokenExpiredError: If the token has expired.
         """
         configs = auth_config or BaseConfig.global_config().AUTH
         return cls.decode_token(token, verify_type="access", auth_config=configs)
@@ -261,8 +280,8 @@ class JWTUtils:
             dict[str, Any]: The decoded refresh token payload.
 
         Raises:
-            InvalidTokenException: If the token is invalid or not a refresh token.
-            TokenExpiredException: If the token has expired.
+            InvalidTokenError: If the token is invalid or not a refresh token.
+            TokenExpiredError: If the token has expired.
         """
         configs = auth_config or BaseConfig.global_config().AUTH
         return cls.decode_token(token, verify_type="refresh", auth_config=configs)
@@ -278,7 +297,7 @@ class JWTUtils:
             UUID: The user's UUID.
 
         Raises:
-            InvalidTokenException: If the user identifier is invalid or missing.
+            InvalidTokenError: If the user identifier is invalid or missing.
         """
         try:
             return UUID(payload["sub"])
@@ -298,7 +317,7 @@ class JWTUtils:
             int: The token expiry timestamp in seconds.
 
         Raises:
-            InvalidTokenException: If the token is invalid.
+            InvalidTokenError: If the token is invalid.
         """
         payload = cls.decode_token(token, auth_config=auth_config)
         return int(payload["exp"])

@@ -1,3 +1,7 @@
+import hashlib
+import os
+from base64 import b64encode
+
 from behave import given, then, when
 
 from archipy.configs.base_config import BaseConfig
@@ -138,9 +142,13 @@ def step_when_reuse_old_password(context, new_password):
     scenario_context = get_current_scenario_context(context)
     password_history = scenario_context.get("password_history")
     test_config = BaseConfig.global_config()
+    auth = test_config.AUTH
+    history_size = scenario_context.get("history_size")
+    if history_size is not None:
+        auth = auth.model_copy(update={"PASSWORD_HISTORY_SIZE": history_size})
 
     try:
-        PasswordUtils.validate_password_history(new_password, password_history, test_config.AUTH)
+        PasswordUtils.validate_password_history(new_password, password_history, auth)
         scenario_context.store("validation_passed", True)
     except InvalidPasswordError as e:
         scenario_context.store("validation_passed", False)
@@ -160,3 +168,67 @@ def step_then_password_reuse_fails_with_message(context):
     print(f"Error message: {validation_error}")
     # Less strict check - just make sure it's a password error
     assert "INVALID_PASSWORD" in validation_error
+
+
+@then('the stored hash uses the "{scheme}" scheme with the configured iteration count')
+def step_then_hash_is_versioned(context, scheme):
+    scenario_context = get_current_scenario_context(context)
+    hashed_password = scenario_context.get("hashed_password")
+    parts = hashed_password.split("$")
+    assert len(parts) == 4, hashed_password
+    assert parts[0] == scheme
+    assert int(parts[1]) == BaseConfig.global_config().AUTH.HASH_ITERATIONS
+
+
+@when("the password is verified with the iteration setting changed to {iterations:d}")
+def step_when_verified_with_changed_iterations(context, iterations):
+    scenario_context = get_current_scenario_context(context)
+    auth = BaseConfig.global_config().AUTH.model_copy(update={"HASH_ITERATIONS": iterations})
+    scenario_context.store(
+        "is_verified",
+        PasswordUtils.verify_password(scenario_context.get("password"), scenario_context.get("hashed_password"), auth),
+    )
+
+
+def _legacy_hash(password, iterations):
+    auth = BaseConfig.global_config().AUTH
+    salt = os.urandom(auth.SALT_LENGTH)
+    return b64encode(salt + hashlib.pbkdf2_hmac("sha256", password.encode(), salt, iterations)).decode("utf-8")
+
+
+@given("the password is hashed in the legacy format with the configured iteration count")
+def step_given_legacy_hash_configured(context):
+    scenario_context = get_current_scenario_context(context)
+    iterations = BaseConfig.global_config().AUTH.HASH_ITERATIONS
+    scenario_context.store("hashed_password", _legacy_hash(scenario_context.get("password"), iterations))
+
+
+@given("the password is hashed in the legacy format with {iterations:d} iterations")
+def step_given_legacy_hash_iterations(context, iterations):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("hashed_password", _legacy_hash(scenario_context.get("password"), iterations))
+
+
+@given('a stored hash "{stored}"')
+def step_given_stored_hash(context, stored):
+    get_current_scenario_context(context).store("hashed_password", stored)
+
+
+@given("the password history size is {size:d}")
+def step_given_history_size(context, size):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("history_size", size)
+
+
+@when("an authentication configuration is built with a password history size of {size:d}")
+def step_when_auth_config_history_size(context, size):
+    from pydantic import ValidationError
+
+    from archipy.configs.config_template import AuthConfig
+
+    scenario_context = get_current_scenario_context(context)
+    try:
+        AuthConfig(PASSWORD_HISTORY_SIZE=size)
+        scenario_context.store("config_error", None)
+    except ValidationError as e:
+        scenario_context.store("config_error", e)

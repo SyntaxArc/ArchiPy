@@ -19,6 +19,12 @@ if TYPE_CHECKING:
     from archipy.models.types.language_type import LanguageType
 
 
+_HASH_SCHEME = "pbkdf2_sha256"
+_HASH_SEPARATOR = "$"
+# Iteration count used by the pre-versioned format when the setting was left at its old default.
+_LEGACY_DEFAULT_ITERATIONS = 100_000
+
+
 class PasswordUtils:
     """A utility class for handling password-related operations, such as hashing, verification, and validation."""
 
@@ -32,18 +38,26 @@ class PasswordUtils:
                 If not provided, uses the global config.
 
         Returns:
-            str: A base64-encoded string containing the salt and hash in the format "salt:hash".
+            str: A self-describing string in the format ``pbkdf2_sha256$<iterations>$<salt>$<hash>`` where salt and
+                hash are base64-encoded. The iteration count is stored with the hash, so changing
+                ``HASH_ITERATIONS`` or ``SALT_LENGTH`` later does not invalidate existing hashes.
         """
         configs = auth_config or BaseConfig.global_config().AUTH
         salt = os.urandom(configs.SALT_LENGTH)
-        pw_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, configs.HASH_ITERATIONS)
+        iterations = configs.HASH_ITERATIONS
+        pw_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, iterations)
 
-        # Combine salt and hash, encode in base64
-        return b64encode(salt + pw_hash).decode("utf-8")
+        return _HASH_SEPARATOR.join(
+            (_HASH_SCHEME, str(iterations), b64encode(salt).decode("utf-8"), b64encode(pw_hash).decode("utf-8")),
+        )
 
     @staticmethod
     def verify_password(password: str, stored_password: str, auth_config: AuthConfig | None = None) -> bool:
         """Verifies a password against a stored hash.
+
+        Both the current ``pbkdf2_sha256$...`` format and the legacy format (base64 of ``salt + hash``, written by
+        earlier versions) are accepted. Legacy hashes carry no parameters, so they are tried with the configured
+        ``HASH_ITERATIONS`` and, if that differs, with the former default of 100000.
 
         Args:
             password (str): The password to verify.
@@ -57,19 +71,29 @@ class PasswordUtils:
         try:
             configs = auth_config or BaseConfig.global_config().AUTH
 
-            # Decode the stored password
+            if stored_password.startswith(_HASH_SCHEME + _HASH_SEPARATOR):
+                _, iterations, salt_b64, hash_b64 = stored_password.split(_HASH_SEPARATOR)
+                salt = b64decode(salt_b64.encode("utf-8"), validate=True)
+                stored_hash = b64decode(hash_b64.encode("utf-8"), validate=True)
+                return PasswordUtils._matches(password, salt, stored_hash, int(iterations))
+
+            # Legacy format: base64(salt + hash)
             decoded = b64decode(stored_password.encode("utf-8"))
             salt = decoded[: configs.SALT_LENGTH]
             stored_hash = decoded[configs.SALT_LENGTH :]
-
-            # Hash the provided password with the same salt
-            pw_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, configs.HASH_ITERATIONS)
-
-            # Compare in constant time to prevent timing attacks
-            return hmac.compare_digest(pw_hash, stored_hash)
+            candidates = dict.fromkeys((configs.HASH_ITERATIONS, _LEGACY_DEFAULT_ITERATIONS))
+            return any(PasswordUtils._matches(password, salt, stored_hash, count) for count in candidates)
         except ValueError, TypeError, IndexError:
             # Catch specific exceptions that could occur during decoding or comparison
             return False
+
+    @staticmethod
+    def _matches(password: str, salt: bytes, stored_hash: bytes, iterations: int) -> bool:
+        """Hash ``password`` with the given parameters and compare in constant time."""
+        if iterations < 1:
+            return False
+        pw_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, iterations)
+        return hmac.compare_digest(pw_hash, stored_hash)
 
     @staticmethod
     def validate_password(
@@ -174,9 +198,10 @@ class PasswordUtils:
         # First validate against password policy
         cls.validate_password(new_password, configs)
 
-        # Check password history
-        if any(
+        # Check password history (a size of 0 disables the check)
+        history_size = max(configs.PASSWORD_HISTORY_SIZE, 0)
+        if history_size and any(
             cls.verify_password(new_password, old_password, configs)
-            for old_password in password_history[-configs.PASSWORD_HISTORY_SIZE :]
+            for old_password in password_history[-history_size:]
         ):
             raise InvalidPasswordError(requirements=["Password has been used recently"], lang=lang)
