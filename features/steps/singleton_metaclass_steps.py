@@ -3,7 +3,7 @@ import time
 
 from behave import given, then, when
 
-from archipy.helpers.decorators.singleton import singleton_decorator
+from archipy.helpers.decorators import singleton
 from archipy.helpers.metaclasses.singleton import Singleton
 from features.test_helpers import get_current_scenario_context
 
@@ -41,7 +41,7 @@ def _make_decorated_class(name, calls, slow=False, **kwargs):
             time.sleep(0.05)
         self.value = value
 
-    return singleton_decorator(**kwargs)(type(name, (), {"__init__": init}))
+    return singleton(**kwargs)(type(name, (), {"__init__": init}))
 
 
 @given("a class using the singleton decorator")

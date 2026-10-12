@@ -61,43 +61,43 @@ With optional extras (install only what you need):
 
 ArchiPy supports modular features through optional extras — install only what you need:
 
-| Category      | Extra                           | Description                                       |
-|---------------|---------------------------------|---------------------------------------------------|
-| Database      | `archipy[postgres]`             | PostgreSQL adapter with SQLAlchemy integration    |
-| Database      | `archipy[mysql]`                | MySQL adapter with SQLAlchemy integration         |
-| Database      | `archipy[mysql-async]`          | MySQL async adapter (asyncmy2)                    |
-| Database      | `archipy[aiosqlite]`            | SQLite async adapter with SQLAlchemy integration  |
-| Database      | `archipy[starrocks]`            | StarRocks adapter with SQLAlchemy integration     |
-| Database      | `archipy[starrocks-async]`      | StarRocks async adapter                           |
-| Database      | `archipy[sqlalchemy]`           | SQLAlchemy core integration                       |
-| Database      | `archipy[sqlalchemy-async]`     | SQLAlchemy async integration                      |
-| Database      | `archipy[elasticsearch]`        | Elasticsearch integration                         |
-| Database      | `archipy[elasticsearch-async]`  | Elasticsearch async integration                   |
-| Database      | `archipy[scylladb]`             | ScyllaDB integration                              |
-| Service       | `archipy[redis]`                | Redis caching and key-value storage               |
-| Service       | `archipy[keycloak]`             | Authentication and authorization services         |
-| Service       | `archipy[minio]`                | S3-compatible object storage                      |
-| Service       | `archipy[kafka]`                | Message streaming and event processing            |
-| Service       | `archipy[temporalio]`           | Temporal workflow engine                          |
-| Service       | `archipy[parsian-ipg]`          | Payment gateway (Parsian)                         |
-| Service       | `archipy[saman-ipg]`            | Payment gateway (Saman)                           |
-| Web           | `archipy[fastapi]`              | FastAPI integration with middleware and utilities |
-| Web           | `archipy[grpc]`                 | gRPC integration with interceptors                |
+| Category      | Extra                           | Description                                                        |
+|---------------|---------------------------------|--------------------------------------------------------------------|
+| Database      | `archipy[postgres]`             | PostgreSQL adapter with SQLAlchemy integration                     |
+| Database      | `archipy[mysql]`                | MySQL adapter with SQLAlchemy integration                          |
+| Database      | `archipy[mysql-async]`          | MySQL async adapter (asyncmy2)                                     |
+| Database      | `archipy[aiosqlite]`            | SQLite async adapter with SQLAlchemy integration                   |
+| Database      | `archipy[starrocks]`            | StarRocks adapter with SQLAlchemy integration                      |
+| Database      | `archipy[starrocks-async]`      | StarRocks async adapter                                            |
+| Database      | `archipy[sqlalchemy]`           | SQLAlchemy core integration                                        |
+| Database      | `archipy[sqlalchemy-async]`     | SQLAlchemy async integration                                       |
+| Database      | `archipy[elasticsearch]`        | Elasticsearch integration                                          |
+| Database      | `archipy[elasticsearch-async]`  | Elasticsearch async integration                                    |
+| Database      | `archipy[scylladb]`             | ScyllaDB integration                                               |
+| Service       | `archipy[redis]`                | Redis caching and key-value storage                                |
+| Service       | `archipy[keycloak]`             | Authentication and authorization services                          |
+| Service       | `archipy[minio]`                | S3-compatible object storage                                       |
+| Service       | `archipy[kafka]`                | Message streaming and event processing                             |
+| Service       | `archipy[temporalio]`           | Temporal workflow engine                                           |
+| Service       | `archipy[parsian-ipg]`          | Payment gateway (Parsian)                                          |
+| Service       | `archipy[saman-ipg]`            | Payment gateway (Saman)                                            |
+| Web           | `archipy[fastapi]`              | FastAPI integration with middleware and utilities                  |
+| Web           | `archipy[grpc]`                 | gRPC integration with interceptors                                 |
 | Observability | `archipy[otel]`                 | OpenTelemetry SDK, OTLP, httpx/requests, threading, system metrics |
-| Observability | `archipy[otel-fastapi]`         | FastAPI auto-instrumentation                      |
-| Observability | `archipy[otel-grpc]`            | gRPC server/client contrib interceptors           |
-| Observability | `archipy[otel-sqlalchemy]`      | SQLAlchemy instrumentation                        |
-| Observability | `archipy[otel-redis]`           | Redis instrumentation                             |
-| Observability | `archipy[otel-kafka]`           | Confluent Kafka instrumentation                   |
-| Observability | `archipy[otel-scylladb]`        | Cassandra/ScyllaDB instrumentation                |
-| Observability | `archipy[otel-minio]`           | Botocore (MinIO/S3) instrumentation               |
-| Utilities     | `archipy[jwt]`                  | JSON Web Token utilities                          |
-| Utilities     | `archipy[scheduler]`            | Task scheduling utilities                         |
-| Utilities     | `archipy[cache]`                | TTL and async caching utilities                   |
-| Utilities     | `archipy[dependency-injection]` | Dependency injector support                       |
-| Testing       | `archipy[fakeredis]`            | In-memory Redis mock for testing                  |
-| Testing       | `archipy[testcontainers]`       | Testcontainers integration                        |
-| Testing       | `archipy[behave]`               | BDD testing framework                             |
+| Observability | `archipy[otel-fastapi]`         | FastAPI auto-instrumentation                                       |
+| Observability | `archipy[otel-grpc]`            | gRPC server/client contrib interceptors                            |
+| Observability | `archipy[otel-sqlalchemy]`      | SQLAlchemy instrumentation                                         |
+| Observability | `archipy[otel-redis]`           | Redis instrumentation                                              |
+| Observability | `archipy[otel-kafka]`           | Confluent Kafka instrumentation                                    |
+| Observability | `archipy[otel-scylladb]`        | Cassandra/ScyllaDB instrumentation                                 |
+| Observability | `archipy[otel-minio]`           | Botocore (MinIO/S3) instrumentation                                |
+| Utilities     | `archipy[jwt]`                  | JSON Web Token utilities                                           |
+| Utilities     | `archipy[scheduler]`            | Task scheduling utilities                                          |
+| Utilities     | `archipy[cache]`                | TTL and async caching utilities                                    |
+| Utilities     | `archipy[dependency-injection]` | Dependency injector support                                        |
+| Testing       | `archipy[fakeredis]`            | In-memory Redis mock for testing                                   |
+| Testing       | `archipy[testcontainers]`       | Testcontainers integration                                         |
+| Testing       | `archipy[behave]`               | BDD testing framework                                              |
 
 > **Note:** Enable observability with `OTEL__IS_ENABLED=true` and install the matching `otel-*`
 > extras for each stack you use. See [Observability](../tutorials/observability.md).
@@ -119,7 +119,8 @@ If issues arise, verify:
 > require Python 3.14 or later. Using an older Python will result in `SyntaxError` at import time.
 
 > **Tip:** For the best development experience, use an IDE that supports Python type hints, such as PyCharm or VS Code
-> with the Python extension. The project uses modern Python type hints and benefits from IDE support for type checking and
+> with the Python extension. The project uses modern Python type hints and benefits from IDE support for type checking
+> and
 > autocompletion.
 
 ## See Also

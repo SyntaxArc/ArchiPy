@@ -129,14 +129,14 @@ else:
 ```python
 import logging
 
-from archipy.helpers.decorators.sqlalchemy_atomic import starrocks_sqlalchemy_atomic_decorator
+from archipy.helpers.decorators import starrocks_sqlalchemy_atomic
 from archipy.models.errors import DatabaseQueryError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
-@starrocks_sqlalchemy_atomic_decorator
+@starrocks_sqlalchemy_atomic
 def create_user_with_profile(
     username: str,
     email: str,
@@ -174,7 +174,7 @@ import asyncio
 import logging
 
 from archipy.adapters.starrocks.sqlalchemy.adapters import AsyncStarrocksSQLAlchemyAdapter
-from archipy.helpers.decorators.sqlalchemy_atomic import async_starrocks_sqlalchemy_atomic_decorator
+from archipy.helpers.decorators import starrocks_sqlalchemy_atomic
 from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
 # Configure logging
@@ -191,7 +191,7 @@ async def main() -> None:
     else:
         logger.info("Async StarRocks adapter created")
 
-    @async_starrocks_sqlalchemy_atomic_decorator
+    @starrocks_sqlalchemy_atomic
     async def create_user_async(username: str, email: str, age: int) -> User:
         """Create a user asynchronously.
 

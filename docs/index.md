@@ -37,7 +37,7 @@ Install and run a typed, cached service:
 ```python
 from archipy.configs.base_config import BaseConfig
 from archipy.adapters.redis.adapters import RedisAdapter
-from archipy.helpers.decorators.cache import ttl_cache
+from archipy.helpers.decorators import ttl_cache
 
 config = BaseConfig()
 BaseConfig.set_global(config)
@@ -75,7 +75,8 @@ ArchiPy is organized into four layers:
 - **Models** — Entities (SQLAlchemy), DTOs (Pydantic), Errors, and Types — data structures only, no I/O
 - **Helpers** — Pure utilities: decorators (retry, cache, atomic), interceptors (rate limiting, tracing), JWT, password,
   date utils
-- **Adapters** — Plug-and-play integrations: PostgreSQL, MySQL, SQLite, StarRocks, Redis, Kafka, Keycloak, MinIO, ScyllaDB,
+- **Adapters** — Plug-and-play integrations: PostgreSQL, MySQL, SQLite, StarRocks, Redis, Kafka, Keycloak, MinIO,
+  ScyllaDB,
   Elasticsearch, Temporal, Email, Payment Gateways
 
 ## Architecture Overview

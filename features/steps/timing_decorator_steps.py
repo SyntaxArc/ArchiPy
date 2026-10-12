@@ -5,7 +5,7 @@ import time
 
 from behave import given, then, when
 
-from archipy.helpers.decorators.timing import timing_decorator
+from archipy.helpers.decorators import timing
 from features.test_helpers import get_current_scenario_context
 
 _TIMING_LOGGER = "archipy.helpers.decorators.timing"
@@ -24,7 +24,7 @@ class _ListHandler(logging.Handler):
 def step_given_timing_function(context, sleep):
     sc = get_current_scenario_context(context)
 
-    @timing_decorator
+    @timing
     def slow_work(a=0, b=0):
         time.sleep(sleep)
         return "result" if (a, b) == (0, 0) else f"result:{a + b}"
@@ -36,7 +36,7 @@ def step_given_timing_function(context, sleep):
 def step_given_async_timing_function(context, sleep):
     sc = get_current_scenario_context(context)
 
-    @timing_decorator
+    @timing
     async def slow_work():
         await asyncio.sleep(sleep)
         return "result"
@@ -48,7 +48,7 @@ def step_given_async_timing_function(context, sleep):
 def step_given_timing_raising_function(context):
     sc = get_current_scenario_context(context)
 
-    @timing_decorator
+    @timing
     def slow_work():
         raise ValueError("boom")
 

@@ -10,22 +10,22 @@ your business logic and external dependencies.
 
 ## Available Adapters
 
-| Adapter                                 | Purpose                        | Example                                              | API Reference                                           |
-|-----------------------------------------|--------------------------------|------------------------------------------------------|---------------------------------------------------------|
-| [Email](email.md)                       | Email sending interface        | Connect to SMTP servers for sending emails           | [API](../../api_reference/adapters/email.md)            |
-| [Keycloak](keycloak.md)                 | Authentication & authorization | User management and access control with Keycloak     | [API](../../api_reference/adapters/keycloak.md)         |
-| [Kafka](kafka.md)                       | Message streaming              | Event-driven architectures with Apache Kafka         | [API](../../api_reference/adapters/kafka.md)            |
-| [MinIO](minio.md)                       | Object storage                 | S3-compatible object storage for files and documents | [API](../../api_reference/adapters/minio.md)            |
-| [Payment Gateways](payment_gateways.md) | Payment gateway                | Process online payments with Parsian & Saman   | [API](../../api_reference/adapters/payment_gateways.md) |
-| [PostgreSQL](postgres.md)               | Database access                | SQLAlchemy integration for PostgreSQL                | [API](../../api_reference/adapters/postgres.md)         |
-| [MySQL](mysql.md)                       | Database access                | SQLAlchemy integration for MySQL                     | [API](../../api_reference/adapters/mysql.md)            |
-| [SQLite](sqlite.md)                     | Database access                | SQLAlchemy integration for SQLite                    | [API](../../api_reference/adapters/sqlite.md)           |
-| [StarRocks](starrocks.md)               | Database access                | SQLAlchemy integration for StarRocks                 | [API](../../api_reference/adapters/starrocks.md)        |
-| [ScyllaDB](scylladb.md)                 | NoSQL database                 | Wide-column store for ScyllaDB and Cassandra         | [API](../../api_reference/adapters/scylladb.md)         |
-| [Elasticsearch](elasticsearch.md)       | Search & analytics             | Full-text search, document indexing, aggregations    | [API](../../api_reference/adapters/elasticsearch.md)    |
+| Adapter                                 | Purpose                        | Example                                                   | API Reference                                           |
+|-----------------------------------------|--------------------------------|-----------------------------------------------------------|---------------------------------------------------------|
+| [Email](email.md)                       | Email sending interface        | Connect to SMTP servers for sending emails                | [API](../../api_reference/adapters/email.md)            |
+| [Keycloak](keycloak.md)                 | Authentication & authorization | User management and access control with Keycloak          | [API](../../api_reference/adapters/keycloak.md)         |
+| [Kafka](kafka.md)                       | Message streaming              | Event-driven architectures with Apache Kafka              | [API](../../api_reference/adapters/kafka.md)            |
+| [MinIO](minio.md)                       | Object storage                 | S3-compatible object storage for files and documents      | [API](../../api_reference/adapters/minio.md)            |
+| [Payment Gateways](payment_gateways.md) | Payment gateway                | Process online payments with Parsian & Saman              | [API](../../api_reference/adapters/payment_gateways.md) |
+| [PostgreSQL](postgres.md)               | Database access                | SQLAlchemy integration for PostgreSQL                     | [API](../../api_reference/adapters/postgres.md)         |
+| [MySQL](mysql.md)                       | Database access                | SQLAlchemy integration for MySQL                          | [API](../../api_reference/adapters/mysql.md)            |
+| [SQLite](sqlite.md)                     | Database access                | SQLAlchemy integration for SQLite                         | [API](../../api_reference/adapters/sqlite.md)           |
+| [StarRocks](starrocks.md)               | Database access                | SQLAlchemy integration for StarRocks                      | [API](../../api_reference/adapters/starrocks.md)        |
+| [ScyllaDB](scylladb.md)                 | NoSQL database                 | Wide-column store for ScyllaDB and Cassandra              | [API](../../api_reference/adapters/scylladb.md)         |
+| [Elasticsearch](elasticsearch.md)       | Search & analytics             | Full-text search, document indexing, aggregations         | [API](../../api_reference/adapters/elasticsearch.md)    |
 | [Redis](redis.md)                       | Key-value store                | Caching, pub/sub, RediSearch vector/range/hybrid, cluster | [API](../../api_reference/adapters/redis.md)            |
-| [Temporal](temporal.md)                 | Workflow orchestration         | Durable workflow execution and activity coordination | [API](../../api_reference/adapters/temporal.md)         |
-| [Vault](vault.md)                       | Secrets management             | KV v2 secrets, dynamic leases, transit encryption    | [API](../../api_reference/adapters/vault.md)            |
+| [Temporal](temporal.md)                 | Workflow orchestration         | Durable workflow execution and activity coordination      | [API](../../api_reference/adapters/temporal.md)         |
+| [Vault](vault.md)                       | Secrets management             | KV v2 secrets, dynamic leases, transit encryption         | [API](../../api_reference/adapters/vault.md)            |
 
 ## Adapter Architecture
 

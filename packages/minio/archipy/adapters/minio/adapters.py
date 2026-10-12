@@ -24,7 +24,7 @@ from archipy.adapters.minio.ports import (
 )
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import MinioConfig
-from archipy.helpers.decorators import ttl_cache_decorator
+from archipy.helpers.decorators import ttl_cache
 from archipy.models.errors import (
     AlreadyExistsError,
     ConfigurationError,
@@ -229,7 +229,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self.object_exists.clear_cache()
 
     @override
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def bucket_exists(self, bucket_name: str) -> bool:
         """Check if a bucket exists.
 
@@ -335,7 +335,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_general_exception(e, "remove_bucket")
 
     @override
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=1)
+    @ttl_cache(ttl_seconds=300, maxsize=1)
     def list_buckets(self) -> list[MinioBucketType]:
         """List all buckets.
 
@@ -394,13 +394,11 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not object_name or not file_path:
                 _raise_invalid_argument(
-                    "bucket_name, object_name or file_path"
-                    if not all([bucket_name, object_name, file_path])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "object_name"
-                    if not object_name
-                    else "file_path",
+                    (
+                        "bucket_name, object_name or file_path"
+                        if not all([bucket_name, object_name, file_path])
+                        else ("bucket_name" if not bucket_name else "object_name" if not object_name else "file_path")
+                    ),
                 )
             extra_args: dict[str, Any] = {}
             if tags:
@@ -436,13 +434,11 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not object_name or not file_path:
                 _raise_invalid_argument(
-                    "bucket_name, object_name or file_path"
-                    if not all([bucket_name, object_name, file_path])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "object_name"
-                    if not object_name
-                    else "file_path",
+                    (
+                        "bucket_name, object_name or file_path"
+                        if not all([bucket_name, object_name, file_path])
+                        else ("bucket_name" if not bucket_name else "object_name" if not object_name else "file_path")
+                    ),
                 )
             self._client.download_file(bucket_name, object_name, file_path)
         except InvalidArgumentError:
@@ -473,11 +469,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not object_name:
                 _raise_invalid_argument(
-                    "bucket_name or object_name"
-                    if not all([bucket_name, object_name])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "object_name",
+                    (
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
                 )
             self._client.delete_object(Bucket=bucket_name, Key=object_name)
             self._clear_object_caches()
@@ -511,7 +509,10 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             if not object_names:
                 _raise_invalid_argument("object_names")
 
-            delete_payload = {"Objects": [{"Key": name} for name in object_names], "Quiet": True}
+            delete_payload = {
+                "Objects": [{"Key": name} for name in object_names],
+                "Quiet": True,
+            }
             self._client.delete_objects(Bucket=bucket_name, Delete=delete_payload)
             self._clear_object_caches()
         except InvalidArgumentError:
@@ -524,7 +525,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_general_exception(e, "remove_objects")
 
     @override
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def object_exists(self, bucket_name: str, object_name: str) -> bool:
         """Check if an object exists in a bucket.
 
@@ -543,11 +544,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not object_name:
                 _raise_invalid_argument(
-                    "bucket_name or object_name"
-                    if not all([bucket_name, object_name])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "object_name",
+                    (
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
                 )
             self._client.head_object(Bucket=bucket_name, Key=object_name)
         except InvalidArgumentError:
@@ -568,7 +571,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             return True
 
     @override
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def list_objects(
         self,
         bucket_name: str,
@@ -632,7 +635,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             return object_list
 
     @override
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def stat_object(self, bucket_name: str, object_name: str) -> MinioObjectType:
         """Get object metadata.
 
@@ -653,11 +656,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not object_name:
                 _raise_invalid_argument(
-                    "bucket_name or object_name"
-                    if not all([bucket_name, object_name])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "object_name",
+                    (
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
                 )
             response = self._client.head_object(Bucket=bucket_name, Key=object_name)
         except InvalidArgumentError:
@@ -704,11 +709,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not object_name:
                 _raise_invalid_argument(
-                    "bucket_name or object_name"
-                    if not all([bucket_name, object_name])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "object_name",
+                    (
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
                 )
             url = self._client.generate_presigned_url(
                 "get_object",
@@ -753,11 +760,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not object_name:
                 _raise_invalid_argument(
-                    "bucket_name or object_name"
-                    if not all([bucket_name, object_name])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "object_name",
+                    (
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
                 )
             url = self._client.generate_presigned_url(
                 "put_object",
@@ -798,11 +807,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not policy:
                 _raise_invalid_argument(
-                    "bucket_name or policy"
-                    if not all([bucket_name, policy])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "policy",
+                    (
+                        "bucket_name or policy"
+                        if not all([bucket_name, policy])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "policy"
+                    ),
                 )
             self._client.put_bucket_policy(Bucket=bucket_name, Policy=policy)
         except InvalidArgumentError:
@@ -816,7 +827,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_general_exception(e, "set_bucket_policy")
 
     @override
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def get_bucket_policy(self, bucket_name: str) -> MinioPolicyType:
         """Get bucket policy.
 
@@ -881,15 +892,26 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not src_bucket_name or not src_object_name or not dest_bucket_name or not dest_object_name:
                 _raise_invalid_argument(
-                    "src_bucket_name, src_object_name, dest_bucket_name or dest_object_name"
-                    if not all([src_bucket_name, src_object_name, dest_bucket_name, dest_object_name])
-                    else "src_bucket_name"
-                    if not src_bucket_name
-                    else "src_object_name"
-                    if not src_object_name
-                    else "dest_bucket_name"
-                    if not dest_bucket_name
-                    else "dest_object_name",
+                    (
+                        "src_bucket_name, src_object_name, dest_bucket_name or dest_object_name"
+                        if not all(
+                            [
+                                src_bucket_name,
+                                src_object_name,
+                                dest_bucket_name,
+                                dest_object_name,
+                            ],
+                        )
+                        else (
+                            "src_bucket_name"
+                            if not src_bucket_name
+                            else (
+                                "src_object_name"
+                                if not src_object_name
+                                else ("dest_bucket_name" if not dest_bucket_name else "dest_object_name")
+                            )
+                        )
+                    ),
                 )
             self._client.copy_object(
                 Bucket=dest_bucket_name,
@@ -943,11 +965,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not object_name:
                 _raise_invalid_argument(
-                    "bucket_name or object_name"
-                    if not all([bucket_name, object_name])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "object_name",
+                    (
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
                 )
 
             kwargs: dict[str, Any] = {
@@ -1000,11 +1024,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not object_name:
                 _raise_invalid_argument(
-                    "bucket_name or object_name"
-                    if not all([bucket_name, object_name])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "object_name",
+                    (
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
                 )
             response = self._client.get_object(Bucket=bucket_name, Key=object_name)
         except InvalidArgumentError:
@@ -1045,11 +1071,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not object_name:
                 _raise_invalid_argument(
-                    "bucket_name or object_name"
-                    if not all([bucket_name, object_name])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "object_name",
+                    (
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
                 )
             tag_set = [{"Key": k, "Value": v} for k, v in tags.items()]
             self._client.put_object_tagging(
@@ -1083,11 +1111,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not object_name:
                 _raise_invalid_argument(
-                    "bucket_name or object_name"
-                    if not all([bucket_name, object_name])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "object_name",
+                    (
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
                 )
             self._client.delete_object_tagging(Bucket=bucket_name, Key=object_name)
         except InvalidArgumentError:
@@ -1119,11 +1149,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not object_name:
                 _raise_invalid_argument(
-                    "bucket_name or object_name"
-                    if not all([bucket_name, object_name])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "object_name",
+                    (
+                        "bucket_name or object_name"
+                        if not all([bucket_name, object_name])
+                        else "bucket_name"
+                        if not bucket_name
+                        else "object_name"
+                    ),
                 )
             response = self._client.get_object_tagging(Bucket=bucket_name, Key=object_name)
         except InvalidArgumentError:
@@ -1290,7 +1322,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_general_exception(e, "set_bucket_versioning")
 
     @override
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def get_bucket_versioning(self, bucket_name: str) -> str:
         """Return the versioning status of a bucket.
 
@@ -1326,7 +1358,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             return status
 
     @override
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def list_object_versions(
         self,
         bucket_name: str,
@@ -1412,13 +1444,11 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         try:
             if not bucket_name or not object_name or not version_id:
                 _raise_invalid_argument(
-                    "bucket_name, object_name or version_id"
-                    if not all([bucket_name, object_name, version_id])
-                    else "bucket_name"
-                    if not bucket_name
-                    else "object_name"
-                    if not object_name
-                    else "version_id",
+                    (
+                        "bucket_name, object_name or version_id"
+                        if not all([bucket_name, object_name, version_id])
+                        else ("bucket_name" if not bucket_name else "object_name" if not object_name else "version_id")
+                    ),
                 )
             self._client.delete_object(Bucket=bucket_name, Key=object_name, VersionId=version_id)
             self._clear_object_caches()

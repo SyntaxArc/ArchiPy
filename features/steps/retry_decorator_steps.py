@@ -4,7 +4,7 @@ import time
 
 from behave import given, then, when
 
-from archipy.helpers.decorators.retry import retry_decorator
+from archipy.helpers.decorators import retry
 from archipy.models.errors import InvalidArgumentError, ResourceExhaustedError
 from features.test_helpers import get_current_scenario_context
 
@@ -39,7 +39,7 @@ def step_given_retry_ignore(context, name):
 
 
 def _retry_decorator_from_config(sc):
-    return retry_decorator(
+    return retry(
         max_retries=sc.get("retry_max_retries"),
         delay=sc.get("retry_delay"),
         retry_on=sc.get("retry_on"),

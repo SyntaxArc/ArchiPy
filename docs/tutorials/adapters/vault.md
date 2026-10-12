@@ -146,7 +146,8 @@ except (NotFoundError, PermissionDeniedError) as e:
 ### Dynamic Credentials
 
 Without `parameters`, the adapter calls hvac
-[`secrets.database.generate_credentials`](https://python-hvac.org/en/stable/usage/secrets_engines/database.html#generate-credentials)
+[
+`secrets.database.generate_credentials`](https://python-hvac.org/en/stable/usage/secrets_engines/database.html#generate-credentials)
 (with a generic read fallback for non-database mounts). Pass `parameters` (even `{}`) to
 force a write to `{mount}/creds/{role}` for engines like SSH OTP. Lease renew/revoke use
 [`sys.renew_lease` / `sys.revoke_lease`](https://python-hvac.org/en/stable/usage/system_backend/lease.html).

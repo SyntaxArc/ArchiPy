@@ -16,7 +16,10 @@ from redis.commands.search.query import Query
 from redis.commands.search.reducers import count as agg_count
 from redis.commands.search.result import Result
 
-from archipy.adapters.redis.search_ports import AsyncRedisSearchHandlePort, RedisSearchHandlePort
+from archipy.adapters.redis.search_ports import (
+    AsyncRedisSearchHandlePort,
+    RedisSearchHandlePort,
+)
 from archipy.models.dtos.redis.search.index_schema_dto import (
     IndexFieldConfig,
     IndexSchemaDTO,
@@ -25,7 +28,10 @@ from archipy.models.dtos.redis.search.index_schema_dto import (
     TextFieldConfig,
     VectorFieldConfig,
 )
-from archipy.models.dtos.redis.search.search_result_dto import SearchHitDTO, SearchResultDTO
+from archipy.models.dtos.redis.search.search_result_dto import (
+    SearchHitDTO,
+    SearchResultDTO,
+)
 from archipy.models.errors import InvalidArgumentError
 from archipy.models.types import JsonValue, RedisIndexType
 
@@ -34,7 +40,10 @@ if TYPE_CHECKING:
     from redis.client import Redis
 
     from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
-    from archipy.models.dtos.redis.search.document_dto import HashDocumentUpsertDTO, JsonDocumentUpsertDTO
+    from archipy.models.dtos.redis.search.document_dto import (
+        HashDocumentUpsertDTO,
+        JsonDocumentUpsertDTO,
+    )
     from archipy.models.dtos.redis.search.search_query_dto import (
         KnnQueryDTO,
         RangeQueryDTO,
@@ -78,7 +87,9 @@ def list_redis_search_indexes(client: Redis | RedisCluster) -> list[str]:
     return _normalize_index_names(result)
 
 
-async def list_redis_search_indexes_async(client: AsyncRedis | AsyncRedisCluster) -> list[str]:
+async def list_redis_search_indexes_async(
+    client: AsyncRedis | AsyncRedisCluster,
+) -> list[str]:
     """List RediSearch index names from an async standalone or cluster client."""
     if isinstance(client, AsyncRedisCluster):
         target_node = _cluster_ft_list_target(client)
@@ -129,7 +140,7 @@ def _vector_field_attributes(field: VectorFieldConfig) -> dict[str, Any]:
         "EF_CONSTRUCTION": field.ef_construction,
         "EF_RUNTIME": field.ef_runtime,
         "EPSILON": field.epsilon,
-        "COMPRESSION": field.compression.value if field.compression is not None else None,
+        "COMPRESSION": (field.compression.value if field.compression is not None else None),
         "CONSTRUCTION_WINDOW_SIZE": field.construction_window_size,
         "GRAPH_MAX_DEGREE": field.graph_max_degree,
         "SEARCH_WINDOW_SIZE": field.search_window_size,
@@ -300,7 +311,7 @@ def _result_to_dto(result: Any) -> SearchResultDTO:
     return SearchResultDTO(
         total=int(result.total),
         hits=hits,
-        duration_ms=float(result.duration) if getattr(result, "duration", None) is not None else None,
+        duration_ms=(float(result.duration) if getattr(result, "duration", None) is not None else None),
         warnings=list(getattr(result, "warnings", []) or []),
     )
 
@@ -638,13 +649,19 @@ class RedisSearchHandle(RedisSearchHandlePort):
         if query.is_range:
             redis_query, query_params = _build_range_query(query)
             if kwargs.pop("raw", False):
-                return cast("SearchResultDTO", self._search.search(redis_query, query_params=query_params, **kwargs))
+                return cast(
+                    "SearchResultDTO",
+                    self._search.search(redis_query, query_params=query_params, **kwargs),
+                )
             result = self._search.search(redis_query, query_params=query_params, **kwargs)
             return _result_to_dto(result)
 
         redis_query, query_params = _build_search_query(query)
         if kwargs.pop("raw", False):
-            return cast("SearchResultDTO", self._search.search(redis_query, query_params=query_params, **kwargs))
+            return cast(
+                "SearchResultDTO",
+                self._search.search(redis_query, query_params=query_params, **kwargs),
+            )
         result = self._search.search(redis_query, query_params=query_params, **kwargs)
         return _result_to_dto(result)
 
@@ -863,7 +880,10 @@ class AsyncRedisSearchHandle(AsyncRedisSearchHandlePort):
         """Execute a RediSearch aggregation asynchronously."""
         request = _build_aggregate_request(aggregation)
         if kwargs.pop("raw", False):
-            return cast("dict[str, Any]", await self._await_result(self._search.aggregate(request, **kwargs)))
+            return cast(
+                "dict[str, Any]",
+                await self._await_result(self._search.aggregate(request, **kwargs)),
+            )
         result = await self._await_result(self._search.aggregate(request, **kwargs))
         return {"total": result.total, "rows": result.rows}
 

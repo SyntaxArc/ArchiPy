@@ -1,13 +1,22 @@
 """Registry for MySQL SQLAlchemy session managers."""
 
-from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort, SessionManagerPort
-from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
+from archipy.adapters.base.sqlalchemy.session_manager_ports import (
+    AsyncSessionManagerPort,
+    SessionManagerPort,
+)
+from archipy.adapters.base.sqlalchemy.session_manager_registry import (
+    SessionManagerRegistry,
+)
 from archipy.adapters.mysql.sqlalchemy.session_managers import (
     AsyncMySQLSQlAlchemySessionManager,
     MySQLSQlAlchemySessionManager,
 )
 from archipy.helpers.metaclasses.singleton import Singleton
-from archipy.models.errors import DatabaseConnectionError, InvalidArgumentError, InvalidEntityTypeError
+from archipy.models.errors import (
+    DatabaseConnectionError,
+    InvalidArgumentError,
+    InvalidEntityTypeError,
+)
 
 
 class MySQLSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):

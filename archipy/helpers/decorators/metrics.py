@@ -10,6 +10,7 @@ import time
 from typing import TYPE_CHECKING, Any, Protocol
 
 from archipy.configs.base_config import BaseConfig
+from archipy.helpers.decorators._deprecation_alias import warn_deprecated_name
 from archipy.helpers.utils.otel_utils import DURATION_HISTOGRAM_BUCKETS_S, OtelUtils
 from archipy.models.errors import InvalidArgumentError
 
@@ -196,19 +197,126 @@ def _get_or_create_counter(module: str, instrument_name: str) -> Any:
         return counter
 
 
+def _instrumented(
+    func: Callable[..., Any],
+    *,
+    get_instrument: Callable[[], Any],
+    emit: Callable[[Any, float, str], None],
+) -> Callable[..., Any]:
+    """Wrap a sync or async function so every call is recorded on a metric instrument.
+
+    Args:
+        func: The function to wrap. Coroutine functions get an async wrapper.
+        get_instrument: Returns the (cached) histogram or counter.
+        emit: Records one measurement as ``(instrument, elapsed_seconds, status)``.
+
+    Returns:
+        The wrapped function.
+    """
+
+    def record(instrument: Any, start: float, status: str) -> None:
+        _safe_emit(emit, instrument, time.perf_counter() - start, status)
+
+    if inspect.iscoroutinefunction(func):
+
+        @functools.wraps(func)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            if _active_metrics_config() is None:
+                return await func(*args, **kwargs)
+
+            instrument = get_instrument()
+            start = time.perf_counter()
+            status = "ok"
+            try:
+                return await func(*args, **kwargs)
+            except BaseException as exc:
+                status = _status_for_base_exception(exc)
+                raise
+            finally:
+                record(instrument, start, status)
+
+        return async_wrapper
+
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        if _active_metrics_config() is None:
+            return func(*args, **kwargs)
+
+        instrument = get_instrument()
+        start = time.perf_counter()
+        status = "ok"
+        try:
+            return func(*args, **kwargs)
+        except BaseException as exc:
+            status = _status_for_base_exception(exc)
+            raise
+        finally:
+            record(instrument, start, status)
+
+    return wrapper
+
+
+def _duration_wrapper(
+    func: Callable[..., Any],
+    name: str | None,
+    unit: str,
+    attributes: dict[str, Any] | None,
+) -> Callable[..., Any]:
+    module, instrument_name = _resolve_instrument_name(func, name, "duration")
+    return _instrumented(
+        func,
+        get_instrument=lambda: _get_or_create_histogram(module, instrument_name, unit),
+        emit=lambda histogram, elapsed, status: histogram.record(elapsed, _merge_status_attributes(attributes, status)),
+    )
+
+
+def _counter_wrapper(
+    func: Callable[..., Any],
+    name: str | None,
+    attributes: dict[str, Any] | None,
+) -> Callable[..., Any]:
+    module, instrument_name = _resolve_instrument_name(func, name, "calls")
+    return _instrumented(
+        func,
+        get_instrument=lambda: _get_or_create_counter(module, instrument_name),
+        emit=lambda counter, _elapsed, status: counter.add(1, _merge_status_attributes(attributes, status)),
+    )
+
+
+def _require_coroutine_function(func: Callable[..., Any], decorator_name: str) -> None:
+    """Raise when an ``async_*`` decorator is applied to a non-coroutine function.
+
+    Args:
+        func: The candidate function.
+        decorator_name: Name of the decorator for the error payload.
+
+    Raises:
+        InvalidArgumentError: If ``func`` is not a coroutine function.
+    """
+    if not inspect.iscoroutinefunction(func):
+        raise InvalidArgumentError(
+            argument_name="func",
+            additional_data={
+                "decorator": decorator_name,
+                "func_name": getattr(func, "__name__", "unknown"),
+            },
+        )
+
+
 def measure_duration[F: _Function](
     name: str | None = None,
     *,
     unit: str = "s",
     attributes: dict[str, Any] | None = None,
 ) -> Callable[[F], Callable[..., Any]]:
-    """Decorate a sync function to record execution duration as a histogram.
+    """Decorate a sync or async function to record execution duration as a histogram.
 
     Instrument name defaults to ``{module}.{qualname}.duration``. The histogram
     is cached in a module-level map keyed by provider id + instrument name. Each
-    recording includes a ``status`` attribute of ``ok`` or ``error``.
+    recording includes a ``status`` attribute of ``ok``, ``error`` or ``cancelled``.
 
-    No-ops when OTel is disabled or ``config.OTEL.METRICS_ENABLED`` is False.
+    Works for ``def`` and ``async def`` functions alike. No-ops when OTel is disabled
+    or ``config.OTEL.METRICS_ENABLED`` is False.
 
     Args:
         name: Histogram instrument name. Defaults to module-qualified duration name.
@@ -217,41 +325,10 @@ def measure_duration[F: _Function](
 
     Returns:
         A decorator that records duration around the target function.
-
-    Raises:
-        InvalidArgumentError: If the decorated object is a coroutine function.
     """
 
     def decorator(func: F) -> Callable[..., Any]:
-        if inspect.iscoroutinefunction(func):
-            raise InvalidArgumentError(
-                argument_name="func",
-                additional_data={
-                    "decorator": "measure_duration",
-                    "func_name": func.__name__,
-                    "hint": "Use async_measure_duration instead of measure_duration",
-                },
-            )
-
-        module, instrument_name = _resolve_instrument_name(func, name, "duration")
-
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            if _active_metrics_config() is None:
-                return func(*args, **kwargs)
-
-            histogram = _get_or_create_histogram(module, instrument_name, unit)
-            start = time.perf_counter()
-            status = "ok"
-            try:
-                return func(*args, **kwargs)
-            except BaseException as exc:
-                status = _status_for_base_exception(exc)
-                raise
-            finally:
-                _safe_emit(histogram.record, time.perf_counter() - start, _merge_status_attributes(attributes, status))
-
-        return wrapper
+        return _duration_wrapper(func, name, unit, attributes)
 
     return decorator
 
@@ -264,6 +341,9 @@ def async_measure_duration[F: _AsyncFunction](
 ) -> Callable[[F], Callable[..., Coroutine[Any, Any, Any]]]:
     """Decorate an async function to record execution duration as a histogram.
 
+    Deprecated:
+        Use :func:`measure_duration`, which supports async functions directly.
+
     Args:
         name: Histogram instrument name. Defaults to module-qualified duration name.
         unit: Unit of the recorded duration. Defaults to ``"s"``.
@@ -275,36 +355,11 @@ def async_measure_duration[F: _AsyncFunction](
     Raises:
         InvalidArgumentError: If the decorated object is not a coroutine function.
     """
+    warn_deprecated_name("async_measure_duration", "measure_duration")
 
     def decorator(func: F) -> Callable[..., Coroutine[Any, Any, Any]]:
-        if not inspect.iscoroutinefunction(func):
-            raise InvalidArgumentError(
-                argument_name="func",
-                additional_data={
-                    "decorator": "async_measure_duration",
-                    "func_name": func.__name__,
-                },
-            )
-
-        module, instrument_name = _resolve_instrument_name(func, name, "duration")
-
-        @functools.wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            if _active_metrics_config() is None:
-                return await func(*args, **kwargs)
-
-            histogram = _get_or_create_histogram(module, instrument_name, unit)
-            start = time.perf_counter()
-            status = "ok"
-            try:
-                return await func(*args, **kwargs)
-            except BaseException as exc:
-                status = _status_for_base_exception(exc)
-                raise
-            finally:
-                _safe_emit(histogram.record, time.perf_counter() - start, _merge_status_attributes(attributes, status))
-
-        return wrapper
+        _require_coroutine_function(func, "async_measure_duration")
+        return _duration_wrapper(func, name, unit, attributes)
 
     return decorator
 
@@ -314,13 +369,14 @@ def count_calls[F: _Function](
     *,
     attributes: dict[str, Any] | None = None,
 ) -> Callable[[F], Callable[..., Any]]:
-    """Decorate a sync function to increment a call counter.
+    """Decorate a sync or async function to increment a call counter.
 
     Instrument name defaults to ``{module}.{qualname}.calls``. The counter is
     cached in a module-level map keyed by provider id + instrument name. Each
-    increment includes a ``status`` attribute of ``ok`` or ``error``.
+    increment includes a ``status`` attribute of ``ok``, ``error`` or ``cancelled``.
 
-    No-ops when OTel is disabled or ``config.OTEL.METRICS_ENABLED`` is False.
+    Works for ``def`` and ``async def`` functions alike. No-ops when OTel is disabled
+    or ``config.OTEL.METRICS_ENABLED`` is False.
 
     Args:
         name: Counter instrument name. Defaults to module-qualified calls name.
@@ -328,40 +384,10 @@ def count_calls[F: _Function](
 
     Returns:
         A decorator that counts invocations of the target function.
-
-    Raises:
-        InvalidArgumentError: If the decorated object is a coroutine function.
     """
 
     def decorator(func: F) -> Callable[..., Any]:
-        if inspect.iscoroutinefunction(func):
-            raise InvalidArgumentError(
-                argument_name="func",
-                additional_data={
-                    "decorator": "count_calls",
-                    "func_name": func.__name__,
-                    "hint": "Use async_count_calls instead of count_calls",
-                },
-            )
-
-        module, instrument_name = _resolve_instrument_name(func, name, "calls")
-
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            if _active_metrics_config() is None:
-                return func(*args, **kwargs)
-
-            counter = _get_or_create_counter(module, instrument_name)
-            status = "ok"
-            try:
-                return func(*args, **kwargs)
-            except BaseException as exc:
-                status = _status_for_base_exception(exc)
-                raise
-            finally:
-                _safe_emit(counter.add, 1, _merge_status_attributes(attributes, status))
-
-        return wrapper
+        return _counter_wrapper(func, name, attributes)
 
     return decorator
 
@@ -373,6 +399,9 @@ def async_count_calls[F: _AsyncFunction](
 ) -> Callable[[F], Callable[..., Coroutine[Any, Any, Any]]]:
     """Decorate an async function to increment a call counter.
 
+    Deprecated:
+        Use :func:`count_calls`, which supports async functions directly.
+
     Args:
         name: Counter instrument name. Defaults to module-qualified calls name.
         attributes: Optional static attributes merged into each recording.
@@ -383,34 +412,10 @@ def async_count_calls[F: _AsyncFunction](
     Raises:
         InvalidArgumentError: If the decorated object is not a coroutine function.
     """
+    warn_deprecated_name("async_count_calls", "count_calls")
 
     def decorator(func: F) -> Callable[..., Coroutine[Any, Any, Any]]:
-        if not inspect.iscoroutinefunction(func):
-            raise InvalidArgumentError(
-                argument_name="func",
-                additional_data={
-                    "decorator": "async_count_calls",
-                    "func_name": func.__name__,
-                },
-            )
-
-        module, instrument_name = _resolve_instrument_name(func, name, "calls")
-
-        @functools.wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            if _active_metrics_config() is None:
-                return await func(*args, **kwargs)
-
-            counter = _get_or_create_counter(module, instrument_name)
-            status = "ok"
-            try:
-                return await func(*args, **kwargs)
-            except BaseException as exc:
-                status = _status_for_base_exception(exc)
-                raise
-            finally:
-                _safe_emit(counter.add, 1, _merge_status_attributes(attributes, status))
-
-        return wrapper
+        _require_coroutine_function(func, "async_count_calls")
+        return _counter_wrapper(func, name, attributes)
 
     return decorator

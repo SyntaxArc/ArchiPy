@@ -7,8 +7,14 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from archipy.models.dtos.redis.search.aggregation_dto import AggregationDTO
-    from archipy.models.dtos.redis.search.document_dto import HashDocumentUpsertDTO, JsonDocumentUpsertDTO
-    from archipy.models.dtos.redis.search.index_schema_dto import IndexFieldConfig, IndexSchemaDTO
+    from archipy.models.dtos.redis.search.document_dto import (
+        HashDocumentUpsertDTO,
+        JsonDocumentUpsertDTO,
+    )
+    from archipy.models.dtos.redis.search.index_schema_dto import (
+        IndexFieldConfig,
+        IndexSchemaDTO,
+    )
     from archipy.models.dtos.redis.search.search_query_dto import SearchQueryDTO
     from archipy.models.dtos.redis.search.search_result_dto import SearchResultDTO
     from archipy.models.types import JsonValue, RedisIndexType

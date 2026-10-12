@@ -489,7 +489,10 @@ class AtomicActivity(BaseActivity[T, R]):
         if db_type not in ("postgres", "sqlite", "starrocks"):
             raise InvalidArgumentError(
                 argument_name="db_type",
-                additional_data={"got": db_type, "allowed": ["postgres", "sqlite", "starrocks"]},
+                additional_data={
+                    "got": db_type,
+                    "allowed": ["postgres", "sqlite", "starrocks"],
+                },
             )
         self.db_type = db_type
 
@@ -504,15 +507,15 @@ class AtomicActivity(BaseActivity[T, R]):
         """
         # Lazy import to avoid requiring SQLAlchemy when using temporalio without sqlalchemy extra
         from archipy.helpers.decorators import (
-            async_postgres_sqlalchemy_atomic_decorator,
-            async_sqlite_sqlalchemy_atomic_decorator,
-            async_starrocks_sqlalchemy_atomic_decorator,
+            postgres_sqlalchemy_atomic,
+            sqlite_sqlalchemy_atomic,
+            starrocks_sqlalchemy_atomic,
         )
 
         decorators_map = {
-            "postgres": async_postgres_sqlalchemy_atomic_decorator,
-            "sqlite": async_sqlite_sqlalchemy_atomic_decorator,
-            "starrocks": async_starrocks_sqlalchemy_atomic_decorator,
+            "postgres": postgres_sqlalchemy_atomic,
+            "sqlite": sqlite_sqlalchemy_atomic,
+            "starrocks": starrocks_sqlalchemy_atomic,
         }
         return decorators_map[self.db_type]
 

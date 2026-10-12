@@ -144,7 +144,10 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
         """
         terminal_number = self._get_terminal_number()
         try:
-            payload = {"RefNum": request.reference_number, "TerminalNumber": terminal_number}
+            payload = {
+                "RefNum": request.reference_number,
+                "TerminalNumber": terminal_number,
+            }
 
             resp = self.client.post(self.verify_url, json=payload)
             resp.raise_for_status()
@@ -188,7 +191,10 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
         """
         terminal_number = self._get_terminal_number()
         try:
-            payload = {"RefNum": request.reference_number, "TerminalNumber": terminal_number}
+            payload = {
+                "RefNum": request.reference_number,
+                "TerminalNumber": terminal_number,
+            }
             resp = self.client.post(self.reverse_url, json=payload)
             resp.raise_for_status()
             data = resp.json()
@@ -295,7 +301,10 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
         proxy = self._get_proxy(configs.PROXIES)
         self.client = httpx2.AsyncClient(proxy=proxy, timeout=30)
 
-        logger.info("AsyncSamanShaparakPaymentAdapter initialized with terminal %s", self.terminal_id)
+        logger.info(
+            "AsyncSamanShaparakPaymentAdapter initialized with terminal %s",
+            self.terminal_id,
+        )
 
     @staticmethod
     def _get_proxy(proxies: dict[str, str] | None) -> str | None:
@@ -380,7 +389,10 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
         """
         terminal_number = self._get_terminal_number()
         try:
-            payload = {"RefNum": request.reference_number, "TerminalNumber": terminal_number}
+            payload = {
+                "RefNum": request.reference_number,
+                "TerminalNumber": terminal_number,
+            }
 
             resp = await self.client.post(self.verify_url, json=payload)
             resp.raise_for_status()
@@ -424,7 +436,10 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
         """
         terminal_number = self._get_terminal_number()
         try:
-            payload = {"RefNum": request.reference_number, "TerminalNumber": terminal_number}
+            payload = {
+                "RefNum": request.reference_number,
+                "TerminalNumber": terminal_number,
+            }
             resp = await self.client.post(self.reverse_url, json=payload)
             resp.raise_for_status()
             data = resp.json()

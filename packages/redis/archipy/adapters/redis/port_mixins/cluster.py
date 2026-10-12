@@ -16,7 +16,9 @@ class RedisClusterPort:
         """
         return None
 
-    def cluster_nodes(self) -> dict[str, dict[str, str | bool | list[list[str]] | list[dict[str, str]]]] | None:
+    def cluster_nodes(
+        self,
+    ) -> dict[str, dict[str, str | bool | list[list[str]] | list[dict[str, str]]]] | None:
         """Get cluster nodes information.
 
         Returns:
@@ -78,7 +80,9 @@ class AsyncRedisClusterPort:
         """
         return None
 
-    async def cluster_nodes(self) -> dict[str, dict[str, str | bool | list[list[str]] | list[dict[str, str]]]] | None:
+    async def cluster_nodes(
+        self,
+    ) -> dict[str, dict[str, str | bool | list[list[str]] | list[dict[str, str]]]] | None:
         """Get cluster nodes information asynchronously.
 
         Returns:

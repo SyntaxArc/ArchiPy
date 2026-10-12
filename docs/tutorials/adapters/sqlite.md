@@ -116,14 +116,14 @@ else:
 ```python
 import logging
 
-from archipy.helpers.decorators.sqlalchemy_atomic import sqlite_sqlalchemy_atomic_decorator
+from archipy.helpers.decorators import sqlite_sqlalchemy_atomic
 from archipy.models.errors import DatabaseQueryError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
-@sqlite_sqlalchemy_atomic_decorator
+@sqlite_sqlalchemy_atomic
 def create_user_with_profile(username: str, email: str, profile_data: dict[str, str]) -> User:
     """Create a user and profile in a single transaction.
 
@@ -155,7 +155,7 @@ import asyncio
 import logging
 
 from archipy.adapters.sqlite.sqlalchemy.adapters import AsyncSQLiteSQLAlchemyAdapter
-from archipy.helpers.decorators.sqlalchemy_atomic import async_sqlite_sqlalchemy_atomic_decorator
+from archipy.helpers.decorators import sqlite_sqlalchemy_atomic
 from archipy.models.errors import DatabaseQueryError, DatabaseConnectionError
 
 # Configure logging
@@ -172,7 +172,7 @@ async def main() -> None:
     else:
         logger.info("Async SQLite adapter created")
 
-    @async_sqlite_sqlalchemy_atomic_decorator
+    @sqlite_sqlalchemy_atomic
     async def create_user_async(username: str, email: str) -> User:
         """Create a user asynchronously.
 

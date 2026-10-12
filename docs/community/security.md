@@ -20,7 +20,7 @@ Include as much detail as possible:
 
 - A description of the vulnerability and its potential impact
 - Steps to reproduce, including a minimal code example if possible
-- The ArchiPy version(s) affected
+- The ArchiPy version (s) affected
 - Any suggested mitigations you are aware of
 
 You will receive an acknowledgment within **48 hours** and a status update within **7 days**.

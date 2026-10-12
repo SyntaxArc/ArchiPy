@@ -6,7 +6,7 @@ import time
 
 from behave import given, then, when
 
-from archipy.helpers.decorators.timeout import timeout_decorator
+from archipy.helpers.decorators import timeout
 from archipy.models.errors import DeadlineExceededError, FailedPreconditionError
 from features.test_helpers import get_current_scenario_context
 
@@ -14,7 +14,7 @@ from features.test_helpers import get_current_scenario_context
 def _build(context, behavior, limit):
     sc = get_current_scenario_context(context)
 
-    @timeout_decorator(limit)
+    @timeout(limit)
     def slow_function(a=0, b=0):
         behavior()
         return "done" if (a, b) == (0, 0) else f"done:{a + b}"
@@ -31,7 +31,7 @@ def step_given_timeout_sleeping(context, sleep, limit):
 def step_given_async_timeout_sleeping(context, sleep, limit):
     sc = get_current_scenario_context(context)
 
-    @timeout_decorator(limit)
+    @timeout(limit)
     async def slow_function():
         await asyncio.sleep(sleep)
         return "done"

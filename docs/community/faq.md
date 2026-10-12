@@ -243,15 +243,18 @@ class AppConfig(BaseConfig):
 
 ### What decorators does ArchiPy provide?
 
-| Decorator     | Module                                    | Purpose                         |
-|---------------|-------------------------------------------|---------------------------------|
-| `@ttl_cache`  | `helpers.decorators.cache`                | In-memory TTL cache             |
-| `@retry`      | `helpers.decorators.retry`                | Automatic retry with back-off   |
-| `@atomic`     | `helpers.decorators.sqlalchemy_atomic`    | SQLAlchemy transaction wrapping |
-| `@singleton`  | `helpers.decorators.singleton`            | Singleton pattern enforcement   |
-| `@timeout`    | `helpers.decorators.timeout`              | Function execution timeout      |
-| `@timing`     | `helpers.decorators.timing`               | Execution time logging          |
-| `@deprecated` | `helpers.decorators.deprecation_warnings` | Deprecation warning             |
+| Decorator                                  | Purpose                         |
+|--------------------------------------------|---------------------------------|
+| `@ttl_cache`                               | In-memory TTL cache             |
+| `@retry`                                   | Automatic retry with back-off   |
+| `@postgres_sqlalchemy_atomic` (and others) | SQLAlchemy transaction wrapping |
+| `@singleton`                               | Singleton pattern enforcement   |
+| `@timeout`                                 | Function execution timeout      |
+| `@timing`                                  | Execution time logging          |
+| `@method_deprecation_warning`              | Deprecation warning             |
+
+All are imported from `archipy.helpers.decorators` and work for sync and `async def` functions. The older
+`*_decorator` and `async_*` names still work but emit a `DeprecationWarning`.
 
 See the [Decorators tutorial](../tutorials/helpers/decorators.md) for examples.
 
@@ -275,7 +278,7 @@ ArchiPy does not ship a FastAPI rate-limit handler. Use the official
 [Interceptors — FastAPI Rate Limiting](../tutorials/helpers/interceptors.md#fastapi-rate-limiting).
 
 **Still supported in ArchiPy:** the gRPC rate-limit interceptor (`GrpcServerRateLimitInterceptor`,
-`AsyncGrpcServerRateLimitInterceptor`), `grpc_rate_limit_decorator`, `GrpcRateLimitConfig`,
+`AsyncGrpcServerRateLimitInterceptor`), `grpc_rate_limit`, `GrpcRateLimitConfig`,
 `RateLimitUtils`, and `RateLimitWindowDTO`.
 
 ---

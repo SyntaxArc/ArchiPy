@@ -4,7 +4,7 @@ import time
 
 from behave import given, then, when
 
-from archipy.helpers.decorators import ttl_cache_decorator
+from archipy.helpers.decorators import ttl_cache
 from features.test_helpers import get_current_scenario_context
 
 
@@ -36,7 +36,7 @@ class TestClass:
         """
         self.counter = counter
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def cached_method(self, x: int) -> int:
         """A cached method that doubles the input.
 
@@ -49,7 +49,7 @@ class TestClass:
         self.counter.increment()
         return x * 2
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def cached_method_1(self, x: int) -> int:
         """First cached method.
 
@@ -62,7 +62,7 @@ class TestClass:
         self.counter.increment()
         return x * 2
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def cached_method_2(self, x: int) -> int:
         """Second cached method.
 
@@ -86,13 +86,13 @@ class TestClass:
 # Step implementations
 
 
-@given("a function decorated with ttl_cache_decorator")
+@given("a function decorated with ttl_cache")
 def step_given_cached_function(context):
     """Create a cached function."""
     scenario_context = get_current_scenario_context(context)
     counter = ExecutionCounter()
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def test_function(x: int) -> int:
         counter.increment()
         return x * 2
@@ -101,13 +101,13 @@ def step_given_cached_function(context):
     scenario_context.store("function", test_function)
 
 
-@given("a function decorated with ttl_cache_decorator with TTL {ttl:d} seconds")
+@given("a function decorated with ttl_cache with TTL {ttl:d} seconds")
 def step_given_cached_function_with_ttl(context, ttl):
     """Create a cached function with specific TTL."""
     scenario_context = get_current_scenario_context(context)
     counter = ExecutionCounter()
 
-    @ttl_cache_decorator(ttl_seconds=ttl, maxsize=100)
+    @ttl_cache(ttl_seconds=ttl, maxsize=100)
     def test_function(x: int) -> int:
         counter.increment()
         return x * 2
@@ -116,13 +116,13 @@ def step_given_cached_function_with_ttl(context, ttl):
     scenario_context.store("function", test_function)
 
 
-@given("a function decorated with ttl_cache_decorator with maxsize {maxsize:d}")
+@given("a function decorated with ttl_cache with maxsize {maxsize:d}")
 def step_given_cached_function_with_maxsize(context, maxsize):
     """Create a cached function with specific maxsize."""
     scenario_context = get_current_scenario_context(context)
     counter = ExecutionCounter()
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=maxsize)
+    @ttl_cache(ttl_seconds=300, maxsize=maxsize)
     def test_function(x: int) -> int:
         counter.increment()
         return x * 2
@@ -157,13 +157,13 @@ def step_given_class_with_multiple_cached_methods(context):
     scenario_context.store("test_instance", test_instance)
 
 
-@given("a function that returns None decorated with ttl_cache_decorator")
+@given("a function that returns None decorated with ttl_cache")
 def step_given_cached_function_returning_none(context):
     """Create a cached function that returns None."""
     scenario_context = get_current_scenario_context(context)
     counter = ExecutionCounter()
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def test_function(x: int) -> None:
         counter.increment()
         return None
@@ -172,13 +172,13 @@ def step_given_cached_function_returning_none(context):
     scenario_context.store("function", test_function)
 
 
-@given("a function that raises exceptions decorated with ttl_cache_decorator")
+@given("a function that raises exceptions decorated with ttl_cache")
 def step_given_cached_function_raising_exceptions(context):
     """Create a cached function that raises exceptions."""
     scenario_context = get_current_scenario_context(context)
     counter = ExecutionCounter()
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def test_function(x: int) -> int:
         counter.increment()
         raise ValueError("Test exception")
@@ -187,13 +187,13 @@ def step_given_cached_function_raising_exceptions(context):
     scenario_context.store("function", test_function)
 
 
-@given("a function with multiple parameters decorated with ttl_cache_decorator")
+@given("a function with multiple parameters decorated with ttl_cache")
 def step_given_cached_function_with_multiple_params(context):
     """Create a cached function with multiple parameters."""
     scenario_context = get_current_scenario_context(context)
     counter = ExecutionCounter()
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     def test_function(x: int, y: int = 0) -> int:
         counter.increment()
         return x + y
@@ -435,7 +435,7 @@ def step_when_call_function_with_string_arg(context, arg):
         # Create a new function that accepts both string and int
         counter = ExecutionCounter()
 
-        @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+        @ttl_cache(ttl_seconds=300, maxsize=100)
         def test_function(x: str | int) -> str | int:
             counter.increment()
             return x
@@ -626,13 +626,13 @@ def step_when_call_function_with_list_arg(context):
     scenario_context.store("result", function([1, 2]))
 
 
-@given("an async function decorated with ttl_cache_decorator")
+@given("an async function decorated with ttl_cache")
 def step_given_async_cached_function(context):
     """Create an async cached function."""
     scenario_context = get_current_scenario_context(context)
     counter = ExecutionCounter()
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100)
     async def test_function(x: int) -> int:
         counter.increment()
         await asyncio.sleep(0)
@@ -697,12 +697,12 @@ def step_given_parent_child_cached(context):
     """Create a hierarchy where parent and child both cache a method called ``compute``."""
 
     class Base:
-        @ttl_cache_decorator(ttl_seconds=300, maxsize=10)
+        @ttl_cache(ttl_seconds=300, maxsize=10)
         def compute(self, x: int) -> str:
             return f"base:{x}"
 
     class Child(Base):
-        @ttl_cache_decorator(ttl_seconds=300, maxsize=10)
+        @ttl_cache(ttl_seconds=300, maxsize=10)
         def compute(self, x: int) -> str:
             return f"child:{super().compute(x)}"
 

@@ -1,13 +1,22 @@
 """Registry for StarRocks SQLAlchemy session managers."""
 
-from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort, SessionManagerPort
-from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
+from archipy.adapters.base.sqlalchemy.session_manager_ports import (
+    AsyncSessionManagerPort,
+    SessionManagerPort,
+)
+from archipy.adapters.base.sqlalchemy.session_manager_registry import (
+    SessionManagerRegistry,
+)
 from archipy.adapters.starrocks.sqlalchemy.session_managers import (
     AsyncStarRocksSQlAlchemySessionManager,
     StarRocksSQlAlchemySessionManager,
 )
 from archipy.helpers.metaclasses.singleton import Singleton
-from archipy.models.errors import DatabaseConnectionError, InvalidArgumentError, InvalidEntityTypeError
+from archipy.models.errors import (
+    DatabaseConnectionError,
+    InvalidArgumentError,
+    InvalidEntityTypeError,
+)
 
 
 class StarRocksSessionManagerRegistry(SessionManagerRegistry, metaclass=Singleton):

@@ -15,7 +15,7 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
 )
-from archipy.helpers.decorators import ttl_cache_decorator
+from archipy.helpers.decorators import ttl_cache
 from archipy.models.errors import (
     InternalError,
     NotFoundError,
@@ -34,7 +34,7 @@ HTTP_NOT_FOUND = 404
 class KeycloakRolesMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for role operations."""
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
+    @ttl_cache(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
     def get_user_roles(self, user_id: str) -> list[KeycloakRoleType] | None:
         """Get roles assigned to a user.
 
@@ -52,7 +52,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_user_roles")
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
+    @ttl_cache(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
     def get_client_roles_for_user(self, user_id: str, client_id: str) -> list[KeycloakRoleType]:
         """Get client-specific roles assigned to a user.
 
@@ -255,7 +255,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "delete_realm_role")
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=1)  # Cache for 5 minutes
+    @ttl_cache(ttl_seconds=300, maxsize=1)  # Cache for 5 minutes
     def get_realm_roles(self) -> list[dict[str, Any]] | None:
         """Get all realm roles.
 
@@ -270,7 +270,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_realm_roles")
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=1)  # Cache for 5 minutes
+    @ttl_cache(ttl_seconds=300, maxsize=1)  # Cache for 5 minutes
     def get_realm_role(self, role_name: str) -> dict | None:
         """Get realm role.
 

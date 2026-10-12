@@ -31,10 +31,17 @@ from archipy.adapters.redis.search import (
 )
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import RedisConfig, RedisMode
-from archipy.models.errors import ConfigurationError, InternalError, InvalidArgumentError
+from archipy.models.errors import (
+    ConfigurationError,
+    InternalError,
+    InvalidArgumentError,
+)
 
 if TYPE_CHECKING:
-    from archipy.adapters.redis.search_ports import AsyncRedisSearchHandlePort, RedisSearchHandlePort
+    from archipy.adapters.redis.search_ports import (
+        AsyncRedisSearchHandlePort,
+        RedisSearchHandlePort,
+    )
 
 
 class RedisConnectionMixin(SyncRedisMixinBase):
@@ -470,7 +477,10 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             if not isinstance(awaited_value, int):
                 raise InvalidArgumentError(
                     argument_name="value",
-                    additional_data={"expected": "int", "got": type(awaited_value).__name__},
+                    additional_data={
+                        "expected": "int",
+                        "got": type(awaited_value).__name__,
+                    },
                 )
             return awaited_value
         return value
@@ -484,7 +494,9 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
         return bool(value)
 
     @staticmethod
-    async def _ensure_async_str(value: str | bytes | Awaitable[str | bytes | None] | None) -> str | None:
+    async def _ensure_async_str(
+        value: str | bytes | Awaitable[str | bytes | None] | None,
+    ) -> str | None:
         """Ensure an async string result, awaiting if necessary."""
         if isinstance(value, Awaitable):
             result = await value
@@ -493,7 +505,10 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             if result is not None and not isinstance(result, str):
                 raise InvalidArgumentError(
                     argument_name="value",
-                    additional_data={"expected": "str | None", "got": type(result).__name__},
+                    additional_data={
+                        "expected": "str | None",
+                        "got": type(result).__name__,
+                    },
                 )
             return result
         if isinstance(value, bytes):
@@ -540,7 +555,10 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
         if not isinstance(result, (AsyncPipeline, AsyncClusterPipeline)):
             raise InvalidArgumentError(
                 argument_name="pipeline",
-                additional_data={"expected": "AsyncPipeline", "got": type(result).__name__},
+                additional_data={
+                    "expected": "AsyncPipeline",
+                    "got": type(result).__name__,
+                },
             )
         return result
 

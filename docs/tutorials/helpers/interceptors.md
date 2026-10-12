@@ -13,11 +13,11 @@ and how OpenTelemetry is wired through AppUtils rather than custom metric/trace 
 FastAPI metric middleware and gRPC metric/trace interceptors were removed in 5.0.0. Traces and
 metrics come from OpenTelemetry contrib instrumentors configured via `BaseConfig.OTEL`.
 
-| Stack   | Wiring                                                                 |
-|---------|------------------------------------------------------------------------|
-| FastAPI | `AppUtils.create_fastapi_app` → `FastAPIUtils.build_otel_telemetry_config` (native FastAPI telemetry) |
-| gRPC    | `AppUtils.create_grpc_app` / `create_async_grpc_app` → contrib server interceptor at index 0 |
-| Client gRPC | `OtelUtils.grpc_client_interceptors()` / `async_grpc_client_interceptors()` |
+| Stack       | Wiring                                                                                                |
+|-------------|-------------------------------------------------------------------------------------------------------|
+| FastAPI     | `AppUtils.create_fastapi_app` → `FastAPIUtils.build_otel_telemetry_config` (native FastAPI telemetry) |
+| gRPC        | `AppUtils.create_grpc_app` / `create_async_grpc_app` → contrib server interceptor at index 0          |
+| Client gRPC | `OtelUtils.grpc_client_interceptors()` / `async_grpc_client_interceptors()`                           |
 
 ```python
 import logging
@@ -85,7 +85,7 @@ def create_grpc_server(max_workers: int = 10) -> grpc.Server:
 
 Per-RPC gRPC rate limits use two pieces:
 
-1. **`grpc_rate_limit_decorator`** — declares limits on servicer methods (see
+1. **`grpc_rate_limit`** — declares limits on servicer methods (see
    [Decorator Tutorials — gRPC Rate Limit](decorators.md#grpc-rate-limit-decorator))
 2. **`GrpcServerRateLimitInterceptor` / `AsyncGrpcServerRateLimitInterceptor`** — enforces decorated limits via Redis
    `INCREX`
@@ -105,23 +105,23 @@ GRPC_RATE_LIMIT__IS_ENABLED=true
 ```
 
 With `IS_ENABLED`, `AppUtils.create_grpc_app` / `create_async_grpc_app` append the matching
-interceptor. Per-RPC limits still come only from `grpc_rate_limit_decorator`.
+interceptor. Per-RPC limits still come only from `grpc_rate_limit`.
 
 **Sync:**
 
 ```python
 from archipy.configs.base_config import BaseConfig
-from archipy.helpers.decorators import grpc_rate_limit_decorator
+from archipy.helpers.decorators import grpc_rate_limit
 from archipy.helpers.utils.app_utils import AppUtils
 
 
 class MySyncServiceServicer(pb2_grpc.MyServiceServicer):
-    @grpc_rate_limit_decorator(calls_count=100, minutes=1)
+    @grpc_rate_limit(calls_count=100, minutes=1)
     def Cheap(self, request, context):
         return pb2.CheapResponse()
 
-    @grpc_rate_limit_decorator(calls_count=10, seconds=1)
-    @grpc_rate_limit_decorator(calls_count=1000, days=1)
+    @grpc_rate_limit(calls_count=10, seconds=1)
+    @grpc_rate_limit(calls_count=1000, days=1)
     def Expensive(self, request, context):
         return pb2.ExpensiveResponse()
 
@@ -134,17 +134,17 @@ server = AppUtils.create_grpc_app(config)
 
 ```python
 from archipy.configs.base_config import BaseConfig
-from archipy.helpers.decorators import grpc_rate_limit_decorator
+from archipy.helpers.decorators import grpc_rate_limit
 from archipy.helpers.utils.app_utils import AppUtils
 
 
 class MyAsyncServiceServicer(pb2_grpc.MyServiceServicer):
-    @grpc_rate_limit_decorator(calls_count=100, minutes=1)
+    @grpc_rate_limit(calls_count=100, minutes=1)
     async def Cheap(self, request, context):
         return pb2.CheapResponse()
 
-    @grpc_rate_limit_decorator(calls_count=10, seconds=1)
-    @grpc_rate_limit_decorator(calls_count=1000, days=1)
+    @grpc_rate_limit(calls_count=10, seconds=1)
+    @grpc_rate_limit(calls_count=1000, days=1)
     async def Expensive(self, request, context):
         return pb2.ExpensiveResponse()
 

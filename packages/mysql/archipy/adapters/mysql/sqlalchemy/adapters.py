@@ -2,7 +2,10 @@
 
 from typing import override
 
-from archipy.adapters.base.sqlalchemy.adapters import AsyncBaseSQLAlchemyAdapter, BaseSQLAlchemyAdapter
+from archipy.adapters.base.sqlalchemy.adapters import (
+    AsyncBaseSQLAlchemyAdapter,
+    BaseSQLAlchemyAdapter,
+)
 from archipy.adapters.mysql.sqlalchemy.session_managers import (
     AsyncMySQLSQlAlchemySessionManager,
     MySQLSQlAlchemySessionManager,

@@ -11,27 +11,28 @@ implementation).
 
 ## Submodules
 
-| Adapter                                 | Description                                                |
-|-----------------------------------------|------------------------------------------------------------|
-| [Base SQLAlchemy](base.md)              | Shared SQLAlchemy session management and base CRUD adapter |
-| [Redis](redis.md)                       | Redis cache, pub/sub, and RediSearch adapter               |
-| [PostgreSQL](postgres.md)               | PostgreSQL database adapter via SQLAlchemy                 |
-| [MySQL](mysql.md)                       | MySQL database adapter via SQLAlchemy                      |
-| [SQLite](sqlite.md)                     | SQLite database adapter via SQLAlchemy                     |
-| [StarRocks](starrocks.md)               | StarRocks analytical database adapter via SQLAlchemy       |
-| [Kafka](kafka.md)                       | Apache Kafka message streaming adapter                     |
-| [Keycloak](keycloak.md)                 | Keycloak identity and access management adapter            |
-| [MinIO](minio.md)                       | MinIO object storage adapter                               |
-| [ScyllaDB](scylladb.md)                 | ScyllaDB/Cassandra wide-column store adapter               |
-| [Elasticsearch](elasticsearch.md)       | Elasticsearch search engine adapter                        |
-| [Temporal](temporal.md)                 | Temporal workflow orchestration adapter                    |
-| [Vault](vault.md)                       | HashiCorp Vault secrets, leases, and transit adapter       |
-| [Email](email.md)                       | Email service adapter                                      |
+| Adapter                                 | Description                                                          |
+|-----------------------------------------|----------------------------------------------------------------------|
+| [Base SQLAlchemy](base.md)              | Shared SQLAlchemy session management and base CRUD adapter           |
+| [Redis](redis.md)                       | Redis cache, pub/sub, and RediSearch adapter                         |
+| [PostgreSQL](postgres.md)               | PostgreSQL database adapter via SQLAlchemy                           |
+| [MySQL](mysql.md)                       | MySQL database adapter via SQLAlchemy                                |
+| [SQLite](sqlite.md)                     | SQLite database adapter via SQLAlchemy                               |
+| [StarRocks](starrocks.md)               | StarRocks analytical database adapter via SQLAlchemy                 |
+| [Kafka](kafka.md)                       | Apache Kafka message streaming adapter                               |
+| [Keycloak](keycloak.md)                 | Keycloak identity and access management adapter                      |
+| [MinIO](minio.md)                       | MinIO object storage adapter                                         |
+| [ScyllaDB](scylladb.md)                 | ScyllaDB/Cassandra wide-column store adapter                         |
+| [Elasticsearch](elasticsearch.md)       | Elasticsearch search engine adapter                                  |
+| [Temporal](temporal.md)                 | Temporal workflow orchestration adapter                              |
+| [Vault](vault.md)                       | HashiCorp Vault secrets, leases, and transit adapter                 |
+| [Email](email.md)                       | Email service adapter                                                |
 | [Payment Gateways](payment_gateways.md) | Internet payment gateway adapters (Parsian Shaparak, Saman Shaparak) |
 
 ## Source Code
 
-📁 Location: `archipy/adapters/` (core: `base`, `email`) and `packages/<name>/archipy/adapters/<name>/` (one installable package per adapter)
+📁 Location: `archipy/adapters/` (core: `base`, `email`) and `packages/<name>/archipy/adapters/<name>/` (one installable
+package per adapter)
 
 🔗 [Browse Source](https://github.com/SyntaxArc/ArchiPy/tree/master/archipy/adapters)
 

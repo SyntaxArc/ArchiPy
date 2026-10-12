@@ -54,20 +54,20 @@ TEMPORAL__RETRY_INITIAL_INTERVAL=1
 
 ### Configuration Reference
 
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `CLIENT_IDENTITY` | Client identity visible on the Temporal server | `None` |
-| `API_KEY` | Temporal Cloud API key | `None` |
-| `LAZY_CONNECT` | Defer connection until first client use | `false` |
-| `KEEP_ALIVE_INTERVAL_MS` | gRPC keep-alive ping interval | `30000` |
-| `KEEP_ALIVE_TIMEOUT_MS` | gRPC keep-alive timeout | `15000` |
-| `CLIENT_RPC_RETRY_*` | Client-side RPC retry backoff | SDK defaults |
-| `WORKER_GRACEFUL_SHUTDOWN_SECONDS` | Worker shutdown grace period | `30` |
-| `WORKER_MAX_CACHED_WORKFLOWS` | In-memory workflow cache size | `1000` |
-| `WORKER_DEBUG_MODE` | Enable workflow sandbox debug mode | `false` |
-| `WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION` | Disable eager activity execution | `false` |
-| `RETRY_INITIAL_INTERVAL` | Initial workflow/activity retry delay (seconds) | `1` |
-| `RETRY_NON_RETRYABLE_ERROR_TYPES` | Error types excluded from retries | `None` |
+| Variable                                  | Purpose                                         | Default      |
+|-------------------------------------------|-------------------------------------------------|--------------|
+| `CLIENT_IDENTITY`                         | Client identity visible on the Temporal server  | `None`       |
+| `API_KEY`                                 | Temporal Cloud API key                          | `None`       |
+| `LAZY_CONNECT`                            | Defer connection until first client use         | `false`      |
+| `KEEP_ALIVE_INTERVAL_MS`                  | gRPC keep-alive ping interval                   | `30000`      |
+| `KEEP_ALIVE_TIMEOUT_MS`                   | gRPC keep-alive timeout                         | `15000`      |
+| `CLIENT_RPC_RETRY_*`                      | Client-side RPC retry backoff                   | SDK defaults |
+| `WORKER_GRACEFUL_SHUTDOWN_SECONDS`        | Worker shutdown grace period                    | `30`         |
+| `WORKER_MAX_CACHED_WORKFLOWS`             | In-memory workflow cache size                   | `1000`       |
+| `WORKER_DEBUG_MODE`                       | Enable workflow sandbox debug mode              | `false`      |
+| `WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION` | Disable eager activity execution                | `false`      |
+| `RETRY_INITIAL_INTERVAL`                  | Initial workflow/activity retry delay (seconds) | `1`          |
+| `RETRY_NON_RETRYABLE_ERROR_TYPES`         | Error types excluded from retries               | `None`       |
 
 ### Direct Configuration
 
@@ -300,7 +300,7 @@ import logging
 from datetime import timedelta
 
 from archipy.adapters.temporal import AtomicActivity
-from archipy.helpers.decorators.sqlalchemy_atomic import postgres_sqlalchemy_atomic_decorator
+from archipy.helpers.decorators import postgres_sqlalchemy_atomic
 from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
 # Configure logging
@@ -644,10 +644,10 @@ TEMPORAL__HOST=temporal.production.com
 
 ### What gets wired
 
-| Feature | When | Mechanism |
-|---------|------|-----------|
-| Metrics | `TEMPORAL.ENABLE_METRICS` and `OTEL.IS_ENABLED` + `METRICS_ENABLED` | Temporal `Runtime` with `OpenTelemetryConfig` (OTLP URL/headers/protocol from `OTEL`) |
-| Traces | `OTEL.IS_ENABLED` and `TRACES_ENABLED` | `temporalio.contrib.opentelemetry.TracingInterceptor` on the client after `OtelUtils.init_otel_if_needed` |
+| Feature | When                                                                | Mechanism                                                                                                 |
+|---------|---------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
+| Metrics | `TEMPORAL.ENABLE_METRICS` and `OTEL.IS_ENABLED` + `METRICS_ENABLED` | Temporal `Runtime` with `OpenTelemetryConfig` (OTLP URL/headers/protocol from `OTEL`)                     |
+| Traces  | `OTEL.IS_ENABLED` and `TRACES_ENABLED`                              | `temporalio.contrib.opentelemetry.TracingInterceptor` on the client after `OtelUtils.init_otel_if_needed` |
 
 ### Available Metrics
 

@@ -21,7 +21,7 @@ import logging
 import random
 from typing import Any
 
-from archipy.helpers.decorators.retry import retry_decorator
+from archipy.helpers.decorators import retry
 from archipy.models.errors import ResourceExhaustedError
 
 # Configure logging
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 # Retry a function that might fail temporarily
-@retry_decorator(
+@retry(
     max_retries=3,
     delay=1,
     backoff=2.0,
@@ -81,8 +81,8 @@ else:
 
 ## Timeout Decorator
 
-The timeout decorator ensures a function doesn't run longer than a specified duration. The limit may be a float
-(e.g. `0.5`). Synchronous functions use `SIGALRM`, so they work on Unix and only from the main thread (calling one
+The timeout decorator ensures a function doesn't run longer than a specified duration. The limit may be a float (e.g.
+`0.5`). Synchronous functions use `SIGALRM`, so they work on Unix and only from the main thread (calling one
 from another thread raises `FailedPreconditionError` instead of running without a limit); the previous signal handler
 is restored after the call. `async def` functions are bounded with `asyncio.timeout` and work in any thread.
 
@@ -90,7 +90,7 @@ is restored after the call. `async def` functions are bounded with `asyncio.time
 import logging
 import time
 
-from archipy.helpers.decorators.timeout import timeout_decorator
+from archipy.helpers.decorators import timeout
 from archipy.models.errors import DeadlineExceededError
 
 # Configure logging
@@ -98,7 +98,7 @@ logger = logging.getLogger(__name__)
 
 
 # Set a timeout for a potentially long-running function
-@timeout_decorator(3)  # 3 seconds timeout
+@timeout(3)  # 3 seconds timeout
 def slow_operation(duration: float) -> str:
     """A function that might take too long.
 
@@ -142,14 +142,14 @@ The timing decorator measures and logs the execution time of functions.
 import logging
 import time
 
-from archipy.helpers.decorators.timing import timing_decorator
+from archipy.helpers.decorators import timing
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
 # Measure and log how long a function takes to execute
-@timing_decorator
+@timing
 def process_data(items: list[int]) -> int:
     """Process a list of items with time measurement.
 
@@ -178,14 +178,14 @@ The TTL cache decorator caches function results with automatic expiration.
 import logging
 import time
 
-from archipy.helpers.decorators import ttl_cache_decorator
+from archipy.helpers.decorators import ttl_cache
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
 # Cache the results of an expensive function
-@ttl_cache_decorator(ttl_seconds=60, maxsize=100)
+@ttl_cache(ttl_seconds=60, maxsize=100)
 def fetch_user_data(user_id: int) -> dict[str, str | int]:
     """Fetch user data from a slow source with caching.
 
@@ -231,17 +231,14 @@ These decorators automatically manage database transactions.
 import logging
 from uuid import UUID
 
-from archipy.helpers.decorators.sqlalchemy_atomic import (
-    async_postgres_sqlalchemy_atomic_decorator,
-    postgres_sqlalchemy_atomic_decorator,
-)
+from archipy.helpers.decorators import postgres_sqlalchemy_atomic
 from archipy.models.errors import DatabaseQueryError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
-@postgres_sqlalchemy_atomic_decorator
+@postgres_sqlalchemy_atomic
 def create_user(username: str, email: str) -> "User":  # type: ignore[name-defined]
     """Create a user in a database transaction.
 
@@ -265,7 +262,7 @@ def create_user(username: str, email: str) -> "User":  # type: ignore[name-defin
     return user
 
 
-@async_postgres_sqlalchemy_atomic_decorator
+@postgres_sqlalchemy_atomic
 async def update_user_email(user_id: UUID, new_email: str) -> "User | None":  # type: ignore[name-defined]
     """Update a user's email in an async transaction.
 
@@ -292,12 +289,12 @@ async def update_user_email(user_id: UUID, new_email: str) -> "User | None":  # 
 
 ## gRPC Rate Limit Decorator
 
-`grpc_rate_limit_decorator` declares per-RPC rate limits on gRPC servicer methods. It does **not** enforce limits by
+`grpc_rate_limit` declares per-RPC rate limits on gRPC servicer methods. It does **not** enforce limits by
 itself — enable ``GRPC_RATE_LIMIT.IS_ENABLED`` (or register the interceptor manually) so decorated methods are checked
 before the handler runs.
 
 ```python
-from archipy.helpers.decorators import grpc_rate_limit_decorator
+from archipy.helpers.decorators import grpc_rate_limit
 from archipy.helpers.utils.app_utils import AppUtils
 from archipy.configs.base_config import BaseConfig
 
@@ -311,12 +308,12 @@ matching interceptor automatically.
 
 ```python
 class MySyncServiceServicer(pb2_grpc.MyServiceServicer):
-    @grpc_rate_limit_decorator(calls_count=100, minutes=1)
+    @grpc_rate_limit(calls_count=100, minutes=1)
     def Cheap(self, request, context):
         return pb2.CheapResponse()
 
-    @grpc_rate_limit_decorator(calls_count=10, seconds=1)
-    @grpc_rate_limit_decorator(calls_count=1000, days=1)
+    @grpc_rate_limit(calls_count=10, seconds=1)
+    @grpc_rate_limit(calls_count=1000, days=1)
     def Expensive(self, request, context):
         return pb2.ExpensiveResponse()
 
@@ -328,12 +325,12 @@ sync_server = AppUtils.create_grpc_app(config)
 
 ```python
 class MyAsyncServiceServicer(pb2_grpc.MyServiceServicer):
-    @grpc_rate_limit_decorator(calls_count=100, minutes=1)
+    @grpc_rate_limit(calls_count=100, minutes=1)
     async def Cheap(self, request, context):
         return pb2.CheapResponse()
 
-    @grpc_rate_limit_decorator(calls_count=10, seconds=1)
-    @grpc_rate_limit_decorator(calls_count=1000, days=1)
+    @grpc_rate_limit(calls_count=10, seconds=1)
+    @grpc_rate_limit(calls_count=1000, days=1)
     async def Expensive(self, request, context):
         return pb2.ExpensiveResponse()
 
@@ -346,14 +343,14 @@ async_server = AppUtils.create_async_grpc_app(config)
 
 ### Parameters
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `calls_count` | `1` | Max requests allowed in the window |
-| `milliseconds` | `0` | Window component (ms) |
-| `seconds` | `0` | Window component (s) |
-| `minutes` | `0` | Window component (min) |
-| `hours` | `0` | Window component (h) |
-| `days` | `0` | Window component (days) |
+| Parameter      | Default | Description                        |
+|----------------|---------|------------------------------------|
+| `calls_count`  | `1`     | Max requests allowed in the window |
+| `milliseconds` | `0`     | Window component (ms)              |
+| `seconds`      | `0`     | Window component (s)               |
+| `minutes`      | `0`     | Window component (min)             |
+| `hours`        | `0`     | Window component (h)               |
+| `days`         | `0`     | Window component (days)            |
 
 Time units are summed into one window. At least one time component must be greater than zero.
 
@@ -372,5 +369,29 @@ See [Interceptor Tutorials — Rate Limiting](interceptors.md#rate-limiting-inte
 ## See Also
 
 - [API Reference - Decorators](../../api_reference/helpers/decorators.md) - Full decorators API documentation
-- [API Reference - gRPC Rate Limit Interceptor](../../api_reference/helpers/interceptors.md#rate_limit) - Interceptor API
+- [API Reference - gRPC Rate Limit Interceptor](../../api_reference/helpers/interceptors.md#rate_limit) - Interceptor
+  API
 - [Helper Tutorials](index.md) - Overview of all helper tutorials
+
+## Deprecated names
+
+Decorators dropped their `_decorator` suffix and now detect `async def` functions themselves, so the separate
+`async_*` variants are no longer needed. The old names still work and emit a `DeprecationWarning` that names the
+replacement.
+
+| Deprecated                                                                 | Use instead                                            |
+|----------------------------------------------------------------------------|--------------------------------------------------------|
+| `retry_decorator`                                                          | `retry`                                                |
+| `timeout_decorator`                                                        | `timeout`                                              |
+| `timing_decorator`                                                         | `timing`                                               |
+| `singleton_decorator`                                                      | `singleton`                                            |
+| `ttl_cache_decorator`                                                      | `ttl_cache`                                            |
+| `grpc_rate_limit_decorator`                                                | `grpc_rate_limit`                                      |
+| `sqlalchemy_atomic_decorator(db_type, is_async=...)`                       | `sqlalchemy_atomic(db_type)`                           |
+| `postgres_/mysql_/sqlite_/starrocks_sqlalchemy_atomic_decorator`           | `postgres_/mysql_/sqlite_/starrocks_sqlalchemy_atomic` |
+| `async_postgres_/async_mysql_/async_sqlite_/async_starrocks_..._decorator` | `postgres_/mysql_/sqlite_/starrocks_sqlalchemy_atomic` |
+| `async_measure_duration`, `async_count_calls`                              | `measure_duration`, `count_calls`                      |
+| `async_trace_span`, `async_trace_root`                                     | `trace_span`, `trace_root`                             |
+
+Import everything from `archipy.helpers.decorators`. The old submodule paths (for example
+`archipy.helpers.decorators.retry`) keep exporting the deprecated names.

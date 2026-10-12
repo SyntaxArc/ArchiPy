@@ -422,7 +422,7 @@ class UserRepository:
 # logics/user/user_registration_logic.py
 import logging
 
-from archipy.helpers.decorators.sqlalchemy_atomic import postgres_sqlalchemy_atomic_decorator
+from archipy.helpers.decorators import postgres_sqlalchemy_atomic
 
 from models.dtos.user.domain.v1.user_dtos import UserRegistrationInputDTO, UserRegistrationOutputDTO
 from models.dtos.user.repository.user_dtos import CreateUserCommandDTO, SearchUsersQueryDTO
@@ -438,7 +438,7 @@ class UserRegistrationLogic:
     def __init__(self, user_repository: UserRepository) -> None:
         self._repo = user_repository
 
-    @postgres_sqlalchemy_atomic_decorator
+    @postgres_sqlalchemy_atomic
     def register_user(self, input_dto: UserRegistrationInputDTO) -> UserRegistrationOutputDTO:
         """Validate uniqueness and persist a new user.
 
@@ -467,7 +467,7 @@ class UserRegistrationLogic:
 # logics/user/user_query_logic.py
 import logging
 
-from archipy.helpers.decorators.sqlalchemy_atomic import postgres_sqlalchemy_atomic_decorator
+from archipy.helpers.decorators import postgres_sqlalchemy_atomic
 from archipy.models.errors import NotFoundError
 
 from models.dtos.user.domain.v1.user_dtos import (
@@ -489,7 +489,7 @@ class UserQueryLogic:
     def __init__(self, user_repository: UserRepository) -> None:
         self._repo = user_repository
 
-    @postgres_sqlalchemy_atomic_decorator
+    @postgres_sqlalchemy_atomic
     def get_user_by_id(self, input_dto: UserGetInputDTO) -> UserGetOutputDTO:
         """Retrieve a user by ID.
 
@@ -507,7 +507,7 @@ class UserQueryLogic:
             raise NotFoundError(resource_type="user", additional_data={"user_id": str(input_dto.user_id)})
         return UserGetOutputDTO(id=user.id, username=user.username, email=user.email)
 
-    @postgres_sqlalchemy_atomic_decorator
+    @postgres_sqlalchemy_atomic
     def search_users(self, input_dto: UserSearchInputDTO) -> UserSearchOutputDTO:
         """Search users by optional username filter.
 

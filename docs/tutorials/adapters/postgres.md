@@ -15,7 +15,7 @@ uv add "archipy[postgres]"
 ```
 
 > **Tip:** The PostgreSQL adapter is an optional extra. Install it alongside any ORM extras you need, for example
-`archipy[postgres]`.
+> `archipy[postgres]`.
 
 ## Configuration
 
@@ -396,13 +396,13 @@ def delete_user(user_id: UUID) -> None:
 
 ## Transactions
 
-Use the `@postgres_sqlalchemy_atomic_decorator` to wrap operations in a transaction. If any exception is raised, the
+Use the `@postgres_sqlalchemy_atomic` to wrap operations in a transaction. If any exception is raised, the
 entire transaction is automatically rolled back.
 
 ```python
 import logging
 
-from archipy.helpers.decorators.sqlalchemy_atomic import postgres_sqlalchemy_atomic_decorator
+from archipy.helpers.decorators import postgres_sqlalchemy_atomic
 from archipy.models.errors import AlreadyExistsError, DatabaseQueryError
 
 logger = logging.getLogger(__name__)
@@ -410,7 +410,7 @@ logger = logging.getLogger(__name__)
 adapter = PostgresSQLAlchemyAdapter()
 
 
-@postgres_sqlalchemy_atomic_decorator
+@postgres_sqlalchemy_atomic
 def create_user_with_post(username: str, email: str, post_title: str, post_content: str) -> tuple[User, Post]:
     """Create a user and their first post atomically.
 
@@ -668,7 +668,7 @@ asyncio.run(async_create_user("async_alice", "async@example.com"))
 import asyncio
 import logging
 
-from archipy.helpers.decorators.sqlalchemy_atomic import async_postgres_sqlalchemy_atomic_decorator
+from archipy.helpers.decorators import postgres_sqlalchemy_atomic
 from archipy.models.errors import DatabaseQueryError
 
 logger = logging.getLogger(__name__)
@@ -676,7 +676,7 @@ logger = logging.getLogger(__name__)
 adapter = AsyncPostgresSQLAlchemyAdapter()
 
 
-@async_postgres_sqlalchemy_atomic_decorator
+@postgres_sqlalchemy_atomic
 async def async_create_user_with_post(username: str, email: str, title: str) -> tuple[User, Post]:
     """Create a user and a post asynchronously in a single transaction.
 

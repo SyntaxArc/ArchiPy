@@ -129,7 +129,13 @@ class ScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def insert(self, table: str, data: dict[str, Any], ttl: int | None = None, if_not_exists: bool = False) -> None:
+    def insert(
+        self,
+        table: str,
+        data: dict[str, Any],
+        ttl: int | None = None,
+        if_not_exists: bool = False,
+    ) -> None:
         """Insert data into a table.
 
         Args:
@@ -167,7 +173,13 @@ class ScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def update(self, table: str, data: dict[str, Any], conditions: dict[str, Any], ttl: int | None = None) -> None:
+    def update(
+        self,
+        table: str,
+        data: dict[str, Any],
+        conditions: dict[str, Any],
+        ttl: int | None = None,
+    ) -> None:
         """Update data in a table.
 
         Args:

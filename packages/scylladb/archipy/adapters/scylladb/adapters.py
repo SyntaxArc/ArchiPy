@@ -34,7 +34,7 @@ from cassandra.query import BatchStatement, PreparedStatement, SimpleStatement
 from archipy.adapters.scylladb.ports import AsyncScyllaDBPort, ScyllaDBPort
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import ScyllaDBConfig
-from archipy.helpers.decorators import ttl_cache_decorator
+from archipy.helpers.decorators import ttl_cache
 from archipy.models.errors import (
     ConfigurationError,
     ConnectionTimeoutError,
@@ -358,7 +358,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                     return prepared
 
             # Apply cache decorator
-            cached_prepare = ttl_cache_decorator(
+            cached_prepare = ttl_cache(
                 ttl_seconds=self.config.PREPARED_STATEMENT_CACHE_TTL_SECONDS,
                 maxsize=self.config.PREPARED_STATEMENT_CACHE_SIZE,
             )(_prepare_internal)
@@ -477,7 +477,13 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     @override
-    def insert(self, table: str, data: dict[str, Any], ttl: int | None = None, if_not_exists: bool = False) -> None:
+    def insert(
+        self,
+        table: str,
+        data: dict[str, Any],
+        ttl: int | None = None,
+        if_not_exists: bool = False,
+    ) -> None:
         """Insert data into a table.
 
         Args:
@@ -541,7 +547,13 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     @override
-    def update(self, table: str, data: dict[str, Any], conditions: dict[str, Any], ttl: int | None = None) -> None:
+    def update(
+        self,
+        table: str,
+        data: dict[str, Any],
+        conditions: dict[str, Any],
+        ttl: int | None = None,
+    ) -> None:
         """Update data in a table.
 
         Args:

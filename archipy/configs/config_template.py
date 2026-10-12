@@ -201,7 +201,7 @@ class GrpcRateLimitConfig(BaseModel):
 
     Controls Redis key layout, failure modes, and identity resolution for
     ``GrpcServerRateLimitInterceptor`` / ``AsyncGrpcServerRateLimitInterceptor``.
-    Per-RPC limits are declared via ``grpc_rate_limit_decorator`` on servicer methods.
+    Per-RPC limits are declared via ``grpc_rate_limit`` on servicer methods.
     When ``IS_ENABLED`` is True, ``AppUtils.create_grpc_app`` and ``AppUtils.create_async_grpc_app``
     register the matching interceptor automatically.
     """

@@ -5,7 +5,10 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Awaitable, Iterable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any
 
-from archipy.adapters.redis.adapter_mixins._shared import AsyncRedisMixinBase, SyncRedisMixinBase
+from archipy.adapters.redis.adapter_mixins._shared import (
+    AsyncRedisMixinBase,
+    SyncRedisMixinBase,
+)
 
 if TYPE_CHECKING:
     from datetime import datetime, timedelta

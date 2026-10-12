@@ -132,7 +132,7 @@ class RedisMock(RedisAdapter):
 
     def _get_client(self, host: str, configs: RedisConfig, *, decode_responses: bool | None = None) -> Redis:
         return fakeredis.FakeRedis(
-            decode_responses=configs.DECODE_RESPONSES if decode_responses is None else decode_responses,
+            decode_responses=(configs.DECODE_RESPONSES if decode_responses is None else decode_responses),
             server=self._server,
         )
 
@@ -182,7 +182,7 @@ class AsyncRedisMock(AsyncRedisAdapter):
 
     def _get_client(self, host: str, configs: RedisConfig, *, decode_responses: bool | None = None) -> AsyncRedis:
         return FakeAsyncRedis(
-            decode_responses=configs.DECODE_RESPONSES if decode_responses is None else decode_responses,
+            decode_responses=(configs.DECODE_RESPONSES if decode_responses is None else decode_responses),
             server=self._server,
         )
 

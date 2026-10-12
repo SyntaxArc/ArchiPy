@@ -10,13 +10,13 @@ with proper error handling and Python 3.14 type hints.
 
 ## Supported Gateways
 
-| Gateway              | Adapter Class                          | Protocol |
-|---------------------|----------------------------------------|----------|
-| Parsian Shaparak    | `ParsianShaparakPaymentAdapter`        | SOAP/WSDL |
-| Saman Shaparak      | `SamanShaparakPaymentAdapter`          | REST/JSON |
-| Saman Neo-PG        | `SamanNeoPgShaparakPaymentAdapter`     | REST/JSON (dynamic URL) |
-| Async Saman Shaparak | `AsyncSamanShaparakPaymentAdapter`   | REST/JSON (async) |
-| Async Saman Neo-PG  | `AsyncSamanNeoPgShaparakPaymentAdapter`| REST/JSON (async, dynamic URL) |
+| Gateway              | Adapter Class                           | Protocol                       |
+|----------------------|-----------------------------------------|--------------------------------|
+| Parsian Shaparak     | `ParsianShaparakPaymentAdapter`         | SOAP/WSDL                      |
+| Saman Shaparak       | `SamanShaparakPaymentAdapter`           | REST/JSON                      |
+| Saman Neo-PG         | `SamanNeoPgShaparakPaymentAdapter`      | REST/JSON (dynamic URL)        |
+| Async Saman Shaparak | `AsyncSamanShaparakPaymentAdapter`      | REST/JSON (async)              |
+| Async Saman Neo-PG   | `AsyncSamanNeoPgShaparakPaymentAdapter` | REST/JSON (async, dynamic URL) |
 
 ## Installation
 
@@ -25,7 +25,7 @@ uv add "archipy[parsian-ipg]"  # Parsian gateway
 uv add "archipy[saman-ipg]"    # Saman gateway
 ```
 
-> **Tip:** Payment gateways are optional extras. Install only the gateway(s) you need.
+> **Tip:** Payment gateways are optional extras. Install only the gateway (s) you need.
 
 ---
 
@@ -441,12 +441,12 @@ async def saman_callback(ref_num: str, request: Request) -> dict[str, str]:
 
 All adapters use ArchiPy's consistent error hierarchy:
 
-| Error Type             | Trigger                                           |
-|------------------------|---------------------------------------------------|
-| `UnavailableError`    | Network failure, service unreachable              |
-| `InternalError`        | Unexpected server response                        |
+| Error Type                | Trigger                                        |
+|---------------------------|------------------------------------------------|
+| `UnavailableError`        | Network failure, service unreachable           |
+| `InternalError`           | Unexpected server response                     |
 | `FailedPreconditionError` | Missing required config (e.g., no TERMINAL_ID) |
-| `InvalidArgumentError` | Invalid request parameters                        |
+| `InvalidArgumentError`    | Invalid request parameters                     |
 
 ## See Also
 

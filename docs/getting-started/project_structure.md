@@ -124,7 +124,7 @@ Logic classes are **pure business rules**. They:
 
 - Accept domain DTOs as input; return domain DTOs as output
 - Are framework-agnostic (no FastAPI/gRPC imports)
-- Define the unit of work boundary via `@postgres_sqlalchemy_atomic_decorator`
+- Define the unit of work boundary via `@postgres_sqlalchemy_atomic`
 - May call other logic classes within the same transaction (nested `@atomic` reuses the open session)
 - Must never import or call repositories from a different domain
 

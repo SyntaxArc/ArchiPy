@@ -6,7 +6,10 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from archipy.adapters.redis.search_ports import AsyncRedisSearchHandlePort, RedisSearchHandlePort
+    from archipy.adapters.redis.search_ports import (
+        AsyncRedisSearchHandlePort,
+        RedisSearchHandlePort,
+    )
 
 
 class RedisConnectionPort:

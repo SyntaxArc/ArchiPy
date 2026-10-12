@@ -385,15 +385,15 @@ asyncio.run(main())
 
 #### Parameters
 
-| Parameter | Description |
-|---|---|
-| `byint` / `byfloat` | Increment step (mutually exclusive; defaults to 1) |
-| `lbound` / `ubound` | Lower and upper bounds on the resulting value |
-| `saturate` | Clamp to the bound instead of rejecting when out of range |
-| `ex` / `px` | Relative expiry in seconds or milliseconds |
-| `exat` / `pxat` | Absolute expiry timestamp |
-| `persist` | Remove any existing expiration |
-| `enx` | Set expiration only when the key has no TTL (preserves window start) |
+| Parameter           | Description                                                          |
+|---------------------|----------------------------------------------------------------------|
+| `byint` / `byfloat` | Increment step (mutually exclusive; defaults to 1)                   |
+| `lbound` / `ubound` | Lower and upper bounds on the resulting value                        |
+| `saturate`          | Clamp to the bound instead of rejecting when out of range            |
+| `ex` / `px`         | Relative expiry in seconds or milliseconds                           |
+| `exat` / `pxat`     | Absolute expiry timestamp                                            |
+| `persist`           | Remove any existing expiration                                       |
+| `enx`               | Set expiration only when the key has no TTL (preserves window start) |
 
 ## RediSearch
 
@@ -536,7 +536,8 @@ handle = redis.search_index("cluster-products")
 handle.create_index(cluster_schema, prefix="{products}:")
 ```
 
-> See [Redis scalable query best practices](https://redis.io/docs/latest/develop/ai/search-and-query/best-practices/scalable-query-best-practices/)
+>
+See [Redis scalable query best practices](https://redis.io/docs/latest/develop/ai/search-and-query/best-practices/scalable-query-best-practices/)
 > for cluster sizing and `SHARD_K_RATIO` guidance.
 
 ### Upsert Documents
@@ -876,6 +877,8 @@ else:
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — Redis configuration setup
 - [Cache Decorator](../helpers/decorators.md#cache-decorator) — TTL cache decorator usage
-- [Interceptors - Rate Limiting](../helpers/interceptors.md#rate-limiting-interceptor) — gRPC rate limiting with `INCREX`; FastAPI via `fastapi-redis-sdk`
-- [BDD Testing](../testing_strategy.md) — RediSearch scenarios in `features/redis_adapter.feature` (container and cluster)
+- [Interceptors - Rate Limiting](../helpers/interceptors.md#rate-limiting-interceptor) — gRPC rate limiting with
+  `INCREX`; FastAPI via `fastapi-redis-sdk`
+- [BDD Testing](../testing_strategy.md) — RediSearch scenarios in `features/redis_adapter.feature` (container and
+  cluster)
 - [API Reference](../../api_reference/adapters/redis.md) — Full Redis adapter API documentation

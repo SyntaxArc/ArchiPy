@@ -14,7 +14,7 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
 )
-from archipy.helpers.decorators import ttl_cache_decorator
+from archipy.helpers.decorators import ttl_cache
 from archipy.helpers.utils.string_utils import StringUtils
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class KeycloakClientsMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for client operations."""
 
-    @ttl_cache_decorator(ttl_seconds=3600, maxsize=1)  # Cache for 1 hour
+    @ttl_cache(ttl_seconds=3600, maxsize=1)  # Cache for 1 hour
     def get_service_account_id(self) -> str | None:
         """Get service account user ID for the current client.
 
@@ -39,7 +39,7 @@ class KeycloakClientsMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_service_account_id")
 
-    @ttl_cache_decorator(ttl_seconds=3600, maxsize=50)  # Cache for 1 hour
+    @ttl_cache(ttl_seconds=3600, maxsize=50)  # Cache for 1 hour
     def get_client_secret(self, client_id: str) -> str | None:
         """Get client secret.
 
@@ -58,7 +58,7 @@ class KeycloakClientsMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_client_secret")
 
-    @ttl_cache_decorator(ttl_seconds=3600, maxsize=50)  # Cache for 1 hour
+    @ttl_cache(ttl_seconds=3600, maxsize=50)  # Cache for 1 hour
     def get_client_id(self, client_name: str) -> str | None:
         """Get client ID by client name.
 

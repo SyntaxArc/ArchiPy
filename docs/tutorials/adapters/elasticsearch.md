@@ -965,7 +965,8 @@ The Elasticsearch **adapter** (`ElasticsearchAdapter` / `AsyncElasticsearchAdapt
 in 5.0.0. Elastic APM (`ElasticsearchAPMConfig` / `ELASTIC_APM`) was removed — use OpenTelemetry
 instead.
 
-The `elasticsearch` client emits OTel spans natively — no extra instrumentor needed. Install `archipy[otel]` and enable OTel:
+The `elasticsearch` client emits OTel spans natively — no extra instrumentor needed. Install `archipy[otel]` and enable
+OTel:
 
 ```bash
 uv add "archipy[otel]"

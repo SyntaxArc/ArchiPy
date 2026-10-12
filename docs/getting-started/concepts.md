@@ -79,12 +79,12 @@ DTOs are divided into two groups:
 
 The helpers layer contains pure utilities with no direct external I/O:
 
-| Sub-package             | Contents                                                                     |
-|-------------------------|------------------------------------------------------------------------------|
-| `helpers/utils/`        | JWT, password, TOTP, datetime, string, file, OpenTelemetry               |
+| Sub-package             | Contents                                                                                    |
+|-------------------------|---------------------------------------------------------------------------------------------|
+| `helpers/utils/`        | JWT, password, TOTP, datetime, string, file, OpenTelemetry                                  |
 | `helpers/decorators/`   | `@atomic`, `@ttl_cache`, `@retry`, `@singleton`, `@timeout`, `@timing`, `@trace_*`, metrics |
-| `helpers/interceptors/` | gRPC exception handling and rate limiting (OTel via AppUtils)            |
-| `helpers/metaclasses/`  | `SingletonMeta` and other meta-programming utilities                     |
+| `helpers/interceptors/` | gRPC exception handling and rate limiting (OTel via AppUtils)                               |
+| `helpers/metaclasses/`  | `SingletonMeta` and other meta-programming utilities                                        |
 
 ### Adapters
 
@@ -176,7 +176,7 @@ In tests, inject `RedisMock` instead of `RedisAdapter` — no Redis server neede
 ## Unit of Work
 
 The **logic layer** is the unit of work boundary. Every public method on a logic class is decorated with
-`@postgres_sqlalchemy_atomic_decorator`, which opens a SQLAlchemy session, commits on success, and rolls back
+`@postgres_sqlalchemy_atomic`, which opens a SQLAlchemy session, commits on success, and rolls back
 on any exception:
 
 ```
@@ -185,14 +185,14 @@ Service  →  Logic (@atomic)  →  Repository  →  Adapter  →  DB
 ```
 
 ```python
-from archipy.helpers.decorators.sqlalchemy_atomic import postgres_sqlalchemy_atomic_decorator
+from archipy.helpers.decorators import postgres_sqlalchemy_atomic
 from models.dtos.user.domain.v1.user_dtos import UserRegistrationInputDTO, UserRegistrationOutputDTO
 
 
 class UserRegistrationLogic:
     """Handles user registration within a single database transaction."""
 
-    @postgres_sqlalchemy_atomic_decorator
+    @postgres_sqlalchemy_atomic
     def register_user(self, input_dto: UserRegistrationInputDTO) -> UserRegistrationOutputDTO:
         """Validate uniqueness and create a new user.
 
@@ -209,11 +209,11 @@ class UserRegistrationLogic:
 >
 > - Logic classes **may call other logic classes** — nested `@atomic` calls reuse the open session.
 > - Logic classes **must never import or call a repository from another domain directly**.
-    > Cross-domain reads must go through the other domain's logic class.
-    >
-    >     ```
->     ✅  OrderCreationLogic  →  UserQueryLogic  →  UserRepository
->     ❌  OrderCreationLogic  →  UserRepository  (bypasses domain boundary)
+>   Cross-domain reads must go through the other domain's logic class.
+>
+>       ```
+>   ✅ OrderCreationLogic → UserQueryLogic → UserRepository
+>   ❌ OrderCreationLogic → UserRepository (bypasses domain boundary)
 >     ```
 
 ---

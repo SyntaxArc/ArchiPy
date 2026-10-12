@@ -785,7 +785,7 @@ statements = [
 
 ### 9. Use Helper Methods Wisely
 
-Leverage count() and exists() for cleaner code, but be mindful of performance:
+Leverage count () and exists () for cleaner code, but be mindful of performance:
 
 ```python
 # Good: Check existence using primary key

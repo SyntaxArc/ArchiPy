@@ -7,13 +7,16 @@ import logging
 from typing import TYPE_CHECKING, Any, NoReturn, override
 
 import hvac.exceptions
-from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout as RequestsTimeout
+from requests.exceptions import (
+    ConnectionError as RequestsConnectionError,
+    Timeout as RequestsTimeout,
+)
 
 from archipy.adapters.vault.ports import VaultPort
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import VaultConfig
 from archipy.configs.vault_settings_source import create_vault_client
-from archipy.helpers.decorators import ttl_cache_decorator
+from archipy.helpers.decorators import ttl_cache
 from archipy.models.dtos.vault_lease_dto import VaultLeaseDTO
 from archipy.models.errors import (
     BaseError,
@@ -87,7 +90,10 @@ class VaultExceptionHandlerMixin:
             raise PermissionDeniedError(
                 additional_data={"details": f"Permission denied for Vault operation: {operation}"},
             ) from exception
-        if isinstance(exception, hvac.exceptions.InvalidRequest | hvac.exceptions.ParamValidationError):
+        if isinstance(
+            exception,
+            hvac.exceptions.InvalidRequest | hvac.exceptions.ParamValidationError,
+        ):
             raise InvalidArgumentError(argument_name=operation) from exception
         if isinstance(exception, hvac.exceptions.VaultDown | hvac.exceptions.RateLimitExceeded):
             raise UnavailableError(resource_type="Vault", additional_data={"operation": operation}) from exception
@@ -128,7 +134,13 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
             self._client = create_vault_client(self.configs)
         except ConfigurationError:
             raise
-        except (hvac.exceptions.VaultError, RequestsConnectionError, RequestsTimeout, OSError, ValueError) as e:
+        except (
+            hvac.exceptions.VaultError,
+            RequestsConnectionError,
+            RequestsTimeout,
+            OSError,
+            ValueError,
+        ) as e:
             raise ConfigurationError(operation="vault_connect", reason=str(e)) from e
 
         self.token_renew_count = 0
@@ -138,7 +150,7 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
         ttl = max(self.configs.SECRET_CACHE_TTL, 0)
         self._read_secret_cached: Any | None = None
         if ttl > 0:
-            cached = ttl_cache_decorator(ttl_seconds=ttl, maxsize=100)(VaultAdapter._read_secret_uncached)
+            cached = ttl_cache(ttl_seconds=ttl, maxsize=100)(VaultAdapter._read_secret_uncached)
             self._read_secret_cached = cached.__get__(self, VaultAdapter)
 
     def _mount(self, mount_point: str | None) -> str:
@@ -164,7 +176,13 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
             return fn()
         except BaseError:
             raise
-        except (hvac.exceptions.VaultError, RequestsConnectionError, RequestsTimeout, OSError, ValueError) as e:
+        except (
+            hvac.exceptions.VaultError,
+            RequestsConnectionError,
+            RequestsTimeout,
+            OSError,
+            ValueError,
+        ) as e:
             self._handle_vault_exception(e, operation)
 
     def _maybe_renew_token(self) -> None:
@@ -178,7 +196,13 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
                 self._client.auth.token.renew_self()
                 self.token_renew_count += 1
                 logger.debug("Renewed Vault token (previous TTL=%s)", ttl)
-        except (hvac.exceptions.VaultError, RequestsConnectionError, RequestsTimeout, OSError, ValueError) as e:
+        except (
+            hvac.exceptions.VaultError,
+            RequestsConnectionError,
+            RequestsTimeout,
+            OSError,
+            ValueError,
+        ) as e:
             self._handle_vault_exception(e, "renew_token")
 
     def clear_secret_cache(self) -> None:

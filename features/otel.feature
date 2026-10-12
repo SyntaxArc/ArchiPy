@@ -12,8 +12,8 @@ Feature: OpenTelemetry decorators
     Then a span named "load_user" should be recorded
 
   @async
-  Scenario: async_trace_span creates a span
-    Given an async function decorated with async_trace_span named "load_user_async"
+  Scenario: trace_span creates a span
+    Given an async function decorated with trace_span named "load_user_async"
     When I call the traced async function
     Then a span named "load_user_async" should be recorded
 
@@ -100,9 +100,39 @@ Feature: OpenTelemetry decorators
     When I call the traced sync function with password "s3cret"
     Then the recorded span should have attribute "password" equal to "***"
 
-  Scenario: sync measure_duration rejects coroutine functions
-    When I apply measure_duration to an async function
-    Then an InvalidArgumentError should be raised for decorator "measure_duration"
+  Scenario Outline: <decorator> accepts async functions
+    When I apply <decorator> to an async function and call it
+    Then the async function should return its result
+
+    Examples:
+      | decorator        |
+      | measure_duration |
+      | count_calls      |
+      | trace_span       |
+      | trace_root       |
+
+  Scenario Outline: Deprecated <alias> still works and points at <replacement>
+    When I apply the deprecated <alias> to an async function
+    Then exactly one DeprecationWarning should name "<replacement>"
+    And the decorated async function should still return its result
+
+    Examples:
+      | alias                  | replacement      |
+      | async_measure_duration | measure_duration |
+      | async_count_calls      | count_calls      |
+      | async_trace_span       | trace_span       |
+      | async_trace_root       | trace_root       |
+
+  Scenario Outline: Deprecated <alias> still rejects sync functions
+    When I apply the deprecated <alias> to a sync function
+    Then an InvalidArgumentError should be raised for decorator "<alias>"
+
+    Examples:
+      | alias                  |
+      | async_measure_duration |
+      | async_count_calls      |
+      | async_trace_span       |
+      | async_trace_root       |
 
   Scenario: http protobuf resolves signal paths on OTLP endpoint
     When I resolve OTLP endpoints for protocol "http/protobuf" with base "http://localhost:4318"
@@ -500,13 +530,13 @@ Feature: OpenTelemetry decorators
 
   @async
   Scenario: async cancellation records cancelled metric status
-    Given an async function decorated with async_measure_duration named "test.cancel.duration"
+    Given an async function decorated with measure_duration named "test.cancel.duration"
     When I cancel the measured async function
     Then a histogram metric named "test.cancel.duration" should have status "cancelled"
 
   @async
   Scenario: async cancellation sets span ERROR status
-    Given an async function decorated with async_trace_span named "cancel_span"
+    Given an async function decorated with trace_span named "cancel_span"
     When I cancel the traced async function
     Then the recorded span status should be ERROR
 

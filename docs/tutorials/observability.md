@@ -13,16 +13,16 @@ Enable the relevant extras, set `OTEL__IS_ENABLED=true`, and call `AppUtils.crea
 
 ## Installation
 
-| Extra                     | Purpose                                              |
-|---------------------------|------------------------------------------------------|
-| `archipy[otel]`           | SDK, OTLP exporters, httpx/requests, threading, system metrics |
-| `archipy[otel-fastapi]`   | FastAPI native telemetry (FastAPI 0.142.2+)          |
-| `archipy[otel-grpc]`      | gRPC server/client contrib interceptors              |
-| `archipy[otel-sqlalchemy]`| SQLAlchemy instrumentation (covers Postgres/MySQL/SQLite via ORM) |
-| `archipy[otel-redis]`     | Redis instrumentation                                |
-| `archipy[otel-kafka]`     | Confluent Kafka instrumentation                      |
-| `archipy[otel-scylladb]`  | Cassandra/ScyllaDB driver instrumentation            |
-| `archipy[otel-minio]`     | Botocore (MinIO/S3) instrumentation                  |
+| Extra                      | Purpose                                                           |
+|----------------------------|-------------------------------------------------------------------|
+| `archipy[otel]`            | SDK, OTLP exporters, httpx/requests, threading, system metrics    |
+| `archipy[otel-fastapi]`    | FastAPI native telemetry (FastAPI 0.142.2+)                       |
+| `archipy[otel-grpc]`       | gRPC server/client contrib interceptors                           |
+| `archipy[otel-sqlalchemy]` | SQLAlchemy instrumentation (covers Postgres/MySQL/SQLite via ORM) |
+| `archipy[otel-redis]`      | Redis instrumentation                                             |
+| `archipy[otel-kafka]`      | Confluent Kafka instrumentation                                   |
+| `archipy[otel-scylladb]`   | Cassandra/ScyllaDB driver instrumentation                         |
+| `archipy[otel-minio]`      | Botocore (MinIO/S3) instrumentation                               |
 
 === "Core"
 
@@ -89,44 +89,44 @@ logger.info("OTel enabled=%s endpoint=%s", config.OTEL.IS_ENABLED, config.OTEL.O
 
 ### Key fields
 
-| Field                     | Default                     | Description                                      |
-|---------------------------|-----------------------------|--------------------------------------------------|
-| `IS_ENABLED`              | `false`                     | Master switch                                    |
-| `OTLP_ENDPOINT`           | `http://localhost:4317`     | Default OTLP collector URL                       |
-| `TRACES_ENDPOINT`         | `None`                      | Optional per-signal OTLP traces URL override     |
-| `METRICS_ENDPOINT`        | `None`                      | Optional per-signal OTLP metrics URL override    |
-| `LOGS_ENDPOINT`           | `None`                      | Optional per-signal OTLP logs URL override       |
-| `PROTOCOL`                | `grpc`                      | `grpc` or `http/protobuf`                        |
-| `TRACES_SAMPLE_RATIO`     | `0.1`                       | Parent-based trace ID ratio sampler              |
-| `METRIC_EXPORT_INTERVAL_MS` | `60000`                   | Periodic OTLP metric export interval             |
-| `METRICS_EXPORTER`        | `otlp`                      | Unique exporter: `otlp`, `pull`, or `pushgateway`|
-| `METRICS_PULL_HOST`       | `0.0.0.0`                   | Pull scrape bind host (unauthenticated)          |
-| `METRICS_PULL_PORT`       | `8200`                      | Pull scrape bind port (`/metrics`)               |
-| `METRICS_PUSHGATEWAY_URL` | `None`                      | Pushgateway URL (required for `pushgateway`)     |
-| `METRICS_PUSHGATEWAY_JOB` | `None`                      | Pushgateway job (defaults to `SERVICE_NAME`)     |
-| `METRICS_PUSHGATEWAY_INTERVAL_SECONDS` | `60`           | Push interval when exporter is `pushgateway`     |
-| `METRICS_PUSHGATEWAY_TIMEOUT_SECONDS` | `10`            | HTTP timeout for push/delete                     |
-| `METRICS_PUSHGATEWAY_GROUPING_KEY` | `{}`               | Extra grouping labels (max 16 entries)           |
-| `METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN` | `true`       | Delete grouping key on graceful shutdown         |
-| `SYSTEM_METRICS_ENABLED`  | `true`                      | Process/system metrics instrumentor              |
-| `LOGS_ENABLED`            | `true`                      | Enable log export when OTel is on                |
-| `LOGS_EXPORTER`           | `console`                   | Unique logs exporter: `console` or `otlp`        |
-| `FASTAPI_EXCLUDED_URLS`   | `None`                      | Comma-separated URL patterns skipped by FastAPI  |
-| `FASTAPI_OPERATION_SPANS_ENABLED` | `true`              | FastAPI child spans (dependencies, endpoint, serialization, background tasks) |
-| `FASTAPI_LOGS_ENABLED`    | `false`                     | FastAPI log records for validation failures and unhandled exceptions (includes stack traces) |
-| `RESOURCE_ATTRIBUTES`     | `{}`                        | Extra OTel resource attributes                   |
-| `LOGS_LEVEL`              | `INFO`                      | Minimum level for the root-logger handler        |
+| Field                                    | Default                 | Description                                                                                  |
+|------------------------------------------|-------------------------|----------------------------------------------------------------------------------------------|
+| `IS_ENABLED`                             | `false`                 | Master switch                                                                                |
+| `OTLP_ENDPOINT`                          | `http://localhost:4317` | Default OTLP collector URL                                                                   |
+| `TRACES_ENDPOINT`                        | `None`                  | Optional per-signal OTLP traces URL override                                                 |
+| `METRICS_ENDPOINT`                       | `None`                  | Optional per-signal OTLP metrics URL override                                                |
+| `LOGS_ENDPOINT`                          | `None`                  | Optional per-signal OTLP logs URL override                                                   |
+| `PROTOCOL`                               | `grpc`                  | `grpc` or `http/protobuf`                                                                    |
+| `TRACES_SAMPLE_RATIO`                    | `0.1`                   | Parent-based trace ID ratio sampler                                                          |
+| `METRIC_EXPORT_INTERVAL_MS`              | `60000`                 | Periodic OTLP metric export interval                                                         |
+| `METRICS_EXPORTER`                       | `otlp`                  | Unique exporter: `otlp`, `pull`, or `pushgateway`                                            |
+| `METRICS_PULL_HOST`                      | `0.0.0.0`               | Pull scrape bind host (unauthenticated)                                                      |
+| `METRICS_PULL_PORT`                      | `8200`                  | Pull scrape bind port (`/metrics`)                                                           |
+| `METRICS_PUSHGATEWAY_URL`                | `None`                  | Pushgateway URL (required for `pushgateway`)                                                 |
+| `METRICS_PUSHGATEWAY_JOB`                | `None`                  | Pushgateway job (defaults to `SERVICE_NAME`)                                                 |
+| `METRICS_PUSHGATEWAY_INTERVAL_SECONDS`   | `60`                    | Push interval when exporter is `pushgateway`                                                 |
+| `METRICS_PUSHGATEWAY_TIMEOUT_SECONDS`    | `10`                    | HTTP timeout for push/delete                                                                 |
+| `METRICS_PUSHGATEWAY_GROUPING_KEY`       | `{}`                    | Extra grouping labels (max 16 entries)                                                       |
+| `METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN` | `true`                  | Delete grouping key on graceful shutdown                                                     |
+| `SYSTEM_METRICS_ENABLED`                 | `true`                  | Process/system metrics instrumentor                                                          |
+| `LOGS_ENABLED`                           | `true`                  | Enable log export when OTel is on                                                            |
+| `LOGS_EXPORTER`                          | `console`               | Unique logs exporter: `console` or `otlp`                                                    |
+| `FASTAPI_EXCLUDED_URLS`                  | `None`                  | Comma-separated URL patterns skipped by FastAPI                                              |
+| `FASTAPI_OPERATION_SPANS_ENABLED`        | `true`                  | FastAPI child spans (dependencies, endpoint, serialization, background tasks)                |
+| `FASTAPI_LOGS_ENABLED`                   | `false`                 | FastAPI log records for validation failures and unhandled exceptions (includes stack traces) |
+| `RESOURCE_ATTRIBUTES`                    | `{}`                    | Extra OTel resource attributes                                                               |
+| `LOGS_LEVEL`                             | `INFO`                  | Minimum level for the root-logger handler                                                    |
 
 ### Metrics exporters
 
 Exactly **one** metrics exporter when `METRICS_ENABLED` is true — set via
 `METRICS_EXPORTER` (`otlp` | `pull` | `pushgateway`):
 
-| Mode | `METRICS_EXPORTER` | Behavior |
-|------|-------------------|----------|
-| OTLP (default) | `otlp` | Periodic export to the OTLP collector |
-| Pull scrape | `pull` | Dedicated HTTP server on `METRICS_PULL_HOST:METRICS_PULL_PORT/metrics` |
-| Pushgateway | `pushgateway` | Daemon thread pushes Prometheus text to Pushgateway (no local scrape) |
+| Mode           | `METRICS_EXPORTER` | Behavior                                                               |
+|----------------|--------------------|------------------------------------------------------------------------|
+| OTLP (default) | `otlp`             | Periodic export to the OTLP collector                                  |
+| Pull scrape    | `pull`             | Dedicated HTTP server on `METRICS_PULL_HOST:METRICS_PULL_PORT/metrics` |
+| Pushgateway    | `pushgateway`      | Daemon thread pushes Prometheus text to Pushgateway (no local scrape)  |
 
 `otlp` and `pushgateway` both *push* from the process, but to different wire
 targets: OTLP collector vs Prometheus Pushgateway.
@@ -155,15 +155,16 @@ OTEL__METRICS_PUSHGATEWAY_INTERVAL_SECONDS=60
 
 `OtelUtils.metrics_registry()` returns the Prometheus `CollectorRegistry` when
 exporter is `pull` or `pushgateway`.
+
 ### Logs exporters
 
 Exactly **one** logs exporter when `LOGS_ENABLED` is true — set via
 `LOGS_EXPORTER` (`console` | `otlp`):
 
-| Mode | `LOGS_EXPORTER` | Behavior |
-|------|-----------------|----------|
-| Console (default) | `console` | INFO/DEBUG → stdout; WARNING+ → stderr |
-| OTLP | `otlp` | Batch export to the OTLP collector |
+| Mode              | `LOGS_EXPORTER` | Behavior                               |
+|-------------------|-----------------|----------------------------------------|
+| Console (default) | `console`       | INFO/DEBUG → stdout; WARNING+ → stderr |
+| OTLP              | `otlp`          | Batch export to the OTLP collector     |
 
 ```bash
 # OTLP log export
@@ -289,7 +290,8 @@ interceptors when OTel is enabled (requires `archipy[otel-grpc]` for traces):
   `TRACES_ENABLED`
 - **Metrics** — ArchiPy `rpc.server.request.duration` histogram (seconds, same buckets as FastAPI's
   `http.server.request.duration`) and `rpc.server.active_requests` up-down counter (in-flight calls,
-  like `http.server.active_requests`) when `METRICS_ENABLED` (works in metrics-only mode; no handler decorators required)
+  like `http.server.active_requests`) when `METRICS_ENABLED` (works in metrics-only mode; no handler decorators
+  required)
 
 Order becomes: OTel traces (if any) → OTel metrics (if any) → exception interceptor
 → rate-limit (if enabled) → custom interceptors.
@@ -317,6 +319,7 @@ silently. Elasticsearch needs no instrumentor — the `elasticsearch` client emi
 spans natively.
 `SystemMetricsInstrumentor` runs only when `METRICS_ENABLED` and
 `SYSTEM_METRICS_ENABLED` are both true.
+
 ### Client gRPC
 
 For outbound gRPC clients, attach contrib interceptors explicitly:
@@ -346,18 +349,18 @@ For async clients use `OtelUtils.async_grpc_client_interceptors()`.
 For code outside FastAPI/gRPC — workers, schedulers, domain logic — use decorators from
 `archipy.helpers.decorators`:
 
-| Decorator            | Purpose                                      |
-|----------------------|----------------------------------------------|
-| `@trace_span`        | Sync child span                              |
-| `@async_trace_span`  | Async child span                             |
-| `@trace_root`        | Sync root span (entry point)                 |
-| `@async_trace_root`  | Async root span                              |
-| `@trace_class`       | Wrap public methods of a class with spans    |
+| Decorator      | Purpose                                   |
+|----------------|-------------------------------------------|
+| `@trace_span`  | Sync child span                           |
+| `@trace_span`  | Async child span                          |
+| `@trace_root`  | Sync root span (entry point)              |
+| `@trace_root`  | Async root span                           |
+| `@trace_class` | Wrap public methods of a class with spans |
 
 ```python
 import logging
 
-from archipy.helpers.decorators import async_trace_span, trace_root, trace_span
+from archipy.helpers.decorators import trace_span, trace_root, trace_span
 
 logger = logging.getLogger(__name__)
 
@@ -405,8 +408,8 @@ def calculate_total(items: list[dict[str, float]]) -> float:
 ```
 
 Decorators no-op when `OTEL.IS_ENABLED` is false. On exceptions they set span status via
-`OtelUtils.status_for_exception` (`BaseError` with HTTP status below 500 leaves status
-**UNSET** per the OTel spec for handled client errors; other exceptions become ERROR).
+`OtelUtils.status_for_exception` (`BaseError` with HTTP status below 500 leaves status **UNSET** per the OTel spec for
+handled client errors; other exceptions become ERROR).
 
 > **Warning (`capture_args`):** Prefer non-sensitive identifiers (`user_id`,
 > `order_id`). Names matching a denylist (`password`, `token`, `secret`,
@@ -418,12 +421,12 @@ Decorators no-op when `OTEL.IS_ENABLED` is false. On exceptions they set span st
 
 ## Metrics Decorators
 
-| Decorator                 | Purpose                                |
-|---------------------------|----------------------------------------|
-| `@measure_duration`       | Sync duration histogram                |
-| `@async_measure_duration` | Async duration histogram               |
-| `@count_calls`            | Sync call counter                      |
-| `@async_count_calls`      | Async call counter                     |
+| Decorator           | Purpose                  |
+|---------------------|--------------------------|
+| `@measure_duration` | Sync duration histogram  |
+| `@measure_duration` | Async duration histogram |
+| `@count_calls`      | Sync call counter        |
+| `@count_calls`      | Async call counter       |
 
 ```python
 from archipy.helpers.decorators import count_calls, measure_duration
@@ -458,7 +461,6 @@ send to Sentry or Elastic APM:
 from archipy.helpers.utils.base_utils import BaseUtils
 from archipy.models.errors import InternalError
 
-
 try:
     raise InternalError()
 except InternalError as exc:
@@ -484,10 +486,10 @@ See [Temporal adapter](adapters/temporal.md) for a full example.
 
 ## Known Gaps
 
-| Area              | Status                                                                 |
-|-------------------|------------------------------------------------------------------------|
-| **Kafka aio**     | `otel-kafka` covers Confluent Kafka sync instrumentation; async Kafka paths may not be instrumented |
-| **SMTP / email**  | No OpenTelemetry instrumentation for `smtplib` / the email adapter     |
+| Area             | Status                                                                                              |
+|------------------|-----------------------------------------------------------------------------------------------------|
+| **Kafka aio**    | `otel-kafka` covers Confluent Kafka sync instrumentation; async Kafka paths may not be instrumented |
+| **SMTP / email** | No OpenTelemetry instrumentation for `smtplib` / the email adapter                                  |
 
 ---
 

@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Mapping
 
-from archipy.adapters.redis.adapter_mixins._shared import AsyncRedisMixinBase, SyncRedisMixinBase
+from archipy.adapters.redis.adapter_mixins._shared import (
+    AsyncRedisMixinBase,
+    SyncRedisMixinBase,
+)
 from archipy.models.errors import InternalError
 
 

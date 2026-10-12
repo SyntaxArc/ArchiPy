@@ -15,7 +15,7 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
 )
-from archipy.helpers.decorators import ttl_cache_decorator
+from archipy.helpers.decorators import ttl_cache
 from archipy.models.errors import (
     InternalError,
 )
@@ -33,7 +33,7 @@ HTTP_NOT_FOUND = 404
 class KeycloakUsersMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for user operations."""
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
+    @ttl_cache(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
     def get_user_by_id(self, user_id: str) -> KeycloakUserType | None:
         """Get user details by user ID.
 
@@ -55,7 +55,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_user_by_id")
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
+    @ttl_cache(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
     def get_user_by_username(self, username: str) -> KeycloakUserType | None:
         """Get user details by username.
 
@@ -74,7 +74,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             raise InternalError() from e
 
-    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
+    @ttl_cache(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
     def get_user_by_email(self, email: str) -> KeycloakUserType | None:
         """Get user details by email.
 
@@ -154,7 +154,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "reset_password")
 
-    @ttl_cache_decorator(ttl_seconds=30, maxsize=50)  # Cache for 30 seconds with limited entries
+    @ttl_cache(ttl_seconds=30, maxsize=50)  # Cache for 30 seconds with limited entries
     def search_users(self, query: str, max_results: int = 100) -> list[KeycloakUserType] | None:
         """Search for users by username, email, or name.
 

@@ -37,16 +37,12 @@ from archipy.adapters.starrocks.sqlalchemy.adapters import (
 from archipy.adapters.starrocks.sqlalchemy.session_manager_registry import StarRocksSessionManagerRegistry
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import SQLiteSQLAlchemyConfig
-from archipy.helpers.decorators.sqlalchemy_atomic import (
-    sqlalchemy_atomic_decorator,
-    async_mysql_sqlalchemy_atomic_decorator,
-    async_postgres_sqlalchemy_atomic_decorator,
-    async_sqlite_sqlalchemy_atomic_decorator,
-    async_starrocks_sqlalchemy_atomic_decorator,
-    mysql_sqlalchemy_atomic_decorator,
-    postgres_sqlalchemy_atomic_decorator,
-    sqlite_sqlalchemy_atomic_decorator,
-    starrocks_sqlalchemy_atomic_decorator,
+from archipy.helpers.decorators import (
+    mysql_sqlalchemy_atomic,
+    postgres_sqlalchemy_atomic,
+    sqlalchemy_atomic,
+    sqlite_sqlalchemy_atomic,
+    starrocks_sqlalchemy_atomic,
 )
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
 from archipy.models.errors import DatabaseError, InternalError
@@ -120,23 +116,25 @@ def _get_db_type(context) -> str:
     return "sqlite"
 
 
-def _get_atomic_decorator(db_type: str, is_async: bool = False):
+def _get_atomic_decorator(db_type: str, is_async: bool = False):  # noqa: ARG001
     """Get the appropriate atomic decorator for the database type.
+
+    The decorators detect async functions themselves, so ``is_async`` only documents the call site.
 
     Args:
         db_type: Database type ('postgres', 'sqlite', 'mysql', or 'starrocks')
-        is_async: Whether to return async decorator
+        is_async: Whether the decorated function is async
 
     Returns:
         The appropriate atomic decorator function
     """
     if db_type == "postgres":
-        return async_postgres_sqlalchemy_atomic_decorator if is_async else postgres_sqlalchemy_atomic_decorator
+        return postgres_sqlalchemy_atomic
     if db_type == "mysql":
-        return async_mysql_sqlalchemy_atomic_decorator if is_async else mysql_sqlalchemy_atomic_decorator
+        return mysql_sqlalchemy_atomic
     if db_type == "starrocks":
-        return async_starrocks_sqlalchemy_atomic_decorator if is_async else starrocks_sqlalchemy_atomic_decorator
-    return async_sqlite_sqlalchemy_atomic_decorator if is_async else sqlite_sqlalchemy_atomic_decorator
+        return starrocks_sqlalchemy_atomic
+    return sqlite_sqlalchemy_atomic
 
 
 def _get_session_registry(db_type: str):
@@ -2127,7 +2125,7 @@ _RAISABLE = {
 def step_given_fake_atomic_session(context, mode):
     from unittest import mock
 
-    from archipy.helpers.decorators import sqlalchemy_atomic as atomic_module
+    from archipy.helpers.decorators import sqlalchemy_transaction as atomic_module
 
     sc = get_current_scenario_context(context)
     session = _FakeSession(is_async=mode == "async")
@@ -2148,14 +2146,14 @@ def _run_atomic_function(context, body):
     mode = sc.get("fake_mode")
     if mode == "async":
 
-        @sqlalchemy_atomic_decorator(db_type="sqlite", is_async=True)
+        @sqlalchemy_atomic("sqlite")
         async def work():
             body()
 
         runner = lambda: asyncio.run(work())  # noqa: E731
     else:
 
-        @sqlalchemy_atomic_decorator(db_type="sqlite")
+        @sqlalchemy_atomic("sqlite")
         def work():
             body()
 
@@ -2217,7 +2215,7 @@ def step_then_no_atomic_marker(context):
 def step_when_driver_error_handled(context, kind, code):
     from sqlalchemy.exc import IntegrityError, OperationalError
 
-    from archipy.helpers.decorators.sqlalchemy_atomic import _handle_db_exception
+    from archipy.helpers.decorators.sqlalchemy_transaction import _handle_db_exception
 
     class _DriverError(Exception):
         pass

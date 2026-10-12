@@ -8,11 +8,15 @@ description: API reference for ArchiPy helper decorators.
 The `helpers/decorators` subpackage provides function and class decorators for cross-cutting concerns including caching,
 retry logic, deprecation, timing, tracing, and transaction management.
 
+Decorators are named without a `_decorator` suffix (`retry`, `timeout`, `ttl_cache`, ...) and detect `async def`
+functions automatically. The old names (`retry_decorator`, `async_trace_span`, ...) keep working and emit a
+`DeprecationWarning`; see the [Decorators tutorial](../../tutorials/helpers/decorators.md#deprecated-names).
+
 ## Cache
 
 Decorator for caching function return values to avoid redundant computation or I/O.
 
-::: archipy.helpers.decorators.cache
+::: archipy.helpers.decorators.ttl_caching
 options:
 show_root_toc_entry: false
 heading_level: 3
@@ -21,7 +25,7 @@ heading_level: 3
 
 Decorator that automatically retries a failing function call with configurable backoff strategies.
 
-::: archipy.helpers.decorators.retry
+::: archipy.helpers.decorators.retry_policy
 options:
 show_root_toc_entry: false
 heading_level: 3
@@ -30,7 +34,7 @@ heading_level: 3
 
 Decorator that enforces a maximum execution time on a function call.
 
-::: archipy.helpers.decorators.timeout
+::: archipy.helpers.decorators.timeout_limit
 options:
 show_root_toc_entry: false
 heading_level: 3
@@ -39,15 +43,15 @@ heading_level: 3
 
 Decorator that measures and records the execution time of a function.
 
-::: archipy.helpers.decorators.timing
+::: archipy.helpers.decorators.timing_log
 options:
 show_root_toc_entry: false
 heading_level: 3
 
 ## Tracing
 
-OpenTelemetry span decorators for functions and classes (`trace_span`, `async_trace_span`,
-`trace_root`, `async_trace_root`, `trace_class`).
+OpenTelemetry span decorators for functions and classes (`trace_span`, `trace_root`, `trace_class`). The old
+`async_trace_span` and `async_trace_root` names are deprecated aliases.
 
 ::: archipy.helpers.decorators.tracing
 options:
@@ -56,8 +60,8 @@ heading_level: 3
 
 ## Metrics
 
-OpenTelemetry metrics decorators for duration histograms and call counters
-(`measure_duration`, `async_measure_duration`, `count_calls`, `async_count_calls`).
+OpenTelemetry metrics decorators for duration histograms and call counters (`measure_duration`, `count_calls`). Both
+accept sync and async functions; the `async_*` names are deprecated aliases.
 
 ::: archipy.helpers.decorators.metrics
 options:
@@ -68,7 +72,7 @@ heading_level: 3
 
 Decorator that ensures a class is instantiated only once throughout the application lifecycle.
 
-::: archipy.helpers.decorators.singleton
+::: archipy.helpers.decorators.singleton_class
 options:
 show_root_toc_entry: false
 heading_level: 3
@@ -77,7 +81,7 @@ heading_level: 3
 
 Decorator that wraps a function in a SQLAlchemy database transaction, rolling back on failure.
 
-::: archipy.helpers.decorators.sqlalchemy_atomic
+::: archipy.helpers.decorators.sqlalchemy_transaction
 options:
 show_root_toc_entry: false
 heading_level: 3
@@ -105,7 +109,7 @@ heading_level: 3
 Decorator that declares per-RPC rate-limit windows on gRPC servicer methods. Read by
 `GrpcServerRateLimitInterceptor` and `AsyncGrpcServerRateLimitInterceptor`.
 
-::: archipy.helpers.decorators.grpc_rate_limit
+::: archipy.helpers.decorators.grpc_rate_limit_window
 options:
 show_root_toc_entry: false
 heading_level: 3

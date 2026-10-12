@@ -124,14 +124,14 @@ else:
 ```python
 import logging
 
-from archipy.helpers.decorators.sqlalchemy_atomic import mysql_sqlalchemy_atomic_decorator
+from archipy.helpers.decorators import mysql_sqlalchemy_atomic
 from archipy.models.errors import DatabaseQueryError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
-@mysql_sqlalchemy_atomic_decorator
+@mysql_sqlalchemy_atomic
 def create_user_with_profile(username: str, email: str, profile_data: dict[str, str]) -> User:
     """Create a user and profile in a single transaction.
 
@@ -163,7 +163,7 @@ import asyncio
 import logging
 
 from archipy.adapters.mysql.sqlalchemy.adapters import AsyncMySQLSQLAlchemyAdapter
-from archipy.helpers.decorators.sqlalchemy_atomic import async_mysql_sqlalchemy_atomic_decorator
+from archipy.helpers.decorators import mysql_sqlalchemy_atomic
 from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
 # Configure logging
@@ -180,7 +180,7 @@ async def main() -> None:
     else:
         logger.info("Async MySQL adapter created")
 
-    @async_mysql_sqlalchemy_atomic_decorator
+    @mysql_sqlalchemy_atomic
     async def create_user_async(username: str, email: str) -> User:
         """Create a user asynchronously.
 

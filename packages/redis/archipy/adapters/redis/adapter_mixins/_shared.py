@@ -49,7 +49,9 @@ class AsyncRedisMixinBase:
         raise NotImplementedError
 
     @staticmethod
-    async def _ensure_async_str(value: str | bytes | Awaitable[str | bytes | None] | None) -> str | None:
+    async def _ensure_async_str(
+        value: str | bytes | Awaitable[str | bytes | None] | None,
+    ) -> str | None:
         """Coerce async Redis string responses that may be typed as Awaitable."""
         raise NotImplementedError
 
@@ -63,7 +65,7 @@ def _redis_connection_kwargs(configs: RedisConfig, *, decode_responses: bool | N
     """Build common Redis client connection kwargs from config."""
     return {
         "password": configs.PASSWORD,
-        "decode_responses": configs.DECODE_RESPONSES if decode_responses is None else decode_responses,
+        "decode_responses": (configs.DECODE_RESPONSES if decode_responses is None else decode_responses),
         "health_check_interval": configs.HEALTH_CHECK_INTERVAL,
         "max_connections": configs.MAX_CONNECTIONS,
         "socket_connect_timeout": configs.SOCKET_CONNECT_TIMEOUT,

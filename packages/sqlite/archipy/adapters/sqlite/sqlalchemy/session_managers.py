@@ -113,7 +113,7 @@ class SQLiteSQLAlchemySessionManager(BaseSQLAlchemySessionManager[SQLiteSQLAlche
         """
         try:
             return URL.create(
-                drivername=_SYNC_DRIVER if configs.DRIVER_NAME == _ASYNC_DRIVER else configs.DRIVER_NAME,
+                drivername=(_SYNC_DRIVER if configs.DRIVER_NAME == _ASYNC_DRIVER else configs.DRIVER_NAME),
                 database=configs.DATABASE,
             )
         except SQLAlchemyError as e:
@@ -190,7 +190,7 @@ class AsyncSQLiteSQLAlchemySessionManager(
         """
         try:
             return URL.create(
-                drivername=_ASYNC_DRIVER if configs.DRIVER_NAME in _SYNC_DRIVERS else configs.DRIVER_NAME,
+                drivername=(_ASYNC_DRIVER if configs.DRIVER_NAME in _SYNC_DRIVERS else configs.DRIVER_NAME),
                 database=configs.DATABASE,
             )
         except SQLAlchemyError as e:

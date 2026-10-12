@@ -325,3 +325,59 @@ Feature: Helper decorators
       Then a DeprecationError is raised
       And the deprecation error names feature "OldThing"
       And the deprecation error message is "This feature is deprecated and should no longer be used"
+
+  Rule: Renamed decorators keep their old names working
+
+    Scenario Outline: Old name <old> still works and warns once pointing at <new>
+      When the old decorator name "<old>" is applied
+      Then exactly one DeprecationWarning should name "<new>"
+      And the DeprecationWarning should point at the calling code
+
+      Examples:
+        | old                                         | new                         |
+        | retry_decorator                             | retry                       |
+        | timeout_decorator                           | timeout                     |
+        | timing_decorator                            | timing                      |
+        | singleton_decorator                         | singleton                   |
+        | ttl_cache_decorator                         | ttl_cache                   |
+        | grpc_rate_limit_decorator                   | grpc_rate_limit             |
+        | sqlalchemy_atomic_decorator                 | sqlalchemy_atomic           |
+        | postgres_sqlalchemy_atomic_decorator        | postgres_sqlalchemy_atomic  |
+        | mysql_sqlalchemy_atomic_decorator           | mysql_sqlalchemy_atomic     |
+        | sqlite_sqlalchemy_atomic_decorator          | sqlite_sqlalchemy_atomic    |
+        | starrocks_sqlalchemy_atomic_decorator       | starrocks_sqlalchemy_atomic |
+        | async_postgres_sqlalchemy_atomic_decorator  | postgres_sqlalchemy_atomic  |
+        | async_mysql_sqlalchemy_atomic_decorator     | mysql_sqlalchemy_atomic     |
+        | async_sqlite_sqlalchemy_atomic_decorator    | sqlite_sqlalchemy_atomic    |
+        | async_starrocks_sqlalchemy_atomic_decorator | starrocks_sqlalchemy_atomic |
+
+    Scenario Outline: New name <new> is exported without a warning
+      When the new decorator name "<new>" is imported from the decorators package
+      Then it should be a function and not a module
+      And no DeprecationWarning should have been emitted
+
+      Examples:
+        | new                        |
+        | retry                      |
+        | timeout                    |
+        | timing                     |
+        | singleton                  |
+        | ttl_cache                  |
+        | grpc_rate_limit            |
+        | sqlalchemy_atomic          |
+        | postgres_sqlalchemy_atomic |
+
+    Scenario Outline: Old module path <module> still exports <name>
+      When "<name>" is imported from the old module path "<module>"
+      Then the old module path should resolve to a callable
+
+      Examples:
+        | module            | name                                 |
+        | retry             | retry_decorator                      |
+        | timeout           | timeout_decorator                    |
+        | timing            | timing_decorator                     |
+        | singleton         | singleton_decorator                  |
+        | cache             | ttl_cache_decorator                  |
+        | grpc_rate_limit   | grpc_rate_limit_decorator            |
+        | sqlalchemy_atomic | postgres_sqlalchemy_atomic_decorator |
+        | sqlalchemy_atomic | _handle_db_exception                 |

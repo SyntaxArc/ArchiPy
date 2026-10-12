@@ -6,7 +6,7 @@ from behave import given, then, when
 
 from archipy.adapters.redis.adapters import AsyncRedisAdapter, RedisAdapter
 from archipy.configs.base_config import BaseConfig
-from archipy.helpers.decorators import grpc_rate_limit_decorator
+from archipy.helpers.decorators import grpc_rate_limit
 from archipy.helpers.interceptors.grpc.base.server_interceptor import MethodName
 from archipy.helpers.utils.app_utils import AsyncGrpcAPIUtils, GrpcAPIUtils
 from archipy.helpers.utils.jwt_utils import JWTUtils
@@ -115,7 +115,7 @@ def _outcome_from_abort(context: MagicMock) -> str:
 def _decorate_handler(calls_count: int, seconds: int):
     """Return a decorated handler function for the configured window."""
 
-    @grpc_rate_limit_decorator(calls_count=calls_count, seconds=seconds)
+    @grpc_rate_limit(calls_count=calls_count, seconds=seconds)
     def handler(_request, _context):
         return {"status": "ok"}
 
@@ -125,8 +125,8 @@ def _decorate_handler(calls_count: int, seconds: int):
 def _decorate_handler_multi(burst_calls: int, burst_seconds: int, sustained_calls: int, sustained_seconds: int):
     """Return a handler with stacked burst and sustained decorators."""
 
-    @grpc_rate_limit_decorator(calls_count=sustained_calls, seconds=sustained_seconds)
-    @grpc_rate_limit_decorator(calls_count=burst_calls, seconds=burst_seconds)
+    @grpc_rate_limit(calls_count=sustained_calls, seconds=sustained_seconds)
+    @grpc_rate_limit(calls_count=burst_calls, seconds=burst_seconds)
     def handler(_request, _context):
         return {"status": "ok"}
 

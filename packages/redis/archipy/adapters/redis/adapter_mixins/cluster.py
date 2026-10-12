@@ -7,7 +7,10 @@ from typing import Any
 from redis import RedisCluster
 from redis.asyncio import RedisCluster as AsyncRedisCluster
 
-from archipy.adapters.redis.adapter_mixins._shared import AsyncRedisMixinBase, SyncRedisMixinBase
+from archipy.adapters.redis.adapter_mixins._shared import (
+    AsyncRedisMixinBase,
+    SyncRedisMixinBase,
+)
 
 
 class RedisClusterMixin(SyncRedisMixinBase):
@@ -19,7 +22,9 @@ class RedisClusterMixin(SyncRedisMixinBase):
             return self.client.cluster_info()
         return None
 
-    def cluster_nodes(self) -> dict[str, dict[str, str | bool | list[list[str]] | list[dict[str, str]]]] | None:
+    def cluster_nodes(
+        self,
+    ) -> dict[str, dict[str, str | bool | list[list[str]] | list[dict[str, str]]]] | None:
         """Get cluster nodes information."""
         if isinstance(self.client, RedisCluster):
             return self.client.cluster_nodes()
@@ -59,7 +64,9 @@ class AsyncRedisClusterMixin(AsyncRedisMixinBase):
             return await self.client.cluster_info()
         return None
 
-    async def cluster_nodes(self) -> dict[str, dict[str, str | bool | list[list[str]] | list[dict[str, str]]]] | None:
+    async def cluster_nodes(
+        self,
+    ) -> dict[str, dict[str, str | bool | list[list[str]] | list[dict[str, str]]]] | None:
         """Get cluster nodes information asynchronously."""
         if isinstance(self.client, AsyncRedisCluster):
             return await self.client.cluster_nodes()

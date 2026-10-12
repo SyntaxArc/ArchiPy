@@ -6,7 +6,11 @@ from typing import TYPE_CHECKING, override
 
 from sqlalchemy import URL
 from sqlalchemy.exc import SQLAlchemyError
-from starrocks.dialect import StarRocksDialect, StarRocksSQLCompiler, StarRocksTypeCompiler
+from starrocks.dialect import (
+    StarRocksDialect,
+    StarRocksSQLCompiler,
+    StarRocksTypeCompiler,
+)
 
 from archipy.adapters.base.sqlalchemy.session_managers import (
     AsyncBaseSQLAlchemySessionManager,

@@ -8,6 +8,7 @@ import inspect
 from typing import TYPE_CHECKING, Any, Protocol
 
 from archipy.configs.base_config import BaseConfig
+from archipy.helpers.decorators._deprecation_alias import warn_deprecated_name
 from archipy.helpers.utils.otel_utils import OtelUtils
 from archipy.models.errors import InvalidArgumentError
 
@@ -302,24 +303,68 @@ async def _run_traced_async(
             raise
 
 
-def _reject_coroutine_function(func: _Function, decorator_name: str) -> None:
-    """Raise when a sync decorator is applied to an async function.
+def _traced_wrapper(
+    func: Callable[..., Any],
+    *,
+    name: str | None,
+    kind: Any | None,
+    attributes: dict[str, Any] | None,
+    capture_args: list[str] | None,
+    root: bool,
+) -> Callable[..., Any]:
+    """Wrap a sync or async function so each call runs inside an OpenTelemetry span.
+
+    Args:
+        func: The function to wrap. Coroutine functions get an async wrapper.
+        name: Span name, or None for the function name.
+        kind: OpenTelemetry span kind.
+        attributes: Optional static span attributes.
+        capture_args: Parameter names recorded as span attributes.
+        root: When True, start the span detached from any parent span.
+
+    Returns:
+        The wrapped function.
+    """
+    span_name = name or getattr(func, "__name__", "unknown")
+    signature = inspect.signature(func)
+    options: dict[str, Any] = {
+        "span_name": span_name,
+        "kind": kind,
+        "attributes": attributes,
+        "capture_args": capture_args,
+        "signature": signature,
+        "root": root,
+    }
+
+    if inspect.iscoroutinefunction(func):
+
+        @functools.wraps(func)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            return await _run_traced_async(func, args, kwargs, **options)
+
+        return async_wrapper
+
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return _run_traced(func, args, kwargs, **options)
+
+    return wrapper
+
+
+def _require_coroutine_function(func: _Function, decorator_name: str) -> None:
+    """Raise when an ``async_*`` decorator is applied to a non-coroutine function.
 
     Args:
         func: The candidate function.
-        decorator_name: Name of the sync decorator for the error payload.
+        decorator_name: Name of the decorator for the error payload.
 
     Raises:
-        InvalidArgumentError: If ``func`` is a coroutine function.
+        InvalidArgumentError: If ``func`` is not a coroutine function.
     """
-    if inspect.iscoroutinefunction(func):
+    if not inspect.iscoroutinefunction(func):
         raise InvalidArgumentError(
             argument_name="func",
-            additional_data={
-                "decorator": decorator_name,
-                "func_name": func.__name__,
-                "hint": f"Use the async_* variant instead of {decorator_name}",
-            },
+            additional_data={"decorator": decorator_name, "func_name": func.__name__},
         )
 
 
@@ -330,7 +375,7 @@ def trace_span[F: _Function](
     attributes: dict[str, Any] | None = None,
     capture_args: list[str] | None = None,
 ) -> Callable[[F], Callable[..., Any]]:
-    """Decorate a sync function with an OpenTelemetry child span.
+    """Decorate a sync or async function with an OpenTelemetry child span.
 
     Args:
         name: Span name. Defaults to the function name.
@@ -342,9 +387,6 @@ def trace_span[F: _Function](
     Returns:
         A decorator that wraps the target function in a span.
 
-    Raises:
-        InvalidArgumentError: If the decorated object is a coroutine function.
-
     Example:
         ```python
         @trace_span(name="load_user", capture_args=["user_id"])
@@ -354,25 +396,14 @@ def trace_span[F: _Function](
     """
 
     def decorator(func: F) -> Callable[..., Any]:
-        _reject_coroutine_function(func, "trace_span")
-        span_name = name or func.__name__
-        signature = inspect.signature(func)
-
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            return _run_traced(
-                func,
-                args,
-                kwargs,
-                span_name=span_name,
-                kind=kind,
-                attributes=attributes,
-                capture_args=capture_args,
-                signature=signature,
-                root=False,
-            )
-
-        return wrapper
+        return _traced_wrapper(
+            func,
+            name=name,
+            kind=kind,
+            attributes=attributes,
+            capture_args=capture_args,
+            root=False,
+        )
 
     return decorator
 
@@ -385,6 +416,9 @@ def async_trace_span[F: _AsyncFunction](
     capture_args: list[str] | None = None,
 ) -> Callable[[F], Callable[..., Coroutine[Any, Any, Any]]]:
     """Decorate an async function with an OpenTelemetry child span.
+
+    Deprecated:
+        Use :func:`trace_span`, which supports async functions directly.
 
     Args:
         name: Span name. Defaults to the function name.
@@ -399,35 +433,18 @@ def async_trace_span[F: _AsyncFunction](
     Raises:
         InvalidArgumentError: If the decorated object is not a coroutine function.
     """
+    warn_deprecated_name("async_trace_span", "trace_span")
 
     def decorator(func: F) -> Callable[..., Coroutine[Any, Any, Any]]:
-        if not inspect.iscoroutinefunction(func):
-            raise InvalidArgumentError(
-                argument_name="func",
-                additional_data={
-                    "decorator": "async_trace_span",
-                    "func_name": func.__name__,
-                },
-            )
-
-        span_name = name or func.__name__
-        signature = inspect.signature(func)
-
-        @functools.wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            return await _run_traced_async(
-                func,
-                args,
-                kwargs,
-                span_name=span_name,
-                kind=kind,
-                attributes=attributes,
-                capture_args=capture_args,
-                signature=signature,
-                root=False,
-            )
-
-        return wrapper
+        _require_coroutine_function(func, "async_trace_span")
+        return _traced_wrapper(
+            func,
+            name=name,
+            kind=kind,
+            attributes=attributes,
+            capture_args=capture_args,
+            root=False,
+        )
 
     return decorator
 
@@ -439,7 +456,7 @@ def trace_root[F: _Function](
     attributes: dict[str, Any] | None = None,
     capture_args: list[str] | None = None,
 ) -> Callable[[F], Callable[..., Any]]:
-    """Decorate a sync function with a root OpenTelemetry span.
+    """Decorate a sync or async function with a root OpenTelemetry span.
 
     Starts the span with a fresh context detached from any parent span
     (``INVALID_SPAN`` context).
@@ -453,31 +470,17 @@ def trace_root[F: _Function](
 
     Returns:
         A decorator that wraps the target function in a root span.
-
-    Raises:
-        InvalidArgumentError: If the decorated object is a coroutine function.
     """
 
     def decorator(func: F) -> Callable[..., Any]:
-        _reject_coroutine_function(func, "trace_root")
-        span_name = name or func.__name__
-        signature = inspect.signature(func)
-
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            return _run_traced(
-                func,
-                args,
-                kwargs,
-                span_name=span_name,
-                kind=kind,
-                attributes=attributes,
-                capture_args=capture_args,
-                signature=signature,
-                root=True,
-            )
-
-        return wrapper
+        return _traced_wrapper(
+            func,
+            name=name,
+            kind=kind,
+            attributes=attributes,
+            capture_args=capture_args,
+            root=True,
+        )
 
     return decorator
 
@@ -490,6 +493,9 @@ def async_trace_root[F: _AsyncFunction](
     capture_args: list[str] | None = None,
 ) -> Callable[[F], Callable[..., Coroutine[Any, Any, Any]]]:
     """Decorate an async function with a root OpenTelemetry span.
+
+    Deprecated:
+        Use :func:`trace_root`, which supports async functions directly.
 
     Starts the span with a fresh context detached from any parent span
     (``INVALID_SPAN`` context).
@@ -507,35 +513,18 @@ def async_trace_root[F: _AsyncFunction](
     Raises:
         InvalidArgumentError: If the decorated object is not a coroutine function.
     """
+    warn_deprecated_name("async_trace_root", "trace_root")
 
     def decorator(func: F) -> Callable[..., Coroutine[Any, Any, Any]]:
-        if not inspect.iscoroutinefunction(func):
-            raise InvalidArgumentError(
-                argument_name="func",
-                additional_data={
-                    "decorator": "async_trace_root",
-                    "func_name": func.__name__,
-                },
-            )
-
-        span_name = name or func.__name__
-        signature = inspect.signature(func)
-
-        @functools.wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            return await _run_traced_async(
-                func,
-                args,
-                kwargs,
-                span_name=span_name,
-                kind=kind,
-                attributes=attributes,
-                capture_args=capture_args,
-                signature=signature,
-                root=True,
-            )
-
-        return wrapper
+        _require_coroutine_function(func, "async_trace_root")
+        return _traced_wrapper(
+            func,
+            name=name,
+            kind=kind,
+            attributes=attributes,
+            capture_args=capture_args,
+            root=True,
+        )
 
     return decorator
 

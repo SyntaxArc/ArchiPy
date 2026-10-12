@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import warnings
 
 from behave import given, then, when
 from behave.runner import Context
@@ -15,8 +17,6 @@ from opentelemetry.trace import StatusCode
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import OtelLogsExporter, OtelMetricsExporter
 from archipy.helpers.decorators import (
-    async_measure_duration,
-    async_trace_span,
     count_calls,
     measure_duration,
     trace_class,
@@ -213,11 +213,11 @@ def step_given_trace_span(context, span_name):
     scenario_context.store("expected_span_name", span_name)
 
 
-@given('an async function decorated with async_trace_span named "{span_name}"')
+@given('an async function decorated with trace_span named "{span_name}"')
 def step_given_async_trace_span(context, span_name):
     scenario_context = get_current_scenario_context(context)
 
-    @async_trace_span(name=span_name)
+    @trace_span(name=span_name)
     async def traced_async() -> str:
         return "ok"
 
@@ -554,19 +554,69 @@ def step_then_span_attribute_string(context, attr_name, attr_value):
     )
 
 
-@when("I apply measure_duration to an async function")
-def step_when_apply_measure_duration_to_async(context):
+_OTEL_DECORATORS = {
+    "measure_duration": lambda: measure_duration(name="test.async.duration"),
+    "count_calls": lambda: count_calls(name="test.async.calls"),
+    "trace_span": lambda: trace_span(name="async_span"),
+    "trace_root": lambda: trace_root(name="async_root"),
+}
+
+
+@when("I apply {decorator_name} to an async function and call it")
+def step_when_apply_to_async_and_call(context, decorator_name):
+    scenario_context = get_current_scenario_context(context)
+
+    @_OTEL_DECORATORS[decorator_name]()
+    async def work() -> str:
+        return "async-result"
+
+    scenario_context.store("async_result", asyncio.run(work()))
+
+
+@then("the async function should return its result")
+def step_then_async_function_result(context):
+    assert get_current_scenario_context(context).get("async_result") == "async-result"
+
+
+def _deprecated_otel_decorator(alias_name):
+    from archipy.helpers import decorators
+
+    return getattr(decorators, alias_name)
+
+
+@when("I apply the deprecated {alias_name} to an async function")
+def step_when_apply_deprecated_to_async(context, alias_name):
+    scenario_context = get_current_scenario_context(context)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+
+        @_deprecated_otel_decorator(alias_name)(name=f"test.{alias_name}")
+        async def work() -> str:
+            return "async-result"
+
+    scenario_context.store("deprecation_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+    scenario_context.store("async_result", asyncio.run(work()))
+
+
+@when("I apply the deprecated {alias_name} to a sync function")
+def step_when_apply_deprecated_to_sync(context, alias_name):
     scenario_context = get_current_scenario_context(context)
     try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
 
-        @measure_duration()
-        async def bad_async() -> str:
-            return "nope"
+            @_deprecated_otel_decorator(alias_name)(name=f"test.{alias_name}")
+            def work() -> str:
+                return "sync"
 
         scenario_context.store("decorator_error", None)
-        scenario_context.store("bad_async", bad_async)
     except InvalidArgumentError as exc:
         scenario_context.store("decorator_error", exc)
+
+
+@then("the decorated async function should still return its result")
+def step_then_deprecated_async_result(context):
+    assert get_current_scenario_context(context).get("async_result") == "async-result"
 
 
 @then('an InvalidArgumentError should be raised for decorator "{decorator_name}"')
@@ -1298,12 +1348,12 @@ def step_given_static_password_attr(context, password):
     scenario_context.store("expected_span_name", "static_secret_span")
 
 
-@given('an async function decorated with async_measure_duration named "{instrument_name}"')
+@given('an async function decorated with measure_duration named "{instrument_name}"')
 def step_given_async_measure_duration(context, instrument_name):
     scenario_context = get_current_scenario_context(context)
     import asyncio
 
-    @async_measure_duration(name=instrument_name)
+    @measure_duration(name=instrument_name)
     async def measured_async() -> str:
         await asyncio.sleep(60)
         return "done"
@@ -1347,7 +1397,7 @@ async def step_when_cancel_traced_async(context):
 
     scenario_context = get_current_scenario_context(context)
 
-    @async_trace_span(name=scenario_context.get("expected_span_name") or "cancel_span")
+    @trace_span(name=scenario_context.get("expected_span_name") or "cancel_span")
     async def cancellable() -> str:
         await asyncio.sleep(60)
         return "done"
@@ -1357,7 +1407,7 @@ async def step_when_cancel_traced_async(context):
         # Prefer the named cancel_span from the Given step; redefine with sleep
         span_name = scenario_context.get("expected_span_name") or "cancel_span"
 
-        @async_trace_span(name=span_name)
+        @trace_span(name=span_name)
         async def cancellable_named() -> str:
             await asyncio.sleep(60)
             return "done"
