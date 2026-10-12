@@ -2381,3 +2381,66 @@ def step_then_up_down_counter_zero(context, instrument_name):
     points = _metric_datapoints(context, instrument_name)
     assert points, f"No datapoints for up-down counter '{instrument_name}'"
     assert sum(point.value for point in points) == 0, [point.value for point in points]
+
+
+@given("a class decorated with trace_class that holds a nested class")
+def step_given_trace_class_nested(context):
+    @trace_class()
+    class Service:
+        class Config:
+            value = 1
+
+        def public_method(self) -> str:
+            return "public"
+
+    get_current_scenario_context(context).store("traced_nested_owner", Service)
+
+
+@then("the nested class should still be a class")
+def step_then_nested_class_untouched(context):
+    owner = get_current_scenario_context(context).get("traced_nested_owner")
+    assert isinstance(owner.Config, type), f"Nested class was replaced by {owner.Config!r}"
+    assert owner.Config.value == 1
+
+
+@when("I call the traced sync function with wrong arguments")
+def step_when_call_traced_sync_wrong_args(context):
+    scenario_context = get_current_scenario_context(context)
+    try:
+        scenario_context.get("traced_sync")(1, 2, 3)
+        scenario_context.store("call_error", None)
+    except Exception as exc:
+        scenario_context.store("call_error", exc)
+
+
+@then("the function's own TypeError should be raised")
+def step_then_functions_own_type_error(context):
+    error = get_current_scenario_context(context).get("call_error")
+    assert isinstance(error, TypeError), f"Got {error!r}"
+    assert "traced_sync()" in str(error), f"Error did not come from the traced function: {error}"
+
+
+@given("a sync function decorated with measure_duration whose histogram fails to record")
+def step_given_measure_duration_failing_histogram(context):
+    from unittest import mock
+
+    from archipy.helpers.decorators import metrics as metrics_module
+
+    class _BrokenHistogram:
+        def record(self, *_args, **_kwargs):
+            raise RuntimeError("exporter exploded")
+
+    patcher = mock.patch.object(metrics_module, "_get_or_create_histogram", lambda *_a, **_k: _BrokenHistogram())
+    patcher.start()
+    context.add_cleanup(patcher.stop)
+
+    @measure_duration(name="test.broken.duration")
+    def measured_sync() -> str:
+        return "timed"
+
+    get_current_scenario_context(context).store("measured_sync", measured_sync)
+
+
+@then("the measured function should still return its result")
+def step_then_measured_result(context):
+    assert get_current_scenario_context(context).get("result") == "timed"

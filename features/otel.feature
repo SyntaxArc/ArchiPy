@@ -40,6 +40,20 @@ Feature: OpenTelemetry decorators
     Then a span named "TracedService.public_method" should be recorded
     And no span named "TracedService._private_method" should be recorded
 
+  Scenario: trace_class leaves nested classes untouched
+    Given a class decorated with trace_class that holds a nested class
+    Then the nested class should still be a class
+
+  Scenario: capture_args does not mask the function's own argument error
+    Given a sync function decorated with trace_span that captures arg "user_id"
+    When I call the traced sync function with wrong arguments
+    Then the function's own TypeError should be raised
+
+  Scenario: a failing metric instrument does not break the decorated function
+    Given a sync function decorated with measure_duration whose histogram fails to record
+    When I call the measured sync function
+    Then the measured function should still return its result
+
   Scenario: measure_duration records histogram datapoints
     Given a sync function decorated with measure_duration named "test.work.duration"
     When I call the measured sync function

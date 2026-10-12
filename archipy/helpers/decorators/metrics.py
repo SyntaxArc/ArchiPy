@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
 import functools
 import inspect
+import logging
 import threading
 import time
 from typing import TYPE_CHECKING, Any, Protocol
@@ -15,6 +15,9 @@ from archipy.models.errors import InvalidArgumentError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
+
+
+logger = logging.getLogger(__name__)
 
 
 class _Function(Protocol):
@@ -61,6 +64,34 @@ def _merge_status_attributes(
     merged: dict[str, Any] = dict(attributes) if attributes else {}
     merged["status"] = status
     return merged
+
+
+def _status_for_base_exception(exc: BaseException) -> str:
+    """Map a raised exception to the ``status`` label.
+
+    Args:
+        exc: The exception raised by the decorated function.
+
+    Returns:
+        ``"cancelled"`` for cancellation and interpreter-level interrupts, otherwise the
+        status computed by ``OtelUtils.metric_status_for_exception``.
+    """
+    if isinstance(exc, Exception):
+        return OtelUtils.metric_status_for_exception(exc)
+    return "cancelled"
+
+
+def _safe_emit(emit: Callable[..., Any], *args: Any) -> None:
+    """Record a metric without letting telemetry failures replace the function outcome.
+
+    Args:
+        emit: ``histogram.record`` or ``counter.add``.
+        *args: Arguments forwarded to ``emit``.
+    """
+    try:
+        emit(*args)
+    except Exception:  # telemetry must never break the decorated function
+        logger.warning("Failed to record metric", exc_info=True)
 
 
 _CACHE_LOCK = threading.Lock()
@@ -214,14 +245,11 @@ def measure_duration[F: _Function](
             status = "ok"
             try:
                 return func(*args, **kwargs)
-            except Exception as exc:
-                status = OtelUtils.metric_status_for_exception(exc)
+            except BaseException as exc:
+                status = _status_for_base_exception(exc)
                 raise
             finally:
-                histogram.record(
-                    time.perf_counter() - start,
-                    _merge_status_attributes(attributes, status),
-                )
+                _safe_emit(histogram.record, time.perf_counter() - start, _merge_status_attributes(attributes, status))
 
         return wrapper
 
@@ -273,17 +301,11 @@ def async_measure_duration[F: _AsyncFunction](
             status = "ok"
             try:
                 return await func(*args, **kwargs)
-            except asyncio.CancelledError:
-                status = "cancelled"
-                raise
-            except Exception as exc:
-                status = OtelUtils.metric_status_for_exception(exc)
+            except BaseException as exc:
+                status = _status_for_base_exception(exc)
                 raise
             finally:
-                histogram.record(
-                    time.perf_counter() - start,
-                    _merge_status_attributes(attributes, status),
-                )
+                _safe_emit(histogram.record, time.perf_counter() - start, _merge_status_attributes(attributes, status))
 
         return wrapper
 
@@ -339,11 +361,11 @@ def count_calls[F: _Function](
             status = "ok"
             try:
                 return func(*args, **kwargs)
-            except Exception as exc:
-                status = OtelUtils.metric_status_for_exception(exc)
+            except BaseException as exc:
+                status = _status_for_base_exception(exc)
                 raise
             finally:
-                counter.add(1, _merge_status_attributes(attributes, status))
+                _safe_emit(counter.add, 1, _merge_status_attributes(attributes, status))
 
         return wrapper
 
@@ -392,14 +414,11 @@ def async_count_calls[F: _AsyncFunction](
             status = "ok"
             try:
                 return await func(*args, **kwargs)
-            except asyncio.CancelledError:
-                status = "cancelled"
-                raise
-            except Exception as exc:
-                status = OtelUtils.metric_status_for_exception(exc)
+            except BaseException as exc:
+                status = _status_for_base_exception(exc)
                 raise
             finally:
-                counter.add(1, _merge_status_attributes(attributes, status))
+                _safe_emit(counter.add, 1, _merge_status_attributes(attributes, status))
 
         return wrapper
 

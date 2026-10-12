@@ -130,7 +130,11 @@ def _apply_capture_args(
     """
     if not capture_args:
         return
-    bound = signature.bind(*args, **kwargs)
+    try:
+        bound = signature.bind(*args, **kwargs)
+    except TypeError:
+        # Bad call arguments: let the traced function raise its own error instead of the tracer
+        return
     bound.apply_defaults()
     for arg_name in capture_args:
         if arg_name not in bound.arguments:
@@ -155,6 +159,53 @@ def _resolve_kind(kind: Any | None) -> Any:
     from opentelemetry.trace import SpanKind
 
     return SpanKind.INTERNAL
+
+
+def _prepare_span(
+    *,
+    kind: Any | None,
+    attributes: dict[str, Any] | None,
+    root: bool,
+) -> tuple[Any, dict[str, Any]] | None:
+    """Resolve the tracer and span start options, or None when tracing is inactive.
+
+    Args:
+        kind: OpenTelemetry span kind (defaults to INTERNAL).
+        attributes: Optional static span attributes.
+        root: When True, start the span with a fresh (detached) context.
+
+    Returns:
+        ``(tracer, start_kwargs)``, or None when traces are disabled or OTel is unavailable.
+    """
+    config = BaseConfig.global_config()
+    if not OtelUtils.is_traces_enabled(config):
+        return None
+
+    OtelUtils.init_otel_if_needed(config)
+    if OtelUtils.import_failed():
+        return None
+
+    tracer = OtelUtils.get_tracer(__name__)
+    try:
+        resolved_kind = _resolve_kind(kind)
+    except ImportError:
+        return None
+
+    # Disable SDK auto-record/status — we handle both manually for BaseError mapping.
+    start_kwargs: dict[str, Any] = {
+        "kind": resolved_kind,
+        "record_exception": False,
+        "set_status_on_exception": False,
+    }
+    sanitized = _sanitize_attributes(attributes)
+    if sanitized:
+        start_kwargs["attributes"] = sanitized
+    if root:
+        from opentelemetry import trace
+        from opentelemetry.trace import INVALID_SPAN
+
+        start_kwargs["context"] = trace.set_span_in_context(INVALID_SPAN)
+    return tracer, start_kwargs
 
 
 def _run_traced(
@@ -185,34 +236,10 @@ def _run_traced(
     Returns:
         The return value of ``func``.
     """
-    config = BaseConfig.global_config()
-    if not OtelUtils.is_traces_enabled(config):
+    prepared = _prepare_span(kind=kind, attributes=attributes, root=root)
+    if prepared is None:
         return func(*args, **kwargs)
-
-    OtelUtils.init_otel_if_needed(config)
-    if OtelUtils.import_failed():
-        return func(*args, **kwargs)
-
-    tracer = OtelUtils.get_tracer(__name__)
-    try:
-        resolved_kind = _resolve_kind(kind)
-    except ImportError:
-        return func(*args, **kwargs)
-
-    # Disable SDK auto-record/status — we handle both manually for BaseError mapping.
-    start_kwargs: dict[str, Any] = {
-        "kind": resolved_kind,
-        "record_exception": False,
-        "set_status_on_exception": False,
-    }
-    sanitized = _sanitize_attributes(attributes)
-    if sanitized:
-        start_kwargs["attributes"] = sanitized
-    if root:
-        from opentelemetry import trace
-        from opentelemetry.trace import INVALID_SPAN
-
-        start_kwargs["context"] = trace.set_span_in_context(INVALID_SPAN)
+    tracer, start_kwargs = prepared
 
     with tracer.start_as_current_span(span_name, **start_kwargs) as span:
         _apply_capture_args(span, signature, args, kwargs, capture_args)
@@ -254,34 +281,10 @@ async def _run_traced_async(
     Returns:
         The return value of ``func``.
     """
-    config = BaseConfig.global_config()
-    if not OtelUtils.is_traces_enabled(config):
+    prepared = _prepare_span(kind=kind, attributes=attributes, root=root)
+    if prepared is None:
         return await func(*args, **kwargs)
-
-    OtelUtils.init_otel_if_needed(config)
-    if OtelUtils.import_failed():
-        return await func(*args, **kwargs)
-
-    tracer = OtelUtils.get_tracer(__name__)
-    try:
-        resolved_kind = _resolve_kind(kind)
-    except ImportError:
-        return await func(*args, **kwargs)
-
-    # Disable SDK auto-record/status — we handle both manually for BaseError mapping.
-    start_kwargs: dict[str, Any] = {
-        "kind": resolved_kind,
-        "record_exception": False,
-        "set_status_on_exception": False,
-    }
-    sanitized = _sanitize_attributes(attributes)
-    if sanitized:
-        start_kwargs["attributes"] = sanitized
-    if root:
-        from opentelemetry import trace
-        from opentelemetry.trace import INVALID_SPAN
-
-        start_kwargs["context"] = trace.set_span_in_context(INVALID_SPAN)
+    tracer, start_kwargs = prepared
 
     with tracer.start_as_current_span(span_name, **start_kwargs) as span:
         _apply_capture_args(span, signature, args, kwargs, capture_args)
@@ -625,7 +628,7 @@ def trace_class(
         for method_name, attr in list(vars(cls).items()):
             if method_name.startswith("_") or method_name in excluded:
                 continue
-            if isinstance(attr, property):
+            if isinstance(attr, property | type):
                 continue
 
             if isinstance(attr, staticmethod):
