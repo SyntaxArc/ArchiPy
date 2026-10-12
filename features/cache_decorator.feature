@@ -125,3 +125,38 @@ Feature: TTL Cache Decorator
     When I call the function with string argument "test"
     Then the function should not be executed again
     And the execution count should be 2
+
+  Scenario: Equal values of different types are cached separately
+    Given a function decorated with ttl_cache_decorator
+    When I call the function with integer argument 1
+    Then the function should be executed
+    When I call the function with float argument 1.0
+    Then the function should be executed
+
+  Scenario: Unhashable arguments bypass the cache instead of failing
+    Given a function decorated with ttl_cache_decorator
+    When I call the function with a list argument
+    Then the function should be executed
+    When I call the function with a list argument
+    Then the function should be executed again
+    And the execution count should be 2
+
+  Scenario: Async functions are cached by their awaited result
+    Given an async function decorated with ttl_cache_decorator
+    When I await the function with argument 5
+    Then the function should be executed
+    And the result should be 10
+    When I await the function with argument 5
+    Then the function should not be executed again
+    And the result should be 10
+
+  Scenario: Concurrent callers share the cache without errors
+    Given a function decorated with ttl_cache_decorator
+    When 8 threads call the function with argument 5 concurrently
+    Then no thread should have raised an error
+    And every thread should have received 10
+
+  Scenario: Same-named cached methods in a class hierarchy do not share bound state
+    Given a parent and child class with same-named cached methods
+    When I call the child method with argument 3
+    Then the child method result should be "child:base:3"

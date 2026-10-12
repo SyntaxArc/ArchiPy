@@ -2,22 +2,21 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import signal
+import threading
 import time
 from functools import wraps
-from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, cast
 
-from archipy.models.errors import DeadlineExceededError
+from archipy.models.errors import DeadlineExceededError, FailedPreconditionError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-# Define type variables for the decorator
-P = ParamSpec("P")
-R = TypeVar("R")
 
-
-def timeout_decorator(seconds: float) -> Callable[[Callable[P, R]], Callable[P, R]]:
+def timeout_decorator[**P, R](seconds: float) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """A decorator that adds a timeout to a function.
 
     If the function takes longer than the specified number of seconds to execute,
@@ -26,10 +25,14 @@ def timeout_decorator(seconds: float) -> Callable[[Callable[P, R]], Callable[P, 
     After the call, the previous SIGALRM handler is restored and any timer that was
     pending before the call is re-armed with its remaining time.
 
+    ``async def`` functions are supported too: they are bounded with `asyncio.timeout`, which
+    works in any thread and needs no signals.
+
     Limitations:
-        Relies on `SIGALRM`, so it works only on Unix and only when the decorated function
-        is called from the main thread of the main interpreter. It cannot interrupt
-        blocking C calls that do not return to the interpreter.
+        Synchronous functions rely on `SIGALRM`, so they work only on Unix and only when the
+        decorated function is called from the main thread of the main interpreter. Calling one
+        from another thread raises `FailedPreconditionError` instead of running without a timeout.
+        It cannot interrupt blocking C calls that do not return to the interpreter.
 
     Args:
         seconds (float): The maximum number of seconds the function is allowed to run.
@@ -58,8 +61,26 @@ def timeout_decorator(seconds: float) -> Callable[[Callable[P, R]], Callable[P, 
         # Capture function name before wrapping - use getattr for type safety
         func_name = getattr(func, "__name__", "unknown")
 
+        if inspect.iscoroutinefunction(func):
+
+            @wraps(func)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                try:
+                    async with asyncio.timeout(seconds):
+                        return await func(*args, **kwargs)
+                except TimeoutError as e:
+                    raise DeadlineExceededError(timeout=seconds, operation=func_name) from e
+
+            return cast("Callable[P, R]", async_wrapper)
+
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            if threading.current_thread() is not threading.main_thread():
+                raise FailedPreconditionError(
+                    precondition="timeout_decorator requires the main thread",
+                    additional_data={"operation": func_name},
+                )
+
             def handle_timeout(_signum: int, _frame: Any) -> None:
                 raise DeadlineExceededError(timeout=seconds, operation=func_name)
 

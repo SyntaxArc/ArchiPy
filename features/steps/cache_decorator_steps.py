@@ -1,3 +1,5 @@
+import asyncio
+import threading
 import time
 
 from behave import given, then, when
@@ -602,3 +604,119 @@ def step_then_cached_method_maintains_identity(context):
     method2 = test_instance.cached_method
 
     assert method1 is method2, "Expected cached method to maintain identity consistency"
+
+
+@when("I call the function with float argument {arg:f}")
+def step_when_call_function_with_float_arg(context, arg):
+    """Call the function with a float argument."""
+    scenario_context = get_current_scenario_context(context)
+    function = scenario_context.get("function")
+    counter = scenario_context.get("counter")
+    scenario_context.store("initial_count", counter.count)
+    scenario_context.store("result", function(arg))
+
+
+@when("I call the function with a list argument")
+def step_when_call_function_with_list_arg(context):
+    """Call the function with an unhashable argument."""
+    scenario_context = get_current_scenario_context(context)
+    function = scenario_context.get("function")
+    counter = scenario_context.get("counter")
+    scenario_context.store("initial_count", counter.count)
+    scenario_context.store("result", function([1, 2]))
+
+
+@given("an async function decorated with ttl_cache_decorator")
+def step_given_async_cached_function(context):
+    """Create an async cached function."""
+    scenario_context = get_current_scenario_context(context)
+    counter = ExecutionCounter()
+
+    @ttl_cache_decorator(ttl_seconds=300, maxsize=100)
+    async def test_function(x: int) -> int:
+        counter.increment()
+        await asyncio.sleep(0)
+        return x * 2
+
+    scenario_context.store("counter", counter)
+    scenario_context.store("function", test_function)
+
+
+@when("I await the function with argument {arg:d}")
+def step_when_await_function(context, arg):
+    """Await the async cached function."""
+    scenario_context = get_current_scenario_context(context)
+    function = scenario_context.get("function")
+    counter = scenario_context.get("counter")
+    scenario_context.store("initial_count", counter.count)
+    scenario_context.store("result", asyncio.run(function(arg)))
+
+
+@when("{threads:d} threads call the function with argument {arg:d} concurrently")
+def step_when_threads_call_function(context, threads, arg):
+    """Call the cached function from several threads at once."""
+    scenario_context = get_current_scenario_context(context)
+    function = scenario_context.get("function")
+    results: list[int] = []
+    errors: list[Exception] = []
+    barrier = threading.Barrier(threads)
+
+    def worker() -> None:
+        try:
+            barrier.wait(timeout=5)
+            for _ in range(50):
+                results.append(function(arg))
+        except Exception as e:
+            errors.append(e)
+
+    pool = [threading.Thread(target=worker) for _ in range(threads)]
+    for thread in pool:
+        thread.start()
+    for thread in pool:
+        thread.join(timeout=10)
+    scenario_context.store("thread_results", results)
+    scenario_context.store("thread_errors", errors)
+
+
+@then("no thread should have raised an error")
+def step_then_no_thread_error(context):
+    """Verify no worker thread failed."""
+    errors = get_current_scenario_context(context).get("thread_errors")
+    assert not errors, f"Threads raised: {errors!r}"
+
+
+@then("every thread should have received {expected:d}")
+def step_then_every_thread_result(context, expected):
+    """Verify every worker thread got the same result."""
+    results = get_current_scenario_context(context).get("thread_results")
+    assert results and set(results) == {expected}, f"Got {set(results)!r}"
+
+
+@given("a parent and child class with same-named cached methods")
+def step_given_parent_child_cached(context):
+    """Create a hierarchy where parent and child both cache a method called ``compute``."""
+
+    class Base:
+        @ttl_cache_decorator(ttl_seconds=300, maxsize=10)
+        def compute(self, x: int) -> str:
+            return f"base:{x}"
+
+    class Child(Base):
+        @ttl_cache_decorator(ttl_seconds=300, maxsize=10)
+        def compute(self, x: int) -> str:
+            return f"child:{super().compute(x)}"
+
+    get_current_scenario_context(context).store("child_instance", Child())
+
+
+@when("I call the child method with argument {arg:d}")
+def step_when_call_child_method(context, arg):
+    """Call the child's cached method, which calls the parent's cached method."""
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("child_result", scenario_context.get("child_instance").compute(arg))
+
+
+@then('the child method result should be "{expected}"')
+def step_then_child_method_result(context, expected):
+    """Verify the child result."""
+    assert get_current_scenario_context(context).get("child_result") == expected

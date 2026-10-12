@@ -38,6 +38,7 @@ from archipy.adapters.starrocks.sqlalchemy.session_manager_registry import StarR
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import SQLiteSQLAlchemyConfig
 from archipy.helpers.decorators.sqlalchemy_atomic import (
+    sqlalchemy_atomic_decorator,
     async_mysql_sqlalchemy_atomic_decorator,
     async_postgres_sqlalchemy_atomic_decorator,
     async_sqlite_sqlalchemy_atomic_decorator,
@@ -2016,3 +2017,228 @@ async def step_then_related_entities_accessible(context):
 
     result = await verify_relationships()
     assert result, "Relationship verification failed"
+
+
+# ---- unit scenarios: atomic decorator against a fake session (no database) ----
+
+
+class _FakeTransaction:
+    def __init__(self, session):
+        self.session = session
+
+    def __enter__(self):
+        self.session.active = True
+        return self
+
+    def __exit__(self, *_exc):
+        self.session.active = False
+        return False
+
+    async def __aenter__(self):
+        return self.__enter__()
+
+    async def __aexit__(self, *exc):
+        return self.__exit__(*exc)
+
+
+class _FakeSession:
+    """Records what the atomic decorator does to a session."""
+
+    def __init__(self, *, is_async, rollback_error=None):
+        self.info = {}
+        self.active = False
+        self.is_async = is_async
+        self.rollback_error = rollback_error
+        self.rolled_back = False
+        self.closed = False
+        self.committed = False
+
+    def in_transaction(self):
+        return self.active
+
+    def begin(self):
+        return _FakeTransaction(self)
+
+    def _rollback(self):
+        self.rolled_back = True
+        if self.rollback_error is not None:
+            raise self.rollback_error
+
+    def _close(self):
+        self.closed = True
+
+    def _commit(self):
+        self.committed = True
+
+    def __getattr__(self, name):
+        action = {"rollback": self._rollback, "close": self._close, "commit": self._commit}.get(name)
+        if action is None:
+            raise AttributeError(name)
+        if self.is_async:
+
+            async def coroutine():
+                return action()
+
+            return coroutine
+        return action
+
+
+class _FakeSessionManager:
+    def __init__(self, session):
+        self.session = session
+
+    def get_session(self):
+        return self.session
+
+    def remove_session(self):
+        if self.session.is_async:
+
+            async def noop():
+                return None
+
+            return noop()
+        return None
+
+
+def _fake_registry(session):
+    manager = _FakeSessionManager(session)
+
+    class FakeRegistry:
+        @staticmethod
+        def get_sync_manager():
+            return manager
+
+        @staticmethod
+        def get_async_manager():
+            return manager
+
+    return FakeRegistry
+
+
+_RAISABLE = {
+    "KeyboardInterrupt": KeyboardInterrupt,
+    "SystemExit": SystemExit,
+    "CancelledError": asyncio.CancelledError,
+    "ValueError": ValueError,
+}
+
+
+@given("a fake {mode} session behind the atomic decorator")
+def step_given_fake_atomic_session(context, mode):
+    from unittest import mock
+
+    from archipy.helpers.decorators import sqlalchemy_atomic as atomic_module
+
+    sc = get_current_scenario_context(context)
+    session = _FakeSession(is_async=mode == "async")
+    patcher = mock.patch.object(atomic_module, "_load_session_manager_registry", lambda _db_type: _fake_registry(session))
+    patcher.start()
+    context.add_cleanup(patcher.stop)
+    sc.store("fake_session", session)
+    sc.store("fake_mode", mode)
+
+
+@given("the fake session fails to roll back")
+def step_given_fake_rollback_fails(context):
+    get_current_scenario_context(context).get("fake_session").rollback_error = RuntimeError("rollback broke")
+
+
+def _run_atomic_function(context, body):
+    sc = get_current_scenario_context(context)
+    mode = sc.get("fake_mode")
+    if mode == "async":
+
+        @sqlalchemy_atomic_decorator(db_type="sqlite", is_async=True)
+        async def work():
+            body()
+
+        runner = lambda: asyncio.run(work())  # noqa: E731
+    else:
+
+        @sqlalchemy_atomic_decorator(db_type="sqlite")
+        def work():
+            body()
+
+        runner = work
+    try:
+        runner()
+        sc.store("atomic_error", None)
+    except BaseException as e:  # noqa: BLE001
+        sc.store("atomic_error", e)
+
+
+@when("the atomic function raises {name}")
+def step_when_atomic_function_raises(context, name):
+    exc_type = _RAISABLE[name]
+
+    def body():
+        raise exc_type()
+
+    _run_atomic_function(context, body)
+
+
+@when("the atomic function succeeds")
+def step_when_atomic_function_succeeds(context):
+    _run_atomic_function(context, lambda: None)
+
+
+@then("{name} should propagate through the atomic block unchanged")
+def step_then_propagates_unchanged(context, name):
+    error = get_current_scenario_context(context).get("atomic_error")
+    assert type(error) is _RAISABLE[name], f"Got {error!r}"
+
+
+@then("the fake session should have been rolled back and closed")
+def step_then_fake_rolled_back_closed(context):
+    session = get_current_scenario_context(context).get("fake_session")
+    assert session.rolled_back and session.closed, f"rolled_back={session.rolled_back} closed={session.closed}"
+
+
+@then("the fake session should have been closed")
+def step_then_fake_closed(context):
+    assert get_current_scenario_context(context).get("fake_session").closed
+
+
+@then("an InternalError chained from ValueError should be raised")
+def step_then_internal_error_chained(context):
+    error = get_current_scenario_context(context).get("atomic_error")
+    assert isinstance(error, InternalError), f"Got {error!r}"
+    assert isinstance(error.__cause__, ValueError), f"Cause {error.__cause__!r}"
+
+
+@then("the session should carry no atomic marker")
+def step_then_no_atomic_marker(context):
+    sc = get_current_scenario_context(context)
+    assert sc.get("atomic_error") is None, f"Unexpected error {sc.get('atomic_error')!r}"
+    assert sc.get("fake_session").info == {}, f"Got {sc.get('fake_session').info!r}"
+
+
+@when("a {kind} error with driver code {code} is handled by the atomic decorator")
+def step_when_driver_error_handled(context, kind, code):
+    from sqlalchemy.exc import IntegrityError, OperationalError
+
+    from archipy.helpers.decorators.sqlalchemy_atomic import _handle_db_exception
+
+    class _DriverError(Exception):
+        pass
+
+    # PostgreSQL codes are strings (pgcode); MySQL-style codes are the first positional arg
+    orig = _DriverError(int(code), "driver message") if code.isdigit() and len(code) == 4 else _DriverError("driver message")
+    if not (code.isdigit() and len(code) == 4):
+        orig.pgcode = code
+    error_type = OperationalError if kind == "operational" else IntegrityError
+    sqlalchemy_error = error_type("SELECT 1", {}, orig)
+    sc = get_current_scenario_context(context)
+    try:
+        _handle_db_exception(sqlalchemy_error, "sqlite", "work")
+        sc.store("atomic_error", None)
+    except Exception as e:
+        sc.store("atomic_error", e)
+
+
+@then("the atomic decorator should raise {expected}")
+def step_then_named_error_raised(context, expected):
+    from archipy.models import errors
+
+    error = get_current_scenario_context(context).get("atomic_error")
+    assert type(error) is getattr(errors, expected), f"Got {error!r}"

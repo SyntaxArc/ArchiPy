@@ -266,3 +266,57 @@ Feature: SQLAlchemy Atomic Transactions
     When an insert after update on the same table is attempted in one StarRocks transaction
     Then a StarRocks transaction limitation error should be raised
     And the database session should remain usable
+
+  @unit
+  Scenario Outline: Cancellation and interpreter exit pass through the atomic block unchanged
+    Given a fake <mode> session behind the atomic decorator
+    When the atomic function raises <exception>
+    Then <exception> should propagate through the atomic block unchanged
+    And the fake session should have been rolled back and closed
+
+    Examples:
+      | mode  | exception         |
+      | sync  | KeyboardInterrupt |
+      | sync  | SystemExit        |
+      | async | CancelledError    |
+
+  @unit
+  Scenario Outline: A failing rollback does not hide the original error
+    Given a fake <mode> session behind the atomic decorator
+    And the fake session fails to roll back
+    When the atomic function raises ValueError
+    Then an InternalError chained from ValueError should be raised
+    And the fake session should have been closed
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  @unit
+  Scenario Outline: The atomic marker is cleared once the outermost block exits
+    Given a fake <mode> session behind the atomic decorator
+    When the atomic function succeeds
+    Then the session should carry no atomic marker
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  @unit
+  Scenario Outline: Driver error codes map to specific database errors
+    When a <kind> error with driver code <code> is handled by the atomic decorator
+    Then the atomic decorator should raise <expected>
+
+    Examples:
+      | kind        | code  | expected                   |
+      | operational | 1213  | DatabaseDeadlockError      |
+      | operational | 1205  | DatabaseTimeoutError       |
+      | operational | 40001 | DatabaseSerializationError |
+      | operational | 40P01 | DatabaseDeadlockError      |
+      | operational | 2003  | DatabaseConnectionError    |
+      | integrity   | 1062  | DatabaseConstraintError    |
+      | integrity   | 1451  | DatabaseConstraintError    |
+      | integrity   | 23505 | DatabaseConstraintError    |
+      | integrity   | 1048  | DatabaseIntegrityError     |

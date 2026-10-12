@@ -49,6 +49,7 @@ def _build_warning_class(context, message):
     @class_deprecation_warning(message)
     class OldClass:
         def __init__(self, value):
+            """Store the value."""
             self.value = value
 
     get_current_scenario_context(context).store("warning_target", OldClass)
@@ -164,6 +165,7 @@ def _build_error_class(context, kwargs):
     @class_deprecation_error(**kwargs)
     class LegacyClass:
         def __init__(self):
+            """Mark the body as run."""
             ran["value"] = True
 
     sc.store("error_target", LegacyClass)
@@ -214,3 +216,15 @@ def step_then_deprecation_error_feature(context, feature):
 @then('the deprecation error message is "{message}"')
 def step_then_deprecation_error_message(context, message):
     assert get_current_scenario_context(context).get("deprecation_error").get_message() == message
+
+
+@then("the warning class constructor keeps its docstring")
+def step_then_warning_class_doc(context):
+    target = get_current_scenario_context(context).get("warning_target")
+    assert target.__init__.__doc__ == "Store the value.", f"Got {target.__init__.__doc__!r}"
+
+
+@then("the error class constructor keeps its docstring")
+def step_then_error_class_doc(context):
+    target = get_current_scenario_context(context).get("error_target")
+    assert target.__init__.__doc__ == "Mark the body as run.", f"Got {target.__init__.__doc__!r}"

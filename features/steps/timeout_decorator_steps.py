@@ -1,10 +1,13 @@
+import asyncio
+import inspect
 import signal
+import threading
 import time
 
 from behave import given, then, when
 
 from archipy.helpers.decorators.timeout import timeout_decorator
-from archipy.models.errors import DeadlineExceededError
+from archipy.models.errors import DeadlineExceededError, FailedPreconditionError
 from features.test_helpers import get_current_scenario_context
 
 
@@ -22,6 +25,18 @@ def _build(context, behavior, limit):
 @given("a timeout-decorated function that sleeps {sleep:f} seconds with a {limit:f} second limit")
 def step_given_timeout_sleeping(context, sleep, limit):
     _build(context, lambda: time.sleep(sleep), limit)
+
+
+@given("an async timeout-decorated function that sleeps {sleep:f} seconds with a {limit:f} second limit")
+def step_given_async_timeout_sleeping(context, sleep, limit):
+    sc = get_current_scenario_context(context)
+
+    @timeout_decorator(limit)
+    async def slow_function():
+        await asyncio.sleep(sleep)
+        return "done"
+
+    sc.store("timeout_function", slow_function)
 
 
 @given("a timeout-decorated function that raises ValueError with a {limit:f} second limit")
@@ -50,7 +65,8 @@ def _run(context, *args):
     context.add_cleanup(signal.signal, signal.SIGALRM, previous_handler)
     start = time.monotonic()
     try:
-        sc.store("timeout_result", sc.get("timeout_function")(*args))
+        func = sc.get("timeout_function")
+        sc.store("timeout_result", asyncio.run(func(*args)) if inspect.iscoroutinefunction(func) else func(*args))
         sc.store("timeout_error", None)
     except Exception as e:
         sc.store("timeout_error", e)
@@ -60,6 +76,30 @@ def _run(context, *args):
 @when("the timeout-decorated function is called")
 def step_when_timeout_called(context):
     _run(context)
+
+
+@when("the timeout-decorated function is called from a worker thread")
+def step_when_timeout_called_in_thread(context):
+    sc = get_current_scenario_context(context)
+    outcome = {}
+
+    def target():
+        try:
+            outcome["result"] = sc.get("timeout_function")()
+        except Exception as e:
+            outcome["error"] = e
+
+    worker = threading.Thread(target=target)
+    worker.start()
+    worker.join(timeout=5)
+    sc.store("timeout_result", outcome.get("result"))
+    sc.store("timeout_error", outcome.get("error"))
+
+
+@then("the timeout-decorated function raises FailedPreconditionError")
+def step_then_timeout_failed_precondition(context):
+    error = get_current_scenario_context(context).get("timeout_error")
+    assert isinstance(error, FailedPreconditionError), f"Got {error!r}"
 
 
 @when("the timeout-decorated function is called with arguments {a:d} and {b:d}")

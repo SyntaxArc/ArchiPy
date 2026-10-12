@@ -37,3 +37,27 @@ Feature: Singleton Metaclass
     When 8 threads instantiate the singleton class at the same time
     Then all threads received the same singleton instance
     And the singleton constructor ran 1 times
+
+  Scenario: The singleton decorator returns one instance and runs the constructor once
+    Given a class using the singleton decorator
+    When the singleton class is instantiated with value 10 and then with value 20
+    Then both singleton instances are the same object
+    And the singleton instance value is 10
+    And the singleton constructor ran 1 times
+
+  Scenario: The singleton decorator keeps the decorated name a class
+    Given a class using the singleton decorator
+    When the singleton class is instantiated twice
+    Then the singleton instances are instances of the decorated class
+
+  Scenario: The singleton decorator gives a subclass its own instance
+    Given a class using the singleton decorator
+    And a subclass of that singleton class
+    When the singleton class and its subclass are instantiated
+    Then the two singleton instances are different objects
+
+  Scenario: The singleton decorator creates one instance under concurrency
+    Given a thread-safe class using the singleton decorator with a slow constructor
+    When 8 threads instantiate the singleton class at the same time
+    Then all threads received the same singleton instance
+    And the singleton constructor ran 1 times

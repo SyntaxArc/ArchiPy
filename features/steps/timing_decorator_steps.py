@@ -1,3 +1,5 @@
+import asyncio
+import inspect
 import logging
 import time
 
@@ -26,6 +28,18 @@ def step_given_timing_function(context, sleep):
     def slow_work(a=0, b=0):
         time.sleep(sleep)
         return "result" if (a, b) == (0, 0) else f"result:{a + b}"
+
+    sc.store("timing_function", slow_work)
+
+
+@given("an async timing-decorated function that sleeps {sleep:f} seconds")
+def step_given_async_timing_function(context, sleep):
+    sc = get_current_scenario_context(context)
+
+    @timing_decorator
+    async def slow_work():
+        await asyncio.sleep(sleep)
+        return "result"
 
     sc.store("timing_function", slow_work)
 
@@ -70,7 +84,8 @@ def step_given_timing_logger_level(context, level):
 def _run(context, *args):
     sc = get_current_scenario_context(context)
     try:
-        sc.store("timing_result", sc.get("timing_function")(*args))
+        func = sc.get("timing_function")
+        sc.store("timing_result", asyncio.run(func(*args)) if inspect.iscoroutinefunction(func) else func(*args))
         sc.store("timing_error", None)
     except Exception as e:
         sc.store("timing_error", e)

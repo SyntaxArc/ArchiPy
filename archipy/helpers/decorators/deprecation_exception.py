@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any
 
 from archipy.models.errors import DeprecationError
 from archipy.models.types.language_type import LanguageType
@@ -11,15 +11,8 @@ from archipy.models.types.language_type import LanguageType
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-# Define type variables for the decorator
-P = ParamSpec("P")
-R = TypeVar("R")
 
-# Define a type variable for the return type of the decorated class
-T = TypeVar("T", bound=type[Any])
-
-
-def method_deprecation_error(
+def method_deprecation_error[**P, R](
     operation: str | None = None,
     lang: LanguageType = LanguageType.EN,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
@@ -73,7 +66,10 @@ def method_deprecation_error(
     return decorator
 
 
-def class_deprecation_error(operation: str | None = None, lang: LanguageType = LanguageType.FA) -> Callable[[T], T]:
+def class_deprecation_error[T: type[Any]](
+    operation: str | None = None,
+    lang: LanguageType = LanguageType.FA,
+) -> Callable[[T], T]:
     """A decorator that raises a DeprecationException when the decorated class is instantiated.
 
     Args:
@@ -106,6 +102,7 @@ def class_deprecation_error(operation: str | None = None, lang: LanguageType = L
     """
 
     def decorator(cls: T) -> T:
+        @wraps(cls.__init__)
         def new_init(_self: Any, *_args: Any, **_kwargs: Any) -> None:
             operation_name = operation if operation is not None else cls.__name__
             raise DeprecationError(deprecated_feature=operation_name, lang=lang)

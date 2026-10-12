@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+import inspect
+import threading
 from functools import wraps
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
+
+from cachetools.keys import typedkey
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
+
+
+_MISSING: Any = object()
 
 
 class CachedFunction[**P, R]:
@@ -33,19 +40,30 @@ class CachedFunction[**P, R]:
         ```
     """
 
-    def __init__(self, func: Callable[..., R], cache: Any, instance: object | None = None) -> None:
+    def __init__(
+        self,
+        func: Callable[..., R],
+        cache: Any,
+        instance: object | None = None,
+        lock: threading.RLock | None = None,
+    ) -> None:
         """Initialize the cached function wrapper.
 
         Args:
             func: The function to wrap.
             cache: The cache instance to use.
             instance: The instance this method is bound to (for bound methods).
+            lock: Lock guarding the cache; shared between bound copies of the same decorated function.
         """
         self._func: Callable[..., R] = func
         self._cache: Any = cache
         self._instance: object | None = instance
+        # Calls on the same cache from several threads must not race on the (non thread-safe) TTLCache
+        self._lock = lock if lock is not None else threading.RLock()
         # Preserve function metadata
         wraps(func)(self)
+        if inspect.iscoroutinefunction(func):
+            inspect.markcoroutinefunction(self)
 
     def __get__(self, obj: object, objtype: type | None = None) -> CachedFunction[P, R]:
         """Support instance methods by implementing descriptor protocol.
@@ -58,52 +76,72 @@ class CachedFunction[**P, R]:
 
         # Cache the bound method in the instance's __dict__ for identity consistency
         func_name = getattr(self._func, "__name__", "cached_method")
-        bound_method_name = f"_cached_{func_name}"
+        # id(self) keeps same-named cached methods of different classes in one MRO apart
+        bound_method_name = f"_cached_{func_name}_{id(self)}"
         if not hasattr(obj, bound_method_name):
             # Create a bound CachedFunction that shares the same cache
-            bound_cached: CachedFunction[P, R] = CachedFunction(self._func, self._cache, instance=obj)
+            bound_cached: CachedFunction[P, R] = CachedFunction(self._func, self._cache, instance=obj, lock=self._lock)
             # Store in instance __dict__ to maintain identity
             try:
                 object.__setattr__(obj, bound_method_name, bound_cached)
             except AttributeError, TypeError:
                 # If we can't set the attribute (frozen dataclass, etc.), return a new instance
-                return CachedFunction(self._func, self._cache, instance=obj)
+                return CachedFunction(self._func, self._cache, instance=obj, lock=self._lock)
 
         return getattr(obj, bound_method_name)
 
-    def __call__(self, *args: Any, **kwargs: Any) -> R:
+    def _make_key(self, args: tuple[Any, ...], kwargs: dict[str, Any]) -> Any | None:
+        """Build a hashable key from the call arguments, or None if they cannot be hashed."""
+        key = typedkey(*args, **kwargs)
+        try:
+            hash(key)
+        except TypeError:
+            return None
+        return key
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """Call the cached function.
+
+        Calls whose arguments are not hashable bypass the cache instead of failing.
 
         Args:
             *args: Positional arguments to pass to the function.
             **kwargs: Keyword arguments to pass to the function.
 
         Returns:
-            The result of the function call (from cache or fresh).
+            The result of the function call (from cache or fresh). For ``async def`` functions
+            the result is an awaitable and the awaited value is what gets cached.
         """
-        # Create a key based on function name, args, and kwargs
-        func_name = getattr(self._func, "__name__", "unknown")
-        key_parts = [func_name]
+        key = self._make_key(args, kwargs)
+        call_args = args if self._instance is None else (self._instance, *args)
 
-        # Use repr() with type information for robust key generation
-        key_parts.extend(f"{type(arg).__name__}:{arg!r}" for arg in args)
+        if inspect.iscoroutinefunction(self._func):
+            return self._call_async(key, call_args, kwargs)
 
-        # Add keyword arguments
-        key_parts.extend(f"{k}={type(v).__name__}:{v!r}" for k, v in sorted(kwargs.items()))
+        if key is None:
+            return self._func(*call_args, **kwargs)
+        with self._lock:
+            cached = self._cache.get(key, _MISSING)
+        if cached is not _MISSING:
+            return cached
 
-        key = ":".join(key_parts)
+        result: R = self._func(*call_args, **kwargs)
+        with self._lock:
+            self._cache[key] = result
+        return result
 
-        # Check if result is in cache
-        if key in self._cache:
-            return self._cache[key]
+    async def _call_async(self, key: Any | None, call_args: tuple[Any, ...], kwargs: dict[str, Any]) -> Any:
+        """Await the wrapped coroutine function and cache its awaited value."""
+        if key is None:
+            return await cast("Awaitable[Any]", self._func(*call_args, **kwargs))
+        with self._lock:
+            cached = self._cache.get(key, _MISSING)
+        if cached is not _MISSING:
+            return cached
 
-        # Call the function with the instance if this is a bound method
-        if self._instance is not None:
-            result: R = self._func(self._instance, *args, **kwargs)
-        else:
-            result = self._func(*args, **kwargs)
-
-        self._cache[key] = result
+        result = await cast("Awaitable[Any]", self._func(*call_args, **kwargs))
+        with self._lock:
+            self._cache[key] = result
         return result
 
     def clear_cache(self) -> None:
@@ -112,13 +150,14 @@ class CachedFunction[**P, R]:
         This clears all cached values for this function. When used with instance methods,
         this clears the shared cache for all instances.
         """
-        self._cache.clear()
+        with self._lock:
+            self._cache.clear()
 
 
 def ttl_cache_decorator[**P, R](
     ttl_seconds: int | Callable[[], int] = 300,
     maxsize: int = 100,
-) -> Any:
+) -> Callable[[Callable[P, R]], CachedFunction[P, R]]:
     """Decorator that provides a TTL cache for functions and methods.
 
     The cache is shared across all instances when decorating instance methods.
@@ -133,8 +172,7 @@ def ttl_cache_decorator[**P, R](
             When the cache is full, the least recently used entry is evicted.
 
     Returns:
-        Decorated function with TTL caching and a clear_cache() method (typed as :class:`~typing.Any`
-        at compile time so ParamSpec-style decorator typing stays sound).
+        Decorated function with TTL caching and a clear_cache() method.
 
     Example:
         ```python
@@ -161,14 +199,19 @@ def ttl_cache_decorator[**P, R](
     Note:
         - Exceptions are not cached; the function will be re-executed on the next call
         - None values are cached like any other value
+        - Argument types are part of the key (``f(1)`` and ``f(1.0)`` are cached separately) and
+          arguments must be hashable; calls with unhashable arguments run uncached
+        - ``async def`` functions are supported; the awaited result is cached
+        - Access to the cache is guarded by a lock, so it is safe to call from several threads
         - Cache is shared across all instances of a class (not per-instance)
     """
     from cachetools import TTLCache
 
     resolved_ttl = int(ttl_seconds) if isinstance(ttl_seconds, int) else int(ttl_seconds())
     cache: TTLCache = TTLCache(maxsize=maxsize, ttl=resolved_ttl)
+    lock = threading.RLock()
 
     def decorator(func: Callable[P, R]) -> CachedFunction[P, R]:
-        return CachedFunction(func, cache, instance=None)
+        return CachedFunction(func, cache, instance=None, lock=lock)
 
     return decorator

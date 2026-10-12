@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 import time
-from typing import TYPE_CHECKING
+from functools import wraps
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -15,7 +17,8 @@ logger = logging.getLogger(__name__)
 def timing_decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     """A decorator that measures the execution time of a function and logs it when DEBUG logging is enabled.
 
-    The duration is also logged when the function raises an exception.
+    The duration is also logged when the function raises an exception. Works for both regular
+    and ``async def`` functions; for async functions the time spent awaiting is included.
 
     Args:
         func (Callable): The function to be decorated.
@@ -42,10 +45,22 @@ def timing_decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
         Slept for 2 seconds
         ```
     """
-    from functools import wraps
-
     # Capture function name before wrapping - use getattr for type safety
     func_name = getattr(func, "__name__", "unknown")
+
+    if inspect.iscoroutinefunction(func):
+
+        @wraps(func)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            if not logger.isEnabledFor(logging.DEBUG):
+                return await func(*args, **kwargs)
+            start_time = time.perf_counter()
+            try:
+                return await func(*args, **kwargs)
+            finally:
+                logger.debug("%s took %.4f seconds to execute.", func_name, time.perf_counter() - start_time)
+
+        return cast("Callable[P, R]", async_wrapper)
 
     @wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:

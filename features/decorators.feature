@@ -28,12 +28,39 @@ Feature: Helper decorators
       And the retry-decorated function was invoked 3 times
       And the retry error carries resource type "external-api"
 
-    Scenario: Zero max_retries never calls the function
+    Scenario: Fewer than one attempt is rejected when the decorator is applied
       Given a retry config with max_retries 0 and delay 0.0
-      And a retry-decorated function that raises ValueError on the first 0 calls
+      When the retry decorator is applied
+      Then the retry decorator is rejected with InvalidArgumentError
+
+    Scenario: A backoff below one is rejected when the decorator is applied
+      Given a retry config with max_retries 3 and delay 0.0
+      And a retry backoff of 0.5
+      When the retry decorator is applied
+      Then the retry decorator is rejected with InvalidArgumentError
+
+    Scenario: Backoff grows the delay between attempts
+      Given a retry config with max_retries 3 and delay 0.05
+      And a retry backoff of 2.0
+      And a retry-decorated function that raises ValueError on the first 10 calls
       When the retry-decorated function is called
       Then the retry-decorated function raises ResourceExhaustedError
-      And the retry-decorated function was invoked 0 times
+      And the retry elapsed time is at least 0.15 seconds
+
+    Scenario: Async functions are retried without blocking the event loop
+      Given a retry config with max_retries 3 and delay 0.0
+      And an async retry-decorated function that raises ValueError on the first 2 calls
+      When the retry-decorated function is called
+      Then the retry-decorated function returns "ok"
+      And the retry-decorated function was invoked 3 times
+
+    Scenario: Async retries are exhausted and ResourceExhaustedError is raised
+      Given a retry config with max_retries 2 and delay 0.0
+      And an async retry-decorated function that raises ValueError on the first 10 calls
+      When the retry-decorated function is called
+      Then the retry-decorated function raises ResourceExhaustedError
+      And the retry-decorated function was invoked 2 times
+      And the retry error is chained from the last ValueError raised by the function
 
     Scenario: Delay is applied between attempts but not after the last one
       Given a retry config with max_retries 3 and delay 0.05
@@ -148,6 +175,23 @@ Feature: Helper decorators
       Then the timeout-decorated function raises ValueError
       And the previously installed SIGALRM handler is restored
 
+    Scenario: Async function finishing within the timeout returns its result
+      Given an async timeout-decorated function that sleeps 0.0 seconds with a 1.0 second limit
+      When the timeout-decorated function is called
+      Then the timeout-decorated function returns "done"
+
+    Scenario: Async function exceeding the timeout raises DeadlineExceededError
+      Given an async timeout-decorated function that sleeps 2.0 seconds with a 0.1 second limit
+      When the timeout-decorated function is called
+      Then the timeout-decorated function raises DeadlineExceededError
+      And the timeout error names operation "slow_function"
+      And the timeout-decorated function was interrupted before 1.0 seconds
+
+    Scenario: Sync function called outside the main thread is rejected instead of running unbounded
+      Given a timeout-decorated function that sleeps 0.0 seconds with a 1.0 second limit
+      When the timeout-decorated function is called from a worker thread
+      Then the timeout-decorated function raises FailedPreconditionError
+
   Rule: Timing decorator
 
     Scenario: Execution time is logged when root logging level is DEBUG
@@ -202,6 +246,14 @@ Feature: Helper decorators
       Then the timing-decorated function raises ValueError
       And one timing log message is recorded for "slow_work"
 
+    Scenario: Async function execution time is logged
+      Given an async timing-decorated function that sleeps 0.02 seconds
+      And the root logging level is DEBUG
+      When the timing-decorated function is called
+      Then the timing-decorated function returns "result"
+      And one timing log message is recorded for "slow_work"
+      And the timing log message reports at least 0.02 seconds
+
   Rule: Deprecation decorators
 
     Scenario: Deprecated method warns with the default message and still runs
@@ -237,6 +289,12 @@ Feature: Helper decorators
       When the deprecated-warning class is instantiated with value 1
       Then exactly one DeprecationWarning was emitted
       And the deprecation warning text is "use NewClass instead"
+
+    Scenario: Deprecated classes keep their constructor metadata
+      Given a class decorated with class_deprecation_warning without a message
+      And a class decorated with class_deprecation_error with operation "OldThing" and language EN
+      Then the warning class constructor keeps its docstring
+      And the error class constructor keeps its docstring
 
     Scenario: Deprecated method raises DeprecationError in English by default
       Given a method decorated with method_deprecation_error without arguments

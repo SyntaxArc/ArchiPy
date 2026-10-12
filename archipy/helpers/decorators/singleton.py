@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 import threading
+from contextlib import nullcontext
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from contextlib import AbstractContextManager
 
 
-def singleton_decorator(*, thread_safe: bool = True) -> Callable[[type[Any]], Callable[..., Any]]:
+def singleton_decorator[T: type[Any]](*, thread_safe: bool = True) -> Callable[[T], T]:
     """A decorator to create thread-safe Singleton classes.
 
-    This decorator ensures that only one instance of a class is created. It supports an optional
-    `thread_safe` parameter to control whether thread-safety mechanisms (e.g., locks) should be used.
+    This decorator ensures that only one instance of a class is created. The decorated name
+    is still the class itself, so ``isinstance``, subclassing and class-level attributes keep
+    working. Constructor arguments passed after the first instantiation are ignored.
 
     Args:
         thread_safe (bool, optional): If True, enables thread-safety for instance creation.
@@ -23,11 +26,11 @@ def singleton_decorator(*, thread_safe: bool = True) -> Callable[[type[Any]], Ca
         function: A decorator function that can be applied to a class.
 
     Example:
-        To create a Singleton class, apply the `singleton` decorator and optionally specify
+        To create a Singleton class, apply the `singleton_decorator` and optionally specify
         whether thread-safety should be enabled:
 
         ```python
-        @singleton(thread_safe=True)
+        @singleton_decorator(thread_safe=True)
         class MySingletonClass:
             def __init__(self, value):
                 self.value = value
@@ -41,47 +44,46 @@ def singleton_decorator(*, thread_safe: bool = True) -> Callable[[type[Any]], Ca
         print(instance1.value)  # Output: 10
         print(instance2.value)  # Output: 10
         print(instance1 is instance2)  # Output: True
+        print(isinstance(instance1, MySingletonClass))  # Output: True
         ```
     """
 
-    def decorator(cls: type[Any]) -> Callable[..., Any]:
-        """The inner decorator function that implements the Singleton pattern.
+    def decorator(cls: T) -> T:
+        """Patch the class so that it only ever builds and initializes one instance.
 
         Args:
             cls: The class to be decorated as a Singleton.
 
         Returns:
-            function: A function that returns the Singleton instance of the class.
+            The same class, now limited to a single instance per (sub)class.
         """
-        instances = {}  # Stores instances of Singleton classes
-        lock: threading.Lock | None = (
-            threading.Lock() if thread_safe else None
-        )  # Lock for thread-safe instance creation
+        instances: dict[type, Any] = {}
+        initialized: set[type] = set()
+        # Without thread safety a no-op context manager replaces the lock
+        lock: AbstractContextManager[Any] = threading.RLock() if thread_safe else nullcontext()
+        original_new = cls.__new__
+        original_init = cls.__init__
 
-        def get_instance(*args: Any, **kwargs: Any) -> Any:
-            """Create or return the Singleton instance of the class.
+        def singleton_new(klass: type, *args: Any, **kwargs: Any) -> Any:
+            if klass not in instances:
+                with lock:
+                    if klass not in instances:
+                        if original_new is object.__new__:
+                            instances[klass] = original_new(klass)
+                        else:
+                            instances[klass] = original_new(klass, *args, **kwargs)
+            return instances[klass]
 
-            If `thread_safe` is True, a lock is used to ensure that only one instance is created
-            even in a multi-threaded environment. If `thread_safe` is False, no locking mechanism
-            is used, which may result in multiple instances being created in a multi-threaded context.
+        def singleton_init(self: Any, *args: Any, **kwargs: Any) -> None:
+            klass = type(self)
+            if klass not in initialized:
+                with lock:
+                    if klass not in initialized:
+                        original_init(self, *args, **kwargs)
+                        initialized.add(klass)
 
-            Args:
-                *args: Positional arguments to pass to the class constructor.
-                **kwargs: Keyword arguments to pass to the class constructor.
-
-            Returns:
-                object: The Singleton instance of the class.
-            """
-            if cls not in instances:
-                if thread_safe:
-                    if lock is not None:
-                        with lock:
-                            if cls not in instances:
-                                instances[cls] = cls(*args, **kwargs)
-                else:
-                    instances[cls] = cls(*args, **kwargs)
-            return instances[cls]
-
-        return get_instance
+        cls.__new__ = singleton_new  # type: ignore[assignment]
+        cls.__init__ = singleton_init  # type: ignore[misc]
+        return cls
 
     return decorator

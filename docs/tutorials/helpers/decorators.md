@@ -9,7 +9,12 @@ This page demonstrates how to use ArchiPy's decorators for common cross-cutting 
 
 ## Retry Decorator
 
-The retry decorator automatically retries a function when it encounters specific exceptions.
+The retry decorator automatically retries a function when it encounters specific exceptions. It works for both
+regular and `async def` functions (async functions wait with `asyncio.sleep`, so the event loop is never blocked).
+
+`max_retries` is the total number of attempts, including the first call, and must be at least 1. Use `backoff`
+(e.g. `2.0` doubles the delay after every failure) and `jitter` (e.g. `0.1` adds up to 10% random delay) to spread
+retries out. `ignore` takes precedence over `retry_on`.
 
 ```python
 import logging
@@ -27,6 +32,8 @@ logger = logging.getLogger(__name__)
 @retry_decorator(
     max_retries=3,
     delay=1,
+    backoff=2.0,
+    jitter=0.1,
     retry_on=(ConnectionError, TimeoutError),
     ignore=(ValueError,),
     resource_type="API",
@@ -75,8 +82,9 @@ else:
 ## Timeout Decorator
 
 The timeout decorator ensures a function doesn't run longer than a specified duration. The limit may be a float
-(e.g. `0.5`). It uses `SIGALRM`, so it works on Unix and only from the main thread; the previous signal handler is
-restored after the call.
+(e.g. `0.5`). Synchronous functions use `SIGALRM`, so they work on Unix and only from the main thread (calling one
+from another thread raises `FailedPreconditionError` instead of running without a limit); the previous signal handler
+is restored after the call. `async def` functions are bounded with `asyncio.timeout` and work in any thread.
 
 ```python
 import logging

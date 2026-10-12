@@ -3,6 +3,7 @@ import time
 
 from behave import given, then, when
 
+from archipy.helpers.decorators.singleton import singleton_decorator
 from archipy.helpers.metaclasses.singleton import Singleton
 from features.test_helpers import get_current_scenario_context
 
@@ -31,6 +32,40 @@ def step_given_two_singleton_classes(context):
     calls = {"count": 0}
     sc.store("singleton_cls", _make_class("FirstSingleton", calls))
     sc.store("singleton_cls_other", _make_class("SecondSingleton", calls))
+
+
+def _make_decorated_class(name, calls, slow=False, **kwargs):
+    def init(self, value=None):
+        calls["count"] += 1
+        if slow:
+            time.sleep(0.05)
+        self.value = value
+
+    return singleton_decorator(**kwargs)(type(name, (), {"__init__": init}))
+
+
+@given("a class using the singleton decorator")
+def step_given_decorated_class(context):
+    sc = get_current_scenario_context(context)
+    calls = {"count": 0}
+    sc.store("singleton_calls", calls)
+    sc.store("singleton_cls", _make_decorated_class("DecoratedSingleton", calls))
+
+
+@given("a thread-safe class using the singleton decorator with a slow constructor")
+def step_given_decorated_thread_safe(context):
+    sc = get_current_scenario_context(context)
+    calls = {"count": 0}
+    sc.store("singleton_calls", calls)
+    sc.store("singleton_cls", _make_decorated_class("SafeDecorated", calls, slow=True, thread_safe=True))
+
+
+@then("the singleton instances are instances of the decorated class")
+def step_then_decorated_isinstance(context):
+    sc = get_current_scenario_context(context)
+    cls = sc.get("singleton_cls")
+    assert isinstance(cls, type), f"Decorated name is {cls!r}, not a class"
+    assert all(isinstance(i, cls) for i in sc.get("singleton_instances"))
 
 
 @given("a subclass of that singleton class")

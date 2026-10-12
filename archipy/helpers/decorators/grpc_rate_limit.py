@@ -2,18 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ParamSpec, TypeVar
+from typing import TYPE_CHECKING
 
 from archipy.helpers.utils.rate_limit_utils import RateLimitUtils
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-P = ParamSpec("P")
-R = TypeVar("R")
 
-
-def grpc_rate_limit_decorator(
+def grpc_rate_limit_decorator[**P, R](
     calls_count: int = 1,
     milliseconds: int = 0,
     seconds: int = 0,
