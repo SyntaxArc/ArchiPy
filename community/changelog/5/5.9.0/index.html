@@ -3261,7 +3261,8 @@
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <h3 id="configs-opentelemetry">Configs - OpenTelemetry<a class="headerlink" href="#configs-opentelemetry" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong><code>OTEL.FASTAPI_LOGS_ENABLED</code></strong> - Opt-in FastAPI log records for validation failures and unhandled exceptions, exported
+<li><strong><code>OTEL.FASTAPI_LOGS_ENABLED</code></strong> - Opt-in FastAPI log records for validation failures and unhandled exceptions,
+  exported
   through ArchiPy's logger provider.<ul>
 <li>Default is <code>False</code>; the records include exception messages and stack traces, so enable it deliberately</li>
 <li>Requires <code>OTEL.LOGS_ENABLED</code>; without a logger provider the option is skipped with a warning</li>

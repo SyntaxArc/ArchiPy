@@ -3243,8 +3243,8 @@
   adapter implementations) for evaluating multiple <code>(resource, scope)</code> pairs in a single UMA call.<ul>
 <li>Returns a <code>frozenset[tuple[str, str]]</code> containing only the granted pairs from the requested set.</li>
 <li>Sync implementation wraps <code>KeycloakOpenID.uma_permissions</code>; async implementation wraps <code>a_uma_permissions</code>.</li>
-<li>Cached with <code>ttl_cache_decorator(ttl_seconds=30, maxsize=200)</code> (sync) and <code>alru_cache(ttl=30, maxsize=200)</code> (
-  async) to avoid redundant Keycloak round-trips.</li>
+<li>Cached with <code>ttl_cache_decorator(ttl_seconds=30, maxsize=200)</code> (sync) and <code>alru_cache(ttl=30, maxsize=200)</code>
+  (async) to avoid redundant Keycloak round-trips.</li>
 <li>Existing <code>check_permissions</code> now documents <code>check_permissions_batch</code> as the preferred entry point when multiple
   pairs must be checked per request.</li>
 </ul>

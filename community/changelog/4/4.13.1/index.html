@@ -3288,7 +3288,8 @@
 <h3 id="adapters-temporal">Adapters - Temporal<a class="headerlink" href="#adapters-temporal" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Worker Tuning Configuration</strong> - Wired new worker settings from <code>TemporalConfig</code> into <code>TemporalWorkerManager</code>.<ul>
-<li>Added <code>WORKER_GRACEFUL_SHUTDOWN_SECONDS</code>, <code>WORKER_MAX_CACHED_WORKFLOWS</code>, <code>WORKER_DEBUG_MODE</code>, <code>WORKER_MAX_CONCURRENT_LOCAL_ACTIVITIES</code>, and <code>WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION</code>.</li>
+<li>Added <code>WORKER_GRACEFUL_SHUTDOWN_SECONDS</code>, <code>WORKER_MAX_CACHED_WORKFLOWS</code>, <code>WORKER_DEBUG_MODE</code>,
+  <code>WORKER_MAX_CONCURRENT_LOCAL_ACTIVITIES</code>, and <code>WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION</code>.</li>
 <li><code>WorkerHandle.stop()</code> now defaults to the configured graceful shutdown timeout.</li>
 </ul>
 </li>
@@ -3296,17 +3297,21 @@
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-temporal_1">Adapters - Temporal<a class="headerlink" href="#adapters-temporal_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Client Connection Wiring</strong> - <code>TemporalAdapter.get_client()</code> now passes keep-alive, RPC retry, identity, API key, and RPC metadata to <code>Client.connect</code>.</li>
-<li><strong>Retry Policy Defaults</strong> - Workflow start/execute and activity helpers now include <code>initial_interval</code> and <code>non_retryable_error_types</code> from config.</li>
+<li><strong>Client Connection Wiring</strong> - <code>TemporalAdapter.get_client()</code> now passes keep-alive, RPC retry, identity, API key, and
+  RPC metadata to <code>Client.connect</code>.</li>
+<li><strong>Retry Policy Defaults</strong> - Workflow start/execute and activity helpers now include <code>initial_interval</code> and
+  <code>non_retryable_error_types</code> from config.</li>
 </ul>
 <h3 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Temporal Tutorial</strong> - Fixed install extra to <code>archipy[temporalio]</code> and documented new <code>TEMPORAL__*</code> environment variables.</li>
+<li><strong>Temporal Tutorial</strong> - Fixed install extra to <code>archipy[temporalio]</code> and documented new <code>TEMPORAL__*</code> environment
+  variables.</li>
 </ul>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="tests-temporal-adapter">Tests - Temporal Adapter<a class="headerlink" href="#tests-temporal-adapter" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Extended Config Scenario</strong> - Added BDD coverage verifying client identity and worker debug mode flow from config into adapters.</li>
+<li><strong>Extended Config Scenario</strong> - Added BDD coverage verifying client identity and worker debug mode flow from config
+  into adapters.</li>
 </ul>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <ul>

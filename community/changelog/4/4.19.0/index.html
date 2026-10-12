@@ -3261,7 +3261,8 @@
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-vault">Adapters - Vault<a class="headerlink" href="#adapters-vault" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>HashiCorp Vault Adapter</strong> - Added sync <code>VaultPort</code> / <code>VaultAdapter</code> for runtime KV v2, dynamic leases, and transit encrypt/decrypt via hvac.<ul>
+<li><strong>HashiCorp Vault Adapter</strong> - Added sync <code>VaultPort</code> / <code>VaultAdapter</code> for runtime KV v2, dynamic leases, and transit
+  encrypt/decrypt via hvac.<ul>
 <li>KV v2: <code>read_secret</code>, <code>write_secret</code>, <code>delete_secret</code>, <code>list_secrets</code></li>
 <li>Dynamic credentials via <code>secrets.database.generate_credentials</code> (generic write/read fallback for other engines)</li>
 <li>Lease renew/revoke through <code>sys.renew_lease</code> / <code>sys.revoke_lease</code></li>
@@ -3272,9 +3273,12 @@
 </ul>
 <h3 id="configs-vault">Configs - Vault<a class="headerlink" href="#configs-vault" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Vault Settings Source</strong> - Added <code>VaultSettingsSource</code> and <code>create_vault_client()</code> for KV v2 secret injection at BaseConfig startup (priority after file secrets, before TOML/env).</li>
-<li><strong>VaultConfig</strong> - Added <code>VAULT</code> on <code>BaseConfig</code> with connection, TLS/mTLS, timeouts/retries, cache, and token lifecycle fields.</li>
-<li><strong>Auth Methods</strong> - Support for hvac auth backends: <code>token</code>, <code>approle</code>, <code>kubernetes</code>, <code>userpass</code>, <code>ldap</code>, <code>okta</code>, <code>jwt</code>, <code>aws</code>, <code>azure</code>, <code>gcp</code>, <code>github</code>, and <code>cert</code>.</li>
+<li><strong>Vault Settings Source</strong> - Added <code>VaultSettingsSource</code> and <code>create_vault_client()</code> for KV v2 secret injection at
+  BaseConfig startup (priority after file secrets, before TOML/env).</li>
+<li><strong>VaultConfig</strong> - Added <code>VAULT</code> on <code>BaseConfig</code> with connection, TLS/mTLS, timeouts/retries, cache, and token
+  lifecycle fields.</li>
+<li><strong>Auth Methods</strong> - Support for hvac auth backends: <code>token</code>, <code>approle</code>, <code>kubernetes</code>, <code>userpass</code>, <code>ldap</code>, <code>okta</code>,
+  <code>jwt</code>, <code>aws</code>, <code>azure</code>, <code>gcp</code>, <code>github</code>, and <code>cert</code>.</li>
 </ul>
 <h3 id="models-vault">Models - Vault<a class="headerlink" href="#models-vault" title="Permanent link">&para;</a></h3>
 <ul>
@@ -3282,13 +3286,16 @@
 </ul>
 <h3 id="docs-vault">Docs - Vault<a class="headerlink" href="#docs-vault" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Adapter Documentation</strong> - Added Vault tutorial and API reference pages, mkdocs nav entries, and config-management coverage for settings-source priority and auth examples.</li>
+<li><strong>Adapter Documentation</strong> - Added Vault tutorial and API reference pages, mkdocs nav entries, and config-management
+  coverage for settings-source priority and auth examples.</li>
 </ul>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="tests-vault">Tests - Vault<a class="headerlink" href="#tests-vault" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Vault Test Container</strong> - Added <code>VaultTestContainer</code> (<code>hashicorp/vault:2.0.3</code>) with <code>@needs-vault</code> and <code>.env.test</code> wiring.</li>
-<li><strong>BDD Coverage</strong> - Added <code>vault_adapter.feature</code> and BaseConfig Vault scenarios for secret injection, env priority, auth failure, cache invalidate, token renew, invalid args, and Postgres dynamic credentials.</li>
+<li><strong>Vault Test Container</strong> - Added <code>VaultTestContainer</code> (<code>hashicorp/vault:2.0.3</code>) with <code>@needs-vault</code> and <code>.env.test</code>
+  wiring.</li>
+<li><strong>BDD Coverage</strong> - Added <code>vault_adapter.feature</code> and BaseConfig Vault scenarios for secret injection, env priority,
+  auth failure, cache invalidate, token renew, invalid args, and Postgres dynamic credentials.</li>
 </ul>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <ul>

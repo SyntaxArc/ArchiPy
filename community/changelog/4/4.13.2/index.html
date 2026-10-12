@@ -3280,32 +3280,40 @@
 <ul>
 <li><strong>Nested Router Path Templates</strong> - Resolved metric path template resolution for nested routers in FastAPI 0.137+.<ul>
 <li>Added <code>_flatten_routes()</code> helper to expand <code>_IncludedRouter</code> entries before route matching.</li>
-<li>Uses <code>iter_route_contexts()</code> for FastAPI &gt;= 0.137.2, falls back to <code>effective_route_contexts()</code> for 0.137.0–0.137.1.</li>
+<li>Uses <code>iter_route_contexts()</code> for FastAPI &gt;= 0.137.2, falls back to <code>effective_route_contexts()</code> for
+  0.137.0–0.137.1.</li>
 </ul>
 </li>
 </ul>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="configs-scylladb">Configs - ScyllaDB<a class="headerlink" href="#configs-scylladb" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Default Replication Strategy</strong> - Changed <code>ScyllaDBConfig.REPLICATION_STRATEGY</code> default from <code>SimpleStrategy</code> to <code>NetworkTopologyStrategy</code> with default replication config <code>{"datacenter1": 1}</code>. Update environment files if using <code>SimpleStrategy</code>.</li>
+<li><strong>Default Replication Strategy</strong> - Changed <code>ScyllaDBConfig.REPLICATION_STRATEGY</code> default from <code>SimpleStrategy</code> to
+  <code>NetworkTopologyStrategy</code> with default replication config <code>{"datacenter1": 1}</code>. Update environment files if using
+  <code>SimpleStrategy</code>.</li>
 </ul>
 <h3 id="decorators">Decorators<a class="headerlink" href="#decorators" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Tracing &amp; Deprecation</strong> - Removed redundant <code>wrapper.__wrapped__ = func</code> assignments from <code>capture_transaction</code>, <code>capture_span</code>, <code>async_capture_transaction</code>, <code>async_capture_span</code>, and <code>method_deprecation_warning</code>.</li>
+<li><strong>Tracing &amp; Deprecation</strong> - Removed redundant <code>wrapper.__wrapped__ = func</code> assignments from <code>capture_transaction</code>,
+  <code>capture_span</code>, <code>async_capture_transaction</code>, <code>async_capture_span</code>, and <code>method_deprecation_warning</code>.</li>
 </ul>
 <h3 id="models-email-dtos">Models - Email DTOs<a class="headerlink" href="#models-email-dtos" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Frozen Model Mutation</strong> - Use <code>object.__setattr__</code> in <code>EmailAttachmentDTO</code> to support Pydantic v2 frozen model semantics.</li>
+<li><strong>Frozen Model Mutation</strong> - Use <code>object.__setattr__</code> in <code>EmailAttachmentDTO</code> to support Pydantic v2 frozen model
+  semantics.</li>
 </ul>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <h3 id="tutorials">Tutorials<a class="headerlink" href="#tutorials" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Updated adapter tutorials for Elasticsearch, Email, Kafka, Keycloak, MinIO, PostgreSQL, Redis, ScyllaDB, SQLite, StarRocks, and Temporal.</li>
+<li>Updated adapter tutorials for Elasticsearch, Email, Kafka, Keycloak, MinIO, PostgreSQL, Redis, ScyllaDB, SQLite,
+  StarRocks, and Temporal.</li>
 </ul>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Test Containers</strong> - Bumped Keycloak <code>26.6.4</code> → <code>26.7.0</code>, Kafka <code>4.3.0</code> → <code>4.3.1</code>, ScyllaDB <code>2026.1.5</code> → <code>2026.2</code>.</li>
-<li><strong>Python Packages</strong> - Updated fastapi <code>0.138</code> → <code>0.139</code>, grpcio <code>1.81.1</code> → <code>1.82.1</code>, protobuf <code>6.33.6</code> → <code>7.35.1</code>, confluent-kafka <code>2.14.2</code> → <code>2.15.0</code>, boto3 <code>1.43.36</code> → <code>1.43.46</code>, sentry-sdk <code>2.63.0</code> → <code>2.64.0</code>, temporalio <code>1.29.0</code> → <code>1.30.0</code>, and other minor bumps.</li>
+<li><strong>Python Packages</strong> - Updated fastapi <code>0.138</code> → <code>0.139</code>, grpcio <code>1.81.1</code> → <code>1.82.1</code>, protobuf <code>6.33.6</code> → <code>7.35.1</code>,
+  confluent-kafka <code>2.14.2</code> → <code>2.15.0</code>, boto3 <code>1.43.36</code> → <code>1.43.46</code>, sentry-sdk <code>2.63.0</code> → <code>2.64.0</code>, temporalio
+  <code>1.29.0</code> → <code>1.30.0</code>, and other minor bumps.</li>
 <li><strong>Dev Tools</strong> - Updated ruff <code>0.15.18</code> → <code>0.15.21</code>, ty <code>0.0.52</code> → <code>0.0.58</code>.</li>
 </ul>
 

@@ -3671,19 +3671,19 @@ variables or <code>.env</code> files and validated at startup:</p>
 <hr />
 <h2 id="unit-of-work">Unit of Work<a class="headerlink" href="#unit-of-work" title="Permanent link">&para;</a></h2>
 <p>The <strong>logic layer</strong> is the unit of work boundary. Every public method on a logic class is decorated with
-<code>@postgres_sqlalchemy_atomic_decorator</code>, which opens a SQLAlchemy session, commits on success, and rolls back
+<code>@postgres_sqlalchemy_atomic</code>, which opens a SQLAlchemy session, commits on success, and rolls back
 on any exception:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Service  →  Logic (@atomic)  →  Repository  →  Adapter  →  DB
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>                 ↑___________commit / rollback____________↑
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators.sqlalchemy_atomic</span><span class="w"> </span><span class="kn">import</span> <span class="n">postgres_sqlalchemy_atomic_decorator</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">postgres_sqlalchemy_atomic</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">models.dtos.user.domain.v1.user_dtos</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserRegistrationInputDTO</span><span class="p">,</span> <span class="n">UserRegistrationOutputDTO</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">UserRegistrationLogic</span><span class="p">:</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="sd">"""Handles user registration within a single database transaction."""</span>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="nd">@postgres_sqlalchemy_atomic_decorator</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="nd">@postgres_sqlalchemy_atomic</span>
 </span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">register_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_dto</span><span class="p">:</span> <span class="n">UserRegistrationInputDTO</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">UserRegistrationOutputDTO</span><span class="p">:</span>
 </span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">        </span><span class="sd">"""Validate uniqueness and create a new user.</span>
 </span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
@@ -3701,14 +3701,9 @@ on any exception:</p>
 <li>Logic classes <strong>may call other logic classes</strong> — nested <code>@atomic</code> calls reuse the open session.</li>
 <li>
 <p>Logic classes <strong>must never import or call a repository from another domain directly</strong>.
-    &gt; Cross-domain reads must go through the other domain's logic class.</p>
-<blockquote>
-<div class="language-text highlight"><pre><span></span><code>```
-</code></pre></div>
-<p>✅  OrderCreationLogic  →  UserQueryLogic  →  UserRepository
-❌  OrderCreationLogic  →  UserRepository  (bypasses domain boundary)
-```</p>
-</blockquote>
+  Cross-domain reads must go through the other domain's logic class.</p>
+<p><code>✅ OrderCreationLogic → UserQueryLogic → UserRepository
+  ❌ OrderCreationLogic → UserRepository (bypasses domain boundary)</code></p>
 </li>
 </ul>
 </blockquote>

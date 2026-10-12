@@ -3267,7 +3267,8 @@
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-redis">Adapters - Redis<a class="headerlink" href="#adapters-redis" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Native FakeAsyncRedis Mock</strong> - <code>AsyncRedisMock</code> now uses fakeredis <code>FakeAsyncRedis</code> instead of wrapping sync <code>FakeRedis</code> with <code>AsyncMock</code>.<ul>
+<li><strong>Native FakeAsyncRedis Mock</strong> - <code>AsyncRedisMock</code> now uses fakeredis <code>FakeAsyncRedis</code> instead of wrapping sync
+  <code>FakeRedis</code> with <code>AsyncMock</code>.<ul>
 <li>Async commands, pub/sub, and pipelines work through the real async client API</li>
 <li>CLUSTER mode uses <code>FakeAsyncRedisClusterWrapper</code> with the same cluster helpers as the sync mock</li>
 <li>Sync and async mocks share a <code>FakeServer</code> across write, read, and search clients</li>
@@ -3278,7 +3279,8 @@
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="tests-integration">Tests - Integration<a class="headerlink" href="#tests-integration" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Flaky Scenario Stabilization</strong> - Aligned assertions with implementation and waited for eventual visibility in integration steps.<ul>
+<li><strong>Flaky Scenario Stabilization</strong> - Aligned assertions with implementation and waited for eventual visibility in
+  integration steps.<ul>
 <li>Atomic updates sleep 1s before writing <code>updated_at</code> so database timestamps differ</li>
 <li>Error-handling steps patch <code>logger.error</code> instead of <code>logger.exception</code></li>
 <li>Redis KNN and hybrid search poll until RediSearch indexes a recent write</li>
@@ -3295,11 +3297,14 @@
 <h2 id="chore">Chore<a class="headerlink" href="#chore" title="Permanent link">&para;</a></h2>
 <h3 id="chore-agent-rules">Chore - Agent Rules<a class="headerlink" href="#chore-agent-rules" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Cursor Agent Guidance</strong> - Strengthened workspace rules so agents follow one owner per topic instead of conflicting summaries.<ul>
-<li>Added <code>rules-index.mdc</code> plus canonical <code>models-errors.mdc</code>, <code>helpers-configs.mdc</code>, <code>security.mdc</code>, and <code>contributing.mdc</code></li>
+<li><strong>Cursor Agent Guidance</strong> - Strengthened workspace rules so agents follow one owner per topic instead of conflicting
+  summaries.<ul>
+<li>Added <code>rules-index.mdc</code> plus canonical <code>models-errors.mdc</code>, <code>helpers-configs.mdc</code>, <code>security.mdc</code>, and
+  <code>contributing.mdc</code></li>
 <li>Resolved adapter, lazy-import, and boundary-exception policy into <code>adapter-conventions.mdc</code></li>
 <li>Expanded BDD seam/red-green guidance in <code>testing-bdd.mdc</code>; slimmed <code>AGENTS.md</code> to commands and a rule index</li>
-<li>Changelog writes are opt-in: skip Cursor rules, <code>AGENTS.md</code>, chores, tests-only, and non-consumer docs unless the user asks</li>
+<li>Changelog writes are opt-in: skip Cursor rules, <code>AGENTS.md</code>, chores, tests-only, and non-consumer docs unless the
+  user asks</li>
 </ul>
 </li>
 </ul>

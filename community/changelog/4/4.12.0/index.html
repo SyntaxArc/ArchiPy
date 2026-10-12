@@ -3267,12 +3267,14 @@
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-minio">Adapters - MinIO<a class="headerlink" href="#adapters-minio" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Object Existence Check</strong> - Added <code>object_exists</code> to <code>MinioPort</code> and <code>MinioAdapter</code> for lightweight presence checks without downloading object content.<ul>
+<li><strong>Object Existence Check</strong> - Added <code>object_exists</code> to <code>MinioPort</code> and <code>MinioAdapter</code> for lightweight presence checks
+  without downloading object content.<ul>
 <li>Returns <code>True</code> when the object key exists and <code>False</code> when it does not.</li>
 <li>Cached for five minutes via <code>@ttl_cache_decorator</code> to reduce repeated HEAD requests.</li>
 </ul>
 </li>
-<li><strong>Batch Object Deletion</strong> - Added <code>remove_objects</code> for deleting multiple object keys in a single S3 <code>DeleteObjects</code> call.<ul>
+<li><strong>Batch Object Deletion</strong> - Added <code>remove_objects</code> for deleting multiple object keys in a single S3 <code>DeleteObjects</code>
+  call.<ul>
 <li>Clears object-related caches after a successful batch delete.</li>
 </ul>
 </li>
@@ -3282,7 +3284,8 @@
 <li><code>remove_object_tags</code> clears all tags from an object.</li>
 </ul>
 </li>
-<li><strong>Upload-Time Tags</strong> - Extended <code>put_object</code> and <code>put_object_stream</code> with an optional <code>tags: dict[str, str] | None</code> parameter so tags can be applied at upload time.</li>
+<li><strong>Upload-Time Tags</strong> - Extended <code>put_object</code> and <code>put_object_stream</code> with an optional <code>tags: dict[str, str] | None</code>
+  parameter so tags can be applied at upload time.</li>
 <li><strong>Bucket Lifecycle / TTL</strong> - Added lifecycle configuration methods for automatic object expiration.<ul>
 <li><code>set_bucket_lifecycle</code> accepts S3-format lifecycle rule dicts (<code>MinioLifecycleRuleType</code>).</li>
 <li><code>get_bucket_lifecycle</code> returns configured rules or an empty list when none are set.</li>
@@ -3292,7 +3295,8 @@
 <li><strong>Object Versioning</strong> - Added bucket versioning and version-level delete support.<ul>
 <li><code>set_bucket_versioning</code> enables or suspends versioning on a bucket.</li>
 <li><code>get_bucket_versioning</code> returns <code>Enabled</code>, <code>Suspended</code>, or an empty string when never configured.</li>
-<li><code>list_object_versions</code> lists version entries and delete markers with normalized metadata (<code>MinioObjectVersionType</code>).</li>
+<li><code>list_object_versions</code> lists version entries and delete markers with normalized metadata
+  (<code>MinioObjectVersionType</code>).</li>
 <li><code>remove_object_version</code> permanently deletes a specific version by <code>version_id</code>.</li>
 </ul>
 </li>
@@ -3300,20 +3304,25 @@
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-starrocks">Adapters - StarRocks<a class="headerlink" href="#adapters-starrocks" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Type Ignore Cleanup</strong> - Removed redundant <code># type: ignore[invalid-assignment]</code> comments from StarRocks SQLAlchemy compiler patches, keeping only the <code>ty: ignore</code> directives.</li>
+<li><strong>Type Ignore Cleanup</strong> - Removed redundant <code># type: ignore[invalid-assignment]</code> comments from StarRocks SQLAlchemy
+  compiler patches, keeping only the <code>ty: ignore</code> directives.</li>
 </ul>
 <h3 id="documentation-minio">Documentation - MinIO<a class="headerlink" href="#documentation-minio" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Tutorial Expansion</strong> - Extended <code>docs/tutorials/adapters/minio.md</code> with examples for object existence checks, batch deletion, object tags, and versioning workflows.</li>
-<li><strong>API Reference Clarification</strong> - Updated the MinIO adapter API reference to state that the concrete adapter wraps <strong>boto3</strong> for S3-compatible storage.</li>
+<li><strong>Tutorial Expansion</strong> - Extended <code>docs/tutorials/adapters/minio.md</code> with examples for object existence checks, batch
+  deletion, object tags, and versioning workflows.</li>
+<li><strong>API Reference Clarification</strong> - Updated the MinIO adapter API reference to state that the concrete adapter wraps
+  <strong>boto3</strong> for S3-compatible storage.</li>
 </ul>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="tests-minio-adapter">Tests - MinIO Adapter<a class="headerlink" href="#tests-minio-adapter" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Tag Scenarios</strong> - Added BDD coverage for upload-time tags, setting tags on existing objects, and removing all tags.</li>
 <li><strong>Lifecycle Scenarios</strong> - Added scenarios for setting, verifying, and deleting bucket lifecycle rules.</li>
-<li><strong>Existence and Batch Delete</strong> - Added scenarios for <code>object_exists</code> before and after deletion, and for <code>remove_objects</code> batch cleanup.</li>
-<li><strong>Versioning Scenarios</strong> - Added end-to-end coverage for enabling versioning, uploading multiple versions, listing versions, and permanently deleting the oldest version.</li>
+<li><strong>Existence and Batch Delete</strong> - Added scenarios for <code>object_exists</code> before and after deletion, and for
+  <code>remove_objects</code> batch cleanup.</li>
+<li><strong>Versioning Scenarios</strong> - Added end-to-end coverage for enabling versioning, uploading multiple versions, listing
+  versions, and permanently deleting the oldest version.</li>
 </ul>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <ul>

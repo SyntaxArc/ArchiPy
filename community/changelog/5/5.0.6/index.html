@@ -3239,24 +3239,30 @@
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="chore-linting">Chore - Linting<a class="headerlink" href="#chore-linting" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Empty Global Ruff Ignore List</strong> - Removed blanket <code>lint.ignore</code> entries and fixed the underlying findings instead of suppressing them.<ul>
-<li>Cleared global ignores for <code>BLE001</code>, <code>D100</code>, <code>D104</code>, <code>E501</code>, <code>PERF203</code>, <code>PLR0913</code>, <code>PLR0917</code>, <code>RUF003</code>, <code>SIM102</code>, and <code>TRY301</code></li>
-<li>Pruned stale or unused per-file ignores; kept narrow exceptions for ports, optional-dep lazy imports, FastAPI <code>Depends</code>, and intentional Unicode comments</li>
+<li><strong>Empty Global Ruff Ignore List</strong> - Removed blanket <code>lint.ignore</code> entries and fixed the underlying findings instead of
+  suppressing them.<ul>
+<li>Cleared global ignores for <code>BLE001</code>, <code>D100</code>, <code>D104</code>, <code>E501</code>, <code>PERF203</code>, <code>PLR0913</code>, <code>PLR0917</code>, <code>RUF003</code>, <code>SIM102</code>,
+  and <code>TRY301</code></li>
+<li>Pruned stale or unused per-file ignores; kept narrow exceptions for ports, optional-dep lazy imports, FastAPI
+  <code>Depends</code>, and intentional Unicode comments</li>
 <li>Registered <code>BaseDTO</code> in Ruff <code>runtime-evaluated-base-classes</code> for type-checking import rules</li>
 </ul>
 </li>
 </ul>
 <h3 id="adapters-exception-boundaries">Adapters - Exception Boundaries<a class="headerlink" href="#adapters-exception-boundaries" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Library-Specific Exception Mapping</strong> - Narrowed broad <code>except Exception</code> handlers at adapter boundaries to concrete client/driver errors where the failure surface is known.<ul>
+<li><strong>Library-Specific Exception Mapping</strong> - Narrowed broad <code>except Exception</code> handlers at adapter boundaries to concrete
+  client/driver errors where the failure surface is known.<ul>
 <li>Kafka, MinIO, SQLAlchemy, ScyllaDB, Email, and Vault catch typed exception tuples and re-raise domain errors</li>
-<li>Soft-fail authz, worker lifecycle, and <code>repr()</code> boundaries keep documented <code># noqa: BLE001</code> where unconstrained raises remain</li>
+<li>Soft-fail authz, worker lifecycle, and <code>repr()</code> boundaries keep documented <code># noqa: BLE001</code> where unconstrained
+  raises remain</li>
 </ul>
 </li>
 </ul>
 <h3 id="models-adapters-helpers-documentation">Models / Adapters / Helpers - Documentation<a class="headerlink" href="#models-adapters-helpers-documentation" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Module And Package Docstrings</strong> - Added concise Google-style module and package docstrings across <code>archipy/</code> to satisfy <code>D100</code>/<code>D104</code> without global suppression.</li>
+<li><strong>Module And Package Docstrings</strong> - Added concise Google-style module and package docstrings across <code>archipy/</code> to
+  satisfy <code>D100</code>/<code>D104</code> without global suppression.</li>
 </ul>
 <h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
 <h3 id="tests-elasticsearch">Tests - Elasticsearch<a class="headerlink" href="#tests-elasticsearch" title="Permanent link">&para;</a></h3>

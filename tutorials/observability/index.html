@@ -4038,7 +4038,8 @@ interceptors when OTel is enabled (requires <code>archipy[otel-grpc]</code> for 
   <code>TRACES_ENABLED</code></li>
 <li><strong>Metrics</strong> — ArchiPy <code>rpc.server.request.duration</code> histogram (seconds, same buckets as FastAPI's
   <code>http.server.request.duration</code>) and <code>rpc.server.active_requests</code> up-down counter (in-flight calls,
-  like <code>http.server.active_requests</code>) when <code>METRICS_ENABLED</code> (works in metrics-only mode; no handler decorators required)</li>
+  like <code>http.server.active_requests</code>) when <code>METRICS_ENABLED</code> (works in metrics-only mode; no handler decorators
+  required)</li>
 </ul>
 <p>Order becomes: OTel traces (if any) → OTel metrics (if any) → exception interceptor
 → rate-limit (if enabled) → custom interceptors.</p>
@@ -4096,7 +4097,7 @@ spans natively.
 <td>Sync child span</td>
 </tr>
 <tr>
-<td><code>@async_trace_span</code></td>
+<td><code>@trace_span</code></td>
 <td>Async child span</td>
 </tr>
 <tr>
@@ -4104,7 +4105,7 @@ spans natively.
 <td>Sync root span (entry point)</td>
 </tr>
 <tr>
-<td><code>@async_trace_root</code></td>
+<td><code>@trace_root</code></td>
 <td>Async root span</td>
 </tr>
 <tr>
@@ -4115,7 +4116,7 @@ spans natively.
 </table>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">async_trace_span</span><span class="p">,</span> <span class="n">trace_root</span><span class="p">,</span> <span class="n">trace_span</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">trace_span</span><span class="p">,</span> <span class="n">trace_root</span><span class="p">,</span> <span class="n">trace_span</span>
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
 </span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 </span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
@@ -4162,8 +4163,8 @@ spans natively.
 </span><span id="__span-13-47"><a id="__codelineno-13-47" name="__codelineno-13-47" href="#__codelineno-13-47"></a>    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"price"</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Decorators no-op when <code>OTEL.IS_ENABLED</code> is false. On exceptions they set span status via
-<code>OtelUtils.status_for_exception</code> (<code>BaseError</code> with HTTP status below 500 leaves status
-<strong>UNSET</strong> per the OTel spec for handled client errors; other exceptions become ERROR).</p>
+<code>OtelUtils.status_for_exception</code> (<code>BaseError</code> with HTTP status below 500 leaves status <strong>UNSET</strong> per the OTel spec for
+handled client errors; other exceptions become ERROR).</p>
 <blockquote>
 <p><strong>Warning (<code>capture_args</code>):</strong> Prefer non-sensitive identifiers (<code>user_id</code>,
 <code>order_id</code>). Names matching a denylist (<code>password</code>, <code>token</code>, <code>secret</code>,
@@ -4186,7 +4187,7 @@ that may embed secrets.</p>
 <td>Sync duration histogram</td>
 </tr>
 <tr>
-<td><code>@async_measure_duration</code></td>
+<td><code>@measure_duration</code></td>
 <td>Async duration histogram</td>
 </tr>
 <tr>
@@ -4194,7 +4195,7 @@ that may embed secrets.</p>
 <td>Sync call counter</td>
 </tr>
 <tr>
-<td><code>@async_count_calls</code></td>
+<td><code>@count_calls</code></td>
 <td>Async call counter</td>
 </tr>
 </tbody>
@@ -4225,12 +4226,11 @@ send to Sentry or Elastic APM:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.base_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseUtils</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">InternalError</span>
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="k">try</span><span class="p">:</span>
-</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>    <span class="k">raise</span> <span class="n">InternalError</span><span class="p">()</span>
-</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="k">except</span> <span class="n">InternalError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>    <span class="n">BaseUtils</span><span class="o">.</span><span class="n">capture_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
-</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>    <span class="k">raise</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="k">try</span><span class="p">:</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>    <span class="k">raise</span> <span class="n">InternalError</span><span class="p">()</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="k">except</span> <span class="n">InternalError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>    <span class="n">BaseUtils</span><span class="o">.</span><span class="n">capture_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>    <span class="k">raise</span>
 </span></code></pre></div>
 <hr />
 <h2 id="temporal">Temporal<a class="headerlink" href="#temporal" title="Permanent link">&para;</a></h2>

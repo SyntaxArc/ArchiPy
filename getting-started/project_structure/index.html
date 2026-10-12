@@ -3593,7 +3593,7 @@ entities, errors, adapters, repository, and logic classes. This scales naturally
 <ul>
 <li>Accept domain DTOs as input; return domain DTOs as output</li>
 <li>Are framework-agnostic (no FastAPI/gRPC imports)</li>
-<li>Define the unit of work boundary via <code>@postgres_sqlalchemy_atomic_decorator</code></li>
+<li>Define the unit of work boundary via <code>@postgres_sqlalchemy_atomic</code></li>
 <li>May call other logic classes within the same transaction (nested <code>@atomic</code> reuses the open session)</li>
 <li>Must never import or call repositories from a different domain</li>
 </ul>

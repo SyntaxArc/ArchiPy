@@ -3317,42 +3317,57 @@
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-redis">Adapters - Redis<a class="headerlink" href="#adapters-redis" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Vector Range Search</strong> - Added vector range queries via <code>RangeQueryDTO</code> and <code>SearchQueryDTO.from_range()</code>, executed through sync and async RediSearch handles with optional metadata filters and score fields.</li>
-<li><strong>Vector Query Runtime Tuning</strong> - Added <code>VectorQueryRuntimeDTO</code> for per-query KNN, range, and hybrid tuning (<code>ef_runtime</code>, <code>epsilon</code>, <code>batch_size</code>, <code>search_window_size</code>, <code>hybrid_policy</code>, <code>use_search_history</code>, <code>search_buffer_capacity</code>, and cluster-only <code>shard_k_ratio</code>).</li>
-<li><strong>SVS-VAMANA Index Support</strong> - Extended vector index creation with <code>VectorAlgorithm.SVS_VAMANA</code>, including compression, construction window, graph degree, search window, training threshold, and reduce attributes validated at schema time.</li>
-<li><strong>RediSearch Cluster Support</strong> - RediSearch handles now work on standalone and cluster clients; cluster index listing routes keyless admin commands to a target node, and hash-tagged key prefixes keep indexed documents in a single slot.</li>
-<li><strong>Index Listing</strong> - Added <code>list_search_indexes()</code> on sync and async Redis adapters, backed by <code>list_redis_search_indexes</code> / <code>list_redis_search_indexes_async</code>.</li>
+<li><strong>Vector Range Search</strong> - Added vector range queries via <code>RangeQueryDTO</code> and <code>SearchQueryDTO.from_range()</code>, executed
+  through sync and async RediSearch handles with optional metadata filters and score fields.</li>
+<li><strong>Vector Query Runtime Tuning</strong> - Added <code>VectorQueryRuntimeDTO</code> for per-query KNN, range, and hybrid tuning
+  (<code>ef_runtime</code>, <code>epsilon</code>, <code>batch_size</code>, <code>search_window_size</code>, <code>hybrid_policy</code>, <code>use_search_history</code>,
+  <code>search_buffer_capacity</code>, and cluster-only <code>shard_k_ratio</code>).</li>
+<li><strong>SVS-VAMANA Index Support</strong> - Extended vector index creation with <code>VectorAlgorithm.SVS_VAMANA</code>, including
+  compression, construction window, graph degree, search window, training threshold, and reduce attributes validated at
+  schema time.</li>
+<li><strong>RediSearch Cluster Support</strong> - RediSearch handles now work on standalone and cluster clients; cluster index listing
+  routes keyless admin commands to a target node, and hash-tagged key prefixes keep indexed documents in a single slot.</li>
+<li><strong>Index Listing</strong> - Added <code>list_search_indexes()</code> on sync and async Redis adapters, backed by
+  <code>list_redis_search_indexes</code> / <code>list_redis_search_indexes_async</code>.</li>
 </ul>
 <h3 id="models-dtos">Models - DTOs<a class="headerlink" href="#models-dtos" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Vector Query DTOs</strong> - Added <code>VectorQueryRuntimeDTO</code> and <code>RangeQueryDTO</code>; extended <code>KnnQueryDTO</code> and <code>SearchQueryDTO</code> with <code>range</code>, <code>runtime</code>, <code>is_range</code>, and <code>from_range()</code> factory helpers.</li>
+<li><strong>Vector Query DTOs</strong> - Added <code>VectorQueryRuntimeDTO</code> and <code>RangeQueryDTO</code>; extended <code>KnnQueryDTO</code> and <code>SearchQueryDTO</code>
+  with <code>range</code>, <code>runtime</code>, <code>is_range</code>, and <code>from_range()</code> factory helpers.</li>
 </ul>
 <h3 id="models-types">Models - Types<a class="headerlink" href="#models-types" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Vector Search Types</strong> - Added <code>VectorType</code> (<code>BFLOAT16</code>, <code>FLOAT16</code>, <code>FLOAT32</code>, <code>FLOAT64</code>, <code>INT8</code>, <code>UINT8</code>), <code>VectorCompression</code> (LVQ and LeanVec variants), <code>VectorHybridPolicy</code> (<code>BATCHES</code>, <code>ADHOC_BF</code>), and <code>UseSearchHistory</code> (<code>OFF</code>, <code>ON</code>, <code>AUTO</code>); extended <code>VectorAlgorithm</code> with <code>SVS_VAMANA</code>.</li>
+<li><strong>Vector Search Types</strong> - Added <code>VectorType</code> (<code>BFLOAT16</code>, <code>FLOAT16</code>, <code>FLOAT32</code>, <code>FLOAT64</code>, <code>INT8</code>, <code>UINT8</code>),
+  <code>VectorCompression</code> (LVQ and LeanVec variants), <code>VectorHybridPolicy</code> (<code>BATCHES</code>, <code>ADHOC_BF</code>), and <code>UseSearchHistory</code>
+  (<code>OFF</code>, <code>ON</code>, <code>AUTO</code>); extended <code>VectorAlgorithm</code> with <code>SVS_VAMANA</code>.</li>
 </ul>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-redis_1">Adapters - Redis<a class="headerlink" href="#adapters-redis_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Vector Field Schema Validation</strong> - <code>VectorFieldConfig</code> now rejects algorithm-incompatible tuning attributes (FLAT vs HNSW vs SVS-VAMANA) and limits SVS-VAMANA to <code>FLOAT16</code> and <code>FLOAT32</code> vector types.</li>
+<li><strong>Vector Field Schema Validation</strong> - <code>VectorFieldConfig</code> now rejects algorithm-incompatible tuning attributes (FLAT vs
+  HNSW vs SVS-VAMANA) and limits SVS-VAMANA to <code>FLOAT16</code> and <code>FLOAT32</code> vector types.</li>
 </ul>
 <h3 id="models-dtos_1">Models - DTOs<a class="headerlink" href="#models-dtos_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Vector Field Configuration</strong> - Extended <code>VectorFieldConfig</code> with <code>vector_type</code>, HNSW tuning (<code>m</code>, <code>ef_construction</code>, <code>ef_runtime</code>, <code>epsilon</code>), and SVS-VAMANA tuning fields for index-time configuration.</li>
+<li><strong>Vector Field Configuration</strong> - Extended <code>VectorFieldConfig</code> with <code>vector_type</code>, HNSW tuning (<code>m</code>, <code>ef_construction</code>,
+  <code>ef_runtime</code>, <code>epsilon</code>), and SVS-VAMANA tuning fields for index-time configuration.</li>
 </ul>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="tests-redis-adapter">Tests - Redis Adapter<a class="headerlink" href="#tests-redis-adapter" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Vector Search Scenarios</strong> - Extended <code>features/redis_adapter.feature</code> and step definitions with SVS-VAMANA index creation, vector range search, and runtime-tuning coverage for sync RediSearch operations.</li>
+<li><strong>Vector Search Scenarios</strong> - Extended <code>features/redis_adapter.feature</code> and step definitions with SVS-VAMANA index
+  creation, vector range search, and runtime-tuning coverage for sync RediSearch operations.</li>
 </ul>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <h3 id="tutorials-redis">Tutorials - Redis<a class="headerlink" href="#tutorials-redis" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Vector Search Guide</strong> - Expanded the Redis adapter tutorial with SVS-VAMANA and HNSW tuning, cluster index prefixes, vector range queries, hybrid search on cluster, and <code>VectorQueryRuntimeDTO</code> examples.</li>
+<li><strong>Vector Search Guide</strong> - Expanded the Redis adapter tutorial with SVS-VAMANA and HNSW tuning, cluster index prefixes,
+  vector range queries, hybrid search on cluster, and <code>VectorQueryRuntimeDTO</code> examples.</li>
 </ul>
 <h3 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Updated mkdocstrings entries for Redis search DTOs and <code>redis_search_types</code> to cover new vector types, range queries, and runtime parameters.</li>
+<li>Updated mkdocstrings entries for Redis search DTOs and <code>redis_search_types</code> to cover new vector types, range queries,
+  and runtime parameters.</li>
 </ul>
 
 

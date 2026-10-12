@@ -3572,7 +3572,8 @@ fields (<code>GITHUB_TOKEN</code>, <code>CERT_NAME</code> + client cert paths, <
 <h2 id="advanced-features">Advanced Features<a class="headerlink" href="#advanced-features" title="Permanent link">&para;</a></h2>
 <h3 id="dynamic-credentials">Dynamic Credentials<a class="headerlink" href="#dynamic-credentials" title="Permanent link">&para;</a></h3>
 <p>Without <code>parameters</code>, the adapter calls hvac
-<a href="https://python-hvac.org/en/stable/usage/secrets_engines/database.html#generate-credentials"><code>secrets.database.generate_credentials</code></a>
+<a href="https://python-hvac.org/en/stable/usage/secrets_engines/database.html#generate-credentials">
+<code>secrets.database.generate_credentials</code></a>
 (with a generic read fallback for non-database mounts). Pass <code>parameters</code> (even <code>{}</code>) to
 force a write to <code>{mount}/creds/{role}</code> for engines like SSH OTP. Lease renew/revoke use
 <a href="https://python-hvac.org/en/stable/usage/system_backend/lease.html"><code>sys.renew_lease</code> / <code>sys.revoke_lease</code></a>.</p>

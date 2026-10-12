@@ -3333,61 +3333,81 @@
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-redis">Adapters - Redis<a class="headerlink" href="#adapters-redis" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>RediSearch Support</strong> - Added index-bound RediSearch operations to sync and async Redis adapters via <code>search_index(name)</code>, returning <code>RedisSearchHandle</code> / <code>AsyncRedisSearchHandle</code> backed by <code>redis.commands.search</code>.<ul>
-<li>Index lifecycle: <code>create_index</code>, <code>drop_index</code>, <code>info</code>, <code>alter_schema_add</code>, and alias management (<code>add_alias</code>, <code>update_alias</code>, <code>delete_alias</code>).</li>
-<li>Document upsert for HASH and JSON indexes (<code>upsert_hash</code>, <code>upsert_json</code>, and matching DTO helpers) with optional vector fields.</li>
+<li><strong>RediSearch Support</strong> - Added index-bound RediSearch operations to sync and async Redis adapters via
+  <code>search_index(name)</code>, returning <code>RedisSearchHandle</code> / <code>AsyncRedisSearchHandle</code> backed by <code>redis.commands.search</code>.<ul>
+<li>Index lifecycle: <code>create_index</code>, <code>drop_index</code>, <code>info</code>, <code>alter_schema_add</code>, and alias management (<code>add_alias</code>,
+  <code>update_alias</code>, <code>delete_alias</code>).</li>
+<li>Document upsert for HASH and JSON indexes (<code>upsert_hash</code>, <code>upsert_json</code>, and matching DTO helpers) with optional
+  vector fields.</li>
 <li>Query execution: full-text <code>search</code>, vector KNN, hybrid text+KNN, and <code>aggregate</code> via typed DTOs.</li>
-<li>New ports: <code>RedisSearchHandlePort</code> and <code>AsyncRedisSearchHandlePort</code> in <code>search_ports.py</code>; mock search handles updated for BDD coverage.</li>
+<li>New ports: <code>RedisSearchHandlePort</code> and <code>AsyncRedisSearchHandlePort</code> in <code>search_ports.py</code>; mock search handles
+  updated for BDD coverage.</li>
 </ul>
 </li>
 </ul>
 <h3 id="configs">Configs<a class="headerlink" href="#configs" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>FastAPI Middleware Settings</strong> - Added opt-in <code>FastAPIConfig</code> flags for GZip, TrustedHost, and HTTPS redirect middleware, wired into <code>AppUtils.create_fastapi_app</code> via <code>FastAPIUtils.setup_gzip</code>, <code>setup_trusted_host</code>, and <code>setup_https_redirect</code>.<ul>
-<li>New <code>.env</code> variables: <code>FASTAPI__GZIP_MIDDLEWARE_IS_ENABLED</code>, <code>GZIP_MIDDLEWARE_MINIMUM_SIZE</code>, <code>GZIP_MIDDLEWARE_COMPRESSLEVEL</code>, <code>TRUSTED_HOST_MIDDLEWARE_IS_ENABLED</code>, <code>TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS</code>, <code>TRUSTED_HOST_MIDDLEWARE_WWW_REDIRECT</code>, <code>HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED</code>.</li>
+<li><strong>FastAPI Middleware Settings</strong> - Added opt-in <code>FastAPIConfig</code> flags for GZip, TrustedHost, and HTTPS redirect
+  middleware, wired into <code>AppUtils.create_fastapi_app</code> via <code>FastAPIUtils.setup_gzip</code>, <code>setup_trusted_host</code>, and
+  <code>setup_https_redirect</code>.<ul>
+<li>New <code>.env</code> variables: <code>FASTAPI__GZIP_MIDDLEWARE_IS_ENABLED</code>, <code>GZIP_MIDDLEWARE_MINIMUM_SIZE</code>,
+  <code>GZIP_MIDDLEWARE_COMPRESSLEVEL</code>, <code>TRUSTED_HOST_MIDDLEWARE_IS_ENABLED</code>, <code>TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS</code>,
+  <code>TRUSTED_HOST_MIDDLEWARE_WWW_REDIRECT</code>, <code>HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED</code>.</li>
 <li>TrustedHost middleware is skipped with a warning when enabled but <code>ALLOWED_HOSTS</code> is empty.</li>
 </ul>
 </li>
 </ul>
 <h3 id="models-dtos">Models - DTOs<a class="headerlink" href="#models-dtos" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>RediSearch DTOs</strong> - Added typed DTOs under <code>archipy.models.dtos.redis.search</code> for index schema (<code>IndexSchemaDTO</code>, <code>IndexFieldConfig</code>), document upsert (<code>HashDocumentUpsertDTO</code>, <code>JsonDocumentUpsertDTO</code>), search (<code>SearchQueryDTO</code>, <code>KnnQueryDTO</code>), aggregation (<code>AggregationDTO</code>), and results (<code>SearchResultDTO</code>).</li>
+<li><strong>RediSearch DTOs</strong> - Added typed DTOs under <code>archipy.models.dtos.redis.search</code> for index schema (<code>IndexSchemaDTO</code>,
+  <code>IndexFieldConfig</code>), document upsert (<code>HashDocumentUpsertDTO</code>, <code>JsonDocumentUpsertDTO</code>), search (<code>SearchQueryDTO</code>,
+  <code>KnnQueryDTO</code>), aggregation (<code>AggregationDTO</code>), and results (<code>SearchResultDTO</code>).</li>
 </ul>
 <h3 id="models-types">Models - Types<a class="headerlink" href="#models-types" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>RediSearch Types</strong> - Added <code>VectorDistanceMetric</code> (<code>COSINE</code>, <code>L2</code>, <code>IP</code>), <code>VectorAlgorithm</code> (<code>FLAT</code>, <code>HNSW</code>), and <code>RedisIndexType</code> (<code>HASH</code>, <code>JSON</code>) enums for index and vector field configuration.</li>
+<li><strong>RediSearch Types</strong> - Added <code>VectorDistanceMetric</code> (<code>COSINE</code>, <code>L2</code>, <code>IP</code>), <code>VectorAlgorithm</code> (<code>FLAT</code>, <code>HNSW</code>), and
+  <code>RedisIndexType</code> (<code>HASH</code>, <code>JSON</code>) enums for index and vector field configuration.</li>
 </ul>
 <h3 id="helpers-utils">Helpers - Utils<a class="headerlink" href="#helpers-utils" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>FastAPI Middleware Setup</strong> - Added <code>FastAPIUtils.setup_gzip</code>, <code>setup_trusted_host</code>, and <code>setup_https_redirect</code>, registered in <code>create_fastapi_app</code> after CORS and before metric/APM middleware.</li>
+<li><strong>FastAPI Middleware Setup</strong> - Added <code>FastAPIUtils.setup_gzip</code>, <code>setup_trusted_host</code>, and <code>setup_https_redirect</code>,
+  registered in <code>create_fastapi_app</code> after CORS and before metric/APM middleware.</li>
 </ul>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="tests-app-utils">Tests - App Utils<a class="headerlink" href="#tests-app-utils" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>FastAPI Middleware Scenarios</strong> - Extended <code>features/app_utils.feature</code> and <code>features/steps/app_utils_steps.py</code> with opt-in GZip, TrustedHost, and HTTPS redirect middleware coverage.<ul>
+<li><strong>FastAPI Middleware Scenarios</strong> - Extended <code>features/app_utils.feature</code> and <code>features/steps/app_utils_steps.py</code> with
+  opt-in GZip, TrustedHost, and HTTPS redirect middleware coverage.<ul>
 <li>GZip compresses responses above <code>minimum_size</code> and skips small payloads.</li>
-<li>TrustedHost allows configured hosts, rejects invalid <code>Host</code> headers, and skips registration when <code>ALLOWED_HOSTS</code> is empty.</li>
+<li>TrustedHost allows configured hosts, rejects invalid <code>Host</code> headers, and skips registration when <code>ALLOWED_HOSTS</code>
+  is empty.</li>
 <li>HTTPS redirect issues <code>307</code> for HTTP requests when enabled; middleware absent when disabled.</li>
 </ul>
 </li>
 </ul>
 <h3 id="tests-redis-adapter">Tests - Redis Adapter<a class="headerlink" href="#tests-redis-adapter" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>RediSearch Feature Suite</strong> - Added sync and async BDD scenarios in <code>features/redis_adapter.feature</code> (container/Redis Stack only) for index creation, HASH/JSON document upsert, KNN and hybrid search, aggregation, schema alteration, alias management, document deletion, and index drop.</li>
+<li><strong>RediSearch Feature Suite</strong> - Added sync and async BDD scenarios in <code>features/redis_adapter.feature</code> (container/Redis
+  Stack only) for index creation, HASH/JSON document upsert, KNN and hybrid search, aggregation, schema alteration,
+  alias management, document deletion, and index drop.</li>
 </ul>
 <h2 id="chore">Chore<a class="headerlink" href="#chore" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Release Workflow</strong> - Removed local <code>make bump-patch</code> / <code>bump-minor</code> / <code>bump-major</code> targets and related docs; releases are tagged on <code>master</code> (for example <code>4.16.0</code>) and publish is triggered by pushing the semver tag.</li>
+<li><strong>Release Workflow</strong> - Removed local <code>make bump-patch</code> / <code>bump-minor</code> / <code>bump-major</code> targets and related docs;
+  releases are tagged on <code>master</code> (for example <code>4.16.0</code>) and publish is triggered by pushing the semver tag.</li>
 </ul>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Python Packages</strong> - Bumped <code>jdatetime</code> <code>5.3.0</code> → <code>6.0.1</code>, <code>boto3</code> <code>1.43.46</code> → <code>1.43.48</code>, <code>httpx2[socks]</code> <code>2.5.0</code> → <code>2.7.0</code>, and <code>sentry-sdk</code> <code>2.64.0</code> → <code>2.65.0</code>.</li>
-<li><strong>Dev Tools</strong> - Updated <code>ty</code> <code>0.0.58</code> → <code>0.0.59</code>, <code>boto3-stubs</code> <code>1.43.46</code> → <code>1.43.48</code>, <code>types-cachetools</code> <code>7.0.0.20260518</code> → <code>7.0.0.20260713</code>, and pinned <code>types-protobuf</code> <code>&gt;=7.34.1.20260518</code>.</li>
+<li><strong>Python Packages</strong> - Bumped <code>jdatetime</code> <code>5.3.0</code> → <code>6.0.1</code>, <code>boto3</code> <code>1.43.46</code> → <code>1.43.48</code>, <code>httpx2[socks]</code> <code>2.5.0</code> →
+  <code>2.7.0</code>, and <code>sentry-sdk</code> <code>2.64.0</code> → <code>2.65.0</code>.</li>
+<li><strong>Dev Tools</strong> - Updated <code>ty</code> <code>0.0.58</code> → <code>0.0.59</code>, <code>boto3-stubs</code> <code>1.43.46</code> → <code>1.43.48</code>, <code>types-cachetools</code>
+  <code>7.0.0.20260518</code> → <code>7.0.0.20260713</code>, and pinned <code>types-protobuf</code> <code>&gt;=7.34.1.20260518</code>.</li>
 </ul>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <h3 id="tutorials-redis">Tutorials - Redis<a class="headerlink" href="#tutorials-redis" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>RediSearch Guide</strong> - Expanded the Redis adapter tutorial with index schema setup, HASH/JSON document upsert, full-text/KNN/hybrid search, aggregation, alias management, and Redis Stack requirements.</li>
+<li><strong>RediSearch Guide</strong> - Expanded the Redis adapter tutorial with index schema setup, HASH/JSON document upsert,
+  full-text/KNN/hybrid search, aggregation, alias management, and Redis Stack requirements.</li>
 </ul>
 <h3 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h3>
 <ul>

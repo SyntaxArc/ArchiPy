@@ -3245,7 +3245,8 @@
 <h2 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-starrocks">Adapters - StarRocks<a class="headerlink" href="#adapters-starrocks" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Real SQLAlchemy BEGIN/ROLLBACK</strong> - StarRocks atomic transactions no longer auto-commit each DML when using SQLAlchemy.<ul>
+<li><strong>Real SQLAlchemy BEGIN/ROLLBACK</strong> - StarRocks atomic transactions no longer auto-commit each DML when using
+  SQLAlchemy.<ul>
 <li>Patched <code>StarRocksDialect.do_begin</code> to emit explicit <code>BEGIN</code> (skipped under autocommit for DDL)</li>
 <li>Sync and async connect args set <code>autocommit=False</code> and <code>init_command="SET enable_sql_transaction = TRUE"</code></li>
 </ul>
@@ -3263,7 +3264,8 @@
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="tests-atomic-transactions">Tests - Atomic Transactions<a class="headerlink" href="#tests-atomic-transactions" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>StarRocks Atomic BDD Coverage</strong> - Expanded sync and async atomic scenarios for StarRocks where shared-nothing SQL transactions are supported.<ul>
+<li><strong>StarRocks Atomic BDD Coverage</strong> - Expanded sync and async atomic scenarios for StarRocks where shared-nothing SQL
+  transactions are supported.<ul>
 <li>Added StarRocks to update, different entity types, and error-handling outlines (sync and async)</li>
 <li>Documented shared-nothing limits: nested blocks, multi same-table insert, insert-after-update</li>
 <li>Capture ORM attrs before insert so expired lazy-loads do not trigger StarRocks error 5307</li>

@@ -4013,48 +4013,42 @@ values.</p>
 <thead>
 <tr>
 <th>Decorator</th>
-<th>Module</th>
 <th>Purpose</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>@ttl_cache</code></td>
-<td><code>helpers.decorators.cache</code></td>
 <td>In-memory TTL cache</td>
 </tr>
 <tr>
 <td><code>@retry</code></td>
-<td><code>helpers.decorators.retry</code></td>
 <td>Automatic retry with back-off</td>
 </tr>
 <tr>
-<td><code>@atomic</code></td>
-<td><code>helpers.decorators.sqlalchemy_atomic</code></td>
+<td><code>@postgres_sqlalchemy_atomic</code> (and others)</td>
 <td>SQLAlchemy transaction wrapping</td>
 </tr>
 <tr>
 <td><code>@singleton</code></td>
-<td><code>helpers.decorators.singleton</code></td>
 <td>Singleton pattern enforcement</td>
 </tr>
 <tr>
 <td><code>@timeout</code></td>
-<td><code>helpers.decorators.timeout</code></td>
 <td>Function execution timeout</td>
 </tr>
 <tr>
 <td><code>@timing</code></td>
-<td><code>helpers.decorators.timing</code></td>
 <td>Execution time logging</td>
 </tr>
 <tr>
-<td><code>@deprecated</code></td>
-<td><code>helpers.decorators.deprecation_warnings</code></td>
+<td><code>@method_deprecation_warning</code></td>
 <td>Deprecation warning</td>
 </tr>
 </tbody>
 </table>
+<p>All are imported from <code>archipy.helpers.decorators</code> and work for sync and <code>async def</code> functions. The older
+<code>*_decorator</code> and <code>async_*</code> names still work but emit a <code>DeprecationWarning</code>.</p>
 <p>See the <a href="../../tutorials/helpers/decorators/">Decorators tutorial</a> for examples.</p>
 <h3 id="what-is-the-difference-between-singleton-decorator-and-singletonmeta-metaclass">What is the difference between <code>@singleton</code> decorator and <code>SingletonMeta</code> metaclass?<a class="headerlink" href="#what-is-the-difference-between-singleton-decorator-and-singletonmeta-metaclass" title="Permanent link">&para;</a></h3>
 <p>Both enforce the singleton pattern but suit different use cases:</p>
@@ -4071,7 +4065,7 @@ values.</p>
 <code>REDIS_*</code> / <code>REDIS_URL</code> env vars). See
 <a href="../../tutorials/helpers/interceptors/#fastapi-rate-limiting">Interceptors — FastAPI Rate Limiting</a>.</p>
 <p><strong>Still supported in ArchiPy:</strong> the gRPC rate-limit interceptor (<code>GrpcServerRateLimitInterceptor</code>,
-<code>AsyncGrpcServerRateLimitInterceptor</code>), <code>grpc_rate_limit_decorator</code>, <code>GrpcRateLimitConfig</code>,
+<code>AsyncGrpcServerRateLimitInterceptor</code>), <code>grpc_rate_limit</code>, <code>GrpcRateLimitConfig</code>,
 <code>RateLimitUtils</code>, and <code>RateLimitWindowDTO</code>.</p>
 <hr />
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>

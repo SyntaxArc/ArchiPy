@@ -30316,7 +30316,7 @@ heading_level: 3</p>
         <p>Configuration for gRPC server rate limiting.</p>
 <p>Controls Redis key layout, failure modes, and identity resolution for
 <code>GrpcServerRateLimitInterceptor</code> / <code>AsyncGrpcServerRateLimitInterceptor</code>.
-Per-RPC limits are declared via <code>grpc_rate_limit_decorator</code> on servicer methods.
+Per-RPC limits are declared via <code>grpc_rate_limit</code> on servicer methods.
 When <code>IS_ENABLED</code> is True, <code>AppUtils.create_grpc_app</code> and <code>AppUtils.create_async_grpc_app</code>
 register the matching interceptor automatically.</p>
 
@@ -30369,7 +30369,7 @@ register the matching interceptor automatically.</p>
 </span><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a>
 </span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a><span class="sd">    Controls Redis key layout, failure modes, and identity resolution for</span>
 </span><span id="__span-0-203"><a id="__codelineno-0-203" name="__codelineno-0-203"></a><span class="sd">    ``GrpcServerRateLimitInterceptor`` / ``AsyncGrpcServerRateLimitInterceptor``.</span>
-</span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a><span class="sd">    Per-RPC limits are declared via ``grpc_rate_limit_decorator`` on servicer methods.</span>
+</span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a><span class="sd">    Per-RPC limits are declared via ``grpc_rate_limit`` on servicer methods.</span>
 </span><span id="__span-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="sd">    When ``IS_ENABLED`` is True, ``AppUtils.create_grpc_app`` and ``AppUtils.create_async_grpc_app``</span>
 </span><span id="__span-0-206"><a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="sd">    register the matching interceptor automatically.</span>
 </span><span id="__span-0-207"><a id="__codelineno-0-207" name="__codelineno-0-207"></a><span class="sd">    """</span>

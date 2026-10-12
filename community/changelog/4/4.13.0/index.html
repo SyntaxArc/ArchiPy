@@ -3289,9 +3289,11 @@
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-keycloak">Adapters - Keycloak<a class="headerlink" href="#adapters-keycloak" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Group Management</strong> - Added full group lifecycle management to <code>KeycloakPort</code>, <code>AsyncKeycloakPort</code>, and their adapters.<ul>
+<li><strong>Group Management</strong> - Added full group lifecycle management to <code>KeycloakPort</code>, <code>AsyncKeycloakPort</code>, and their
+  adapters.<ul>
 <li><code>create_group</code>, <code>update_group</code>, <code>delete_group</code> for group CRUD.</li>
-<li><code>get_group</code>, <code>get_group_by_path</code>, <code>get_group_children</code>, <code>get_groups</code>, <code>get_subgroups</code>, <code>groups_count</code> for retrieval and hierarchy traversal.</li>
+<li><code>get_group</code>, <code>get_group_by_path</code>, <code>get_group_children</code>, <code>get_groups</code>, <code>get_subgroups</code>, <code>groups_count</code> for
+  retrieval and hierarchy traversal.</li>
 </ul>
 </li>
 <li><strong>Group Membership</strong> - Added methods for managing user membership and group access control.<ul>
@@ -3303,32 +3305,42 @@
 <li><strong>Group Role Mappings</strong> - Added realm- and client-level role assignment for groups.<ul>
 <li><code>get_group_realm_roles</code>, <code>assign_group_realm_roles</code>, <code>delete_group_realm_roles</code>.</li>
 <li><code>get_group_client_roles</code>, <code>assign_group_client_roles</code>, <code>delete_group_client_roles</code>.</li>
-<li><code>get_composite_client_roles_of_group</code>, <code>get_client_role_groups</code>, <code>get_realm_role_groups</code> for composite and reverse lookups.</li>
+<li><code>get_composite_client_roles_of_group</code>, <code>get_client_role_groups</code>, <code>get_realm_role_groups</code> for composite and reverse
+  lookups.</li>
 </ul>
 </li>
 </ul>
 <h3 id="adapters-redis">Adapters - Redis<a class="headerlink" href="#adapters-redis" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Database Flush</strong> - Added <code>flushdb</code> to <code>RedisPort</code>, <code>AsyncRedisPort</code>, and their adapters for deleting all keys in the current database, with an optional <code>asynchronous</code> flag.</li>
-<li><strong>RESP3 Protocol</strong> - Added <code>REDIS__PROTOCOL</code> configuration (<code>Literal[2, 3]</code>, default <code>3</code>) to select the RESP protocol version across standalone, cluster, and sentinel connections.</li>
-<li><strong>Sentinel Authentication</strong> - Added <code>REDIS__SENTINEL_PASSWORD</code> config for authenticating against sentinel nodes when distinct from the data-node password.</li>
-<li><strong>Cluster Read Balancing</strong> - Cluster connections now apply <code>LoadBalancingStrategy.ROUND_ROBIN</code> when <code>CLUSTER_READ_FROM_REPLICAS</code> is enabled.</li>
+<li><strong>Database Flush</strong> - Added <code>flushdb</code> to <code>RedisPort</code>, <code>AsyncRedisPort</code>, and their adapters for deleting all keys in the
+  current database, with an optional <code>asynchronous</code> flag.</li>
+<li><strong>RESP3 Protocol</strong> - Added <code>REDIS__PROTOCOL</code> configuration (<code>Literal[2, 3]</code>, default <code>3</code>) to select the RESP protocol
+  version across standalone, cluster, and sentinel connections.</li>
+<li><strong>Sentinel Authentication</strong> - Added <code>REDIS__SENTINEL_PASSWORD</code> config for authenticating against sentinel nodes when
+  distinct from the data-node password.</li>
+<li><strong>Cluster Read Balancing</strong> - Cluster connections now apply <code>LoadBalancingStrategy.ROUND_ROBIN</code> when
+  <code>CLUSTER_READ_FROM_REPLICAS</code> is enabled.</li>
 </ul>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="configs-redis">Configs - Redis<a class="headerlink" href="#configs-redis" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Protocol Field Replacement</strong> - Replaced <code>RedisConfig.VERSION</code> (<code>REDIS__VERSION</code>) with <code>RedisConfig.PROTOCOL</code> (<code>REDIS__PROTOCOL</code>), now typed as <code>Literal[2, 3]</code> for the RESP protocol version. Update environment files accordingly.</li>
+<li><strong>Protocol Field Replacement</strong> - Replaced <code>RedisConfig.VERSION</code> (<code>REDIS__VERSION</code>) with <code>RedisConfig.PROTOCOL</code>
+  (<code>REDIS__PROTOCOL</code>), now typed as <code>Literal[2, 3]</code> for the RESP protocol version. Update environment files accordingly.</li>
 </ul>
 <h3 id="adapters-redis_1">Adapters - Redis<a class="headerlink" href="#adapters-redis_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Async Iterator Typing</strong> - Async scan iterators (<code>scan_iter</code>, <code>sscan_iter</code>) now return <code>AsyncIterator[bytes | str]</code> instead of <code>Iterator[bytes | str]</code>.</li>
+<li><strong>Async Iterator Typing</strong> - Async scan iterators (<code>scan_iter</code>, <code>sscan_iter</code>) now return <code>AsyncIterator[bytes | str]</code>
+  instead of <code>Iterator[bytes | str]</code>.</li>
 </ul>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="tests-redis-adapter">Tests - Redis Adapter<a class="headerlink" href="#tests-redis-adapter" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Cluster Test Container</strong> - Added <code>RedisClusterTestContainer</code> managing a six-node Redis cluster for integration coverage.</li>
-<li><strong>Cluster Scenarios</strong> - Extended the Redis feature suite with cluster configurations for both sync and async adapters, adding <code>cluster</code> as a recognized adapter type in step definitions.</li>
-<li><strong>Expanded BDD Coverage</strong> - Added scenarios covering strings, expiry/TTL, counters, multi-key operations, key types, pipelines, and <code>flushdb</code> across mock, container, and cluster adapters.</li>
+<li><strong>Cluster Test Container</strong> - Added <code>RedisClusterTestContainer</code> managing a six-node Redis cluster for integration
+  coverage.</li>
+<li><strong>Cluster Scenarios</strong> - Extended the Redis feature suite with cluster configurations for both sync and async adapters,
+  adding <code>cluster</code> as a recognized adapter type in step definitions.</li>
+<li><strong>Expanded BDD Coverage</strong> - Added scenarios covering strings, expiry/TTL, counters, multi-key operations, key types,
+  pipelines, and <code>flushdb</code> across mock, container, and cluster adapters.</li>
 </ul>
 <h3 id="tests-keycloak-adapter">Tests - Keycloak Adapter<a class="headerlink" href="#tests-keycloak-adapter" title="Permanent link">&para;</a></h3>
 <ul>

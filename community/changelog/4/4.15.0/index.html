@@ -3361,68 +3361,108 @@
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <h3 id="configs">Configs<a class="headerlink" href="#configs" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>FastAPI Rate Limit Settings</strong> - Added <code>FastAPIRateLimitConfig</code> and the <code>BaseConfig.FASTAPI_RATE_LIMIT</code> attribute, centralizing trusted-proxy resolution, Redis key layout, fail-open/closed behavior, <code>X-RateLimit-*</code> headers, and JWT-based identity for <code>FastAPIRestRateLimitHandler</code>.<ul>
-<li>New <code>.env</code> variables: <code>FASTAPI_RATE_LIMIT__TRUSTED_PROXY_IPS</code>, <code>ALLOW_PRIVATE_IPS</code>, <code>KEY_PREFIX</code>, <code>FAIL_CLOSED</code>, <code>SKIP_METHODS</code>, <code>HASH_QUERY_PARAM_VALUES</code>, <code>REQUIRE_IDENTIFIER_FOR_QUERY_PARAMS</code>, <code>REJECT_UNKNOWN_CLIENT</code>, <code>RATE_LIMIT_HEADERS</code>, <code>IDENTITY_FROM_ACCESS_TOKEN</code>.</li>
+<li><strong>FastAPI Rate Limit Settings</strong> - Added <code>FastAPIRateLimitConfig</code> and the <code>BaseConfig.FASTAPI_RATE_LIMIT</code> attribute,
+  centralizing trusted-proxy resolution, Redis key layout, fail-open/closed behavior, <code>X-RateLimit-*</code> headers, and
+  JWT-based identity for <code>FastAPIRestRateLimitHandler</code>.<ul>
+<li>New <code>.env</code> variables: <code>FASTAPI_RATE_LIMIT__TRUSTED_PROXY_IPS</code>, <code>ALLOW_PRIVATE_IPS</code>, <code>KEY_PREFIX</code>, <code>FAIL_CLOSED</code>,
+  <code>SKIP_METHODS</code>, <code>HASH_QUERY_PARAM_VALUES</code>, <code>REQUIRE_IDENTIFIER_FOR_QUERY_PARAMS</code>, <code>REJECT_UNKNOWN_CLIENT</code>,
+  <code>RATE_LIMIT_HEADERS</code>, <code>IDENTITY_FROM_ACCESS_TOKEN</code>.</li>
 </ul>
 </li>
-<li><strong>gRPC Rate Limit Settings</strong> - Added <code>GrpcRateLimitConfig</code> and the <code>BaseConfig.GRPC_RATE_LIMIT</code> attribute, controlling Redis key layout, fail-open/closed behavior, skipped health-check methods, and JWT-based identity for the new gRPC rate-limit interceptors.<ul>
+<li><strong>gRPC Rate Limit Settings</strong> - Added <code>GrpcRateLimitConfig</code> and the <code>BaseConfig.GRPC_RATE_LIMIT</code> attribute, controlling
+  Redis key layout, fail-open/closed behavior, skipped health-check methods, and JWT-based identity for the new gRPC
+  rate-limit interceptors.<ul>
 <li>New <code>.env</code> variables: <code>GRPC_RATE_LIMIT__IS_ENABLED</code>, <code>FAIL_CLOSED</code>, <code>IDENTITY_FROM_ACCESS_TOKEN</code>.</li>
-<li>When <code>IS_ENABLED</code> is <code>True</code>, <code>AppUtils.create_grpc_app</code> and <code>AppUtils.create_async_grpc_app</code> register the matching interceptor automatically.</li>
+<li>When <code>IS_ENABLED</code> is <code>True</code>, <code>AppUtils.create_grpc_app</code> and <code>AppUtils.create_async_grpc_app</code> register the matching
+  interceptor automatically.</li>
 </ul>
 </li>
 </ul>
 <h3 id="models-dtos">Models - DTOs<a class="headerlink" href="#models-dtos" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Rate Limit Window DTO</strong> - Added <code>RateLimitWindowDTO</code> (<code>calls_count</code>, <code>window_ms</code>) with a <code>key_suffix</code> property producing a stable Redis key segment per tier. Shared by the FastAPI handler and both gRPC interceptors.</li>
+<li><strong>Rate Limit Window DTO</strong> - Added <code>RateLimitWindowDTO</code> (<code>calls_count</code>, <code>window_ms</code>) with a <code>key_suffix</code> property
+  producing a stable Redis key segment per tier. Shared by the FastAPI handler and both gRPC interceptors.</li>
 </ul>
 <h3 id="helpers-decorators">Helpers - Decorators<a class="headerlink" href="#helpers-decorators" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>gRPC Rate Limit Decorator</strong> - Added <code>grpc_rate_limit_decorator</code>, attaching one or more rate-limit windows to a servicer method without wrapping it. Stacking the decorator declares independent burst and sustained tiers, all enforced in declaration order by <code>GrpcServerRateLimitInterceptor</code>.</li>
+<li><strong>gRPC Rate Limit Decorator</strong> - Added <code>grpc_rate_limit_decorator</code>, attaching one or more rate-limit windows to a
+  servicer method without wrapping it. Stacking the decorator declares independent burst and sustained tiers, all
+  enforced in declaration order by <code>GrpcServerRateLimitInterceptor</code>.</li>
 </ul>
 <h3 id="helpers-utils">Helpers - Utils<a class="headerlink" href="#helpers-utils" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Rate Limit Utils</strong> - Added <code>RateLimitUtils</code> with <code>compute_rate_limit_window</code> (validates <code>calls_count &gt;= 1</code> and a positive combined window) and <code>get_rate_limit_windows_from_callable</code> (reads stacked windows off a function or bound method).</li>
-<li><strong>gRPC Interceptor Auto-Registration</strong> - Added <code>GrpcAPIUtils.setup_rate_limit_interceptor</code> and <code>AsyncGrpcAPIUtils.setup_rate_limit_interceptor</code>, wired into <code>AppUtils.create_grpc_app</code> / <code>create_async_grpc_app</code> to append the sync or async rate-limit interceptor when <code>GRPC_RATE_LIMIT.IS_ENABLED</code> is <code>True</code>.</li>
+<li><strong>Rate Limit Utils</strong> - Added <code>RateLimitUtils</code> with <code>compute_rate_limit_window</code> (validates <code>calls_count &gt;= 1</code> and a
+  positive combined window) and <code>get_rate_limit_windows_from_callable</code> (reads stacked windows off a function or bound
+  method).</li>
+<li><strong>gRPC Interceptor Auto-Registration</strong> - Added <code>GrpcAPIUtils.setup_rate_limit_interceptor</code> and
+  <code>AsyncGrpcAPIUtils.setup_rate_limit_interceptor</code>, wired into <code>AppUtils.create_grpc_app</code> / <code>create_async_grpc_app</code> to
+  append the sync or async rate-limit interceptor when <code>GRPC_RATE_LIMIT.IS_ENABLED</code> is <code>True</code>.</li>
 </ul>
 <h3 id="helpers-interceptors">Helpers - Interceptors<a class="headerlink" href="#helpers-interceptors" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>gRPC Rate Limit Interceptors</strong> - Added <code>GrpcServerRateLimitInterceptor</code> and <code>AsyncGrpcServerRateLimitInterceptor</code>, enforcing decorator-declared Redis-backed windows per RPC.<ul>
+<li><strong>gRPC Rate Limit Interceptors</strong> - Added <code>GrpcServerRateLimitInterceptor</code> and <code>AsyncGrpcServerRateLimitInterceptor</code>,
+  enforcing decorator-declared Redis-backed windows per RPC.<ul>
 <li>Uses atomic <code>INCREX</code> (<code>saturate=True</code>, <code>enx=True</code>, millisecond <code>px</code> expiry) to avoid check-then-act races.</li>
-<li>Identity resolution: custom <code>identifier_fn</code>, JWT <code>sub</code> claim from a Bearer token in invocation metadata (<code>IDENTITY_FROM_ACCESS_TOKEN</code>), falling back to parsed peer host (<code>ipv4:</code>/<code>ipv6:</code>/<code>unix:</code> prefixes handled).</li>
-<li>Breached windows abort with <code>RESOURCE_EXHAUSTED</code> (via <code>RateLimitExceededError</code>) including a computed <code>retry_after</code>; Redis/identity failures abort with <code>UNAVAILABLE</code> (via <code>UnavailableError</code>) when <code>FAIL_CLOSED</code> is <code>True</code>.</li>
+<li>Identity resolution: custom <code>identifier_fn</code>, JWT <code>sub</code> claim from a Bearer token in invocation metadata
+  (<code>IDENTITY_FROM_ACCESS_TOKEN</code>), falling back to parsed peer host (<code>ipv4:</code>/<code>ipv6:</code>/<code>unix:</code> prefixes handled).</li>
+<li>Breached windows abort with <code>RESOURCE_EXHAUSTED</code> (via <code>RateLimitExceededError</code>) including a computed
+  <code>retry_after</code>; Redis/identity failures abort with <code>UNAVAILABLE</code> (via <code>UnavailableError</code>) when <code>FAIL_CLOSED</code> is
+  <code>True</code>.</li>
 <li><code>SKIP_METHODS</code> excludes full gRPC method names (health checks by default) from rate limiting.</li>
 </ul>
 </li>
-<li><strong>gRPC Identity Helpers</strong> - Added <code>archipy.helpers.interceptors.grpc.rate_limit.identifiers</code> with <code>invocation_metadata_to_dict</code>, <code>extract_bearer_token_from_metadata</code>, and <code>resolve_jwt_access_token_sub_from_metadata</code>, verifying Bearer tokens via <code>JWTUtils</code> and returning the <code>sub</code> claim.</li>
-<li><strong>FastAPI Identity Helpers</strong> - Added <code>archipy.helpers.interceptors.fastapi.rate_limit.identifiers</code> with <code>extract_bearer_token</code> and <code>resolve_jwt_access_token_sub</code>, used by <code>FastAPIRestRateLimitHandler</code> to bucket authenticated requests by user instead of IP.</li>
+<li><strong>gRPC Identity Helpers</strong> - Added <code>archipy.helpers.interceptors.grpc.rate_limit.identifiers</code> with
+  <code>invocation_metadata_to_dict</code>, <code>extract_bearer_token_from_metadata</code>, and <code>resolve_jwt_access_token_sub_from_metadata</code>,
+  verifying Bearer tokens via <code>JWTUtils</code> and returning the <code>sub</code> claim.</li>
+<li><strong>FastAPI Identity Helpers</strong> - Added <code>archipy.helpers.interceptors.fastapi.rate_limit.identifiers</code> with
+  <code>extract_bearer_token</code> and <code>resolve_jwt_access_token_sub</code>, used by <code>FastAPIRestRateLimitHandler</code> to bucket
+  authenticated requests by user instead of IP.</li>
 </ul>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="helpers-fastapi-rate-limit">Helpers - FastAPI Rate Limit<a class="headerlink" href="#helpers-fastapi-rate-limit" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Handler Rewrite</strong> - <code>FastAPIRestRateLimitHandler</code> gained config-driven behavior sourced from <code>FastAPIRateLimitConfig</code>, with per-instance overrides for every setting.<ul>
-<li><strong>Trusted Proxy Chain Resolution</strong> - Client IP is only taken from forwarded headers (<code>Forwarded</code>, <code>X-Forwarded-For</code>, <code>X-Real-IP</code>, <code>CF-Connecting-IP</code>, <code>True-Client-IP</code>) when the immediate peer is a configured trusted proxy (<code>TRUSTED_PROXY_IPS</code>, CIDR or exact match, or <code>*</code> to trust all peers). <code>X-Forwarded-For</code> is walked right-to-left with nginx <code>real_ip_recursive</code> semantics, skipping trusted hops and stripping port suffixes.</li>
-<li><strong>JWT-Based Identity</strong> - <code>identity_from_access_token</code> (default <code>True</code>) verifies a Bearer token via <code>JWTUtils</code> and buckets by <code>sub</code>, falling back to client IP when the token is missing or invalid.</li>
-<li><strong>Stacked Windows</strong> - New <code>additional_windows</code> parameter enforces extra <code>RateLimitWindowDTO</code> tiers alongside the primary window; all tiers must pass, and the most constrained remaining quota is reported in headers.</li>
-<li><strong>Rate Limit Headers</strong> - <code>rate_limit_headers</code> (default <code>True</code>) attaches <code>X-RateLimit-Limit</code> / <code>X-RateLimit-Remaining</code> on allowed responses and adds <code>Retry-After</code> on <code>429</code>s.</li>
-<li><strong>Unknown Client Handling</strong> - <code>reject_unknown_client</code> (default <code>True</code>) returns <code>503</code> when no client identity can be resolved instead of silently allowing the request.</li>
-<li><strong>Query Param Safety</strong> - <code>require_identifier_for_query_params</code> (default <code>True</code>) raises <code>InvalidArgumentError</code> at construction when <code>query_params</code> is set without <code>identifier_fn</code> or <code>identity_from_access_token</code>, preventing client-controlled per-user quota targeting.</li>
-<li><strong>Redis Failure Handling</strong> - <code>fail_closed</code> (default <code>True</code>) returns <code>503</code> on Redis connection errors instead of allowing requests through.</li>
+<li><strong>Handler Rewrite</strong> - <code>FastAPIRestRateLimitHandler</code> gained config-driven behavior sourced from
+  <code>FastAPIRateLimitConfig</code>, with per-instance overrides for every setting.<ul>
+<li><strong>Trusted Proxy Chain Resolution</strong> - Client IP is only taken from forwarded headers (<code>Forwarded</code>,
+  <code>X-Forwarded-For</code>, <code>X-Real-IP</code>, <code>CF-Connecting-IP</code>, <code>True-Client-IP</code>) when the immediate peer is a configured
+  trusted proxy (<code>TRUSTED_PROXY_IPS</code>, CIDR or exact match, or <code>*</code> to trust all peers). <code>X-Forwarded-For</code> is walked
+  right-to-left with nginx <code>real_ip_recursive</code> semantics, skipping trusted hops and stripping port suffixes.</li>
+<li><strong>JWT-Based Identity</strong> - <code>identity_from_access_token</code> (default <code>True</code>) verifies a Bearer token via <code>JWTUtils</code> and
+  buckets by <code>sub</code>, falling back to client IP when the token is missing or invalid.</li>
+<li><strong>Stacked Windows</strong> - New <code>additional_windows</code> parameter enforces extra <code>RateLimitWindowDTO</code> tiers alongside the
+  primary window; all tiers must pass, and the most constrained remaining quota is reported in headers.</li>
+<li><strong>Rate Limit Headers</strong> - <code>rate_limit_headers</code> (default <code>True</code>) attaches <code>X-RateLimit-Limit</code> /
+  <code>X-RateLimit-Remaining</code> on allowed responses and adds <code>Retry-After</code> on <code>429</code>s.</li>
+<li><strong>Unknown Client Handling</strong> - <code>reject_unknown_client</code> (default <code>True</code>) returns <code>503</code> when no client identity can
+  be resolved instead of silently allowing the request.</li>
+<li><strong>Query Param Safety</strong> - <code>require_identifier_for_query_params</code> (default <code>True</code>) raises <code>InvalidArgumentError</code> at
+  construction when <code>query_params</code> is set without <code>identifier_fn</code> or <code>identity_from_access_token</code>, preventing
+  client-controlled per-user quota targeting.</li>
+<li><strong>Redis Failure Handling</strong> - <code>fail_closed</code> (default <code>True</code>) returns <code>503</code> on Redis connection errors instead of
+  allowing requests through.</li>
 </ul>
 </li>
 </ul>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="tests-grpc-rate-limit">Tests - gRPC Rate Limit<a class="headerlink" href="#tests-grpc-rate-limit" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>New Feature Suite</strong> - Added <code>features/grpc_rate_limit.feature</code> and <code>features/steps/grpc_rate_limit_steps.py</code> covering sync and async interceptor modes: within-limit success, over-limit <code>RESOURCE_EXHAUSTED</code> rejection, undecorated methods bypassing limits, stacked burst/sustained windows, per-JWT-user isolation, <code>UNAVAILABLE</code> abort when Redis is down and fail-closed, and <code>InvalidArgumentError</code> on invalid window construction.</li>
+<li><strong>New Feature Suite</strong> - Added <code>features/grpc_rate_limit.feature</code> and <code>features/steps/grpc_rate_limit_steps.py</code>
+  covering sync and async interceptor modes: within-limit success, over-limit <code>RESOURCE_EXHAUSTED</code> rejection,
+  undecorated methods bypassing limits, stacked burst/sustained windows, per-JWT-user isolation, <code>UNAVAILABLE</code> abort
+  when Redis is down and fail-closed, and <code>InvalidArgumentError</code> on invalid window construction.</li>
 </ul>
 <h3 id="tests-fastapi-rate-limit">Tests - FastAPI Rate Limit<a class="headerlink" href="#tests-fastapi-rate-limit" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Expanded Scenario Coverage</strong> - Extended <code>features/fastapi_rate_limit.feature</code> and <code>features/steps/fastapi_rate_limit_steps.py</code>.<ul>
+<li><strong>Expanded Scenario Coverage</strong> - Extended <code>features/fastapi_rate_limit.feature</code> and
+  <code>features/steps/fastapi_rate_limit_steps.py</code>.<ul>
 <li><code>X-RateLimit-Limit</code> / <code>X-RateLimit-Remaining</code> header assertions on allowed and rejected responses.</li>
-<li>Spoofed <code>X-Real-IP</code> is ignored without a configured trusted proxy; distinct clients are isolated only behind trusted proxies.</li>
-<li>Multi-hop <code>X-Forwarded-For</code> chains, injected entries ahead of the real client, port-suffix stripping, and multiple <code>X-Forwarded-For</code> header fields combined per RFC 9110.</li>
+<li>Spoofed <code>X-Real-IP</code> is ignored without a configured trusted proxy; distinct clients are isolated only behind
+  trusted proxies.</li>
+<li>Multi-hop <code>X-Forwarded-For</code> chains, injected entries ahead of the real client, port-suffix stripping, and multiple
+  <code>X-Forwarded-For</code> header fields combined per RFC 9110.</li>
 <li><code>X-Real-IP</code> precedence rules when <code>X-Forwarded-For</code> is also present.</li>
-<li><code>503</code> on Redis unavailability with <code>fail_closed</code>; <code>InvalidArgumentError</code> when <code>query_params</code> is set without an identifier.</li>
+<li><code>503</code> on Redis unavailability with <code>fail_closed</code>; <code>InvalidArgumentError</code> when <code>query_params</code> is set without an
+  identifier.</li>
 <li>JWT-based user isolation, fallback to client IP when a JWT is missing or invalid/expired.</li>
 </ul>
 </li>
@@ -3430,20 +3470,26 @@
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <h3 id="tutorials-decorators">Tutorials - Decorators<a class="headerlink" href="#tutorials-decorators" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>gRPC Rate Limit Decorator</strong> - Added usage guide for <code>grpc_rate_limit_decorator</code>, including stacked burst/sustained window examples and interceptor registration.</li>
+<li><strong>gRPC Rate Limit Decorator</strong> - Added usage guide for <code>grpc_rate_limit_decorator</code>, including stacked burst/sustained
+  window examples and interceptor registration.</li>
 </ul>
 <h3 id="tutorials-interceptors">Tutorials - Interceptors<a class="headerlink" href="#tutorials-interceptors" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>gRPC Rate Limiting</strong> - Added a <code>GrpcServerRateLimitInterceptor</code> / <code>AsyncGrpcServerRateLimitInterceptor</code> guide covering <code>GRPC_RATE_LIMIT</code> config, automatic registration via <code>AppUtils</code>, JWT-based identity, and health-check exclusions.</li>
-<li><strong>FastAPI Rate Limiting</strong> - Expanded the <code>FastAPIRestRateLimitHandler</code> guide with trusted-proxy configuration, JWT identity, stacked <code>additional_windows</code>, and rate-limit header reference.</li>
+<li><strong>gRPC Rate Limiting</strong> - Added a <code>GrpcServerRateLimitInterceptor</code> / <code>AsyncGrpcServerRateLimitInterceptor</code> guide
+  covering <code>GRPC_RATE_LIMIT</code> config, automatic registration via <code>AppUtils</code>, JWT-based identity, and health-check
+  exclusions.</li>
+<li><strong>FastAPI Rate Limiting</strong> - Expanded the <code>FastAPIRestRateLimitHandler</code> guide with trusted-proxy configuration, JWT
+  identity, stacked <code>additional_windows</code>, and rate-limit header reference.</li>
 </ul>
 <h3 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Complete User Example / Project Structure</strong> - Updated to reference the new rate-limiting configuration and helper modules.</li>
+<li><strong>Complete User Example / Project Structure</strong> - Updated to reference the new rate-limiting configuration and helper
+  modules.</li>
 </ul>
 <h3 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Added mkdocstrings entries for <code>FastAPIRateLimitConfig</code>, <code>GrpcRateLimitConfig</code>, <code>grpc_rate_limit</code> decorator, <code>grpc.rate_limit</code> interceptors and identifiers, <code>RateLimitUtils</code>, and <code>RateLimitWindowDTO</code>.</li>
+<li>Added mkdocstrings entries for <code>FastAPIRateLimitConfig</code>, <code>GrpcRateLimitConfig</code>, <code>grpc_rate_limit</code> decorator,
+  <code>grpc.rate_limit</code> interceptors and identifiers, <code>RateLimitUtils</code>, and <code>RateLimitWindowDTO</code>.</li>
 </ul>
 
 

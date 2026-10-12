@@ -3250,28 +3250,35 @@
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-mysql">Adapters - MySQL<a class="headerlink" href="#adapters-mysql" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>MySQL SQLAlchemy Adapter</strong> - Added a full MySQL adapter package with sync and async session managers, session manager registry, and concrete adapters following the existing PostgreSQL/StarRocks patterns.<ul>
+<li><strong>MySQL SQLAlchemy Adapter</strong> - Added a full MySQL adapter package with sync and async session managers, session
+  manager registry, and concrete adapters following the existing PostgreSQL/StarRocks patterns.<ul>
 <li>Sync driver: <code>mysql+pymysql</code> via the <code>mysql</code> extra</li>
 <li>Async driver: <code>mysql+asyncmy</code> via <code>asyncmy2</code> and the <code>mysql-async</code> extra</li>
 <li>Patches <code>MySQLTypeCompiler.visit_UUID</code> to map PostgreSQL UUID columns to <code>VARCHAR(36)</code> for shared entity models</li>
 </ul>
 </li>
-<li><strong>MySQL Configuration</strong> - Added <code>MySQLSQLAlchemyConfig</code> and <code>MYSQL_SQLALCHEMY</code> on <code>BaseConfig</code> with defaults <code>DRIVER_NAME=mysql+pymysql</code> and <code>PORT=3306</code>.</li>
-<li><strong>Atomic Transaction Decorators</strong> - Added <code>mysql_sqlalchemy_atomic_decorator</code> and <code>async_mysql_sqlalchemy_atomic_decorator</code>, registered in <code>ATOMIC_BLOCK_CONFIGS</code> and the lazy decorator exports.</li>
+<li><strong>MySQL Configuration</strong> - Added <code>MySQLSQLAlchemyConfig</code> and <code>MYSQL_SQLALCHEMY</code> on <code>BaseConfig</code> with defaults
+  <code>DRIVER_NAME=mysql+pymysql</code> and <code>PORT=3306</code>.</li>
+<li><strong>Atomic Transaction Decorators</strong> - Added <code>mysql_sqlalchemy_atomic_decorator</code> and
+  <code>async_mysql_sqlalchemy_atomic_decorator</code>, registered in <code>ATOMIC_BLOCK_CONFIGS</code> and the lazy decorator exports.</li>
 </ul>
 <h3 id="tests-mysql">Tests - MySQL<a class="headerlink" href="#tests-mysql" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>MySQL Test Container</strong> - Added <code>MySQLTestContainer</code> (<code>mysql:8.4.11</code>) with <code>@needs-mysql</code> tag mapping and <code>.env.test</code> / <code>.env.example</code> configuration.</li>
-<li><strong>Atomic Transaction Coverage</strong> - Wired <code>mysql</code> into all <code>atomic_transactions</code> scenario outlines (sync and async) alongside PostgreSQL and SQLite.</li>
+<li><strong>MySQL Test Container</strong> - Added <code>MySQLTestContainer</code> (<code>mysql:8.4.11</code>) with <code>@needs-mysql</code> tag mapping and
+  <code>.env.test</code> / <code>.env.example</code> configuration.</li>
+<li><strong>Atomic Transaction Coverage</strong> - Wired <code>mysql</code> into all <code>atomic_transactions</code> scenario outlines (sync and async)
+  alongside PostgreSQL and SQLite.</li>
 </ul>
 <h3 id="docs-mysql">Docs - MySQL<a class="headerlink" href="#docs-mysql" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Adapter Documentation</strong> - Added MySQL tutorial and API reference pages, mkdocs nav entries, installation extras, testing tags, and adapter index rows marked 🟢 Stable.</li>
+<li><strong>Adapter Documentation</strong> - Added MySQL tutorial and API reference pages, mkdocs nav entries, installation extras,
+  testing tags, and adapter index rows marked 🟢 Stable.</li>
 </ul>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="tests-atomic-transactions">Tests - Atomic Transactions<a class="headerlink" href="#tests-atomic-transactions" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Cross-Database Determinism</strong> - Gave test entity <code>String</code> columns explicit lengths for MySQL VARCHAR requirements, and ordered related-entity queries by name so assertions do not depend on insert order.</li>
+<li><strong>Cross-Database Determinism</strong> - Gave test entity <code>String</code> columns explicit lengths for MySQL VARCHAR requirements,
+  and ordered related-entity queries by name so assertions do not depend on insert order.</li>
 </ul>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <ul>

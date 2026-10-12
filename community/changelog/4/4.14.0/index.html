@@ -3350,12 +3350,17 @@
 <h2 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-elasticsearch">Adapters - Elasticsearch<a class="headerlink" href="#adapters-elasticsearch" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Document Scanning</strong> - Added <code>scan()</code> to <code>ElasticsearchPort</code> and <code>async scan()</code> to <code>AsyncElasticsearchPort</code>, delegating to <code>elasticsearch.helpers.scan</code> and <code>elasticsearch.helpers.async_scan</code> for scroll-based iteration over large result sets without manual scroll lifecycle management.</li>
-<li><strong>Bulk Action Types</strong> - Added <code>ElasticsearchBulkActionType</code> and <code>ElasticsearchBulkResultType</code> aliases for helper-format bulk actions and <code>(success_count, error_count_or_error_list)</code> return tuples.</li>
+<li><strong>Document Scanning</strong> - Added <code>scan()</code> to <code>ElasticsearchPort</code> and <code>async scan()</code> to <code>AsyncElasticsearchPort</code>,
+  delegating to <code>elasticsearch.helpers.scan</code> and <code>elasticsearch.helpers.async_scan</code> for scroll-based iteration over
+  large result sets without manual scroll lifecycle management.</li>
+<li><strong>Bulk Action Types</strong> - Added <code>ElasticsearchBulkActionType</code> and <code>ElasticsearchBulkResultType</code> aliases for
+  helper-format bulk actions and <code>(success_count, error_count_or_error_list)</code> return tuples.</li>
 </ul>
 <h3 id="adapters-redis">Adapters - Redis<a class="headerlink" href="#adapters-redis" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>INCREX Window Counter</strong> - Added <code>increx</code> to <code>RedisPort</code> and <code>AsyncRedisPort</code> (and adapters/mocks), wrapping the Redis 8.8 <code>INCREX</code> command for atomic counter increments with optional bounds (<code>lbound</code>, <code>ubound</code>, <code>saturate</code>), expiration (<code>ex</code>, <code>px</code>, <code>exat</code>, <code>pxat</code>, <code>persist</code>, <code>enx</code>), and float or integer step sizes (<code>byfloat</code>, <code>byint</code>).</li>
+<li><strong>INCREX Window Counter</strong> - Added <code>increx</code> to <code>RedisPort</code> and <code>AsyncRedisPort</code> (and adapters/mocks), wrapping the
+  Redis 8.8 <code>INCREX</code> command for atomic counter increments with optional bounds (<code>lbound</code>, <code>ubound</code>, <code>saturate</code>),
+  expiration (<code>ex</code>, <code>px</code>, <code>exat</code>, <code>pxat</code>, <code>persist</code>, <code>enx</code>), and float or integer step sizes (<code>byfloat</code>, <code>byint</code>).</li>
 <li><strong>Array Data Structure</strong> - Added Redis 8.8 array commands to sync and async ports and adapters.<ul>
 <li><code>arset</code> to write contiguous values at a starting index.</li>
 <li><code>arget</code> to read a single index.</li>
@@ -3364,20 +3369,28 @@
 <li><code>arring</code> to append into a fixed-size ring buffer.</li>
 </ul>
 </li>
-<li><strong>Sorted Set Aggregators</strong> - Added <code>zunion</code> and <code>zinter</code> to sync and async ports and adapters, including support for the Redis 8.8 <code>COUNT</code> aggregator that scores members by the number of input sets containing them (or weighted sum when per-set weights are provided).</li>
-<li><strong>Runtime Configuration</strong> - Added <code>config_set</code> and <code>config_get</code> to sync and async ports and adapters for reading and updating Redis server parameters (for example <code>notify-keyspace-events</code> for keyspace and subkey notifications).</li>
+<li><strong>Sorted Set Aggregators</strong> - Added <code>zunion</code> and <code>zinter</code> to sync and async ports and adapters, including support for
+  the Redis 8.8 <code>COUNT</code> aggregator that scores members by the number of input sets containing them (or weighted sum when
+  per-set weights are provided).</li>
+<li><strong>Runtime Configuration</strong> - Added <code>config_set</code> and <code>config_get</code> to sync and async ports and adapters for reading and
+  updating Redis server parameters (for example <code>notify-keyspace-events</code> for keyspace and subkey notifications).</li>
 </ul>
 <h3 id="helpers-fastapi-rate-limit">Helpers - FastAPI Rate Limit<a class="headerlink" href="#helpers-fastapi-rate-limit" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Atomic Rate Limiting</strong> - <code>FastAPIRestRateLimitHandler</code> now uses Redis <code>INCREX</code> with <code>saturate=True</code>, <code>enx=True</code>, and millisecond expiry instead of separate <code>GET</code>/<code>SET</code>/<code>INCRBY</code>/<code>PTTL</code> calls, eliminating check-then-act races under concurrent requests.</li>
+<li><strong>Atomic Rate Limiting</strong> - <code>FastAPIRestRateLimitHandler</code> now uses Redis <code>INCREX</code> with <code>saturate=True</code>, <code>enx=True</code>, and
+  millisecond expiry instead of separate <code>GET</code>/<code>SET</code>/<code>INCRBY</code>/<code>PTTL</code> calls, eliminating check-then-act races under
+  concurrent requests.</li>
 </ul>
 <h2 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h2>
 <h3 id="adapters-elasticsearch_1">Adapters - Elasticsearch<a class="headerlink" href="#adapters-elasticsearch_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Bulk Helper Integration</strong> - <code>bulk()</code> and <code>async bulk()</code> now delegate to <code>elasticsearch.helpers.bulk</code> and <code>elasticsearch.helpers.async_bulk</code> instead of the low-level client <code>bulk</code> API.<ul>
-<li><code>actions</code> accepts any <code>Iterable[ElasticsearchBulkActionType]</code> (generators supported) instead of requiring a materialized <code>list[dict[str, Any]]</code>.</li>
+<li><strong>Bulk Helper Integration</strong> - <code>bulk()</code> and <code>async bulk()</code> now delegate to <code>elasticsearch.helpers.bulk</code> and
+  <code>elasticsearch.helpers.async_bulk</code> instead of the low-level client <code>bulk</code> API.<ul>
+<li><code>actions</code> accepts any <code>Iterable[ElasticsearchBulkActionType]</code> (generators supported) instead of requiring a
+  materialized <code>list[dict[str, Any]]</code>.</li>
 <li>Added <code>stats_only</code> parameter to return only success and error counts.</li>
-<li>Return type changed from <code>ElasticsearchResponseType</code> to <code>ElasticsearchBulkResultType</code> — a <code>(success_count, error_count_or_error_list)</code> tuple. Update callers that previously parsed the raw client response.</li>
+<li>Return type changed from <code>ElasticsearchResponseType</code> to <code>ElasticsearchBulkResultType</code> — a
+  <code>(success_count, error_count_or_error_list)</code> tuple. Update callers that previously parsed the raw client response.</li>
 <li>Failures raise <code>BulkIndexError</code> when <code>raise_on_error</code> is true (default helper behaviour).</li>
 </ul>
 </li>
@@ -3385,31 +3398,41 @@
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <h3 id="tests-elasticsearch-adapter">Tests - Elasticsearch Adapter<a class="headerlink" href="#tests-elasticsearch-adapter" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Bulk and Scan Scenarios</strong> - Added sync and async BDD scenarios for helper-format bulk operations (index, update, delete) and document scanning.</li>
+<li><strong>Bulk and Scan Scenarios</strong> - Added sync and async BDD scenarios for helper-format bulk operations (index, update,
+  delete) and document scanning.</li>
 <li><strong>Step Refactor</strong> - Updated Elasticsearch step definitions to assert helper bulk result tuples and scan hit counts.</li>
 </ul>
 <h3 id="tests-redis-adapter">Tests - Redis Adapter<a class="headerlink" href="#tests-redis-adapter" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Redis 8.8 Feature Coverage</strong> - Added BDD scenarios for array operations (<code>arset</code>, <code>arget</code>, <code>arlen</code>, <code>ardel</code>, <code>arring</code>), <code>INCREX</code> rate-limit semantics, <code>ZUNION</code>/<code>ZINTER</code> with <code>COUNT</code> aggregator, and hash subkey notifications via <code>config_set</code> + <code>PSUBSCRIBE</code>.</li>
-<li><strong>Sync and Async Parity</strong> - New scenarios cover mock, container, and cluster adapter types for sync paths; container and cluster for async paths where applicable.</li>
-<li><strong>Test Image</strong> - Bumped Redis test container image to <code>redis:8.8.0-alpine</code> in <code>.env.test</code> to exercise Redis 8.8 commands.</li>
+<li><strong>Redis 8.8 Feature Coverage</strong> - Added BDD scenarios for array operations (<code>arset</code>, <code>arget</code>, <code>arlen</code>, <code>ardel</code>,
+  <code>arring</code>), <code>INCREX</code> rate-limit semantics, <code>ZUNION</code>/<code>ZINTER</code> with <code>COUNT</code> aggregator, and hash subkey notifications via
+  <code>config_set</code> + <code>PSUBSCRIBE</code>.</li>
+<li><strong>Sync and Async Parity</strong> - New scenarios cover mock, container, and cluster adapter types for sync paths; container
+  and cluster for async paths where applicable.</li>
+<li><strong>Test Image</strong> - Bumped Redis test container image to <code>redis:8.8.0-alpine</code> in <code>.env.test</code> to exercise Redis 8.8
+  commands.</li>
 </ul>
 <h3 id="tests-fastapi-rate-limit">Tests - FastAPI Rate Limit<a class="headerlink" href="#tests-fastapi-rate-limit" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Rate Limit Feature Suite</strong> - Added <code>features/fastapi_rate_limit.feature</code> with scenarios for within-limit success, 429 rejection with <code>Retry-After</code>, window expiry reset, and per-client isolation using <code>X-Real-IP</code>.</li>
+<li><strong>Rate Limit Feature Suite</strong> - Added <code>features/fastapi_rate_limit.feature</code> with scenarios for within-limit success,
+  429 rejection with <code>Retry-After</code>, window expiry reset, and per-client isolation using <code>X-Real-IP</code>.</li>
 </ul>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <h3 id="tutorials-elasticsearch">Tutorials - Elasticsearch<a class="headerlink" href="#tutorials-elasticsearch" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Bulk and Scan Guides</strong> - Expanded the Elasticsearch adapter tutorial with helper-format bulk action generators, <code>stats_only</code> usage, <code>scan()</code> / <code>async scan()</code> examples, <code>BulkIndexError</code> troubleshooting, and performance guidance for batch writes and large result iteration.</li>
+<li><strong>Bulk and Scan Guides</strong> - Expanded the Elasticsearch adapter tutorial with helper-format bulk action generators,
+  <code>stats_only</code> usage, <code>scan()</code> / <code>async scan()</code> examples, <code>BulkIndexError</code> troubleshooting, and performance guidance for
+  batch writes and large result iteration.</li>
 </ul>
 <h3 id="tutorials-redis">Tutorials - Redis<a class="headerlink" href="#tutorials-redis" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>INCREX Window Counter</strong> - Added sync and async <code>increx()</code> examples, parameter reference, Redis 8.8 requirement, and cross-link to the FastAPI rate limiting guide.</li>
+<li><strong>INCREX Window Counter</strong> - Added sync and async <code>increx()</code> examples, parameter reference, Redis 8.8 requirement, and
+  cross-link to the FastAPI rate limiting guide.</li>
 </ul>
 <h3 id="tutorials-interceptors">Tutorials - Interceptors<a class="headerlink" href="#tutorials-interceptors" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>FastAPI Rate Limiting</strong> - Added a <code>FastAPIRestRateLimitHandler</code> dependency guide covering installation, <code>Depends</code> usage, <code>INCREX</code>-backed atomic limiting, client identification headers, and per-query-parameter buckets.</li>
+<li><strong>FastAPI Rate Limiting</strong> - Added a <code>FastAPIRestRateLimitHandler</code> dependency guide covering installation, <code>Depends</code>
+  usage, <code>INCREX</code>-backed atomic limiting, client identification headers, and per-query-parameter buckets.</li>
 </ul>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <ul>
