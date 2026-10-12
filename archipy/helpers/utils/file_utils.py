@@ -110,4 +110,6 @@ class FileUtils:
 
         file_path = Path(file_name)
         ext = file_path.suffix[1:].lower()
-        return ext in allowed_extensions and bool(ext)
+        # Compare case-insensitively and accept entries written as ".pdf" or "PDF"
+        normalized_allowed = {allowed.lstrip(".").lower() for allowed in allowed_extensions}
+        return bool(ext) and ext in normalized_allowed

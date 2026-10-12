@@ -164,3 +164,47 @@ def step_then_singleton_constructor_count(context, count):
 @then("the singleton instance value is {value:d}")
 def step_then_singleton_value(context, value):
     assert get_current_scenario_context(context).get("singleton_instances")[0].value == value
+
+
+@given("a singleton class whose constructor creates another singleton")
+def step_given_nested_singleton(context):
+    sc = get_current_scenario_context(context)
+    inner = _make_class("InnerSingleton", {"count": 0})
+
+    def init(self):
+        self.inner = inner()
+
+    sc.store("singleton_cls_other", inner)
+    sc.store("singleton_cls", Singleton("OuterSingleton", (), {"__init__": init}))
+
+
+@when("the outer singleton class is instantiated in a worker thread")
+def step_when_outer_instantiated_in_thread(context):
+    sc = get_current_scenario_context(context)
+    cls = sc.get("singleton_cls")
+    results = []
+    thread = threading.Thread(target=lambda: results.append(cls()), daemon=True)
+    thread.start()
+    thread.join(timeout=5)
+    sc.store("singleton_thread_finished", not thread.is_alive())
+    sc.store("singleton_instances", results)
+
+
+@then("the worker thread finished")
+def step_then_worker_finished(context):
+    assert get_current_scenario_context(context).get("singleton_thread_finished") is True
+
+
+@then("the inner singleton instance was created")
+def step_then_inner_created(context):
+    sc = get_current_scenario_context(context)
+    (outer,) = sc.get("singleton_instances")
+    assert outer.inner is sc.get("singleton_cls_other")()
+
+
+@given("a singleton class without thread safety and a slow constructor")
+def step_given_unsafe_singleton(context):
+    sc = get_current_scenario_context(context)
+    calls = {"count": 0}
+    sc.store("singleton_calls", calls)
+    sc.store("singleton_cls", _make_class("UnsafeSingleton", calls, slow=True, thread_safe=False))

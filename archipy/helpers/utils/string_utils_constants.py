@@ -67,8 +67,8 @@ class StringUtilsConstants:
     # replace "ܥ|ڍ|ڈ|ڊ|ﺪ|ﺩ|ډ" with "د"
     alphabet_dal_translate_table = str.maketrans(dict.fromkeys("\u0689\ufeaa\ufea9\u068a\u0688\u068d\u0725", "\u062f"))
 
-    # replace "ڌ|ڎ|ڏ|ڐ|ﺫ|ﺬ|ﻧ" with "ذ"
-    alphabet_zal_translate_table = str.maketrans(dict.fromkeys("\ufeab\ufeac\ufee7\u0690\u068f\u068e\u068c", "\u0630"))
+    # replace "ڌ|ڎ|ڏ|ڐ|ﺫ|ﺬ" with "ذ"
+    alphabet_zal_translate_table = str.maketrans(dict.fromkeys("\ufeab\ufeac\u0690\u068f\u068e\u068c", "\u0630"))
 
     # replace "ۯ|ڑ|ڒ|ړ|ڔ|ڕ|ږ|ڒ|ڑ|ڕ|ﺭ|ﺮ|ڗ" with "ر"
     alphabet_re_translate_table = str.maketrans(
@@ -111,11 +111,11 @@ class StringUtilsConstants:
 
     # replace "ڢ|ڣ|ڢ|ڣ|ڤ|ڦ|ڥ|ڡ|ﻒ|ﻑ|ﻔ|ﻓ" with "ف"
     alphabet_fe_translate_table = str.maketrans(
-        dict.fromkeys("\ufed2\ufed1\ufed4\ufed3\u06a1\u06a5\u06a6\u06a4\u0603\u06a3\u06a2", "\u0641"),
+        dict.fromkeys("\ufed2\ufed1\ufed4\ufed3\u06a1\u06a5\u06a6\u06a4\u06a3\u06a2", "\u0641"),
     )
 
-    # replace "؋|ڧ|ڨ|ﻕ|ﻖ|ﻗ|ﻘ" with "ق"
-    alphabet_ghaf_translate_table = str.maketrans(dict.fromkeys("\ufed5\ufed6\ufed7\u06a7\u06a8\u060b\ufed8", "\u0642"))
+    # replace "ڧ|ڨ|ﻕ|ﻖ|ﻗ|ﻘ" with "ق"
+    alphabet_ghaf_translate_table = str.maketrans(dict.fromkeys("\ufed5\ufed6\ufed7\u06a7\u06a8\ufed8", "\u0642"))
 
     # replace "ݿ|ڮ|ڬ|ݤ|ݣ|ݢ|ڭ|ﻚ|ﮎ|ﻜ|ﮏ|ګ|ﻛ|ﮑ|ﮐ|ڪ|ك|ﻙ" with "ک"
     alphabet_kaf_translate_table = str.maketrans(
@@ -139,9 +139,9 @@ class StringUtilsConstants:
     # replace "ݥ|ݦ|ﻡ|ﻤ|ﻢ|ﻣ" with "م"
     alphabet_mim_translate_table = str.maketrans(dict.fromkeys("\ufee1\ufee4\ufee2\ufee3\u0766\u0765", "\u0645"))
 
-    # replace "ڹ|ں|ڽ|ڻ|ݧ|ݨ|ݩ|ڼ|ﻦ|ﻥ|ﻨ" with "ن"
+    # replace "ڹ|ں|ڽ|ڻ|ݧ|ݨ|ݩ|ڼ|ﻦ|ﻥ|ﻧ|ﻨ" with "ن"
     alphabet_nun_translate_table = str.maketrans(
-        dict.fromkeys("\u06bc\ufee6\ufee5\ufee8\u0769\u0768\u0767\u06bb\u06bd\u06ba\u06b9", "\u0646"),
+        dict.fromkeys("\u06bc\ufee6\ufee5\ufee7\ufee8\u0769\u0768\u0767\u06bb\u06bd\u06ba\u06b9", "\u0646"),
     )
 
     # replace "ۄ|ۆ|ۊ|ވ|ﯙ|ۈ|ۋ|ﺆ|ۊ|ۇ|ۏ|ۅ|ۉ|ﻭ|ﻮ|ؤ" with "و"
@@ -176,17 +176,14 @@ class StringUtilsConstants:
         dict.fromkeys("\u2022\u00b7\u25cf\u0387\u30fb\u2219\uff61\u2d30", "\u002e"),
     )
 
-    # replace ',|٬|٫|‚|，' with '،'
-    punctuation_translate_table3 = str.maketrans(dict.fromkeys("\u002c\u066c\u066b\u201a\uff0c", "\u060c"))
+    # replace '٬|٫|‚|，' with '،' (the ASCII ',' is handled by ``ascii_punctuation_patterns``)
+    punctuation_translate_table3 = str.maketrans(dict.fromkeys("\u066c\u066b\u201a\uff0c", "\u060c"))
 
-    # replace 'ʕ | ? | ⁉ | � ' with '؟'
-    punctuation_translate_table4 = str.maketrans(dict.fromkeys("\u0295\u003f\u2049\ufffd", "\u061f"))
+    # replace 'ʕ | ⁉ | � ' with '؟' (the ASCII '?' is handled by ``ascii_punctuation_patterns``)
+    punctuation_translate_table4 = str.maketrans(dict.fromkeys("\u0295\u2049\ufffd", "\u061f"))
 
     # replace '‼ | ❕ ' with '!'
     punctuation_translate_table5 = str.maketrans(dict.fromkeys("\u203c\u2755", "\u0021"))
-
-    # replace '_ ' with 'ـ'
-    punctuation_translate_table6 = str.maketrans(dict.fromkeys("\u005f", "\u0640"))
 
     # replace ' － | ━ | − | ‐ | ‑ | – | — | ─ | − | ー | ⁃ (hyphen bullet : not supported by pycharm) |  ' with '-'
     punctuation_translate_table7 = str.maketrans(
@@ -199,11 +196,20 @@ class StringUtilsConstants:
     # replace '› | 》| ﴿ ' with '»'
     punctuation_translate_table9 = str.maketrans(dict.fromkeys("\u203a\u300b\ufd3f", "\u00bb"))
 
-    # replace ';' with '؛'
-    punctuation_translate_table10 = str.maketrans(dict.fromkeys("\u003b", "\u061b"))
-
-    # replace '%' with '٪'
-    punctuation_translate_table11 = str.maketrans(dict.fromkeys("\u0025", "\u066a"))
+    # ASCII ',', '?', ';', '%' and '_' also occur in numbers, URLs, e-mails and identifiers, so they are converted
+    # to their Persian forms only next to Persian text.
+    ascii_punctuation_patterns: list = compile_patterns(
+        [
+            (
+                r"(?<=[\u0600-\u06ff\ufb50-\ufdff\ufe70-\ufeff]),|,(?=\s*[\u0600-\u06ff\ufb50-\ufdff\ufe70-\ufeff])",
+                "\u060c",
+            ),
+            (r"(?<=[\u0600-\u06ff\ufb50-\ufdff\ufe70-\ufeff\u061f])\?", "\u061f"),
+            (r"(?<=[\u0600-\u06ff\ufb50-\ufdff\ufe70-\ufeff\u061b]);", "\u061b"),
+            (r"(?<=[\u0600-\u06ff\ufb50-\ufdff\ufe70-\ufeff])%", "\u066a"),
+            (r"(?<=[\u0600-\u06ff\ufb50-\ufdff\ufe70-\ufeff])_(?=[\u0600-\u06ff\ufb50-\ufdff\ufe70-\ufeff])", "\u0640"),
+        ],
+    )
 
     # replace "  ˈ | ‘ | ’ | “ | ”  " with " ' "
     punctuation_translate_table12 = str.maketrans(dict.fromkeys("\u02c8\u2018\u2019\u201c\u201d", "\u0027"))
@@ -227,7 +233,8 @@ class StringUtilsConstants:
             (f" ([{punctuation_after}])", r"\1"),
             (f"([{punctuation_before}]) ", r"\1"),
             (
-                f"([{punctuation_after[:3]}])([^ {punctuation_after}" + r"\d])",
+                # not after an ASCII word character, so "file.txt" and "example.com" stay intact
+                f"(?<![A-Za-z0-9])([{punctuation_after[:3]}])([^ {punctuation_after}" + r"\d])",
                 r"\1 \2",
             ),
             (
@@ -273,7 +280,7 @@ class StringUtilsConstants:
         dict.fromkeys(
             "\u002e\u003a\u0021\u060c\u061b\u061f\u00bb\u005d"
             "\u0029\u007d\u00ab\u005b\u0028\u007b\u002d\u0640\u066a\u0021\u0027\u0022\u0023"
-            "\u002b\u002f",
+            "\u002b\u002f\u002c\u003f\u003b\u0025\u005f",
             "\u0020",
         ),
     )

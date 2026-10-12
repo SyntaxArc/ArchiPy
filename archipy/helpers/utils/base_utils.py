@@ -118,9 +118,14 @@ class BaseUtils(ErrorUtils, DatetimeUtils, PasswordUtils, JWTUtils, TOTPUtils, F
                 national_code (str): The national code to validate.
 
             Raises:
-                InvalidNationalCodeError: If the length is not 10 digits.
+                InvalidNationalCodeError: If the code is not exactly 10 ASCII digits, or is a single repeated digit.
             """
             if not len(national_code) == IRANIAN_NATIONAL_CODE_LEN:
+                raise InvalidNationalCodeError(national_code)
+            if not (national_code.isascii() and national_code.isdigit()):
+                raise InvalidNationalCodeError(national_code)
+            # Codes made of one repeated digit satisfy the checksum but are not issued
+            if len(set(national_code)) == 1:
                 raise InvalidNationalCodeError(national_code)
 
         def _calculate_weighted_sum(national_code: str) -> int:

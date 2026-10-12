@@ -1,12 +1,13 @@
+import threading
 from datetime import UTC, date, datetime, timedelta
 from unittest.mock import patch
 
 from behave import given, then, when
 from behave.runner import Context
+from features.test_helpers import get_current_scenario_context
 
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers.utils.datetime_utils import DatetimeUtils
-from features.test_helpers import get_current_scenario_context
 
 
 @given('a naive datetime "{date_string}"')
@@ -336,3 +337,119 @@ def step_then_cached_with_standard_ttl(context: Context) -> None:
     assert (
         expected_expiry_range_start <= expiry_time <= expected_expiry_range_end
     ), f"Cache expiry time should be around {test_config.DATETIME.CACHE_TTL} seconds from now"
+
+
+@when('the string "{value}" is parsed with the format "{format_}"')
+def step_when_parse_with_format(context: Context, value, format_) -> None:
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("parsed", DatetimeUtils.get_datetime_from_string_datetime(value, format_))
+
+
+@then('the parsed datetime is "{expected}" in UTC')
+def step_then_parsed_is_utc(context: Context, expected) -> None:
+    parsed = get_current_scenario_context(context).get("parsed")
+    assert parsed.astimezone(UTC).isoformat() == expected, parsed.isoformat()
+
+
+@then("the parsed datetime keeps a UTC offset of {minutes:d} minutes")
+def step_then_parsed_offset(context: Context, minutes) -> None:
+    parsed = get_current_scenario_context(context).get("parsed")
+    assert parsed.utcoffset() == timedelta(minutes=minutes), parsed.utcoffset()
+
+
+@when('the date range from "{start}" to "{end}" is generated')
+def step_when_daterange(context: Context, start, end) -> None:
+    scenario_context = get_current_scenario_context(context)
+    dates = DatetimeUtils.daterange(datetime.fromisoformat(start), datetime.fromisoformat(end))
+    scenario_context.store("generated_dates", [d.isoformat() for d in dates])
+
+
+@then('the generated dates are "{expected}"')
+def step_then_generated_dates(context: Context, expected) -> None:
+    dates = get_current_scenario_context(context).get("generated_dates")
+    assert dates == ([] if expected == "none" else expected.split(",")), dates
+
+
+def _restore_cache(context: Context) -> None:
+    original = dict(DatetimeUtils._holiday_cache)
+    original_max = DatetimeUtils._HOLIDAY_CACHE_MAX_SIZE
+
+    def restore() -> None:
+        DatetimeUtils._holiday_cache.clear()
+        DatetimeUtils._holiday_cache.update(original)
+        DatetimeUtils._HOLIDAY_CACHE_MAX_SIZE = original_max
+
+    context.add_cleanup(restore)
+
+
+@given("an expired holiday cache entry")
+def step_given_expired_cache_entry(context: Context) -> None:
+    _restore_cache(context)
+    DatetimeUtils._holiday_cache.clear()
+    DatetimeUtils._holiday_cache["2000-01-01"] = (True, DatetimeUtils.get_datetime_utc_now() - timedelta(days=1))
+
+
+@when("{count:d} threads read the holiday cache at the same time")
+def step_when_threads_read_cache(context: Context, count) -> None:
+    scenario_context = get_current_scenario_context(context)
+    barrier = threading.Barrier(count)
+    errors: list[BaseException] = []
+
+    def worker() -> None:
+        barrier.wait()
+        try:
+            DatetimeUtils._check_cache("2000-01-01", DatetimeUtils.get_datetime_utc_now())
+        except BaseException as e:
+            errors.append(e)
+
+    threads = [threading.Thread(target=worker) for _ in range(count)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=5)
+    scenario_context.store("thread_errors", errors)
+
+
+@then("no thread raised an error")
+def step_then_no_thread_error(context: Context) -> None:
+    errors = get_current_scenario_context(context).get("thread_errors")
+    assert errors == [], errors
+
+
+@given("the holiday cache is limited to {size:d} entries")
+def step_given_cache_limit(context: Context, size) -> None:
+    _restore_cache(context)
+    DatetimeUtils._holiday_cache.clear()
+    DatetimeUtils._HOLIDAY_CACHE_MAX_SIZE = size
+
+
+@when("{count:d} holiday statuses are cached")
+def step_when_statuses_cached(context: Context, count) -> None:
+    now = DatetimeUtils.get_datetime_utc_now()
+    for index in range(count):
+        DatetimeUtils._store_in_cache(f"2030-01-{index + 1:02d}", False, now + timedelta(hours=1), now)
+    get_current_scenario_context(context).store("last_cached_key", f"2030-01-{count:02d}")
+
+
+@then("the holiday cache holds at most {size:d} entries")
+def step_then_cache_size(context: Context, size) -> None:
+    assert len(DatetimeUtils._holiday_cache) <= size, len(DatetimeUtils._holiday_cache)
+
+
+@then("the most recently cached holiday is still present")
+def step_then_latest_cached(context: Context) -> None:
+    assert get_current_scenario_context(context).get("last_cached_key") in DatetimeUtils._holiday_cache
+
+
+@when("we check the date while the API returns an invalid response")
+def step_when_invalid_api_response(context: Context) -> None:
+    scenario_context = get_current_scenario_context(context)
+    target_date = scenario_context.get("target_date")
+    _restore_cache(context)
+    DatetimeUtils._holiday_cache.clear()
+    with patch.object(DatetimeUtils, "_call_holiday_api", side_effect=ValueError("not json")):
+        try:
+            DatetimeUtils.is_holiday_in_iran(target_date)
+            scenario_context.store("error", None)
+        except Exception as e:
+            scenario_context.store("error", e)

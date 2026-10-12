@@ -28,3 +28,17 @@ Feature: File Utilities
       | notes.txt    | succeed         |
       | script.exe   | fail            |
       | archive.zip  | fail            |
+
+  Scenario Outline: Allowed extensions are matched regardless of case or leading dot
+    Given the allowed extensions are ".PDF, Png"
+    And a file name "<file_name>"
+    When the file name is validated against the allowed extensions
+    Then the validation should <expected_result>
+
+    Examples:
+      | file_name  | expected_result |
+      | report.pdf | succeed         |
+      | REPORT.PDF | succeed         |
+      | image.png  | succeed         |
+      | image.PNG  | succeed         |
+      | script.exe | fail            |

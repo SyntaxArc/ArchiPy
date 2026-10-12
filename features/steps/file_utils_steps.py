@@ -1,5 +1,6 @@
 from behave import given, then, when
 
+from archipy.configs.base_config import BaseConfig
 from archipy.helpers.utils.file_utils import FileUtils
 from archipy.models.errors import BaseError
 from features.test_helpers import get_current_scenario_context
@@ -73,3 +74,21 @@ def step_when_file_validated(context):
 
     is_valid = FileUtils.validate_file_name(file_name)
     scenario_context.store("is_valid", is_valid)
+
+
+@given('the allowed extensions are "{extensions}"')
+def step_given_allowed_extensions(context, extensions):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("allowed_extensions", [item.strip() for item in extensions.split(",")])
+
+
+@when("the file name is validated against the allowed extensions")
+def step_when_file_validated_against_extensions(context):
+    scenario_context = get_current_scenario_context(context)
+    file_config = BaseConfig.global_config().FILE.model_copy(
+        update={"ALLOWED_EXTENSIONS": scenario_context.get("allowed_extensions")},
+    )
+    scenario_context.store(
+        "is_valid",
+        FileUtils.validate_file_name(scenario_context.get("file_name"), file_config),
+    )

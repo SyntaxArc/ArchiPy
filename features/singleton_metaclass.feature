@@ -61,3 +61,14 @@ Feature: Singleton Metaclass
     When 8 threads instantiate the singleton class at the same time
     Then all threads received the same singleton instance
     And the singleton constructor ran 1 times
+
+  Scenario: A singleton constructor may create another singleton without deadlocking
+    Given a singleton class whose constructor creates another singleton
+    When the outer singleton class is instantiated in a worker thread
+    Then the worker thread finished
+    And the inner singleton instance was created
+
+  Scenario: A singleton without locking still hands every thread the same instance
+    Given a singleton class without thread safety and a slow constructor
+    When 8 threads instantiate the singleton class at the same time
+    Then all threads received the same singleton instance

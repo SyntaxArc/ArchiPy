@@ -78,3 +78,43 @@ Feature: Datetime Utilities
     Given a Gregorian date strictly after today
     When we check if the date is a holiday in Iran with cache verification
     Then the result should be cached with standard TTL
+
+  Scenario: A UTC offset parsed from a format is kept
+    When the string "2024-01-01 10:00 +0330" is parsed with the format "%Y-%m-%d %H:%M %z"
+    Then the parsed datetime is "2024-01-01T06:30:00+00:00" in UTC
+    And the parsed datetime keeps a UTC offset of 210 minutes
+
+  Scenario: A string without an offset is read as UTC
+    When the string "2024-01-01 10:00" is parsed with the format "%Y-%m-%d %H:%M"
+    Then the parsed datetime is "2024-01-01T10:00:00+00:00" in UTC
+
+  Scenario Outline: A date range counts calendar dates
+    When the date range from "<start>" to "<end>" is generated
+    Then the generated dates are "<dates>"
+
+    Examples:
+      | start               | end                 | dates                 |
+      | 2024-01-01T23:00:00 | 2024-01-02T01:00:00 | 2024-01-01            |
+      | 2024-01-01T10:00:00 | 2024-01-03T09:00:00 | 2024-01-01,2024-01-02 |
+      | 2024-01-01T00:00:00 | 2024-01-03T00:00:00 | 2024-01-01,2024-01-02 |
+      | 2024-01-01T10:00:00 | 2024-01-01T12:00:00 | none                  |
+
+  Scenario: A date range accepts a mix of naive and aware datetimes
+    When the date range from "2024-01-01T00:00:00" to "2024-01-03T00:00:00+00:00" is generated
+    Then the generated dates are "2024-01-01,2024-01-02"
+
+  Scenario: Concurrent reads of an expired holiday cache entry do not fail
+    Given an expired holiday cache entry
+    When 8 threads read the holiday cache at the same time
+    Then no thread raised an error
+
+  Scenario: The holiday cache stays within its size limit
+    Given the holiday cache is limited to 3 entries
+    When 10 holiday statuses are cached
+    Then the holiday cache holds at most 3 entries
+    And the most recently cached holiday is still present
+
+  Scenario: A holiday API response that is not valid JSON raises an error
+    Given a Gregorian date "2031-05-05"
+    When we check the date while the API returns an invalid response
+    Then an error should be raised

@@ -17,7 +17,8 @@ class Singleton(type):
 
     Attributes:
         _instances (dict): A dictionary to store instances of Singleton classes.
-        _lock (threading.Lock): A lock to ensure thread-safe instance creation.
+        _lock (threading.RLock): A reentrant lock to ensure thread-safe instance creation; a singleton whose
+            constructor creates another singleton does not deadlock.
 
     Example:
         To create a Singleton class, use the `Singleton` metaclass and optionally specify
@@ -41,7 +42,7 @@ class Singleton(type):
     """
 
     _instances: ClassVar[dict[type, SingletonInstance]] = {}  # Stores instances of Singleton classes
-    _lock: ClassVar[threading.Lock] = threading.Lock()  # Lock for thread-safe instance creation
+    _lock: ClassVar[threading.RLock] = threading.RLock()  # Lock for thread-safe instance creation
 
     def __new__(
         cls,
@@ -89,5 +90,6 @@ class Singleton(type):
                     if cls not in cls._instances:
                         cls._instances[cls] = super().__call__(*args, **kwargs)
             else:
-                cls._instances[cls] = super().__call__(*args, **kwargs)
+                # Two racing threads may both construct, but every caller receives the first stored instance
+                cls._instances.setdefault(cls, super().__call__(*args, **kwargs))
         return cls._instances[cls]

@@ -74,23 +74,25 @@ class StringUtils(StringUtilsConstants):
     def normalize_punctuation(cls, text: str) -> str:
         """Normalizes punctuation marks in the text.
 
+        ASCII ``,``, ``?``, ``;``, ``%`` and ``_`` are converted to their Persian forms only next to Persian text, so
+        numbers (``1,000``), URLs, e-mails and identifiers are left intact.
+
         Args:
             text (str): The input text containing punctuation marks.
 
         Returns:
             str: The text with punctuation marks normalized.
         """
+        for pattern, repl in cls.ascii_punctuation_patterns:
+            text = pattern.sub(repl, text)
         text = text.translate(cls.punctuation_translate_table1)
         text = text.translate(cls.punctuation_translate_table2)
         text = text.translate(cls.punctuation_translate_table3)
         text = text.translate(cls.punctuation_translate_table4)
         text = text.translate(cls.punctuation_translate_table5)
-        text = text.translate(cls.punctuation_translate_table6)
         text = text.translate(cls.punctuation_translate_table7)
         text = text.translate(cls.punctuation_translate_table8)
         text = text.translate(cls.punctuation_translate_table9)
-        text = text.translate(cls.punctuation_translate_table10)
-        text = text.translate(cls.punctuation_translate_table11)
         text = text.translate(cls.punctuation_translate_table12)
         return text.translate(cls.punctuation_translate_table13)
 
@@ -116,16 +118,19 @@ class StringUtils(StringUtilsConstants):
         return text.translate(cls.number_nine_translate_table)
 
     @classmethod
-    def clean_spacing(cls, text: str) -> str:
+    def clean_spacing(cls, text: str, *, keep_zwnj: bool = False) -> str:
         """Cleans up spacing issues in the text, such as non-breaking spaces and zero-width non-joiners.
 
         Args:
             text (str): The input text with spacing issues.
+            keep_zwnj (bool): Keep zero-width non-joiners, which Persian words such as "می‌خواهم" need. When
+                `False` (the default) they are turned into spaces.
 
         Returns:
             str: The text with spacing cleaned up.
         """
-        text = text.replace("\u200c", " ")  # ZWNJ
+        if not keep_zwnj:
+            text = text.replace("\u200c", " ")  # ZWNJ
         text = text.replace("\xa0", " ")  # NBSP
 
         for pattern, repl in cls.character_refinement_patterns:
@@ -268,9 +273,9 @@ class StringUtils(StringUtilsConstants):
             value (int): The number to format.
 
         Returns:
-            str: The formatted number with thousand separators.
+            str: The formatted number with thousand separators. Non-integer values are returned as `str(value)`.
         """
-        return f"{value:,}" if isinstance(value, int) else value
+        return f"{value:,}" if isinstance(value, int) else str(value)
 
     @classmethod
     def remove_emoji(cls, text: str) -> str:
@@ -300,17 +305,17 @@ class StringUtils(StringUtilsConstants):
 
     @classmethod
     def replace_currencies_with_mask(cls, text: str, mask: str | None = None) -> str:
-        """Masks currency symbols and amounts in the text.
+        """Masks currency symbols in the text (the amounts next to them are not masked).
 
         Args:
-            text (str): The input text containing currency symbols and amounts.
-            mask (str | None): The mask to replace currencies with. Defaults to "MASK_CURRENCIES".
+            text (str): The input text containing currency symbols.
+            mask (str | None): The mask to replace currency symbols with. Defaults to "MASK_CURRENCIES".
 
         Returns:
-            str: The text with currency symbols and amounts masked.
+            str: The text with currency symbols masked.
         """
         mask = mask or "MASK_CURRENCIES"
-        currency_pattern = re_compile(r"(\\|zł|£|\$|₡|₦|¥|₩|₪|₫|€|₱|₲|₴|₹|﷼)+")
+        currency_pattern = re_compile(r"(zł|£|\$|₡|₦|¥|₩|₪|₫|€|₱|₲|₴|₹|﷼)+")
         return currency_pattern.sub(f" {mask} ", text)
 
     @classmethod
@@ -325,20 +330,15 @@ class StringUtils(StringUtilsConstants):
             str: The text with numbers masked.
         """
         mask = mask or "MASK_NUMBERS"
-        work_text = str(text)
-        numbers: list[str] = re.findall("[0-9]+", work_text)
-        replacement = f" {mask} "
-        for raw_number in sorted(numbers, key=len, reverse=True):
-            number = str(raw_number)
-            work_text = re.sub(re.escape(number), replacement, work_text)
-        return work_text
+        # A single pass, so a mask that itself contains digits (e.g. "NUM1") is never rewritten
+        return re.sub("[0-9]+", lambda _: f" {mask} ", str(text))
 
     @classmethod
-    def is_string_none_or_empty(cls, text: str) -> bool:
+    def is_string_none_or_empty(cls, text: str | None) -> bool:
         """Checks if a string is `None` or empty (after stripping whitespace).
 
         Args:
-            text (str): The input string to check.
+            text (str | None): The input string to check.
 
         Returns:
             bool: `True` if the string is `None` or empty, `False` otherwise.
@@ -421,6 +421,7 @@ class StringUtils(StringUtilsConstants):
         clean_spacing: bool = True,
         remove_punctuation: bool = False,
         normalize_punctuation_spacing: bool = False,
+        keep_zwnj: bool = False,
     ) -> str:
         """Normalizes Persian text with configurable options.
 
@@ -445,6 +446,8 @@ class StringUtils(StringUtilsConstants):
             remove_punctuation (bool): Whether to remove punctuation marks. Defaults to `False`.
             normalize_punctuation_spacing (bool): Whether to apply proper spacing around
                 punctuation marks. Defaults to `False`.
+            keep_zwnj (bool): Whether to keep zero-width non-joiners when cleaning spacing instead of turning them
+                into spaces. Defaults to `False`.
 
         Returns:
             str: The normalized text.
@@ -479,7 +482,7 @@ class StringUtils(StringUtilsConstants):
         )
 
         if clean_spacing:
-            text = cls.clean_spacing(text)
+            text = cls.clean_spacing(text, keep_zwnj=keep_zwnj)
         if normalize_punctuation_spacing:
             text = cls.normalize_punctuation_spacing(text)
 
@@ -500,7 +503,7 @@ class StringUtils(StringUtilsConstants):
 
         components = text.split("_")
         # First component remains lowercase, the rest get capitalized
-        return components[0] + "".join(x.title() for x in components[1:])
+        return components[0] + "".join(x[:1].upper() + x[1:] for x in components[1:])
 
     @classmethod
     def camel_to_snake_case(cls, text: str) -> str:

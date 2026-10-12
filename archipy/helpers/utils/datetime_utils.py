@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -26,6 +27,8 @@ class DatetimeUtils:
 
     """A class-level cache for storing holiday statuses to avoid redundant API calls."""
     _holiday_cache: ClassVar[dict[str, tuple[bool, datetime]]] = {}
+    _holiday_cache_lock: ClassVar[threading.Lock] = threading.Lock()
+    _HOLIDAY_CACHE_MAX_SIZE: ClassVar[int] = 4096
 
     @staticmethod
     def convert_to_jalali(target_date: date) -> jdatetime.date:
@@ -76,16 +79,28 @@ class DatetimeUtils:
             tuple[bool, bool]: A tuple where the first element indicates if the cache was hit,
                                and the second element is the cached holiday status.
         """
-        cached_data = cls._holiday_cache.get(date_str)
-        if cached_data:
-            is_holiday, expiry_time = cached_data
-            if current_time < expiry_time:
-                return True, is_holiday
+        with cls._holiday_cache_lock:
+            cached_data = cls._holiday_cache.get(date_str)
+            if cached_data:
+                is_holiday, expiry_time = cached_data
+                if current_time < expiry_time:
+                    return True, is_holiday
 
-            # Remove expired cache entry
-            del cls._holiday_cache[date_str]
+                # Remove expired cache entry
+                cls._holiday_cache.pop(date_str, None)
 
         return False, False
+
+    @classmethod
+    def _store_in_cache(cls, date_str: str, is_holiday: bool, expiry_time: datetime, current_time: datetime) -> None:
+        """Stores a holiday status in the cache, evicting expired (then oldest) entries when the cache is full."""
+        with cls._holiday_cache_lock:
+            if date_str not in cls._holiday_cache and len(cls._holiday_cache) >= cls._HOLIDAY_CACHE_MAX_SIZE:
+                for key in [k for k, (_, expiry) in cls._holiday_cache.items() if expiry <= current_time]:
+                    cls._holiday_cache.pop(key, None)
+                while len(cls._holiday_cache) >= cls._HOLIDAY_CACHE_MAX_SIZE:
+                    cls._holiday_cache.pop(next(iter(cls._holiday_cache)), None)
+            cls._holiday_cache[date_str] = (is_holiday, expiry_time)
 
     @classmethod
     def _fetch_and_cache_holiday_status(
@@ -109,7 +124,7 @@ class DatetimeUtils:
             bool: True if the date is a holiday, False otherwise.
 
         Raises:
-            UnknownError: If the API request fails due to a network issue or other request-related errors.
+            UnknownError: If the API request fails due to a network issue, or its response is not valid JSON.
         """
         try:
             config: Any = BaseConfig.global_config()
@@ -123,8 +138,8 @@ class DatetimeUtils:
 
             # Cache the result with appropriate expiration
             expiry_time = current_time + timedelta(seconds=cache_ttl)
-            cls._holiday_cache[date_str] = (is_holiday, expiry_time)
-        except httpx2.HTTPError as exception:
+            cls._store_in_cache(date_str, is_holiday, expiry_time, current_time)
+        except (httpx2.HTTPError, ValueError) as exception:
             raise UnknownError from exception
 
         return is_holiday
@@ -146,7 +161,8 @@ class DatetimeUtils:
         config: Any = BaseConfig.global_config()
         transport = httpx2.HTTPTransport(retries=config.DATETIME.MAX_RETRIES)
         url = DatetimeUtils._build_api_url(jalali_date)
-        headers = {"x-api-key": config.DATETIME.TIME_IR_API_KEY}
+        api_key = config.DATETIME.TIME_IR_API_KEY
+        headers = {"x-api-key": api_key} if api_key else {}
         with httpx2.Client(transport=transport, timeout=config.DATETIME.REQUEST_TIMEOUT) as client:
             response = client.get(url, headers=headers)
             response.raise_for_status()
@@ -214,8 +230,11 @@ class DatetimeUtils:
         Yields:
             date: Each date in the range.
         """
-        for n in range((end_date - start_date).days):
-            yield (start_date + timedelta(n)).date()
+        # Compare calendar dates (naive values are read as UTC) so a range that crosses midnight is not skipped.
+        first_day = cls.ensure_timezone_aware(start_date).date()
+        last_day = cls.ensure_timezone_aware(end_date).date()
+        for n in range((last_day - first_day).days):
+            yield first_day + timedelta(n)
 
     @classmethod
     def get_string_datetime_from_datetime(cls, dt: datetime, format_: str | None = None) -> str:
@@ -253,16 +272,11 @@ class DatetimeUtils:
             format_ (str | None): The format string. If None, uses ISO 8601.
 
         Returns:
-            datetime: The parsed datetime object with UTC timezone.
+            datetime: The parsed timezone-aware datetime. Strings without an offset are read as UTC.
         """
-        # Parse using a single expression and immediately make timezone-aware for both cases
-        dt = (
-            datetime.fromisoformat(date_string)
-            if format_ is None
-            else datetime.strptime(date_string, format_).replace(tzinfo=UTC)
-        )
+        dt = datetime.fromisoformat(date_string) if format_ is None else datetime.strptime(date_string, format_)
 
-        # Handle the fromisoformat case which might already have timezone info
+        # Values without an offset are read as UTC; an offset parsed from the string (e.g. ``%z``) is kept
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=UTC)
 
@@ -327,7 +341,7 @@ class DatetimeUtils:
         Returns:
             datetime: The resulting datetime after subtraction.
         """
-        datetime_given = datetime_given or cls.get_datetime_now()
+        datetime_given = cls.get_datetime_now() if datetime_given is None else datetime_given
         return datetime_given - timedelta(weeks=weeks, days=days, hours=hours, minutes=minutes, seconds=seconds)
 
     @classmethod
@@ -353,5 +367,5 @@ class DatetimeUtils:
         Returns:
             datetime: The resulting datetime after addition.
         """
-        datetime_given = datetime_given or cls.get_datetime_now()
+        datetime_given = cls.get_datetime_now() if datetime_given is None else datetime_given
         return datetime_given + timedelta(weeks=weeks, days=days, hours=hours, minutes=minutes, seconds=seconds)

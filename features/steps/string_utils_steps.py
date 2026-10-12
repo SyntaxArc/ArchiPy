@@ -22,7 +22,7 @@ def step_when_arabic_vowels_removed(context):
 def step_then_resulting_text_should_be(context, expected_text):
     scenario_context = get_current_scenario_context(context)
     result_text = scenario_context.get("result_text")
-    assert result_text == expected_text
+    assert result_text == expected_text.replace("<ZWNJ>", "\u200c")
 
 
 @given('a text with unnormalized Persian characters "{text}"')
@@ -140,7 +140,7 @@ def step_when_text_is_normalized(context):
 @given('a text with spacing issues "{text}"')
 def step_given_text_with_spacing_issues(context, text):
     scenario_context = get_current_scenario_context(context)
-    scenario_context.store("test_text", text)
+    scenario_context.store("test_text", text.replace("<ZWNJ>", "\u200c"))
 
 
 @when("the spacing is cleaned")
@@ -233,3 +233,41 @@ def step_when_emojis_removed(context):
     test_text = scenario_context.get("test_text")
     result_text = StringUtils.remove_emoji(test_text)
     scenario_context.store("result_text", result_text)
+
+
+@when("the spacing is cleaned keeping zero-width non-joiners")
+def step_when_spacing_cleaned_keep_zwnj(context):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("result_text", StringUtils.clean_spacing(scenario_context.get("test_text"), keep_zwnj=True))
+
+
+@when('numbers are replaced with the mask "{mask}"')
+def step_when_numbers_replaced_with_custom_mask(context, mask):
+    scenario_context = get_current_scenario_context(context)
+    result = StringUtils.normalize_persian_text(scenario_context.get("test_text"), mask_all_numbers=True, number_mask=mask)
+    scenario_context.store("result_text", result)
+
+
+@given('a text "{text}"')
+def step_given_plain_text(context, text):
+    get_current_scenario_context(context).store("test_text", text)
+
+
+@when("punctuation spacing is applied")
+def step_when_punctuation_spacing(context):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("result_text", StringUtils.normalize_punctuation_spacing(scenario_context.get("test_text")))
+
+
+@when("it is converted to camel case")
+def step_when_camel_case(context):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("result_text", StringUtils.snake_to_camel_case(scenario_context.get("test_text")))
+
+
+@when("the value is formatted with thousand separators")
+def step_when_thousand_separators(context):
+    scenario_context = get_current_scenario_context(context)
+    text = scenario_context.get("test_text")
+    value = int(text) if text.isdigit() else text
+    scenario_context.store("result_text", StringUtils.convert_add_3digit_delimiter(value))

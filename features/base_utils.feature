@@ -41,3 +41,15 @@ Feature: Base Utilities
     Given an invalid national code "1234567890"
     When the national code validation is attempted
     Then an error message "فرمت کد ملی وارد شده اشتباه است: ۱۲۳۴۵۶۷۸۹۰" should be raised
+
+  Scenario Outline: Malformed or repeated-digit national codes are rejected
+    Given an invalid national code "<code>"
+    When the national code is validated
+    Then the validation should fail
+
+    Examples:
+      | code       |
+      | 12345abcde |
+      | 0000000000 |
+      | 1111111111 |
+      | ۱۲۳۴۵۶۷۸۹۱ |
