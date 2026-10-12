@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.10.0](5.10.0.md) | 2026-10-12 | Decorators drop the `_decorator` suffix and detect async (old names deprecated); **breaking:** email send errors, Keycloak expired tokens and Saman 5xx now raise specific errors |
 | [5.9.0](5.9.0.md) | 2026-10-11 | Opt-in FastAPI OTel logs; gRPC `rpc.server.active_requests`; **breaking:** `rpc.server.duration` → `rpc.server.request.duration` |
 | [5.8.0](5.8.0.md) | 2026-10-10 | Adapters ship as per-extra packages (`archipy[redis]` → `archipy-redis`); async extras no longer pull sync drivers               |
 | [5.7.1](5.7.1.md) | 2026-10-03 | Test container images bumped; dependency floors raised to locked versions                                                        |
