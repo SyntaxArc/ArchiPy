@@ -976,6 +976,176 @@ Feature: Keycloak Authentication Testing
     Given no keycloak utils auth context is set
     Then the keycloak utils auth context is cleared
 
+  # --- KeycloakUtils gRPC decorators: stub-only scenarios ---
+  # Response streams, handler-initiated aborts, hidden failure causes and metadata parsing need no Keycloak server,
+  # so the token validation is scripted through a stub adapter.
+  Scenario Outline: Utils gRPC response-stream handler keeps the auth context while streaming
+    Given a keycloak utils stub adapter is installed
+    And the keycloak utils stub accepts token "good-token" for user "user-1" with realm roles "reader"
+    And the keycloak utils grpc auth requires any of roles "reader"
+    And the keycloak utils grpc handler is a response stream
+    When the keycloak utils <mode> grpc handler is invoked with bearer token "good-token"
+    Then the keycloak utils grpc handler ran with user "user-1" and roles "reader"
+    And the keycloak utils grpc handler returned "a,b"
+    And the keycloak utils auth context is cleared
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Utils gRPC response-stream handler rejects a missing token
+    Given a keycloak utils stub adapter is installed
+    And the keycloak utils grpc handler is a response stream
+    When the keycloak utils <mode> grpc handler is invoked without metadata on a plain context
+    Then the keycloak utils call fails with error code "UNAUTHENTICATED"
+    And the keycloak utils grpc handler did not run
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Utils gRPC handler abort is not rewritten as an internal error
+    Given a keycloak utils stub adapter is installed
+    And the keycloak utils stub accepts token "good-token" for user "user-1" with realm roles "reader"
+    And the keycloak utils grpc auth requires any of roles "reader"
+    And the keycloak utils grpc handler aborts the servicer context itself
+    When the keycloak utils <mode> grpc handler is invoked with bearer token "good-token"
+    Then the keycloak utils servicer context was aborted exactly once with status "RESOURCE_EXHAUSTED"
+    And the keycloak utils auth context is cleared
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario: Utils sync gRPC handler hides the cause of unexpected failures
+    Given a keycloak utils stub adapter is installed
+    And the keycloak utils stub accepts token "good-token" for user "user-1" with realm roles "reader"
+    And the keycloak utils grpc auth requires any of roles "reader"
+    And the keycloak utils grpc handler crashes with a runtime failure
+    When the keycloak utils sync grpc handler is invoked with bearer token "good-token" on a plain context
+    Then the keycloak utils call fails with error code "INTERNAL_ERROR"
+    And the keycloak utils error should not expose "boom"
+
+  Scenario Outline: Utils lookups are not cached unless a TTL is configured
+    Given a keycloak utils stub adapter is installed
+    And the keycloak utils stub accepts token "good-token" for user "user-1" with realm roles "reader"
+    And the keycloak utils fastapi auth requires any of roles "reader"
+    When the keycloak utils <mode> fastapi dependency is called with token "good-token"
+    And the keycloak utils stub revokes userinfo for token "good-token"
+    And the keycloak utils <mode> fastapi dependency is called with token "good-token"
+    Then the keycloak utils call fails with error code "UNAUTHENTICATED"
+    And the keycloak utils stub served 2 "userinfo" lookups
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Utils userinfo lookups are cached for the configured TTL
+    Given a keycloak utils stub adapter is installed
+    And the keycloak utils stub caches remote lookups for 60 seconds
+    And the keycloak utils stub accepts token "good-token" for user "user-1" with realm roles "reader"
+    And the keycloak utils fastapi auth requires any of roles "reader"
+    When the keycloak utils <mode> fastapi dependency is called with token "good-token"
+    And the keycloak utils stub revokes userinfo for token "good-token"
+    And the keycloak utils <mode> fastapi dependency is called with token "good-token"
+    Then the keycloak utils dependency returns user info with subject "user-1"
+    And the keycloak utils stub served 1 "userinfo" lookups
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Utils cached lookups are looked up again after the TTL
+    Given a keycloak utils stub adapter is installed
+    And the keycloak utils stub caches remote lookups for 60 seconds
+    And the keycloak utils stub accepts token "good-token" for user "user-1" with realm roles "reader"
+    And the keycloak utils fastapi auth requires any of roles "reader"
+    When the keycloak utils <mode> fastapi dependency is called with token "good-token"
+    And the keycloak utils stub revokes userinfo for token "good-token"
+    And the keycloak utils cached lookups expire
+    And the keycloak utils <mode> fastapi dependency is called with token "good-token"
+    Then the keycloak utils call fails with error code "UNAUTHENTICATED"
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Utils cached lookups are kept apart per token
+    Given a keycloak utils stub adapter is installed
+    And the keycloak utils stub caches remote lookups for 60 seconds
+    And the keycloak utils stub accepts token "token-a" for user "user-a" with realm roles "reader"
+    And the keycloak utils stub accepts token "token-b" for user "user-b" with realm roles "reader"
+    And the keycloak utils fastapi auth requires any of roles "reader"
+    When the keycloak utils <mode> fastapi dependency is called with token "token-a"
+    And the keycloak utils <mode> fastapi dependency is called with token "token-b"
+    Then the keycloak utils dependency returns user info with subject "user-b"
+    And the keycloak utils stub served 2 "userinfo" lookups
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Utils permission lookups are cached for the configured TTL
+    Given a keycloak utils stub adapter is installed
+    And the keycloak utils stub caches remote lookups for 60 seconds
+    And the keycloak utils stub accepts token "good-token" for user "user-1" with realm roles "reader"
+    And the keycloak utils stub grants permission "doc#read" to token "good-token"
+    And the keycloak utils fastapi auth requires permissions "doc#read"
+    When the keycloak utils <mode> fastapi dependency is called with token "good-token"
+    And the keycloak utils stub revokes permission "doc#read" from token "good-token"
+    And the keycloak utils <mode> fastapi dependency is called with token "good-token"
+    Then the keycloak utils dependency returns user info with subject "user-1"
+    And the keycloak utils stub served 1 "permissions" lookups
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Utils gRPC handler reads the bearer scheme case-insensitively
+    Given a keycloak utils stub adapter is installed
+    And the keycloak utils stub accepts token "good-token" for user "user-1" with realm roles "reader"
+    And the keycloak utils grpc auth requires any of roles "reader"
+    When the keycloak utils <mode> grpc handler is invoked with metadata key "authorization" value "BEARER good-token"
+    Then the keycloak utils grpc handler ran with user "user-1" and roles "reader"
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Utils gRPC handler rejects an empty bearer credential
+    Given a keycloak utils stub adapter is installed
+    And the keycloak utils grpc auth requires any of roles "reader"
+    When the keycloak utils <mode> grpc handler is invoked with metadata key "authorization" value "Bearer "
+    Then the keycloak utils servicer context was aborted with status "UNAUTHENTICATED"
+    And the keycloak utils grpc handler did not run
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Utils gRPC handler rejects conflicting authorization headers
+    Given a keycloak utils stub adapter is installed
+    And the keycloak utils stub accepts token "good-token" for user "user-1" with realm roles "reader"
+    And the keycloak utils grpc auth requires any of roles "reader"
+    When the keycloak utils <mode> grpc handler is invoked with duplicate bearer tokens "good-token" and "other-token"
+    Then the keycloak utils servicer context was aborted with status "UNAUTHENTICATED"
+    And the keycloak utils grpc handler did not run
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
   # --- KeycloakUtils auth dependencies: stub-only scenarios ---
   # A real Keycloak cannot be made to return an empty userinfo or empty token claims for a token that it just
   # issued and that passed validation, so these two server responses are scripted through a stub adapter.

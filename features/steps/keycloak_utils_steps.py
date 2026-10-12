@@ -65,6 +65,42 @@ _FakeSyncServicerContext.__abstractmethods__ = frozenset()
 _FakeAsyncServicerContext.__abstractmethods__ = frozenset()
 
 
+class _RealisticSyncServicerContext(_FakeSyncServicerContext):
+    """Aborts like grpc's real sync context: record the status, then raise a bare ``Exception``."""
+
+    def __init__(self, metadata):
+        super().__init__(metadata)
+        self.abort_calls = 0
+        self._code = None
+
+    def code(self):
+        return self._code
+
+    def abort(self, code, details):
+        self.abort_calls += 1
+        self._code = self.abort_code = code
+        self.abort_message = details
+        raise Exception  # noqa: TRY002 - this is what grpc does
+
+
+class _RealisticAsyncServicerContext(_FakeAsyncServicerContext):
+    """Aborts like grpc's real aio context: raise ``grpc.aio.AbortError`` once the status is recorded."""
+
+    def __init__(self, metadata):
+        super().__init__(metadata)
+        self.abort_calls = 0
+
+    async def abort(self, code, details, trailing_metadata=()):
+        self.abort_calls += 1
+        self.abort_code = code
+        self.abort_message = details
+        raise grpc.aio.AbortError("Locally aborted.")
+
+
+_RealisticSyncServicerContext.__abstractmethods__ = frozenset()
+_RealisticAsyncServicerContext.__abstractmethods__ = frozenset()
+
+
 class _PlainContext:
     """Not a gRPC servicer context: only exposes metadata."""
 
@@ -78,8 +114,9 @@ class _PlainContext:
 class _StubKeycloak:
     """Scripted Keycloak adapter boundary (sync)."""
 
-    def __init__(self, tokens):
+    def __init__(self, tokens, calls=None):
         self.tokens = tokens
+        self.calls = calls if calls is not None else {}
         self.configs = SimpleNamespace(CLIENT_ID=CLIENT_ID)
 
     def validate_token(self, token):
@@ -89,9 +126,11 @@ class _StubKeycloak:
         return self.tokens.get(token, {}).get("token_info")
 
     def get_userinfo(self, token):
+        self.calls["userinfo"] = self.calls.get("userinfo", 0) + 1
         return self.tokens.get(token, {}).get("userinfo")
 
     def check_permissions_batch(self, token, permissions):
+        self.calls["permissions"] = self.calls.get("permissions", 0) + 1
         granted = self.tokens.get(token, {}).get("granted", set())
         return {p for p in permissions if p in granted}
 
@@ -187,8 +226,13 @@ def step_keycloak_utils_install_stub(context):
     tokens = {}
     sc.store("tokens", tokens)
     sc.store("stub_installed", True)
-    sync_stub = _StubKeycloak(tokens)
-    async_stub = _AsyncStubKeycloak(tokens)
+    calls = {}
+    sync_stub = _StubKeycloak(tokens, calls)
+    async_stub = _AsyncStubKeycloak(tokens, calls)
+    sc.store("stubs", (sync_stub, async_stub))
+    sc.store("stub_calls", calls)
+    keycloak_utils.clear_keycloak_remote_cache()
+    context.add_cleanup(keycloak_utils.clear_keycloak_remote_cache)
     for name, stub in (("_shared_sync_adapter", sync_stub), ("_shared_async_adapter", async_stub)):
         patcher = patch.object(keycloak_utils, name, lambda stub=stub: stub)
         patcher.start()
@@ -220,6 +264,40 @@ def step_keycloak_utils_no_token_info(context, token):
 @given('the keycloak utils stub has no userinfo for token "{token}"')
 def step_keycloak_utils_no_userinfo(context, token):
     _ctx(context).get("tokens")[token]["userinfo"] = {}
+
+
+@given("the keycloak utils stub caches remote lookups for {seconds:g} seconds")
+def step_keycloak_utils_stub_cache_ttl(context, seconds):
+    for stub in _ctx(context).get("stubs"):
+        stub.configs.REMOTE_CACHE_TTL_SECONDS = seconds
+
+
+@given('the keycloak utils stub grants permission "{perm}" to token "{token}"')
+def step_keycloak_utils_stub_grants(context, perm, token):
+    _ctx(context).get("tokens")[token]["granted"].add(tuple(perm.split("#")))
+
+
+@when('the keycloak utils stub revokes userinfo for token "{token}"')
+def step_keycloak_utils_stub_revokes_userinfo(context, token):
+    _ctx(context).get("tokens")[token]["userinfo"] = {}
+
+
+@when('the keycloak utils stub revokes permission "{perm}" from token "{token}"')
+def step_keycloak_utils_stub_revokes_permission(context, perm, token):
+    _ctx(context).get("tokens")[token]["granted"].discard(tuple(perm.split("#")))
+
+
+@when("the keycloak utils cached lookups expire")
+def step_keycloak_utils_cache_expires(context):
+    with keycloak_utils._remote_cache_lock:
+        for key, (_, value) in list(keycloak_utils._remote_cache.items()):
+            keycloak_utils._remote_cache[key] = (0.0, value)
+
+
+@then('the keycloak utils stub served {count:d} "{kind}" lookups')
+def step_keycloak_utils_lookup_count(context, count, kind):
+    actual = _ctx(context).get("stub_calls").get(kind, 0)
+    assert actual == count, f"Expected {count} {kind} lookups, got {actual}"
 
 
 @given('the keycloak utils {surface} auth requires any of roles "{roles}"')
@@ -329,6 +407,33 @@ def step_keycloak_utils_grpc_resource_attr(context, attr):
     _auth_kwargs(_ctx(context)).update(resource_attribute_name=attr)
 
 
+@given("the keycloak utils grpc handler is a response stream")
+def step_keycloak_utils_grpc_stream(context):
+    _ctx(context).store("handler_stream", True)
+
+
+@given("the keycloak utils grpc handler aborts the servicer context itself")
+def step_keycloak_utils_grpc_handler_aborts(context):
+    _ctx(context).store("handler_aborts", True)
+
+
+@then('the keycloak utils servicer context was aborted exactly once with status "{status}"')
+def step_keycloak_utils_aborted_once(context, status):
+    sc = _ctx(context)
+    assert sc.get("aborted"), f"context not aborted, error={sc.get('error')!r}"
+    grpc_context = sc.get("grpc_context")
+    assert grpc_context.abort_calls == 1, f"expected one abort, got {grpc_context.abort_calls}"
+    assert grpc_context.abort_code == getattr(grpc.StatusCode, status)
+
+
+@then('the keycloak utils error should not expose "{text}"')
+def step_keycloak_utils_error_hides(context, text):
+    error = _ctx(context).get("error")
+    assert error is not None, "expected an error but the call succeeded"
+    exposed = f"{error.additional_data} {error.get_message()}"
+    assert text not in exposed, f"the error exposed {text!r}: {exposed}"
+
+
 @given("the keycloak utils grpc handler crashes with a runtime failure")
 def step_keycloak_utils_grpc_crash(context):
     _ctx(context).store("handler_crash", True)
@@ -341,11 +446,30 @@ def _make_handler(sc):
         _record(calls)
         if sc.get("handler_crash"):
             raise RuntimeError("boom")
+        if sc.get("handler_aborts"):
+            ctx.abort(grpc.StatusCode.RESOURCE_EXHAUSTED, "slow down")
         return "handled"
 
     async def async_handler(self, request, ctx):
-        return handler(self, request, ctx)
+        _record(calls)
+        if sc.get("handler_crash"):
+            raise RuntimeError("boom")
+        if sc.get("handler_aborts"):
+            await ctx.abort(grpc.StatusCode.RESOURCE_EXHAUSTED, "slow down")
+        return "handled"
 
+    def stream_handler(self, request, ctx):
+        _record(calls)
+        yield "a"
+        yield "b"
+
+    async def async_stream_handler(self, request, ctx):
+        _record(calls)
+        yield "a"
+        yield "b"
+
+    if sc.get("handler_stream"):
+        return stream_handler, async_stream_handler
     return handler, async_handler
 
 
@@ -358,26 +482,37 @@ async def _invoke_grpc(context, mode, metadata, plain=False):
     sc = _ctx(context)
     handler, async_handler = _make_handler(sc)
     kwargs = dict(_auth_kwargs(sc))
+    realistic = bool(sc.get("handler_aborts"))
     if plain:
         grpc_context = _PlainContext(metadata)
     elif mode == "sync":
-        grpc_context = _FakeSyncServicerContext(metadata)
+        grpc_context = (_RealisticSyncServicerContext if realistic else _FakeSyncServicerContext)(metadata)
     else:
-        grpc_context = _FakeAsyncServicerContext(metadata)
+        grpc_context = (_RealisticAsyncServicerContext if realistic else _FakeAsyncServicerContext)(metadata)
     sc.store("grpc_context", grpc_context)
     request = SimpleNamespace(**_request_attrs(sc))
+    streaming = bool(sc.get("handler_stream"))
     try:
         with _adapters_for_call(sc):
             if mode == "sync":
                 wrapped = KeycloakUtils.grpc_auth(**kwargs)(handler)
                 result = wrapped(object(), request, grpc_context)
+                if streaming:
+                    result = ",".join(result)
             else:
                 wrapped = KeycloakUtils.async_grpc_auth(**kwargs)(async_handler)
-                result = await wrapped(object(), request, grpc_context)
+                if streaming:
+                    result = ",".join([item async for item in wrapped(object(), request, grpc_context)])
+                else:
+                    result = await wrapped(object(), request, grpc_context)
         sc.store("handler_result", result)
     except BaseError as error:
         sc.store("error", error)
     except _Aborted:
+        sc.store("aborted", True)
+    except Exception as error:
+        if not (realistic and (type(error) is Exception or isinstance(error, grpc.aio.AbortError))):
+            raise
         sc.store("aborted", True)
 
 
@@ -394,6 +529,11 @@ async def step_keycloak_utils_grpc_bearer_plain(context, mode, token):
 @when('the keycloak utils {mode} grpc handler is invoked with metadata key "{key}" value "{value}"')
 async def step_keycloak_utils_grpc_metadata(context, mode, key, value):
     await _invoke_grpc(context, mode, ((key, value),))
+
+
+@when('the keycloak utils {mode} grpc handler is invoked with duplicate bearer tokens "{first}" and "{second}"')
+async def step_keycloak_utils_grpc_duplicate_tokens(context, mode, first, second):
+    await _invoke_grpc(context, mode, (("authorization", f"Bearer {first}"), ("authorization", f"Bearer {second}")))
 
 
 @when("the keycloak utils {mode} grpc handler is invoked without metadata")
@@ -557,7 +697,13 @@ def step_keycloak_utils_uma_setup(context, client, resource, scopes, scope, role
     policy_name = f"{resource}-{role}-policy"
     adapter.create_client_authz_role_based_policy(
         internal_id,
-        {"name": policy_name, "type": "role", "logic": "POSITIVE", "decisionStrategy": "UNANIMOUS", "roles": [{"id": role_id}]},
+        {
+            "name": policy_name,
+            "type": "role",
+            "logic": "POSITIVE",
+            "decisionStrategy": "UNANIMOUS",
+            "roles": [{"id": role_id}],
+        },
         skip_exists=True,
     )
     policy_id = next(p["id"] for p in admin.get_client_authz_policies(internal_id) if p["name"] == policy_name)
@@ -642,7 +788,9 @@ def step_keycloak_utils_grpc_ran_as(context, username, roles):
     assert not set(_split(roles)) - set(auth.roles), auth.roles
 
 
-@when('the keycloak utils {mode} grpc handler is invoked with the bearer access token of user "{username}" on a plain context')
+@when(
+    'the keycloak utils {mode} grpc handler is invoked with the bearer access token of user "{username}" on a plain context',
+)
 async def step_keycloak_utils_grpc_user_bearer_plain(context, mode, username):
     sc = _ctx(context)
     await _invoke_grpc(context, mode, (("authorization", f"Bearer {_access_token(sc, username)}"),), plain=True)

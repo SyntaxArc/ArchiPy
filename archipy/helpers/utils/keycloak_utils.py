@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import functools
+import hashlib
+import inspect
 import logging
+import threading
+import time
 from contextvars import ContextVar
 from functools import cache
 from typing import TYPE_CHECKING, Any, NoReturn
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 
 from fastapi import Depends, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -42,6 +46,99 @@ logger = logging.getLogger(__name__)
 
 # Guard against pathological nested ``act`` claims.
 _MAX_ACTOR_DEPTH = 8
+
+_REMOTE_CACHE_MAX_SIZE = 1024
+_remote_cache: dict[tuple[Any, ...], tuple[float, Any]] = {}
+_remote_cache_lock = threading.Lock()
+
+
+def _remote_cache_ttl(keycloak: KeycloakAdapter | AsyncKeycloakAdapter) -> float:
+    """Return the configured remote-lookup cache TTL in seconds (0 means disabled)."""
+    return float(getattr(keycloak.configs, "REMOTE_CACHE_TTL_SECONDS", 0) or 0)
+
+
+def _remote_cache_key(
+    keycloak: KeycloakAdapter | AsyncKeycloakAdapter,
+    operation: str,
+    token_str: str,
+    extra: object = None,
+) -> tuple[Any, ...]:
+    """Build a cache key from a token digest so raw tokens are never kept as keys."""
+    digest = hashlib.sha256(token_str.encode()).hexdigest()
+    return (id(keycloak.configs), operation, digest, extra)
+
+
+def _remote_cache_get(key: tuple[Any, ...]) -> tuple[bool, Any]:
+    """Return ``(hit, value)`` for a non-expired entry; expired entries are dropped."""
+    with _remote_cache_lock:
+        entry = _remote_cache.get(key)
+        if entry is None:
+            return False, None
+        expires_at, value = entry
+        if time.monotonic() >= expires_at:
+            _remote_cache.pop(key, None)
+            return False, None
+        return True, value
+
+
+def _remote_cache_set(key: tuple[Any, ...], value: object, ttl: float) -> None:
+    """Store a value, evicting expired and then oldest entries when the cache is full."""
+    now = time.monotonic()
+    with _remote_cache_lock:
+        if key not in _remote_cache and len(_remote_cache) >= _REMOTE_CACHE_MAX_SIZE:
+            for stale in [k for k, (expires_at, _) in _remote_cache.items() if expires_at <= now]:
+                _remote_cache.pop(stale, None)
+            while len(_remote_cache) >= _REMOTE_CACHE_MAX_SIZE:
+                _remote_cache.pop(next(iter(_remote_cache)), None)
+        _remote_cache[key] = (now + ttl, value)
+
+
+def clear_keycloak_remote_cache() -> None:
+    """Drop every cached UserInfo / permission lookup (useful in tests or after a revocation event)."""
+    with _remote_cache_lock:
+        _remote_cache.clear()
+
+
+def _cached_sync_lookup(
+    keycloak: KeycloakAdapter,
+    operation: str,
+    token_str: str,
+    extra: object,
+    fetch: Callable[[], Any],
+) -> Any:  # noqa: ANN401
+    """Run a remote Keycloak lookup through the opt-in TTL cache; only truthy results are cached."""
+    ttl = _remote_cache_ttl(keycloak)
+    if ttl <= 0:
+        return fetch()
+    key = _remote_cache_key(keycloak, operation, token_str, extra)
+    hit, value = _remote_cache_get(key)
+    if hit:
+        return value
+    value = fetch()
+    if value:
+        _remote_cache_set(key, value, ttl)
+    return value
+
+
+async def _cached_async_lookup(
+    keycloak: AsyncKeycloakAdapter,
+    operation: str,
+    token_str: str,
+    extra: object,
+    fetch: Callable[[], Awaitable[Any]],
+) -> Any:  # noqa: ANN401
+    """Async variant of :func:`_cached_sync_lookup`."""
+    ttl = _remote_cache_ttl(keycloak)
+    if ttl <= 0:
+        return await fetch()
+    key = _remote_cache_key(keycloak, operation, token_str, extra)
+    hit, value = _remote_cache_get(key)
+    if hit:
+        return value
+    value = await fetch()
+    if value:
+        _remote_cache_set(key, value, ttl)
+    return value
 
 
 def _raise_unauthenticated(lang: LanguageType) -> NoReturn:
@@ -80,6 +177,134 @@ async def _abort_grpc_async_if_servicer_context(error: BaseError, context: objec
         return
     if isinstance(context, AsyncServicerContext):
         await error.abort_grpc_async(context)
+
+
+try:
+    from grpc import StatusCode as _GrpcStatusCode
+    from grpc.aio import AbortError as _GrpcAioAbortError
+
+    _AIO_ABORT_ERRORS: tuple[type[BaseException], ...] = (_GrpcAioAbortError,)
+except ImportError:
+    _GrpcStatusCode = None
+    _AIO_ABORT_ERRORS = ()
+
+
+def _is_sync_context_abort(error: Exception, context: object) -> bool:
+    """Tell whether ``error`` is the bare exception that ``context.abort()`` raises on a sync servicer context.
+
+    Such an exception already carries a deliberate status (set by the handler or an inner decorator) and must
+    pass through instead of being rewritten as an internal error.
+    """
+    code_getter = getattr(context, "code", None)
+    if type(error) is not Exception or not callable(code_getter):
+        return False
+    return code_getter() not in {None, getattr(_GrpcStatusCode, "OK", None)}
+
+
+def _raise_sync_failure(error: Exception, context: object, lang: LanguageType) -> NoReturn:
+    """Abort the sync gRPC call for ``error`` and raise; unexpected failures are hidden behind an internal error."""
+    if _is_sync_context_abort(error, context):
+        raise error
+    if isinstance(error, BaseError):
+        _abort_grpc_sync_if_servicer_context(error, context)
+        raise error
+    logger.error("Unexpected failure in gRPC handler", exc_info=error)
+    # Internal details stay in the log; the client only sees a generic error.
+    raise InternalError(lang=lang) from error
+
+
+async def _abort_async_failure(error: Exception, context: object, lang: LanguageType) -> None:
+    """Abort the async gRPC call for ``error``; re-raise when the context cannot be aborted."""
+    if isinstance(error, _AIO_ABORT_ERRORS):
+        raise error
+    if context is None:
+        raise error
+    if isinstance(error, BaseError) and GRPC_AVAILABLE and isinstance(context, AsyncServicerContext):
+        await _abort_grpc_async_if_servicer_context(error, context)
+        return
+    if GRPC_AVAILABLE and isinstance(context, AsyncServicerContext):
+        logger.error("Unexpected failure in gRPC handler", exc_info=error)
+        await _abort_grpc_async_if_servicer_context(InternalError(lang=lang), context)
+        return
+    raise error
+
+
+def _wrap_sync_grpc_handler(
+    func: Callable,
+    authorize: Callable[[object, object], None],
+    lang: LanguageType,
+) -> Callable:
+    """Wrap a sync servicer method so ``authorize`` runs first and the auth context lives for the whole call.
+
+    Generator handlers (response streams) keep the auth context set while the stream is consumed.
+    """
+    if inspect.isgeneratorfunction(func):
+
+        @functools.wraps(func)
+        def stream_wrapper(self: object, request: object, context: object) -> Iterator[object]:
+            try:
+                authorize(request, context)
+                yield from func(self, request, context)
+            # Translated to a typed gRPC failure; never swallowed.
+            except Exception as error:  # noqa: BLE001
+                _raise_sync_failure(error, context, lang)
+            finally:
+                AuthContextManager.clear_auth_context()
+
+        return stream_wrapper
+
+    @functools.wraps(func)
+    def wrapper(self: object, request: object, context: object) -> object:
+        try:
+            authorize(request, context)
+            return func(self, request, context)
+        # Translated to a typed gRPC failure; never swallowed.
+        except Exception as error:  # noqa: BLE001
+            _raise_sync_failure(error, context, lang)
+        finally:
+            AuthContextManager.clear_auth_context()
+
+    return wrapper
+
+
+def _wrap_async_grpc_handler(
+    func: Callable,
+    authorize: Callable[[object, object], Awaitable[None]],
+    lang: LanguageType,
+) -> Callable:
+    """Wrap an async servicer method so ``authorize`` runs first and the auth context lives for the whole call.
+
+    Async-generator handlers (response streams) are iterated, not awaited, and keep the auth context set.
+    """
+    if inspect.isasyncgenfunction(func):
+
+        @functools.wraps(func)
+        async def stream_wrapper(self: object, request: object, context: object) -> AsyncIterator[object]:
+            try:
+                await authorize(request, context)
+                async for item in func(self, request, context):
+                    yield item
+            # Translated to a typed gRPC failure; never swallowed.
+            except Exception as error:  # noqa: BLE001
+                await _abort_async_failure(error, context, lang)
+            finally:
+                AuthContextManager.clear_auth_context()
+
+        return stream_wrapper
+
+    @functools.wraps(func)
+    async def wrapper(self: object, request: object, context: object) -> object:
+        try:
+            await authorize(request, context)
+            return await func(self, request, context)
+        # Translated to a typed gRPC failure; never swallowed.
+        except Exception as error:  # noqa: BLE001
+            await _abort_async_failure(error, context, lang)
+            return None  # the abort ends the call; this satisfies the type checker
+        finally:
+            AuthContextManager.clear_auth_context()
+
+    return wrapper
 
 
 def _extract_roles(user_info: dict[str, Any], client_id: str | None) -> set[str]:
@@ -152,7 +377,13 @@ def _authorize_sync(
     if not token_info:
         raise TokenExpiredError(lang=lang)
 
-    user_info = keycloak.get_userinfo(token_str)
+    user_info = _cached_sync_lookup(
+        keycloak,
+        "userinfo",
+        token_str,
+        None,
+        lambda: keycloak.get_userinfo(token_str),
+    )
     if not user_info:
         raise UnauthenticatedError(lang=lang)
 
@@ -172,7 +403,13 @@ def _authorize_sync(
             )
 
     if required_permissions:
-        granted = keycloak.check_permissions_batch(token_str, required_permissions)
+        granted = _cached_sync_lookup(
+            keycloak,
+            "permissions",
+            token_str,
+            frozenset(required_permissions),
+            lambda: keycloak.check_permissions_batch(token_str, required_permissions),
+        )
         missing = set(required_permissions) - granted
         if missing:
             raise PermissionDeniedError(
@@ -202,7 +439,13 @@ async def _authorize_async(
     if not token_info:
         raise TokenExpiredError(lang=lang)
 
-    user_info = await keycloak.get_userinfo(token_str)
+    user_info = await _cached_async_lookup(
+        keycloak,
+        "userinfo",
+        token_str,
+        None,
+        lambda: keycloak.get_userinfo(token_str),
+    )
     if not user_info:
         raise UnauthenticatedError(lang=lang)
 
@@ -222,7 +465,13 @@ async def _authorize_async(
             )
 
     if required_permissions:
-        granted = await keycloak.check_permissions_batch(token_str, required_permissions)
+        granted = await _cached_async_lookup(
+            keycloak,
+            "permissions",
+            token_str,
+            frozenset(required_permissions),
+            lambda: keycloak.check_permissions_batch(token_str, required_permissions),
+        )
         missing = set(required_permissions) - granted
         if missing:
             raise PermissionDeniedError(
@@ -457,31 +706,28 @@ class KeycloakUtils:
         invocation_metadata_result = get_metadata()
         if invocation_metadata_result is None:
             return None
-        # Convert metadata tuples to dict, handling both str and bytes keys
-        # invocation_metadata_result is an iterable of tuples at runtime
-        metadata: dict[str, str] = {}
+        # Keep every value per key: a repeated header is ambiguous and must not silently pick one of them.
+        metadata: dict[str, set[str]] = {}
         try:
             for key, value in invocation_metadata_result:
-                # Normalize key to string
-                key_str = key.decode("utf-8") if isinstance(key, bytes) else str(key)
-                # Normalize value to string
+                key_str = (key.decode("utf-8") if isinstance(key, bytes) else str(key)).lower()
                 value_str = value.decode("utf-8") if isinstance(value, bytes) else str(value)
-                metadata[key_str] = value_str
+                metadata.setdefault(key_str, set()).add(value_str)
         except TypeError, ValueError:
             # If iteration fails, return None
             return None
 
-        auth_keys = ["authorization", "Authorization", "auth", "token"]
-
-        for key in auth_keys:
-            if key in metadata:
-                auth_value = metadata[key]
-                # Handle both bytes and string values
-                auth_value_str = auth_value.decode("utf-8") if isinstance(auth_value, bytes) else str(auth_value)
-
-                if auth_value_str.startswith(("Bearer ", "bearer ")):
-                    return auth_value_str[7:]
-                return auth_value_str
+        for key in ("authorization", "auth", "token"):
+            values = metadata.get(key)
+            if not values:
+                continue
+            if len(values) > 1:
+                return None
+            auth_value = next(iter(values))
+            scheme, _, credentials = auth_value.partition(" ")
+            if scheme.lower() == "bearer":
+                return credentials.strip() or None
+            return auth_value
 
         return None
 
@@ -516,52 +762,35 @@ class KeycloakUtils:
             Decorated function with authentication and authorization
         """
 
+        def authorize(request: object, context: object) -> None:
+            token_str = cls._extract_token_from_metadata(context)
+            if not token_str:
+                _raise_unauthenticated(lang)
+
+            keycloak = cls._get_keycloak_adapter()
+
+            resource_uuid: str | None = None
+            if resource_attribute_name:
+                resource_uuid = getattr(request, resource_attribute_name, None)
+                if not resource_uuid:
+                    _raise_invalid_argument(resource_attribute_name, lang)
+
+            user_info, token_info, user_roles = _authorize_sync(
+                keycloak,
+                token_str,
+                resource_uuid,
+                required_roles,
+                all_roles_required,
+                required_permissions,
+                admin_roles,
+                lang,
+            )
+
+            auth_context = _build_auth_context(user_info, token_str, user_roles, token_info)
+            AuthContextManager.set_auth_context(auth_context)
+
         def decorator(func: Callable) -> Callable:
-            @functools.wraps(func)
-            def wrapper(self: object, request: object, context: object) -> object:
-                try:
-                    token_str = cls._extract_token_from_metadata(context)
-                    if not token_str:
-                        _raise_unauthenticated(lang)
-
-                    keycloak = cls._get_keycloak_adapter()
-
-                    resource_uuid: str | None = None
-                    if resource_attribute_name:
-                        resource_uuid = getattr(request, resource_attribute_name, None)
-                        if not resource_uuid:
-                            _raise_invalid_argument(resource_attribute_name, lang)
-
-                    user_info, token_info, user_roles = _authorize_sync(
-                        keycloak,
-                        token_str,
-                        resource_uuid,
-                        required_roles,
-                        all_roles_required,
-                        required_permissions,
-                        admin_roles,
-                        lang,
-                    )
-
-                    auth_context = _build_auth_context(user_info, token_str, user_roles, token_info)
-                    AuthContextManager.set_auth_context(auth_context)
-
-                    return func(self, request, context)
-
-                # Re-raised as a domain error (or the original) so callers see a typed failure.
-                except Exception as e:
-                    if isinstance(e, BaseError):
-                        _abort_grpc_sync_if_servicer_context(e, context)
-                        raise
-                    raise InternalError(
-                        lang=lang,
-                        additional_data={"original_error": str(e), "error_type": type(e).__name__},
-                    ) from e
-
-                finally:
-                    AuthContextManager.clear_auth_context()
-
-            return wrapper
+            return _wrap_sync_grpc_handler(func, authorize, lang)
 
         return decorator
 
@@ -596,58 +825,34 @@ class KeycloakUtils:
             Decorated function with authentication and authorization
         """
 
+        async def authorize(request: object, context: object) -> None:
+            token_str = cls._extract_token_from_metadata(context)
+            if not token_str:
+                _raise_unauthenticated(lang)
+
+            keycloak = cls._get_async_keycloak_adapter()
+
+            resource_uuid: str | None = None
+            if resource_attribute_name:
+                resource_uuid = getattr(request, resource_attribute_name, None)
+                if not resource_uuid:
+                    _raise_invalid_argument(resource_attribute_name, lang)
+
+            user_info, token_info, user_roles = await _authorize_async(
+                keycloak,
+                token_str,
+                resource_uuid,
+                required_roles,
+                all_roles_required,
+                required_permissions,
+                admin_roles,
+                lang,
+            )
+
+            auth_context = _build_auth_context(user_info, token_str, user_roles, token_info)
+            AuthContextManager.set_auth_context(auth_context)
+
         def decorator(func: Callable) -> Callable:
-            @functools.wraps(func)
-            async def wrapper(self: object, request: object, context: object) -> object:
-                try:
-                    token_str = cls._extract_token_from_metadata(context)
-                    if not token_str:
-                        _raise_unauthenticated(lang)
-
-                    keycloak = cls._get_async_keycloak_adapter()
-
-                    resource_uuid: str | None = None
-                    if resource_attribute_name:
-                        resource_uuid = getattr(request, resource_attribute_name, None)
-                        if not resource_uuid:
-                            _raise_invalid_argument(resource_attribute_name, lang)
-
-                    user_info, token_info, user_roles = await _authorize_async(
-                        keycloak,
-                        token_str,
-                        resource_uuid,
-                        required_roles,
-                        all_roles_required,
-                        required_permissions,
-                        admin_roles,
-                        lang,
-                    )
-
-                    auth_context = _build_auth_context(user_info, token_str, user_roles, token_info)
-                    AuthContextManager.set_auth_context(auth_context)
-
-                    return await func(self, request, context)
-
-                # Re-raised as a domain error (or the original) so callers see a typed failure.
-                except Exception as e:
-                    grpc_ctx = context
-                    if grpc_ctx is None:
-                        raise
-                    if isinstance(e, BaseError) and GRPC_AVAILABLE and isinstance(grpc_ctx, AsyncServicerContext):
-                        await _abort_grpc_async_if_servicer_context(e, grpc_ctx)
-                        return None  # abort_grpc_async will terminate, but satisfy type checker
-                    if GRPC_AVAILABLE and isinstance(grpc_ctx, AsyncServicerContext):
-                        error_instance = InternalError(
-                            lang=lang,
-                            additional_data={"original_error": str(e), "error_type": type(e).__name__},
-                        )
-                        await _abort_grpc_async_if_servicer_context(error_instance, grpc_ctx)
-                        return None  # abort_grpc_async will terminate, but satisfy type checker
-                    raise
-
-                finally:
-                    AuthContextManager.clear_auth_context()
-
-            return wrapper
+            return _wrap_async_grpc_handler(func, authorize, lang)
 
         return decorator
