@@ -406,6 +406,100 @@ Feature: OpenTelemetry decorators
       | mode  |
       | async |
 
+  Scenario Outline: A deliberate abort keeps its status through the exception interceptor
+    Given a <mode> gRPC server using the <stack> interceptor stack
+    When a unary RPC that aborts with RESOURCE_EXHAUSTED is invoked
+    Then the gRPC unary call should fail with status RESOURCE_EXHAUSTED
+
+    Examples: Sync interceptor stacks
+      | mode | stack     |
+      | sync | exception |
+      | sync | full      |
+
+    @async
+    Examples: Async interceptor stacks
+      | mode  | stack     |
+      | async | exception |
+      | async | full      |
+
+  Scenario Outline: A handled client error is recorded as ok with its gRPC status code
+    Given a <mode> gRPC server using the full interceptor stack
+    When a unary RPC that aborts with RESOURCE_EXHAUSTED is invoked
+    Then a histogram metric named "rpc.server.request.duration" should have status "ok"
+    And a histogram metric named "rpc.server.request.duration" should have gRPC status code "RESOURCE_EXHAUSTED"
+
+    Examples: Sync interceptor stack
+      | mode |
+      | sync |
+
+    @async
+    Examples: Async interceptor stack
+      | mode  |
+      | async |
+
+  Scenario Outline: Unexpected handler errors do not expose internals to the client
+    Given a <mode> gRPC server using the <stack> interceptor stack
+    When a unary RPC that crashes unexpectedly is invoked
+    Then the gRPC unary call should fail with status INTERNAL
+    And the gRPC unary failure should not expose "secret internal failure"
+    And the gRPC unary failure should not expose "original_error"
+
+    Examples: Sync interceptor stacks
+      | mode | stack     |
+      | sync | exception |
+      | sync | full      |
+
+    @async
+    Examples: Async interceptor stacks
+      | mode  | stack     |
+      | async | exception |
+      | async | full      |
+
+  Scenario Outline: A crashed call is recorded as an internal error
+    Given a <mode> gRPC server using the full interceptor stack
+    When a unary RPC that crashes unexpectedly is invoked
+    Then a histogram metric named "rpc.server.request.duration" should have status "error"
+    And a histogram metric named "rpc.server.request.duration" should have gRPC status code "INTERNAL"
+
+    Examples: Sync interceptor stack
+      | mode |
+      | sync |
+
+    @async
+    Examples: Async interceptor stack
+      | mode  |
+      | async |
+
+  @async
+  Scenario: An async call cancelled by the client is recorded as cancelled
+    Given a async gRPC server using the metrics interceptor stack
+    When the client cancels an RPC while the server handler is running
+    Then a histogram metric named "rpc.server.request.duration" should have status "cancelled"
+
+  Scenario Outline: A server-streaming call cancelled by the client is recorded as cancelled
+    Given a <mode> gRPC server using the metrics interceptor stack
+    When the client cancels a server-streaming RPC after the first message
+    Then a histogram metric named "rpc.server.request.duration" should have status "cancelled"
+    And an up-down counter metric named "rpc.server.active_requests" should net to 0 with datapoints
+
+    Examples: Interceptor modes
+      | mode |
+      | sync |
+
+    @async
+    Examples: Interceptor modes
+      | mode  |
+      | async |
+
+  Scenario: A sync stream on an already terminated RPC leaves no active request behind
+    When a sync response stream is intercepted for an RPC that already terminated
+    Then an up-down counter metric named "rpc.server.active_requests" should net to 0 with datapoints
+    And a histogram metric named "rpc.server.request.duration" should have status "cancelled"
+
+  Scenario: RPC instruments are created once under concurrent first use
+    When 16 threads request the RPC instruments at the same time
+    Then every thread should receive the same RPC instruments
+
   Scenario: metrics-only gRPC records RPC duration without span
     Given OpenTelemetry metrics-only mode for testing
     When I call an instrumented gRPC TestMethod
@@ -478,6 +572,28 @@ Feature: OpenTelemetry decorators
     And I wait for a Pushgateway push attempt
     Then the OpenTelemetry meter provider should be available
     And the metrics registry should be available
+
+  Scenario: metrics pushgateway sends a last push on shutdown when it keeps its group
+    Given OpenTelemetry is configured for pushgateway metrics with a stub gateway that keeps its group on shutdown
+    When I initialize OpenTelemetry providers from config
+    And I wait for a Pushgateway push
+    And I note the number of Pushgateway pushes
+    And I shut down OpenTelemetry providers
+    Then the Pushgateway should have received another push
+    And the Pushgateway should not have received a delete
+
+  Scenario: A failed OpenTelemetry initialization is not retried straight away
+    When OpenTelemetry provider construction fails and initialization is requested twice in a row
+    Then provider construction should have been attempted 1 time
+
+  Scenario: A failed OpenTelemetry initialization is retried once the back-off has passed
+    When OpenTelemetry provider construction fails and initialization is requested again after the back-off
+    Then provider construction should have been attempted 2 times
+
+  Scenario: Shut down providers are tracked without being kept alive
+    When a provider is marked as shut down and then dropped
+    Then the provider should have been reported as unusable while alive
+    And the shut down provider registry should no longer hold it
 
   Scenario: Temporal connect attaches TracingInterceptor and resolved metrics endpoint
     When I connect a Temporal adapter with OTel enabled using a mocked Client

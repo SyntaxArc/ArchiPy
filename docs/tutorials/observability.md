@@ -291,7 +291,9 @@ interceptors when OTel is enabled (requires `archipy[otel-grpc]` for traces):
 - **Metrics** — ArchiPy `rpc.server.request.duration` histogram (seconds, same buckets as FastAPI's
   `http.server.request.duration`) and `rpc.server.active_requests` up-down counter (in-flight calls,
   like `http.server.active_requests`) when `METRICS_ENABLED` (works in metrics-only mode; no handler decorators
-  required)
+  required). The duration histogram carries a `status` attribute (`ok`, `error` or `cancelled`) and the
+  `rpc.grpc.status_code` the call finished with. Handled caller errors (for example `NOT_FOUND` or
+  `RESOURCE_EXHAUSTED`) count as `ok`, and a call cancelled by the client or by its deadline counts as `cancelled`.
 
 Order becomes: OTel traces (if any) → OTel metrics (if any) → exception interceptor
 → rate-limit (if enabled) → custom interceptors.

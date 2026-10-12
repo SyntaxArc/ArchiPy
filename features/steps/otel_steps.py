@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 import warnings
 
 from behave import given, then, when
@@ -1384,6 +1385,13 @@ def step_then_histogram_status(context, instrument_name, status):
     assert status in statuses, f"Expected status {status!r} in {statuses!r}"
 
 
+@then('a histogram metric named "{instrument_name}" should have gRPC status code "{code}"')
+def step_then_histogram_grpc_status_code(context, instrument_name, code):
+    points = _metric_datapoints(context, instrument_name)
+    codes = [point.attributes.get("rpc.grpc.status_code") for point in points]
+    assert code in codes, f"Expected gRPC status code {code!r} in {codes!r}"
+
+
 @then('the "{instrument_name}" histogram should have {expected:d} datapoint for method "{method}"')
 def step_then_histogram_datapoint_count_for_method(context, instrument_name, expected, method):
     points = [p for p in _metric_datapoints(context, instrument_name) if p.attributes.get("rpc.method") == method]
@@ -2494,3 +2502,170 @@ def step_given_measure_duration_failing_histogram(context):
 @then("the measured function should still return its result")
 def step_then_measured_result(context):
     assert get_current_scenario_context(context).get("result") == "timed"
+
+
+# ---------------------------------------------------------------------------
+# gRPC metrics interceptor edge cases
+# ---------------------------------------------------------------------------
+
+
+@when("a sync response stream is intercepted for an RPC that already terminated")
+def step_when_stream_on_terminated_rpc(context):
+    from archipy.helpers.interceptors.grpc.base.server_interceptor import MethodName
+    from archipy.helpers.interceptors.grpc.otel_metrics.server_interceptor import (
+        GrpcServerOtelMetricsInterceptor,
+        _RpcInstruments,
+    )
+
+    _RpcInstruments.clear()
+
+    class _TerminatedRpcContext:
+        def add_callback(self, _callback) -> bool:
+            return False
+
+        def code(self):
+            return None
+
+    def stream_handler(_request, _context):
+        yield b"never consumed"
+
+    method_name = MethodName(full_name="test.Svc/Stream", package="test", service="Svc", method="Stream")
+    stream = GrpcServerOtelMetricsInterceptor().intercept(stream_handler, b"", _TerminatedRpcContext(), method_name)
+    assert stream is not None  # the stream is returned but never iterated
+
+
+@when("{count:d} threads request the RPC instruments at the same time")
+def step_when_threads_request_instruments(context, count):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from archipy.helpers.interceptors.grpc.otel_metrics.server_interceptor import _RpcInstruments
+
+    _RpcInstruments.clear()
+    barrier = threading.Barrier(count)
+
+    def fetch():
+        barrier.wait(timeout=5)
+        return _RpcInstruments.get()
+
+    with ThreadPoolExecutor(max_workers=count) as pool:
+        results = list(pool.map(lambda _: fetch(), range(count)))
+    get_current_scenario_context(context).store("rpc_instruments_results", results)
+
+
+@then("every thread should receive the same RPC instruments")
+def step_then_same_instruments(context):
+    results = get_current_scenario_context(context).get("rpc_instruments_results")
+    assert all(result is not None for result in results), "Metrics were unavailable"
+    first_histogram, first_active = results[0]
+    assert all(h is first_histogram and a is first_active for h, a in results), "Instruments were created twice"
+
+
+# ---------------------------------------------------------------------------
+# Pushgateway last push, initialization back-off, provider shutdown tracking
+# ---------------------------------------------------------------------------
+
+
+@given("OpenTelemetry is configured for pushgateway metrics with a stub gateway that keeps its group on shutdown")
+def step_given_pushgateway_keeps_group(context):
+    _configure_pushgateway(context, fail_push=False)
+    BaseConfig.global_config().OTEL.METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN = False
+
+
+@when("I note the number of Pushgateway pushes")
+def step_when_note_pushgateway_pushes(context):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("pushgateway_pushes_before", len(scenario_context.get("pushgateway_pushes")))
+
+
+@then("the Pushgateway should have received another push")
+def step_then_pushgateway_another_push(context):
+    scenario_context = get_current_scenario_context(context)
+    before = scenario_context.get("pushgateway_pushes_before")
+    after = len(scenario_context.get("pushgateway_pushes"))
+    assert after > before, f"Expected a push during shutdown, pushes stayed at {before}"
+
+
+@then("the Pushgateway should not have received a delete")
+def step_then_pushgateway_no_delete(context):
+    assert get_current_scenario_context(context).get("pushgateway_deletes") == []
+
+
+def _fail_provider_construction(context):
+    """Make provider construction raise, counting attempts; restored when the scenario ends."""
+    scenario_context = get_current_scenario_context(context)
+    OtelUtils.reset_for_testing()
+    OtelUtils._globals_set = False
+    config = BaseConfig.global_config()
+    _reset_otel_config_defaults()
+    config.OTEL.IS_ENABLED = True
+    config.OTEL.TRACES_ENABLED = True
+    config.OTEL.METRICS_ENABLED = True
+    config.OTEL.LOGS_ENABLED = False
+    config.OTEL.PROTOCOL = "http/protobuf"
+    config.OTEL.OTLP_ENDPOINT = "http://localhost:4318"
+
+    attempts: list[int] = []
+    original = OtelUtils.__dict__["_build_providers"]
+
+    @classmethod
+    def _boom(cls, _config):
+        attempts.append(1)
+        raise RuntimeError("provider construction boom")
+
+    OtelUtils._build_providers = _boom
+    context.add_cleanup(setattr, OtelUtils, "_build_providers", original)
+    context.add_cleanup(OtelUtils.reset_for_testing)
+    scenario_context.store("provider_attempts", attempts)
+    scenario_context.store("otel_enabled_for_test", True)
+    return config
+
+
+@when("OpenTelemetry provider construction fails and initialization is requested twice in a row")
+def step_when_init_fails_twice(context):
+    config = _fail_provider_construction(context)
+    OtelUtils.init_otel_if_needed(config)
+    OtelUtils.init_otel_if_needed(config)
+
+
+@when("OpenTelemetry provider construction fails and initialization is requested again after the back-off")
+def step_when_init_fails_then_retries(context):
+    import time
+
+    config = _fail_provider_construction(context)
+    OtelUtils.init_otel_if_needed(config)
+    OtelUtils._init_failed_at = time.monotonic() - 3600
+    OtelUtils.init_otel_if_needed(config)
+
+
+@then("provider construction should have been attempted {expected:d} time")
+@then("provider construction should have been attempted {expected:d} times")
+def step_then_provider_attempts(context, expected):
+    attempts = get_current_scenario_context(context).get("provider_attempts")
+    assert len(attempts) == expected, f"Expected {expected} attempt(s), got {len(attempts)}"
+
+
+@when("a provider is marked as shut down and then dropped")
+def step_when_provider_marked_shutdown(context):
+    import gc
+
+    class _Provider:
+        """Plain provider stand-in: real SDK providers register an atexit hook that keeps them alive."""
+
+    scenario_context = get_current_scenario_context(context)
+    provider = _Provider()
+    OtelUtils._mark_provider_shutdown(provider)
+    scenario_context.store("unusable_while_alive", not OtelUtils._is_usable_provider(provider))
+    before = len(OtelUtils._shutdown_providers)
+    del provider
+    gc.collect()
+    scenario_context.store("registry_size_change", before - len(OtelUtils._shutdown_providers))
+
+
+@then("the provider should have been reported as unusable while alive")
+def step_then_provider_unusable_while_alive(context):
+    assert get_current_scenario_context(context).get("unusable_while_alive") is True
+
+
+@then("the shut down provider registry should no longer hold it")
+def step_then_registry_released(context):
+    assert get_current_scenario_context(context).get("registry_size_change") >= 1

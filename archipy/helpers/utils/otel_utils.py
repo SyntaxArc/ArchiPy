@@ -6,6 +6,8 @@ import atexit
 import logging
 import os
 import threading
+import time
+import weakref
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 if TYPE_CHECKING:
@@ -18,6 +20,7 @@ logger = logging.getLogger(__name__)
 HTTP_SERVER_ERROR_MIN = 500
 _STATUS_DESC_MAX_LEN = 256
 _DEFAULT_FLUSH_TIMEOUT_MS = 30_000
+_INIT_RETRY_BACKOFF_SECONDS = 30.0
 DURATION_HISTOGRAM_BUCKETS_S: tuple[float, ...] = (
     0.005,
     0.01,
@@ -141,7 +144,8 @@ class OtelUtils:
     _owns_logger: bool = False
     _logging_handler: Any | None = None
     _init_pid: int | None = None
-    _shutdown_provider_ids: ClassVar[set[int]] = set()
+    _shutdown_providers: ClassVar[weakref.WeakSet[Any]] = weakref.WeakSet()
+    _init_failed_at: float | None = None
     _metrics_pull_registry: Any | None = None
     _metrics_pull_httpd: Any | None = None
     _metrics_pull_thread: Any | None = None
@@ -343,11 +347,15 @@ class OtelUtils:
         current_pid = os.getpid()
         if cls._initialized and cls._init_pid == current_pid:
             return
+        if cls._init_failed_recently():
+            return
 
         with cls._lock:
             if not config.OTEL.IS_ENABLED or cls._import_failed:
                 return
             if cls._initialized and cls._init_pid == current_pid:
+                return
+            if cls._init_failed_recently():
                 return
             if cls._initialized and cls._init_pid is not None and cls._init_pid != current_pid:
                 cls._reset_after_fork()
@@ -358,6 +366,7 @@ class OtelUtils:
                 cls._register_atexit()
                 cls._initialized = True
                 cls._init_pid = current_pid
+                cls._init_failed_at = None
             except ImportError:
                 cls._import_failed = True
                 logger.warning(
@@ -367,7 +376,14 @@ class OtelUtils:
             except Exception:
                 cls._stop_metrics_pushgateway_unlocked()
                 cls._stop_metrics_pull_scrape_unlocked()
+                cls._init_failed_at = time.monotonic()
                 logger.exception("Failed to initialize OpenTelemetry")
+
+    @classmethod
+    def _init_failed_recently(cls) -> bool:
+        """Return True while a failed initialization is still inside its retry back-off window."""
+        failed_at = cls._init_failed_at
+        return failed_at is not None and time.monotonic() - failed_at < _INIT_RETRY_BACKOFF_SECONDS
 
     @classmethod
     def force_flush(cls, timeout_millis: int = _DEFAULT_FLUSH_TIMEOUT_MS) -> bool:
@@ -380,17 +396,19 @@ class OtelUtils:
             True when every provider flushed successfully (or none exist).
         """
         ok = True
+        # Flush outside the lock: a slow exporter must not block initialization or shutdown on other threads.
         with cls._lock:
-            for provider in (cls._tracer_provider, cls._meter_provider, cls._logger_provider):
-                if provider is None or not hasattr(provider, "force_flush"):
-                    continue
-                try:
-                    result = provider.force_flush(timeout_millis)
-                    if result is False:
-                        ok = False
-                except Exception:
-                    logger.debug("Error during OTel force_flush", exc_info=True)
+            providers = (cls._tracer_provider, cls._meter_provider, cls._logger_provider)
+        for provider in providers:
+            if provider is None or not hasattr(provider, "force_flush"):
+                continue
+            try:
+                result = provider.force_flush(timeout_millis)
+                if result is False:
                     ok = False
+            except Exception:
+                logger.debug("Error during OTel force_flush", exc_info=True)
+                ok = False
         return ok
 
     @classmethod
@@ -413,6 +431,7 @@ class OtelUtils:
             cls._owns_logger = False
             cls._initialized = False
             cls._init_pid = None
+            cls._init_failed_at = None
             cls._instrumented_libraries.clear()
             cls._clear_metric_instrument_caches()
 
@@ -474,6 +493,7 @@ class OtelUtils:
             cls._initialized = True
             cls._init_pid = os.getpid()
             cls._import_failed = False
+            cls._init_failed_at = None
 
     @classmethod
     def reset_for_testing(cls) -> None:
@@ -496,6 +516,7 @@ class OtelUtils:
             cls._owns_logger = False
             cls._initialized = False
             cls._import_failed = False
+            cls._init_failed_at = None
             cls._init_pid = None
             cls._instrumented_libraries.clear()
             cls._clear_metric_instrument_caches()
@@ -664,14 +685,15 @@ class OtelUtils:
     @classmethod
     def _is_usable_provider(cls, provider: Any) -> bool:
         """Return False for providers that were shut down or are otherwise unusable."""
-        if provider is None or id(provider) in cls._shutdown_provider_ids:
+        if provider is None or provider in cls._shutdown_providers:
             return False
         return not getattr(provider, "_shutdown", False)
 
     @classmethod
     def _mark_provider_shutdown(cls, provider: Any | None) -> None:
         if provider is not None:
-            cls._shutdown_provider_ids.add(id(provider))
+            # Hold the provider weakly: ``id()`` values are reused after garbage collection.
+            cls._shutdown_providers.add(provider)
 
     @classmethod
     def _existing_concrete_tracer_provider(cls) -> Any | None:
@@ -1015,27 +1037,33 @@ class OtelUtils:
             "delete_on_shutdown": delete_on_shutdown,
         }
 
-        def _push_loop() -> None:
+        def _push_once() -> None:
             from prometheus_client import push_to_gateway
 
+            try:
+                push_to_gateway(
+                    gateway=gateway_url,
+                    job=job,
+                    registry=registry,
+                    grouping_key=grouping_key or None,
+                    timeout=timeout,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to push metrics to Pushgateway %s (job=%s)",
+                    gateway_url,
+                    job,
+                    exc_info=True,
+                )
+
+        def _push_loop() -> None:
             while True:
-                try:
-                    push_to_gateway(
-                        gateway=gateway_url,
-                        job=job,
-                        registry=registry,
-                        grouping_key=grouping_key or None,
-                        timeout=timeout,
-                    )
-                except Exception:
-                    logger.warning(
-                        "Failed to push metrics to Pushgateway %s (job=%s)",
-                        gateway_url,
-                        job,
-                        exc_info=True,
-                    )
+                _push_once()
                 if stop_event.wait(interval):
                     break
+            if not delete_on_shutdown:
+                # Keep the last interval's metrics; with delete-on-shutdown the group is removed anyway.
+                _push_once()
 
         thread = threading.Thread(
             target=_push_loop,
