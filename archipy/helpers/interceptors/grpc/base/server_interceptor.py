@@ -88,7 +88,7 @@ def parse_method_name(method_name: str) -> MethodName:
         MethodName: A `MethodName` object containing the parsed components.
     """
     method_full_name = method_name.replace("/", "", 1)
-    package_and_service, method = method_full_name.split("/")
+    package_and_service, _, method = method_full_name.partition("/")
     *maybe_package, service = package_and_service.rsplit(".", maxsplit=1)
     package = maybe_package[0] if maybe_package else ""
     return MethodName(full_name=method_full_name, package=package, service=service, method=method)
@@ -142,6 +142,8 @@ class BaseGrpcServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
 
         handler_factory, next_handler_method = _get_factory_and_method(next_handler)
 
+        # ``wraps`` carries decorator metadata (e.g. rate-limit windows) to interceptors placed after this one.
+        @functools.wraps(next_handler_method)
         def invoke_intercept_method(request: object, context: grpc.ServicerContext) -> object:
             """Invokes the intercepted method.
 
@@ -247,6 +249,8 @@ class BaseAsyncGrpcServerInterceptor(grpc.aio.ServerInterceptor, metaclass=abc.A
 
         handler_factory, next_handler_method = _get_factory_and_method(next_handler)
 
+        # ``wraps`` carries decorator metadata (e.g. rate-limit windows) to interceptors placed after this one.
+        @functools.wraps(next_handler_method)
         async def invoke_intercept_method(request: object, context: grpc.aio.ServicerContext) -> object:
             """Invokes the intercepted async method.
 
@@ -260,6 +264,7 @@ class BaseAsyncGrpcServerInterceptor(grpc.aio.ServerInterceptor, metaclass=abc.A
             method_name_model = parse_method_name(handler_call_details.method)
             return await self.intercept(next_handler_method, request, context, method_name_model)
 
+        @functools.wraps(next_handler_method)
         async def invoke_intercept_stream(
             request: object,
             context: grpc.aio.ServicerContext,

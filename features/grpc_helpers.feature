@@ -217,3 +217,13 @@ Feature: gRPC helpers
     Given an async pass-through client interceptor with a failing continuation
     When an async "unary_unary" call with request "boom" is intercepted expecting failure
     Then the intercepted async call raised "continuation failed"
+
+  Scenario Outline: Method names are parsed into package, service and method
+    When the gRPC method name "<full_name>" is parsed
+    Then the parsed gRPC method has package "<package>", service "<service>" and method "<method>"
+
+    Examples:
+      | full_name         | package | service | method |
+      | /pkg.sub.Svc/Call | pkg.sub | Svc     | Call   |
+      | /Svc/Call         | (none)  | Svc     | Call   |
+      | /pkg.Svc          | pkg     | Svc     | (none) |

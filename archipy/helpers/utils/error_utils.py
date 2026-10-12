@@ -69,12 +69,15 @@ class ErrorUtils:
         validation_error: ValidationError,
         *,
         include_type: bool = False,
+        include_input: bool = False,
     ) -> list[dict[str, str]]:
         """Formats Pydantic validation errors into a structured format.
 
         Args:
             validation_error (ValidationError): The validation error to format.
             include_type (bool): Whether to include the error type in the output. Defaults to False.
+            include_input (bool): Whether to echo the rejected input value (as ``value``). Defaults to False,
+                because the input may be a password, token or other secret and must not reach the client or logs.
 
         Returns:
             list[dict[str, str]]: A list of formatted validation error details.
@@ -84,8 +87,9 @@ class ErrorUtils:
             error_dict = {
                 "field": ".".join(str(x) for x in error["loc"]),
                 "message": error["msg"],
-                "value": str(error.get("input", "")),
             }
+            if include_input:
+                error_dict["value"] = str(error.get("input", ""))
             if include_type:
                 error_dict["type"] = error["type"]
             formatted_errors.append(error_dict)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import threading
 import time
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -31,9 +33,9 @@ class _RpcInstruments:
     mirroring FastAPI's ``http.server.request.duration`` / ``http.server.active_requests`` pair.
     """
 
-    _histogram: ClassVar[Any | None] = None
-    _active: ClassVar[Any | None] = None
-    _provider_id: ClassVar[int | None] = None
+    # One tuple (histogram, active, provider id) so readers never see a half-updated pair.
+    _state: ClassVar[tuple[Any, Any, int] | None] = None
+    _lock: ClassVar[threading.Lock] = threading.Lock()
 
     @classmethod
     def get(cls) -> tuple[Any, Any] | None:
@@ -44,41 +46,93 @@ class _RpcInstruments:
         """
         if OtelUtils.import_failed() or OtelUtils.meter_provider() is None:
             return None
-        provider = OtelUtils.meter_provider()
-        provider_id = id(provider)
-        if cls._histogram is not None and cls._active is not None and cls._provider_id == provider_id:
-            return cls._histogram, cls._active
-        meter = OtelUtils.get_meter(_RPC_METER_NAME)
-        cls._histogram = meter.create_histogram(
-            _RPC_DURATION_INSTRUMENT,
-            unit="s",
-            description="gRPC server call duration",
-            explicit_bucket_boundaries_advisory=DURATION_HISTOGRAM_BUCKETS_S,
-        )
-        cls._active = meter.create_up_down_counter(
-            _RPC_ACTIVE_INSTRUMENT,
-            unit="{request}",
-            description="Number of active gRPC server requests",
-        )
-        cls._provider_id = provider_id
-        return cls._histogram, cls._active
+        provider_id = id(OtelUtils.meter_provider())
+        state = cls._state
+        if state is not None and state[2] == provider_id:
+            return state[0], state[1]
+        with cls._lock:
+            state = cls._state
+            if state is not None and state[2] == provider_id:
+                return state[0], state[1]
+            meter = OtelUtils.get_meter(_RPC_METER_NAME)
+            histogram = meter.create_histogram(
+                _RPC_DURATION_INSTRUMENT,
+                unit="s",
+                description="gRPC server call duration",
+                explicit_bucket_boundaries_advisory=DURATION_HISTOGRAM_BUCKETS_S,
+            )
+            active = meter.create_up_down_counter(
+                _RPC_ACTIVE_INSTRUMENT,
+                unit="{request}",
+                description="Number of active gRPC server requests",
+            )
+            cls._state = (histogram, active, provider_id)
+            return histogram, active
 
     @classmethod
     def clear(cls) -> None:
         """Drop the cached instruments (tests / provider reset)."""
-        cls._histogram = None
-        cls._active = None
-        cls._provider_id = None
+        with cls._lock:
+            cls._state = None
 
 
-def _rpc_attributes(method_name_model: MethodName, status: str) -> dict[str, str]:
+# gRPC codes that signal a handled caller error, recorded as ``ok`` like HTTP statuses below 500.
+_CLIENT_FAULT_CODES = frozenset(
+    {
+        "INVALID_ARGUMENT",
+        "NOT_FOUND",
+        "ALREADY_EXISTS",
+        "PERMISSION_DENIED",
+        "UNAUTHENTICATED",
+        "FAILED_PRECONDITION",
+        "OUT_OF_RANGE",
+        "RESOURCE_EXHAUSTED",
+        "ABORTED",
+    },
+)
+
+
+def _rpc_attributes(method_name_model: MethodName, status: str, grpc_code: str | None = None) -> dict[str, str]:
     """Build semantic-convention-ish attributes for an RPC metric recording."""
-    return {
+    attributes = {
         "rpc.system": "grpc",
         "rpc.service": method_name_model.service,
         "rpc.method": method_name_model.method,
         "status": status,
     }
+    if grpc_code is not None:
+        attributes["rpc.grpc.status_code"] = grpc_code
+    return attributes
+
+
+def _status_for_code(code_name: str) -> str:
+    """Map a gRPC status code name to the ``status`` metric attribute."""
+    if code_name == "OK" or code_name in _CLIENT_FAULT_CODES:
+        return "ok"
+    if code_name == "CANCELLED":
+        return "cancelled"
+    return "error"
+
+
+def _classify_failure(exc: BaseException, context: object) -> tuple[str, str | None]:
+    """Work out the metric status and gRPC code for a call that raised ``exc``.
+
+    The metrics interceptor runs outside the exception interceptor, so ``exc`` is usually the abort signal rather
+    than the domain error. The status the call finished with is on the context, so prefer it.
+
+    Args:
+        exc: The exception that escaped the handler.
+        context: The gRPC context of the call.
+
+    Returns:
+        ``(status, grpc_code_name)``. The code name is ``None`` when the context holds no status.
+    """
+    code_getter = getattr(context, "code", None)
+    code = code_getter() if callable(code_getter) else None
+    code_name = getattr(code, "name", None)
+    if isinstance(code_name, str) and code_name != "OK":
+        return _status_for_code(code_name), code_name
+    return OtelUtils.metric_status_for_exception(exc), None
 
 
 class _RpcCallRecorder:
@@ -106,7 +160,7 @@ class _RpcCallRecorder:
         histogram, active = instruments
         return cls(histogram, active, method_name_model)
 
-    def finish(self, status: str) -> None:
+    def finish(self, status: str, grpc_code: str | None = None) -> None:
         """Decrement active requests and record elapsed seconds with the call status.
 
         Idempotent: only the first call records, so a termination callback and the normal path cannot double count.
@@ -117,7 +171,7 @@ class _RpcCallRecorder:
         self._active.add(-1, self._active_attributes)
         self._histogram.record(
             time.perf_counter() - self._start,
-            _rpc_attributes(self._method_name_model, status),
+            _rpc_attributes(self._method_name_model, status, grpc_code),
         )
 
 
@@ -149,39 +203,47 @@ class GrpcServerOtelMetricsInterceptor(BaseGrpcServerInterceptor):
         try:
             result = method(request, context)
         except Exception as exc:
-            recorder.finish(OtelUtils.metric_status_for_exception(exc))
+            recorder.finish(*_classify_failure(exc, context))
             raise
         if isinstance(result, Iterator):
             # Response-streaming handler: the RPC only finishes once the stream is consumed. If the client
             # cancels or the stream is never iterated, the generator's ``finally`` never runs, so also finish
             # on RPC termination to keep the active-requests counter balanced.
-            context.add_callback(lambda: recorder.finish("cancelled"))
-            return self._time_stream(result, recorder)
-        recorder.finish("ok")
+            if not context.add_callback(lambda: recorder.finish("cancelled", "CANCELLED")):
+                # The RPC already terminated: no callback will ever fire.
+                recorder.finish("cancelled", "CANCELLED")
+            return self._time_stream(result, recorder, context)
+        recorder.finish("ok", "OK")
         return result
 
     @staticmethod
     def _time_stream(
         stream: Iterator[object],
         recorder: _RpcCallRecorder,
+        context: grpc.ServicerContext,
     ) -> Iterator[object]:
         """Relay a sync response stream and record the duration once it ends.
 
         Args:
             stream: The response iterator returned by the handler.
             recorder: Tracker for the in-flight call.
+            context: The context of the sync gRPC call.
 
         Yields:
             Each response message.
         """
-        status = "ok"
+        status, grpc_code = "ok", "OK"
         try:
             yield from stream
+        except GeneratorExit:
+            # The client went away and gRPC closed the generator.
+            status, grpc_code = "cancelled", "CANCELLED"
+            raise
         except Exception as exc:
-            status = OtelUtils.metric_status_for_exception(exc)
+            status, grpc_code = _classify_failure(exc, context)
             raise
         finally:
-            recorder.finish(status)
+            recorder.finish(status, grpc_code)
 
 
 class AsyncGrpcServerOtelMetricsInterceptor(BaseAsyncGrpcServerInterceptor):
@@ -209,14 +271,18 @@ class AsyncGrpcServerOtelMetricsInterceptor(BaseAsyncGrpcServerInterceptor):
         if recorder is None:
             return await method(request, context)
 
-        status = "ok"
+        status, grpc_code = "ok", "OK"
         try:
             return await method(request, context)
+        except asyncio.CancelledError:
+            # Client cancellation or an expired deadline; ``CancelledError`` is not an ``Exception``.
+            status, grpc_code = "cancelled", "CANCELLED"
+            raise
         except Exception as exc:
-            status = OtelUtils.metric_status_for_exception(exc)
+            status, grpc_code = _classify_failure(exc, context)
             raise
         finally:
-            recorder.finish(status)
+            recorder.finish(status, grpc_code)
 
     async def intercept_stream(
         self,
@@ -242,12 +308,15 @@ class AsyncGrpcServerOtelMetricsInterceptor(BaseAsyncGrpcServerInterceptor):
                 yield item
             return
 
-        status = "ok"
+        status, grpc_code = "ok", "OK"
         try:
             async for item in iterate_stream_result(method(request, context)):
                 yield item
+        except asyncio.CancelledError, GeneratorExit:
+            status, grpc_code = "cancelled", "CANCELLED"
+            raise
         except Exception as exc:
-            status = OtelUtils.metric_status_for_exception(exc)
+            status, grpc_code = _classify_failure(exc, context)
             raise
         finally:
-            recorder.finish(status)
+            recorder.finish(status, grpc_code)

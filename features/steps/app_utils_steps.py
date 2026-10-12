@@ -1,3 +1,7 @@
+from types import SimpleNamespace
+from unittest.mock import patch
+
+import grpc
 from behave import given, then, when
 from fastapi import Depends, FastAPI
 from fastapi.routing import APIRoute
@@ -5,7 +9,18 @@ from pydantic import BaseModel, ValidationError
 from starlette.testclient import TestClient
 
 from archipy.configs.base_config import BaseConfig
-from archipy.helpers.utils.app_utils import AppUtils, FastAPIExceptionHandler, FastAPIUtils
+from archipy.helpers.interceptors.grpc.rate_limit.grpc_rate_limit_interceptor import (
+    AsyncGrpcServerRateLimitInterceptor,
+    GrpcServerRateLimitInterceptor,
+)
+from archipy.helpers.utils import app_utils
+from archipy.helpers.utils.app_utils import (
+    AppUtils,
+    AsyncGrpcAPIUtils,
+    FastAPIExceptionHandler,
+    FastAPIUtils,
+    GrpcAPIUtils,
+)
 from archipy.models.errors import BaseError
 from features.test_helpers import get_current_scenario_context
 
@@ -203,7 +218,7 @@ def step_when_options_preflight_header(context, header):
     scenario_context.store("response", response)
 
 
-@when('I make an OPTIONS preflight {preflight_type}')
+@when("I make an OPTIONS preflight {preflight_type}")
 def step_when_options_preflight_type(context, preflight_type):
     scenario_context = get_current_scenario_context(context)
     app = scenario_context.get("app")
@@ -268,9 +283,7 @@ def step_then_response_status_code(context, status_code):
     scenario_context = get_current_scenario_context(context)
     response = scenario_context.get("response")
 
-    assert response.status_code == status_code, (
-        f"Expected {status_code} status code, but got: {response.status_code}"
-    )
+    assert response.status_code == status_code, f"Expected {status_code} status code, but got: {response.status_code}"
 
 
 @then("the custom header should NOT be in access-control-expose-headers")
@@ -507,3 +520,95 @@ def step_then_response_location_https(context):
     response = scenario_context.get("response")
     location = response.headers.get("location", "")
     assert location.startswith("https://"), f"Expected https location, but got: {location}"
+
+
+class _NamedInterceptor:
+    """Stand-in interceptor identified by name; the gRPC server factory is replaced, so it is never invoked."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+@given('custom {kind} gRPC interceptors "{names}"')
+def step_given_custom_grpc_interceptors(context, kind, names):
+    interceptors = [_NamedInterceptor(name) for name in names.split(",")]
+    container = {"list": list, "tuple": tuple, "set": set}[kind]
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("custom_interceptors", container(interceptors))
+    scenario_context.store("custom_interceptor_names", names.split(","))
+
+
+@when("a {mode} gRPC app is created with the custom interceptors")
+def step_when_grpc_app_created(context, mode):
+    scenario_context = get_current_scenario_context(context)
+    config = BaseConfig.global_config()
+    custom = scenario_context.get("custom_interceptors")
+    with (
+        patch.object(grpc, "server") as sync_server,
+        patch.object(app_utils, "create_grpc_server") as async_server,
+    ):
+        if mode == "sync":
+            AppUtils.create_grpc_app(config, customized_interceptors=custom)
+            used = sync_server.call_args.kwargs["interceptors"]
+        else:
+            AppUtils.create_async_grpc_app(config, customized_interceptors=custom)
+            used = async_server.call_args.kwargs["interceptors"]
+    scenario_context.store("used_interceptors", used)
+
+
+@then('the gRPC app should run the custom interceptors in the order "{names}"')
+def step_then_grpc_app_interceptor_order(context, names):
+    used = get_current_scenario_context(context).get("used_interceptors")
+    custom_names = [i.name for i in used if isinstance(i, _NamedInterceptor)]
+    assert custom_names == names.split(","), f"Got {custom_names}"
+    assert used[-3:] == [i for i in used if isinstance(i, _NamedInterceptor)], "Custom interceptors must run last"
+
+
+@then("the gRPC app should run all the custom interceptors")
+def step_then_grpc_app_all_interceptors(context):
+    scenario_context = get_current_scenario_context(context)
+    used = scenario_context.get("used_interceptors")
+    custom_names = sorted(i.name for i in used if isinstance(i, _NamedInterceptor))
+    assert custom_names == sorted(scenario_context.get("custom_interceptor_names")), f"Got {custom_names}"
+
+
+@given("gRPC rate limiting is enabled with fail closed set to {fail_closed} and a Redis client that cannot be created")
+def step_given_rate_limit_enabled_failing_redis(context, fail_closed):
+    scenario_context = get_current_scenario_context(context)
+    rate_limit = BaseConfig.global_config().GRPC_RATE_LIMIT.model_copy(
+        update={"IS_ENABLED": True, "FAIL_CLOSED": fail_closed == "true"},
+    )
+    scenario_context.store("rate_limit_config", SimpleNamespace(GRPC_RATE_LIMIT=rate_limit))
+
+
+@when("the {mode} gRPC rate limit interceptor is set up")
+def step_when_rate_limit_interceptor_set_up(context, mode):
+    scenario_context = get_current_scenario_context(context)
+    config = scenario_context.get("rate_limit_config")
+    interceptor_class, setup = (
+        (GrpcServerRateLimitInterceptor, GrpcAPIUtils.setup_rate_limit_interceptor)
+        if mode == "sync"
+        else (AsyncGrpcServerRateLimitInterceptor, AsyncGrpcAPIUtils.setup_rate_limit_interceptor)
+    )
+    interceptors: list = []
+    error = None
+    with patch.object(interceptor_class, "_create_redis_client", side_effect=RuntimeError("redis down")):
+        try:
+            setup(config, interceptors)
+        except RuntimeError as exc:
+            error = exc
+    scenario_context.store("setup_error", error)
+    scenario_context.store("setup_interceptors", interceptors)
+
+
+@then("the gRPC rate limit setup should raise the initialization error")
+def step_then_rate_limit_setup_raises(context):
+    error = get_current_scenario_context(context).get("setup_error")
+    assert isinstance(error, RuntimeError) and str(error) == "redis down", f"Got {error!r}"
+
+
+@then("the gRPC rate limit setup should continue without the interceptor")
+def step_then_rate_limit_setup_continues(context):
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("setup_error") is None
+    assert scenario_context.get("setup_interceptors") == []

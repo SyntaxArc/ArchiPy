@@ -1,6 +1,8 @@
 """Step definitions for error handling tests."""
 
 import inspect
+import json
+import logging
 from typing import ClassVar
 from unittest.mock import patch
 
@@ -123,7 +125,6 @@ def step_given_raised_error(context, error_type, message):
 @given('an error with code "{code}", English message "{message_en}", and Persian message "{message_fa}"')
 def step_given_create_error_detail(context, code, message_en, message_fa):
     scenario_context = get_current_scenario_context(context)
-
 
     error_code = code
     error_msg_en = message_en
@@ -278,6 +279,43 @@ def step_when_endpoint_raises_unexpected(context):
     scenario_context.store("response", response)
 
 
+class _ErrorLogCollector(logging.Handler):
+    """Collect log records emitted through ``archipy.helpers.utils.error_utils``."""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.ERROR)
+        self.records: list[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.records.append(record)
+
+
+@when("an endpoint raises an unexpected exception while errors are captured")
+def step_when_endpoint_raises_unexpected_captured(context):
+    scenario_context = get_current_scenario_context(context)
+    collector = _ErrorLogCollector()
+    error_logger = logging.getLogger("archipy.helpers.utils.error_utils")
+    error_logger.addHandler(collector)
+    context.add_cleanup(error_logger.removeHandler, collector)
+    scenario_context.store("error_log_collector", collector)
+    step_when_endpoint_raises_unexpected(context)
+
+
+@then('the captured error log should hold a "{error_type}" with message "{message}"')
+def step_then_captured_error_log(context, error_type: str, message: str):
+    collector = get_current_scenario_context(context).get("error_log_collector")
+    captured = [record.exc_info[1] for record in collector.records if record.exc_info]
+    assert any(type(error).__name__ == error_type and str(error) == message for error in captured), (
+        f"Expected a logged {error_type}({message!r}), got {captured!r}"
+    )
+
+
+@then('the response body should not contain "{text}"')
+def step_then_response_body_lacks(context, text: str):
+    response = get_current_scenario_context(context).get("response")
+    assert text not in response.text, f"Response body leaked {text!r}: {response.text}"
+
+
 @when('an endpoint receives invalid request data "{invalid_data_description}"')
 def step_when_endpoint_receives_invalid_data(context, invalid_data_description: str):
     scenario_context = get_current_scenario_context(context)
@@ -396,11 +434,7 @@ def step_when_sync_grpc_invalid_request(context):
     finally:
         channel.close()
 
-    error_instance = InvalidArgumentError(
-        argument_name="request_validation",
-        lang=LanguageType.EN,
-        additional_data={"validation_errors": [{"field": "data", "message": "Field required"}]},
-    )
+    error_instance = InternalError(lang=LanguageType.EN)
 
     scenario_context.store("grpc_rpc_error", grpc_error)
     scenario_context.store("grpc_error", error_instance)
@@ -463,11 +497,7 @@ async def step_when_async_grpc_invalid_request(context):
 
     grpc_error = await make_call()
 
-    error_instance = InvalidArgumentError(
-        argument_name="request_validation",
-        lang=LanguageType.EN,
-        additional_data={"validation_errors": [{"field": "data", "message": "Field required"}]},
-    )
+    error_instance = InternalError(lang=LanguageType.EN)
 
     scenario_context.store("grpc_rpc_error", grpc_error)
     scenario_context.store("grpc_error", error_instance)
@@ -617,7 +647,10 @@ def step_when_sync_grpc_raises_validation_error_with_lang(context, error_type: s
 
 @when('an async gRPC method raises "{error_type}" validation error with value "{invalid_value}" in language "{lang}"')
 async def step_when_async_grpc_raises_validation_error_with_lang(
-    context, error_type: str, invalid_value: str, lang: str,
+    context,
+    error_type: str,
+    invalid_value: str,
+    lang: str,
 ):
     scenario_context = get_current_scenario_context(context)
 
@@ -1093,3 +1126,85 @@ def step_then_check_message_matches(context):
         assert expected_message == actual_message, f"Expected message '{expected_message}', but got '{actual_message}'"
     else:
         assert False, "No gRPC error or error instance found to verify message"
+
+
+@then("the gRPC error should not expose the internal failure")
+def step_then_grpc_error_hides_internal_failure(context):
+    grpc_error = get_current_scenario_context(context).get("grpc_rpc_error")
+    assert grpc_error is not None, "gRPC call should have failed with an RpcError"
+    error_info = extract_grpc_error_info(grpc_error)
+    exposed = f"{error_info['details']} {error_info['trailing_metadata']}"
+    for leaked in ("Unexpected error", "original_error", "ValueError"):
+        assert leaked not in exposed, f"gRPC error exposed {leaked!r}: {exposed}"
+
+
+class _Aborted(Exception):
+    """Raised by the recording contexts, like a real gRPC abort."""
+
+
+class _RecordingSyncContext:
+    def __init__(self) -> None:
+        self.code = None
+        self.trailing = None
+
+    def set_trailing_metadata(self, trailing) -> None:
+        self.trailing = trailing
+
+    def abort(self, code, details) -> None:
+        self.code = code
+        raise _Aborted
+
+
+class _RecordingAsyncContext(_RecordingSyncContext):
+    async def abort(self, code, details) -> None:
+        self.code = code
+        raise _Aborted
+
+
+async def _abort_with(context, mode: str, additional_data: dict) -> None:
+    recording = _RecordingSyncContext() if mode == "sync" else _RecordingAsyncContext()
+    error = InternalError(lang=LanguageType.EN, additional_data=additional_data)
+    try:
+        if mode == "sync":
+            error.abort_grpc_sync(recording)
+        else:
+            await error.abort_grpc_async(recording)
+    except _Aborted:
+        pass
+    get_current_scenario_context(context).store("recording_context", recording)
+
+
+@when("a {mode} gRPC context is aborted with an error holding a UUID, a datetime and a Decimal")
+async def step_when_abort_with_non_json_data(context, mode: str):
+    from datetime import datetime
+    from decimal import Decimal
+    from uuid import uuid4
+
+    await _abort_with(context, mode, {"id": uuid4(), "at": datetime.now(), "amount": Decimal("1.5")})
+
+
+@when("a {mode} gRPC context is aborted with an error holding {size:d} characters of additional data")
+async def step_when_abort_with_oversized_data(context, mode: str, size: int):
+    await _abort_with(context, mode, {"payload": "x" * size})
+
+
+@then("the context should be aborted with status code {code:d}")
+def step_then_context_aborted_with_code(context, code: int):
+    recording = get_current_scenario_context(context).get("recording_context")
+    assert recording.code is not None and recording.code.value[0] == code, f"Got {recording.code!r}"
+
+
+def _recorded_additional_data(context) -> str:
+    recording = get_current_scenario_context(context).get("recording_context")
+    assert recording.trailing is not None, "No trailing metadata was set"
+    return dict(recording.trailing)["additional_data"]
+
+
+@then('the aborted context trailing metadata "additional_data" should be valid JSON')
+def step_then_recorded_metadata_json(context):
+    assert isinstance(json.loads(_recorded_additional_data(context)), dict)
+
+
+@then('the aborted context trailing metadata "additional_data" should be the truncation marker')
+def step_then_recorded_metadata_truncated(context):
+    assert json.loads(_recorded_additional_data(context)) == {"truncated": True}

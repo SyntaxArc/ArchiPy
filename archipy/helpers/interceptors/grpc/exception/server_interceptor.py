@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
+import grpc
 from pydantic import ValidationError
 
 from archipy.helpers.interceptors.grpc.base.server_interceptor import (
@@ -18,9 +20,64 @@ from archipy.models.errors import InternalError, InvalidArgumentError
 from archipy.models.errors.base_error import BaseError
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable
+    from collections.abc import AsyncIterator, Callable, Generator
 
-    import grpc
+
+def _invalid_argument_from_validation(validation_error: ValidationError) -> InvalidArgumentError:
+    """Build the INVALID_ARGUMENT error that describes a request validation failure.
+
+    Args:
+        validation_error: The Pydantic validation error.
+
+    Returns:
+        InvalidArgumentError: The error carrying the (input-free) validation details.
+    """
+    validation_details = BaseUtils.format_validation_errors(validation_error, include_type=True)
+    return InvalidArgumentError(
+        argument_name="request_validation",
+        additional_data={"validation_errors": validation_details, "error_count": len(validation_error.errors())},
+    )
+
+
+@contextmanager
+def request_validation() -> Generator[None]:
+    """Report a Pydantic ``ValidationError`` raised inside the block as INVALID_ARGUMENT.
+
+    By default the exception interceptors treat a ``ValidationError`` escaping a handler as a server fault
+    (INTERNAL), because it usually comes from building DTOs out of database rows or upstream responses. Wrap the
+    code that parses the *client's request* in this context manager to blame the client instead.
+
+    Example:
+        ```python
+        def Create(self, request, context):
+            with request_validation():
+                dto = CreateUserDTO(name=request.name, email=request.email)
+        ```
+
+    Raises:
+        InvalidArgumentError: When the block raises ``pydantic.ValidationError``.
+    """
+    try:
+        yield
+    except ValidationError as validation_error:
+        raise _invalid_argument_from_validation(validation_error) from validation_error
+
+
+def _is_sync_abort(error: Exception, context: grpc.ServicerContext) -> bool:
+    """Tell whether ``error`` is the bare exception raised by ``context.abort()``.
+
+    ``ServicerContext.abort`` records the status on the context and then raises a plain ``Exception``. Mapping that
+    exception again would overwrite the deliberate status (for example RESOURCE_EXHAUSTED) with INTERNAL.
+
+    Args:
+        error: The exception caught around the handler.
+        context: The sync gRPC context of the call.
+
+    Returns:
+        bool: True when the context was aborted and ``error`` is the abort signal.
+    """
+    code = getattr(context, "code", None)
+    return type(error) is Exception and callable(code) and code() not in {None, grpc.StatusCode.OK}
 
 
 class GrpcServerExceptionInterceptor(BaseGrpcServerInterceptor):
@@ -29,7 +86,20 @@ class GrpcServerExceptionInterceptor(BaseGrpcServerInterceptor):
     This interceptor catches all exceptions thrown by gRPC service methods and
     converts them to appropriate gRPC errors, eliminating the need for repetitive
     try-catch blocks in each service method.
+
+    A Pydantic ``ValidationError`` escaping a handler is reported as INTERNAL, since it normally signals a server
+    bug. Use ``request_validation()`` around request parsing to report INVALID_ARGUMENT, or pass
+    ``validation_errors_as_invalid_argument=True`` to restore the previous mapping for every ``ValidationError``.
     """
+
+    def __init__(self, validation_errors_as_invalid_argument: bool = False) -> None:
+        """Initialize the interceptor.
+
+        Args:
+            validation_errors_as_invalid_argument: When True, every Pydantic ``ValidationError`` raised by a handler
+                is reported as INVALID_ARGUMENT (the pre-5.10 behavior). Defaults to False (INTERNAL).
+        """
+        self._validation_errors_as_invalid_argument = validation_errors_as_invalid_argument
 
     def intercept(
         self,
@@ -58,6 +128,8 @@ class GrpcServerExceptionInterceptor(BaseGrpcServerInterceptor):
             result = method(request, context)
 
         except Exception as error:
+            if _is_sync_abort(error, context):
+                raise
             self._abort_for_error(error, context, method_name_model)
             raise  # This will never be reached, but satisfies MyPy
         else:
@@ -85,6 +157,8 @@ class GrpcServerExceptionInterceptor(BaseGrpcServerInterceptor):
         try:
             yield from stream
         except Exception as error:
+            if _is_sync_abort(error, context):
+                raise
             self._abort_for_error(error, context, method_name_model)
             raise  # This will never be reached, but satisfies MyPy
 
@@ -97,7 +171,7 @@ class GrpcServerExceptionInterceptor(BaseGrpcServerInterceptor):
             method_name_model: The method name information for better error tracking.
         """
         BaseUtils.capture_exception(error)
-        if isinstance(error, ValidationError):
+        if isinstance(error, ValidationError) and self._validation_errors_as_invalid_argument:
             self._handle_validation_error(error, context)
         elif isinstance(error, BaseError):
             error.abort_grpc_sync(context)
@@ -112,37 +186,23 @@ class GrpcServerExceptionInterceptor(BaseGrpcServerInterceptor):
             validation_error: The validation error to handle.
             context: The gRPC context to abort.
         """
-        # Format validation errors for better debugging
-        validation_details = BaseUtils.format_validation_errors(validation_error, include_type=True)
-
-        InvalidArgumentError(
-            argument_name="request_validation",
-            additional_data={"validation_errors": validation_details, "error_count": len(validation_error.errors())},
-        ).abort_grpc_sync(context)
+        _invalid_argument_from_validation(validation_error).abort_grpc_sync(context)
 
     @staticmethod
     def _handle_unexpected_error(
-        error: Exception,
+        error: Exception,  # noqa: ARG004 - kept for subclass overrides
         context: grpc.ServicerContext,
-        method_name_model: MethodName,
+        method_name_model: MethodName,  # noqa: ARG004 - kept for subclass overrides
     ) -> None:
         """Handle unexpected errors by converting them to internal errors.
 
         Args:
             error: The unexpected error to handle.
             context: The gRPC context to abort.
-            method_name_model: The method name information for better error tracking.
+            method_name_model: The method name information (kept for subclass overrides).
         """
-        # Capture the exception for monitoring
-        InternalError(
-            additional_data={
-                "original_error": str(error),
-                "error_type": type(error).__name__,
-                "service": method_name_model.service,
-                "method": method_name_model.method,
-                "package": method_name_model.package,
-            },
-        ).abort_grpc_sync(context)
+        # The cause was already logged by ``capture_exception``; never send internals to the client.
+        InternalError().abort_grpc_sync(context)
 
 
 class AsyncGrpcServerExceptionInterceptor(BaseAsyncGrpcServerInterceptor):
@@ -151,7 +211,20 @@ class AsyncGrpcServerExceptionInterceptor(BaseAsyncGrpcServerInterceptor):
     This interceptor catches all exceptions thrown by gRPC service methods and
     converts them to appropriate gRPC errors, eliminating the need for repetitive
     try-catch blocks in each service method.
+
+    A Pydantic ``ValidationError`` escaping a handler is reported as INTERNAL, since it normally signals a server
+    bug. Use ``request_validation()`` around request parsing to report INVALID_ARGUMENT, or pass
+    ``validation_errors_as_invalid_argument=True`` to restore the previous mapping for every ``ValidationError``.
     """
+
+    def __init__(self, validation_errors_as_invalid_argument: bool = False) -> None:
+        """Initialize the interceptor.
+
+        Args:
+            validation_errors_as_invalid_argument: When True, every Pydantic ``ValidationError`` raised by a handler
+                is reported as INVALID_ARGUMENT (the pre-5.10 behavior). Defaults to False (INTERNAL).
+        """
+        self._validation_errors_as_invalid_argument = validation_errors_as_invalid_argument
 
     async def intercept(
         self,
@@ -179,9 +252,16 @@ class AsyncGrpcServerExceptionInterceptor(BaseAsyncGrpcServerInterceptor):
             # Execute the gRPC method
             result = await method(request, context)
 
+        except grpc.aio.AbortError:
+            # The handler or an inner interceptor already aborted the call with a deliberate status.
+            raise
+
         except ValidationError as validation_error:
             BaseUtils.capture_exception(validation_error)
-            await self._handle_validation_error(validation_error, context)
+            if self._validation_errors_as_invalid_argument:
+                await self._handle_validation_error(validation_error, context)
+            else:
+                await self._handle_unexpected_error(validation_error, context, method_name_model)
             raise  # This will never be reached, but satisfies MyPy
 
         except BaseError as base_error:
@@ -218,9 +298,16 @@ class AsyncGrpcServerExceptionInterceptor(BaseAsyncGrpcServerInterceptor):
             async for item in iterate_stream_result(method(request, context)):
                 yield item
 
+        except grpc.aio.AbortError:
+            # The handler or an inner interceptor already aborted the call with a deliberate status.
+            raise
+
         except ValidationError as validation_error:
             BaseUtils.capture_exception(validation_error)
-            await self._handle_validation_error(validation_error, context)
+            if self._validation_errors_as_invalid_argument:
+                await self._handle_validation_error(validation_error, context)
+            else:
+                await self._handle_unexpected_error(validation_error, context, method_name_model)
             raise  # This will never be reached, but satisfies MyPy
 
         except BaseError as base_error:
@@ -241,34 +328,20 @@ class AsyncGrpcServerExceptionInterceptor(BaseAsyncGrpcServerInterceptor):
             validation_error: The validation error to handle.
             context: The gRPC context to abort.
         """
-        # Format validation errors for better debugging
-        validation_details = BaseUtils.format_validation_errors(validation_error, include_type=True)
-
-        await InvalidArgumentError(
-            argument_name="request_validation",
-            additional_data={"validation_errors": validation_details, "error_count": len(validation_error.errors())},
-        ).abort_grpc_async(context)
+        await _invalid_argument_from_validation(validation_error).abort_grpc_async(context)
 
     @staticmethod
     async def _handle_unexpected_error(
-        error: Exception,
+        error: Exception,  # noqa: ARG004 - kept for subclass overrides
         context: grpc.aio.ServicerContext,
-        method_name_model: MethodName,
+        method_name_model: MethodName,  # noqa: ARG004 - kept for subclass overrides
     ) -> None:
         """Handle unexpected errors by converting them to internal errors.
 
         Args:
             error: The unexpected error to handle.
             context: The gRPC context to abort.
-            method_name_model: The method name information for better error tracking.
+            method_name_model: The method name information (kept for subclass overrides).
         """
-        # Capture the exception for monitoring
-        await InternalError(
-            additional_data={
-                "original_error": str(error),
-                "error_type": type(error).__name__,
-                "service": method_name_model.service,
-                "method": method_name_model.method,
-                "package": method_name_model.package,
-            },
-        ).abort_grpc_async(context)
+        # The cause was already logged by ``capture_exception``; never send internals to the client.
+        await InternalError().abort_grpc_async(context)

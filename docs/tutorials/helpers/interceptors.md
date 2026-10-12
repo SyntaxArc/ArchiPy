@@ -81,6 +81,24 @@ def create_grpc_server(max_workers: int = 10) -> grpc.Server:
         raise InternalError(additional_data={"detail": "Failed to create gRPC server"}) from e
 ```
 
+A Pydantic `ValidationError` that escapes a handler is reported as `INTERNAL`: it usually comes from building DTOs
+out of database rows or upstream responses, which is a server fault. Wrap the code that parses the **client's
+request** in `request_validation()` to report `INVALID_ARGUMENT` with the field errors instead:
+
+```python
+from archipy.helpers.interceptors.grpc.exception import request_validation
+
+
+def Create(self, request, context):
+    with request_validation():
+        dto = CreateUserDTO(name=request.name, email=request.email)
+    ...
+```
+
+To keep the pre-5.10 behavior (every `ValidationError` becomes `INVALID_ARGUMENT`), construct the interceptor with
+`GrpcServerExceptionInterceptor(validation_errors_as_invalid_argument=True)`. The async interceptor takes the same
+argument.
+
 ### Rate Limiting Interceptor
 
 Per-RPC gRPC rate limits use two pieces:
@@ -171,8 +189,22 @@ gRPC invocation metadata (`authorization: Bearer ...`). Missing or invalid token
 `context.peer()` (for example `ipv4:1.2.3.4:5678`).
 
 > **Warning:** `context.peer()` reflects the immediate TCP peer. Behind an L7 proxy that
-> reconnects upstream, the peer is often the proxy address. Pass `identifier_fn` to the interceptor
-> when you need a custom server-resolved identity.
+> reconnects upstream, the peer is often the proxy address. Pass `trusted_proxy_hosts` (the proxy
+> addresses) to the interceptor to take the client address from `x-forwarded-for`, or pass
+> `identifier_fn` when you need a custom server-resolved identity. `x-forwarded-for` is only read
+> when the direct peer is a trusted proxy, so callers cannot spoof it.
+
+If `identifier_fn` raises, a fail-closed limiter aborts the call with `UNAVAILABLE`; a fail-open
+limiter lets the call through without counting it.
+
+A call rejected by one window gives its quota back to the windows it already passed, so a rejected
+call does not eat into the burst budget.
+
+When `GRPC_RATE_LIMIT__FAIL_CLOSED=true`, a rate limiter that cannot be created at startup stops
+`AppUtils.create_grpc_app` / `create_async_grpc_app` instead of leaving the server unprotected.
+
+`customized_interceptors` runs after the built-in interceptors, in the order of the sequence you pass
+(a `list` or `tuple`; the iteration order of a `set` is arbitrary).
 
 Undecorated servicer methods are never rate-limited. Stacked decorators add multiple windows; all
 windows must pass before the RPC handler runs.

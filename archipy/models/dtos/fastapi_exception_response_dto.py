@@ -100,20 +100,11 @@ class ValidationErrorResponseDTO(FastAPIErrorResponseDTO):
                                             "example": "Invalid email format",
                                             "description": "Validation error message",
                                         },
-                                        "value": {
-                                            "type": "string",
-                                            "example": "invalid@email",
-                                            "description": "Invalid value that caused the error",
-                                        },
                                     },
                                 },
                                 "example": [
-                                    {"field": "email", "message": "Invalid email format", "value": "invalid@email"},
-                                    {
-                                        "field": "password",
-                                        "message": "Password must be at least 8 characters",
-                                        "value": "123",
-                                    },
+                                    {"field": "email", "message": "Invalid email format"},
+                                    {"field": "password", "message": "Password must be at least 8 characters"},
                                 ],
                             },
                         },

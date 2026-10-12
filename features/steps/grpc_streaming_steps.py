@@ -1,3 +1,5 @@
+import asyncio
+import threading
 from concurrent.futures import ThreadPoolExecutor
 
 import grpc
@@ -5,9 +7,12 @@ from behave import given, then, when
 from opentelemetry.instrumentation.grpc import aio_server_interceptor, server_interceptor
 from opentelemetry.sdk.trace import TracerProvider
 
+from pydantic import BaseModel
+
 from archipy.helpers.interceptors.grpc.exception.server_interceptor import (
     AsyncGrpcServerExceptionInterceptor,
     GrpcServerExceptionInterceptor,
+    request_validation,
 )
 from archipy.helpers.interceptors.grpc.otel_metrics.server_interceptor import (
     AsyncGrpcServerOtelMetricsInterceptor,
@@ -70,6 +75,49 @@ async def _ping(_request: bytes, _context) -> bytes:
     return b"pong"
 
 
+async def _abort_unary(_request: bytes, context) -> bytes:
+    """Unary handler that aborts the call itself with a deliberate status."""
+    await context.abort(grpc.StatusCode.RESOURCE_EXHAUSTED, "slow down")
+
+
+async def _crash_unary(_request: bytes, _context) -> bytes:
+    """Unary handler that fails with an error whose text must never reach the client."""
+    raise ValueError("secret internal failure")
+
+
+class _ClientPayload(BaseModel):
+    age: int
+
+
+def _bad_payload() -> _ClientPayload:
+    """Build a model from a value that fails validation (the value must never reach the client)."""
+    return _ClientPayload(age="secret-client-value")  # type: ignore[arg-type]
+
+
+async def _validation_crash_unary(_request: bytes, _context) -> bytes:
+    """Unary handler that lets a Pydantic ValidationError escape."""
+    _bad_payload()
+    return b""
+
+
+async def _request_validation_unary(_request: bytes, _context) -> bytes:
+    """Unary handler that validates the client's request inside ``request_validation``."""
+    with request_validation():
+        _bad_payload()
+    return b""
+
+
+# Set by the handlers below so a test can wait until a call is really running on the server.
+_HANDLER_STARTED = threading.Event()
+
+
+async def _hang(_request: bytes, _context) -> bytes:
+    """Unary handler that never answers on its own."""
+    _HANDLER_STARTED.set()
+    await asyncio.sleep(60)
+    return b"late"
+
+
 def _sync_count(request: bytes, _context):
     yield from (str(index).encode() for index in range(int(request)))
 
@@ -121,9 +169,30 @@ def _sync_ping(_request: bytes, _context) -> bytes:
     return b"pong"
 
 
+def _sync_abort_unary(_request: bytes, context) -> bytes:
+    context.abort(grpc.StatusCode.RESOURCE_EXHAUSTED, "slow down")
+
+
+def _sync_crash_unary(_request: bytes, _context) -> bytes:
+    raise ValueError("secret internal failure")
+
+
+def _sync_validation_crash_unary(_request: bytes, _context) -> bytes:
+    _bad_payload()
+    return b""
+
+
+def _sync_request_validation_unary(_request: bytes, _context) -> bytes:
+    with request_validation():
+        _bad_payload()
+    return b""
+
+
 def _build_sync_interceptors(stack: str) -> list:
     if stack == "exception":
         return [GrpcServerExceptionInterceptor()]
+    if stack == "legacy-validation":
+        return [GrpcServerExceptionInterceptor(validation_errors_as_invalid_argument=True)]
     if stack == "metrics":
         return [GrpcServerOtelMetricsInterceptor()]
     if stack == "full":
@@ -138,6 +207,8 @@ def _build_sync_interceptors(stack: str) -> list:
 def _build_interceptors(stack: str) -> list:
     if stack == "exception":
         return [AsyncGrpcServerExceptionInterceptor()]
+    if stack == "legacy-validation":
+        return [AsyncGrpcServerExceptionInterceptor(validation_errors_as_invalid_argument=True)]
     if stack == "metrics":
         return [AsyncGrpcServerOtelMetricsInterceptor()]
     if stack == "full":
@@ -161,6 +232,11 @@ async def _with_server(stack: str, call):
         "Echo": grpc.stream_stream_rpc_method_handler(_echo),
         "Sum": grpc.stream_unary_rpc_method_handler(_sum),
         "Ping": grpc.unary_unary_rpc_method_handler(_ping),
+        "AbortUnary": grpc.unary_unary_rpc_method_handler(_abort_unary),
+        "CrashUnary": grpc.unary_unary_rpc_method_handler(_crash_unary),
+        "ValidationCrash": grpc.unary_unary_rpc_method_handler(_validation_crash_unary),
+        "RequestValidation": grpc.unary_unary_rpc_method_handler(_request_validation_unary),
+        "Hang": grpc.unary_unary_rpc_method_handler(_hang),
     }
     server.add_generic_rpc_handlers((grpc.method_handlers_generic_handler(_SERVICE, handlers),))
     port = server.add_insecure_port("127.0.0.1:0")
@@ -184,6 +260,10 @@ def _with_sync_server(stack: str, call):
         "Echo": grpc.stream_stream_rpc_method_handler(_sync_echo),
         "Sum": grpc.stream_unary_rpc_method_handler(_sync_sum),
         "Ping": grpc.unary_unary_rpc_method_handler(_sync_ping),
+        "AbortUnary": grpc.unary_unary_rpc_method_handler(_sync_abort_unary),
+        "CrashUnary": grpc.unary_unary_rpc_method_handler(_sync_crash_unary),
+        "ValidationCrash": grpc.unary_unary_rpc_method_handler(_sync_validation_crash_unary),
+        "RequestValidation": grpc.unary_unary_rpc_method_handler(_sync_request_validation_unary),
     }
     server.add_generic_rpc_handlers((grpc.method_handlers_generic_handler(_SERVICE, handlers),))
     port = server.add_insecure_port("127.0.0.1:0")
@@ -336,3 +416,131 @@ def step_then_stream_status(context, status):
 def step_then_unary_response(context, expected):
     actual = get_current_scenario_context(context).get("grpc_unary_response")
     assert actual == expected, f"Expected unary response {expected!r}, got {actual!r}"
+
+
+async def _capture_unary_failure(context, method: str) -> None:
+    """Invoke a unary RPC that is expected to fail and store its status, details and trailing metadata."""
+    scenario_context = get_current_scenario_context(context)
+    stack = scenario_context.get("grpc_stream_stack")
+
+    def describe(error) -> dict:
+        return {
+            "status": error.code().name,
+            "details": error.details() or "",
+            "trailing": str(error.trailing_metadata() or ()),
+        }
+
+    if scenario_context.get("grpc_stream_mode") == "sync":
+
+        def sync_call(channel):
+            try:
+                channel.unary_unary(f"/{_SERVICE}/{method}")(b"")
+            except grpc.RpcError as error:
+                return describe(error)
+            raise AssertionError(f"{method} was expected to fail")
+
+        failure = _with_sync_server(stack, sync_call)
+    else:
+
+        async def async_call(channel):
+            try:
+                await channel.unary_unary(f"/{_SERVICE}/{method}")(b"")
+            except grpc.aio.AioRpcError as error:
+                return describe(error)
+            raise AssertionError(f"{method} was expected to fail")
+
+        failure = await _with_server(stack, async_call)
+    scenario_context.store("grpc_unary_failure", failure)
+
+
+@when("a unary RPC that aborts with RESOURCE_EXHAUSTED is invoked")
+async def step_when_unary_aborts(context):
+    await _capture_unary_failure(context, "AbortUnary")
+
+
+@when("a unary RPC that crashes unexpectedly is invoked")
+async def step_when_unary_crashes(context):
+    await _capture_unary_failure(context, "CrashUnary")
+
+
+@when("a unary RPC whose handler raises a validation error is invoked")
+async def step_when_unary_validation_crash(context):
+    await _capture_unary_failure(context, "ValidationCrash")
+
+
+@when("a unary RPC whose handler validates the request is invoked")
+async def step_when_unary_request_validation(context):
+    await _capture_unary_failure(context, "RequestValidation")
+
+
+async def _wait_for_rpc_duration(scenario_context) -> None:
+    """Wait (bounded) until the server has recorded an RPC duration.
+
+    The server unwinds a cancelled handler asynchronously, after the client already saw the cancellation.
+    """
+    reader = scenario_context.get("metric_reader")
+    for _ in range(100):
+        data = reader.get_metrics_data()
+        if data is not None and any(
+            metric.name == "rpc.server.request.duration"
+            for resource in data.resource_metrics
+            for scope in resource.scope_metrics
+            for metric in scope.metrics
+        ):
+            return
+        await asyncio.sleep(0.02)
+
+
+@when("the client cancels an RPC while the server handler is running")
+async def step_when_client_cancels_running_rpc(context):
+    scenario_context = get_current_scenario_context(context)
+    stack = scenario_context.get("grpc_stream_stack")
+    _HANDLER_STARTED.clear()
+
+    async def call(channel):
+        pending = channel.unary_unary(f"/{_SERVICE}/Hang")(b"")
+        assert await asyncio.to_thread(_HANDLER_STARTED.wait, 5), "The handler never started"
+        pending.cancel()
+        try:
+            await pending
+        except asyncio.CancelledError:
+            pass
+        await _wait_for_rpc_duration(scenario_context)
+
+    await _with_server(stack, call)
+
+
+@when("the client cancels a server-streaming RPC after the first message")
+async def step_when_client_cancels_stream(context):
+    scenario_context = get_current_scenario_context(context)
+    stack = scenario_context.get("grpc_stream_stack")
+    if scenario_context.get("grpc_stream_mode") == "sync":
+
+        def sync_call(channel):
+            stream = channel.unary_stream(f"/{_SERVICE}/Count")(b"1000000")
+            assert next(stream) == b"0"
+            stream.cancel()
+
+        _with_sync_server(stack, sync_call)
+        return
+
+    async def async_call(channel):
+        stream = channel.unary_stream(f"/{_SERVICE}/Count")(b"1000000")
+        assert await stream.read() == b"0"
+        stream.cancel()
+        await _wait_for_rpc_duration(scenario_context)
+
+    await _with_server(stack, async_call)
+
+
+@then("the gRPC unary call should fail with status {status}")
+def step_then_unary_failed_with_status(context, status):
+    failure = get_current_scenario_context(context).get("grpc_unary_failure")
+    assert failure["status"] == status, f"Expected {status}, got {failure['status']}"
+
+
+@then('the gRPC unary failure should not expose "{text}"')
+def step_then_unary_failure_hides(context, text):
+    failure = get_current_scenario_context(context).get("grpc_unary_failure")
+    exposed = f"{failure['details']} {failure['trailing']}"
+    assert text not in exposed, f"The failure exposed {text!r}: {exposed}"

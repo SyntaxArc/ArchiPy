@@ -21,7 +21,7 @@ from archipy.models.errors import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, MutableMapping
+    from collections.abc import AsyncGenerator, Callable, MutableMapping, Sequence, Set as AbstractSet
     from contextlib import AbstractAsyncContextManager
 
     from fastapi.routing import APIRoute
@@ -65,16 +65,19 @@ class FastAPIExceptionHandler:
     """Handles various types of errors and converts them to appropriate JSON responses."""
 
     @staticmethod
-    def create_error_response(exception: BaseError) -> JSONResponse:
+    def create_error_response(exception: BaseError, *, capture: bool = True) -> JSONResponse:
         """Creates a standardized error response.
 
         Args:
             exception (BaseError): The exception to be converted into a response.
+            capture (bool): Whether to log and record ``exception`` first. Pass False when the underlying
+                cause was already captured. Defaults to True.
 
         Returns:
             JSONResponse: A JSON response containing the exception details.
         """
-        BaseUtils.capture_exception(exception)
+        if capture:
+            BaseUtils.capture_exception(exception)
         # Default to internal server error if status code is not set
         status_code = exception.http_status or HTTPStatus.INTERNAL_SERVER_ERROR.value
         return JSONResponse(status_code=status_code, content=exception.to_dict())
@@ -93,17 +96,19 @@ class FastAPIExceptionHandler:
         return FastAPIExceptionHandler.create_error_response(exception)
 
     @staticmethod
-    async def generic_exception_handler(_request: Request, _exception: Exception) -> JSONResponse:
+    async def generic_exception_handler(_request: Request, exception: Exception) -> JSONResponse:
         """Handles generic errors.
 
         Args:
             _request (Request): The incoming request.
-            _exception (Exception): The generic exception to handle.
+            exception (Exception): The generic exception to handle.
 
         Returns:
             JSONResponse: A JSON response containing the exception details.
         """
-        return FastAPIExceptionHandler.create_error_response(UnknownError())
+        # Record the real failure (with its traceback); the client only gets the generic error.
+        BaseUtils.capture_exception(exception)
+        return FastAPIExceptionHandler.create_error_response(UnknownError(), capture=False)
 
     @staticmethod
     async def validation_exception_handler(
@@ -346,7 +351,6 @@ class FastAPIUtils:
                     error_dict = {
                         "field": ".".join(str(x) for x in error.get("loc", [])),
                         "message": error.get("msg", ""),
-                        "value": str(error.get("input", "")),
                     }
                     if "type" in error:
                         error_dict["type"] = error["type"]
@@ -489,9 +493,11 @@ class AsyncGrpcAPIUtils:
             )
 
             interceptors.append(AsyncGrpcServerRateLimitInterceptor(rate_limit_config=config.GRPC_RATE_LIMIT))
-        # Optional interceptor: a failed init must not stop server startup.
+        # A fail-open limiter must not stop startup; a fail-closed one must not leave the server unprotected.
         except Exception:
             logger.exception("Failed to initialize Rate Limit Interceptor")
+            if config.GRPC_RATE_LIMIT.FAIL_CLOSED:
+                raise
 
 
 class GrpcAPIUtils:
@@ -526,9 +532,11 @@ class GrpcAPIUtils:
             )
 
             interceptors.append(GrpcServerRateLimitInterceptor(rate_limit_config=config.GRPC_RATE_LIMIT))
-        # Optional interceptor: a failed init must not stop server startup.
+        # A fail-open limiter must not stop startup; a fail-closed one must not leave the server unprotected.
         except Exception:
             logger.exception("Failed to initialize Rate Limit Interceptor")
+            if config.GRPC_RATE_LIMIT.FAIL_CLOSED:
+                raise
 
 
 class AppUtils:
@@ -633,11 +641,26 @@ class AppUtils:
 
         return app
 
+    @staticmethod
+    def _ordered_interceptors(customized_interceptors: Sequence[Any] | AbstractSet[Any]) -> list[Any]:
+        """Return custom interceptors in the order they run.
+
+        Pass a ``list`` or ``tuple`` to control the order (first runs outermost). A ``set`` is still accepted for
+        backward compatibility, but its iteration order is arbitrary.
+
+        Args:
+            customized_interceptors: The interceptors supplied by the caller.
+
+        Returns:
+            list[Any]: The interceptors as a list.
+        """
+        return list(customized_interceptors)
+
     @classmethod
     def create_async_grpc_app(
         cls,
         config: BaseConfig,
-        customized_interceptors: set[Any] | None = None,
+        customized_interceptors: Sequence[Any] | AbstractSet[Any] | None = None,
         compression: grpc.Compression | None = None,
     ) -> GrpcAioServer:
         """Create and configure an async gRPC application."""
@@ -650,7 +673,7 @@ class AppUtils:
         AsyncGrpcAPIUtils.setup_rate_limit_interceptor(config, async_interceptors)
 
         if customized_interceptors:
-            async_interceptors.extend(customized_interceptors)
+            async_interceptors.extend(cls._ordered_interceptors(customized_interceptors))
 
         if create_grpc_server is None:
             raise ConfigurationError(operation="import", reason="grpc_aio_extra_required")
@@ -666,7 +689,7 @@ class AppUtils:
     def create_grpc_app(
         cls,
         config: BaseConfig,
-        customized_interceptors: set[Any] | None = None,
+        customized_interceptors: Sequence[Any] | AbstractSet[Any] | None = None,
         compression: grpc.Compression | None = None,
     ) -> grpc.Server:
         """Create and configure a synchronous gRPC server."""
@@ -678,7 +701,7 @@ class AppUtils:
         GrpcAPIUtils.setup_otel_interceptor(config, interceptors)
         GrpcAPIUtils.setup_rate_limit_interceptor(config, interceptors)
         if customized_interceptors:
-            interceptors.extend(customized_interceptors)
+            interceptors.extend(cls._ordered_interceptors(customized_interceptors))
 
         return grpc.server(
             futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),

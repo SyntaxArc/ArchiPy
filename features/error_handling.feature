@@ -83,6 +83,19 @@ Feature: Error Handling
     And the response should contain error code "UNKNOWN_ERROR"
 
   @fastapi
+  Scenario: FastAPI validation errors do not echo the rejected input
+    When an endpoint receives invalid request data "invalid field type"
+    Then the response should have HTTP status code 422
+    And the response body should not contain "not_a_number"
+
+  @fastapi
+  Scenario: FastAPI unexpected exceptions are logged with the real cause and hidden from the client
+    When an endpoint raises an unexpected exception while errors are captured
+    Then the response should have HTTP status code 500
+    And the response body should not contain "Unexpected error"
+    And the captured error log should hold a "ValueError" with message "Unexpected error"
+
+  @fastapi
   Scenario Outline: FastAPI error response format verification
     When an endpoint raises "<error_type>" error
     Then the response JSON should have "error" key with value "<error_code>"
@@ -160,18 +173,63 @@ Feature: Error Handling
       | InternalError        | 13          | INTERNAL_ERROR   | Internal system error occurred |
 
   @grpc
-  Scenario: Sync gRPC handles validation errors
+  Scenario: Sync gRPC reports a ValidationError raised by the handler as an internal error
     When a sync gRPC method receives invalid request
-    Then the gRPC call should fail with status code 3
-    And the gRPC error code should be "INVALID_ARGUMENT"
-    And the error should contain validation error details
+    Then the gRPC call should fail with status code 13
+    And the gRPC error code should be "INTERNAL_ERROR"
 
   @grpc @async
-  Scenario: Async gRPC handles validation errors
+  Scenario: Async gRPC reports a ValidationError raised by the handler as an internal error
     When an async gRPC method receives invalid request
-    Then the gRPC call should fail with status code 3
-    And the gRPC error code should be "INVALID_ARGUMENT"
-    And the error should contain validation error details
+    Then the gRPC call should fail with status code 13
+    And the gRPC error code should be "INTERNAL_ERROR"
+
+  @grpc
+  Scenario Outline: A ValidationError raised by the handler is an internal error and hides the input
+    Given a <mode> gRPC server using the exception interceptor stack
+    When a unary RPC whose handler raises a validation error is invoked
+    Then the gRPC unary call should fail with status INTERNAL
+    And the gRPC unary failure should not expose "secret-client-value"
+
+    Examples: Sync interceptor
+      | mode |
+      | sync |
+
+    @async
+    Examples: Async interceptor
+      | mode  |
+      | async |
+
+  @grpc
+  Scenario Outline: A ValidationError inside request_validation is reported as INVALID_ARGUMENT
+    Given a <mode> gRPC server using the exception interceptor stack
+    When a unary RPC whose handler validates the request is invoked
+    Then the gRPC unary call should fail with status INVALID_ARGUMENT
+    And the gRPC unary failure should not expose "secret-client-value"
+
+    Examples: Sync interceptor
+      | mode |
+      | sync |
+
+    @async
+    Examples: Async interceptor
+      | mode  |
+      | async |
+
+  @grpc
+  Scenario Outline: The legacy flag reports every ValidationError as INVALID_ARGUMENT
+    Given a <mode> gRPC server using the legacy-validation interceptor stack
+    When a unary RPC whose handler raises a validation error is invoked
+    Then the gRPC unary call should fail with status INVALID_ARGUMENT
+
+    Examples: Sync interceptor
+      | mode |
+      | sync |
+
+    @async
+    Examples: Async interceptor
+      | mode  |
+      | async |
 
   @grpc
   Scenario: Sync gRPC handles unexpected exceptions
@@ -184,6 +242,40 @@ Feature: Error Handling
     When an async gRPC method raises an unexpected exception
     Then the gRPC call should fail with status code 13
     And the gRPC error code should be "INTERNAL_ERROR"
+
+  @grpc
+  Scenario: Sync gRPC does not expose internal failure details to the client
+    When a sync gRPC method raises an unexpected exception
+    Then the gRPC call should fail with status code 13
+    And the gRPC error should not expose the internal failure
+
+  @grpc @async
+  Scenario: Async gRPC does not expose internal failure details to the client
+    When an async gRPC method raises an unexpected exception
+    Then the gRPC call should fail with status code 13
+    And the gRPC error should not expose the internal failure
+
+  @unit
+  Scenario Outline: gRPC abort serializes additional data that is not plain JSON
+    When a <mode> gRPC context is aborted with an error holding a UUID, a datetime and a Decimal
+    Then the context should be aborted with status code 13
+    And the aborted context trailing metadata "additional_data" should be valid JSON
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  @unit
+  Scenario Outline: gRPC abort replaces oversized additional data with a marker
+    When a <mode> gRPC context is aborted with an error holding 100000 characters of additional data
+    Then the context should be aborted with status code 13
+    And the aborted context trailing metadata "additional_data" should be the truncation marker
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
 
   @grpc
   Scenario Outline: gRPC error trailing metadata

@@ -5,6 +5,7 @@ from behave import given, then, when
 from pydantic import SecretStr
 
 from archipy.configs.base_config import BaseConfig
+from archipy.helpers.interceptors.grpc.base.server_interceptor import parse_method_name
 from archipy.helpers.interceptors.grpc.rate_limit.identifiers import (
     extract_bearer_token_from_metadata,
     invocation_metadata_to_dict,
@@ -192,3 +193,15 @@ def step_identifier_sub_is_uuid(context):
 def step_identifier_sub_none(context):
     actual = get_current_scenario_context(context).get("identifier_sub")
     assert actual is None, f"Expected None, got {actual!r}"
+
+
+@when('the gRPC method name "{full_name}" is parsed')
+def step_when_grpc_method_name_parsed(context, full_name):
+    get_current_scenario_context(context).store("parsed_method_name", parse_method_name(full_name))
+
+
+@then('the parsed gRPC method has package "{package}", service "{service}" and method "{method}"')
+def step_then_grpc_method_name_parts(context, package, service, method):
+    parsed = get_current_scenario_context(context).get("parsed_method_name")
+    expected = tuple("" if part == "(none)" else part for part in (package, service, method))
+    assert (parsed.package, parsed.service, parsed.method) == expected, parsed

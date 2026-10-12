@@ -35,10 +35,12 @@ class RateLimitUtils:
             A ``RateLimitWindowDTO`` with the combined window in milliseconds.
 
         Raises:
-            InvalidArgumentError: If ``calls_count`` is below 1 or the window is zero.
+            InvalidArgumentError: If ``calls_count`` is below 1, a window component is negative, or the window is zero.
         """
         if calls_count < 1:
             raise InvalidArgumentError(additional_data={"detail": "calls_count must be at least 1"})
+        if min(milliseconds, seconds, minutes, hours, days) < 0:
+            raise InvalidArgumentError(additional_data={"detail": "Rate limit window components must not be negative"})
 
         window_ms = (
             milliseconds + 1000 * seconds + 60 * 1000 * minutes + 60 * 60 * 1000 * hours + 24 * 60 * 60 * 1000 * days

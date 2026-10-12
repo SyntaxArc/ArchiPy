@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from functools import cache
 from typing import TYPE_CHECKING, Any
 
+from archipy.configs.base_config import BaseConfig
 from archipy.models.errors import InvalidTokenError, TokenExpiredError
 
 if TYPE_CHECKING:
@@ -13,6 +15,29 @@ if TYPE_CHECKING:
 
 
 _METADATA_PAIR_MIN_LEN = 2
+
+# (global config object, its AUTH section): re-resolved only when the global config object changes.
+_auth_config_cache: tuple[object, AuthConfig] | None = None
+
+
+@cache
+def _jwt_utils() -> Any:  # noqa: ANN401
+    """Import ``JWTUtils`` once (a module-level import would create an import cycle)."""
+    from archipy.helpers.utils.jwt_utils import JWTUtils  # noqa: PLC0415
+
+    return JWTUtils
+
+
+def _resolve_auth_config() -> AuthConfig:
+    """Return the global ``AUTH`` config, cached until ``BaseConfig.set_global`` swaps the config object."""
+    global _auth_config_cache  # noqa: PLW0603
+    config = BaseConfig.global_config()
+    cached = _auth_config_cache
+    if cached is not None and cached[0] is config and cached[1] is config.AUTH:
+        return cached[1]
+    auth_config = config.AUTH
+    _auth_config_cache = (config, auth_config)
+    return auth_config
 
 
 def invocation_metadata_to_dict(metadata_items: Iterable[Any]) -> dict[str, str]:
@@ -78,10 +103,8 @@ def resolve_jwt_access_token_sub_from_metadata(
     if not token:
         return None
 
-    from archipy.helpers.utils.jwt_utils import JWTUtils  # noqa: PLC0415
-
     try:
-        payload = JWTUtils.verify_access_token(token, auth_config=auth_config)
+        payload = _jwt_utils().verify_access_token(token, auth_config=auth_config or _resolve_auth_config())
     except InvalidTokenError, TokenExpiredError:
         return None
 

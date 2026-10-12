@@ -219,3 +219,37 @@ Feature: App Utilities
     When the client reads a server-sent events stream that is rejected before it starts
     Then the event stream request should return status code 400
     And the client should have received no events
+
+  Scenario Outline: A gRPC app runs custom interceptors in the order they were given
+    Given custom <kind> gRPC interceptors "first,second,third"
+    When a <mode> gRPC app is created with the custom interceptors
+    Then the gRPC app should run the custom interceptors in the order "first,second,third"
+
+    Examples:
+      | mode  | kind  |
+      | sync  | list  |
+      | sync  | tuple |
+      | async | list  |
+      | async | tuple |
+
+  Scenario Outline: A gRPC app still accepts a set of custom interceptors
+    Given custom set gRPC interceptors "first,second,third"
+    When a <mode> gRPC app is created with the custom interceptors
+    Then the gRPC app should run all the custom interceptors
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: A rate limiter that fails to start stops a fail-closed gRPC server
+    Given gRPC rate limiting is enabled with fail closed set to <fail_closed> and a Redis client that cannot be created
+    When the <mode> gRPC rate limit interceptor is set up
+    Then the gRPC rate limit setup should <outcome>
+
+    Examples:
+      | mode  | fail_closed | outcome                          |
+      | sync  | true        | raise the initialization error   |
+      | async | true        | raise the initialization error   |
+      | sync  | false       | continue without the interceptor |
+      | async | false       | continue without the interceptor |

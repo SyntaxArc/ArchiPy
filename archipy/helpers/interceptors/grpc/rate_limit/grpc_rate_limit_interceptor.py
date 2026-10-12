@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
+import logging
 from math import ceil
 from typing import TYPE_CHECKING
 
@@ -12,7 +14,10 @@ from archipy.helpers.interceptors.grpc.base.server_interceptor import (
     BaseGrpcServerInterceptor,
     MethodName,
 )
-from archipy.helpers.interceptors.grpc.rate_limit.identifiers import resolve_jwt_access_token_sub_from_metadata
+from archipy.helpers.interceptors.grpc.rate_limit.identifiers import (
+    invocation_metadata_to_dict,
+    resolve_jwt_access_token_sub_from_metadata,
+)
 from archipy.helpers.utils.rate_limit_utils import RateLimitUtils
 from archipy.models.errors import RateLimitExceededError, UnavailableError
 
@@ -24,6 +29,10 @@ if TYPE_CHECKING:
     from archipy.adapters.redis.adapters import AsyncRedisAdapter, RedisAdapter
     from archipy.configs.config_template import GrpcRateLimitConfig
     from archipy.models.dtos.rate_limit_window_dto import RateLimitWindowDTO
+
+logger = logging.getLogger(__name__)
+
+_FORWARDED_FOR_HEADER = "x-forwarded-for"
 
 
 class _GrpcRateLimitInterceptorMixin:
@@ -39,6 +48,7 @@ class _GrpcRateLimitInterceptorMixin:
         fail_closed: bool | None = None,
         skip_methods: frozenset[str] | None = None,
         identity_from_access_token: bool | None = None,
+        trusted_proxy_hosts: frozenset[str] | None = None,
     ) -> None:
         """Initialize global rate-limit settings for the interceptor.
 
@@ -48,6 +58,9 @@ class _GrpcRateLimitInterceptorMixin:
             fail_closed: Override for ``GRPC_RATE_LIMIT.FAIL_CLOSED``.
             skip_methods: Full gRPC method names excluded from rate limiting.
             identity_from_access_token: Override for ``GRPC_RATE_LIMIT.IDENTITY_FROM_ACCESS_TOKEN``.
+            trusted_proxy_hosts: Peer hosts (load balancers, ingress) whose ``x-forwarded-for`` header is trusted.
+                When the direct peer is in this set, the client address comes from the header instead of the
+                proxy address, so callers behind the proxy no longer share one rate-limit bucket.
         """
         resolved_rate_limit_config = rate_limit_config or BaseConfig.global_config().GRPC_RATE_LIMIT
         app_config = BaseConfig.global_config()
@@ -65,6 +78,8 @@ class _GrpcRateLimitInterceptorMixin:
             if identity_from_access_token is not None
             else resolved_rate_limit_config.IDENTITY_FROM_ACCESS_TOKEN
         )
+        self._trusted_proxy_hosts = trusted_proxy_hosts or frozenset()
+        self._windows_by_method: dict[str, tuple[RateLimitWindowDTO, ...]] = {}
 
     @staticmethod
     def _full_method_name(method_name_model: MethodName) -> str:
@@ -112,13 +127,45 @@ class _GrpcRateLimitInterceptorMixin:
 
         return peer
 
+    def _windows_for(self, method: Callable, method_name_model: MethodName) -> tuple[RateLimitWindowDTO, ...]:
+        """Return the rate-limit windows declared on ``method``, validated once per RPC method."""
+        full_method = self._full_method_name(method_name_model)
+        windows = self._windows_by_method.get(full_method)
+        if windows is None:
+            windows = RateLimitUtils.get_rate_limit_windows_from_callable(method)
+            self._windows_by_method[full_method] = windows
+        return windows
+
+    def _peer_identity(self, context: grpc.ServicerContext | grpc.aio.ServicerContext) -> str:
+        """Return the client host, honouring ``x-forwarded-for`` only when the direct peer is a trusted proxy."""
+        peer_host = self._parse_peer(context.peer())
+        if peer_host not in self._trusted_proxy_hosts:
+            return peer_host
+        metadata = context.invocation_metadata()
+        forwarded = invocation_metadata_to_dict(list(metadata) if metadata is not None else []).get(
+            _FORWARDED_FOR_HEADER,
+        )
+        if not forwarded:
+            return peer_host
+        hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
+        # Walk from the proxy side: the first hop that is not itself a trusted proxy is the real client.
+        for hop in reversed(hops):
+            if hop not in self._trusted_proxy_hosts:
+                return hop
+        return hops[0] if hops else peer_host
+
     def _build_rate_limit_key(self, identity: str, method_name_model: MethodName, window: RateLimitWindowDTO) -> str:
         """Build the Redis key for one rate-limit window tier."""
         full_method = self._full_method_name(method_name_model)
         return f"{self._key_prefix}:{identity}:{full_method}:{window.key_suffix}"
 
-    def _resolve_identity(self, context: grpc.ServicerContext, method_name_model: MethodName) -> str:
-        """Resolve the server-side rate-limit identity for an RPC."""
+    def _resolve_identity(self, context: grpc.ServicerContext, method_name_model: MethodName) -> str | None:
+        """Resolve the server-side rate-limit identity for an RPC.
+
+        Returns:
+            The identity, or ``None`` when a custom ``identifier_fn`` failed and the limiter is fail-open. In that
+            case the call is not limited, instead of pooling every such caller into one shared bucket.
+        """
         if self._identifier_fn is not None:
             try:
                 return str(self._identifier_fn(context, method_name_model))
@@ -128,19 +175,23 @@ class _GrpcRateLimitInterceptorMixin:
                         additional_data={"detail": "Rate limiter identity resolution failed"},
                     ).abort_grpc_sync(context)
                     raise RuntimeError("unreachable") from exc
-                return "unknown"
+                logger.warning("Rate limiter identity resolution failed; the call is not rate limited", exc_info=True)
+                return None
 
         if self._identity_from_access_token:
             metadata = context.invocation_metadata()
             metadata_items = list(metadata) if metadata is not None else []
             if user_sub := resolve_jwt_access_token_sub_from_metadata(metadata_items):
                 return user_sub
-            return self._parse_peer(context.peer())
 
-        return self._parse_peer(context.peer())
+        return self._peer_identity(context)
 
-    async def _resolve_identity_async(self, context: grpc.aio.ServicerContext, method_name_model: MethodName) -> str:
-        """Resolve the server-side rate-limit identity for an async RPC."""
+    async def _resolve_identity_async(
+        self,
+        context: grpc.aio.ServicerContext,
+        method_name_model: MethodName,
+    ) -> str | None:
+        """Resolve the server-side rate-limit identity for an async RPC (``None`` means do not limit)."""
         if self._identifier_fn is not None:
             try:
                 result = self._identifier_fn(context, method_name_model)
@@ -153,16 +204,18 @@ class _GrpcRateLimitInterceptorMixin:
                         additional_data={"detail": "Rate limiter identity resolution failed"},
                     ).abort_grpc_async(context)
                     raise RuntimeError("unreachable") from exc
-                return "unknown"
+                logger.warning("Rate limiter identity resolution failed; the call is not rate limited", exc_info=True)
+                return None
 
         if self._identity_from_access_token:
             metadata = context.invocation_metadata()
             metadata_items = list(metadata) if metadata is not None else []
-            if user_sub := resolve_jwt_access_token_sub_from_metadata(metadata_items):
+            # Signature verification is CPU bound; keep it off the event loop.
+            user_sub = await asyncio.to_thread(resolve_jwt_access_token_sub_from_metadata, metadata_items)
+            if user_sub:
                 return user_sub
-            return self._parse_peer(context.peer())
 
-        return self._parse_peer(context.peer())
+        return self._peer_identity(context)
 
     def _abort_rate_limited_sync(self, context: grpc.ServicerContext, window: RateLimitWindowDTO, pexpire: int) -> None:
         """Abort a sync RPC with RESOURCE_EXHAUSTED when a window is breached."""
@@ -220,6 +273,7 @@ class GrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseGrpcSer
         skip_methods: frozenset[str] | None = None,
         identifier_fn: Callable[[grpc.ServicerContext, MethodName], str] | None = None,
         identity_from_access_token: bool | None = None,
+        trusted_proxy_hosts: frozenset[str] | None = None,
     ) -> None:
         """Initialize the sync gRPC rate-limit interceptor."""
         super().__init__(
@@ -228,6 +282,7 @@ class GrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseGrpcSer
             fail_closed=fail_closed,
             skip_methods=skip_methods,
             identity_from_access_token=identity_from_access_token,
+            trusted_proxy_hosts=trusted_proxy_hosts,
         )
         self._identifier_fn = identifier_fn
         self._redis_client: RedisAdapter = self._create_redis_client()
@@ -254,6 +309,16 @@ class GrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseGrpcSer
             return 0, remaining
         return self._redis_client.pttl(key), 0
 
+    def _refund(self, keys: Sequence[str]) -> None:
+        """Give back the quota consumed in earlier windows by a call that a later window rejected."""
+        from redis.exceptions import RedisError  # noqa: PLC0415
+
+        for key in keys:
+            try:
+                self._redis_client.increx(key, byint=-1, lbound=0, saturate=True)
+            except ConnectionError, OSError, TimeoutError, RedisError:
+                logger.debug("Could not refund rate-limit quota for %s", key, exc_info=True)
+
     def intercept(
         self,
         method: Callable,
@@ -264,7 +329,7 @@ class GrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseGrpcSer
         """Enforce stacked rate-limit windows before invoking the RPC handler."""
         from redis.exceptions import RedisError  # noqa: PLC0415
 
-        windows = RateLimitUtils.get_rate_limit_windows_from_callable(method)
+        windows = self._windows_for(method, method_name_model)
         if not windows:
             return method(request, context)
 
@@ -273,6 +338,10 @@ class GrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseGrpcSer
             return method(request, context)
 
         identity = self._resolve_identity(context, method_name_model)
+        if identity is None:
+            return method(request, context)
+
+        consumed: list[str] = []
         for window in windows:
             key = self._build_rate_limit_key(identity, method_name_model, window)
             try:
@@ -284,8 +353,10 @@ class GrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseGrpcSer
                 return method(request, context)
 
             if pexpire != 0:
+                self._refund(consumed)
                 self._abort_rate_limited_sync(context, window, pexpire)
                 raise RuntimeError("unreachable")
+            consumed.append(key)
 
         return method(request, context)
 
@@ -302,6 +373,7 @@ class AsyncGrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseAs
         skip_methods: frozenset[str] | None = None,
         identifier_fn: Callable[[grpc.aio.ServicerContext, MethodName], str] | None = None,
         identity_from_access_token: bool | None = None,
+        trusted_proxy_hosts: frozenset[str] | None = None,
     ) -> None:
         """Initialize the async gRPC rate-limit interceptor."""
         super().__init__(
@@ -310,6 +382,7 @@ class AsyncGrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseAs
             fail_closed=fail_closed,
             skip_methods=skip_methods,
             identity_from_access_token=identity_from_access_token,
+            trusted_proxy_hosts=trusted_proxy_hosts,
         )
         self._identifier_fn = identifier_fn
         self._redis_client: AsyncRedisAdapter = self._create_redis_client()
@@ -336,18 +409,33 @@ class AsyncGrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseAs
             return 0, remaining
         return await self._redis_client.pttl(key), 0
 
+    async def _refund(self, keys: Sequence[str]) -> None:
+        """Give back the quota consumed in earlier windows by a call that a later window rejected."""
+        from redis.exceptions import RedisError  # noqa: PLC0415
+
+        for key in keys:
+            try:
+                await self._redis_client.increx(key, byint=-1, lbound=0, saturate=True)
+            except ConnectionError, OSError, TimeoutError, RedisError:
+                logger.debug("Could not refund rate-limit quota for %s", key, exc_info=True)
+
     async def _enforce_rate_limit_windows_async(
         self,
-        method: Callable,
-        request: object,
         context: grpc.aio.ServicerContext,
         method_name_model: MethodName,
         windows: Sequence[RateLimitWindowDTO],
-    ) -> object | None:
-        """Enforce rate-limit windows; return handler result on fail-open bypass."""
+    ) -> None:
+        """Enforce rate-limit windows, aborting the call when one is breached.
+
+        Returns once the call may proceed, including when the limiter is fail-open and Redis is unavailable.
+        """
         from redis.exceptions import RedisError  # noqa: PLC0415
 
         identity = await self._resolve_identity_async(context, method_name_model)
+        if identity is None:
+            return
+
+        consumed: list[str] = []
         for window in windows:
             key = self._build_rate_limit_key(identity, method_name_model, window)
             try:
@@ -356,12 +444,13 @@ class AsyncGrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseAs
                 if self._fail_closed:
                     await self._abort_unavailable_async(context, detail="Rate limiter unavailable")
                     raise RuntimeError("unreachable") from exc
-                return await self._invoke_maybe_async_handler(method, request, context)
+                return
 
             if pexpire != 0:
+                await self._refund(consumed)
                 await self._abort_rate_limited_async(context, window, pexpire)
                 raise RuntimeError("unreachable")
-        return None
+            consumed.append(key)
 
     async def intercept(
         self,
@@ -371,22 +460,9 @@ class AsyncGrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseAs
         method_name_model: MethodName,
     ) -> object:
         """Enforce stacked rate-limit windows before invoking the async RPC handler."""
-        windows = RateLimitUtils.get_rate_limit_windows_from_callable(method)
-        if not windows:
-            return await self._invoke_maybe_async_handler(method, request, context)
-
+        windows = self._windows_for(method, method_name_model)
         full_method = self._full_method_name(method_name_model)
-        if full_method in self._skip_methods:
-            return await self._invoke_maybe_async_handler(method, request, context)
-
-        bypass_result = await self._enforce_rate_limit_windows_async(
-            method,
-            request,
-            context,
-            method_name_model,
-            windows,
-        )
-        if bypass_result is not None:
-            return bypass_result
+        if windows and full_method not in self._skip_methods:
+            await self._enforce_rate_limit_windows_async(context, method_name_model, windows)
 
         return await self._invoke_maybe_async_handler(method, request, context)

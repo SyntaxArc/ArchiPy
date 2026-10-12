@@ -49,6 +49,27 @@ def _raise_grpc_unavailable() -> NoReturn:
     raise InternalError(error_code="GRPC_UNAVAILABLE")
 
 
+_MAX_TRAILING_METADATA_BYTES = 4096
+
+
+def _encode_additional_data(additional_data: dict[str, Any]) -> str:
+    """Serialize ``additional_data`` for gRPC trailing metadata.
+
+    Values that are not JSON native (UUID, datetime, Decimal, ...) fall back to ``str``. Payloads larger than
+    ``_MAX_TRAILING_METADATA_BYTES`` are replaced by a marker so the abort never fails on the metadata size limit.
+
+    Args:
+        additional_data: The error context data.
+
+    Returns:
+        str: JSON text that is safe to send as trailing metadata.
+    """
+    encoded = json.dumps(additional_data, default=str)
+    if len(encoded.encode("utf-8")) > _MAX_TRAILING_METADATA_BYTES:
+        return json.dumps({"truncated": True})
+    return encoded
+
+
 def _raise_invalid_grpc_context(reason: str) -> NoReturn:
     from archipy.models.errors.validation_errors import InvalidArgumentError
 
@@ -250,7 +271,7 @@ class BaseError(Exception):
         message = self.get_message()
 
         if self.additional_data and hasattr(context, "set_trailing_metadata"):
-            context.set_trailing_metadata((("additional_data", json.dumps(self.additional_data)),))
+            context.set_trailing_metadata((("additional_data", _encode_additional_data(self.additional_data)),))
 
         if hasattr(context, "abort") and callable(context.abort):
             await context.abort(status_code, message)
@@ -276,7 +297,7 @@ class BaseError(Exception):
         message = self.get_message()
 
         if self.additional_data and hasattr(context, "set_trailing_metadata"):
-            context.set_trailing_metadata((("additional_data", json.dumps(self.additional_data)),))
+            context.set_trailing_metadata((("additional_data", _encode_additional_data(self.additional_data)),))
 
         if hasattr(context, "abort") and callable(context.abort):
             context.abort(status_code, message)
