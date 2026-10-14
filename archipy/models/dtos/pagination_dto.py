@@ -5,6 +5,8 @@ from typing import ClassVar, Self, TypeVar
 
 from pydantic import Field, PositiveInt, model_validator
 
+from archipy.configs.base_config import BaseConfig
+from archipy.configs.config_template import PaginationConfig
 from archipy.models.dtos.base_dtos import BaseDTO
 from archipy.models.errors import OutOfRangeError
 
@@ -43,7 +45,9 @@ class PaginationDTO(BaseDTO):
     page: PositiveInt = Field(default=1, description="Page number (1-indexed)")
     page_size: PositiveInt = Field(default=10, le=100, description="Number of items per page")
 
-    MAX_ITEMS: ClassVar = 10000
+    MAX_ITEMS: ClassVar[int | None] = None
+    """Limit of ``page * page_size``. ``None`` reads ``PAGINATION.MAX_ITEMS`` from the global config; a subclass may
+    set its own number."""
 
     @model_validator(mode="after")
     def validate_pagination(self) -> Self:
@@ -56,12 +60,25 @@ class PaginationDTO(BaseDTO):
             The validated model instance if valid.
 
         Raises:
-            OutOfRangeError: If the total requested items exceeds MAX_ITEMS.
+            OutOfRangeError: If the total requested items exceeds the limit (``MAX_ITEMS``).
         """
         total_items = self.page * self.page_size
-        if total_items > self.MAX_ITEMS:
+        if total_items > self._max_items():
             raise OutOfRangeError(field_name="pagination")
         return self
+
+    @classmethod
+    def _max_items(cls) -> int:
+        """Return the page limit: the class override, else ``PAGINATION.MAX_ITEMS`` of the global config.
+
+        Falls back to the ``PaginationConfig`` default when no global config is set.
+        """
+        if cls.MAX_ITEMS is not None:
+            return cls.MAX_ITEMS
+        try:
+            return BaseConfig.global_config().PAGINATION.MAX_ITEMS
+        except AssertionError:
+            return PaginationConfig().MAX_ITEMS
 
     @property
     def offset(self) -> int:
