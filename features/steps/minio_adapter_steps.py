@@ -4,7 +4,7 @@ import json
 import os
 import tempfile
 
-import requests
+import httpx2
 from behave import given, then, when
 from features.test_helpers import get_current_scenario_context
 
