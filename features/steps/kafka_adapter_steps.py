@@ -646,3 +646,30 @@ async def step_async_health_check_pass(context):
     except UnavailableError as e:
         context.logger.error(f"Async health check failed: {str(e)}")
         raise AssertionError(f"Async producer health check failed: {str(e)}")
+
+
+@when('I produce and consume a message on topic "{topic}" through the async Kafka adapters')
+def step_async_kafka_roundtrip(context, topic):
+    """Round-trip one message through the async adapters (used by the span scenarios)."""
+    import asyncio
+    import uuid
+
+    admin = get_kafka_admin_adapter(context)
+    admin.create_topic(topic, num_partitions=1, replication_factor=1)
+    assert wait_for_topic_condition(admin, lambda name, topics: name in topics, topic)
+
+    async def roundtrip():
+        producer = get_async_kafka_producer_adapter(context, topic)
+        consumer = get_async_kafka_consumer_adapter(context, topic, f"async-span-group-{uuid.uuid4().hex[:6]}")
+        await consumer.subscribe([topic])
+        await producer.produce("async-span-message")
+        await producer.flush(timeout=5)
+        deadline = time.monotonic() + 10
+        message = None
+        while message is None and time.monotonic() < deadline:
+            message = await consumer.poll(timeout=1)
+        await consumer.close()
+        await producer.close()
+        return message
+
+    assert asyncio.run(roundtrip()) is not None, "Async consumer received no message"

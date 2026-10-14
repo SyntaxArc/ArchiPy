@@ -1,5 +1,5 @@
 # features/keycloak_auth.feature
-@needs-keycloak
+@needs-keycloak @needs-otel-collector
 Feature: Keycloak Authentication Testing
   As a developer
   I want to test Keycloak authentication operations
@@ -1189,6 +1189,17 @@ Feature: Keycloak Authentication Testing
     And the keycloak utils fastapi auth requires any of roles "utils-reader"
     When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
     Then the keycloak utils call fails with error code "TOKEN_EXPIRED"
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Keycloak <mode> adapter requests emit HTTP spans
+    Given adapter spans are exported to the collector
+    And a configured <mode> Keycloak adapter
+    When I create a realm named "span-realm" with display name "Span Realm" using <mode> adapter
+    Then the collector should have a span with attribute "http.url" containing "/admin/realms"
 
     Examples:
       | mode  |
