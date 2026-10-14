@@ -715,6 +715,22 @@ class SQLAlchemyConfig(BaseModel):
 
     DATABASE: str | None = Field(default=None, description="Database name")
     DRIVER_NAME: str = Field(default="postgresql+psycopg", description="Database driver name")
+    COUNT_CACHE_ENABLED: bool = Field(
+        default=False,
+        description="Whether to cache the total count of search queries, so only the first page runs a COUNT",
+    )
+    COUNT_CACHE_MAX_SIZE: int = Field(default=1000, ge=1, description="Maximum number of cached search query totals")
+    COUNT_CACHE_TTL_SECONDS: int = Field(
+        default=60,
+        ge=1,
+        description="Seconds a cached search query total stays valid",
+    )
+    COUNT_THRESHOLD: int | None = Field(
+        default=None,
+        ge=0,
+        description="Default count threshold of search queries: exact totals up to it, a PostgreSQL estimate above it. "
+        "None always counts exactly",
+    )
     ECHO: bool = Field(default=False, description="Whether to log SQL statements")
     ECHO_POOL: bool = Field(default=False, description="Whether to log connection pool events")
     ENABLE_FROM_LINTING: bool = Field(default=True, description="Whether to enable SQL linting")
