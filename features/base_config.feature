@@ -62,3 +62,20 @@ Feature: Base Configuration System
     Given a BaseConfig with APP_NAME "my-service" and OTEL.SERVICE_NAME "other"
     When the global configuration is set
     Then OTEL.SERVICE_NAME should be "other"
+
+  Scenario: An unset COUNT_THRESHOLD defaults to PAGINATION.MAX_ITEMS on set_global
+    Given a BaseConfig with PAGINATION.MAX_ITEMS 500 and no COUNT_THRESHOLD
+    When the global configuration is set
+    Then every SQLAlchemy COUNT_THRESHOLD should be 500
+
+  Scenario: An explicit COUNT_THRESHOLD wins over PAGINATION.MAX_ITEMS
+    Given a BaseConfig with PAGINATION.MAX_ITEMS 500 and POSTGRES_SQLALCHEMY.COUNT_THRESHOLD 20
+    When the global configuration is set
+    Then POSTGRES_SQLALCHEMY.COUNT_THRESHOLD should be 20
+    And SQLITE_SQLALCHEMY.COUNT_THRESHOLD should be 500
+
+  Scenario: The pagination limit follows PAGINATION.MAX_ITEMS
+    Given a BaseConfig with PAGINATION.MAX_ITEMS 50 and no COUNT_THRESHOLD
+    When the global configuration is set
+    Then pagination of page 5 with size 10 should be accepted
+    And pagination of page 6 with size 10 should be rejected as out of range

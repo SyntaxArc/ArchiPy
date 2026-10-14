@@ -483,6 +483,22 @@ Feature: SQLAlchemy Atomic Transactions
       | sqlite    |
       | starrocks |
 
+  Scenario: The search output DTO reports whether the total is above the count threshold
+    Given the application database is initialized for postgres
+    And test entities are defined
+    And 25 searchable entities exist with description prefix "search-output"
+    And the search count threshold config is 10
+    And the global count threshold is 10
+    When I search page 1 of size 10 for entities with description prefix "search-output"
+    Then the search output DTO reports the total as estimated
+    And the exact search output DTO reports the total as exact
+    Given the global count threshold is 30
+    When I search page 1 of size 10 for entities with description prefix "search-output"
+    Then the search output DTO reports the total as exact
+    Given the global count threshold is not set
+    When I search page 1 of size 10 for entities with description prefix "search-output"
+    Then the search output DTO reports the total as exact
+
   Scenario Outline: The configured count threshold applies when the search sets none
     Given the application database is initialized for <db_type>
     And test entities are defined

@@ -232,3 +232,71 @@ def step_then_auth_jwt_issuer(context, expected):
 def step_then_temporal_client_identity(context, expected):
     actual = BaseConfig.global_config().TEMPORAL.CLIENT_IDENTITY
     assert actual == expected, f"Expected TEMPORAL.CLIENT_IDENTITY={expected!r}, got {actual!r}"
+
+
+@given("a BaseConfig with PAGINATION.MAX_ITEMS {max_items:d} and no COUNT_THRESHOLD")
+def step_given_pagination_max_items(context, max_items):
+    scenario_context = get_current_scenario_context(context)
+    config = TestConfig()
+    config.PAGINATION.MAX_ITEMS = max_items
+    for sqlalchemy_config in _sqlalchemy_configs(config):
+        sqlalchemy_config.COUNT_THRESHOLD = None
+    scenario_context.store("pending_global_config", config)
+
+
+@given("a BaseConfig with PAGINATION.MAX_ITEMS {max_items:d} and POSTGRES_SQLALCHEMY.COUNT_THRESHOLD {threshold:d}")
+def step_given_pagination_max_items_and_explicit_threshold(context, max_items, threshold):
+    scenario_context = get_current_scenario_context(context)
+    config = TestConfig()
+    config.PAGINATION.MAX_ITEMS = max_items
+    for sqlalchemy_config in _sqlalchemy_configs(config):
+        sqlalchemy_config.COUNT_THRESHOLD = None
+    config.POSTGRES_SQLALCHEMY.COUNT_THRESHOLD = threshold
+    scenario_context.store("pending_global_config", config)
+
+
+def _sqlalchemy_configs(config):
+    return (
+        config.SQLALCHEMY,
+        config.POSTGRES_SQLALCHEMY,
+        config.MYSQL_SQLALCHEMY,
+        config.SQLITE_SQLALCHEMY,
+        config.STARROCKS_SQLALCHEMY,
+    )
+
+
+@then("every SQLAlchemy COUNT_THRESHOLD should be {expected:d}")
+def step_then_every_count_threshold(context, expected):
+    actual = [config.COUNT_THRESHOLD for config in _sqlalchemy_configs(BaseConfig.global_config())]
+    assert actual == [expected] * len(actual), f"Expected every COUNT_THRESHOLD to be {expected}, got {actual}"
+
+
+@then("POSTGRES_SQLALCHEMY.COUNT_THRESHOLD should be {expected:d}")
+def step_then_postgres_count_threshold(context, expected):
+    actual = BaseConfig.global_config().POSTGRES_SQLALCHEMY.COUNT_THRESHOLD
+    assert actual == expected, f"Expected POSTGRES_SQLALCHEMY.COUNT_THRESHOLD={expected}, got {actual}"
+
+
+@then("SQLITE_SQLALCHEMY.COUNT_THRESHOLD should be {expected:d}")
+def step_then_sqlite_count_threshold(context, expected):
+    actual = BaseConfig.global_config().SQLITE_SQLALCHEMY.COUNT_THRESHOLD
+    assert actual == expected, f"Expected SQLITE_SQLALCHEMY.COUNT_THRESHOLD={expected}, got {actual}"
+
+
+@then("pagination of page {page:d} with size {size:d} should be accepted")
+def step_then_pagination_accepted(context, page, size):
+    from archipy.models.dtos.pagination_dto import PaginationDTO
+
+    assert PaginationDTO(page=page, page_size=size).offset == (page - 1) * size
+
+
+@then("pagination of page {page:d} with size {size:d} should be rejected as out of range")
+def step_then_pagination_rejected(context, page, size):
+    from archipy.models.dtos.pagination_dto import PaginationDTO
+    from archipy.models.errors import OutOfRangeError
+
+    try:
+        PaginationDTO(page=page, page_size=size)
+    except OutOfRangeError:
+        return
+    raise AssertionError(f"Expected OutOfRangeError for page {page} with size {size}")

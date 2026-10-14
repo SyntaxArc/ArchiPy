@@ -2471,6 +2471,40 @@ def step_given_count_threshold_config(context, threshold):
             adapter._count_threshold = threshold  # noqa: SLF001
 
 
+@given("the global count threshold is {threshold:d}")
+def step_given_global_count_threshold(context, threshold):
+    sqlalchemy_config = BaseConfig.global_config().POSTGRES_SQLALCHEMY
+    context.add_cleanup(setattr, sqlalchemy_config, "COUNT_THRESHOLD", sqlalchemy_config.COUNT_THRESHOLD)
+    sqlalchemy_config.COUNT_THRESHOLD = threshold
+
+
+@given("the global count threshold is not set")
+def step_given_global_count_threshold_unset(context):
+    sqlalchemy_config = BaseConfig.global_config().POSTGRES_SQLALCHEMY
+    context.add_cleanup(setattr, sqlalchemy_config, "COUNT_THRESHOLD", sqlalchemy_config.COUNT_THRESHOLD)
+    sqlalchemy_config.COUNT_THRESHOLD = None
+
+
+@then("the search output DTO reports the total as {kind}")
+def step_then_search_output_dto_kind(context, kind):
+    from archipy.models.dtos.search_output_dto import SearchOutputDTO
+
+    assert kind in {"estimated", "exact"}, f"Unknown total kind {kind!r}"
+    _, total = get_current_scenario_context(context).get("search_result")
+    output = SearchOutputDTO(total_count=total)
+    assert output.total_count_estimated is (kind == "estimated"), (
+        f"Expected the total {total} to be {kind}, got total_count_estimated={output.total_count_estimated}"
+    )
+
+
+@then("the exact search output DTO reports the total as exact")
+def step_then_exact_search_output_dto(context):
+    from archipy.models.dtos.search_output_dto import ExactSearchOutputDTO
+
+    _, total = get_current_scenario_context(context).get("search_result")
+    assert ExactSearchOutputDTO(total_count=total).total_count_estimated is False
+
+
 @given("the table statistics are refreshed")
 def step_given_table_statistics_refreshed(context):
     from sqlalchemy import text
