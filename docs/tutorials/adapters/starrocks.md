@@ -455,5 +455,6 @@ async def get_age_distribution() -> dict[str, list[dict[str, int]]]:
 - [Configuration Management](../config_management.md) — StarRocks configuration setup
 - [BDD Testing](../testing_strategy.md) — Testing database operations
 - [PostgreSQL Adapter](postgres.md) — Similar patterns for PostgreSQL
+- [SQLAlchemy Search Totals](sqlalchemy.md) — Cheap totals for paginated searches, count threshold and count cache
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Transaction decorator usage
 - [API Reference](../../api_reference/adapters/starrocks.md) — Full StarRocks adapter API documentation

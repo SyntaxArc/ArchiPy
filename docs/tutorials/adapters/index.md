@@ -21,6 +21,7 @@ your business logic and external dependencies.
 | [MySQL](mysql.md)                       | Database access                | SQLAlchemy integration for MySQL                          | [API](../../api_reference/adapters/mysql.md)            |
 | [SQLite](sqlite.md)                     | Database access                | SQLAlchemy integration for SQLite                         | [API](../../api_reference/adapters/sqlite.md)           |
 | [StarRocks](starrocks.md)               | Database access                | SQLAlchemy integration for StarRocks                      | [API](../../api_reference/adapters/starrocks.md)        |
+| [SQLAlchemy Search Totals](sqlalchemy.md) | Database access              | Cheap totals for paginated searches on any SQL adapter    | [API](../../api_reference/adapters/postgres.md)         |
 | [ScyllaDB](scylladb.md)                 | NoSQL database                 | Wide-column store for ScyllaDB and Cassandra              | [API](../../api_reference/adapters/scylladb.md)         |
 | [Elasticsearch](elasticsearch.md)       | Search & analytics             | Full-text search, document indexing, aggregations         | [API](../../api_reference/adapters/elasticsearch.md)    |
 | [Redis](redis.md)                       | Key-value store                | Caching, pub/sub, RediSearch vector/range/hybrid, cluster | [API](../../api_reference/adapters/redis.md)            |

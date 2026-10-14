@@ -136,6 +136,7 @@ nav:
           - MySQL: tutorials/adapters/mysql.md
           - SQLite: tutorials/adapters/sqlite.md
           - StarRocks: tutorials/adapters/starrocks.md
+          - SQLAlchemy Search Totals: tutorials/adapters/sqlalchemy.md
           - Kafka: tutorials/adapters/kafka.md
           - Keycloak: tutorials/adapters/keycloak.md
           - MinIO: tutorials/adapters/minio.md

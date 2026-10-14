@@ -399,5 +399,6 @@ async def get_user(user_id: UUID) -> dict[str, str | UUID]:
 - [Configuration Management](../config_management.md) — SQLite configuration setup
 - [BDD Testing](../testing_strategy.md) — Testing database operations
 - [PostgreSQL Adapter](postgres.md) — Similar patterns for PostgreSQL
+- [SQLAlchemy Search Totals](sqlalchemy.md) — Cheap totals for paginated searches, count threshold and count cache
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Transaction decorator usage
 - [API Reference](../../api_reference/adapters/sqlite.md) — Full SQLite adapter API documentation

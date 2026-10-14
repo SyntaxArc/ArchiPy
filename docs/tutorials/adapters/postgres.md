@@ -506,6 +506,11 @@ def search_users(
     return users, total
 ```
 
+### Total Count Performance
+
+For large tables, `count_threshold`, the `COUNT_THRESHOLD` setting and the opt-in count cache keep the total cheap. They
+apply to every SQLAlchemy adapter, see [SQLAlchemy Search Totals](sqlalchemy.md).
+
 ### Available Filter Operations
 
 | Operation               | Behaviour                                   |
@@ -909,5 +914,6 @@ worker_config = PostgresSQLAlchemyConfig(
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — PostgreSQL configuration setup
 - [BDD Testing](../testing_strategy.md) — Testing database operations
+- [SQLAlchemy Search Totals](sqlalchemy.md) — Cheap totals for paginated searches, count threshold and count cache
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Transaction decorator usage
 - [API Reference](../../api_reference/adapters/postgres.md) — Full PostgreSQL adapter API documentation
