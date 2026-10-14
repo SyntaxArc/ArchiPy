@@ -6,6 +6,7 @@ import contextlib
 import logging
 from typing import TYPE_CHECKING, NoReturn, override
 
+import confluent_kafka
 from confluent_kafka import (
     ConcurrentModificationException,
     Consumer,
@@ -304,7 +305,9 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
                 config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
                 config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
                 config["ssl.endpoint.identification.algorithm"] = "none"
-            consumer = Consumer(config)
+            # Looked up on the module at call time: OpenTelemetry's Kafka instrumentor replaces
+            # ``confluent_kafka.Consumer``, so a name bound at import time would never be traced.
+            consumer = confluent_kafka.Consumer(config)
         except _KAFKA_CLIENT_ERRORS as e:
             cls._handle_kafka_exception(e, "KafkaConsumer_init")
         else:
@@ -519,7 +522,8 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
                 config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
                 config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
                 config["ssl.endpoint.identification.algorithm"] = "none"
-            producer = Producer(config)
+            # See the consumer: resolved at call time so the OpenTelemetry instrumentor can wrap it.
+            producer = confluent_kafka.Producer(config)
         except _KAFKA_CLIENT_ERRORS as e:
             cls._handle_kafka_exception(e, "KafkaProducer_init")
         else:

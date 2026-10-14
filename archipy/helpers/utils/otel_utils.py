@@ -1318,7 +1318,9 @@ class OtelUtils:
         extra (or the contrib package directly) to enable them. Instrumentors
         whose target library is absent (e.g. ``httpx`` when only ``httpx2`` is
         installed) raise ``DependencyConflictError`` and are skipped at debug
-        level instead of OTel logging the conflict as an error.
+        level. A target library that is installed outside the instrumentor's
+        supported version range is logged at warning level, because no spans
+        are emitted for it.
 
         Driver-level DB instrumentors (psycopg/pymysql/sqlite3) are omitted:
         ArchiPy goes through SQLAlchemy — use ``archipy[otel-sqlalchemy]``.
@@ -1363,14 +1365,70 @@ class OtelUtils:
             except ImportError:
                 logger.debug("Skipping OTel instrumentation for %s (package not installed)", key)
             except DependencyConflictError as e:
-                logger.debug("Skipping OTel instrumentation for %s (%s)", key, e.conflict)
+                cls._handle_instrumentation_conflict(key, e.conflict, module_name, class_name, otel)
             except Exception:
                 logger.debug("Failed to instrument %s", key, exc_info=True)
 
     @classmethod
-    def _instrument_with_providers(cls, instrumentor: Any) -> None:
+    def _handle_instrumentation_conflict(
+        cls,
+        key: str,
+        conflict: Any,
+        module_name: str,
+        class_name: str,
+        otel: Any,
+    ) -> None:
+        """React to a ``DependencyConflictError`` raised by an instrumentor.
+
+        A target library that is absent is skipped at debug level. One that is installed but outside the
+        instrumentor's supported range would otherwise fail silently, so it is either instrumented anyway (when
+        listed in ``OTEL.INSTRUMENTATION_SKIP_DEP_CHECK``) or reported at warning level.
+        """
+        if not (conflict.found or conflict.found_any):
+            logger.debug("Skipping OTel instrumentation for %s (%s)", key, conflict)
+        elif key in otel.INSTRUMENTATION_SKIP_DEP_CHECK:
+            instrumentor_cls = getattr(__import__(module_name, fromlist=[class_name]), class_name)
+            cls._instrument_ignoring_version_range(key, instrumentor_cls)
+        else:
+            # Without this the service would run silently without these spans.
+            logger.warning(
+                "OTel instrumentation for %s is disabled, no spans will be emitted: the installed version "
+                "is outside the range the instrumentor supports (%s)",
+                key,
+                conflict,
+            )
+
+    @classmethod
+    def _instrument_ignoring_version_range(cls, key: str, instrumentor_cls: Any) -> None:
+        """Instrument a library whose installed version is newer than the instrumentor's declared range.
+
+        Some instrumentors cap the library version in their metadata long before the runtime hooks they use
+        break (for example ``opentelemetry-instrumentation-sqlalchemy`` caps SQLAlchemy below 2.1). Keys listed in
+        ``OTEL.INSTRUMENTATION_SKIP_DEP_CHECK`` are instrumented anyway, with a warning.
+        """
+        try:
+            cls._instrument_with_providers(instrumentor_cls(), skip_dep_check=True)
+        except Exception:
+            logger.warning(
+                "OTel instrumentation for %s is disabled, no spans will be emitted: the installed version is "
+                "outside the range the instrumentor supports and instrumenting it anyway failed",
+                key,
+                exc_info=True,
+            )
+            return
+        cls._instrumented_libraries.add(key)
+        logger.warning(
+            "OTel instrumentation for %s is enabled although the installed version is outside the range the "
+            "instrumentor declares (OTEL.INSTRUMENTATION_SKIP_DEP_CHECK); remove %r from that setting once the "
+            "instrumentor supports this version",
+            key,
+            key,
+        )
+
+    @classmethod
+    def _instrument_with_providers(cls, instrumentor: Any, *, skip_dep_check: bool = False) -> None:
         """Instrument with ArchiPy's providers; raise ``DependencyConflictError`` on a missing target library."""
-        kwargs: dict[str, Any] = {"raise_exception_on_conflict": True}
+        kwargs: dict[str, Any] = {"skip_dep_check": True} if skip_dep_check else {"raise_exception_on_conflict": True}
         if cls._tracer_provider is not None:
             kwargs["tracer_provider"] = cls._tracer_provider
         if cls._meter_provider is not None:

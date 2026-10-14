@@ -1020,6 +1020,14 @@ class OpentelemetryConfig(BaseModel):
             "under the request span when TRACES_ENABLED is true"
         ),
     )
+    INSTRUMENTATION_SKIP_DEP_CHECK: list[str] = Field(
+        default=["sqlalchemy"],
+        description=(
+            "Auto-instrumentation keys (e.g. sqlalchemy) that are instrumented even when the installed library is "
+            "newer than the instrumentor's declared version range. ArchiPy requires SQLAlchemy 2.1 while "
+            "opentelemetry-instrumentation-sqlalchemy still declares <2.1.0; remove the key once upstream supports it"
+        ),
+    )
     FASTAPI_LOGS_ENABLED: bool = Field(
         default=False,
         description=(

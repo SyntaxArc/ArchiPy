@@ -6,7 +6,8 @@ from abc import abstractmethod
 from asyncio import current_task
 from typing import TYPE_CHECKING, Any, TypeVar, override
 
-from sqlalchemy import URL, Engine, create_engine
+import sqlalchemy
+from sqlalchemy import URL, Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
@@ -114,7 +115,9 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
         """
         try:
             url = self._create_url(configs)
-            return create_engine(
+            # Looked up on the module at call time: OpenTelemetry's SQLAlchemy instrumentor replaces
+            # ``sqlalchemy.create_engine``, so a name bound at import time would skip the instrumentation.
+            return sqlalchemy.create_engine(
                 url,
                 isolation_level=configs.ISOLATION_LEVEL,
                 echo=configs.ECHO,

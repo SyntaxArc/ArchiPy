@@ -109,6 +109,7 @@ logger.info("OTel enabled=%s endpoint=%s", config.OTEL.IS_ENABLED, config.OTEL.O
 | `METRICS_PUSHGATEWAY_GROUPING_KEY`       | `{}`                    | Extra grouping labels (max 16 entries)                                                       |
 | `METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN` | `true`                  | Delete grouping key on graceful shutdown                                                     |
 | `SYSTEM_METRICS_ENABLED`                 | `true`                  | Process/system metrics instrumentor                                                          |
+| `INSTRUMENTATION_SKIP_DEP_CHECK`         | `["sqlalchemy"]`        | Libraries instrumented even when newer than the instrumentor's declared range                |
 | `LOGS_ENABLED`                           | `true`                  | Enable log export when OTel is on                                                            |
 | `LOGS_EXPORTER`                          | `console`               | Unique logs exporter: `console` or `otlp`                                                    |
 | `FASTAPI_EXCLUDED_URLS`                  | `None`                  | Comma-separated URL patterns skipped by FastAPI                                              |
@@ -321,6 +322,21 @@ silently. Elasticsearch needs no instrumentor — the `elasticsearch` client emi
 spans natively.
 `SystemMetricsInstrumentor` runs only when `METRICS_ENABLED` and
 `SYSTEM_METRICS_ENABLED` are both true.
+
+#### Version ranges
+
+Each instrumentor declares the library versions it supports. When a library is installed outside
+that range, ArchiPy logs a **warning** (`no spans will be emitted`) instead of staying silent.
+A library that is simply not installed is skipped at debug level.
+
+`opentelemetry-instrumentation-sqlalchemy` still declares `sqlalchemy<2.1.0`, while ArchiPy requires
+SQLAlchemy 2.1. The cap sits in the instrumentor's `instruments` extra, which is not a hard
+dependency, so installs resolve without error and the instrumentor only refuses at runtime. To keep
+SQLAlchemy spans, `OTEL__INSTRUMENTATION_SKIP_DEP_CHECK` (default `["sqlalchemy"]`) lists the
+libraries that are instrumented anyway; ArchiPy logs one warning naming the mismatch. Set it to `[]`
+to turn the bypass off. Remove a key once its instrumentor supports the installed version:
+`make check-instrumentor-compat` resolves the instrumentor's `instruments` extra together with
+ArchiPy's own SQLAlchemy bound and reports when upstream has caught up (a weekly CI job runs it too).
 
 ### Client gRPC
 
