@@ -1197,6 +1197,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#tracing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3640,6 +3651,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#tracing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4227,6 +4249,14 @@ shared adapter instance (e.g., via application lifespan) and call <code>close()<
 </span><span id="__span-14-92"><a id="__codelineno-14-92" name="__codelineno-14-92" href="#__codelineno-14-92"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Retrieved topic list"</span><span class="p">)</span>
 </span><span id="__span-14-93"><a id="__codelineno-14-93" name="__codelineno-14-93" href="#__codelineno-14-93"></a>        <span class="k">return</span> <span class="p">{</span><span class="s2">"topics"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">cluster_metadata</span><span class="o">.</span><span class="n">topics</span><span class="o">.</span><span class="n">keys</span><span class="p">())}</span>
 </span></code></pre></div>
+<h2 id="tracing">Tracing<a class="headerlink" href="#tracing" title="Permanent link">&para;</a></h2>
+<p>With the <code>archipy[otel-kafka]</code> extra and <code>OTEL__IS_ENABLED=true</code>, producers and consumers (sync and async) emit
+<code>send</code> and <code>recv</code> spans through the Confluent Kafka instrumentor.</p>
+<p>The instrumentor opens a <code>&lt;topic&gt; process</code> span when a message is polled. It ends when the next <code>poll</code>, <code>consume</code> or
+<code>close</code> runs, which would include idle time and make unrelated work its children. <code>KafkaConsumerAdapter.commit</code> therefore
+ends the span as soon as the offset is committed, so commit after the message is processed. A consumer that never
+commits (auto-commit) keeps the upstream behaviour. The async consumer adapter is not changed: its polls run in an
+executor thread, so its span still ends on the next poll or close.</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns with proper chaining</li>
