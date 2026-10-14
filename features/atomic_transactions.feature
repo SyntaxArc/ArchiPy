@@ -356,3 +356,370 @@ Feature: SQLAlchemy Atomic Transactions
       | mysql     | mysql      |
       | starrocks | starrocks  |
       | sqlite    | sqlite     |
+
+  Scenario Outline: Search returns the total count across pages
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 searchable entities exist with description prefix "search-total"
+    When I search page <page> of size 10 for entities with description prefix "search-total"
+    Then the search should return <rows> rows and a total of 25
+
+    Examples:
+      | db_type   | page | rows |
+      | postgres  | 1    | 10   |
+      | postgres  | 3    | 5    |
+      | postgres  | 4    | 0    |
+      | sqlite    | 1    | 10   |
+      | sqlite    | 3    | 5    |
+      | mysql     | 3    | 5    |
+      | starrocks | 1    | 10   |
+      | starrocks | 3    | 5    |
+      | starrocks | 4    | 0    |
+
+  Scenario Outline: A first page that is not full skips the count query
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 searchable entities exist with description prefix "search-short"
+    When I search page 1 of size 50 for entities with description prefix "search-short"
+    Then the search should return 25 rows and a total of 25
+    And 0 COUNT queries should have run
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
+
+  Scenario Outline: A full page runs one count query
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 searchable entities exist with description prefix "search-full"
+    When I search page 1 of size 10 for entities with description prefix "search-full"
+    Then the search should return 10 rows and a total of 25
+    And 1 COUNT queries should have run
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
+
+  Scenario Outline: The total stays exact when it is below the count threshold
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 searchable entities exist with description prefix "search-below"
+    When I search page 1 of size 10 for entities with description prefix "search-below" and count threshold 100
+    Then the search should return 10 rows and a total of 25
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
+
+  Scenario Outline: The total is above the count threshold when there are more rows than the threshold
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 searchable entities exist with description prefix "search-above"
+    When I search page 1 of size 10 for entities with description prefix "search-above" and count threshold 10
+    Then the search should return 10 rows and a total of at least 11
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
+
+  Scenario Outline: Every page counts when the count cache is disabled
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 searchable entities exist with description prefix "search-nocache"
+    When I search page 1 of size 10 for entities with description prefix "search-nocache"
+    And I search page 2 of size 10 for entities with description prefix "search-nocache"
+    Then the search should return 10 rows and a total of 25
+    And 2 COUNT queries should have run
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | starrocks |
+
+  Scenario Outline: The count cache reuses the total for later pages
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 searchable entities exist with description prefix "search-cache"
+    And the search count cache is enabled with a TTL of 60 seconds
+    When I search page 1 of size 10 for entities with description prefix "search-cache"
+    And I search page 2 of size 10 for entities with description prefix "search-cache"
+    And I search page 3 of size 10 for entities with description prefix "search-cache"
+    Then the search should return 5 rows and a total of 25
+    And 1 COUNT queries should have run
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
+
+  Scenario Outline: The count cache counts again after its TTL expires
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 searchable entities exist with description prefix "search-expire"
+    And the search count cache is enabled with a TTL of 1 seconds
+    When I search page 1 of size 10 for entities with description prefix "search-expire"
+    And the cached search total expires
+    And I search page 2 of size 10 for entities with description prefix "search-expire"
+    Then 2 COUNT queries should have run
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | starrocks |
+
+  Scenario Outline: The configured count threshold applies when the search sets none
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 searchable entities exist with description prefix "search-config"
+    And the search count threshold config is 10
+    When I search page 1 of size 10 for entities with description prefix "search-config"
+    Then the search should return 10 rows and a total of at least 11
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | starrocks |
+
+  @async
+  Scenario Outline: Async search returns the total count across pages
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 async searchable entities exist with description prefix "async-search-total"
+    When I async search page 3 of size 10 for entities with description prefix "async-search-total"
+    Then the search should return 5 rows and a total of 25
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
+
+  @async
+  Scenario Outline: Async search skips the count query on a short first page
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 async searchable entities exist with description prefix "async-search-short"
+    When I async search page 1 of size 50 for entities with description prefix "async-search-short"
+    Then the search should return 25 rows and a total of 25
+    And 0 COUNT queries should have run
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | starrocks |
+
+  @async
+  Scenario Outline: Async search is above the count threshold when there are more rows than the threshold
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 async searchable entities exist with description prefix "async-search-above"
+    When I async search page 1 of size 10 for entities with description prefix "async-search-above" and count threshold 10
+    Then the search should return 10 rows and a total of at least 11
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | starrocks |
+
+  @async
+  Scenario Outline: The async count cache reuses the total for later pages
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 async searchable entities exist with description prefix "async-search-cache"
+    And the search count cache is enabled with a TTL of 60 seconds
+    When I async search page 1 of size 10 for entities with description prefix "async-search-cache"
+    And I async search page 2 of size 10 for entities with description prefix "async-search-cache"
+    Then the search should return 10 rows and a total of 25
+    And 1 COUNT queries should have run
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | starrocks |
+
+  Scenario Outline: A search with its own limit totals only the limited rows
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 searchable entities exist with description prefix "search-limit"
+    When I search page 1 of size 3 for a query limited to 7 entities with description prefix "search-limit"
+    Then the search should return 3 rows and a total of 7
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
+
+  Scenario Outline: A total equal to the count threshold is exact
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 searchable entities exist with description prefix "search-edge"
+    When I search page 1 of size 10 for entities with description prefix "search-edge" and count threshold 25
+    Then the search should return 10 rows and a total of 25
+    And 0 EXPLAIN estimates should have run
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | mysql     |
+      | starrocks |
+
+  Scenario: The estimate above the count threshold is close to the real total on PostgreSQL
+    Given the application database is initialized for postgres
+    And test entities are defined
+    And 25 searchable entities exist with description prefix "search-estimate"
+    And the table statistics are refreshed
+    When I search page 1 of size 10 for entities with description prefix "search-estimate" and count threshold 10
+    Then the search should return 10 rows and a total of 25
+    And 1 EXPLAIN estimates should have run
+
+  Scenario Outline: The count cache keeps the totals of different searches apart
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 5 searchable entities exist with description prefix "cache-five"
+    And 12 searchable entities exist with description prefix "cache-twelve"
+    And the search count cache is enabled with a TTL of 60 seconds
+    When I search page 1 of size 3 for entities with description prefix "cache-five"
+    And I search page 1 of size 3 for entities with description prefix "cache-twelve"
+    Then the search should return 3 rows and a total of 12
+    And 2 COUNT queries should have run
+    When I search page 2 of size 3 for entities with description prefix "cache-five"
+    Then the search should return 2 rows and a total of 5
+    And 2 COUNT queries should have run
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | starrocks |
+
+  @async
+  Scenario Outline: The async count cache counts again after its TTL expires
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And 25 async searchable entities exist with description prefix "async-search-expire"
+    And the search count cache is enabled with a TTL of 1 seconds
+    When I async search page 1 of size 10 for entities with description prefix "async-search-expire"
+    And the cached search total expires
+    And I async search page 2 of size 10 for entities with description prefix "async-search-expire"
+    Then 2 COUNT queries should have run
+
+    Examples:
+      | db_type   |
+      | postgres  |
+      | sqlite    |
+      | starrocks |
+
+  Scenario Outline: Search filters match the expected entities
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And entities exist with these descriptions: apple,banana,cherry,NULL
+    When I filter the descriptions with <operation> and value "<value>"
+    Then the filter should match <count> entities
+
+    Examples:
+      | db_type   | operation             | value        | count |
+      | postgres  | EQUAL                 | apple        | 1     |
+      | postgres  | NOT_EQUAL             | apple        | 2     |
+      | postgres  | LESS_THAN             | banana       | 1     |
+      | postgres  | LESS_THAN_OR_EQUAL    | banana       | 2     |
+      | postgres  | GREATER_THAN          | banana       | 1     |
+      | postgres  | GREATER_THAN_OR_EQUAL | banana       | 2     |
+      | postgres  | LIKE                  | an           | 1     |
+      | postgres  | ILIKE                 | AN           | 1     |
+      | postgres  | STARTS_WITH           | ch           | 1     |
+      | postgres  | ENDS_WITH             | ana          | 1     |
+      | postgres  | CONTAINS              | rr           | 1     |
+      | postgres  | IS_NULL               | NULL         | 1     |
+      | postgres  | IS_NOT_NULL           | x            | 3     |
+      | postgres  | IN_LIST               | apple,cherry | 2     |
+      | postgres  | NOT_IN_LIST           | apple        | 2     |
+      | postgres  | EQUAL                 | NULL         | 4     |
+      | sqlite    | EQUAL                 | apple        | 1     |
+      | sqlite    | NOT_EQUAL             | apple        | 2     |
+      | sqlite    | LESS_THAN             | banana       | 1     |
+      | sqlite    | GREATER_THAN_OR_EQUAL | banana       | 2     |
+      | sqlite    | LIKE                  | an           | 1     |
+      | sqlite    | ILIKE                 | AN           | 1     |
+      | sqlite    | STARTS_WITH           | ch           | 1     |
+      | sqlite    | ENDS_WITH             | ana          | 1     |
+      | sqlite    | IS_NULL               | NULL         | 1     |
+      | sqlite    | IS_NOT_NULL           | x            | 3     |
+      | sqlite    | IN_LIST               | apple,cherry | 2     |
+      | sqlite    | NOT_IN_LIST           | apple        | 2     |
+      | sqlite    | EQUAL                 | NULL         | 4     |
+      | mysql     | EQUAL                 | apple        | 1     |
+      | mysql     | IN_LIST               | apple,cherry | 2     |
+      | mysql     | IS_NULL               | NULL         | 1     |
+      | starrocks | EQUAL                 | apple        | 1     |
+      | starrocks | NOT_EQUAL             | apple        | 2     |
+      | starrocks | LESS_THAN             | banana       | 1     |
+
+  Scenario Outline: A list filter rejects a value that is not a list
+    Given the application database is initialized for sqlite
+    And test entities are defined
+    When I filter the descriptions with <operation> and the non-list value "apple"
+    Then the filter should be rejected with an InvalidArgumentError
+
+    Examples:
+      | operation   |
+      | IN_LIST     |
+      | NOT_IN_LIST |
+
+  Scenario Outline: A <shape> search totals the distinct rows, not the entities
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And entities exist with these descriptions: alpha,alpha,beta,beta,beta,gamma,delta
+    When I search page 1 of size 2 for the <shape> descriptions
+    Then the search should return 2 rows and a total of 4
+    When I search page 2 of size 2 for the <shape> descriptions
+    Then the search should return 2 rows and a total of 4
+
+    Examples:
+      | db_type   | shape    |
+      | postgres  | distinct |
+      | postgres  | grouped  |
+      | sqlite    | distinct |
+      | sqlite    | grouped  |
+      | mysql     | distinct |
+      | mysql     | grouped  |
+      | starrocks | distinct |
+      | starrocks | grouped  |
+
+  Scenario Outline: A <shape> search above the count threshold still totals the distinct rows
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    And entities exist with these descriptions: alpha,alpha,beta,beta,beta,gamma,delta
+    When I search page 1 of size 2 for the <shape> descriptions and count threshold 2
+    Then the search should return 2 rows and a total of at least 3
+
+    Examples:
+      | db_type   | shape    |
+      | postgres  | distinct |
+      | postgres  | grouped  |
+      | sqlite    | distinct |
+      | starrocks | distinct |
+      | starrocks | grouped  |

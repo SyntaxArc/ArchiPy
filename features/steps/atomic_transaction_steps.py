@@ -438,9 +438,9 @@ def step_then_entity_should_be_retrievable(context):
 
         retrieved_entity = session.get(TestEntity, entity_uuid)
         assert retrieved_entity is not None, "Entity not found in database after atomic transaction"
-        assert (
-            retrieved_entity.description == "Entity created in atomic transaction"
-        ), "Entity has incorrect description"
+        assert retrieved_entity.description == "Entity created in atomic transaction", (
+            "Entity has incorrect description"
+        )
         logger.info("Entity retrieved successfully")
         return retrieved_entity
 
@@ -1122,9 +1122,7 @@ def step_then_entity_and_relationships_retrievable(context):
 
         # Query for related entities (order by name for cross-DB determinism)
         related_query = (
-            select(RelatedTestEntity)
-            .where(RelatedTestEntity.parent_id == main_uuid)
-            .order_by(RelatedTestEntity.name)
+            select(RelatedTestEntity).where(RelatedTestEntity.parent_id == main_uuid).order_by(RelatedTestEntity.name)
         )
         related_entities = session.execute(related_query).scalars().all()
 
@@ -1433,17 +1431,17 @@ def step_then_session_maintains_consistency(context):
             logger.info(f"Verifying entity {i} with UUID {result['uuid']}")
 
             expected_description = f"Updated Entity {i + 1}"
-            assert (
-                result["description"] == expected_description
-            ), f"Entity {i + 1} has wrong description: {result['description']}"
+            assert result["description"] == expected_description, (
+                f"Entity {i + 1} has wrong description: {result['description']}"
+            )
             assert result["updated_at"] is not None, f"Entity {i + 1} missing updated_at timestamp"
 
             # Verify the entity in the database matches our context
             db_entity = session.get(TestEntity, result["uuid"])
             assert db_entity is not None, f"Entity {i + 1} not found in database"
-            assert (
-                db_entity.description == expected_description
-            ), f"Database entity {i + 1} has wrong description: {db_entity.description}"
+            assert db_entity.description == expected_description, (
+                f"Database entity {i + 1} has wrong description: {db_entity.description}"
+            )
 
             logger.info(f"Entity {i} verified successfully")
 
@@ -1909,9 +1907,9 @@ async def step_then_all_async_entities_retrievable(context):
 
                 retrieved_entity = await session.get(TestEntity, entity_uuid)
                 assert retrieved_entity is not None, f"Entity {i + 1} not found after async atomic transaction"
-                assert (
-                    retrieved_entity.description == f"Async Entity {i + 1}"
-                ), f"Entity {i + 1} has incorrect description"
+                assert retrieved_entity.description == f"Async Entity {i + 1}", (
+                    f"Entity {i + 1} has incorrect description"
+                )
                 logger.info(f"Async entity {i} verified successfully")
 
         logger.info("All async entities verified successfully")
@@ -1994,9 +1992,7 @@ async def step_then_related_entities_accessible(context):
 
         # Query for related entities (order by name for cross-DB determinism)
         stmt = (
-            select(RelatedTestEntity)
-            .where(RelatedTestEntity.parent_id == parent_uuid)
-            .order_by(RelatedTestEntity.name)
+            select(RelatedTestEntity).where(RelatedTestEntity.parent_id == parent_uuid).order_by(RelatedTestEntity.name)
         )
         result = await session.execute(stmt)
         related_entities = result.scalars().all()
@@ -2130,7 +2126,9 @@ def step_given_fake_atomic_session(context, mode):
 
     sc = get_current_scenario_context(context)
     session = _FakeSession(is_async=mode == "async")
-    patcher = mock.patch.object(atomic_module, "_load_session_manager_registry", lambda _db_type: _fake_registry(session))
+    patcher = mock.patch.object(
+        atomic_module, "_load_session_manager_registry", lambda _db_type: _fake_registry(session),
+    )
     patcher.start()
     context.add_cleanup(patcher.stop)
     sc.store("fake_session", session)
@@ -2262,7 +2260,11 @@ def step_when_driver_error_handled(context, kind, code):
         pass
 
     # PostgreSQL codes are strings (pgcode); MySQL-style codes are the first positional arg
-    orig = _DriverError(int(code), "driver message") if code.isdigit() and len(code) == 4 else _DriverError("driver message")
+    orig = (
+        _DriverError(int(code), "driver message")
+        if code.isdigit() and len(code) == 4
+        else _DriverError("driver message")
+    )
     if not (code.isdigit() and len(code) == 4):
         orig.pgcode = code
     error_type = OperationalError if kind == "operational" else IntegrityError
@@ -2281,3 +2283,349 @@ def step_then_named_error_raised(context, expected):
 
     error = get_current_scenario_context(context).get("atomic_error")
     assert type(error) is getattr(errors, expected), f"Got {error!r}"
+
+
+# --- Search pagination totals ---
+
+
+def _install_count_counter(context, engine) -> None:
+    """Record every COUNT statement the engine runs for the rest of the scenario."""
+    from sqlalchemy import event
+
+    statements: list[str] = []
+    explains: list[str] = []
+
+    @event.listens_for(engine, "before_cursor_execute")
+    def record_count_statement(conn, cursor, statement, parameters, ctx, executemany):  # noqa: ARG001
+        lowered = statement.lower()
+        if "count(" in lowered:
+            statements.append(statement)
+        if lowered.startswith("explain"):
+            explains.append(statement)
+
+    get_current_scenario_context(context).store("count_statements", statements)
+    get_current_scenario_context(context).store("explain_statements", explains)
+
+
+def _search_query(prefix: str):
+    return select(TestEntity).where(TestEntity.description.like(f"{prefix}%"))
+
+
+def _store_search(context, results, total: int) -> None:
+    get_current_scenario_context(context).store("search_result", (results, total))
+
+
+@given('{count:d} searchable entities exist with description prefix "{prefix}"')
+def step_given_searchable_entities(context, count, prefix):
+    scenario_context = get_current_scenario_context(context)
+    adapter = get_adapter(context)
+
+    @_get_atomic_decorator(scenario_context.get("db_type", "sqlite"))
+    def create_entities():
+        adapter.bulk_create(
+            [TestEntityFactory.create_test_entity(description=f"{prefix}-{index}") for index in range(count)],
+        )
+
+    create_entities()
+    _install_count_counter(context, adapter.session_manager.engine)
+
+
+@given('{count:d} async searchable entities exist with description prefix "{prefix}"')
+async def step_given_async_searchable_entities(context, count, prefix):
+    scenario_context = get_current_scenario_context(context)
+    async_adapter = get_async_adapter(context)
+
+    @_get_atomic_decorator(scenario_context.get("db_type", "sqlite"), is_async=True)
+    async def create_entities():
+        await async_adapter.bulk_create(
+            [TestEntityFactory.create_test_entity(description=f"{prefix}-{index}") for index in range(count)],
+        )
+
+    await create_entities()
+    _install_count_counter(context, async_adapter.session_manager.engine.sync_engine)
+
+
+@given("the search count cache is enabled with a TTL of {ttl:d} seconds")
+def step_given_count_cache_enabled(context, ttl):
+    from archipy.adapters.base.sqlalchemy.adapters import _build_async_count_cache, _build_count_cache
+    from archipy.configs.config_template import SQLAlchemyConfig
+
+    scenario_context = get_current_scenario_context(context)
+    cache_config = SQLAlchemyConfig(COUNT_CACHE_ENABLED=True, COUNT_CACHE_TTL_SECONDS=ttl)
+    scenario_context.store("count_cache_ttl", ttl)
+    if scenario_context.adapter is not None:
+        scenario_context.adapter._cached_count = _build_count_cache(cache_config)  # noqa: SLF001
+    if scenario_context.async_adapter is not None:
+        scenario_context.async_adapter._cached_count = _build_async_count_cache(cache_config)  # noqa: SLF001
+
+
+@when('I search page {page:d} of size {size:d} for entities with description prefix "{prefix}"')
+def step_when_search_page(context, page, size, prefix):
+    from archipy.models.dtos.pagination_dto import PaginationDTO
+
+    scenario_context = get_current_scenario_context(context)
+    adapter = get_adapter(context)
+
+    @_get_atomic_decorator(scenario_context.get("db_type", "sqlite"))
+    def search():
+        return adapter.execute_search_query(
+            TestEntity,
+            _search_query(prefix),
+            pagination=PaginationDTO(page=page, page_size=size),
+        )
+
+    _store_search(context, *search())
+
+
+@when(
+    'I search page {page:d} of size {size:d} for entities with description prefix "{prefix}" and count threshold {threshold:d}',
+)
+def step_when_search_page_with_threshold(context, page, size, prefix, threshold):
+    from archipy.models.dtos.pagination_dto import PaginationDTO
+
+    scenario_context = get_current_scenario_context(context)
+    adapter = get_adapter(context)
+
+    @_get_atomic_decorator(scenario_context.get("db_type", "sqlite"))
+    def search():
+        return adapter.execute_search_query(
+            TestEntity,
+            _search_query(prefix),
+            pagination=PaginationDTO(page=page, page_size=size),
+            count_threshold=threshold,
+        )
+
+    _store_search(context, *search())
+
+
+@when('I async search page {page:d} of size {size:d} for entities with description prefix "{prefix}"')
+async def step_when_async_search_page(context, page, size, prefix):
+    from archipy.models.dtos.pagination_dto import PaginationDTO
+
+    scenario_context = get_current_scenario_context(context)
+    async_adapter = get_async_adapter(context)
+
+    @_get_atomic_decorator(scenario_context.get("db_type", "sqlite"), is_async=True)
+    async def search():
+        return await async_adapter.execute_search_query(
+            TestEntity,
+            _search_query(prefix),
+            pagination=PaginationDTO(page=page, page_size=size),
+        )
+
+    _store_search(context, *await search())
+
+
+@when(
+    'I async search page {page:d} of size {size:d} for entities with description prefix "{prefix}" and count threshold {threshold:d}',
+)
+async def step_when_async_search_page_with_threshold(context, page, size, prefix, threshold):
+    from archipy.models.dtos.pagination_dto import PaginationDTO
+
+    scenario_context = get_current_scenario_context(context)
+    async_adapter = get_async_adapter(context)
+
+    @_get_atomic_decorator(scenario_context.get("db_type", "sqlite"), is_async=True)
+    async def search():
+        return await async_adapter.execute_search_query(
+            TestEntity,
+            _search_query(prefix),
+            pagination=PaginationDTO(page=page, page_size=size),
+            count_threshold=threshold,
+        )
+
+    _store_search(context, *await search())
+
+
+@when("the cached search total expires")
+def step_when_cached_total_expires(context):
+    ttl = get_current_scenario_context(context).get("count_cache_ttl")
+    time.sleep(ttl + 0.2)
+
+
+@then("the search should return {rows:d} rows and a total of {total:d}")
+def step_then_search_rows_and_total(context, rows, total):
+    results, actual_total = get_current_scenario_context(context).get("search_result")
+    assert len(results) == rows, f"Expected {rows} rows, got {len(results)}"
+    assert actual_total == total, f"Expected total {total}, got {actual_total}"
+
+
+@then("the search should return {rows:d} rows and a total of at least {minimum:d}")
+def step_then_search_rows_and_minimum_total(context, rows, minimum):
+    results, actual_total = get_current_scenario_context(context).get("search_result")
+    assert len(results) == rows, f"Expected {rows} rows, got {len(results)}"
+    assert actual_total >= minimum, f"Expected total of at least {minimum}, got {actual_total}"
+
+
+@then("{count:d} COUNT queries should have run")
+def step_then_count_queries_ran(context, count):
+    statements = get_current_scenario_context(context).get("count_statements")
+    assert len(statements) == count, f"Expected {count} COUNT queries, got {len(statements)}: {statements}"
+
+
+@given("the search count threshold config is {threshold:d}")
+def step_given_count_threshold_config(context, threshold):
+    scenario_context = get_current_scenario_context(context)
+    for adapter in (scenario_context.adapter, scenario_context.async_adapter):
+        if adapter is not None:
+            adapter._count_threshold = threshold  # noqa: SLF001
+
+
+@given("the table statistics are refreshed")
+def step_given_table_statistics_refreshed(context):
+    from sqlalchemy import text
+
+    scenario_context = get_current_scenario_context(context)
+    db_type = scenario_context.get("db_type", "sqlite")
+    adapter = get_adapter(context)
+    statement = "ANALYZE TABLE test_entities" if db_type == "mysql" else "ANALYZE test_entities"
+
+    @_get_atomic_decorator(db_type)
+    def analyze():
+        adapter.execute(text(statement))
+
+    analyze()
+
+
+@when('I search page 1 of size {size:d} for a query limited to {limit:d} entities with description prefix "{prefix}"')
+def step_when_search_limited_query(context, size, limit, prefix):
+    from archipy.models.dtos.pagination_dto import PaginationDTO
+
+    scenario_context = get_current_scenario_context(context)
+    adapter = get_adapter(context)
+
+    @_get_atomic_decorator(scenario_context.get("db_type", "sqlite"))
+    def search():
+        return adapter.execute_search_query(
+            TestEntity,
+            _search_query(prefix).limit(limit),
+            pagination=PaginationDTO(page=1, page_size=size),
+        )
+
+    _store_search(context, *search())
+
+
+@given("entities exist with these descriptions: {descriptions}")
+def step_given_entities_with_descriptions(context, descriptions):
+    scenario_context = get_current_scenario_context(context)
+    adapter = get_adapter(context)
+    values = [None if item == "NULL" else item for item in descriptions.split(",")]
+
+    @_get_atomic_decorator(scenario_context.get("db_type", "sqlite"))
+    def create_entities():
+        adapter.bulk_create([TestEntityFactory.create_test_entity(description=value) for value in values])
+
+    create_entities()
+
+
+def _filter_value(operation: str, raw_value: str):
+    if raw_value == "NULL":
+        return None
+    if operation in ("IN_LIST", "NOT_IN_LIST"):
+        return raw_value.split(",")
+    return raw_value
+
+
+@when('I filter the descriptions with {operation} and value "{raw_value}"')
+def step_when_filter_descriptions(context, operation, raw_value):
+    from archipy.models.types.base_types import FilterOperationType
+
+    scenario_context = get_current_scenario_context(context)
+    adapter = get_adapter(context)
+    filter_operation = FilterOperationType[operation]
+    value = _filter_value(operation, raw_value)
+
+    @_get_atomic_decorator(scenario_context.get("db_type", "sqlite"))
+    def run_filter():
+        query = adapter._apply_filter(select(TestEntity), TestEntity.description, value, filter_operation)  # noqa: SLF001
+        return list(adapter.scalars(query).all())
+
+    scenario_context.store("filtered_entities", run_filter())
+
+
+@when('I filter the descriptions with {operation} and the non-list value "{raw_value}"')
+def step_when_filter_with_non_list(context, operation, raw_value):
+    from archipy.models.types.base_types import FilterOperationType
+
+    scenario_context = get_current_scenario_context(context)
+    adapter = get_adapter(context)
+    try:
+        adapter._apply_filter(  # noqa: SLF001
+            select(TestEntity),
+            TestEntity.description,
+            raw_value,
+            FilterOperationType[operation],
+        )
+    except Exception as error:  # noqa: BLE001
+        scenario_context.store("filter_error", error)
+
+
+@then("the filter should match {count:d} entities")
+def step_then_filter_matches(context, count):
+    matched = get_current_scenario_context(context).get("filtered_entities")
+    assert len(matched) == count, f"Expected {count} entities, got {len(matched)}"
+
+
+@then("the filter should be rejected with an InvalidArgumentError")
+def step_then_filter_rejected(context):
+    from archipy.models.errors import InvalidArgumentError
+
+    error = get_current_scenario_context(context).get("filter_error")
+    assert isinstance(error, InvalidArgumentError), f"Got {error!r}"
+
+
+@then("{count:d} EXPLAIN estimates should have run")
+def step_then_explain_estimates_ran(context, count):
+    statements = get_current_scenario_context(context).get("explain_statements")
+    assert len(statements) == count, f"Expected {count} EXPLAIN estimates, got {len(statements)}: {statements}"
+
+
+@when("I search page {page:d} of size {size:d} for the {shape} descriptions")
+def step_when_search_shaped_descriptions(context, page, size, shape):
+    from archipy.models.dtos.pagination_dto import PaginationDTO
+    from archipy.models.dtos.sort_dto import SortDTO
+    from archipy.models.types.sort_order_type import SortOrderType
+
+    scenario_context = get_current_scenario_context(context)
+    adapter = get_adapter(context)
+    if shape == "distinct":
+        query = select(TestEntity.description).distinct()
+    else:
+        query = select(TestEntity.description).group_by(TestEntity.description)
+
+    @_get_atomic_decorator(scenario_context.get("db_type", "sqlite"))
+    def search():
+        return adapter.execute_search_query(
+            TestEntity,
+            query,
+            pagination=PaginationDTO(page=page, page_size=size),
+            sort_info=SortDTO(column="description", order=SortOrderType.ASCENDING),
+        )
+
+    _store_search(context, *search())
+
+
+@when("I search page {page:d} of size {size:d} for the {shape} descriptions and count threshold {threshold:d}")
+def step_when_search_shaped_descriptions_with_threshold(context, page, size, shape, threshold):
+    from archipy.models.dtos.pagination_dto import PaginationDTO
+    from archipy.models.dtos.sort_dto import SortDTO
+    from archipy.models.types.sort_order_type import SortOrderType
+
+    scenario_context = get_current_scenario_context(context)
+    adapter = get_adapter(context)
+    if shape == "distinct":
+        query = select(TestEntity.description).distinct()
+    else:
+        query = select(TestEntity.description).group_by(TestEntity.description)
+
+    @_get_atomic_decorator(scenario_context.get("db_type", "sqlite"))
+    def search():
+        return adapter.execute_search_query(
+            TestEntity,
+            query,
+            pagination=PaginationDTO(page=page, page_size=size),
+            sort_info=SortDTO(column="description", order=SortOrderType.ASCENDING),
+            count_threshold=threshold,
+        )
+
+    _store_search(context, *search())
