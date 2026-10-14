@@ -108,3 +108,50 @@ Feature: MinIO Operations Testing
     Then bucket "version-bucket" should have at least 2 versions of object "versioned.txt"
     When I permanently delete the oldest version of "versioned.txt" in bucket "version-bucket"
     Then downloading "versioned.txt" from "version-bucket" should return content "Version 2"
+
+  Scenario: Stat object returns size, content type and etag
+    Given a bucket named "stat-bucket" exists
+    And an object "stat.txt" exists with content "Hello World" in bucket "stat-bucket"
+    When I stat object "stat.txt" in bucket "stat-bucket"
+    Then the object stats should show size 11 and a non-empty etag
+
+  Scenario: List objects by prefix
+    Given a bucket named "list-bucket" exists
+    And an object "logs/a.txt" exists with content "A" in bucket "list-bucket"
+    And an object "logs/b.txt" exists with content "B" in bucket "list-bucket"
+    And an object "other/c.txt" exists with content "C" in bucket "list-bucket"
+    And an object "root.txt" exists with content "R" in bucket "list-bucket"
+    When I list objects in bucket "list-bucket" with prefix "logs/" recursively
+    Then the listed object names should be "logs/a.txt,logs/b.txt"
+    When I list the top level of bucket "list-bucket"
+    Then the listed object names should be "root.txt"
+
+  Scenario: Upload through a presigned PUT URL
+    Given a bucket named "presigned-put-bucket" exists
+    When I generate a presigned PUT URL for "uploaded.txt" in "presigned-put-bucket"
+    And I upload "Uploaded By URL" to the presigned PUT URL
+    Then downloading "uploaded.txt" from "presigned-put-bucket" should return content "Uploaded By URL"
+
+  Scenario Outline: Missing resources raise <error>
+    Given a bucket named "errors-bucket" exists
+    When I <operation>
+    Then the MinIO call should raise <error>
+
+    Examples:
+      | operation                                                | error                |
+      | stat missing object "nope.txt" in bucket "errors-bucket" | NotFoundError        |
+      | list objects in missing bucket "no-such-bucket-xyz"      | NotFoundError        |
+      | create bucket "errors-bucket" again                      | AlreadyExistsError   |
+      | check existence of an object with an empty bucket name   | InvalidArgumentError |
+
+  Scenario: Object existence is not served stale after an upload
+    Given a bucket named "cache-bucket" exists
+    Then object "late.txt" should not exist in bucket "cache-bucket"
+    When I upload a file "late.txt" with content "Now Here" to bucket "cache-bucket"
+    Then object "late.txt" should exist in bucket "cache-bucket"
+
+  Scenario: Clearing all caches keeps results correct
+    Given a bucket named "clear-bucket" exists
+    And an object "keep.txt" exists with content "Keep" in bucket "clear-bucket"
+    When I clear all adapter caches
+    Then object "keep.txt" should exist in bucket "clear-bucket"

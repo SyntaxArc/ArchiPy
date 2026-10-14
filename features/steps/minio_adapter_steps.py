@@ -206,7 +206,7 @@ def step_presigned_url_valid(context):
 def step_access_presigned_url(context, expected_content):
     scenario_context = get_current_scenario_context(context)
     url = scenario_context.get("presigned_url")
-    response = requests.get(url)
+    response = httpx2.get(url)
     assert response.status_code == 200, f"Failed to access presigned URL: {response.status_code}"
     assert response.text == expected_content, f"Content mismatch: expected '{expected_content}', got '{response.text}'"
     context.logger.info("Verified presigned URL content")
@@ -396,3 +396,110 @@ def step_delete_oldest_version(context, object_name, bucket_name):
     context.logger.info(
         f"Deleted oldest version {oldest['version_id']} of '{object_name}' in '{bucket_name}'",
     )
+
+
+@when('I stat object "{object_name}" in bucket "{bucket_name}"')
+def step_stat_object(context, object_name, bucket_name):
+    adapter = get_minio_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("object_stat", adapter.stat_object(bucket_name, object_name))
+
+
+@then("the object stats should show size {size:d} and a non-empty etag")
+def step_verify_object_stat(context, size):
+    scenario_context = get_current_scenario_context(context)
+    stat = scenario_context.get("object_stat")
+    assert stat["size"] == size, f"Expected size {size}, got {stat['size']}"
+    assert stat["etag"], "Expected a non-empty etag"
+    assert stat["last_modified"] is not None, "Expected last_modified to be set"
+
+
+@when('I list objects in bucket "{bucket_name}" with prefix "{prefix}" {mode}')
+def step_list_objects(context, bucket_name, prefix, mode):
+    assert mode in ("recursively", "non-recursively"), f"Unknown listing mode: {mode}"
+    adapter = get_minio_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    objects = adapter.list_objects(bucket_name, prefix, recursive=mode == "recursively")
+    scenario_context.store("listed_names", sorted(obj["object_name"] for obj in objects))
+
+
+@when('I list the top level of bucket "{bucket_name}"')
+def step_list_top_level(context, bucket_name):
+    adapter = get_minio_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("listed_names", sorted(obj["object_name"] for obj in adapter.list_objects(bucket_name)))
+
+
+@then('the listed object names should be "{names}"')
+def step_verify_listed_names(context, names):
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("listed_names") == sorted(names.split(",")), (
+        f"Unexpected listing: {scenario_context.get('listed_names')}"
+    )
+
+
+@then("no object names should be listed")
+def step_verify_no_listed_names(context):
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("listed_names") == [], f"Unexpected listing: {scenario_context.get('listed_names')}"
+
+
+@when('I generate a presigned PUT URL for "{object_name}" in "{bucket_name}"')
+def step_generate_presigned_put_url(context, object_name, bucket_name):
+    adapter = get_minio_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("presigned_put_url", adapter.presigned_put_object(bucket_name, object_name))
+
+
+@when('I upload "{content}" to the presigned PUT URL')
+def step_upload_to_presigned_url(context, content):
+    scenario_context = get_current_scenario_context(context)
+    response = httpx2.put(scenario_context.get("presigned_put_url"), content=content.encode())
+    assert response.status_code == 200, f"Presigned PUT failed: {response.status_code} {response.text}"
+
+
+def _capture_error(context, action) -> None:
+    scenario_context = get_current_scenario_context(context)
+    try:
+        action()
+    except Exception as error:
+        scenario_context.store("raised_error", error)
+    else:
+        scenario_context.store("raised_error", None)
+
+
+@when('I stat missing object "{object_name}" in bucket "{bucket_name}"')
+def step_stat_missing_object(context, object_name, bucket_name):
+    adapter = get_minio_adapter(context)
+    _capture_error(context, lambda: adapter.stat_object(bucket_name, object_name))
+
+
+@when('I list objects in missing bucket "{bucket_name}"')
+def step_list_missing_bucket(context, bucket_name):
+    adapter = get_minio_adapter(context)
+    _capture_error(context, lambda: adapter.list_objects(bucket_name))
+
+
+@when('I create bucket "{bucket_name}" again')
+def step_create_bucket_again(context, bucket_name):
+    adapter = get_minio_adapter(context)
+    _capture_error(context, lambda: adapter.make_bucket(bucket_name))
+
+
+@when("I check existence of an object with an empty bucket name")
+def step_object_exists_empty_bucket(context):
+    adapter = get_minio_adapter(context)
+    _capture_error(context, lambda: adapter.object_exists("", "any.txt"))
+
+
+@then("the MinIO call should raise {error_name}")
+def step_verify_raised_error(context, error_name):
+    scenario_context = get_current_scenario_context(context)
+    error = scenario_context.get("raised_error")
+    assert error is not None, f"Expected {error_name} but no error was raised"
+    assert type(error).__name__ == error_name, f"Expected {error_name}, got {type(error).__name__}: {error}"
+
+
+@when("I clear all adapter caches")
+def step_clear_all_caches(context):
+    get_minio_adapter(context).clear_all_caches()
