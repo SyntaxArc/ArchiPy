@@ -11,7 +11,7 @@ dependencies = [
     "archipy==0.1.0", # Pinned to core version on publish flow!
     "python-keycloak>=7.1.1",
     "cachetools>=7.2.1",
-    "async-lru>=2.3.0",
+    "async-lru>=2.4.0",
 ]
 license = "Apache-2.0"
 
