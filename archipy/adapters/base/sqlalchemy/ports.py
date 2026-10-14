@@ -43,13 +43,15 @@ class SQLAlchemyPort:
         raise NotImplementedError
 
     @abstractmethod
-    def execute_search_query(
+    def execute_search_query(  # noqa: PLR0913
         self,
         entity: type[BaseEntity],
         query: Select,
         pagination: PaginationDTO | None = None,
         sort_info: SortDTO | None = None,
         has_multiple_entities: bool = False,
+        *,
+        count_threshold: int | None = None,
     ) -> tuple[list[BaseEntity], int]:
         """Executes a search query with pagination and sorting.
 
@@ -59,6 +61,8 @@ class SQLAlchemyPort:
             pagination: Optional pagination settings
             sort_info: Optional sorting information
             has_multiple_entities: Optional bool.
+            count_threshold: When set, the total is exact up to this many rows and an estimate above it
+                (PostgreSQL only; other databases count exactly)
 
         Returns:
             A tuple containing the list of entities and the total count
@@ -168,13 +172,15 @@ class AsyncSQLAlchemyPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def execute_search_query(
+    async def execute_search_query(  # noqa: PLR0913
         self,
         entity: type[BaseEntity],
         query: Select,
         pagination: PaginationDTO | None,
         sort_info: SortDTO | None = None,
         has_multiple_entities: bool = False,
+        *,
+        count_threshold: int | None = None,
     ) -> tuple[list[BaseEntity], int]:
         """Executes a search query with pagination and sorting asynchronously.
 
@@ -184,6 +190,8 @@ class AsyncSQLAlchemyPort:
             pagination: Optional pagination settings
             sort_info: Optional sorting information
             has_multiple_entities: Optional bool
+            count_threshold: When set, the total is exact up to this many rows and an estimate above it
+                (PostgreSQL only; other databases count exactly)
 
         Returns:
             A tuple containing the list of entities and the total count
