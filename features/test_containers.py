@@ -7,7 +7,7 @@ import tempfile
 import time
 from pathlib import Path
 
-import requests
+import httpx2
 from testcontainers.community.mysql import MySqlContainer
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
@@ -1663,11 +1663,11 @@ class PushgatewayTestContainer(metaclass=Singleton, thread_safe=True):
 
     def groups(self) -> list[dict]:
         """Return the metric groups currently stored, as reported by ``/api/v1/metrics``."""
-        response = requests.get(f"{self.url}/api/v1/metrics", timeout=5)
+        response = httpx2.get(f"{self.url}/api/v1/metrics", timeout=5)
         response.raise_for_status()
         return response.json().get("data", [])
 
     def clear(self) -> None:
         """Delete every stored group through the admin API."""
-        response = requests.put(f"{self.url}/api/v1/admin/wipe", timeout=5)
+        response = httpx2.put(f"{self.url}/api/v1/admin/wipe", timeout=5)
         response.raise_for_status()
