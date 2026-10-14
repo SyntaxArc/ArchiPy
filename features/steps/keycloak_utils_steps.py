@@ -1,5 +1,5 @@
 import time
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -15,7 +15,6 @@ from archipy.models.dtos.keycloak_dtos import AuthenticatedUserDTO
 from archipy.models.errors import BaseError
 from features.test_helpers import get_current_scenario_context
 
-CLIENT_ID = "archipy-client"
 
 
 class _Aborted(Exception):
@@ -111,44 +110,6 @@ class _PlainContext:
         return self._metadata
 
 
-class _StubKeycloak:
-    """Scripted Keycloak adapter boundary (sync)."""
-
-    def __init__(self, tokens, calls=None):
-        self.tokens = tokens
-        self.calls = calls if calls is not None else {}
-        self.configs = SimpleNamespace(CLIENT_ID=CLIENT_ID)
-
-    def validate_token(self, token):
-        return token in self.tokens and self.tokens[token]["valid"]
-
-    def get_token_info(self, token):
-        return self.tokens.get(token, {}).get("token_info")
-
-    def get_userinfo(self, token):
-        self.calls["userinfo"] = self.calls.get("userinfo", 0) + 1
-        return self.tokens.get(token, {}).get("userinfo")
-
-    def check_permissions_batch(self, token, permissions):
-        self.calls["permissions"] = self.calls.get("permissions", 0) + 1
-        granted = self.tokens.get(token, {}).get("granted", set())
-        return {p for p in permissions if p in granted}
-
-
-class _AsyncStubKeycloak(_StubKeycloak):
-    async def validate_token(self, token):
-        return super().validate_token(token)
-
-    async def get_token_info(self, token):
-        return super().get_token_info(token)
-
-    async def get_userinfo(self, token):
-        return super().get_userinfo(token)
-
-    async def check_permissions_batch(self, token, permissions):
-        return super().check_permissions_batch(token, permissions)
-
-
 def _ctx(context):
     return get_current_scenario_context(context)
 
@@ -203,88 +164,103 @@ def _real_keycloak_adapters(scenario_context):
     fresh from the same configuration so it binds to the running event loop.
     """
     sync_adapter = _real_sync_adapter(scenario_context)
-    async_adapter = AsyncKeycloakAdapter(sync_adapter.configs.model_copy())
-    with (
-        patch.object(keycloak_utils, "_shared_sync_adapter", lambda: sync_adapter),
-        patch.object(keycloak_utils, "_shared_async_adapter", lambda: async_adapter),
-    ):
+    # The remote cache is keyed by the identity of the adapter configuration, so every call of a scenario must see
+    # the same configuration object.
+    async_configs = scenario_context.get("async_configs")
+    if async_configs is None:
+        async_configs = sync_adapter.configs.model_copy()
+        scenario_context.store("async_configs", async_configs)
+    async_adapter = AsyncKeycloakAdapter(async_configs)
+    with ExitStack() as stack:
+        stack.enter_context(patch.object(keycloak_utils, "_shared_sync_adapter", lambda: sync_adapter))
+        stack.enter_context(patch.object(keycloak_utils, "_shared_async_adapter", lambda: async_adapter))
+        if scenario_context.get("claims_unreadable"):
+
+            async def _no_claims_async(_token):
+                return {}
+
+            stack.enter_context(patch.object(sync_adapter, "get_token_info", lambda _token: {}))
+            stack.enter_context(patch.object(async_adapter, "get_token_info", _no_claims_async))
         yield
 
 
 @contextmanager
 def _adapters_for_call(scenario_context):
-    if scenario_context.get("stub_installed"):
+    with _real_keycloak_adapters(scenario_context):
         yield
-    else:
-        with _real_keycloak_adapters(scenario_context):
-            yield
 
 
-@given("a keycloak utils stub adapter is installed")
-def step_keycloak_utils_install_stub(context):
-    sc = _ctx(context)
-    tokens = {}
-    sc.store("tokens", tokens)
-    sc.store("stub_installed", True)
-    calls = {}
-    sync_stub = _StubKeycloak(tokens, calls)
-    async_stub = _AsyncStubKeycloak(tokens, calls)
-    sc.store("stubs", (sync_stub, async_stub))
-    sc.store("stub_calls", calls)
+UTILS_REALM = "utils-realm"
+
+
+@given("a keycloak utils realm with a client")
+def step_keycloak_utils_realm_with_client(context):
+    """Create the realm and client every KeycloakUtils scenario needs, against the real Keycloak container."""
+    context.execute_steps(
+        f"""
+        Given a configured sync Keycloak adapter
+        And I create a realm named "{UTILS_REALM}" with display name "Utils Realm" using sync adapter
+        And I create a client named "utils-client" in realm "{UTILS_REALM}" with service accounts and update adapter using sync adapter
+        """,
+    )
     keycloak_utils.clear_keycloak_remote_cache()
     context.add_cleanup(keycloak_utils.clear_keycloak_remote_cache)
-    for name, stub in (("_shared_sync_adapter", sync_stub), ("_shared_async_adapter", async_stub)):
-        patcher = patch.object(keycloak_utils, name, lambda stub=stub: stub)
-        patcher.start()
-        context.add_cleanup(patcher.stop)
     AuthContextManager.clear_auth_context()
     context.add_cleanup(AuthContextManager.clear_auth_context)
 
 
-@given('the keycloak utils stub accepts token "{token}" for user "{sub}" with realm roles "{roles}"')
-def step_keycloak_utils_accept_token(context, token, sub, roles):
-    _ctx(context).get("tokens")[token] = {
-        "valid": True,
-        "token_info": {"sub": sub},
-        "userinfo": {
-            "sub": sub,
-            "preferred_username": f"{sub}-name",
-            "email": f"{sub}@example.com",
-            "realm_access": {"roles": _split(roles)},
-        },
-        "granted": set(),
-    }
+@given(
+    'a keycloak utils realm with user "{username}" holding realm role "{role}" and an access token',
+)
+def step_keycloak_utils_realm_with_user_token(context, username, role):
+    """Realm, client, a user with the realm role and a real access token for that user."""
+    step_keycloak_utils_realm_with_client(context)
+    context.execute_steps(
+        f"""
+        Given I create a user with username "{username}" and password "pass123" using sync adapter
+        And I create a realm role named "{role}" with description "Reader" using sync adapter
+        And I assign realm role "{role}" to user "{username}" using sync adapter
+        And the keycloak utils access token of user "{username}" is obtained with password "pass123"
+        """,
+    )
 
 
-@given('the keycloak utils stub has no token info for token "{token}"')
-def step_keycloak_utils_no_token_info(context, token):
-    _ctx(context).get("tokens")[token]["token_info"] = {}
+@given("the keycloak utils adapter caches remote lookups for {seconds:g} seconds")
+def step_keycloak_utils_cache_ttl(context, seconds):
+    configs = _real_sync_adapter(_ctx(context)).configs
+    # The adapter shares the global Keycloak configuration, so the previous value must come back after the scenario.
+    previous = configs.REMOTE_CACHE_TTL_SECONDS
+    configs.REMOTE_CACHE_TTL_SECONDS = seconds
+    context.add_cleanup(lambda: setattr(configs, "REMOTE_CACHE_TTL_SECONDS", previous))
 
 
-@given('the keycloak utils stub has no userinfo for token "{token}"')
-def step_keycloak_utils_no_userinfo(context, token):
-    _ctx(context).get("tokens")[token]["userinfo"] = {}
+@given("the keycloak utils adapter cannot read the claims of issued tokens")
+def step_keycloak_utils_claims_unreadable(context):
+    _ctx(context).store("claims_unreadable", True)
 
 
-@given("the keycloak utils stub caches remote lookups for {seconds:g} seconds")
-def step_keycloak_utils_stub_cache_ttl(context, seconds):
-    for stub in _ctx(context).get("stubs"):
-        stub.configs.REMOTE_CACHE_TTL_SECONDS = seconds
+@when('the keycloak utils sessions of user "{username}" are cleared')
+def step_keycloak_utils_clear_sessions(context, username):
+    sc = _ctx(context)
+    _real_sync_adapter(sc).clear_user_sessions(_user_id(sc, username))
 
 
-@given('the keycloak utils stub grants permission "{perm}" to token "{token}"')
-def step_keycloak_utils_stub_grants(context, perm, token):
-    _ctx(context).get("tokens")[token]["granted"].add(tuple(perm.split("#")))
+@when("the keycloak adapter's own permission cache is cleared")
+def step_keycloak_utils_clear_adapter_permission_cache(context):
+    """Drop the adapter-level permission cache so only the KeycloakUtils TTL cache can serve a stale answer."""
+    _real_sync_adapter(_ctx(context)).check_permissions_batch.clear_cache()
 
 
-@when('the keycloak utils stub revokes userinfo for token "{token}"')
-def step_keycloak_utils_stub_revokes_userinfo(context, token):
-    _ctx(context).get("tokens")[token]["userinfo"] = {}
-
-
-@when('the keycloak utils stub revokes permission "{perm}" from token "{token}"')
-def step_keycloak_utils_stub_revokes_permission(context, perm, token):
-    _ctx(context).get("tokens")[token]["granted"].discard(tuple(perm.split("#")))
+@when('the keycloak utils permission granting scope "{scope}" on resource "{resource}" of client "{client}" is deleted')
+def step_keycloak_utils_delete_permission(context, scope, resource, client):
+    sc = _ctx(context)
+    adapter = _real_sync_adapter(sc)
+    internal_id = sc.get(f"client_{client}")["internal_client_id"]
+    permission_name = f"{resource}-{scope}-permission"
+    permission_id = next(
+        p["id"] for p in adapter.admin_adapter.get_client_authz_permissions(internal_id) if p["name"] == permission_name
+    )
+    adapter.delete_client_authz_policy(internal_id, permission_id)
 
 
 @when("the keycloak utils cached lookups expire")
@@ -292,12 +268,6 @@ def step_keycloak_utils_cache_expires(context):
     with keycloak_utils._remote_cache_lock:
         for key, (_, value) in list(keycloak_utils._remote_cache.items()):
             keycloak_utils._remote_cache[key] = (0.0, value)
-
-
-@then('the keycloak utils stub served {count:d} "{kind}" lookups')
-def step_keycloak_utils_lookup_count(context, count, kind):
-    actual = _ctx(context).get("stub_calls").get(kind, 0)
-    assert actual == count, f"Expected {count} {kind} lookups, got {actual}"
 
 
 @given('the keycloak utils {surface} auth requires any of roles "{roles}"')
@@ -377,21 +347,6 @@ def step_keycloak_utils_error_roles(context, roles):
 def step_keycloak_utils_error_missing_permission(context, perm):
     error = _ctx(context).get("error")
     assert error.additional_data["missing_permissions"] == [perm]
-
-
-@then('the keycloak utils dependency returns user info with subject "{sub}"')
-def step_keycloak_utils_result_subject(context, sub):
-    sc = _ctx(context)
-    assert sc.get("error") is None, f"unexpected error {sc.get('error')!r}"
-    assert sc.get("result")["sub"] == sub
-    assert sc.get("request").state.user_info["sub"] == sub
-
-
-@then('the keycloak utils request state has user roles "{roles}"')
-def step_keycloak_utils_state_roles(context, roles):
-    sc = _ctx(context)
-    assert sc.get("error") is None, f"unexpected error {sc.get('error')!r}"
-    assert sorted(sc.get("request").state.user_roles) == sorted(_split(roles))
 
 
 @then("the keycloak utils request state has an empty actor chain")
@@ -544,18 +499,6 @@ async def step_keycloak_utils_grpc_no_metadata(context, mode):
 @when("the keycloak utils {mode} grpc handler is invoked without metadata on a plain context")
 async def step_keycloak_utils_grpc_no_metadata_plain(context, mode):
     await _invoke_grpc(context, mode, (), plain=True)
-
-
-@then('the keycloak utils grpc handler ran with user "{sub}" and roles "{roles}"')
-def step_keycloak_utils_grpc_ran(context, sub, roles):
-    sc = _ctx(context)
-    assert sc.get("error") is None and not sc.get("aborted"), f"call failed: {sc.get('error')!r}"
-    calls = _handler_calls(sc)
-    assert len(calls) == 1
-    auth = calls[0]
-    assert isinstance(auth, AuthenticatedUserDTO)
-    assert auth.user_id == sub
-    assert sorted(auth.roles) == sorted(_split(roles))
 
 
 @then('the keycloak utils grpc handler returned "{value}"')
@@ -794,3 +737,20 @@ def step_keycloak_utils_grpc_ran_as(context, username, roles):
 async def step_keycloak_utils_grpc_user_bearer_plain(context, mode, username):
     sc = _ctx(context)
     await _invoke_grpc(context, mode, (("authorization", f"Bearer {_access_token(sc, username)}"),), plain=True)
+
+
+@when(
+    'the keycloak utils {mode} grpc handler is invoked with the access token of user "{username}" under authorization scheme "{scheme}"',
+)
+async def step_keycloak_utils_grpc_scheme(context, mode, username, scheme):
+    sc = _ctx(context)
+    await _invoke_grpc(context, mode, (("authorization", f"{scheme} {_access_token(sc, username)}"),))
+
+
+@when(
+    'the keycloak utils {mode} grpc handler is invoked with a conflicting bearer token "{other}" next to the access token of user "{username}"',
+)
+async def step_keycloak_utils_grpc_conflicting(context, mode, other, username):
+    sc = _ctx(context)
+    metadata = (("authorization", f"Bearer {_access_token(sc, username)}"), ("authorization", f"Bearer {other}"))
+    await _invoke_grpc(context, mode, metadata)
