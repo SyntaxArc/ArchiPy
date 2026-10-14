@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.14.0](5.14.0.md) | 2026-10-14 | Search output DTOs with `total_count_estimated`, `PAGINATION.MAX_ITEMS` config that drives the pagination limit and the default `COUNT_THRESHOLD` (**behavior:** PostgreSQL totals above it are estimated) |
 | [5.13.0](5.13.0.md) | 2026-10-14 | Cheaper search totals: `count_threshold` with a PostgreSQL estimate, opt-in count cache, skipped `COUNT` on short pages |
 | [5.12.1](5.12.1.md) | 2026-10-14 | Kafka consume spans end when the message is committed instead of at the next poll |
 | [5.12.0](5.12.0.md) | 2026-10-14 | SQLAlchemy, Kafka and Redis search tracing fixed; Temporal metrics scrape endpoint; `email.send` span; MinIO non-recursive listing returns folders |
