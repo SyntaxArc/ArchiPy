@@ -8,18 +8,22 @@ A persistent event loop per scenario is used so that Temporal workers
 """
 
 import asyncio
+import socket
 import threading
+import time
 from collections.abc import Coroutine
 from datetime import timedelta
 from typing import Any, TypeVar
 
+import httpx2
 from behave import given, then, when
 from temporalio.client import ScheduleIntervalSpec, ScheduleOverlapPolicy, SchedulePolicy, ScheduleSpec
 
 from archipy.adapters.temporal.adapters import TemporalAdapter
 from archipy.adapters.temporal.runtime import TemporalRuntimeManager
 from archipy.adapters.temporal.worker import TemporalWorkerManager, WorkerHandle
-from archipy.configs.config_template import TemporalConfig
+from archipy.configs.base_config import BaseConfig
+from archipy.configs.config_template import OtelMetricsExporter, TemporalConfig
 from archipy.models.errors import BaseError
 from features.test_helpers import get_current_scenario_context
 from features.test_helpers_otel import CollectorTelemetry
@@ -1661,3 +1665,58 @@ def step_temporal_runtime_manager(context):
     assert second is not None and second is not first, "reset_runtime() did not allow a new Runtime"
     global _runtime_endpoint
     _runtime_endpoint = collector.grpc_endpoint
+
+
+def _free_local_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+@given("Temporal metrics are served on a scrape endpoint")
+def step_temporal_metrics_scrape_endpoint(context) -> None:
+    """Switch the app exporter to ``pull`` so the Temporal SDK serves its own ``/metrics`` endpoint."""
+    global _runtime_endpoint
+
+    scenario_context = get_current_scenario_context(context)
+    _enable_temporal_otel(context, enable_metrics=True)
+
+    otel = BaseConfig.global_config().OTEL
+    otel.METRICS_EXPORTER = OtelMetricsExporter.PULL
+    otel.METRICS_PULL_HOST = "127.0.0.1"
+    port = _free_local_port()
+
+    # The Runtime was built for the collector in the step above; a scrape endpoint needs a new one, and the
+    # next OTLP scenario must replace it again.
+    TemporalRuntimeManager().reset_runtime()
+    _runtime_endpoint = "scrape-endpoint"
+
+    temporal_config = scenario_context.get("test_containers").get_container("temporal").config
+    temporal_config = temporal_config.model_copy(update={"ENABLE_METRICS": True, "METRICS_PULL_PORT": port})
+    scenario_context.temporal_adapter = TemporalAdapter(temporal_config)
+    scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
+    scenario_context.store("temporal_scrape_url", f"http://127.0.0.1:{port}/metrics")
+
+
+@given("Temporal metrics are exported over OTLP while the app exporter is the Pushgateway")
+def step_temporal_metrics_with_pushgateway_exporter(context) -> None:
+    """Select ``pushgateway`` as the app exporter; Temporal cannot push, so it must fall back to OTLP."""
+    _enable_temporal_otel(context, enable_metrics=True)
+    BaseConfig.global_config().OTEL.METRICS_EXPORTER = OtelMetricsExporter.PUSHGATEWAY
+
+
+@then('the Temporal scrape endpoint should expose "{name}" for task queue "{task_queue}"')
+def step_scrape_endpoint_exposes_metric(context, name, task_queue):
+    """Poll (bounded) the Temporal SDK ``/metrics`` endpoint until the metric for the task queue shows up."""
+    url = get_current_scenario_context(context).get("temporal_scrape_url")
+    deadline = time.monotonic() + TEMPORAL_METRIC_TIMEOUT_SECONDS
+    body = ""
+    while time.monotonic() < deadline:
+        try:
+            body = httpx2.get(url, timeout=2).text
+        except httpx2.HTTPError:
+            body = ""
+        if any(line.startswith(name) and f'task_queue="{task_queue}"' in line for line in body.splitlines()):
+            return
+        time.sleep(0.2)
+    raise AssertionError(f"{name!r} for task queue {task_queue!r} not found at {url}. Last body:\n{body[:1500]}")

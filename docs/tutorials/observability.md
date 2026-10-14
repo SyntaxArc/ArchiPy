@@ -479,6 +479,8 @@ Temporal metrics and traces reuse the global OTel config:
 - **Metrics:** set `TEMPORAL__ENABLE_METRICS=true` **and** `OTEL__IS_ENABLED=true` with
   `OTEL__METRICS_ENABLED=true`. The adapter builds a Temporal `Runtime` with
   `OpenTelemetryConfig` pointing at `OTEL.OTLP_ENDPOINT` / `PROTOCOL` / `OTLP_HEADERS`.
+  With `OTEL__METRICS_EXPORTER=pull` the Temporal SDK serves its own `/metrics` on `TEMPORAL__METRICS_PULL_PORT`;
+  with `pushgateway` it still exports over OTLP because the SDK cannot push.
 - **Traces:** when `OTEL.IS_ENABLED` and `TRACES_ENABLED`, the Temporal client attaches
   `temporalio.contrib.opentelemetry.TracingInterceptor` after `OtelUtils.init_otel_if_needed`.
 

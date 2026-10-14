@@ -6,7 +6,7 @@ instances with OpenTelemetry metrics integration.
 
 import logging
 
-from temporalio.runtime import OpenTelemetryConfig, Runtime, TelemetryConfig
+from temporalio.runtime import OpenTelemetryConfig, PrometheusConfig, Runtime, TelemetryConfig
 
 from archipy.helpers.metaclasses.singleton import Singleton
 
@@ -45,6 +45,7 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
         otlp_endpoint: str = "http://localhost:4317",
         headers: dict[str, str] | None = None,
         use_http: bool = False,
+        prometheus_bind_address: str | None = None,
     ) -> Runtime | None:
         """Get or create a Runtime with OpenTelemetry telemetry.
 
@@ -53,6 +54,8 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
             otlp_endpoint: OTLP collector endpoint URL.
             headers: Optional headers for OTLP export (auth tokens, routing).
             use_http: If True, use HTTP/protobuf transport instead of gRPC.
+            prometheus_bind_address: If set (``host:port``), the Runtime serves a Prometheus ``/metrics``
+                scrape endpoint on that address instead of exporting over OTLP.
 
         Returns:
             Runtime | None: The configured Runtime instance if metrics are enabled,
@@ -72,18 +75,16 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
             logger.debug("Returning existing Temporal Runtime instance")
             return self._runtime
 
-        logger.info("Creating Temporal Runtime with OTLP metrics at %s", otlp_endpoint)
+        metrics: OpenTelemetryConfig | PrometheusConfig
+        if prometheus_bind_address:
+            logger.info("Creating Temporal Runtime with a Prometheus scrape endpoint on %s", prometheus_bind_address)
+            metrics = PrometheusConfig(bind_address=prometheus_bind_address)
+        else:
+            logger.info("Creating Temporal Runtime with OTLP metrics at %s", otlp_endpoint)
+            metrics = OpenTelemetryConfig(url=otlp_endpoint, headers=headers or None, http=use_http)
 
         try:
-            self._runtime = Runtime(
-                telemetry=TelemetryConfig(
-                    metrics=OpenTelemetryConfig(
-                        url=otlp_endpoint,
-                        headers=headers or None,
-                        http=use_http,
-                    ),
-                ),
-            )
+            self._runtime = Runtime(telemetry=TelemetryConfig(metrics=metrics))
             logger.info("Temporal Runtime created successfully with OpenTelemetry telemetry")
         except Exception:
             logger.exception("Failed to create Temporal Runtime with OpenTelemetry config")

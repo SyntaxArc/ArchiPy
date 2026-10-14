@@ -1321,7 +1321,17 @@ class TemporalConfig(BaseModel):
         default=False,
         description=(
             "Enable OTLP metrics export for Temporal workflows and activities "
-            "(requires BaseConfig.OTEL.IS_ENABLED and METRICS_ENABLED; uses OTEL endpoint)"
+            "(requires BaseConfig.OTEL.IS_ENABLED and METRICS_ENABLED; uses OTEL endpoint). "
+            "With OTEL.METRICS_EXPORTER=pull the Temporal SDK serves its own /metrics scrape endpoint instead."
+        ),
+    )
+    METRICS_PULL_PORT: int = Field(
+        default=8201,
+        ge=1,
+        le=65535,
+        description=(
+            "Port of the Temporal SDK /metrics scrape endpoint when OTEL.METRICS_EXPORTER=pull "
+            "(bound on OTEL.METRICS_PULL_HOST; must differ from OTEL.METRICS_PULL_PORT)"
         ),
     )
 

@@ -7,6 +7,7 @@ and conventions.
 
 from __future__ import annotations
 
+import logging
 from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar, override
@@ -27,16 +28,21 @@ from temporalio.common import RetryPolicy
 from temporalio.service import RetryConfig
 
 from archipy.configs.base_config import BaseConfig
+from archipy.configs.config_template import OtelMetricsExporter
 from archipy.models.errors import InvalidArgumentError
 from archipy.models.errors.base_error import BaseError
 
 from .ports import TemporalPort
 from .runtime import TemporalRuntimeManager
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from archipy.configs.config_template import TemporalConfig
+    from temporalio.runtime import Runtime
+
+    from archipy.configs.config_template import OpentelemetryConfig, TemporalConfig
 
 T = TypeVar("T")
 
@@ -114,15 +120,7 @@ class TemporalAdapter(TemporalPort):
                 global_config = BaseConfig.global_config()
                 otel = global_config.OTEL
                 if self.config.ENABLE_METRICS and otel.IS_ENABLED and otel.METRICS_ENABLED:
-                    from archipy.helpers.utils.otel_utils import OtelUtils
-
-                    runtime_manager = TemporalRuntimeManager()
-                    runtime = runtime_manager.get_runtime(
-                        otel_metrics_enabled=True,
-                        otlp_endpoint=OtelUtils.resolve_metrics_endpoint(otel),
-                        headers=dict(otel.OTLP_HEADERS),
-                        use_http=(otel.PROTOCOL == "http/protobuf"),
-                    )
+                    runtime = self._build_metrics_runtime(otel)
                     if runtime is not None:
                         connect_kwargs["runtime"] = runtime
 
@@ -147,6 +145,38 @@ class TemporalAdapter(TemporalPort):
                 ) from error
 
         return self._client
+
+    def _build_metrics_runtime(self, otel: OpentelemetryConfig) -> Runtime | None:
+        """Build the Temporal Runtime that exports SDK metrics according to the OTel exporter mode.
+
+        The Temporal SDK core can only export over OTLP or serve its own Prometheus scrape endpoint, so
+        ``METRICS_EXPORTER=pull`` selects the scrape endpoint and every other mode uses OTLP.
+
+        Args:
+            otel: The global OpenTelemetry configuration.
+
+        Returns:
+            Runtime | None: The configured Runtime, or None when it could not be created.
+        """
+        from archipy.helpers.utils.otel_utils import OtelUtils
+
+        otlp_endpoint = OtelUtils.resolve_metrics_endpoint(otel)
+        prometheus_bind_address: str | None = None
+        if otel.METRICS_EXPORTER == OtelMetricsExporter.PULL:
+            prometheus_bind_address = f"{otel.METRICS_PULL_HOST}:{self.config.METRICS_PULL_PORT}"
+        elif otel.METRICS_EXPORTER == OtelMetricsExporter.PUSHGATEWAY:
+            logger.warning(
+                "Temporal SDK metrics cannot be pushed to a Pushgateway; they are exported over OTLP to %s instead",
+                otlp_endpoint,
+            )
+
+        return TemporalRuntimeManager().get_runtime(
+            otel_metrics_enabled=True,
+            otlp_endpoint=otlp_endpoint,
+            headers=dict(otel.OTLP_HEADERS),
+            use_http=(otel.PROTOCOL == "http/protobuf"),
+            prometheus_bind_address=prometheus_bind_address,
+        )
 
     @staticmethod
     def _append_tracing_interceptor(connect_kwargs: dict[str, Any]) -> None:

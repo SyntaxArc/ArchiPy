@@ -649,6 +649,20 @@ TEMPORAL__HOST=temporal.production.com
 | Metrics | `TEMPORAL.ENABLE_METRICS` and `OTEL.IS_ENABLED` + `METRICS_ENABLED` | Temporal `Runtime` with `OpenTelemetryConfig` (OTLP URL/headers/protocol from `OTEL`)                     |
 | Traces  | `OTEL.IS_ENABLED` and `TRACES_ENABLED`                              | `temporalio.contrib.opentelemetry.TracingInterceptor` on the client after `OtelUtils.init_otel_if_needed` |
 
+### Exporter modes
+
+The Temporal SDK core can only export over OTLP or serve its own Prometheus scrape endpoint, so it follows `OTEL.METRICS_EXPORTER` like this:
+
+| `OTEL.METRICS_EXPORTER` | Temporal SDK metrics                                                                                       |
+|-------------------------|------------------------------------------------------------------------------------------------------------|
+| `otlp`                  | Exported over OTLP to `OTEL.OTLP_ENDPOINT`                                                                 |
+| `pull`                  | Served on their own `/metrics` endpoint at `OTEL.METRICS_PULL_HOST:TEMPORAL.METRICS_PULL_PORT` (default 8201) |
+| `pushgateway`           | Cannot be pushed. They still go over OTLP to `OTEL.OTLP_ENDPOINT`, and a warning is logged                |
+
+`TEMPORAL.METRICS_PULL_PORT` must differ from `OTEL.METRICS_PULL_PORT`, because the app's own scrape server uses that one.
+To get Temporal and app metrics into one Pushgateway, send Temporal's OTLP to an OpenTelemetry Collector that forwards to it.
+The `Runtime` is created once per process, so the exporter mode and endpoint cannot change after the first connection.
+
 ### Available Metrics
 
 When metrics are enabled, the Temporal SDK emits client and worker metrics to your OTLP

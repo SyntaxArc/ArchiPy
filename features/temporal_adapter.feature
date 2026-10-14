@@ -330,3 +330,15 @@ Feature: Temporal Adapter Operations
   Scenario: Temporal runtime manager reuses one runtime until it is reset
     Given Temporal metrics and traces are exported to the collector
     Then the Temporal runtime manager should reuse one runtime until it is reset
+
+  Scenario: Worker metrics are served on a scrape endpoint when the exporter is pull
+    Given Temporal metrics are served on a scrape endpoint
+    And a worker is started for task queue "otel-scrape-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "scrape"
+    Then the Temporal scrape endpoint should expose "temporal_workflow_completed" for task queue "otel-scrape-queue"
+
+  Scenario: Worker metrics fall back to OTLP when the exporter is the Pushgateway
+    Given Temporal metrics are exported over OTLP while the app exporter is the Pushgateway
+    And a worker is started for task queue "otel-fallback-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "fallback"
+    Then the Temporal "temporal_workflow_completed" count for task queue "otel-fallback-queue" and workflow_type "GreetingWorkflow" should be at least 1
