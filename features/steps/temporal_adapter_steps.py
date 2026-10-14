@@ -17,10 +17,12 @@ from behave import given, then, when
 from temporalio.client import ScheduleIntervalSpec, ScheduleOverlapPolicy, SchedulePolicy, ScheduleSpec
 
 from archipy.adapters.temporal.adapters import TemporalAdapter
+from archipy.adapters.temporal.runtime import TemporalRuntimeManager
 from archipy.adapters.temporal.worker import TemporalWorkerManager, WorkerHandle
 from archipy.configs.config_template import TemporalConfig
 from archipy.models.errors import BaseError
 from features.test_helpers import get_current_scenario_context
+from features.test_helpers_otel import CollectorTelemetry
 from features.test_workflows.temporal_activities import (
     calculation_activity,
     counter_activity,
@@ -174,6 +176,7 @@ async def start_test_worker(
     workflows: list[type] | None = None,
     activities: list | None = None,
     build_id: str | None = None,
+    max_concurrent_activities: int | None = None,
 ) -> WorkerHandle:
     """Start a test worker with specified workflows and activities.
 
@@ -183,6 +186,7 @@ async def start_test_worker(
         workflows (list[type], optional): List of workflow classes. Defaults to None.
         activities (list, optional): List of activity functions. Defaults to None.
         build_id (str, optional): Build identifier for versioning. Defaults to None.
+        max_concurrent_activities (int, optional): Activity slot limit for the worker. Defaults to None.
 
     Returns:
         WorkerHandle: Handle to the started worker.
@@ -220,6 +224,7 @@ async def start_test_worker(
         workflows=workflows,
         activities=activities,
         build_id=build_id,
+        max_concurrent_activities=max_concurrent_activities,
     )
 
     # Store worker handle in scenario context
@@ -1442,3 +1447,217 @@ def step_temporal_worker_manager_config_should_have_debug_mode(context) -> None:
     worker_manager = get_temporal_worker_manager(context)
     assert worker_manager.config.WORKER_DEBUG_MODE is True, "Expected WORKER_DEBUG_MODE to be enabled"
     context.logger.info("Temporal worker manager config has debug mode enabled")
+
+
+# --- OpenTelemetry export: real Temporal server, real workers, real OpenTelemetry Collector ---
+
+TEMPORAL_CORE_SERVICE_NAME = "temporal-core-sdk"
+TEMPORAL_METRIC_TIMEOUT_SECONDS = 10.0
+TEMPORAL_METRICS_ABSENT_WAIT_SECONDS = 3.0
+_runtime_endpoint: str | None = None
+
+
+def _enable_temporal_otel(context, *, enable_metrics: bool) -> None:
+    """Point OpenTelemetry at the collector container and rebuild the Temporal adapter and worker manager.
+
+    The Temporal ``Runtime`` is a process singleton that cannot change its endpoint, so it is only reset when
+    the collector endpoint differs from the one it was created for.
+    """
+    global _runtime_endpoint
+
+    from features.steps.otel_steps import _setup_collector_otel
+
+    scenario_context = get_current_scenario_context(context)
+    collector = scenario_context.get("test_containers").get_container("otel-collector")
+    _setup_collector_otel(context, traces=True, metrics=True)
+    collector.mark()
+
+    manager = TemporalRuntimeManager()
+    if _runtime_endpoint is not None and _runtime_endpoint != collector.grpc_endpoint:
+        manager.reset_runtime()
+    _runtime_endpoint = collector.grpc_endpoint
+
+    temporal_config = scenario_context.get("test_containers").get_container("temporal").config
+    temporal_config = temporal_config.model_copy(update={"ENABLE_METRICS": enable_metrics})
+    scenario_context.temporal_adapter = TemporalAdapter(temporal_config)
+    scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
+    scenario_context.store("temporal_metrics_reader", CollectorTelemetry(collector, TEMPORAL_CORE_SERVICE_NAME))
+
+
+def _temporal_metric_points(context, name: str, task_queue: str | None = None) -> list:
+    """Return the latest exported data points of a Temporal SDK metric, optionally for one task queue."""
+    reader: CollectorTelemetry = get_current_scenario_context(context).get("temporal_metrics_reader")
+    metric = reader.metrics().get(name)
+    if metric is None:
+        return []
+    points = list(metric.data.data_points)
+    if task_queue is not None:
+        points = [point for point in points if point.attributes.get("task_queue") == task_queue]
+    return points
+
+
+def _wait_for_temporal_metric(context, name: str, task_queue: str | None = None, **labels: str) -> list:
+    """Poll (bounded) until a Temporal metric has a data point with the given labels; return those points."""
+    reader: CollectorTelemetry = get_current_scenario_context(context).get("temporal_metrics_reader")
+
+    def read() -> list:
+        return [
+            point
+            for point in _temporal_metric_points(context, name, task_queue)
+            if all(point.attributes.get(key) == value for key, value in labels.items())
+        ]
+
+    points = reader.wait_for(read, timeout=TEMPORAL_METRIC_TIMEOUT_SECONDS)
+    assert points, (
+        f"Temporal metric {name!r} (task_queue={task_queue!r}, labels={labels}) never reached the collector. "
+        f"Exported Temporal metrics: {sorted(reader.metrics())}"
+    )
+    return points
+
+
+@given("Temporal metrics and traces are exported to the collector")
+def step_temporal_otel_enabled(context) -> None:
+    """Enable OpenTelemetry against the collector with Temporal metrics on."""
+    _enable_temporal_otel(context, enable_metrics=True)
+
+
+@given("Temporal traces are exported to the collector while Temporal metrics are disabled")
+def step_temporal_otel_metrics_disabled(context) -> None:
+    """Enable OpenTelemetry against the collector but leave ``TemporalConfig.ENABLE_METRICS`` off."""
+    _enable_temporal_otel(context, enable_metrics=False)
+
+
+@given('a worker limited to {limit:d} concurrent activities is started for task queue "{task_queue}"')
+def step_start_worker_with_activity_limit(context, task_queue, limit):
+    """Start a worker whose activity slots are capped."""
+    run_async(context, start_test_worker(context, task_queue, max_concurrent_activities=limit))
+
+
+@when('I execute the failing retry workflow with {max_attempts:d} attempts on task queue "{task_queue}"')
+def step_execute_failing_retry_workflow(context, max_attempts, task_queue):
+    """Run ``RetryWorkflow`` with an activity that always fails."""
+    adapter = get_temporal_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+
+    async def run():
+        from uuid import uuid4
+
+        client = await adapter.get_client()
+        return await client.execute_workflow(
+            RetryWorkflow,
+            args=[True, max_attempts],
+            id=str(uuid4()),
+            task_queue=task_queue,
+        )
+
+    scenario_context.workflow_result = run_async(context, run())
+
+
+@when('I wait for the Temporal metric "{name}" of task queue "{task_queue}"')
+def step_wait_for_temporal_metric(context, name, task_queue):
+    """Wait (bounded) until the collector has received the metric."""
+    _wait_for_temporal_metric(context, name, task_queue)
+
+
+@then('the collector should expose Temporal metric "{name}" for the task queue "{task_queue}"')
+def step_collector_has_temporal_metric(context, name, task_queue):
+    """Assert the collector received the metric for the task queue."""
+    _wait_for_temporal_metric(context, name, task_queue)
+
+
+@then('the collector should expose Temporal metric "{name}" for task queue "{task_queue}" where {label} is "{value}"')
+def step_collector_has_temporal_metric_label(context, name, task_queue, label, value):
+    """Assert the collector received the metric for the task queue with a label value."""
+    _wait_for_temporal_metric(context, name, task_queue, **{label: value})
+
+
+@then('the collector should expose client Temporal metric "{name}" where {label} is "{value}"')
+def step_collector_has_temporal_metric_any_queue(context, name, label, value):
+    """Assert the collector received the metric (client-side, not tied to a queue) with a label value."""
+    _wait_for_temporal_metric(context, name, None, **{label: value})
+
+
+@then('the Temporal "{name}" count for task queue "{task_queue}" and {label} "{value}" should be at least {minimum:d}')
+def step_temporal_counter_at_least(context, name, task_queue, label, value, minimum):
+    """Assert a Temporal counter has reached a minimum value for one label value."""
+    points = _wait_for_temporal_metric(context, name, task_queue, **{label: value})
+    total = sum(point.value for point in points)
+    assert total >= minimum, f"{name} {label}={value!r} is {total}, expected at least {minimum}"
+
+
+@then(
+    'the Temporal gauge "{name}" for task queue "{task_queue}" and worker type "{worker_type}" '
+    "should settle at {expected:d}",
+)
+def step_temporal_gauge_settles(context, name, task_queue, worker_type, expected):
+    """Assert a worker gauge reaches the expected value (polled, bounded)."""
+    reader: CollectorTelemetry = get_current_scenario_context(context).get("temporal_metrics_reader")
+
+    def read() -> list:
+        return [
+            point
+            for point in _temporal_metric_points(context, name, task_queue)
+            if point.attributes.get("worker_type") == worker_type and point.value == expected
+        ]
+
+    assert reader.wait_for(read, timeout=TEMPORAL_METRIC_TIMEOUT_SECONDS), (
+        f"{name} for {task_queue!r}/{worker_type} never settled at {expected}; "
+        f"got {[p.value for p in _temporal_metric_points(context, name, task_queue)]}"
+    )
+
+
+@then('the collector should not expose any Temporal metric for task queue "{task_queue}"')
+def step_collector_has_no_temporal_metrics(context, task_queue):
+    """Assert no Temporal SDK metric reached the collector for the task queue after a bounded wait."""
+    import time
+
+    reader: CollectorTelemetry = get_current_scenario_context(context).get("temporal_metrics_reader")
+    time.sleep(TEMPORAL_METRICS_ABSENT_WAIT_SECONDS)
+    leaked = {
+        name: len(_temporal_metric_points(context, name, task_queue))
+        for name in reader.metrics()
+        if _temporal_metric_points(context, name, task_queue)
+    }
+    assert not leaked, f"Temporal metrics were exported although ENABLE_METRICS is off: {leaked}"
+
+
+@then("the collector should have exported Temporal workflow and activity spans:")
+def step_collector_has_temporal_spans(context):
+    """Assert the tracing interceptor produced the named spans; stores them for the trace id check."""
+    scenario_context = get_current_scenario_context(context)
+    telemetry: CollectorTelemetry = scenario_context.get("collector_telemetry")
+    expected = {row["name"] for row in context.table}
+
+    def read() -> list:
+        telemetry.flush()
+        spans = telemetry.spans()
+        return spans if expected <= {span.name for span in spans} else []
+
+    spans = telemetry.wait_for(read)
+    names = sorted({span.name for span in telemetry.spans()})
+    assert spans, f"Missing spans {sorted(expected)}; exported spans: {names}"
+    scenario_context.store("temporal_spans", [span for span in spans if span.name in expected])
+
+
+@then("the exported Temporal spans should share one trace id")
+def step_temporal_spans_share_trace(context):
+    """Assert client and worker spans were stitched into one trace by the tracing interceptor."""
+    spans = get_current_scenario_context(context).get("temporal_spans")
+    trace_ids = {span.context.trace_id for span in spans}
+    assert len(trace_ids) == 1, f"Expected one trace id, got {len(trace_ids)} for {[s.name for s in spans]}"
+
+
+@then("the Temporal runtime manager should reuse one runtime until it is reset")
+def step_temporal_runtime_manager(context):
+    """Exercise the real ``TemporalRuntimeManager`` against the collector endpoint."""
+    collector = get_current_scenario_context(context).get("test_containers").get_container("otel-collector")
+    manager = TemporalRuntimeManager()
+    assert manager.get_runtime(otel_metrics_enabled=False) is None
+    first = manager.get_runtime(otel_metrics_enabled=True, otlp_endpoint=collector.grpc_endpoint)
+    assert first is not None, "Runtime with OTLP metrics was not created"
+    assert manager.get_runtime(otel_metrics_enabled=True, otlp_endpoint="http://127.0.0.1:1") is first
+    manager.reset_runtime()
+    second = manager.get_runtime(otel_metrics_enabled=True, otlp_endpoint=collector.grpc_endpoint)
+    assert second is not None and second is not first, "reset_runtime() did not allow a new Runtime"
+    global _runtime_endpoint
+    _runtime_endpoint = collector.grpc_endpoint

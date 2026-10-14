@@ -1,4 +1,4 @@
-@needs-temporal
+@needs-temporal @needs-otel-collector
 Feature: Temporal Adapter Operations
   As a developer
   I want to test Temporal adapter operations
@@ -259,3 +259,74 @@ Feature: Temporal Adapter Operations
     Then the workflow result should be "Hello, ConfigTest!"
     And the temporal adapter config should have client identity "archipy-bdd-client"
     And the temporal worker manager config should have debug mode enabled
+
+  # OpenTelemetry export (real Temporal server, workers and OpenTelemetry Collector)
+  Scenario: Worker exports activity slot gauges
+    Given Temporal metrics and traces are exported to the collector
+    And a worker limited to 3 concurrent activities is started for task queue "otel-slots-queue"
+    When I execute workflow "GreetingWorkflow" with argument "slots"
+    Then the Temporal gauge "temporal_worker_task_slots_available" for task queue "otel-slots-queue" and worker type "ActivityWorker" should settle at 3
+    And the Temporal gauge "temporal_worker_task_slots_used" for task queue "otel-slots-queue" and worker type "ActivityWorker" should settle at 0
+
+  Scenario: Worker exports poller and sticky cache metrics
+    Given Temporal metrics and traces are exported to the collector
+    And a worker is started for task queue "otel-pollers-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "pollers"
+    Then the collector should expose Temporal metric "temporal_num_pollers" for task queue "otel-pollers-queue" where poller_type is "activity_task"
+    And the collector should expose Temporal metric "temporal_num_pollers" for task queue "otel-pollers-queue" where poller_type is "sticky_workflow_task"
+    And the collector should expose Temporal metric "temporal_sticky_cache_size" for the task queue "otel-pollers-queue"
+    And the collector should expose Temporal metric "temporal_worker_start" for the task queue "otel-pollers-queue"
+
+  Scenario: Worker exports workflow completion and latency metrics
+    Given Temporal metrics and traces are exported to the collector
+    And a worker is started for task queue "otel-workflow-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "workflow"
+    Then the Temporal "temporal_workflow_completed" count for task queue "otel-workflow-queue" and workflow_type "GreetingWorkflow" should be at least 1
+    And the collector should expose Temporal metric "temporal_workflow_task_execution_latency" for task queue "otel-workflow-queue" where workflow_type is "GreetingWorkflow"
+    And the collector should expose Temporal metric "temporal_workflow_endtoend_latency" for task queue "otel-workflow-queue" where workflow_type is "GreetingWorkflow"
+    And the collector should expose Temporal metric "temporal_workflow_task_schedule_to_start_latency" for the task queue "otel-workflow-queue"
+
+  Scenario: Worker exports activity execution metrics
+    Given Temporal metrics and traces are exported to the collector
+    And a worker is started for task queue "otel-activity-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "activity"
+    Then the collector should expose Temporal metric "temporal_activity_execution_latency" for task queue "otel-activity-queue" where activity_type is "greeting_activity"
+    And the Temporal "temporal_activity_task_received" count for task queue "otel-activity-queue" and activity_type "greeting_activity" should be at least 1
+    And the collector should expose Temporal metric "temporal_activity_succeed_endtoend_latency" for task queue "otel-activity-queue" where activity_type is "greeting_activity"
+
+  Scenario: Worker exports failed activity metrics
+    Given Temporal metrics and traces are exported to the collector
+    And a worker is started for task queue "otel-failing-queue" with RetryWorkflow
+    When I execute the failing retry workflow with 2 attempts on task queue "otel-failing-queue"
+    Then the Temporal "temporal_activity_execution_failed" count for task queue "otel-failing-queue" and activity_type "failing_activity" should be at least 1
+    And the collector should expose Temporal metric "temporal_activity_execution_failed" for task queue "otel-failing-queue" where failure_reason is "ActivityError"
+
+  Scenario: Client exports request metrics
+    Given Temporal metrics and traces are exported to the collector
+    And a worker is started for task queue "otel-client-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "client"
+    Then the collector should expose client Temporal metric "temporal_request" where operation is "StartWorkflowExecution"
+    And the collector should expose client Temporal metric "temporal_long_request" where operation is "GetWorkflowExecutionHistory"
+    And the collector should expose client Temporal metric "temporal_request_latency" where operation is "RespondActivityTaskCompleted"
+
+  Scenario: Temporal metrics stay off when ENABLE_METRICS is false
+    Given Temporal traces are exported to the collector while Temporal metrics are disabled
+    And a worker is started for task queue "otel-disabled-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "disabled"
+    Then the collector should not expose any Temporal metric for task queue "otel-disabled-queue"
+
+  Scenario: Temporal tracing interceptor exports one trace for client and worker
+    Given Temporal metrics and traces are exported to the collector
+    And a worker is started for task queue "otel-trace-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "trace"
+    Then the collector should have exported Temporal workflow and activity spans:
+      | name                            |
+      | StartWorkflow:GreetingWorkflow  |
+      | RunWorkflow:GreetingWorkflow    |
+      | StartActivity:greeting_activity |
+      | RunActivity:greeting_activity   |
+    And the exported Temporal spans should share one trace id
+
+  Scenario: Temporal runtime manager reuses one runtime until it is reset
+    Given Temporal metrics and traces are exported to the collector
+    Then the Temporal runtime manager should reuse one runtime until it is reset
