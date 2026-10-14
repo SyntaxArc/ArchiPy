@@ -1282,6 +1282,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#exporter-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exporter modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#available-metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3618,6 +3629,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#exporter-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exporter modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#available-metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4420,23 +4442,55 @@ error handling and Python 3.14 type hints.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="exporter-modes">Exporter modes<a class="headerlink" href="#exporter-modes" title="Permanent link">&para;</a></h3>
+<p>The Temporal SDK core can only export over OTLP or serve its own Prometheus scrape endpoint, so it follows <code>OTEL.METRICS_EXPORTER</code> like this:</p>
+<table>
+<thead>
+<tr>
+<th><code>OTEL.METRICS_EXPORTER</code></th>
+<th>Temporal SDK metrics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>otlp</code></td>
+<td>Exported over OTLP to <code>OTEL.OTLP_ENDPOINT</code></td>
+</tr>
+<tr>
+<td><code>pull</code></td>
+<td>Served on their own <code>/metrics</code> endpoint at <code>OTEL.METRICS_PULL_HOST:TEMPORAL.METRICS_PULL_PORT</code> (default 8201)</td>
+</tr>
+<tr>
+<td><code>pushgateway</code></td>
+<td>Cannot be pushed. They still go over OTLP to <code>OTEL.OTLP_ENDPOINT</code>, and a warning is logged</td>
+</tr>
+</tbody>
+</table>
+<p><code>TEMPORAL.METRICS_PULL_PORT</code> must differ from <code>OTEL.METRICS_PULL_PORT</code>, because the app's own scrape server uses that one.
+To get Temporal and app metrics into one Pushgateway, send Temporal's OTLP to an OpenTelemetry Collector that forwards to it.
+The <code>Runtime</code> is created once per process, so the exporter mode and endpoint cannot change after the first connection.</p>
 <h3 id="available-metrics">Available Metrics<a class="headerlink" href="#available-metrics" title="Permanent link">&para;</a></h3>
 <p>When metrics are enabled, the Temporal SDK emits client and worker metrics to your OTLP
-collector (same endpoint as the rest of the app). Typical series include:</p>
+collector (same endpoint as the rest of the app). They come from the SDK core, so they carry the
+resource <code>service.name=temporal-core-sdk</code> instead of your app's service name, and are exported about
+every second. The series below are verified against a real Temporal server by the BDD suite:</p>
 <h4 id="client-side-metrics">Client-Side Metrics<a class="headerlink" href="#client-side-metrics" title="Permanent link">&para;</a></h4>
 <ul>
-<li><code>temporal_request_*</code> — client request counts and latency</li>
-<li><code>temporal_long_request_*</code> — long-polling request metrics</li>
-<li><code>temporal_workflow_*</code> — workflow operation metrics (start, execute, cancel, terminate)</li>
-<li><code>temporal_sticky_cache_*</code> — sticky workflow cache statistics</li>
+<li><code>temporal_request</code> / <code>temporal_request_latency</code> — client request counts and latency (label <code>operation</code>)</li>
+<li><code>temporal_long_request</code> — long-polling request counts (label <code>operation</code>)</li>
 </ul>
 <h4 id="worker-side-metrics">Worker-Side Metrics<a class="headerlink" href="#worker-side-metrics" title="Permanent link">&para;</a></h4>
 <ul>
-<li><code>temporal_worker_task_slots_available</code> / <code>_used</code> — task slot gauges</li>
-<li><code>temporal_worker_task_queue_poll_*</code> — task queue polling metrics</li>
-<li><code>temporal_workflow_task_execution_*</code> / <code>temporal_activity_task_execution_*</code> — task execution</li>
-<li><code>temporal_workflow_task_replay_latency</code> — workflow replay latency</li>
-<li><code>temporal_activity_execution_*</code> — activity execution counts and latency</li>
+<li><code>temporal_worker_start</code> — workers started</li>
+<li><code>temporal_worker_task_slots_available</code> / <code>temporal_worker_task_slots_used</code> — task slot gauges (label <code>worker_type</code>)</li>
+<li><code>temporal_num_pollers</code> — active pollers (label <code>poller_type</code>)</li>
+<li><code>temporal_sticky_cache_size</code> — sticky workflow cache size</li>
+<li><code>temporal_workflow_completed</code> — completed workflows (labels <code>task_queue</code>, <code>workflow_type</code>)</li>
+<li><code>temporal_workflow_task_execution_latency</code>, <code>temporal_workflow_endtoend_latency</code>,
+  <code>temporal_workflow_task_schedule_to_start_latency</code> — workflow latency histograms</li>
+<li><code>temporal_activity_task_received</code> — activity tasks received (label <code>activity_type</code>)</li>
+<li><code>temporal_activity_execution_latency</code>, <code>temporal_activity_succeed_endtoend_latency</code> — activity latency histograms</li>
+<li><code>temporal_activity_execution_failed</code> — failed activity executions (label <code>failure_reason</code>)</li>
 </ul>
 <blockquote>
 <p><strong>Tip:</strong> Query these series in your OTLP backend / Grafana after the collector scrapes or

@@ -1321,6 +1321,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#tracing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3496,6 +3507,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#tracing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3803,6 +3825,53 @@ handling and logging.</p>
 </span><span id="__span-9-46"><a id="__codelineno-9-46" name="__codelineno-9-46" href="#__codelineno-9-46"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Notification email sent to </span><span class="si">{</span><span class="n">recipient</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="__span-9-47"><a id="__codelineno-9-47" name="__codelineno-9-47" href="#__codelineno-9-47"></a>        <span class="k">return</span> <span class="kc">True</span>
 </span></code></pre></div>
+<h2 id="tracing">Tracing<a class="headerlink" href="#tracing" title="Permanent link">&para;</a></h2>
+<p>No OpenTelemetry instrumentor exists for <code>smtplib</code>, so the adapter creates its own span. With
+<code>OTEL__IS_ENABLED=true</code> and <code>OTEL__TRACES_ENABLED=true</code>, every <code>send_email</code> call emits one
+client span:</p>
+<table>
+<thead>
+<tr>
+<th>Span</th>
+<th>Attribute</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>email.send</code></td>
+<td><code>network.protocol.name</code></td>
+<td><code>smtp</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>server.address</code></td>
+<td>Configured SMTP host</td>
+</tr>
+<tr>
+<td></td>
+<td><code>server.port</code></td>
+<td>Configured SMTP port</td>
+</tr>
+<tr>
+<td></td>
+<td><code>email.tls_mode</code></td>
+<td><code>starttls</code> or <code>none</code>, as negotiated with the server</td>
+</tr>
+<tr>
+<td></td>
+<td><code>email.recipient_count</code></td>
+<td>Number of to, cc and bcc recipients</td>
+</tr>
+<tr>
+<td></td>
+<td><code>email.attachment_count</code></td>
+<td>Number of attachments</td>
+</tr>
+</tbody>
+</table>
+<p>A failed send (unreachable server, rejected credentials) marks the span as an error and records the
+<code>UnavailableError</code>. Credentials, addresses, subjects and bodies are never added to spans.</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns with proper chaining</li>

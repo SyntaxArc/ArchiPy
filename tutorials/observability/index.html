@@ -1667,6 +1667,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Library instrumentors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#version-ranges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version ranges
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -3510,6 +3527,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Library instrumentors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#version-ranges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version ranges
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -3823,6 +3857,11 @@
 <td>Process/system metrics instrumentor</td>
 </tr>
 <tr>
+<td><code>INSTRUMENTATION_SKIP_DEP_CHECK</code></td>
+<td><code>["sqlalchemy"]</code></td>
+<td>Libraries instrumented even when newer than the instrumentor's declared range</td>
+</tr>
+<tr>
 <td><code>LOGS_ENABLED</code></td>
 <td><code>true</code></td>
 <td>Enable log export when OTel is on</td>
@@ -4065,6 +4104,18 @@ silently. Elasticsearch needs no instrumentor — the <code>elasticsearch</code>
 spans natively.
 <code>SystemMetricsInstrumentor</code> runs only when <code>METRICS_ENABLED</code> and
 <code>SYSTEM_METRICS_ENABLED</code> are both true.</p>
+<h4 id="version-ranges">Version ranges<a class="headerlink" href="#version-ranges" title="Permanent link">&para;</a></h4>
+<p>Each instrumentor declares the library versions it supports. When a library is installed outside
+that range, ArchiPy logs a <strong>warning</strong> (<code>no spans will be emitted</code>) instead of staying silent.
+A library that is simply not installed is skipped at debug level.</p>
+<p><code>opentelemetry-instrumentation-sqlalchemy</code> still declares <code>sqlalchemy&lt;2.1.0</code>, while ArchiPy requires
+SQLAlchemy 2.1. The cap sits in the instrumentor's <code>instruments</code> extra, which is not a hard
+dependency, so installs resolve without error and the instrumentor only refuses at runtime. To keep
+SQLAlchemy spans, <code>OTEL__INSTRUMENTATION_SKIP_DEP_CHECK</code> (default <code>["sqlalchemy"]</code>) lists the
+libraries that are instrumented anyway; ArchiPy logs one warning naming the mismatch. Set it to <code>[]</code>
+to turn the bypass off. Remove a key once its instrumentor supports the installed version:
+<code>make check-instrumentor-compat</code> resolves the instrumentor's <code>instruments</code> extra together with
+ArchiPy's own SQLAlchemy bound and reports when upstream has caught up (a weekly CI job runs it too).</p>
 <h3 id="client-grpc">Client gRPC<a class="headerlink" href="#client-grpc" title="Permanent link">&para;</a></h3>
 <p>For outbound gRPC clients, attach contrib interceptors explicitly:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -4240,7 +4291,9 @@ send to Sentry or Elastic APM:</p>
 <ul>
 <li><strong>Metrics:</strong> set <code>TEMPORAL__ENABLE_METRICS=true</code> <strong>and</strong> <code>OTEL__IS_ENABLED=true</code> with
   <code>OTEL__METRICS_ENABLED=true</code>. The adapter builds a Temporal <code>Runtime</code> with
-  <code>OpenTelemetryConfig</code> pointing at <code>OTEL.OTLP_ENDPOINT</code> / <code>PROTOCOL</code> / <code>OTLP_HEADERS</code>.</li>
+  <code>OpenTelemetryConfig</code> pointing at <code>OTEL.OTLP_ENDPOINT</code> / <code>PROTOCOL</code> / <code>OTLP_HEADERS</code>.
+  With <code>OTEL__METRICS_EXPORTER=pull</code> the Temporal SDK serves its own <code>/metrics</code> on <code>TEMPORAL__METRICS_PULL_PORT</code>;
+  with <code>pushgateway</code> it still exports over OTLP because the SDK cannot push.</li>
 <li><strong>Traces:</strong> when <code>OTEL.IS_ENABLED</code> and <code>TRACES_ENABLED</code>, the Temporal client attaches
   <code>temporalio.contrib.opentelemetry.TracingInterceptor</code> after <code>OtelUtils.init_otel_if_needed</code>.</li>
 </ul>
