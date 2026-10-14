@@ -673,3 +673,162 @@ def step_async_kafka_roundtrip(context, topic):
         return message
 
     assert asyncio.run(roundtrip()) is not None, "Async consumer received no message"
+
+
+# --- Consume span lifetime (OpenTelemetry) ---
+
+
+def _consume_span_telemetry(context):
+    return get_current_scenario_context(context).get("adapter_span_telemetry")
+
+
+def _consume_spans(context, topic):
+    telemetry = _consume_span_telemetry(context)
+    telemetry.flush()
+    return [span for span in telemetry.spans() if span.name == f"{topic} process"]
+
+
+@when('I produce {count:d} messages on topic "{topic}" and consume them as one batch')
+def step_produce_and_batch_consume(context, count, topic):
+    """Produce messages, then read them with a single ``batch_consume`` call."""
+    import uuid
+
+    admin = get_kafka_admin_adapter(context)
+    admin.create_topic(topic, num_partitions=1, replication_factor=1)
+    assert wait_for_topic_condition(admin, lambda name, topics: name in topics, topic)
+
+    producer = get_kafka_producer_adapter(context, topic)
+    for index in range(count):
+        producer.produce(f"batch-message-{index}")
+    producer.flush(timeout=5)
+
+    consumer = get_kafka_consumer_adapter(context, topic, f"batch-span-group-{uuid.uuid4().hex[:6]}")
+    consumer.subscribe([topic])
+    messages = consumer.batch_consume(messages_number=count, timeout=15)
+    assert len(messages) == count, f"Expected {count} messages in one batch, got {len(messages)}"
+    get_current_scenario_context(context).store("batch_consumer", consumer)
+    get_current_scenario_context(context).store("batch_messages", messages)
+
+
+@when("I commit the last message of the batch")
+def step_commit_batch(context):
+    scenario_context = get_current_scenario_context(context)
+    consumer = scenario_context.get("batch_consumer")
+    consumer.commit(scenario_context.get("batch_messages")[-1], asynchronous=False)
+
+
+@then('the consume span of topic "{topic}" should not have been exported yet')
+def step_consume_span_not_exported(context, topic):
+    spans = _consume_spans(context, topic)
+    assert not spans, f"The consume span ended before the message was committed: {[s.name for s in spans]}"
+
+
+@then('exactly one consume span of topic "{topic}" should be exported with {links:d} links')
+def step_one_consume_span_with_links(context, topic, links):
+    telemetry = _consume_span_telemetry(context)
+    spans = telemetry.wait_for(lambda: _consume_spans(context, topic), timeout=10)
+    assert len(spans) == 1, f"Expected one consume span for the batch, got {len(spans)}"
+    assert len(spans[0].links) == links, f"Expected {links} links, got {len(spans[0].links)}"
+
+
+@when('I poll one message from topic "{topic}" with auto commit enabled')
+def step_poll_with_auto_commit(context, topic):
+    """Poll one message with ``enable.auto.commit`` on, so the adapter's ``commit`` is never called."""
+    import uuid
+
+    admin = get_kafka_admin_adapter(context)
+    admin.create_topic(topic, num_partitions=1, replication_factor=1)
+    assert wait_for_topic_condition(admin, lambda name, topics: name in topics, topic)
+
+    producer = get_kafka_producer_adapter(context, topic)
+    producer.produce("auto-commit-message")
+    producer.flush(timeout=5)
+
+    configs = _get_kafka_config(context).model_copy(update={"ENABLE_AUTO_COMMIT": True})
+    consumer = KafkaConsumerAdapter(
+        group_id=f"auto-commit-span-group-{uuid.uuid4().hex[:6]}",
+        topic_list=[topic],
+        kafka_configs=configs,
+    )
+    consumer.subscribe([topic])
+    deadline = time.monotonic() + 15
+    message = None
+    while message is None and time.monotonic() < deadline:
+        message = consumer.poll(timeout=1)
+    assert message is not None, "Consumer received no message"
+    get_current_scenario_context(context).store("auto_commit_consumer", consumer)
+
+
+@when("the auto commit consumer is closed")
+def step_close_auto_commit_consumer(context):
+    get_current_scenario_context(context).get("auto_commit_consumer").close()
+
+
+def _prepare_topic_with_messages(context, topic, count):
+    """Create the topic, produce ``count`` messages and subscribe a fresh consumer to it."""
+    import uuid
+
+    admin = get_kafka_admin_adapter(context)
+    admin.create_topic(topic, num_partitions=1, replication_factor=1)
+    assert wait_for_topic_condition(admin, lambda name, topics: name in topics, topic)
+
+    producer = get_kafka_producer_adapter(context, topic)
+    for index in range(count):
+        producer.produce(f"multi-message-{index}")
+    producer.flush(timeout=5)
+
+    consumer = get_kafka_consumer_adapter(context, topic, f"multi-span-group-{uuid.uuid4().hex[:6]}")
+    consumer.subscribe([topic])
+    get_current_scenario_context(context).store("multi_consumer", consumer)
+
+
+def _poll_one(consumer):
+    deadline = time.monotonic() + 15
+    message = None
+    while message is None and time.monotonic() < deadline:
+        message = consumer.poll(timeout=1)
+    assert message is not None, "Consumer received no message"
+    return message
+
+
+@when('{count:d} messages are produced on topic "{topic}" and polled and committed one by one')
+def step_poll_and_commit_each(context, count, topic):
+    _prepare_topic_with_messages(context, topic, count)
+    consumer = get_current_scenario_context(context).get("multi_consumer")
+    for _ in range(count):
+        consumer.commit(_poll_one(consumer), asynchronous=False)
+
+
+@when('{count:d} messages are produced on topic "{topic}" and polled without committing')
+def step_poll_without_commit(context, count, topic):
+    _prepare_topic_with_messages(context, topic, count)
+    consumer = get_current_scenario_context(context).get("multi_consumer")
+    for _ in range(count):
+        _poll_one(consumer)
+
+
+@when("the multi message consumer is closed")
+def step_close_multi_consumer(context):
+    get_current_scenario_context(context).get("multi_consumer").close()
+
+
+@then('{count:d} consume spans of topic "{topic}" should be exported')
+def step_n_consume_spans(context, count, topic):
+    telemetry = _consume_span_telemetry(context)
+    spans = telemetry.wait_for(
+        lambda: (lambda found: found if len(found) >= count else [])(_consume_spans(context, topic)),
+        timeout=10,
+    )
+    assert len(spans) == count, f"Expected {count} consume spans, got {len(spans)}"
+    assert len({span.context.span_id for span in spans}) == count, "Consume spans must be distinct"
+
+
+@then('{count:d} consume spans of topic "{topic}" should be exported and the last one still open')
+def step_ended_consume_spans_only(context, count, topic):
+    """Without a commit each span ends at the next poll, so the last polled message has no exported span yet."""
+    telemetry = _consume_span_telemetry(context)
+    spans = telemetry.wait_for(
+        lambda: (lambda found: found if len(found) >= count else [])(_consume_spans(context, topic)),
+        timeout=10,
+    )
+    assert len(spans) == count, f"Expected {count} ended consume spans, got {len(spans)}"

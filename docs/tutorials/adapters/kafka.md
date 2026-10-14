@@ -598,7 +598,14 @@ With the `archipy[otel-kafka]` extra and `OTEL__IS_ENABLED=true`, producers and 
 The instrumentor opens a `<topic> process` span when a message is polled. It ends when the next `poll`, `consume` or
 `close` runs, which would include idle time and make unrelated work its children. `KafkaConsumerAdapter.commit` therefore
 ends the span as soon as the offset is committed, so commit after the message is processed. A consumer that never
-commits (auto-commit) keeps the upstream behaviour. The async consumer adapter is not changed: its polls run in an
+commits (auto-commit) keeps the upstream behaviour.
+
+- **Batches:** `batch_consume` produces one `<topic> process` span for the whole batch, with a link to the producer
+  trace of every message. Commit once after processing the batch.
+- **One message at a time:** each polled message gets its own span, ended by its commit. Without commits, each span ends
+  when the next `poll` starts and the last one ends on `close`.
+- **Auto-commit:** `ENABLE_AUTO_COMMIT=true` commits in the background, so the adapter never sees the end of
+  processing. Spans end at the next `poll`, `consume` or `close`; open your own span around the handler instead. The async consumer adapter is not changed: its polls run in an
 executor thread, so its span still ends on the next poll or close.
 
 ## See Also

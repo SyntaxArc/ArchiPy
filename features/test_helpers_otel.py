@@ -83,6 +83,15 @@ def _decode_span(span: dict[str, Any], resource: dict[str, Any]) -> SimpleNamesp
             span_id=_hex_to_int(span.get("spanId")),
         ),
         parent=SimpleNamespace(span_id=parent_id) if parent_id else None,
+        links=[
+            SimpleNamespace(
+                context=SimpleNamespace(
+                    trace_id=_hex_to_int(link.get("traceId")),
+                    span_id=_hex_to_int(link.get("spanId")),
+                ),
+            )
+            for link in span.get("links", [])
+        ],
         resource=SimpleNamespace(attributes=resource),
     )
 

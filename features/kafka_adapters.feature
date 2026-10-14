@@ -178,3 +178,35 @@ Feature: Kafka Adapter Operations Testing
     When I produce and consume a message on topic "span-topic-commit" through the Kafka adapters
     Then the collector should have a span whose name contains "span-topic-commit process"
     And no span of this thread should be left active
+
+  @needs-otel-collector
+  Scenario: A batch consume produces one consume span that ends at the commit
+    Given adapter spans are exported to the collector
+    When I produce 3 messages on topic "span-topic-batch" and consume them as one batch
+    Then the consume span of topic "span-topic-batch" should not have been exported yet
+    When I commit the last message of the batch
+    Then exactly one consume span of topic "span-topic-batch" should be exported with 3 links
+    And no span of this thread should be left active
+
+  @needs-otel-collector
+  Scenario: With auto commit the consume span stays open until the consumer is closed
+    Given adapter spans are exported to the collector
+    When I poll one message from topic "span-topic-auto" with auto commit enabled
+    Then the consume span of topic "span-topic-auto" should not have been exported yet
+    When the auto commit consumer is closed
+    Then exactly one consume span of topic "span-topic-auto" should be exported with 1 links
+
+  @needs-otel-collector
+  Scenario: Each polled message gets its own consume span that ends at its commit
+    Given adapter spans are exported to the collector
+    When 3 messages are produced on topic "span-topic-multi" and polled and committed one by one
+    Then 3 consume spans of topic "span-topic-multi" should be exported
+    And no span of this thread should be left active
+
+  @needs-otel-collector
+  Scenario: Without commits each consume span ends at the next poll
+    Given adapter spans are exported to the collector
+    When 3 messages are produced on topic "span-topic-nocommit" and polled without committing
+    Then 2 consume spans of topic "span-topic-nocommit" should be exported and the last one still open
+    When the multi message consumer is closed
+    Then 3 consume spans of topic "span-topic-nocommit" should be exported
