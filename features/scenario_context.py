@@ -1,4 +1,5 @@
 import asyncio
+import gc
 import os
 
 
@@ -18,6 +19,7 @@ class ScenarioContext:
         self.async_adapter = None
         self.entities = {}
         self.entity_ids = {}
+        self._base_attributes = frozenset(vars(self)) | {"_base_attributes"}
 
     def store(self, key, value):
         """Store an object with the given key."""
@@ -67,6 +69,19 @@ class ScenarioContext:
                 os.remove(self.db_file)
             except Exception as e:
                 print(f"Error removing database file: {e}")
+
+        self._release_objects()
+
+    def _release_objects(self):
+        """Drop every object the scenario stored and collect them right away.
+
+        Steps attach clients (for example Kafka producers) to the context. A client that outlives its scenario keeps
+        its background threads alive, and they log reconnect failures once the test container is gone.
+        """
+        for name in set(vars(self)) - self._base_attributes:
+            delattr(self, name)
+        self.storage.clear()
+        gc.collect()
 
     async def async_cleanup(self):
         """Clean up async resources associated with this scenario."""
