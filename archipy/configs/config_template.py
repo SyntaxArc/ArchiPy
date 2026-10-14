@@ -728,8 +728,8 @@ class SQLAlchemyConfig(BaseModel):
     COUNT_THRESHOLD: int | None = Field(
         default=None,
         ge=0,
-        description="Default count threshold of search queries: exact totals up to it, a PostgreSQL estimate above it. "
-        "None always counts exactly",
+        description="Count threshold of search queries: exact totals up to it, a PostgreSQL estimate above it. "
+        "When unset, BaseConfig.set_global() fills it with PAGINATION.MAX_ITEMS",
     )
     ECHO: bool = Field(default=False, description="Whether to log SQL statements")
     ECHO_POOL: bool = Field(default=False, description="Whether to log connection pool events")
@@ -1257,6 +1257,21 @@ class FileConfig(BaseModel):
         description="Default number of minutes until link expiration",  # Default 60 minutes (1 hour)
     )
     ALLOWED_EXTENSIONS: list[str] = Field(default=["jpg", "jpeg", "png"], description="List of allowed file extensions")
+
+
+class PaginationConfig(BaseModel):
+    """Configuration settings for pagination limits.
+
+    ``MAX_ITEMS`` bounds how deep a page request may reach, and it is the default ``COUNT_THRESHOLD`` of the
+    SQLAlchemy configs: past the last reachable row an exact total is of no use to a paged API.
+    """
+
+    MAX_ITEMS: int = Field(
+        default=10000,
+        ge=1,
+        description="Largest page * page_size a pagination request may reach. Also the default COUNT_THRESHOLD of "
+        "the SQLAlchemy configs",
+    )
 
 
 class DatetimeConfig(BaseModel):

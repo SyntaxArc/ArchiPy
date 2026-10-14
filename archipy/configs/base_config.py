@@ -39,6 +39,7 @@ from archipy.configs.config_template import (
     MinioConfig,
     MySQLSQLAlchemyConfig,
     OpentelemetryConfig,
+    PaginationConfig,
     ParsianShaparakConfig,
     PostgresSQLAlchemyConfig,
     RedisConfig,
@@ -206,6 +207,7 @@ class BaseConfig[R](BaseSettings):
     KEYCLOAK: KeycloakConfig = KeycloakConfig()
     MINIO: MinioConfig = MinioConfig()
     OTEL: OpentelemetryConfig = OpentelemetryConfig()
+    PAGINATION: PaginationConfig = PaginationConfig()
     PARSIAN_SHAPARAK: ParsianShaparakConfig = ParsianShaparakConfig()
     SAMAN_SHAPARAK: SamanShaparakConfig = SamanShaparakConfig()
     REDIS: RedisConfig = RedisConfig()
@@ -230,6 +232,8 @@ class BaseConfig[R](BaseSettings):
         filled: ``OTEL.SERVICE_NAME``, ``FASTAPI.PROJECT_NAME``, ``AUTH.JWT_ISSUER``,
         and ``TEMPORAL.CLIENT_IDENTITY``. Explicit nested values always win.
 
+        An unset ``COUNT_THRESHOLD`` of the SQLAlchemy configs is filled with ``PAGINATION.MAX_ITEMS``.
+
         Examples:
             >>> class MyAppConfig(BaseConfig):
             ...     def customize(self) -> None:
@@ -250,6 +254,16 @@ class BaseConfig[R](BaseSettings):
                 self.AUTH.JWT_ISSUER = self.APP_NAME
             if self.TEMPORAL.CLIENT_IDENTITY is None:
                 self.TEMPORAL.CLIENT_IDENTITY = self.APP_NAME
+
+        for sqlalchemy_config in (
+            self.SQLALCHEMY,
+            self.POSTGRES_SQLALCHEMY,
+            self.MYSQL_SQLALCHEMY,
+            self.SQLITE_SQLALCHEMY,
+            self.STARROCKS_SQLALCHEMY,
+        ):
+            if sqlalchemy_config.COUNT_THRESHOLD is None:
+                sqlalchemy_config.COUNT_THRESHOLD = self.PAGINATION.MAX_ITEMS
 
     @classmethod
     def global_config(cls) -> BaseConfig:
