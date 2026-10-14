@@ -666,22 +666,27 @@ The `Runtime` is created once per process, so the exporter mode and endpoint can
 ### Available Metrics
 
 When metrics are enabled, the Temporal SDK emits client and worker metrics to your OTLP
-collector (same endpoint as the rest of the app). Typical series include:
+collector (same endpoint as the rest of the app). They come from the SDK core, so they carry the
+resource `service.name=temporal-core-sdk` instead of your app's service name, and are exported about
+every second. The series below are verified against a real Temporal server by the BDD suite:
 
 #### Client-Side Metrics
 
-- `temporal_request_*` — client request counts and latency
-- `temporal_long_request_*` — long-polling request metrics
-- `temporal_workflow_*` — workflow operation metrics (start, execute, cancel, terminate)
-- `temporal_sticky_cache_*` — sticky workflow cache statistics
+- `temporal_request` / `temporal_request_latency` — client request counts and latency (label `operation`)
+- `temporal_long_request` — long-polling request counts (label `operation`)
 
 #### Worker-Side Metrics
 
-- `temporal_worker_task_slots_available` / `_used` — task slot gauges
-- `temporal_worker_task_queue_poll_*` — task queue polling metrics
-- `temporal_workflow_task_execution_*` / `temporal_activity_task_execution_*` — task execution
-- `temporal_workflow_task_replay_latency` — workflow replay latency
-- `temporal_activity_execution_*` — activity execution counts and latency
+- `temporal_worker_start` — workers started
+- `temporal_worker_task_slots_available` / `temporal_worker_task_slots_used` — task slot gauges (label `worker_type`)
+- `temporal_num_pollers` — active pollers (label `poller_type`)
+- `temporal_sticky_cache_size` — sticky workflow cache size
+- `temporal_workflow_completed` — completed workflows (labels `task_queue`, `workflow_type`)
+- `temporal_workflow_task_execution_latency`, `temporal_workflow_endtoend_latency`,
+  `temporal_workflow_task_schedule_to_start_latency` — workflow latency histograms
+- `temporal_activity_task_received` — activity tasks received (label `activity_type`)
+- `temporal_activity_execution_latency`, `temporal_activity_succeed_endtoend_latency` — activity latency histograms
+- `temporal_activity_execution_failed` — failed activity executions (label `failure_reason`)
 
 > **Tip:** Query these series in your OTLP backend / Grafana after the collector scrapes or
 > receives OTLP — panel setup is backend-specific and isn't covered here.
