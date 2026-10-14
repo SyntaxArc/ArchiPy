@@ -1461,7 +1461,7 @@ TEMPORAL_METRICS_ABSENT_WAIT_SECONDS = 3.0
 _runtime_endpoint: str | None = None
 
 
-def _enable_temporal_otel(context, *, enable_metrics: bool) -> None:
+def _enable_temporal_otel(context, *, enable_metrics: bool, protocol: str = "grpc") -> None:
     """Point OpenTelemetry at the collector container and rebuild the Temporal adapter and worker manager.
 
     The Temporal ``Runtime`` is a process singleton that cannot change its endpoint, so it is only reset when
@@ -1473,13 +1473,14 @@ def _enable_temporal_otel(context, *, enable_metrics: bool) -> None:
 
     scenario_context = get_current_scenario_context(context)
     collector = scenario_context.get("test_containers").get_container("otel-collector")
-    _setup_collector_otel(context, traces=True, metrics=True)
+    _setup_collector_otel(context, traces=True, metrics=True, protocol=protocol)
     collector.mark()
 
+    endpoint = BaseConfig.global_config().OTEL.OTLP_ENDPOINT
     manager = TemporalRuntimeManager()
-    if _runtime_endpoint is not None and _runtime_endpoint != collector.grpc_endpoint:
+    if _runtime_endpoint is not None and _runtime_endpoint != endpoint:
         manager.reset_runtime()
-    _runtime_endpoint = collector.grpc_endpoint
+    _runtime_endpoint = endpoint
 
     temporal_config = scenario_context.get("test_containers").get_container("temporal").config
     temporal_config = temporal_config.model_copy(update={"ENABLE_METRICS": enable_metrics})
@@ -1720,3 +1721,22 @@ def step_scrape_endpoint_exposes_metric(context, name, task_queue):
             return
         time.sleep(0.2)
     raise AssertionError(f"{name!r} for task queue {task_queue!r} not found at {url}. Last body:\n{body[:1500]}")
+
+
+@given("Temporal metrics and traces are exported to the collector over HTTP/protobuf")
+def step_temporal_otel_enabled_http(context) -> None:
+    """Enable OpenTelemetry against the collector's HTTP receiver with Temporal metrics on."""
+    _enable_temporal_otel(context, enable_metrics=True, protocol="http/protobuf")
+
+
+@then("the Temporal client should carry a tracing interceptor")
+def step_temporal_client_has_tracing_interceptor(context):
+    """Check the real connected client was built with the OpenTelemetry tracing interceptor."""
+    from temporalio.contrib.opentelemetry import TracingInterceptor
+
+    adapter = get_temporal_adapter(context)
+    client = run_async(context, adapter.get_client())
+    interceptors = client.config().get("interceptors") or []
+    assert any(isinstance(item, TracingInterceptor) for item in interceptors), (
+        f"No TracingInterceptor on the client: {interceptors!r}"
+    )

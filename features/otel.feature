@@ -608,11 +608,6 @@ Feature: OpenTelemetry decorators
     Then the provider should have been reported as unusable while alive
     And the shut down provider registry should no longer hold it
 
-  Scenario: Temporal connect attaches TracingInterceptor and resolved metrics endpoint
-    When I connect a Temporal adapter with OTel enabled using a mocked Client
-    Then the Temporal connect kwargs should include a TracingInterceptor
-    And the Temporal runtime should receive metrics endpoint "http://localhost:4318/v1/metrics"
-
   Scenario: Temporal TracingInterceptor append preserves caller interceptors
     When I append a Temporal TracingInterceptor to connect kwargs that already have a sentinel
     Then the Temporal connect kwargs should keep the sentinel and include a TracingInterceptor
@@ -752,7 +747,7 @@ Feature: OpenTelemetry decorators
 
   Scenario: FastAPI lifespan shutdown clears OTel providers
     When I run FastAPI lifespan startup and shutdown
-    Then OpenTelemetry force flush should have been invoked during lifespan exit
+    Then the span created during the lifespan should reach the collector without an explicit flush
 
   Scenario: auto-instrumentation covers httpx2 clients
     When I run auto-instrumentation of installed libraries

@@ -131,6 +131,7 @@ def _setup_collector_otel(
     sample_ratio: float = 1.0,
     service_name: str | None = None,
     environment: str | None = None,
+    protocol: str = "grpc",
 ) -> CollectorTelemetry:
     """Initialize the real OTel providers so they export over OTLP/gRPC to the collector test container.
 
@@ -150,8 +151,8 @@ def _setup_collector_otel(
     otel.LOGS_ENABLED = logs
     otel.LOGS_EXPORTER = OtelLogsExporter.OTLP if logs else OtelLogsExporter.CONSOLE
     otel.METRICS_EXPORTER = OtelMetricsExporter.OTLP
-    otel.PROTOCOL = "grpc"
-    otel.OTLP_ENDPOINT = collector.grpc_endpoint
+    otel.PROTOCOL = protocol
+    otel.OTLP_ENDPOINT = collector.http_endpoint if protocol == "http/protobuf" else collector.grpc_endpoint
     # Metrics leave the process only when a scenario flushes, so every read sees a complete snapshot.
     otel.METRIC_EXPORT_INTERVAL_MS = 60_000
     otel.SYSTEM_METRICS_ENABLED = False
@@ -1102,58 +1103,6 @@ def step_then_grpc_otel_prepended(context):
     assert any("Otel" in type(item).__name__ or "OpenTelemetry" in type(item).__name__ for item in interceptors[:-1])
 
 
-@when("I connect a Temporal adapter with OTel enabled using a mocked Client")
-async def step_when_temporal_mocked_connect(context):
-    from unittest.mock import MagicMock, patch
-
-    from archipy.adapters.temporal.adapters import TemporalAdapter
-    from archipy.configs.config_template import TemporalConfig
-
-    scenario_context = get_current_scenario_context(context)
-    config = BaseConfig.global_config()
-    config.OTEL.PROTOCOL = "http/protobuf"
-    config.OTEL.OTLP_ENDPOINT = "http://localhost:4318"
-
-    adapter = TemporalAdapter(TemporalConfig(HOST="localhost", PORT=7233, ENABLE_METRICS=True))
-    captured: dict = {}
-
-    async def fake_connect(target, **kwargs):
-        captured["target"] = target
-        captured["kwargs"] = kwargs
-        return MagicMock(name="TemporalClient")
-
-    with patch("archipy.adapters.temporal.adapters.Client.connect", side_effect=fake_connect):
-        with patch("archipy.adapters.temporal.adapters.TemporalRuntimeManager") as runtime_mgr:
-            runtime_mgr.return_value.get_runtime.return_value = MagicMock(name="Runtime")
-            await adapter.get_client()
-            scenario_context.store("temporal_connect_kwargs", captured["kwargs"])
-            scenario_context.store(
-                "temporal_runtime_call_kwargs",
-                runtime_mgr.return_value.get_runtime.call_args.kwargs,
-            )
-
-
-@then("the Temporal connect kwargs should include a TracingInterceptor")
-def step_then_temporal_has_tracing_interceptor(context):
-    from temporalio.contrib.opentelemetry import TracingInterceptor
-
-    scenario_context = get_current_scenario_context(context)
-    kwargs = scenario_context.get("temporal_connect_kwargs")
-    interceptors = kwargs.get("interceptors") or []
-    assert any(isinstance(item, TracingInterceptor) for item in interceptors), (
-        f"No TracingInterceptor in {interceptors!r}"
-    )
-
-
-@then('the Temporal runtime should receive metrics endpoint "{endpoint}"')
-def step_then_temporal_runtime_endpoint(context, endpoint):
-    scenario_context = get_current_scenario_context(context)
-    call_kwargs = scenario_context.get("temporal_runtime_call_kwargs")
-    assert call_kwargs.get("otlp_endpoint") == endpoint, (
-        f"Expected otlp_endpoint={endpoint!r}, got {call_kwargs.get('otlp_endpoint')!r}"
-    )
-
-
 @when("I append a Temporal TracingInterceptor to connect kwargs that already have a sentinel")
 def step_when_temporal_append_with_sentinel(context):
     from archipy.adapters.temporal.adapters import TemporalAdapter
@@ -1879,7 +1828,6 @@ def step_then_only_sentinel(context):
 @when("I run FastAPI lifespan startup and shutdown")
 def step_when_fastapi_lifespan_cycle(context):
     from contextlib import asynccontextmanager
-    from unittest.mock import patch
 
     from fastapi.testclient import TestClient
 
@@ -1895,6 +1843,8 @@ def step_when_fastapi_lifespan_cycle(context):
     @asynccontextmanager
     async def user_lifespan(app):
         user_ran["value"] = True
+        with OtelUtils.get_tracer("lifespan-test").start_as_current_span("lifespan-span"):
+            pass
         yield
 
     app = AppUtils.create_fastapi_app(
@@ -1902,19 +1852,22 @@ def step_when_fastapi_lifespan_cycle(context):
         configure_exception_handlers=False,
         lifespan=user_lifespan,
     )
-    with patch.object(OtelUtils, "force_flush", wraps=OtelUtils.force_flush) as flush_mock:
-        with TestClient(app):
-            assert user_ran["value"] is True
-        scenario_context.store("lifespan_flush_called", flush_mock.called)
+    with TestClient(app):
+        assert user_ran["value"] is True
     # Providers must remain usable after TestClient lifespan exit.
     assert OtelUtils.tracer_provider() is not None
     scenario_context.store("otel_enabled_for_test", True)
 
 
-@then("OpenTelemetry force flush should have been invoked during lifespan exit")
+@then("the span created during the lifespan should reach the collector without an explicit flush")
 def step_then_lifespan_flush(context):
-    scenario_context = get_current_scenario_context(context)
-    assert scenario_context.get("lifespan_flush_called") is True
+    """The batch processor only sends every few seconds, so a quick arrival proves the lifespan exit flushed."""
+    telemetry: CollectorTelemetry = get_current_scenario_context(context).get("collector_telemetry")
+    spans = telemetry.wait_for(
+        lambda: [span for span in telemetry.spans() if span.name == "lifespan-span"],
+        timeout=2.0,
+    )
+    assert spans, f"lifespan-span never reached the collector. Exported: {[s.name for s in telemetry.spans()]}"
 
 
 def _free_tcp_port() -> int:

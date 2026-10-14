@@ -342,3 +342,10 @@ Feature: Temporal Adapter Operations
     And a worker is started for task queue "otel-fallback-queue" with GreetingWorkflow
     When I execute workflow "GreetingWorkflow" with argument "fallback"
     Then the Temporal "temporal_workflow_completed" count for task queue "otel-fallback-queue" and workflow_type "GreetingWorkflow" should be at least 1
+
+  Scenario: Temporal telemetry is exported over HTTP/protobuf
+    Given Temporal metrics and traces are exported to the collector over HTTP/protobuf
+    And a worker is started for task queue "otel-http-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "http"
+    Then the Temporal client should carry a tracing interceptor
+    And the Temporal "temporal_workflow_completed" count for task queue "otel-http-queue" and workflow_type "GreetingWorkflow" should be at least 1
