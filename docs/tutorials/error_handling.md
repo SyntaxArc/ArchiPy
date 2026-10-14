@@ -286,7 +286,7 @@ async def get_user_endpoint(user_id: str) -> dict[str, Any]:  # type: ignore[nam
 
 ## Error Logging and Monitoring
 
-Use `BaseUtils.capture_exception` to log locally and record the exception on the **current
+Use `capture_exception` from `archipy.helpers.errors` to log locally and record the exception on the **current
 OpenTelemetry span** when `OTEL.IS_ENABLED` is true. There is no Sentry or Elastic APM capture
 path in ArchiPy 5.x.
 
@@ -294,7 +294,7 @@ path in ArchiPy 5.x.
 import logging
 from typing import Any
 
-from archipy.helpers.utils.base_utils import BaseUtils
+from archipy.helpers.errors import capture_exception
 from archipy.models.errors import (
     BaseError,
     ConfigurationError,
@@ -324,7 +324,7 @@ def log_error(error: BaseError, context: dict[str, Any] | None = None) -> None:
     )
 
     if isinstance(error, (InternalError, UnknownError, ConfigurationError)):
-        BaseUtils.capture_exception(error)
+        capture_exception(error)
 
 
 def process_request(request_data: dict[str, Any]) -> Any:

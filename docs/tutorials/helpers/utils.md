@@ -201,8 +201,8 @@ logger = logging.getLogger(__name__)
 # Create a FastAPI app with standard config
 app = AppUtils.create_fastapi_app(BaseConfig.global_config())
 
-# Add custom exception handlers
-FastAPIUtils.setup_exception_handlers(app)
+# AppUtils.create_fastapi_app already registers the exception handlers
+# (archipy.helpers.errors.fastapi.setup_exception_handlers); pass configure_exception_handlers=False to skip them.
 
 
 # Set up CORS (reads origins from config.FASTAPI.CORS_MIDDLEWARE_ALLOW_ORIGINS)

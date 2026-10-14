@@ -89,14 +89,6 @@ options:
 show_root_toc_entry: false
 heading_level: 3
 
-## FastAPI Exception Response DTO
-
-DTO representing the standardized error response body returned by FastAPI exception handlers.
-
-::: archipy.models.dtos.fastapi_exception_response_dto
-options:
-show_root_toc_entry: false
-heading_level: 3
 
 ## RediSearch DTOs
 

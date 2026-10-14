@@ -28,9 +28,7 @@ heading_level: 3
 
 ### exception
 
-gRPC server interceptor that catches exceptions and converts them to gRPC status codes.
-
-::: archipy.helpers.interceptors.grpc.exception.server_interceptor
+The gRPC exception interceptor lives in `archipy.helpers.errors.grpc`; see [Errors](errors.md).
 options:
 show_root_toc_entry: false
 heading_level: 3

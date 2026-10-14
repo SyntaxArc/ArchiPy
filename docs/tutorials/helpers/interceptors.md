@@ -40,8 +40,9 @@ reference: [Observability](../observability.md).
 
 ### Exception Interceptor
 
-`GrpcServerExceptionInterceptor` / `AsyncGrpcServerExceptionInterceptor` convert domain errors
-to gRPC status codes and call `BaseUtils.capture_exception` (records on the current OTel span).
+`GrpcExceptionInterceptor` converts domain errors to gRPC status codes and calls
+`archipy.helpers.errors.capture_exception` (records on the current OTel span). `GrpcExceptionInterceptor()` creates
+the sync interceptor and `GrpcExceptionInterceptor(aio=True)` the one for `grpc.aio` servers.
 `AppUtils.create_grpc_app` / `create_async_grpc_app` always register the matching interceptor.
 
 ```python
@@ -50,9 +51,7 @@ from concurrent import futures
 
 import grpc
 
-from archipy.helpers.interceptors.grpc.exception.server_interceptor import (
-    GrpcServerExceptionInterceptor,
-)
+from archipy.helpers.errors.grpc import GrpcExceptionInterceptor
 from archipy.models.errors import InternalError
 
 logger = logging.getLogger(__name__)
@@ -73,7 +72,7 @@ def create_grpc_server(max_workers: int = 10) -> grpc.Server:
     try:
         server = grpc.server(
             futures.ThreadPoolExecutor(max_workers=max_workers),
-            interceptors=[GrpcServerExceptionInterceptor()],
+            interceptors=[GrpcExceptionInterceptor()],
         )
         logger.info("gRPC server created with exception interceptor")
         return server
@@ -81,12 +80,12 @@ def create_grpc_server(max_workers: int = 10) -> grpc.Server:
         raise InternalError(additional_data={"detail": "Failed to create gRPC server"}) from e
 ```
 
-A Pydantic `ValidationError` that escapes a handler is reported as `INTERNAL`: it usually comes from building DTOs
-out of database rows or upstream responses, which is a server fault. Wrap the code that parses the **client's
-request** in `request_validation()` to report `INVALID_ARGUMENT` with the field errors instead:
+A Pydantic `ValidationError` that escapes a handler is reported as `INVALID_ARGUMENT` with the field errors, the
+gRPC counterpart of the HTTP 422 that the FastAPI handlers return. `request_validation()` marks the code that parses
+the **client's request** explicitly:
 
 ```python
-from archipy.helpers.interceptors.grpc.exception import request_validation
+from archipy.helpers.errors.grpc import request_validation
 
 
 def Create(self, request, context):
@@ -95,9 +94,13 @@ def Create(self, request, context):
     ...
 ```
 
-To keep the pre-5.10 behavior (every `ValidationError` becomes `INVALID_ARGUMENT`), construct the interceptor with
-`GrpcServerExceptionInterceptor(validation_errors_as_invalid_argument=True)`. The async interceptor takes the same
-argument.
+A `ValidationError` raised while building DTOs from database rows or upstream responses is a server fault. To report
+every `ValidationError` as `INTERNAL` instead (the 5.10 to 5.14 default), pass
+`validation_errors_as_internal=True` to `GrpcExceptionInterceptor` or to `AppUtils.create_grpc_app` /
+`create_async_grpc_app`.
+
+To abort a call yourself with a `BaseError`, use `abort_grpc(error, context)` from `archipy.helpers.errors.grpc`. It
+detects a sync or `grpc.aio` context; on an async context write `await abort_grpc(error, context)`.
 
 ### Rate Limiting Interceptor
 

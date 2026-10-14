@@ -65,7 +65,8 @@ heading_level: 3
 
 ## Error Utils
 
-Utilities for error formatting, context enrichment, and error chain inspection.
+Deprecated wrappers (`capture_exception`, `async_handle_fastapi_exception`, `get_fastapi_exception_responses`)
+that redirect to [`archipy.helpers.errors`](errors.md).
 
 ::: archipy.helpers.utils.error_utils
 options:

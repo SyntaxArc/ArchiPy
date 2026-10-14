@@ -13,6 +13,7 @@ development patterns across the application. All helpers are free of direct exte
 | Submodule                       | Description                                                                 |
 |---------------------------------|-----------------------------------------------------------------------------|
 | [Decorators](decorators.md)     | Function and class decorators for retry, caching, timing, tracing, and more |
+| [Errors](errors.md)             | Error capture, validation formatting and FastAPI / gRPC error handling     |
 | [Interceptors](interceptors.md) | Cross-cutting concern handlers for FastAPI and gRPC                         |
 | [Metaclasses](metaclasses.md)   | Python metaclass utilities                                                  |
 | [Utils](utils.md)               | General-purpose utility classes for common operations                       |

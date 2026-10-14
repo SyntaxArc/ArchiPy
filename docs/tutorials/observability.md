@@ -471,18 +471,18 @@ explicit second buckets and a description. `status` aligns with tracing:
 
 ## Exception Capture
 
-`BaseUtils.capture_exception` always logs locally. When OTel is enabled and a recording span
+`archipy.helpers.errors.capture_exception` always logs locally. When OTel is enabled and a recording span
 is active, it records the exception on the **current span** and sets span status — it does not
 send to Sentry or Elastic APM:
 
 ```python
-from archipy.helpers.utils.base_utils import BaseUtils
+from archipy.helpers.errors import capture_exception
 from archipy.models.errors import InternalError
 
 try:
     raise InternalError()
 except InternalError as exc:
-    BaseUtils.capture_exception(exc)
+    capture_exception(exc)
     raise
 ```
 
