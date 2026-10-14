@@ -1,5 +1,5 @@
+import asyncio
 from types import SimpleNamespace
-from unittest.mock import patch
 
 import grpc
 from behave import given, then, when
@@ -9,11 +9,7 @@ from pydantic import BaseModel, ValidationError
 from starlette.testclient import TestClient
 
 from archipy.configs.base_config import BaseConfig
-from archipy.helpers.interceptors.grpc.rate_limit.grpc_rate_limit_interceptor import (
-    AsyncGrpcServerRateLimitInterceptor,
-    GrpcServerRateLimitInterceptor,
-)
-from archipy.helpers.utils import app_utils
+from archipy.configs.config_template import RedisMode
 from archipy.helpers.utils.app_utils import (
     AppUtils,
     AsyncGrpcAPIUtils,
@@ -21,8 +17,14 @@ from archipy.helpers.utils.app_utils import (
     FastAPIUtils,
     GrpcAPIUtils,
 )
-from archipy.models.errors import BaseError
+from archipy.models.errors import BaseError, InvalidArgumentError
 from features.test_helpers import get_current_scenario_context
+from features.test_servers import (
+    create_test_async_grpc_servicer,
+    create_test_grpc_servicer,
+    test_service_pb2,
+    test_service_pb2_grpc,
+)
 
 
 def _middleware_names(app) -> list[str]:
@@ -522,54 +524,98 @@ def step_then_response_location_https(context):
     assert location.startswith("https://"), f"Expected https location, but got: {location}"
 
 
-class _NamedInterceptor:
-    """Stand-in interceptor identified by name; the gRPC server factory is replaced, so it is never invoked."""
+class _RecordingSyncInterceptor(grpc.ServerInterceptor):
+    """Real sync server interceptor that records the name of every call that passes through it."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, calls: list[str]) -> None:
         self.name = name
+        self._calls = calls
+
+    def intercept_service(self, continuation, handler_call_details):
+        self._calls.append(self.name)
+        return continuation(handler_call_details)
+
+
+class _RecordingAsyncInterceptor(grpc.aio.ServerInterceptor):
+    """Real aio server interceptor that records the name of every call that passes through it."""
+
+    def __init__(self, name: str, calls: list[str]) -> None:
+        self.name = name
+        self._calls = calls
+
+    async def intercept_service(self, continuation, handler_call_details):
+        self._calls.append(self.name)
+        return await continuation(handler_call_details)
 
 
 @given('custom {kind} gRPC interceptors "{names}"')
 def step_given_custom_grpc_interceptors(context, kind, names):
-    interceptors = [_NamedInterceptor(name) for name in names.split(",")]
-    container = {"list": list, "tuple": tuple, "set": set}[kind]
     scenario_context = get_current_scenario_context(context)
-    scenario_context.store("custom_interceptors", container(interceptors))
+    scenario_context.store("custom_interceptor_kind", kind)
     scenario_context.store("custom_interceptor_names", names.split(","))
+
+
+def _call_sync_grpc_app(config, custom) -> None:
+    server = AppUtils.create_grpc_app(config, customized_interceptors=custom)
+    test_service_pb2_grpc.add_TestServiceServicer_to_server(create_test_grpc_servicer(), server)
+    port = server.add_insecure_port("localhost:0")
+    server.start()
+    try:
+        with grpc.insecure_channel(f"localhost:{port}") as channel:
+            response = test_service_pb2_grpc.TestServiceStub(channel).TestMethod(
+                test_service_pb2.TestRequest(data="hi"),
+                timeout=5,
+            )
+        assert response.result == "success", response
+    finally:
+        server.stop(None).wait(5)
+
+
+async def _call_async_grpc_app(config, custom) -> None:
+    server = AppUtils.create_async_grpc_app(config, customized_interceptors=custom)
+    test_service_pb2_grpc.add_TestServiceServicer_to_server(create_test_async_grpc_servicer(), server)
+    port = server.add_insecure_port("localhost:0")
+    await server.start()
+    try:
+        async with grpc.aio.insecure_channel(f"localhost:{port}") as channel:
+            response = await test_service_pb2_grpc.TestServiceStub(channel).TestMethod(
+                test_service_pb2.TestRequest(data="hi"),
+                timeout=5,
+            )
+        assert response.result == "success", response
+    finally:
+        await server.stop(None)
 
 
 @when("a {mode} gRPC app is created with the custom interceptors")
 def step_when_grpc_app_created(context, mode):
     scenario_context = get_current_scenario_context(context)
     config = BaseConfig.global_config()
-    custom = scenario_context.get("custom_interceptors")
-    with (
-        patch.object(grpc, "server") as sync_server,
-        patch.object(app_utils, "create_grpc_server") as async_server,
-    ):
-        if mode == "sync":
-            AppUtils.create_grpc_app(config, customized_interceptors=custom)
-            used = sync_server.call_args.kwargs["interceptors"]
-        else:
-            AppUtils.create_async_grpc_app(config, customized_interceptors=custom)
-            used = async_server.call_args.kwargs["interceptors"]
-    scenario_context.store("used_interceptors", used)
+    calls: list[str] = []
+    interceptor_class = _RecordingSyncInterceptor if mode == "sync" else _RecordingAsyncInterceptor
+    interceptors = [interceptor_class(name, calls) for name in scenario_context.get("custom_interceptor_names")]
+    container = {"list": list, "tuple": tuple, "set": set}[scenario_context.get("custom_interceptor_kind")]
+    custom = container(interceptors)
+
+    # A real server on a free port serves a real call, so the interceptors that ran are the ones the app applied.
+    if mode == "sync":
+        _call_sync_grpc_app(config, custom)
+    else:
+        asyncio.run(_call_async_grpc_app(config, custom))
+    scenario_context.store("called_interceptors", calls)
 
 
 @then('the gRPC app should run the custom interceptors in the order "{names}"')
 def step_then_grpc_app_interceptor_order(context, names):
-    used = get_current_scenario_context(context).get("used_interceptors")
-    custom_names = [i.name for i in used if isinstance(i, _NamedInterceptor)]
-    assert custom_names == names.split(","), f"Got {custom_names}"
-    assert used[-3:] == [i for i in used if isinstance(i, _NamedInterceptor)], "Custom interceptors must run last"
+    calls = get_current_scenario_context(context).get("called_interceptors")
+    assert calls == names.split(","), f"Got {calls}"
 
 
 @then("the gRPC app should run all the custom interceptors")
 def step_then_grpc_app_all_interceptors(context):
     scenario_context = get_current_scenario_context(context)
-    used = scenario_context.get("used_interceptors")
-    custom_names = sorted(i.name for i in used if isinstance(i, _NamedInterceptor))
-    assert custom_names == sorted(scenario_context.get("custom_interceptor_names")), f"Got {custom_names}"
+    calls = scenario_context.get("called_interceptors")
+    assert sorted(calls) == sorted(scenario_context.get("custom_interceptor_names")), f"Got {calls}"
 
 
 @given("gRPC rate limiting is enabled with fail closed set to {fail_closed} and a Redis client that cannot be created")
@@ -580,23 +626,28 @@ def step_given_rate_limit_enabled_failing_redis(context, fail_closed):
     )
     scenario_context.store("rate_limit_config", SimpleNamespace(GRPC_RATE_LIMIT=rate_limit))
 
+    # A sentinel-mode Redis config without a service name makes the real RedisAdapter refuse to build its clients.
+    global_config = BaseConfig.global_config()
+    original_redis = global_config.REDIS
+    global_config.REDIS = original_redis.model_copy(update={"MODE": RedisMode.SENTINEL, "SENTINEL_SERVICE_NAME": None})
+
+    def restore_redis() -> None:
+        global_config.REDIS = original_redis
+
+    context.add_cleanup(restore_redis)
+
 
 @when("the {mode} gRPC rate limit interceptor is set up")
 def step_when_rate_limit_interceptor_set_up(context, mode):
     scenario_context = get_current_scenario_context(context)
     config = scenario_context.get("rate_limit_config")
-    interceptor_class, setup = (
-        (GrpcServerRateLimitInterceptor, GrpcAPIUtils.setup_rate_limit_interceptor)
-        if mode == "sync"
-        else (AsyncGrpcServerRateLimitInterceptor, AsyncGrpcAPIUtils.setup_rate_limit_interceptor)
-    )
+    setup = GrpcAPIUtils.setup_rate_limit_interceptor if mode == "sync" else AsyncGrpcAPIUtils.setup_rate_limit_interceptor
     interceptors: list = []
     error = None
-    with patch.object(interceptor_class, "_create_redis_client", side_effect=RuntimeError("redis down")):
-        try:
-            setup(config, interceptors)
-        except RuntimeError as exc:
-            error = exc
+    try:
+        setup(config, interceptors)
+    except InvalidArgumentError as exc:
+        error = exc
     scenario_context.store("setup_error", error)
     scenario_context.store("setup_interceptors", interceptors)
 
@@ -604,7 +655,7 @@ def step_when_rate_limit_interceptor_set_up(context, mode):
 @then("the gRPC rate limit setup should raise the initialization error")
 def step_then_rate_limit_setup_raises(context):
     error = get_current_scenario_context(context).get("setup_error")
-    assert isinstance(error, RuntimeError) and str(error) == "redis down", f"Got {error!r}"
+    assert isinstance(error, InvalidArgumentError), f"Got {error!r}"
 
 
 @then("the gRPC rate limit setup should continue without the interceptor")

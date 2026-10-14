@@ -1,6 +1,6 @@
+import socket
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from unittest.mock import MagicMock, patch
 
 import grpc
 from behave import given, then, when
@@ -19,11 +19,10 @@ from archipy.helpers.utils.rate_limit_utils import RateLimitUtils
 from archipy.models.errors import InvalidArgumentError
 from features.test_helpers import get_current_scenario_context
 
+_SERVICE = "test.RateLimitService"
+_UNREACHABLE_REDIS_TIMEOUT_SECONDS = 0.5
+
 _INTERCEPTOR_MODES = frozenset({"sync", "async"})
-
-
-class _AbortCalled(Exception):
-    """Raised when a mocked gRPC context abort is invoked."""
 
 
 def _store_interceptor_mode(scenario_context, mode: str) -> None:
@@ -93,143 +92,141 @@ def _build_method_name(scenario_context) -> MethodName:
     )
 
 
-def _build_sync_context(
-    *, peer: str = "ipv4:127.0.0.1:12345", metadata: list[tuple[str, str]] | None = None,
-) -> MagicMock:
-    """Build a mocked sync gRPC servicer context."""
-    context = MagicMock(spec=grpc.ServicerContext)
-    context.peer.return_value = peer
-    context.invocation_metadata.return_value = metadata or []
+class _PassthroughSyncInterceptor(BaseGrpcServerInterceptor):
+    """Sync interceptor that only forwards the call; it sits after the rate limiter."""
 
-    def abort_side_effect(code: grpc.StatusCode, details: str) -> None:
-        context.abort_code = code
-        context.abort_details = details
-        raise _AbortCalled()
-
-    context.abort.side_effect = abort_side_effect
-    return context
+    def intercept(self, method, request, context, method_name_model):
+        return method(request, context)
 
 
-def _build_async_context(
-    *, peer: str = "ipv4:127.0.0.1:12345", metadata: list[tuple[str, str]] | None = None,
-) -> MagicMock:
-    """Build a mocked async gRPC servicer context."""
-    context = MagicMock(spec=grpc.aio.ServicerContext)
-    context.peer.return_value = peer
-    context.invocation_metadata.return_value = metadata or []
+class _PassthroughAsyncInterceptor(BaseAsyncGrpcServerInterceptor):
+    """Async interceptor that only forwards the call; it sits after the rate limiter."""
 
-    async def abort_side_effect(code: grpc.StatusCode, details: str) -> None:
-        context.abort_code = code
-        context.abort_details = details
-        raise _AbortCalled()
-
-    context.abort = abort_side_effect
-    return context
+    async def intercept(self, method, request, context, method_name_model):
+        return await method(request, context)
 
 
-def _outcome_from_abort(context: MagicMock) -> str:
-    """Map a mocked abort to a scenario outcome label."""
-    if context.abort_code == grpc.StatusCode.UNAVAILABLE:
+def _outcome_for_code(code: grpc.StatusCode | None) -> str:
+    """Map the status code a real client saw to a scenario outcome label."""
+    if code is None:
+        return "allowed"
+    if code == grpc.StatusCode.UNAVAILABLE:
         return "unavailable"
-    if context.abort_code == grpc.StatusCode.RESOURCE_EXHAUSTED:
+    if code == grpc.StatusCode.RESOURCE_EXHAUSTED:
         return "rate_limited"
     return "aborted"
 
 
-def _decorate_handler(calls_count: int, seconds: int):
-    """Return a decorated handler function for the configured window."""
+def _build_handler(scenario_context, *, decorated: bool = True, runs: list[int] | None = None, returns_value=True):
+    """Return a unary handler, decorated with the scenario's rate-limit windows unless ``decorated`` is False.
 
-    @grpc_rate_limit(calls_count=calls_count, seconds=seconds)
-    def handler(_request, _context):
-        return {"status": "ok"}
+    The handler is a coroutine function in async mode, as the async server requires.
+    """
+    payload = b"ok" if returns_value else None
 
-    return handler
+    if _is_async_mode(scenario_context):
 
+        async def handler(_request, _context):
+            if runs is not None:
+                runs.append(1)
+            return payload
 
-def _decorate_handler_multi(burst_calls: int, burst_seconds: int, sustained_calls: int, sustained_seconds: int):
-    """Return a handler with stacked burst and sustained decorators."""
+    else:
 
-    @grpc_rate_limit(calls_count=sustained_calls, seconds=sustained_seconds)
-    @grpc_rate_limit(calls_count=burst_calls, seconds=burst_seconds)
-    def handler(_request, _context):
-        return {"status": "ok"}
+        def handler(_request, _context):
+            if runs is not None:
+                runs.append(1)
+            return payload
 
-    return handler
-
-
-def _undecorated_handler(_request, _context):
-    return {"status": "ok"}
-
-
-def _invoke_rpc_sync(
-    interceptor,
-    handler,
-    method_name_model: MethodName,
-    *,
-    metadata: list[tuple[str, str]] | None = None,
-    peer: str = "ipv4:127.0.0.1:12345",
-) -> str:
-    """Invoke the sync interceptor once and return the outcome label."""
-    context = _build_sync_context(peer=peer, metadata=metadata)
-    try:
-        result = interceptor.intercept(handler, {}, context, method_name_model)
-    except _AbortCalled:
-        return _outcome_from_abort(context)
-    assert result == {"status": "ok"}
-    return "allowed"
+    if not decorated:
+        return handler
+    if scenario_context.get("multi_window"):
+        handler = grpc_rate_limit(
+            calls_count=scenario_context.get("burst_calls"),
+            seconds=scenario_context.get("burst_seconds"),
+        )(handler)
+        return grpc_rate_limit(
+            calls_count=scenario_context.get("sustained_calls"),
+            seconds=scenario_context.get("sustained_seconds"),
+        )(handler)
+    return grpc_rate_limit(calls_count=scenario_context.get("calls_count"), seconds=scenario_context.get("seconds"))(
+        handler,
+    )
 
 
-async def _invoke_rpc_async(
-    interceptor,
-    handler,
-    method_name_model: MethodName,
-    *,
-    metadata: list[tuple[str, str]] | None = None,
-    peer: str = "ipv4:127.0.0.1:12345",
-) -> str:
-    """Invoke the async interceptor once and return the outcome label."""
-    context = _build_async_context(peer=peer, metadata=metadata)
-    try:
-        result = await interceptor.intercept(handler, {}, context, method_name_model)
-    except _AbortCalled:
-        return _outcome_from_abort(context)
-    assert result == {"status": "ok"}
-    return "allowed"
+def _closed_local_port() -> int:
+    """Return a loopback port nothing listens on."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
 
 
-async def _invoke_rpcs(
+def _make_redis_unreachable(scenario_context, interceptor) -> None:
+    """Point the interceptor at a real Redis client whose server port is closed, so every call fails to connect."""
+    redis_config = BaseConfig.global_config().REDIS.model_copy(
+        update={
+            "MASTER_HOST": "127.0.0.1",
+            "PORT": _closed_local_port(),
+            "SOCKET_CONNECT_TIMEOUT": _UNREACHABLE_REDIS_TIMEOUT_SECONDS,
+            "SOCKET_TIMEOUT": _UNREACHABLE_REDIS_TIMEOUT_SECONDS,
+        },
+    )
+    adapter_class = AsyncRedisAdapter if _is_async_mode(scenario_context) else RedisAdapter
+    interceptor._redis_client = adapter_class(redis_config=redis_config)
+
+
+async def _call_real_server(
     scenario_context,
     interceptor,
     handler,
-    method_name_model: MethodName,
     count: int,
     *,
     metadata: list[tuple[str, str]] | None = None,
-    peer: str = "ipv4:127.0.0.1:12345",
+    follow_with_passthrough: bool = False,
 ) -> list[str]:
-    """Invoke decorated RPCs through the configured interceptor mode."""
-    outcomes = []
+    """Serve ``handler`` behind the rate limiter on a real in-process gRPC server and call it ``count`` times.
+
+    Returns the outcome label of each call as seen by a real client.
+    """
+    method = scenario_context.get("method_suffix")
+    path = f"/{_SERVICE}/{method}"
+    rpc_handler = grpc.unary_unary_rpc_method_handler(handler, response_serializer=lambda response: response or b"")
+    generic_handler = grpc.method_handlers_generic_handler(_SERVICE, {method: rpc_handler})
+    outcomes: list[str] = []
+
     if _is_async_mode(scenario_context):
-        for _ in range(count):
-            outcomes.append(
-                await _invoke_rpc_async(interceptor, handler, method_name_model, metadata=metadata, peer=peer),
-            )
+        interceptors = [interceptor, *([_PassthroughAsyncInterceptor()] if follow_with_passthrough else [])]
+        server = grpc.aio.server(interceptors=interceptors)
+        server.add_generic_rpc_handlers((generic_handler,))
+        port = server.add_insecure_port("127.0.0.1:0")
+        await server.start()
+        try:
+            async with grpc.aio.insecure_channel(f"127.0.0.1:{port}") as channel:
+                for _ in range(count):
+                    try:
+                        await channel.unary_unary(path)(b"", metadata=metadata)
+                        outcomes.append(_outcome_for_code(None))
+                    except grpc.aio.AioRpcError as error:
+                        outcomes.append(_outcome_for_code(error.code()))
+        finally:
+            await server.stop(None)
     else:
-        for _ in range(count):
-            outcomes.append(_invoke_rpc_sync(interceptor, handler, method_name_model, metadata=metadata, peer=peer))
+        interceptors = [interceptor, *([_PassthroughSyncInterceptor()] if follow_with_passthrough else [])]
+        server = grpc.server(ThreadPoolExecutor(max_workers=2), interceptors=interceptors)
+        server.add_generic_rpc_handlers((generic_handler,))
+        port = server.add_insecure_port("127.0.0.1:0")
+        server.start()
+        try:
+            with grpc.insecure_channel(f"127.0.0.1:{port}") as channel:
+                for _ in range(count):
+                    try:
+                        channel.unary_unary(path)(b"", metadata=metadata)
+                        outcomes.append(_outcome_for_code(None))
+                    except grpc.RpcError as error:
+                        outcomes.append(_outcome_for_code(error.code()))
+        finally:
+            server.stop(None).wait()
     return outcomes
-
-
-def _resolve_handler(scenario_context):
-    """Return the decorated handler configured for the scenario."""
-    if scenario_context.get("multi_window"):
-        return _decorate_handler_multi(
-            scenario_context.get("burst_calls"),
-            scenario_context.get("burst_seconds"),
-            scenario_context.get("sustained_calls"),
-            scenario_context.get("sustained_seconds"),
-        )
-    return _decorate_handler(scenario_context.get("calls_count"), scenario_context.get("seconds"))
 
 
 @given("a {mode} gRPC JWT rate limit interceptor allowing {calls_count:d} calls per {seconds:d} seconds")
@@ -299,12 +296,10 @@ def step_given_grpc_jwt_tokens_for_two_users(context):
 
 @when("{count:d} decorated gRPC RPCs are invoked")
 async def step_when_decorated_grpc_rpcs_invoked(context, count):
-    """Invoke decorated RPCs through the rate-limit interceptor."""
+    """Invoke decorated RPCs through the rate-limit interceptor on a real gRPC server."""
     scenario_context = get_current_scenario_context(context)
     interceptor = _create_interceptor(scenario_context)
-    method_name_model = _build_method_name(scenario_context)
-    handler = _resolve_handler(scenario_context)
-    outcomes = await _invoke_rpcs(scenario_context, interceptor, handler, method_name_model, count)
+    outcomes = await _call_real_server(scenario_context, interceptor, _build_handler(scenario_context), count)
     scenario_context.store("grpc_outcomes", outcomes)
 
 
@@ -312,20 +307,14 @@ async def step_when_decorated_grpc_rpcs_invoked(context, count):
 async def step_when_decorated_grpc_rpcs_with_jwt_user(context, count, user_label):
     """Invoke decorated RPCs with a JWT metadata token for the given user."""
     scenario_context = get_current_scenario_context(context)
-    token_key = f"grpc_jwt_token_user_{user_label.lower()}"
-    token = scenario_context.get(token_key)
+    token = scenario_context.get(f"grpc_jwt_token_user_{user_label.lower()}")
     interceptor = _create_interceptor(scenario_context)
-    method_name_model = _build_method_name(scenario_context)
-    handler = _decorate_handler(scenario_context.get("calls_count"), scenario_context.get("seconds"))
-    metadata = [("authorization", f"Bearer {token}")]
-
-    outcomes = await _invoke_rpcs(
+    outcomes = await _call_real_server(
         scenario_context,
         interceptor,
-        handler,
-        method_name_model,
+        _build_handler(scenario_context),
         count,
-        metadata=metadata,
+        metadata=[("authorization", f"Bearer {token}")],
     )
     scenario_context.store("grpc_outcomes", outcomes)
 
@@ -335,12 +324,10 @@ async def step_when_undecorated_grpc_rpcs_invoked(context, count):
     """Invoke undecorated RPCs through the rate-limit interceptor."""
     scenario_context = get_current_scenario_context(context)
     interceptor = _create_interceptor(scenario_context)
-    method_name_model = _build_method_name(scenario_context)
-    outcomes = await _invoke_rpcs(
+    outcomes = await _call_real_server(
         scenario_context,
         interceptor,
-        _undecorated_handler,
-        method_name_model,
+        _build_handler(scenario_context, decorated=False),
         count,
     )
     scenario_context.store("grpc_outcomes", outcomes)
@@ -348,18 +335,11 @@ async def step_when_undecorated_grpc_rpcs_invoked(context, count):
 
 @when("1 decorated gRPC RPC is invoked while Redis is unavailable")
 async def step_when_grpc_rpc_while_redis_unavailable(context):
-    """Invoke one RPC while Redis increx raises a connection error."""
+    """Invoke one RPC while the interceptor's Redis server port is closed."""
     scenario_context = get_current_scenario_context(context)
     interceptor = _create_interceptor(scenario_context)
-    method_name_model = _build_method_name(scenario_context)
-    handler = _decorate_handler(scenario_context.get("calls_count"), scenario_context.get("seconds"))
-
-    if _is_async_mode(scenario_context):
-        with patch.object(AsyncRedisAdapter, "increx", side_effect=ConnectionError("down")):
-            outcomes = await _invoke_rpcs(scenario_context, interceptor, handler, method_name_model, 1)
-    else:
-        with patch.object(RedisAdapter, "increx", side_effect=ConnectionError("down")):
-            outcomes = await _invoke_rpcs(scenario_context, interceptor, handler, method_name_model, 1)
+    _make_redis_unreachable(scenario_context, interceptor)
+    outcomes = await _call_real_server(scenario_context, interceptor, _build_handler(scenario_context), 1)
     scenario_context.store("grpc_outcomes", outcomes)
 
 
@@ -423,21 +403,17 @@ def step_given_grpc_trusted_proxy(context, host):
     get_current_scenario_context(context).store("trusted_proxy_hosts", frozenset({host}))
 
 
-@when("{count:d} decorated gRPC RPCs are invoked through proxy {proxy} for forwarded client {client}")
-async def step_when_decorated_grpc_rpcs_through_proxy(context, count, proxy, client):
-    """Invoke decorated RPCs whose direct peer is a proxy forwarding for ``client``."""
+@when("{count:d} decorated gRPC RPCs are invoked with forwarded client {client}")
+async def step_when_decorated_grpc_rpcs_with_forwarded_client(context, count, client):
+    """Invoke decorated RPCs from the loopback peer, which forwards for ``client`` via ``x-forwarded-for``."""
     scenario_context = get_current_scenario_context(context)
     interceptor = _create_interceptor(scenario_context)
-    method_name_model = _build_method_name(scenario_context)
-    handler = _decorate_handler(scenario_context.get("calls_count"), scenario_context.get("seconds"))
-    outcomes = await _invoke_rpcs(
+    outcomes = await _call_real_server(
         scenario_context,
         interceptor,
-        handler,
-        method_name_model,
+        _build_handler(scenario_context),
         count,
         metadata=[("x-forwarded-for", client)],
-        peer=f"ipv4:{proxy}:5000",
     )
     scenario_context.store("grpc_outcomes", outcomes)
 
@@ -447,96 +423,30 @@ async def step_when_grpc_none_handler_while_redis_unavailable(context):
     """Invoke a handler that returns ``None`` while Redis is down and the limiter is fail open."""
     scenario_context = get_current_scenario_context(context)
     interceptor = _create_interceptor(scenario_context)
-    method_name_model = _build_method_name(scenario_context)
+    _make_redis_unreachable(scenario_context, interceptor)
     runs: list[int] = []
-
-    @grpc_rate_limit(calls_count=scenario_context.get("calls_count"), seconds=scenario_context.get("seconds"))
-    def handler(_request, _context):
-        runs.append(1)
-
     scenario_context.store("grpc_handler_runs", runs)
-    if _is_async_mode(scenario_context):
-        with patch.object(AsyncRedisAdapter, "increx", side_effect=ConnectionError("down")):
-            await interceptor.intercept(handler, {}, _build_async_context(), method_name_model)
-    else:
-        with patch.object(RedisAdapter, "increx", side_effect=ConnectionError("down")):
-            interceptor.intercept(handler, {}, _build_sync_context(), method_name_model)
-
-
-class _PassthroughSyncInterceptor(BaseGrpcServerInterceptor):
-    """Sync interceptor that only forwards the call; it sits after the rate limiter."""
-
-    def intercept(self, method, request, context, method_name_model):
-        return method(request, context)
-
-
-class _PassthroughAsyncInterceptor(BaseAsyncGrpcServerInterceptor):
-    """Async interceptor that only forwards the call; it sits after the rate limiter."""
-
-    async def intercept(self, method, request, context, method_name_model):
-        return await method(request, context)
+    outcomes = await _call_real_server(
+        scenario_context,
+        interceptor,
+        _build_handler(scenario_context, runs=runs, returns_value=False),
+        1,
+    )
+    scenario_context.store("grpc_outcomes", outcomes)
 
 
 @when("{count:d} RPCs are invoked on a real server where another interceptor follows the rate limiter")
 async def step_when_grpc_real_server_with_following_interceptor(context, count):
-    """Call a rate-limited handler on an in-process server and record each outcome."""
+    """Call a rate-limited handler on a server where another interceptor follows the rate limiter."""
     scenario_context = get_current_scenario_context(context)
-    rate_limiter = _create_interceptor(scenario_context)
-    service = "test.RateLimitService"
-    method = scenario_context.get("method_suffix")
-    calls_count, seconds = scenario_context.get("calls_count"), scenario_context.get("seconds")
-    path = f"/{service}/{method}"
-
-    def outcome_for(code: grpc.StatusCode | None) -> str:
-        return {None: "allowed", grpc.StatusCode.RESOURCE_EXHAUSTED: "rate_limited"}.get(code, "aborted")
-
-    outcomes: list[str] = []
-    if _is_async_mode(scenario_context):
-
-        @grpc_rate_limit(calls_count=calls_count, seconds=seconds)
-        async def handler(_request, _context):
-            return b"ok"
-
-        server = grpc.aio.server(interceptors=[rate_limiter, _PassthroughAsyncInterceptor()])
-        server.add_generic_rpc_handlers(
-            (grpc.method_handlers_generic_handler(service, {method: grpc.unary_unary_rpc_method_handler(handler)}),),
-        )
-        port = server.add_insecure_port("127.0.0.1:0")
-        await server.start()
-        try:
-            async with grpc.aio.insecure_channel(f"127.0.0.1:{port}") as channel:
-                for _ in range(count):
-                    try:
-                        await channel.unary_unary(path)(b"")
-                        outcomes.append(outcome_for(None))
-                    except grpc.aio.AioRpcError as error:
-                        outcomes.append(outcome_for(error.code()))
-        finally:
-            await server.stop(None)
-    else:
-
-        @grpc_rate_limit(calls_count=calls_count, seconds=seconds)
-        def handler(_request, _context):
-            return b"ok"
-
-        server = grpc.server(
-            ThreadPoolExecutor(max_workers=2), interceptors=[rate_limiter, _PassthroughSyncInterceptor()],
-        )
-        server.add_generic_rpc_handlers(
-            (grpc.method_handlers_generic_handler(service, {method: grpc.unary_unary_rpc_method_handler(handler)}),),
-        )
-        port = server.add_insecure_port("127.0.0.1:0")
-        server.start()
-        try:
-            with grpc.insecure_channel(f"127.0.0.1:{port}") as channel:
-                for _ in range(count):
-                    try:
-                        channel.unary_unary(path)(b"")
-                        outcomes.append(outcome_for(None))
-                    except grpc.RpcError as error:
-                        outcomes.append(outcome_for(error.code()))
-        finally:
-            server.stop(None).wait()
+    interceptor = _create_interceptor(scenario_context)
+    outcomes = await _call_real_server(
+        scenario_context,
+        interceptor,
+        _build_handler(scenario_context),
+        count,
+        follow_with_passthrough=True,
+    )
     scenario_context.store("grpc_outcomes", outcomes)
 
 

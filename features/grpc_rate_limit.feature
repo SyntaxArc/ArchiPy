@@ -133,12 +133,12 @@ Feature: gRPC server rate limit interceptor
 
   Scenario Outline: Callers behind a trusted proxy are limited independently
     Given a <mode> gRPC rate limit interceptor allowing 1 calls per 60 seconds
-    And the gRPC rate limiter trusts proxy "10.0.0.1"
-    When 1 decorated gRPC RPCs are invoked through proxy 10.0.0.1 for forwarded client 203.0.113.7
+    And the gRPC rate limiter trusts proxy "127.0.0.1"
+    When 1 decorated gRPC RPCs are invoked with forwarded client 203.0.113.7
     Then gRPC outcome 1 should be allowed
-    When 1 decorated gRPC RPCs are invoked through proxy 10.0.0.1 for forwarded client 203.0.113.7
+    When 1 decorated gRPC RPCs are invoked with forwarded client 203.0.113.7
     Then gRPC outcome 1 should be rate_limited
-    When 1 decorated gRPC RPCs are invoked through proxy 10.0.0.1 for forwarded client 198.51.100.9
+    When 1 decorated gRPC RPCs are invoked with forwarded client 198.51.100.9
     Then gRPC outcome 1 should be allowed
 
     Examples: Interceptor modes
@@ -148,9 +148,9 @@ Feature: gRPC server rate limit interceptor
 
   Scenario Outline: Callers behind an untrusted proxy share the proxy bucket
     Given a <mode> gRPC rate limit interceptor allowing 1 calls per 60 seconds
-    When 1 decorated gRPC RPCs are invoked through proxy 10.0.0.2 for forwarded client 203.0.113.7
+    When 1 decorated gRPC RPCs are invoked with forwarded client 203.0.113.7
     Then gRPC outcome 1 should be allowed
-    When 1 decorated gRPC RPCs are invoked through proxy 10.0.0.2 for forwarded client 198.51.100.9
+    When 1 decorated gRPC RPCs are invoked with forwarded client 198.51.100.9
     Then gRPC outcome 1 should be rate_limited
 
     Examples: Interceptor modes
