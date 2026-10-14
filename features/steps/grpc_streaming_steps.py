@@ -478,6 +478,12 @@ async def _wait_for_rpc_duration(scenario_context) -> None:
 
     The server unwinds a cancelled handler asynchronously, after the client already saw the cancellation.
     """
+    telemetry = scenario_context.get("collector_telemetry")
+    if telemetry is not None:
+        from features.test_helpers_otel import wait_for_metric_async
+
+        await wait_for_metric_async(telemetry, "rpc.server.request.duration")
+        return
     reader = scenario_context.get("metric_reader")
     for _ in range(100):
         data = reader.get_metrics_data()

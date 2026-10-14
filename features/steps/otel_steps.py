@@ -5,11 +5,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
+import time
+import uuid
 import warnings
 
 from behave import given, then, when
 from behave.runner import Context
 from features.test_helpers import get_current_scenario_context
+from features.test_helpers_otel import CollectorTelemetry
 from opentelemetry import trace
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -48,9 +51,57 @@ def _reset_otel_config_defaults() -> None:
     config.OTEL.FASTAPI_LOGS_ENABLED = False
 
 
+# OTEL fields scenarios may change; they are restored after every scenario.
+_OTEL_FIELDS_TO_RESTORE = (
+    "IS_ENABLED",
+    "TRACES_ENABLED",
+    "METRICS_ENABLED",
+    "LOGS_ENABLED",
+    "LOGS_EXPORTER",
+    "LOGS_LEVEL",
+    "SERVICE_NAME",
+    "ENVIRONMENT",
+    "PROTOCOL",
+    "OTLP_ENDPOINT",
+    "OTLP_HEADERS",
+    "METRIC_EXPORT_INTERVAL_MS",
+    "TRACES_SAMPLE_RATIO",
+    "SYSTEM_METRICS_ENABLED",
+    "FASTAPI_LOGS_ENABLED",
+    "METRICS_EXPORTER",
+    "METRICS_PULL_HOST",
+    "METRICS_PULL_PORT",
+    "METRICS_PUSHGATEWAY_URL",
+    "METRICS_PUSHGATEWAY_JOB",
+    "METRICS_PUSHGATEWAY_INTERVAL_SECONDS",
+    "METRICS_PUSHGATEWAY_TIMEOUT_SECONDS",
+    "METRICS_PUSHGATEWAY_GROUPING_KEY",
+    "METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN",
+)
+
+
+def _snapshot_otel_config(scenario_context) -> None:
+    """Remember the OTEL config once per scenario so teardown can put it back."""
+    if scenario_context.get("otel_config_snapshot") is not None:
+        return
+    otel = BaseConfig.global_config().OTEL
+    scenario_context.store("otel_config_snapshot", {name: getattr(otel, name) for name in _OTEL_FIELDS_TO_RESTORE})
+
+
+def _restore_otel_config(scenario_context) -> None:
+    snapshot = scenario_context.get("otel_config_snapshot")
+    if snapshot is None:
+        return
+    otel = BaseConfig.global_config().OTEL
+    for name, value in snapshot.items():
+        setattr(otel, name, value)
+    scenario_context.store("otel_config_snapshot", None)
+
+
 def _setup_otel_testing(context: Context) -> None:
     """Enable OTel and install in-memory exporters for the current scenario."""
     scenario_context = get_current_scenario_context(context)
+    _snapshot_otel_config(scenario_context)
     OtelUtils.reset_for_testing()
 
     config = BaseConfig.global_config()
@@ -66,7 +117,62 @@ def _setup_otel_testing(context: Context) -> None:
 
     scenario_context.store("span_exporter", span_exporter)
     scenario_context.store("metric_reader", metric_reader)
+    scenario_context.store("collector_telemetry", None)
     scenario_context.store("otel_enabled_for_test", True)
+
+
+def _setup_collector_otel(
+    context: Context,
+    *,
+    traces: bool = True,
+    metrics: bool = True,
+    logs: bool = False,
+    sample_ratio: float = 1.0,
+    service_name: str | None = None,
+    environment: str | None = None,
+) -> CollectorTelemetry:
+    """Initialize the real OTel providers so they export over OTLP/gRPC to the collector test container.
+
+    Every scenario gets its own ``service.name`` so the readers only see this scenario's telemetry.
+    """
+    scenario_context = get_current_scenario_context(context)
+    _snapshot_otel_config(scenario_context)
+    collector = scenario_context.get("test_containers").get_container("otel-collector")
+    OtelUtils.reset_for_testing()
+
+    config = BaseConfig.global_config()
+    _reset_otel_config_defaults()
+    otel = config.OTEL
+    otel.IS_ENABLED = True
+    otel.TRACES_ENABLED = traces
+    otel.METRICS_ENABLED = metrics
+    otel.LOGS_ENABLED = logs
+    otel.LOGS_EXPORTER = OtelLogsExporter.OTLP if logs else OtelLogsExporter.CONSOLE
+    otel.METRICS_EXPORTER = OtelMetricsExporter.OTLP
+    otel.PROTOCOL = "grpc"
+    otel.OTLP_ENDPOINT = collector.grpc_endpoint
+    # Metrics leave the process only when a scenario flushes, so every read sees a complete snapshot.
+    otel.METRIC_EXPORT_INTERVAL_MS = 60_000
+    otel.SYSTEM_METRICS_ENABLED = False
+    otel.TRACES_SAMPLE_RATIO = sample_ratio
+    otel.SERVICE_NAME = service_name or f"archipy-bdd-{uuid.uuid4().hex[:8]}"
+    if environment is not None:
+        otel.ENVIRONMENT = environment
+
+    OtelUtils.init_otel_if_needed(config)
+    assert OtelUtils._initialized, "OpenTelemetry did not initialize against the collector"
+
+    telemetry = CollectorTelemetry(collector, otel.SERVICE_NAME)
+    scenario_context.store("collector_telemetry", telemetry)
+    scenario_context.store("span_exporter", None)
+    scenario_context.store("metric_reader", None)
+    scenario_context.store("otel_enabled_for_test", True)
+    return telemetry
+
+
+def _telemetry(context: Context) -> CollectorTelemetry | None:
+    """Return the collector reader of the current scenario, or None when it uses in-memory exporters."""
+    return get_current_scenario_context(context).get("collector_telemetry")
 
 
 def _close_open_test_spans(scenario_context) -> None:
@@ -119,17 +225,16 @@ def teardown_otel_testing(context: Context) -> None:
             pass
         scenario_context.store("metrics_pull_blocker", None)
     OtelUtils.reset_for_testing()
-    if scenario_context.get("pushgateway_stubs_installed"):
-        _restore_pushgateway_stubs(context)
-        scenario_context.store("pushgateway_stubs_installed", False)
     try:
         config = BaseConfig.global_config()
         config.OTEL.IS_ENABLED = False
         config.OTEL.TRACES_ENABLED = False
         config.OTEL.METRICS_ENABLED = False
         _reset_otel_config_defaults()
+        _restore_otel_config(scenario_context)
     except AssertionError:
         pass
+    scenario_context.store("collector_telemetry", None)
     scenario_context.store("otel_enabled_for_test", False)
 
 
@@ -154,18 +259,33 @@ def _restore_captured_log_streams(scenario_context) -> None:
 
 
 def _finished_spans(context: Context) -> list:
+    telemetry = _telemetry(context)
+    if telemetry is not None:
+        telemetry.flush()
+        return telemetry.spans()
     scenario_context = get_current_scenario_context(context)
     exporter: InMemorySpanExporter = scenario_context.get("span_exporter")
     return list(exporter.get_finished_spans())
 
 
 def _span_by_name(context: Context, name: str):
+    telemetry = _telemetry(context)
+    if telemetry is not None:
+        telemetry.flush()
+        spans = telemetry.wait_for(lambda: [span for span in telemetry.spans() if span.name == name])
+        assert spans, f"No finished span named '{name}'. Found: {[s.name for s in telemetry.spans()]}"
+        return spans[-1]
     spans = [span for span in _finished_spans(context) if span.name == name]
     assert spans, f"No finished span named '{name}'. Found: {[s.name for s in _finished_spans(context)]}"
     return spans[-1]
 
 
 def _metric_datapoints(context: Context, instrument_name: str) -> list:
+    telemetry = _telemetry(context)
+    if telemetry is not None:
+        telemetry.flush()
+        metric = telemetry.wait_for(lambda: telemetry.metrics().get(instrument_name))
+        return list(metric.data.data_points) if metric else []
     scenario_context = get_current_scenario_context(context)
     reader: InMemoryMetricReader = scenario_context.get("metric_reader")
     metrics_data = reader.get_metrics_data()
@@ -183,6 +303,11 @@ def _metric_datapoints(context: Context, instrument_name: str) -> list:
 
 def _span_has_exception_event(span) -> bool:
     return any(event.name == "exception" for event in span.events)
+
+
+@given("OpenTelemetry is configured with the collector")
+def step_given_otel_collector(context):
+    _setup_collector_otel(context)
 
 
 @given("OpenTelemetry is configured for testing")
@@ -676,74 +801,23 @@ def step_then_logs_endpoint(context, endpoint):
 @given('OpenTelemetry providers are built with service name "{service_name}" and environment "{environment}"')
 def step_given_providers_with_resource(context, service_name, environment):
     scenario_context = get_current_scenario_context(context)
-    OtelUtils.reset_for_testing()
-    config = BaseConfig.global_config()
-    config.OTEL.IS_ENABLED = True
-    config.OTEL.TRACES_ENABLED = True
-    config.OTEL.METRICS_ENABLED = False
-    config.OTEL.LOGS_ENABLED = False
-    config.OTEL.SERVICE_NAME = service_name
-    config.OTEL.ENVIRONMENT = environment
-    config.OTEL.TRACES_SAMPLE_RATIO = 1.0
-    # Avoid real OTLP export — use in-memory providers that still set resource attrs.
-    span_exporter = InMemorySpanExporter()
-    OtelUtils.configure_for_testing(span_exporter=span_exporter, service_name=service_name)
-    # Patch environment onto the resource for assertion (configure_for_testing only sets service.name).
-    # Build via _build_providers path for full resource attrs.
-    OtelUtils.reset_for_testing()
-    # Directly build resource the same way production does.
-    from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-
-    resource = Resource.create(
-        {
-            "service.name": service_name,
-            "deployment.environment.name": environment,
-        },
-    )
-    provider = TracerProvider(resource=resource)
-    provider.add_span_processor(SimpleSpanProcessor(span_exporter))
-    OtelUtils._tracer_provider = provider
-    OtelUtils._initialized = True
-    scenario_context.store("span_exporter", span_exporter)
-    scenario_context.store("otel_enabled_for_test", True)
+    _setup_collector_otel(context, metrics=False, service_name=service_name, environment=environment)
     scenario_context.store("expected_service_name", service_name)
     scenario_context.store("expected_environment", environment)
 
 
 @then('the tracer provider resource should include "{attr_name}" equal to "{attr_value}"')
 def step_then_resource_attr(context, attr_name, attr_value):
-    provider = OtelUtils.tracer_provider()
-    assert provider is not None, "No tracer provider"
-    value = provider.resource.attributes.get(attr_name)
+    with OtelUtils.get_tracer(__name__).start_as_current_span("resource_probe"):
+        pass
+    span = _span_by_name(context, "resource_probe")
+    value = span.resource.attributes.get(attr_name)
     assert value == attr_value, f"Expected {attr_name}={attr_value!r}, got {value!r}"
 
 
 @given("OpenTelemetry is configured for testing with sample ratio {ratio:f}")
 def step_given_otel_with_sample_ratio(context, ratio):
-    scenario_context = get_current_scenario_context(context)
-    OtelUtils.reset_for_testing()
-    config = BaseConfig.global_config()
-    config.OTEL.IS_ENABLED = True
-    config.OTEL.TRACES_ENABLED = True
-    config.OTEL.METRICS_ENABLED = False
-    config.OTEL.LOGS_ENABLED = False
-    config.OTEL.TRACES_SAMPLE_RATIO = ratio
-
-    from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-    from opentelemetry.sdk.trace.sampling import ParentBasedTraceIdRatio
-
-    span_exporter = InMemorySpanExporter()
-    resource = Resource.create({"service.name": "archipy-test"})
-    provider = TracerProvider(resource=resource, sampler=ParentBasedTraceIdRatio(ratio))
-    provider.add_span_processor(SimpleSpanProcessor(span_exporter))
-    OtelUtils._tracer_provider = provider
-    OtelUtils._initialized = True
-    scenario_context.store("span_exporter", span_exporter)
-    scenario_context.store("otel_enabled_for_test", True)
+    _setup_collector_otel(context, metrics=False, sample_ratio=ratio)
 
 
 @when("I run a traced function inside a worker thread under an ambient parent")
@@ -1468,6 +1542,13 @@ def step_given_borrowed_tracer(context):
     scenario_context.store("external_tracer_provider", external)
     scenario_context.store("otel_enabled_for_test", True)
 
+    def _release_borrowed_provider() -> None:
+        # Nothing else owns it, and a live global provider would be adopted by later scenarios.
+        external.shutdown()
+        OtelUtils._mark_provider_shutdown(external)
+
+    context.add_cleanup(_release_borrowed_provider)
+
 
 @when("I shut down OpenTelemetry providers")
 def step_when_shutdown_once(context):
@@ -1568,28 +1649,7 @@ def step_then_traced_result(context, value):
 
 @given("OpenTelemetry is configured for testing with log export")
 def step_given_otel_with_logs(context):
-    from opentelemetry.sdk._logs.export import InMemoryLogExporter
-
-    scenario_context = get_current_scenario_context(context)
-    OtelUtils.reset_for_testing()
-    config = BaseConfig.global_config()
-    config.OTEL.IS_ENABLED = True
-    config.OTEL.TRACES_ENABLED = True
-    config.OTEL.METRICS_ENABLED = True
-    config.OTEL.LOGS_ENABLED = True
-
-    span_exporter = InMemorySpanExporter()
-    metric_reader = InMemoryMetricReader()
-    log_exporter = InMemoryLogExporter()
-    OtelUtils.configure_for_testing(
-        span_exporter=span_exporter,
-        metric_reader=metric_reader,
-        log_exporter=log_exporter,
-    )
-    scenario_context.store("span_exporter", span_exporter)
-    scenario_context.store("metric_reader", metric_reader)
-    scenario_context.store("log_exporter", log_exporter)
-    scenario_context.store("otel_enabled_for_test", True)
+    _setup_collector_otel(context, logs=True)
 
 
 @when('I emit an INFO log message "{message}"')
@@ -1602,18 +1662,16 @@ def step_when_emit_warning_log(context, message):
     logging.getLogger("archipy.otel.test").warning(message)
 
 
+def _exported_logs_containing(context, message: str) -> list:
+    telemetry = _telemetry(context)
+    telemetry.flush()
+    return telemetry.wait_for(lambda: [record for record in telemetry.logs() if message in str(record.body)])
+
+
 @then('a log record containing "{message}" should be exported')
 def step_then_log_exported(context, message):
-    scenario_context = get_current_scenario_context(context)
-    log_exporter = scenario_context.get("log_exporter")
-    OtelUtils.force_flush(timeout_millis=2000)
-    records = list(log_exporter.get_finished_logs())
-    bodies = []
-    for record in records:
-        log_record = record.log_record
-        body = log_record.body
-        bodies.append(str(body))
-    assert any(message in body for body in bodies), f"Expected {message!r} in {bodies!r}"
+    records = _exported_logs_containing(context, message)
+    assert records, f"Expected {message!r} in {[str(record.body) for record in _telemetry(context).logs()]!r}"
 
 
 @then('a log record containing "{message}" should carry the ambient parent trace id and span id')
@@ -1622,21 +1680,15 @@ def step_then_log_carries_ambient_context(context, message):
     ambient_span = scenario_context.get("ambient_parent_span")
     assert ambient_span is not None, "No ambient parent span in scenario context"
     ambient_ctx = ambient_span.get_span_context()
-    log_exporter = scenario_context.get("log_exporter")
-    OtelUtils.force_flush(timeout_millis=2000)
-    matches = []
-    for record in log_exporter.get_finished_logs():
-        log_record = record.log_record
-        if message not in str(log_record.body):
-            continue
-        matches.append(log_record)
+    matches = _exported_logs_containing(context, message)
+    assert matches, f"No log record containing {message!r}"
+    for log_record in matches:
         assert log_record.trace_id == ambient_ctx.trace_id, (
             f"Expected log trace_id {ambient_ctx.trace_id:032x}, got {log_record.trace_id:032x}"
         )
         assert log_record.span_id == ambient_ctx.span_id, (
             f"Expected log span_id {ambient_ctx.span_id:016x}, got {log_record.span_id:016x}"
         )
-    assert matches, f"No log record containing {message!r}"
 
 
 @given("OpenTelemetry is configured for console log export with captured streams")
@@ -2132,67 +2184,46 @@ def step_then_metrics_registry_available(context):
     assert OtelUtils.metrics_registry() is not None
 
 
-def _install_pushgateway_stubs(context, *, fail_push: bool = False) -> None:
-    import prometheus_client
-
-    scenario_context = get_current_scenario_context(context)
-    pushes: list[dict] = []
-    deletes: list[dict] = []
-    push_event = __import__("threading").Event()
-
-    def fake_push_to_gateway(*, gateway, job, registry, grouping_key=None, timeout=None, **_kwargs):
-        if fail_push:
-            push_event.set()
-            raise OSError("stub pushgateway unreachable")
-        pushes.append(
-            {
-                "gateway": gateway,
-                "job": job,
-                "registry": registry,
-                "grouping_key": grouping_key,
-                "timeout": timeout,
-            },
-        )
-        push_event.set()
-
-    def fake_delete_from_gateway(*, gateway, job, grouping_key=None, timeout=None, **_kwargs):
-        deletes.append(
-            {
-                "gateway": gateway,
-                "job": job,
-                "grouping_key": grouping_key,
-                "timeout": timeout,
-            },
-        )
-
-    scenario_context.store("pushgateway_pushes", pushes)
-    scenario_context.store("pushgateway_deletes", deletes)
-    scenario_context.store("pushgateway_push_event", push_event)
-    scenario_context.store("pushgateway_orig_push", prometheus_client.push_to_gateway)
-    scenario_context.store("pushgateway_orig_delete", prometheus_client.delete_from_gateway)
-    prometheus_client.push_to_gateway = fake_push_to_gateway
-    prometheus_client.delete_from_gateway = fake_delete_from_gateway
+_PUSHGATEWAY_JOB = "archipy-pushgateway-bdd"
 
 
-def _restore_pushgateway_stubs(context) -> None:
-    import prometheus_client
-
-    scenario_context = get_current_scenario_context(context)
-    orig_push = scenario_context.get("pushgateway_orig_push")
-    orig_delete = scenario_context.get("pushgateway_orig_delete")
-    if orig_push is not None:
-        prometheus_client.push_to_gateway = orig_push
-    if orig_delete is not None:
-        prometheus_client.delete_from_gateway = orig_delete
+def _pushgateway_container(context):
+    return get_current_scenario_context(context).get("test_containers").get_container("pushgateway")
 
 
-def _configure_pushgateway(context, *, fail_push: bool = False) -> None:
+def _pushgateway_group(context, job: str) -> dict | None:
+    """Return the group the real Pushgateway holds for ``job``, or None."""
+    for group in _pushgateway_container(context).groups():
+        if group.get("labels", {}).get("job") == job:
+            return group
+    return None
+
+
+def _wait_for_pushgateway_group(context, job: str, predicate=lambda group: True, timeout: float = 5.0) -> dict | None:
+    deadline = time.monotonic() + timeout
+    while True:
+        group = _pushgateway_group(context, job)
+        if group is not None and predicate(group):
+            return group
+        if time.monotonic() >= deadline:
+            return group
+        time.sleep(0.1)
+
+
+def _group_push_time(group: dict) -> float:
+    return float(group["push_time_seconds"]["metrics"][0]["value"])
+
+
+def _configure_pushgateway(context, *, url: str | None = None, delete_on_shutdown: bool = True) -> None:
+    """Point the real Pushgateway exporter at the Pushgateway container (or at ``url``)."""
     from archipy.configs.config_template import OtelMetricsExporter
 
     scenario_context = get_current_scenario_context(context)
+    _snapshot_otel_config(scenario_context)
     OtelUtils.reset_for_testing()
     OtelUtils._globals_set = False
-    _install_pushgateway_stubs(context, fail_push=fail_push)
+    pushgateway = _pushgateway_container(context)
+    pushgateway.clear()
 
     port = _free_tcp_port()
     config = BaseConfig.global_config()
@@ -2201,12 +2232,12 @@ def _configure_pushgateway(context, *, fail_push: bool = False) -> None:
     config.OTEL.METRICS_ENABLED = True
     config.OTEL.LOGS_ENABLED = False
     config.OTEL.METRICS_EXPORTER = OtelMetricsExporter.PUSHGATEWAY
-    config.OTEL.METRICS_PUSHGATEWAY_URL = "http://127.0.0.1:9091"
-    config.OTEL.METRICS_PUSHGATEWAY_JOB = "archipy-pushgateway-bdd"
+    config.OTEL.METRICS_PUSHGATEWAY_URL = url or pushgateway.url
+    config.OTEL.METRICS_PUSHGATEWAY_JOB = _PUSHGATEWAY_JOB
     config.OTEL.METRICS_PUSHGATEWAY_INTERVAL_SECONDS = 1
     config.OTEL.METRICS_PUSHGATEWAY_TIMEOUT_SECONDS = 1.0
     config.OTEL.METRICS_PUSHGATEWAY_GROUPING_KEY = {"instance": "bdd"}
-    config.OTEL.METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN = True
+    config.OTEL.METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN = delete_on_shutdown
     config.OTEL.METRICS_PULL_HOST = "127.0.0.1"
     config.OTEL.METRICS_PULL_PORT = port
     config.OTEL.SYSTEM_METRICS_ENABLED = False
@@ -2216,48 +2247,104 @@ def _configure_pushgateway(context, *, fail_push: bool = False) -> None:
 
     scenario_context.store("metrics_pull_port", port)
     scenario_context.store("otel_enabled_for_test", True)
-    scenario_context.store("pushgateway_stubs_installed", True)
 
 
-@given("OpenTelemetry is configured for pushgateway metrics with a stub gateway")
-def step_given_pushgateway_stub(context):
-    _configure_pushgateway(context, fail_push=False)
+class _PushFailureCollector(logging.Handler):
+    """Collect the warning ArchiPy logs when a Pushgateway push fails."""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.WARNING)
+        self.seen = threading.Event()
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if "Failed to push metrics to Pushgateway" in record.getMessage():
+            self.seen.set()
 
 
-@given("OpenTelemetry is configured for pushgateway metrics with a failing stub gateway")
-def step_given_pushgateway_failing_stub(context):
-    _configure_pushgateway(context, fail_push=True)
+@given("OpenTelemetry is configured for pushgateway metrics with a real Pushgateway")
+def step_given_pushgateway_real(context):
+    _configure_pushgateway(context)
+
+
+@given("OpenTelemetry is configured for pushgateway metrics with an unreachable Pushgateway")
+def step_given_pushgateway_unreachable(context):
+    scenario_context = get_current_scenario_context(context)
+    # A port nothing listens on: the push fails with a real connection error.
+    _configure_pushgateway(context, url=f"http://127.0.0.1:{_free_tcp_port()}")
+    collector = _PushFailureCollector()
+    otel_logger = logging.getLogger("archipy.helpers.utils.otel_utils")
+    otel_logger.addHandler(collector)
+    context.add_cleanup(otel_logger.removeHandler, collector)
+    scenario_context.store("pushgateway_failure_collector", collector)
+
+
+@given("OpenTelemetry is configured for pushgateway metrics with a real Pushgateway that keeps its group on shutdown")
+def step_given_pushgateway_keeps_group(context):
+    _configure_pushgateway(context, delete_on_shutdown=False)
 
 
 @when("I wait for a Pushgateway push")
 def step_when_wait_pushgateway_push(context):
-    scenario_context = get_current_scenario_context(context)
-    event = scenario_context.get("pushgateway_push_event")
-    assert event.wait(timeout=5), "Timed out waiting for Pushgateway push"
+    group = _wait_for_pushgateway_group(context, _PUSHGATEWAY_JOB)
+    assert group is not None, "Timed out waiting for Pushgateway push"
 
 
 @when("I wait for a Pushgateway push attempt")
 def step_when_wait_pushgateway_attempt(context):
-    scenario_context = get_current_scenario_context(context)
-    event = scenario_context.get("pushgateway_push_event")
-    assert event.wait(timeout=5), "Timed out waiting for Pushgateway push attempt"
+    collector = get_current_scenario_context(context).get("pushgateway_failure_collector")
+    assert collector.seen.wait(timeout=5), "Timed out waiting for Pushgateway push attempt"
+
+
+@when('I note the Pushgateway push time for job "{job}"')
+def step_when_note_pushgateway_push_time(context, job):
+    group = _pushgateway_group(context, job)
+    assert group is not None, f"Pushgateway holds no group for job {job!r}"
+    get_current_scenario_context(context).store("pushgateway_push_time_before", _group_push_time(group))
 
 
 @then('the Pushgateway should have received a push for job "{job}"')
 def step_then_pushgateway_push(context, job):
-    scenario_context = get_current_scenario_context(context)
-    pushes = scenario_context.get("pushgateway_pushes")
-    assert pushes, "Expected at least one Pushgateway push"
-    assert pushes[0]["job"] == job
-    assert pushes[0]["registry"] is OtelUtils.metrics_registry() or OtelUtils.metrics_registry() is not None
+    group = _pushgateway_group(context, job)
+    assert group is not None, f"Expected a Pushgateway group for job {job!r}"
+    assert group.get("last_push_successful") is True, group
+    assert OtelUtils.metrics_registry() is not None
 
 
-@then('the Pushgateway should have received a delete for job "{job}"')
-def step_then_pushgateway_delete(context, job):
-    scenario_context = get_current_scenario_context(context)
-    deletes = scenario_context.get("pushgateway_deletes")
-    assert deletes, "Expected at least one Pushgateway delete"
-    assert deletes[0]["job"] == job
+@then('the Pushgateway group for job "{job}" should carry label "{label}" equal to "{value}"')
+def step_then_pushgateway_label(context, job, label, value):
+    group = _pushgateway_group(context, job)
+    assert group is not None, f"Expected a Pushgateway group for job {job!r}"
+    assert group["labels"].get(label) == value, f"Expected {label}={value!r}, got {group['labels']}"
+
+
+@then('the Pushgateway group for job "{job}" should contain a metric named "{needle}"')
+def step_then_pushgateway_metric(context, job, needle):
+    def has_metric(group: dict) -> bool:
+        return any(needle in name for name in group if isinstance(group[name], dict) and "metrics" in group[name])
+
+    group = _wait_for_pushgateway_group(context, job, has_metric)
+    assert group is not None and has_metric(group), (
+        f"No metric containing {needle!r} in Pushgateway group {sorted(group) if group else None}"
+    )
+
+
+@then('the Pushgateway should no longer hold job "{job}"')
+def step_then_pushgateway_deleted(context, job):
+    assert _pushgateway_group(context, job) is None, f"Pushgateway still holds a group for job {job!r}"
+
+
+@then('the Pushgateway should still hold job "{job}"')
+def step_then_pushgateway_still_holds(context, job):
+    assert _pushgateway_group(context, job) is not None, f"Pushgateway lost the group for job {job!r}"
+
+
+@then('the Pushgateway push time for job "{job}" should have advanced')
+def step_then_pushgateway_push_time_advanced(context, job):
+    before = get_current_scenario_context(context).get("pushgateway_push_time_before")
+    group = _pushgateway_group(context, job)
+    assert group is not None, f"Pushgateway holds no group for job {job!r}"
+    after = _group_push_time(group)
+    assert after > before, f"Expected a push during shutdown, push time stayed at {before}"
 
 
 # ---------------------------------------------------------------------------
@@ -2373,20 +2460,10 @@ def step_then_fastapi_telemetry_logs(context, state):
     assert telemetry["auto_configure"] is False, telemetry
 
 
-@given("FastAPI log records are enabled with an in-memory log exporter")
-def step_given_fastapi_logs_in_memory(context: Context) -> None:
-    from opentelemetry.sdk._logs import LoggerProvider
-    from opentelemetry.sdk._logs.export import InMemoryLogRecordExporter, SimpleLogRecordProcessor
-
-    scenario_context = get_current_scenario_context(context)
-    exporter = InMemoryLogRecordExporter()
-    provider = LoggerProvider()
-    provider.add_log_record_processor(SimpleLogRecordProcessor(exporter))
+@given("FastAPI log records are enabled with the collector")
+def step_given_fastapi_logs_collector(context: Context) -> None:
+    _setup_collector_otel(context, logs=True)
     BaseConfig.global_config().OTEL.FASTAPI_LOGS_ENABLED = True
-    OtelUtils._logger_provider = provider
-    scenario_context.store("log_exporter", exporter)
-    # Ensures teardown_otel_testing resets the provider and config flag.
-    scenario_context.store("otel_enabled_for_test", True)
 
 
 @when('I create an instrumented FastAPI app whose endpoint "{path}" raises')
@@ -2408,12 +2485,24 @@ def step_when_fastapi_raises(context, path):
 
 @then("an OTel log record should be exported")
 def step_then_log_record_exported(context):
-    exporter = get_current_scenario_context(context).get("log_exporter")
-    logs = exporter.get_finished_logs()
-    assert logs, "FastAPI emitted no OTel log record for the unhandled exception"
+    telemetry = _telemetry(context)
+    telemetry.flush()
+    records = telemetry.wait_for(
+        lambda: [record for record in telemetry.logs() if "otel boom" in repr(record.body) + repr(record.attributes)],
+    )
+    assert records, (
+        "FastAPI emitted no OTel log record for the unhandled exception; "
+        f"exported: {[(record.body, record.attributes) for record in telemetry.logs()]}"
+    )
 
 
 def _histogram_metric(context: Context, instrument_name: str):
+    telemetry = _telemetry(context)
+    if telemetry is not None:
+        telemetry.flush()
+        metric = telemetry.wait_for(lambda: telemetry.metrics().get(instrument_name))
+        assert metric, f"No metric named {instrument_name!r}"
+        return metric
     reader: InMemoryMetricReader = get_current_scenario_context(context).get("metric_reader")
     metrics_data = reader.get_metrics_data()
     for resource_metrics in metrics_data.resource_metrics:
@@ -2561,33 +2650,8 @@ def step_then_same_instruments(context):
 
 
 # ---------------------------------------------------------------------------
-# Pushgateway last push, initialization back-off, provider shutdown tracking
+# Initialization back-off, provider shutdown tracking
 # ---------------------------------------------------------------------------
-
-
-@given("OpenTelemetry is configured for pushgateway metrics with a stub gateway that keeps its group on shutdown")
-def step_given_pushgateway_keeps_group(context):
-    _configure_pushgateway(context, fail_push=False)
-    BaseConfig.global_config().OTEL.METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN = False
-
-
-@when("I note the number of Pushgateway pushes")
-def step_when_note_pushgateway_pushes(context):
-    scenario_context = get_current_scenario_context(context)
-    scenario_context.store("pushgateway_pushes_before", len(scenario_context.get("pushgateway_pushes")))
-
-
-@then("the Pushgateway should have received another push")
-def step_then_pushgateway_another_push(context):
-    scenario_context = get_current_scenario_context(context)
-    before = scenario_context.get("pushgateway_pushes_before")
-    after = len(scenario_context.get("pushgateway_pushes"))
-    assert after > before, f"Expected a push during shutdown, pushes stayed at {before}"
-
-
-@then("the Pushgateway should not have received a delete")
-def step_then_pushgateway_no_delete(context):
-    assert get_current_scenario_context(context).get("pushgateway_deletes") == []
 
 
 def _fail_provider_construction(context):

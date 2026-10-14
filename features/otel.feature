@@ -1,10 +1,11 @@
+@needs-otel-collector @needs-pushgateway
 Feature: OpenTelemetry decorators
   As a developer
   I want tracing and metrics decorators backed by OpenTelemetry
   So that spans and instruments are recorded for observability
 
   Background:
-    Given OpenTelemetry is configured for testing
+    Given OpenTelemetry is configured with the collector
 
   Scenario: trace_span creates a span with the expected name
     Given a sync function decorated with trace_span named "load_user"
@@ -180,7 +181,7 @@ Feature: OpenTelemetry decorators
     Then the FastAPI telemetry config should have logs on
 
   Scenario: FastAPI unhandled exception is exported as an OTel log record when enabled
-    Given FastAPI log records are enabled with an in-memory log exporter
+    Given FastAPI log records are enabled with the collector
     When I create an instrumented FastAPI app whose endpoint "/otel-boom" raises
     Then an OTel log record should be exported
 
@@ -558,29 +559,41 @@ Feature: OpenTelemetry decorators
     And the metrics pull scrape port should refuse connections
 
   Scenario: metrics pushgateway pushes and deletes on shutdown
-    Given OpenTelemetry is configured for pushgateway metrics with a stub gateway
+    Given OpenTelemetry is configured for pushgateway metrics with a real Pushgateway
     When I initialize OpenTelemetry providers from config
     And I wait for a Pushgateway push
     Then the Pushgateway should have received a push for job "archipy-pushgateway-bdd"
     And the metrics pull scrape port should refuse connections
     When I shut down OpenTelemetry providers
-    Then the Pushgateway should have received a delete for job "archipy-pushgateway-bdd"
+    Then the Pushgateway should no longer hold job "archipy-pushgateway-bdd"
+
+  Scenario: metrics pushgateway pushes recorded metrics
+    Given OpenTelemetry is configured for pushgateway metrics with a real Pushgateway
+    When I initialize OpenTelemetry providers from config
+    And I call a measured sync function named "test.push.duration"
+    Then the Pushgateway group for job "archipy-pushgateway-bdd" should contain a metric named "test_push_duration"
+
+  Scenario: metrics pushgateway applies the configured grouping key
+    Given OpenTelemetry is configured for pushgateway metrics with a real Pushgateway
+    When I initialize OpenTelemetry providers from config
+    And I wait for a Pushgateway push
+    Then the Pushgateway group for job "archipy-pushgateway-bdd" should carry label "instance" equal to "bdd"
 
   Scenario: metrics pushgateway push failure keeps providers
-    Given OpenTelemetry is configured for pushgateway metrics with a failing stub gateway
+    Given OpenTelemetry is configured for pushgateway metrics with an unreachable Pushgateway
     When I initialize OpenTelemetry providers from config
     And I wait for a Pushgateway push attempt
     Then the OpenTelemetry meter provider should be available
     And the metrics registry should be available
 
   Scenario: metrics pushgateway sends a last push on shutdown when it keeps its group
-    Given OpenTelemetry is configured for pushgateway metrics with a stub gateway that keeps its group on shutdown
+    Given OpenTelemetry is configured for pushgateway metrics with a real Pushgateway that keeps its group on shutdown
     When I initialize OpenTelemetry providers from config
     And I wait for a Pushgateway push
-    And I note the number of Pushgateway pushes
+    And I note the Pushgateway push time for job "archipy-pushgateway-bdd"
     And I shut down OpenTelemetry providers
-    Then the Pushgateway should have received another push
-    And the Pushgateway should not have received a delete
+    Then the Pushgateway push time for job "archipy-pushgateway-bdd" should have advanced
+    And the Pushgateway should still hold job "archipy-pushgateway-bdd"
 
   Scenario: A failed OpenTelemetry initialization is not retried straight away
     When OpenTelemetry provider construction fails and initialization is requested twice in a row
@@ -656,7 +669,7 @@ Feature: OpenTelemetry decorators
     When I cancel the traced async function
     Then the recorded span status should be ERROR
 
-  Scenario: force_flush succeeds for in-memory providers
+  Scenario: force_flush succeeds for real providers
     When I force flush OpenTelemetry providers
     Then OpenTelemetry force flush should succeed
 
