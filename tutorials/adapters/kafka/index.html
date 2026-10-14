@@ -4255,8 +4255,16 @@ shared adapter instance (e.g., via application lifespan) and call <code>close()<
 <p>The instrumentor opens a <code>&lt;topic&gt; process</code> span when a message is polled. It ends when the next <code>poll</code>, <code>consume</code> or
 <code>close</code> runs, which would include idle time and make unrelated work its children. <code>KafkaConsumerAdapter.commit</code> therefore
 ends the span as soon as the offset is committed, so commit after the message is processed. A consumer that never
-commits (auto-commit) keeps the upstream behaviour. The async consumer adapter is not changed: its polls run in an
-executor thread, so its span still ends on the next poll or close.</p>
+commits (auto-commit) keeps the upstream behaviour.</p>
+<ul>
+<li><strong>Batches:</strong> <code>batch_consume</code> produces one <code>&lt;topic&gt; process</code> span for the whole batch, with a link to the producer
+  trace of every message. Commit once after processing the batch.</li>
+<li><strong>One message at a time:</strong> each polled message gets its own span, ended by its commit. Without commits, each span ends
+  when the next <code>poll</code> starts and the last one ends on <code>close</code>.</li>
+<li><strong>Auto-commit:</strong> <code>ENABLE_AUTO_COMMIT=true</code> commits in the background, so the adapter never sees the end of
+  processing. Spans end at the next <code>poll</code>, <code>consume</code> or <code>close</code>; open your own span around the handler instead. The async consumer adapter is not changed: its polls run in an
+executor thread, so its span still ends on the next poll or close.</li>
+</ul>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns with proper chaining</li>
