@@ -1,0 +1,21 @@
+name: Instrumentor compatibility
+
+# opentelemetry-instrumentation-sqlalchemy caps SQLAlchemy below 2.1 while ArchiPy requires 2.1, so ArchiPy
+# instruments SQLAlchemy through OTEL.INSTRUMENTATION_SKIP_DEP_CHECK. This job fails as soon as an instrumentor
+# release supports the required version, which is the signal to remove the bypass.
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  instrumentor-compat:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Check instrumentor version ranges
+        run: ./scripts/check_instrumentor_compat.sh

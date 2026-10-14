@@ -94,6 +94,11 @@ security: ## Run security scan with Bandit
 	@echo "${BLUE}Running security scan...${NC}"
 	$(PYTHON) bandit -c pyproject.toml -r archipy/ packages/ -f json -o bandit-report.json || true
 
+.PHONY: check-instrumentor-compat
+check-instrumentor-compat: ## Check whether OTel instrumentors now support the library versions ArchiPy requires
+	@echo "${BLUE}Checking OpenTelemetry instrumentor compatibility...${NC}"
+	./scripts/check_instrumentor_compat.sh
+
 .PHONY: behave
 behave: ## Run tests with behave
 	@echo "${BLUE}Running tests...${NC}"
