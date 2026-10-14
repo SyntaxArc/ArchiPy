@@ -753,6 +753,10 @@
          <lastmod>2026-10-14</lastmod>
     </url>
     <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.13.0/</loc>
+         <lastmod>2026-10-14</lastmod>
+    </url>
+    <url>
          <loc>https://syntaxarc.github.io/ArchiPy/community/changelog/5/5.2.0/</loc>
          <lastmod>2026-10-14</lastmod>
     </url>
@@ -902,6 +906,10 @@
     </url>
     <url>
          <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/scylladb/</loc>
+         <lastmod>2026-10-14</lastmod>
+    </url>
+    <url>
+         <loc>https://syntaxarc.github.io/ArchiPy/tutorials/adapters/sqlalchemy/</loc>
          <lastmod>2026-10-14</lastmod>
     </url>
     <url>

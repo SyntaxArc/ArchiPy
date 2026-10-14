@@ -717,6 +717,8 @@
       
         
       
+        
+      
     
     
     
@@ -1064,6 +1066,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#total-count-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Total Count Performance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#available-filter-operations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1325,6 +1338,34 @@
     
   
     StarRocks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sqlalchemy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQLAlchemy Search Totals
   
 
     
@@ -3769,6 +3810,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#total-count-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Total Count Performance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#available-filter-operations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4425,6 +4477,9 @@ SQLAlchemy's <code>.where()</code>.</p>
 </span><span id="__span-14-54"><a id="__codelineno-14-54" name="__codelineno-14-54" href="#__codelineno-14-54"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Found </span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2"> users (page </span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
 </span><span id="__span-14-55"><a id="__codelineno-14-55" name="__codelineno-14-55" href="#__codelineno-14-55"></a>    <span class="k">return</span> <span class="n">users</span><span class="p">,</span> <span class="n">total</span>
 </span></code></pre></div>
+<h3 id="total-count-performance">Total Count Performance<a class="headerlink" href="#total-count-performance" title="Permanent link">&para;</a></h3>
+<p>For large tables, <code>count_threshold</code>, the <code>COUNT_THRESHOLD</code> setting and the opt-in count cache keep the total cheap. They
+apply to every SQLAlchemy adapter, see <a href="../sqlalchemy/">SQLAlchemy Search Totals</a>.</p>
 <h3 id="available-filter-operations">Available Filter Operations<a class="headerlink" href="#available-filter-operations" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -4855,6 +4910,7 @@ SQLAlchemy's <code>.where()</code>.</p>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns with proper chaining</li>
 <li><a href="../../config_management/">Configuration Management</a> — PostgreSQL configuration setup</li>
 <li><a href="../../testing_strategy/">BDD Testing</a> — Testing database operations</li>
+<li><a href="../sqlalchemy/">SQLAlchemy Search Totals</a> — Cheap totals for paginated searches, count threshold and count cache</li>
 <li><a href="../../helpers/decorators/#sqlalchemy-transaction-decorators">SQLAlchemy Decorators</a> — Transaction decorator usage</li>
 <li><a href="../../../api_reference/adapters/postgres/">API Reference</a> — Full PostgreSQL adapter API documentation</li>
 </ul>
