@@ -39,6 +39,8 @@ class TestConfig(BaseConfig):
     TEMPORAL__IMAGE: str
     VAULT__IMAGE: str
     MAILPIT__IMAGE: str
+    OTEL_COLLECTOR__IMAGE: str
+    PUSHGATEWAY__IMAGE: str
     TESTCONTAINERS_RYUK_CONTAINER_IMAGE: str | None = None
 
     def __init__(self, **kwargs) -> None:
@@ -97,7 +99,11 @@ def before_feature(context: Context, feature: Feature) -> None:
         feature_filename = str(feature.filename) if feature.filename else ""
     feature_name = getattr(feature, "name", "") or ""
 
-    if "grpc_error_handling" in feature_filename or "error_handling" in feature_filename or "grpc_error" in feature_name.lower():
+    if (
+        "grpc_error_handling" in feature_filename
+        or "error_handling" in feature_filename
+        or "grpc_error" in feature_name.lower()
+    ):
         try:
             from features.test_servers import (
                 create_test_async_grpc_server,
@@ -125,7 +131,8 @@ def before_feature(context: Context, feature: Feature) -> None:
             try:
                 async_server = create_test_async_grpc_server()
                 async_server, async_port, async_thread, async_loop = start_async_grpc_server_sync(
-                    async_server, default_async_servicer,
+                    async_server,
+                    default_async_servicer,
                 )
                 context.grpc_async_server = async_server
                 context.grpc_async_port = async_port

@@ -1,11 +1,13 @@
 """Container manager for test containers"""
 
 import datetime
+import json
 import logging
 import tempfile
 import time
 from pathlib import Path
 
+import requests
 from testcontainers.community.mysql import MySqlContainer
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
@@ -46,6 +48,8 @@ CONTAINER_MEM_LIMITS: dict[str, str] = {
     "kafka": "1024m",
     "temporal": "384m",
     "mailpit": "64m",
+    "otel-collector": "128m",
+    "pushgateway": "64m",
 }
 
 # Test data is tiny and throwaway: small buffers, and no durability work.
@@ -87,6 +91,8 @@ TAG_CONTAINER_MAP: dict[str, str] = {
     "needs-vault": "vault",
     "needs-mailpit": "mailpit",
     "needs-mailpit-plain": "mailpit-plain",
+    "needs-otel-collector": "otel-collector",
+    "needs-pushgateway": "pushgateway",
 }
 
 
@@ -1435,3 +1441,233 @@ class PlainMailpitTestContainer(MailpitTestContainer):
 
     WITH_TLS = False
     NAME = "mailpit-plain"
+
+
+OTEL_COLLECTOR_CONFIG: str = """\
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+exporters:
+  file/traces:
+    path: /otel-out/traces.jsonl
+    flush_interval: 100ms
+  file/metrics:
+    path: /otel-out/metrics.jsonl
+    flush_interval: 100ms
+  file/logs:
+    path: /otel-out/logs.jsonl
+    flush_interval: 100ms
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [file/traces]
+    metrics:
+      receivers: [otlp]
+      exporters: [file/metrics]
+    logs:
+      receivers: [otlp]
+      exporters: [file/logs]
+"""
+
+
+@ContainerManager.register("otel-collector")
+class OtelCollectorTestContainer(metaclass=Singleton, thread_safe=True):
+    """Test container for the official OpenTelemetry Collector (contrib distribution).
+
+    The collector accepts OTLP over gRPC (4317) and HTTP (4318) and writes every signal to an OTLP JSON
+    lines file in a directory shared with the host. The image has no shell, so tests read those files
+    directly instead of using ``exec``. Call ``mark()`` at the start of a scenario and ``read_signal()``
+    afterwards to see only what the scenario exported.
+    """
+
+    GRPC_PORT = 4317
+    HTTP_PORT = 4318
+    SIGNALS = ("traces", "metrics", "logs")
+
+    def __init__(self, image: str | None = None) -> None:
+        """Initialize the collector test container.
+
+        Args:
+            image: Docker image override. Defaults to OTEL_COLLECTOR__IMAGE from TestConfig.
+        """
+        self.name = "otel-collector"
+        self.image = image or BaseConfig.global_config().OTEL_COLLECTOR__IMAGE
+        self._container: DockerContainer | None = None
+        self._work_dir: tempfile.TemporaryDirectory | None = None
+        self._offsets: dict[str, int] = dict.fromkeys(self.SIGNALS, 0)
+        self._is_running = False
+        self.host: str | None = None
+        self.grpc_endpoint: str | None = None
+        self.http_endpoint: str | None = None
+
+    def _build(self) -> DockerContainer:
+        self._work_dir = tempfile.TemporaryDirectory()
+        work_path = Path(self._work_dir.name)
+        config_dir = work_path / "config"
+        out_dir = work_path / "out"
+        config_dir.mkdir()
+        out_dir.mkdir()
+        # The collector runs as an unprivileged user and must be able to create the output files.
+        out_dir.chmod(0o777)
+        (config_dir / "config.yaml").write_text(OTEL_COLLECTOR_CONFIG)
+        return (
+            DockerContainer(self.image)
+            .with_exposed_ports(self.GRPC_PORT, self.HTTP_PORT)
+            .with_volume_mapping(str(config_dir), "/otel-config", "ro")
+            .with_volume_mapping(str(out_dir), "/otel-out", "rw")
+            .with_command("--config=/otel-config/config.yaml")
+            .with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["otel-collector"])
+        )
+
+    def start(self) -> DockerContainer:
+        """Start the collector and wait until its OTLP receivers are listening."""
+        if self._is_running:
+            return self._container
+
+        if self._container is None:
+            self._container = self._build()
+
+        self._container.start()
+        wait_for_logs(self._container, r"Everything is ready", timeout=60)
+        self._is_running = True
+
+        self.host = self._container.get_container_host_ip()
+        self.grpc_endpoint = f"http://{self.host}:{self._container.get_exposed_port(self.GRPC_PORT)}"
+        self.http_endpoint = f"http://{self.host}:{self._container.get_exposed_port(self.HTTP_PORT)}"
+        self._offsets = dict.fromkeys(self.SIGNALS, 0)
+
+        logger.info("OpenTelemetry Collector started: gRPC %s, HTTP %s", self.grpc_endpoint, self.http_endpoint)
+        return self._container
+
+    def stop(self) -> None:
+        """Stop the collector and remove its working directory."""
+        if not self._is_running:
+            return
+
+        if self._container:
+            self._container.stop()
+        if self._work_dir:
+            self._work_dir.cleanup()
+
+        self._container = None
+        self._work_dir = None
+        self._is_running = False
+        self.host = None
+        self.grpc_endpoint = None
+        self.http_endpoint = None
+
+        logger.info("OpenTelemetry Collector stopped")
+
+    def _signal_path(self, signal: str) -> Path:
+        if self._work_dir is None:
+            raise RuntimeError("OpenTelemetry Collector is not running")
+        return Path(self._work_dir.name) / "out" / f"{signal}.jsonl"
+
+    def mark(self) -> None:
+        """Remember the current end of every signal file so later reads ignore older data."""
+        for signal in self.SIGNALS:
+            path = self._signal_path(signal)
+            self._offsets[signal] = path.stat().st_size if path.exists() else 0
+
+    def read_signal(self, signal: str) -> list[dict]:
+        """Return the OTLP JSON export requests written since the last ``mark()``.
+
+        Args:
+            signal: One of ``traces``, ``metrics`` or ``logs``.
+
+        Returns:
+            list[dict]: One parsed OTLP JSON document per exported batch, oldest first.
+        """
+        path = self._signal_path(signal)
+        if not path.exists():
+            return []
+        with path.open("rb") as handle:
+            handle.seek(self._offsets[signal])
+            payload = handle.read()
+        documents: list[dict] = []
+        for line in payload.decode("utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                documents.append(json.loads(line))
+            except json.JSONDecodeError:
+                # The exporter may be mid-write on the last line; the next read picks it up.
+                break
+        return documents
+
+
+@ContainerManager.register("pushgateway")
+class PushgatewayTestContainer(metaclass=Singleton, thread_safe=True):
+    """Test container for the official Prometheus Pushgateway with the admin API enabled."""
+
+    PORT = 9091
+
+    def __init__(self, image: str | None = None) -> None:
+        """Initialize the Pushgateway test container.
+
+        Args:
+            image: Docker image override. Defaults to PUSHGATEWAY__IMAGE from TestConfig.
+        """
+        self.name = "pushgateway"
+        self.image = image or BaseConfig.global_config().PUSHGATEWAY__IMAGE
+        self._container: DockerContainer | None = None
+        self._is_running = False
+        self.host: str | None = None
+        self.url: str | None = None
+
+    def _build(self) -> DockerContainer:
+        return (
+            DockerContainer(self.image)
+            .with_exposed_ports(self.PORT)
+            .with_command("--web.enable-admin-api")
+            .with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["pushgateway"])
+        )
+
+    def start(self) -> DockerContainer:
+        """Start the Pushgateway and wait until it listens."""
+        if self._is_running:
+            return self._container
+
+        if self._container is None:
+            self._container = self._build()
+
+        self._container.start()
+        wait_for_logs(self._container, r"Listening on", timeout=60)
+        self._is_running = True
+
+        self.host = self._container.get_container_host_ip()
+        self.url = f"http://{self.host}:{self._container.get_exposed_port(self.PORT)}"
+
+        logger.info("Pushgateway container started at %s", self.url)
+        return self._container
+
+    def stop(self) -> None:
+        """Stop the Pushgateway container."""
+        if not self._is_running:
+            return
+
+        if self._container:
+            self._container.stop()
+
+        self._container = None
+        self._is_running = False
+        self.host = None
+        self.url = None
+
+        logger.info("Pushgateway container stopped")
+
+    def groups(self) -> list[dict]:
+        """Return the metric groups currently stored, as reported by ``/api/v1/metrics``."""
+        response = requests.get(f"{self.url}/api/v1/metrics", timeout=5)
+        response.raise_for_status()
+        return response.json().get("data", [])
+
+    def clear(self) -> None:
+        """Delete every stored group through the admin API."""
+        response = requests.put(f"{self.url}/api/v1/admin/wipe", timeout=5)
+        response.raise_for_status()
