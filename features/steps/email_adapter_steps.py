@@ -6,11 +6,11 @@ import ssl
 import tempfile
 import threading
 import time
-import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from unittest import mock
 
+import httpx2
 from behave import given, then, when
 from pydantic import ValidationError
 
@@ -34,9 +34,9 @@ def _mailpit(name=None):
 
 
 def _api(method, path, name=None):
-    request = urllib.request.Request(f"{_mailpit(name).api_url}{path}", method=method)
-    with urllib.request.urlopen(request, timeout=10) as response:
-        return response.read()
+    response = httpx2.request(method, f"{_mailpit(name).api_url}{path}", timeout=10)
+    response.raise_for_status()
+    return response.content
 
 
 def _api_json(path):
