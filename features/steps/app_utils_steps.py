@@ -13,10 +13,11 @@ from archipy.configs.config_template import RedisMode
 from archipy.helpers.utils.app_utils import (
     AppUtils,
     AsyncGrpcAPIUtils,
-    FastAPIExceptionHandler,
     FastAPIUtils,
     GrpcAPIUtils,
 )
+from archipy.helpers.errors.fastapi import handle_fastapi_exception
+from archipy.helpers.errors.fastapi.handlers import validation_response
 from archipy.models.errors import BaseError, InvalidArgumentError
 from features.test_helpers import get_current_scenario_context
 from features.test_servers import (
@@ -25,6 +26,10 @@ from features.test_servers import (
     test_service_pb2,
     test_service_pb2_grpc,
 )
+
+
+async def _validation_handler(_request, exception):
+    return validation_response(exception)
 
 
 def _middleware_names(app) -> list[str]:
@@ -308,7 +313,7 @@ def step_when_endpoint_raises_exception(context, exception_type):
 
     app.add_exception_handler(
         eval(exception_type),
-        FastAPIExceptionHandler.custom_exception_handler,
+        handle_fastapi_exception,
     )
 
     @app.get("/test-exception")
@@ -332,7 +337,7 @@ def step_when_endpoint_raises_validation_error(context):
     scenario_context = get_current_scenario_context(context)
     app = scenario_context.get("app")
 
-    app.add_exception_handler(ValidationError, FastAPIExceptionHandler.validation_exception_handler)
+    app.add_exception_handler(ValidationError, _validation_handler)
 
     class TestSchema(BaseModel):
         id: int

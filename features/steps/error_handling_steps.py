@@ -11,7 +11,8 @@ from pydantic import BaseModel
 from starlette.testclient import TestClient
 
 import archipy.models.errors as errors_pkg
-from archipy.helpers.utils.error_utils import ErrorUtils
+from archipy.helpers.errors import capture_exception
+from archipy.helpers.errors.grpc import abort_grpc
 from archipy.models.errors import (
     AlreadyExistsError,
     BaseError,
@@ -145,8 +146,8 @@ def step_given_create_error_detail(context, code, message_en, message_fa):
 def step_when_error_is_captured(context):
     scenario_context = get_current_scenario_context(context)
     error = scenario_context.get("error")
-    with patch("archipy.helpers.utils.error_utils.logger.error") as mock_log:
-        ErrorUtils.capture_exception(error)
+    with patch("archipy.helpers.errors.capture.logger.error") as mock_log:
+        capture_exception(error)
         scenario_context.store("log_called", mock_log.called)
 
 
@@ -434,7 +435,7 @@ def step_when_sync_grpc_invalid_request(context):
     finally:
         channel.close()
 
-    error_instance = InternalError(lang=LanguageType.EN)
+    error_instance = InvalidArgumentError(lang=LanguageType.EN)
 
     scenario_context.store("grpc_rpc_error", grpc_error)
     scenario_context.store("grpc_error", error_instance)
@@ -497,7 +498,7 @@ async def step_when_async_grpc_invalid_request(context):
 
     grpc_error = await make_call()
 
-    error_instance = InternalError(lang=LanguageType.EN)
+    error_instance = InvalidArgumentError(lang=LanguageType.EN)
 
     scenario_context.store("grpc_rpc_error", grpc_error)
     scenario_context.store("grpc_error", error_instance)
@@ -1166,9 +1167,9 @@ async def _abort_with(context, mode: str, additional_data: dict) -> None:
     error = InternalError(lang=LanguageType.EN, additional_data=additional_data)
     try:
         if mode == "sync":
-            error.abort_grpc_sync(recording)
+            abort_grpc(error, recording)
         else:
-            await error.abort_grpc_async(recording)
+            await abort_grpc(error, recording)
     except _Aborted:
         pass
     get_current_scenario_context(context).store("recording_context", recording)

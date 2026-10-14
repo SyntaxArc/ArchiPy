@@ -7,7 +7,6 @@ import logging
 import threading
 import time
 import uuid
-import warnings
 
 import httpx2
 from behave import given, then, when
@@ -28,9 +27,9 @@ from archipy.helpers.decorators import (
     trace_root,
     trace_span,
 )
-from archipy.helpers.utils.error_utils import ErrorUtils
+from archipy.helpers.errors import capture_exception
 from archipy.helpers.utils.otel_utils import OtelUtils
-from archipy.models.errors import ConfigurationError, InvalidArgumentError, NotFoundError
+from archipy.models.errors import ConfigurationError, NotFoundError
 
 
 def _reset_otel_config_defaults() -> None:
@@ -561,7 +560,7 @@ def step_when_capture_exception(context):
     previous_level = error_logger.level
     error_logger.setLevel(logging.CRITICAL)
     try:
-        ErrorUtils.capture_exception(RuntimeError("captured for otel"))
+        capture_exception(RuntimeError("captured for otel"))
     finally:
         error_logger.setLevel(previous_level)
     span = scenario_context.get("manual_span")
@@ -705,58 +704,6 @@ def step_when_apply_to_async_and_call(context, decorator_name):
 @then("the async function should return its result")
 def step_then_async_function_result(context):
     assert get_current_scenario_context(context).get("async_result") == "async-result"
-
-
-def _deprecated_otel_decorator(alias_name):
-    from archipy.helpers import decorators
-
-    return getattr(decorators, alias_name)
-
-
-@when("I apply the deprecated {alias_name} to an async function")
-def step_when_apply_deprecated_to_async(context, alias_name):
-    scenario_context = get_current_scenario_context(context)
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-
-        @_deprecated_otel_decorator(alias_name)(name=f"test.{alias_name}")
-        async def work() -> str:
-            return "async-result"
-
-    scenario_context.store("deprecation_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
-    scenario_context.store("async_result", asyncio.run(work()))
-
-
-@when("I apply the deprecated {alias_name} to a sync function")
-def step_when_apply_deprecated_to_sync(context, alias_name):
-    scenario_context = get_current_scenario_context(context)
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-
-            @_deprecated_otel_decorator(alias_name)(name=f"test.{alias_name}")
-            def work() -> str:
-                return "sync"
-
-        scenario_context.store("decorator_error", None)
-    except InvalidArgumentError as exc:
-        scenario_context.store("decorator_error", exc)
-
-
-@then("the decorated async function should still return its result")
-def step_then_deprecated_async_result(context):
-    assert get_current_scenario_context(context).get("async_result") == "async-result"
-
-
-@then('an InvalidArgumentError should be raised for decorator "{decorator_name}"')
-def step_then_invalid_argument_for_decorator(context, decorator_name):
-    scenario_context = get_current_scenario_context(context)
-    error = scenario_context.get("decorator_error")
-    assert isinstance(error, InvalidArgumentError), f"Expected InvalidArgumentError, got {error!r}"
-    additional = getattr(error, "additional_data", None) or {}
-    assert additional.get("decorator") == decorator_name, (
-        f"Expected decorator={decorator_name}, got {additional.get('decorator')}"
-    )
 
 
 @when('I resolve OTLP endpoints for protocol "{protocol}" with base "{base}"')

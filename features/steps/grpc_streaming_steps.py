@@ -9,11 +9,7 @@ from opentelemetry.sdk.trace import TracerProvider
 
 from pydantic import BaseModel
 
-from archipy.helpers.interceptors.grpc.exception.server_interceptor import (
-    AsyncGrpcServerExceptionInterceptor,
-    GrpcServerExceptionInterceptor,
-    request_validation,
-)
+from archipy.helpers.errors.grpc import GrpcExceptionInterceptor, request_validation
 from archipy.helpers.interceptors.grpc.otel_metrics.server_interceptor import (
     AsyncGrpcServerOtelMetricsInterceptor,
     GrpcServerOtelMetricsInterceptor,
@@ -190,32 +186,32 @@ def _sync_request_validation_unary(_request: bytes, _context) -> bytes:
 
 def _build_sync_interceptors(stack: str) -> list:
     if stack == "exception":
-        return [GrpcServerExceptionInterceptor()]
-    if stack == "legacy-validation":
-        return [GrpcServerExceptionInterceptor(validation_errors_as_invalid_argument=True)]
+        return [GrpcExceptionInterceptor()]
+    if stack == "internal-validation":
+        return [GrpcExceptionInterceptor(validation_errors_as_internal=True)]
     if stack == "metrics":
         return [GrpcServerOtelMetricsInterceptor()]
     if stack == "full":
         return [
             server_interceptor(tracer_provider=TracerProvider()),
             GrpcServerOtelMetricsInterceptor(),
-            GrpcServerExceptionInterceptor(),
+            GrpcExceptionInterceptor(),
         ]
     raise ValueError(f"Unsupported interceptor stack: {stack!r}")
 
 
 def _build_interceptors(stack: str) -> list:
     if stack == "exception":
-        return [AsyncGrpcServerExceptionInterceptor()]
-    if stack == "legacy-validation":
-        return [AsyncGrpcServerExceptionInterceptor(validation_errors_as_invalid_argument=True)]
+        return [GrpcExceptionInterceptor(aio=True)]
+    if stack == "internal-validation":
+        return [GrpcExceptionInterceptor(aio=True, validation_errors_as_internal=True)]
     if stack == "metrics":
         return [AsyncGrpcServerOtelMetricsInterceptor()]
     if stack == "full":
         return [
             aio_server_interceptor(tracer_provider=TracerProvider()),
             AsyncGrpcServerOtelMetricsInterceptor(),
-            AsyncGrpcServerExceptionInterceptor(),
+            GrpcExceptionInterceptor(aio=True),
         ]
     raise ValueError(f"Unsupported interceptor stack: {stack!r}")
 

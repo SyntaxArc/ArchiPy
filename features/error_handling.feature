@@ -173,22 +173,22 @@ Feature: Error Handling
       | InternalError        | 13          | INTERNAL_ERROR   | Internal system error occurred |
 
   @grpc
-  Scenario: Sync gRPC reports a ValidationError raised by the handler as an internal error
+  Scenario: Sync gRPC reports a ValidationError raised by the handler as INVALID_ARGUMENT
     When a sync gRPC method receives invalid request
-    Then the gRPC call should fail with status code 13
-    And the gRPC error code should be "INTERNAL_ERROR"
+    Then the gRPC call should fail with status code 3
+    And the gRPC error code should be "INVALID_ARGUMENT"
 
   @grpc @async
-  Scenario: Async gRPC reports a ValidationError raised by the handler as an internal error
+  Scenario: Async gRPC reports a ValidationError raised by the handler as INVALID_ARGUMENT
     When an async gRPC method receives invalid request
-    Then the gRPC call should fail with status code 13
-    And the gRPC error code should be "INTERNAL_ERROR"
+    Then the gRPC call should fail with status code 3
+    And the gRPC error code should be "INVALID_ARGUMENT"
 
   @grpc
-  Scenario Outline: A ValidationError raised by the handler is an internal error and hides the input
+  Scenario Outline: A ValidationError raised by the handler is INVALID_ARGUMENT and hides the input
     Given a <mode> gRPC server using the exception interceptor stack
     When a unary RPC whose handler raises a validation error is invoked
-    Then the gRPC unary call should fail with status INTERNAL
+    Then the gRPC unary call should fail with status INVALID_ARGUMENT
     And the gRPC unary failure should not expose "secret-client-value"
 
     Examples: Sync interceptor
@@ -217,10 +217,11 @@ Feature: Error Handling
       | async |
 
   @grpc
-  Scenario Outline: The legacy flag reports every ValidationError as INVALID_ARGUMENT
-    Given a <mode> gRPC server using the legacy-validation interceptor stack
+  Scenario Outline: The internal flag reports every ValidationError as INTERNAL
+    Given a <mode> gRPC server using the internal-validation interceptor stack
     When a unary RPC whose handler raises a validation error is invoked
-    Then the gRPC unary call should fail with status INVALID_ARGUMENT
+    Then the gRPC unary call should fail with status INTERNAL
+    And the gRPC unary failure should not expose "secret-client-value"
 
     Examples: Sync interceptor
       | mode |

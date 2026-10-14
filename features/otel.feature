@@ -112,29 +112,6 @@ Feature: OpenTelemetry decorators
       | trace_span       |
       | trace_root       |
 
-  Scenario Outline: Deprecated <alias> still works and points at <replacement>
-    When I apply the deprecated <alias> to an async function
-    Then exactly one DeprecationWarning should name "<replacement>"
-    And the decorated async function should still return its result
-
-    Examples:
-      | alias                  | replacement      |
-      | async_measure_duration | measure_duration |
-      | async_count_calls      | count_calls      |
-      | async_trace_span       | trace_span       |
-      | async_trace_root       | trace_root       |
-
-  Scenario Outline: Deprecated <alias> still rejects sync functions
-    When I apply the deprecated <alias> to a sync function
-    Then an InvalidArgumentError should be raised for decorator "<alias>"
-
-    Examples:
-      | alias                  |
-      | async_measure_duration |
-      | async_count_calls      |
-      | async_trace_span       |
-      | async_trace_root       |
-
   Scenario: http protobuf resolves signal paths on OTLP endpoint
     When I resolve OTLP endpoints for protocol "http/protobuf" with base "http://localhost:4318"
     Then the traces endpoint should be "http://localhost:4318/v1/traces"
