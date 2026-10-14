@@ -124,7 +124,7 @@ Feature: MinIO Operations Testing
     When I list objects in bucket "list-bucket" with prefix "logs/" recursively
     Then the listed object names should be "logs/a.txt,logs/b.txt"
     When I list the top level of bucket "list-bucket"
-    Then the listed object names should be "root.txt"
+    Then the listed object names should be "logs/,other/,root.txt"
 
   Scenario: Upload through a presigned PUT URL
     Given a bucket named "presigned-put-bucket" exists

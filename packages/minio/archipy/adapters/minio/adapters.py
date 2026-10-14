@@ -587,7 +587,9 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             recursive: Whether to list objects recursively.
 
         Returns:
-            list: List of objects with metadata.
+            list: List of objects with metadata. A non-recursive listing also includes one entry per "folder"
+                directly below the prefix, with a trailing "/" in ``object_name``, ``size`` 0 and
+                ``is_prefix`` True.
 
         Raises:
             InvalidArgumentError: If bucket_name is empty.
@@ -616,8 +618,19 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                         "object_name": obj["Key"],
                         "size": obj["Size"],
                         "last_modified": obj["LastModified"],
+                        "is_prefix": False,
                     }
                     for obj in page.get("Contents", [])
+                )
+                # A non-recursive listing uses a delimiter, so S3 groups keys below a "folder" into CommonPrefixes.
+                object_list.extend(
+                    {
+                        "object_name": common_prefix["Prefix"],
+                        "size": 0,
+                        "last_modified": None,
+                        "is_prefix": True,
+                    }
+                    for common_prefix in page.get("CommonPrefixes", [])
                 )
         except InvalidArgumentError:
             # Pass through our custom errors

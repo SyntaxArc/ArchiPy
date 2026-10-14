@@ -119,7 +119,8 @@ class MinioPort:
             recursive: Whether to list objects recursively (include sub-directories)
 
         Returns:
-            A list of MinioObjectType objects
+            A list of MinioObjectType objects. A non-recursive listing also contains one entry per "folder"
+            directly below the prefix (``object_name`` ends with "/", ``is_prefix`` is True).
         """
         raise NotImplementedError
 

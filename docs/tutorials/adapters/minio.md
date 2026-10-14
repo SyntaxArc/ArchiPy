@@ -135,6 +135,11 @@ objects = minio.list_objects("my-bucket", prefix="documents/", recursive=True)
 for obj in objects:
     logger.info(f"Object: {obj['object_name']}, Size: {obj['size']} bytes")
 
+# A non-recursive listing also returns the "folders" directly below the prefix
+for entry in minio.list_objects("my-bucket", prefix="documents/"):
+    kind = "folder" if entry["is_prefix"] else "object"
+    logger.info(f"{kind}: {entry['object_name']}")
+
 # Get object metadata
 metadata = minio.stat_object("my-bucket", "document.pdf")
 logger.info(f"Content type: {metadata['content_type']}")
