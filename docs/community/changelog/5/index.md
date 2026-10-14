@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.12.1](5.12.1.md) | 2026-10-14 | Kafka consume spans end when the message is committed instead of at the next poll |
 | [5.12.0](5.12.0.md) | 2026-10-14 | SQLAlchemy, Kafka and Redis search tracing fixed; Temporal metrics scrape endpoint; `email.send` span; MinIO non-recursive listing returns folders |
 | [5.11.0](5.11.0.md) | 2026-10-13 | Security and correctness fixes across TOTP, passwords, JWT and the gRPC interceptors; **breaking:** minimum HMAC key length and handler `ValidationError` maps to `INTERNAL` |
 | [5.10.0](5.10.0.md) | 2026-10-12 | Decorators drop the `_decorator` suffix and detect async (old names deprecated); **breaking:** email send errors, Keycloak expired tokens and Saman 5xx now raise specific errors |
