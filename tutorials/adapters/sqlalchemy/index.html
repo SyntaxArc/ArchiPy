@@ -1005,6 +1005,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#telling-an-estimate-from-an-exact-total" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Telling an estimate from an exact total
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#count-cache" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3293,6 +3304,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#telling-an-estimate-from-an-exact-total" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Telling an estimate from an exact total
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#count-cache" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3362,8 +3384,29 @@ autovacuum and <code>ANALYZE</code> healthy.</p>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">count_threshold</span><span class="o">=</span><span class="mi">10_000</span><span class="p">,</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span>
 </span></code></pre></div>
-<p><code>COUNT_THRESHOLD</code> in the SQLAlchemy config sets the same threshold for every search that passes none. It is unset by
-default, which means the total is always exact.</p>
+<p><code>COUNT_THRESHOLD</code> in the SQLAlchemy config sets the same threshold for every search that passes none. When it is unset,
+<code>BaseConfig.set_global()</code> fills it with <code>PAGINATION.MAX_ITEMS</code> (default <code>10000</code>), the deepest <code>page * page_size</code> a
+<code>PaginationDTO</code> accepts, because past that row no page can be requested and an exact total is of no use. Set
+<code>COUNT_THRESHOLD</code> to a larger number to count exactly for longer.</p>
+<h2 id="telling-an-estimate-from-an-exact-total">Telling an estimate from an exact total<a class="headerlink" href="#telling-an-estimate-from-an-exact-total" title="Permanent link">&para;</a></h2>
+<p><code>execute_search_query</code> returns only the number, and the estimate is always above the threshold. A search output that
+extends <code>SearchOutputDTO</code> reports that as <code>total_count_estimated</code>, so an API can show "10000+" instead of an invented
+number:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.dtos.search_output_dto</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExactSearchOutputDTO</span><span class="p">,</span> <span class="n">SearchOutputDTO</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">SearchUsersOutputDTO</span><span class="p">(</span><span class="n">SearchOutputDTO</span><span class="p">):</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">UserDTO</span><span class="p">]</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">ListRolesOutputDTO</span><span class="p">(</span><span class="n">ExactSearchOutputDTO</span><span class="p">):</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">RoleDTO</span><span class="p">]</span>
+</span></code></pre></div>
+<p><code>SearchOutputDTO</code> reads <code>COUNT_THRESHOLD</code> from <code>POSTGRES_SQLALCHEMY</code> (set <code>count_threshold_config</code> in a subclass for
+another config) and is meaningful on PostgreSQL only, because the other databases count exactly.
+<code>ExactSearchOutputDTO</code> has the same fields with <code>total_count_estimated</code> always <code>false</code>, for searches that count on their
+own. A total that was counted exactly but is above the threshold, for example a first page larger than the threshold, is
+reported as estimated too.</p>
 <h2 id="count-cache">Count cache<a class="headerlink" href="#count-cache" title="Permanent link">&para;</a></h2>
 <p>With <code>COUNT_CACHE_ENABLED=true</code> each total is cached in process, so only the first page of a search runs a <code>COUNT</code> and
 later pages reuse the total. A total can be stale for up to the TTL, so a row created just before a search may be
