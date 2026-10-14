@@ -38,6 +38,8 @@ DURATION_HISTOGRAM_BUCKETS_S: tuple[float, ...] = (
     10.0,
 )
 
+_REDIS_SEARCH_GUARD_MARKER = "_archipy_original"
+_REDIS_SEARCH_ATTRIBUTES_NAME = "_add_search_attributes"
 _OTEL_INSTALL_HINT = 'OpenTelemetry requires the optional dependency. Install with: uv add "archipy[otel]"'
 _OTEL_FASTAPI_HINT = 'FastAPI OTel instrumentation requires: uv add "archipy[otel-fastapi]"'
 _OTEL_GRPC_HINT = 'gRPC OTel instrumentation requires: uv add "archipy[otel-grpc]"'
@@ -1357,10 +1359,12 @@ class OtelUtils:
                 instrumentor = instrumentor_cls()
                 if getattr(instrumentor, "is_instrumented_by_opentelemetry", False):
                     cls._instrumented_libraries.add(key)
+                    cls._after_library_instrumented(key)
                     logger.debug("Skipping already-instrumented library: %s", key)
                     continue
                 cls._instrument_with_providers(instrumentor)
                 cls._instrumented_libraries.add(key)
+                cls._after_library_instrumented(key)
                 logger.debug("Instrumented library: %s", key)
             except ImportError:
                 logger.debug("Skipping OTel instrumentation for %s (package not installed)", key)
@@ -1368,6 +1372,56 @@ class OtelUtils:
                 cls._handle_instrumentation_conflict(key, e.conflict, module_name, class_name, otel)
             except Exception:
                 logger.debug("Failed to instrument %s", key, exc_info=True)
+
+    @classmethod
+    def _after_library_instrumented(cls, key: str) -> None:
+        """Apply the workaround that belongs to an instrumentor once it is bound."""
+        if key == "redis":
+            cls._guard_redis_search_attributes()
+
+    @classmethod
+    def _guard_redis_search_attributes(cls) -> None:
+        """Keep ``opentelemetry-instrumentation-redis`` from raising into the application on a RESP3 search reply.
+
+        The instrumentor parses an ``FT.SEARCH`` reply as a list, but RESP3 (ArchiPy's default) returns a mapping,
+        so reading ``response[0]`` raises ``KeyError`` inside the caller's search. The guard calls the original and,
+        when it cannot read the reply, records what it can from a mapping reply instead of raising. Idempotent.
+        """
+        try:
+            import opentelemetry.instrumentation.redis as redis_instrumentation
+            from opentelemetry.instrumentation.redis import util as redis_util
+        except ImportError:
+            return
+        original = redis_util._add_search_attributes
+        if getattr(original, _REDIS_SEARCH_GUARD_MARKER, None) is not None:
+            return
+
+        def guarded(span: Any, response: Any, args: Any) -> None:
+            try:
+                original(span, response, args)
+            except KeyError, TypeError, IndexError:
+                logger.debug("Redis search reply not understood by the OTel instrumentor", exc_info=True)
+                total = response.get("total_results") if isinstance(response, dict) else None
+                if total is not None:
+                    span.set_attribute("redis.search.total", total)
+
+        setattr(guarded, _REDIS_SEARCH_GUARD_MARKER, original)
+        # The helper is imported by name into the instrumentor module, so both bindings are replaced.
+        for module in (redis_util, redis_instrumentation):
+            setattr(module, _REDIS_SEARCH_ATTRIBUTES_NAME, guarded)
+
+    @classmethod
+    def restore_redis_search_attributes(cls) -> None:
+        """Undo :meth:`_guard_redis_search_attributes` (used by tests that need the upstream behaviour)."""
+        try:
+            import opentelemetry.instrumentation.redis as redis_instrumentation
+            from opentelemetry.instrumentation.redis import util as redis_util
+        except ImportError:
+            return
+        original = getattr(redis_util._add_search_attributes, _REDIS_SEARCH_GUARD_MARKER, None)
+        if original is not None:
+            for module in (redis_util, redis_instrumentation):
+                setattr(module, _REDIS_SEARCH_ATTRIBUTES_NAME, original)
 
     @classmethod
     def _handle_instrumentation_conflict(
