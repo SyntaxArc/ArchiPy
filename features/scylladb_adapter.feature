@@ -245,3 +245,9 @@ Feature: ScyllaDB Adapter
     Given adapter spans are exported to the collector
     When I run a query through the ScyllaDB adapter
     Then the collector should have a span with attribute "db.system" containing "cassandra"
+
+  @async @needs-scylladb @needs-otel-collector
+  Scenario: Async ScyllaDB queries emit Cassandra spans
+    Given adapter spans are exported to the collector
+    When I run a query through the async ScyllaDB adapter
+    Then the collector should have a span with attribute "db.system" containing "cassandra"

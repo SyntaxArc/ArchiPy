@@ -80,6 +80,8 @@ def _attribute_matches(span, key: str, expected: str) -> bool:
 def step_adapter_spans_enabled(context):
     """Start OpenTelemetry against the collector with every instrumentor freshly bound."""
     _uninstrument_all()
+    # Leave no instrumentor bound for the scenarios of other features that share this process.
+    context.add_cleanup(_uninstrument_all)
     telemetry = _setup_collector_otel(context, traces=True, metrics=False)
     _collector(context).mark()
     get_current_scenario_context(context).store("adapter_span_telemetry", telemetry)
@@ -148,6 +150,16 @@ def step_redis_roundtrip(context):
     assert adapter.get(key) in ("value", b"value")
 
 
+@when("I set and get a key through the async Redis adapter")
+async def step_async_redis_roundtrip(context):
+    from archipy.adapters.redis.adapters import AsyncRedisAdapter
+
+    adapter = AsyncRedisAdapter()
+    key = f"span-async-{uuid.uuid4().hex[:8]}"
+    await adapter.set(key, "value")
+    assert await adapter.get(key) in ("value", b"value")
+
+
 # --- Kafka ---
 
 
@@ -208,6 +220,49 @@ def step_scylladb_query(context):
     adapter.execute("SELECT release_version FROM system.local")
 
 
+@when("I run a query through the async ScyllaDB adapter")
+async def step_async_scylladb_query(context):
+    from archipy.adapters.scylladb.adapters import AsyncScyllaDBAdapter
+
+    adapter = AsyncScyllaDBAdapter(BaseConfig.global_config().SCYLLADB)
+    await adapter.execute("SELECT release_version FROM system.local")
+
+
+# --- Elasticsearch ---
+
+
+def _follow_current_tracer_provider(adapter) -> None:
+    """Point the Elasticsearch client at the tracer provider ArchiPy currently owns.
+
+    The client resolves its tracer from the global provider once, when ``elasticsearch`` is imported. The
+    global provider can only be set once per process, so a provider that ArchiPy re-creates for another
+    scenario would otherwise never receive these spans. A service initializes OpenTelemetry once and is not affected.
+    """
+    adapter.client._otel.tracer = OtelUtils.get_tracer("elasticsearch-api")
+
+
+@when("I index and search a document through the Elasticsearch adapter")
+def step_elasticsearch_roundtrip(context):
+    from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
+
+    adapter = ElasticsearchAdapter(BaseConfig.global_config().ELASTIC)
+    _follow_current_tracer_provider(adapter)
+    index = f"span-{uuid.uuid4().hex[:8]}"
+    adapter.index(index=index, document={"title": "span probe"}, doc_id="1", refresh=True)
+    adapter.search(index=index, query={"query": {"match": {"title": "span"}}})
+
+
+@when("I index and search a document through the async Elasticsearch adapter")
+async def step_async_elasticsearch_roundtrip(context):
+    from archipy.adapters.elasticsearch.adapters import AsyncElasticsearchAdapter
+
+    adapter = AsyncElasticsearchAdapter(BaseConfig.global_config().ELASTIC)
+    _follow_current_tracer_provider(adapter)
+    index = f"span-async-{uuid.uuid4().hex[:8]}"
+    await adapter.index(index=index, document={"title": "span probe"}, doc_id="1", refresh=True)
+    await adapter.search(index=index, query={"query": {"match": {"title": "span"}}})
+
+
 # --- SQLAlchemy ---
 
 
@@ -231,6 +286,10 @@ def _sqlalchemy_adapter(db_type: str, *, is_async: bool):
         "AsyncPostgresSQlAlchemySessionManager",
         "MySQLSQlAlchemySessionManager",
         "AsyncMySQLSQlAlchemySessionManager",
+        "SQLiteSQLAlchemySessionManager",
+        "AsyncSQLiteSQLAlchemySessionManager",
+        "StarRocksSQlAlchemySessionManager",
+        "AsyncStarRocksSQlAlchemySessionManager",
     )
     if db_type == "postgres":
         from archipy.adapters.postgres.sqlalchemy.adapters import (
@@ -245,6 +304,26 @@ def _sqlalchemy_adapter(db_type: str, *, is_async: bool):
 
         adapter_class = AsyncMySQLSQLAlchemyAdapter if is_async else MySQLSQLAlchemyAdapter
         return adapter_class(orm_config=config.MYSQL_SQLALCHEMY)
+    if db_type == "starrocks":
+        from archipy.adapters.starrocks.sqlalchemy.adapters import (
+            AsyncStarrocksSQLAlchemyAdapter,
+            StarrocksSQLAlchemyAdapter,
+        )
+
+        adapter_class = AsyncStarrocksSQLAlchemyAdapter if is_async else StarrocksSQLAlchemyAdapter
+        return adapter_class(orm_config=config.STARROCKS_SQLALCHEMY)
+    if db_type == "sqlite":
+        from archipy.adapters.sqlite.sqlalchemy.adapters import (
+            AsyncSQLiteSQLAlchemyAdapter,
+            SQLiteSQLAlchemyAdapter,
+        )
+        from archipy.configs.config_template import SQLiteSQLAlchemyConfig
+
+        database = str(Path(tempfile.mkdtemp(prefix="span-sqlite-")) / "span.sqlite")
+        driver = "sqlite+aiosqlite" if is_async else "sqlite"
+        sqlite_config = SQLiteSQLAlchemyConfig(DRIVER_NAME=driver, DATABASE=database)
+        adapter_class = AsyncSQLiteSQLAlchemyAdapter if is_async else SQLiteSQLAlchemyAdapter
+        return adapter_class(orm_config=sqlite_config)
     raise AssertionError(f"Unsupported database type {db_type!r}")
 
 

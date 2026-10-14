@@ -338,9 +338,11 @@ Feature: SQLAlchemy Atomic Transactions
     Then the collector should have a database span for "<system>" containing statement "span_probe"
 
     Examples:
-      | db_type  | system     |
-      | postgres | postgresql |
-      | mysql    | mysql      |
+      | db_type   | system     |
+      | postgres  | postgresql |
+      | mysql     | mysql      |
+      | starrocks | starrocks  |
+      | sqlite    | sqlite     |
 
   @async @needs-otel-collector
   Scenario Outline: Async SQLAlchemy queries emit database spans
@@ -349,6 +351,8 @@ Feature: SQLAlchemy Atomic Transactions
     Then the collector should have a database span for "<system>" containing statement "span_probe"
 
     Examples:
-      | db_type  | system     |
-      | postgres | postgresql |
-      | mysql    | mysql      |
+      | db_type   | system     |
+      | postgres  | postgresql |
+      | mysql     | mysql      |
+      | starrocks | starrocks  |
+      | sqlite    | sqlite     |

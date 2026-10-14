@@ -1163,3 +1163,9 @@ Feature: Redis Testing
     Given adapter spans are exported to the collector
     When I set and get a key through the Redis adapter
     Then the collector should have a span with attribute "db.system" containing "redis"
+
+  @async @needs-otel-collector
+  Scenario: Async Redis adapter commands emit spans
+    Given adapter spans are exported to the collector
+    When I set and get a key through the async Redis adapter
+    Then the collector should have a span with attribute "db.system" containing "redis"

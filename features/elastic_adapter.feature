@@ -1,5 +1,5 @@
 # features/elasticsearch.feature
-@needs-elasticsearch
+@needs-elasticsearch @needs-otel-collector
 Feature: Elasticsearch Operations Testing
   As a developer
   I want to test Elasticsearch operations using the adapter pattern
@@ -152,3 +152,14 @@ Feature: Elasticsearch Operations Testing
     When I connect with username "elastic-user" and password "elastic-pass"
     Then the connection should be successful
     And I should be able to perform operations on the cluster
+
+  Scenario: Elasticsearch requests emit spans
+    Given adapter spans are exported to the collector
+    When I index and search a document through the Elasticsearch adapter
+    Then the collector should have a span with attribute "db.system.name" containing "elasticsearch"
+
+  @async
+  Scenario: Async Elasticsearch requests emit spans
+    Given adapter spans are exported to the collector
+    When I index and search a document through the async Elasticsearch adapter
+    Then the collector should have a span with attribute "db.system.name" containing "elasticsearch"
