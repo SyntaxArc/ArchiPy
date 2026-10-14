@@ -590,6 +590,17 @@ async def list_topics() -> dict[str, list[str]]:
         return {"topics": list(cluster_metadata.topics.keys())}
 ```
 
+## Tracing
+
+With the `archipy[otel-kafka]` extra and `OTEL__IS_ENABLED=true`, producers and consumers (sync and async) emit
+`send` and `recv` spans through the Confluent Kafka instrumentor.
+
+The instrumentor opens a `<topic> process` span when a message is polled. It ends when the next `poll`, `consume` or
+`close` runs, which would include idle time and make unrelated work its children. `KafkaConsumerAdapter.commit` therefore
+ends the span as soon as the offset is committed, so commit after the message is processed. A consumer that never
+commits (auto-commit) keeps the upstream behaviour. The async consumer adapter is not changed: its polls run in an
+executor thread, so its span still ends on the next poll or close.
+
 ## See Also
 
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining

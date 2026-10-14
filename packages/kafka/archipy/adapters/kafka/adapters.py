@@ -45,6 +45,31 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _end_consume_span(consumer: Consumer) -> None:
+    """End the OpenTelemetry consume span of the polled message once its offset is committed.
+
+    The Kafka instrumentor opens a ``<topic> process`` span when a message is polled and only ends it on the next
+    ``poll``, ``consume`` or ``close``. The span then outlives the processing of the message and stays the current
+    span of the thread, so spans of unrelated work become its children. A commit marks the end of processing,
+    so it ends the span there.
+
+    Args:
+        consumer: The underlying ``confluent_kafka.Consumer``. Consumers that are not instrumented are left alone.
+    """
+    span = getattr(consumer, "_current_consume_span", None)
+    if span is None:
+        return
+    token = getattr(consumer, "_current_context_token", None)
+    if token is not None:
+        from opentelemetry import context
+
+        context.detach(token)
+    # State owned by the instrumentor's consumer subclass, unknown to the confluent_kafka stubs.
+    consumer._current_context_token = None  # ty: ignore[unresolved-attribute]
+    span.end()
+    consumer._current_consume_span = None  # ty: ignore[unresolved-attribute]
+
+
 # Library/runtime failures observed at the Kafka client boundary.
 _KAFKA_CLIENT_ERRORS: tuple[type[Exception], ...] = (
     KafkaException,
@@ -407,6 +432,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "commit")
         else:
+            _end_consume_span(self._adapter)
             return result
 
     @override

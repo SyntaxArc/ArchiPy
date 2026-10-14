@@ -189,10 +189,9 @@ def step_kafka_roundtrip(context, topic):
     message = None
     while message is None and time.monotonic() < deadline:
         message = consumer.poll(timeout=1)
-    # Closing the consumer ends the instrumentor's open consume span; left open it stays the current span of
-    # this thread and becomes the sampled parent of every span the next scenarios create.
-    consumer.close()
     assert message is not None, "Consumer received no message"
+    # The consume span must end with the commit, not with a later poll or close.
+    consumer.commit(message, asynchronous=False)
 
 
 # --- MinIO / botocore ---
@@ -367,3 +366,13 @@ def step_requests_call(context):
     vault = BaseConfig.global_config().VAULT
     response = requests.get(f"{vault.ADDR}/v1/sys/health", timeout=5)
     assert response.status_code in (200, 429, 472, 473), response.text
+
+
+@then("no span of this thread should be left active")
+def step_no_active_span(context):
+    """A consume span that outlives the commit would stay the current span and parent unrelated work."""
+    from opentelemetry import trace
+
+    assert not trace.get_current_span().get_span_context().is_valid, (
+        f"A span is still active in this thread: {trace.get_current_span()}"
+    )

@@ -171,3 +171,10 @@ Feature: Kafka Adapter Operations Testing
     Given adapter spans are exported to the collector
     When I produce and consume a message on topic "span-topic-async" through the async Kafka adapters
     Then the collector should have a span with attribute "messaging.system" containing "kafka"
+
+  @needs-otel-collector
+  Scenario: Kafka consume span ends when the message is committed
+    Given adapter spans are exported to the collector
+    When I produce and consume a message on topic "span-topic-commit" through the Kafka adapters
+    Then the collector should have a span whose name contains "span-topic-commit process"
+    And no span of this thread should be left active
