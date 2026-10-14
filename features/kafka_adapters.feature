@@ -165,6 +165,7 @@ Feature: Kafka Adapter Operations Testing
     Given adapter spans are exported to the collector
     When I produce and consume a message on topic "span-topic" through the Kafka adapters
     Then the collector should have a span with attribute "messaging.system" containing "kafka"
+    And no span of this thread should be left active
 
   @needs-otel-collector
   Scenario: Async Kafka producer and consumer emit spans

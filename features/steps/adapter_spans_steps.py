@@ -35,6 +35,20 @@ _INSTRUMENTORS = (
 )
 
 
+def _unwrap_kafka_consumer_leftovers() -> None:
+    """Remove the consumer wrappers the Kafka instrumentor forgets to unwrap.
+
+    ``ConfluentKafkaInstrumentor.uninstrument`` unwraps ``poll`` but not ``consume`` or ``close``. Instrumenting
+    again then wraps ``consume`` twice, so one batch creates two consume spans and the first is never ended.
+    """
+    from opentelemetry.instrumentation.confluent_kafka import AutoInstrumentedConsumer
+    from opentelemetry.instrumentation.utils import unwrap
+
+    for method in ("consume", "close"):
+        if hasattr(getattr(AutoInstrumentedConsumer, method), "__wrapped__"):
+            unwrap(AutoInstrumentedConsumer, method)
+
+
 def _uninstrument_all() -> None:
     """Remove stale instrumentors left from an earlier scenario.
 
@@ -51,6 +65,8 @@ def _uninstrument_all() -> None:
         if getattr(instrumentor, "is_instrumented_by_opentelemetry", False):
             try:
                 instrumentor.uninstrument()
+                if class_name == "ConfluentKafkaInstrumentor":
+                    _unwrap_kafka_consumer_leftovers()
             except Exception:
                 # The SQLAlchemy instrumentor unwraps the engine factories first and then removes the engine
                 # listeners one by one; it raises when a listener of an already collected engine is gone. Drop
