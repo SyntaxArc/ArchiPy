@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from functools import wraps
 from typing import TYPE_CHECKING, Any, cast
 
-from archipy.helpers.decorators._deprecation_alias import deprecated_alias
+from archipy.helpers._deprecation import deprecated_alias
 from archipy.models.errors import InvalidArgumentError, ResourceExhaustedError
 
 if TYPE_CHECKING:

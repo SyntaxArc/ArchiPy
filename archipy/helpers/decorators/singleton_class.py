@@ -6,7 +6,7 @@ import threading
 from contextlib import nullcontext
 from typing import TYPE_CHECKING, Any
 
-from archipy.helpers.decorators._deprecation_alias import deprecated_alias
+from archipy.helpers._deprecation import deprecated_alias
 
 if TYPE_CHECKING:
     from collections.abc import Callable

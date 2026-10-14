@@ -8,7 +8,7 @@ import time
 from functools import wraps
 from typing import TYPE_CHECKING, Any, cast
 
-from archipy.helpers.decorators._deprecation_alias import deprecated_alias
+from archipy.helpers._deprecation import deprecated_alias
 
 if TYPE_CHECKING:
     from collections.abc import Callable

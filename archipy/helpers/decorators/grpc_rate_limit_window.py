@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from archipy.helpers.decorators._deprecation_alias import deprecated_alias
+from archipy.helpers._deprecation import deprecated_alias
 from archipy.helpers.utils.rate_limit_utils import RateLimitUtils
 
 if TYPE_CHECKING:

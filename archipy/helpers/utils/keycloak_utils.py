@@ -28,11 +28,6 @@ from archipy.models.errors import (
     TokenExpiredError,
     UnauthenticatedError,
 )
-from archipy.models.errors.base_error import (
-    GRPC_AVAILABLE,
-    AsyncServicerContext,
-    ServicerContext,
-)
 from archipy.models.types.actor_type import ActorType
 from archipy.models.types.language_type import LanguageType
 
@@ -164,27 +159,28 @@ def _shared_async_adapter() -> AsyncKeycloakAdapter:
 
 
 def _abort_grpc_sync_if_servicer_context(error: BaseError, context: object) -> None:
-    """Invoke ``error.abort_grpc_sync`` when ``context`` is a sync gRPC servicer context."""
-    if not GRPC_AVAILABLE or not hasattr(error, "abort_grpc_sync"):
-        return
-    if isinstance(context, ServicerContext):
-        error.abort_grpc_sync(context)
+    """Abort ``context`` with ``error`` when it is a sync gRPC servicer context."""
+    if GRPC_AVAILABLE and isinstance(context, ServicerContext):
+        abort_grpc(error, context)
 
 
 async def _abort_grpc_async_if_servicer_context(error: BaseError, context: object) -> None:
-    """Invoke ``error.abort_grpc_async`` when ``context`` is an async gRPC servicer context."""
-    if not GRPC_AVAILABLE or not hasattr(error, "abort_grpc_async"):
-        return
-    if isinstance(context, AsyncServicerContext):
-        await error.abort_grpc_async(context)
+    """Abort ``context`` with ``error`` when it is an async gRPC servicer context."""
+    if GRPC_AVAILABLE and isinstance(context, AsyncServicerContext):
+        await abort_grpc(error, context)
 
 
 try:
-    from grpc import StatusCode as _GrpcStatusCode
-    from grpc.aio import AbortError as _GrpcAioAbortError
+    from grpc import ServicerContext, StatusCode as _GrpcStatusCode
+    from grpc.aio import AbortError as _GrpcAioAbortError, ServicerContext as AsyncServicerContext
+
+    from archipy.helpers.errors.grpc.abort import abort_grpc
+
+    GRPC_AVAILABLE = True
 
     _AIO_ABORT_ERRORS: tuple[type[BaseException], ...] = (_GrpcAioAbortError,)
 except ImportError:
+    GRPC_AVAILABLE = False
     _GrpcStatusCode = None
     _AIO_ABORT_ERRORS = ()
 

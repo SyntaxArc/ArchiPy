@@ -1,4 +1,4 @@
-"""DTOs for FastAPI exception responses."""
+"""DTOs describing error responses in the OpenAPI documentation."""
 
 from __future__ import annotations
 

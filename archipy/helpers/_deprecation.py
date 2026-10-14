@@ -1,4 +1,4 @@
-"""Helpers for keeping deprecated decorator names working while warning callers."""
+"""Helpers for keeping deprecated names working while warning callers."""
 
 from __future__ import annotations
 

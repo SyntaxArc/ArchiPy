@@ -9,6 +9,7 @@ from math import ceil
 from typing import TYPE_CHECKING
 
 from archipy.configs.base_config import BaseConfig
+from archipy.helpers.errors.grpc.abort import abort_grpc
 from archipy.helpers.interceptors.grpc.base.server_interceptor import (
     BaseAsyncGrpcServerInterceptor,
     BaseGrpcServerInterceptor,
@@ -171,9 +172,10 @@ class _GrpcRateLimitInterceptorMixin:
                 return str(self._identifier_fn(context, method_name_model))
             except Exception as exc:
                 if self._fail_closed:
-                    UnavailableError(
-                        additional_data={"detail": "Rate limiter identity resolution failed"},
-                    ).abort_grpc_sync(context)
+                    abort_grpc(
+                        UnavailableError(additional_data={"detail": "Rate limiter identity resolution failed"}),
+                        context,
+                    )
                     raise RuntimeError("unreachable") from exc
                 logger.warning("Rate limiter identity resolution failed; the call is not rate limited", exc_info=True)
                 return None
@@ -200,9 +202,10 @@ class _GrpcRateLimitInterceptorMixin:
                 return str(result)
             except Exception as exc:
                 if self._fail_closed:
-                    await UnavailableError(
-                        additional_data={"detail": "Rate limiter identity resolution failed"},
-                    ).abort_grpc_async(context)
+                    await abort_grpc(
+                        UnavailableError(additional_data={"detail": "Rate limiter identity resolution failed"}),
+                        context,
+                    )
                     raise RuntimeError("unreachable") from exc
                 logger.warning("Rate limiter identity resolution failed; the call is not rate limited", exc_info=True)
                 return None
@@ -219,14 +222,17 @@ class _GrpcRateLimitInterceptorMixin:
 
     def _abort_rate_limited_sync(self, context: grpc.ServicerContext, window: RateLimitWindowDTO, pexpire: int) -> None:
         """Abort a sync RPC with RESOURCE_EXHAUSTED when a window is breached."""
-        RateLimitExceededError(
-            retry_after=self._retry_after_seconds(pexpire, window.window_ms),
-            additional_data={
-                "limit": window.calls_count,
-                "window_ms": window.window_ms,
-                "remaining": 0,
-            },
-        ).abort_grpc_sync(context)
+        abort_grpc(
+            RateLimitExceededError(
+                retry_after=self._retry_after_seconds(pexpire, window.window_ms),
+                additional_data={
+                    "limit": window.calls_count,
+                    "window_ms": window.window_ms,
+                    "remaining": 0,
+                },
+            ),
+            context,
+        )
 
     async def _abort_rate_limited_async(
         self,
@@ -235,22 +241,25 @@ class _GrpcRateLimitInterceptorMixin:
         pexpire: int,
     ) -> None:
         """Abort an async RPC with RESOURCE_EXHAUSTED when a window is breached."""
-        await RateLimitExceededError(
-            retry_after=self._retry_after_seconds(pexpire, window.window_ms),
-            additional_data={
-                "limit": window.calls_count,
-                "window_ms": window.window_ms,
-                "remaining": 0,
-            },
-        ).abort_grpc_async(context)
+        await abort_grpc(
+            RateLimitExceededError(
+                retry_after=self._retry_after_seconds(pexpire, window.window_ms),
+                additional_data={
+                    "limit": window.calls_count,
+                    "window_ms": window.window_ms,
+                    "remaining": 0,
+                },
+            ),
+            context,
+        )
 
     def _abort_unavailable_sync(self, context: grpc.ServicerContext, *, detail: str) -> None:
         """Abort a sync RPC when the rate limiter backend is unavailable."""
-        UnavailableError(additional_data={"detail": detail}).abort_grpc_sync(context)
+        abort_grpc(UnavailableError(additional_data={"detail": detail}), context)
 
     async def _abort_unavailable_async(self, context: grpc.aio.ServicerContext, *, detail: str) -> None:
         """Abort an async RPC when the rate limiter backend is unavailable."""
-        await UnavailableError(additional_data={"detail": detail}).abort_grpc_async(context)
+        await abort_grpc(UnavailableError(additional_data={"detail": detail}), context)
 
     @staticmethod
     async def _invoke_maybe_async_handler(method: Callable, request: object, context: object) -> object:

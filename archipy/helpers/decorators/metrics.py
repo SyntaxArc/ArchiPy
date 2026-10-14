@@ -10,7 +10,7 @@ import time
 from typing import TYPE_CHECKING, Any, Protocol
 
 from archipy.configs.base_config import BaseConfig
-from archipy.helpers.decorators._deprecation_alias import warn_deprecated_name
+from archipy.helpers._deprecation import warn_deprecated_name
 from archipy.helpers.utils.otel_utils import DURATION_HISTOGRAM_BUCKETS_S, OtelUtils
 from archipy.models.errors import InvalidArgumentError
 

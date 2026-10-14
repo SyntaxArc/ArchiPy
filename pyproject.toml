@@ -212,6 +212,7 @@ docstring-code-line-length = "dynamic"
 "archipy/helpers/utils/app_utils.py" = ["PLC0415"]  # Allow lazy imports for optional dependencies
 "archipy/helpers/utils/jwt_utils.py" = ["PLC0415"]  # Allow lazy imports for optional dependencies
 "archipy/helpers/utils/error_utils.py" = ["PLC0415"]  # Allow lazy imports for optional dependencies
+"archipy/helpers/errors/capture.py" = ["PLC0415"]  # Lazy optional OpenTelemetry import
 "packages/elasticsearch/archipy/adapters/elasticsearch/ports.py" = ["ANN401"]  # Allow Any type for **kwargs parameters
 "packages/keycloak/archipy/adapters/keycloak/port_mixins/*" = ["ANN401", "PLR0913", "PLR0917"]  # Port mixins inherit ports.py ANN401 exemption
 "packages/redis/archipy/adapters/redis/port_mixins/*" = ["ANN401", "ARG002", "PLR0913", "PLR0917"]  # Port mixins: Any types and unused interface params

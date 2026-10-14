@@ -20,7 +20,7 @@ from sqlalchemy.exc import (
 )
 
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
-from archipy.helpers.decorators._deprecation_alias import deprecated_alias, warn_deprecated_name
+from archipy.helpers._deprecation import deprecated_alias, warn_deprecated_name
 from archipy.models.errors import (
     BaseError,
     DatabaseConfigurationError,

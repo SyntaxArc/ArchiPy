@@ -5,15 +5,10 @@ from __future__ import annotations
 import logging
 import re
 from concurrent import futures
-from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
-from pydantic import ValidationError
-
 from archipy.configs.base_config import BaseConfig
-from archipy.helpers.utils.base_utils import BaseUtils
 from archipy.models.errors import (
-    BaseError,
     ConfigurationError,
     InvalidArgumentError,
     UnavailableError,
@@ -48,88 +43,15 @@ except ImportError:
     create_grpc_server: CreateGrpcServerType | None = None
 
 try:
-    from fastapi import FastAPI, Request, Response
-    from fastapi.exceptions import RequestValidationError
+    from fastapi import FastAPI
     from fastapi.middleware.gzip import GZipMiddleware
     from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
     from fastapi.middleware.trustedhost import TrustedHostMiddleware
-    from fastapi.responses import JSONResponse
     from starlette.middleware.cors import CORSMiddleware
 
     FASTAPI_APP = True
 except ImportError:
     FASTAPI_APP = False
-
-
-class FastAPIExceptionHandler:
-    """Handles various types of errors and converts them to appropriate JSON responses."""
-
-    @staticmethod
-    def create_error_response(exception: BaseError, *, capture: bool = True) -> JSONResponse:
-        """Creates a standardized error response.
-
-        Args:
-            exception (BaseError): The exception to be converted into a response.
-            capture (bool): Whether to log and record ``exception`` first. Pass False when the underlying
-                cause was already captured. Defaults to True.
-
-        Returns:
-            JSONResponse: A JSON response containing the exception details.
-        """
-        if capture:
-            BaseUtils.capture_exception(exception)
-        # Default to internal server error if status code is not set
-        status_code = exception.http_status or HTTPStatus.INTERNAL_SERVER_ERROR.value
-        return JSONResponse(status_code=status_code, content=exception.to_dict())
-
-    @staticmethod
-    async def custom_exception_handler(_request: Request, exception: BaseError) -> JSONResponse:
-        """Handles custom errors.
-
-        Args:
-            _request (Request): The incoming request.
-            exception (BaseError): The custom exception to handle.
-
-        Returns:
-            JSONResponse: A JSON response containing the exception details.
-        """
-        return FastAPIExceptionHandler.create_error_response(exception)
-
-    @staticmethod
-    async def generic_exception_handler(_request: Request, exception: Exception) -> JSONResponse:
-        """Handles generic errors.
-
-        Args:
-            _request (Request): The incoming request.
-            exception (Exception): The generic exception to handle.
-
-        Returns:
-            JSONResponse: A JSON response containing the exception details.
-        """
-        # Record the real failure (with its traceback); the client only gets the generic error.
-        BaseUtils.capture_exception(exception)
-        return FastAPIExceptionHandler.create_error_response(UnknownError(), capture=False)
-
-    @staticmethod
-    async def validation_exception_handler(
-        _request: Request,
-        exception: ValidationError,
-    ) -> JSONResponse:
-        """Handles validation errors.
-
-        Args:
-            _request (Request): The incoming request.
-            exception (ValidationError): The validation exception to handle.
-
-        Returns:
-            JSONResponse: A JSON response containing the validation error details.
-        """
-        BaseUtils.capture_exception(exception)
-        errors = BaseUtils.format_validation_errors(exception)
-        return JSONResponse(
-            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
-            content={"error": "VALIDATION_ERROR", "detail": errors},
-        )
 
 
 class FastAPIUtils:
@@ -327,52 +249,6 @@ class FastAPIUtils:
         if exclude is not None:
             telemetry["exclude"] = exclude
         return telemetry
-
-    @staticmethod
-    def setup_exception_handlers(app: FastAPI) -> None:
-        """Configures exception handlers for the FastAPI application.
-
-        Args:
-            app (FastAPI): The FastAPI application instance.
-        """
-
-        # These handlers return JSONResponse which is a subclass of Response,
-        # so they are compatible with FastAPI's exception handler requirements.
-        # We create wrapper functions to match the expected signature
-        async def validation_wrapper(request: Request, exception: Exception) -> Response:
-            if isinstance(exception, ValidationError):
-                return await FastAPIExceptionHandler.validation_exception_handler(request, exception)
-            if isinstance(exception, RequestValidationError):
-                # RequestValidationError has errors() method that returns validation errors
-                # Format them directly since RequestValidationError has a similar structure
-                BaseUtils.capture_exception(exception)
-                formatted_errors = []
-                for error in exception.errors():
-                    error_dict = {
-                        "field": ".".join(str(x) for x in error.get("loc", [])),
-                        "message": error.get("msg", ""),
-                    }
-                    if "type" in error:
-                        error_dict["type"] = error["type"]
-                    formatted_errors.append(error_dict)
-                return JSONResponse(
-                    status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
-                    content={"error": "VALIDATION_ERROR", "detail": formatted_errors},
-                )
-            return await FastAPIExceptionHandler.generic_exception_handler(request, exception)
-
-        async def custom_wrapper(request: Request, exception: Exception) -> Response:
-            if isinstance(exception, BaseError):
-                return await FastAPIExceptionHandler.custom_exception_handler(request, exception)
-            return await FastAPIExceptionHandler.generic_exception_handler(request, exception)
-
-        async def generic_wrapper(request: Request, exception: Exception) -> Response:
-            return await FastAPIExceptionHandler.generic_exception_handler(request, exception)
-
-        app.add_exception_handler(RequestValidationError, validation_wrapper)
-        app.add_exception_handler(ValidationError, validation_wrapper)
-        app.add_exception_handler(BaseError, custom_wrapper)
-        app.add_exception_handler(Exception, generic_wrapper)
 
 
 def _prepend_otel_grpc_metrics_interceptor(interceptors: list, *, async_mode: bool) -> None:
@@ -607,10 +483,12 @@ class AppUtils:
         Returns:
             FastAPI: The configured FastAPI application instance.
         """
+        from archipy.helpers.errors.fastapi import get_fastapi_exception_responses, setup_exception_handlers
+
         config = config or BaseConfig.global_config()
 
         # Define common responses for all endpoints
-        common_responses = BaseUtils.get_fastapi_exception_responses(
+        common_responses = get_fastapi_exception_responses(
             [UnknownError, UnavailableError, InvalidArgumentError],
         )
         # Convert dict[int, ...] to dict[int | str, ...] for FastAPI compatibility
@@ -637,7 +515,7 @@ class AppUtils:
         FastAPIUtils.setup_trusted_host(app, config)
 
         if configure_exception_handlers:
-            FastAPIUtils.setup_exception_handlers(app)
+            setup_exception_handlers(app)
 
         return app
 
@@ -662,11 +540,23 @@ class AppUtils:
         config: BaseConfig,
         customized_interceptors: Sequence[Any] | AbstractSet[Any] | None = None,
         compression: grpc.Compression | None = None,
+        *,
+        validation_errors_as_internal: bool = False,
     ) -> GrpcAioServer:
-        """Create and configure an async gRPC application."""
-        from archipy.helpers.interceptors.grpc.exception import AsyncGrpcServerExceptionInterceptor
+        """Create and configure an async gRPC application.
 
-        async_interceptors = [AsyncGrpcServerExceptionInterceptor()]
+        Args:
+            config: The application config.
+            customized_interceptors: Extra interceptors appended after the built-in ones.
+            compression: The server compression.
+            validation_errors_as_internal: Report a pydantic ``ValidationError`` raised by a handler as INTERNAL
+                instead of INVALID_ARGUMENT. Defaults to False.
+        """
+        from archipy.helpers.errors.grpc import GrpcExceptionInterceptor
+
+        async_interceptors: list[Any] = [
+            GrpcExceptionInterceptor(aio=True, validation_errors_as_internal=validation_errors_as_internal),
+        ]
 
         # OTel inserts at 0 → order: OTel → exception → rate-limit → custom
         AsyncGrpcAPIUtils.setup_otel_interceptor(config, async_interceptors)
@@ -691,11 +581,23 @@ class AppUtils:
         config: BaseConfig,
         customized_interceptors: Sequence[Any] | AbstractSet[Any] | None = None,
         compression: grpc.Compression | None = None,
+        *,
+        validation_errors_as_internal: bool = False,
     ) -> grpc.Server:
-        """Create and configure a synchronous gRPC server."""
-        from archipy.helpers.interceptors.grpc.exception import GrpcServerExceptionInterceptor
+        """Create and configure a synchronous gRPC server.
 
-        interceptors: list[grpc.ServerInterceptor] = [GrpcServerExceptionInterceptor()]
+        Args:
+            config: The application config.
+            customized_interceptors: Extra interceptors appended after the built-in ones.
+            compression: The server compression.
+            validation_errors_as_internal: Report a pydantic ``ValidationError`` raised by a handler as INTERNAL
+                instead of INVALID_ARGUMENT. Defaults to False.
+        """
+        from archipy.helpers.errors.grpc import GrpcExceptionInterceptor
+
+        interceptors: list[Any] = [
+            GrpcExceptionInterceptor(validation_errors_as_internal=validation_errors_as_internal),
+        ]
 
         # OTel inserts at 0 → order: OTel → exception → rate-limit → custom
         GrpcAPIUtils.setup_otel_interceptor(config, interceptors)
