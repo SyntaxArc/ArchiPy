@@ -182,6 +182,7 @@ nav:
       - Helpers:
           - Overview: api_reference/helpers/index.md
           - Decorators: api_reference/helpers/decorators.md
+          - Errors: api_reference/helpers/errors.md
           - Interceptors: api_reference/helpers/interceptors.md
           - Metaclasses: api_reference/helpers/metaclasses.md
           - Utils: api_reference/helpers/utils.md

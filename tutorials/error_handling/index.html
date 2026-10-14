@@ -2436,6 +2436,8 @@
       
         
       
+        
+      
     
     
     
@@ -2507,6 +2509,34 @@
     
   
     Decorators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api_reference/helpers/errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors
   
 
     
@@ -3695,13 +3725,13 @@ makes debugging nearly impossible in production.</p>
 </span><span id="__span-3-67"><a id="__codelineno-3-67" name="__codelineno-3-67" href="#__codelineno-3-67"></a>        <span class="k">raise</span>
 </span></code></pre></div>
 <h2 id="error-logging-and-monitoring">Error Logging and Monitoring<a class="headerlink" href="#error-logging-and-monitoring" title="Permanent link">&para;</a></h2>
-<p>Use <code>BaseUtils.capture_exception</code> to log locally and record the exception on the <strong>current
+<p>Use <code>capture_exception</code> from <code>archipy.helpers.errors</code> to log locally and record the exception on the <strong>current
 OpenTelemetry span</strong> when <code>OTEL.IS_ENABLED</code> is true. There is no Sentry or Elastic APM capture
 path in ArchiPy 5.x.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.base_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseUtils</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">capture_exception</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">BaseError</span><span class="p">,</span>
 </span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">ConfigurationError</span><span class="p">,</span>
@@ -3731,7 +3761,7 @@ path in ArchiPy 5.x.</p>
 </span><span id="__span-4-31"><a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>    <span class="p">)</span>
 </span><span id="__span-4-32"><a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a>
 </span><span id="__span-4-33"><a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="p">(</span><span class="n">InternalError</span><span class="p">,</span> <span class="n">UnknownError</span><span class="p">,</span> <span class="n">ConfigurationError</span><span class="p">)):</span>
-</span><span id="__span-4-34"><a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a>        <span class="n">BaseUtils</span><span class="o">.</span><span class="n">capture_exception</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+</span><span id="__span-4-34"><a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a>        <span class="n">capture_exception</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
 </span><span id="__span-4-35"><a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a>
 </span><span id="__span-4-36"><a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a>
 </span><span id="__span-4-37"><a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a><span class="k">def</span><span class="w"> </span><span class="nf">process_request</span><span class="p">(</span><span class="n">request_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>

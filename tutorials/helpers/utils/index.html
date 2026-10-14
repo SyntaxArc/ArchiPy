@@ -2458,6 +2458,8 @@
       
         
       
+        
+      
     
     
     
@@ -2529,6 +2531,34 @@
     
   
     Decorators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api_reference/helpers/errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors
   
 
     
@@ -3642,8 +3672,8 @@ comprehensive patterns using ArchiPy's domain-specific exceptions.</p>
 </span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="c1"># Create a FastAPI app with standard config</span>
 </span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">(</span><span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">())</span>
 </span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="c1"># Add custom exception handlers</span>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="n">FastAPIUtils</span><span class="o">.</span><span class="n">setup_exception_handlers</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="c1"># AppUtils.create_fastapi_app already registers the exception handlers</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="c1"># (archipy.helpers.errors.fastapi.setup_exception_handlers); pass configure_exception_handlers=False to skip them.</span>
 </span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
 </span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>
 </span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="c1"># Set up CORS (reads origins from config.FASTAPI.CORS_MIDDLEWARE_ALLOW_ORIGINS)</span>

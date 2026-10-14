@@ -2564,6 +2564,8 @@
       
         
       
+        
+      
     
     
     
@@ -2635,6 +2637,34 @@
     
   
     Decorators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api_reference/helpers/errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors
   
 
     
@@ -4303,16 +4333,16 @@ explicit second buckets and a description. <code>status</code> aligns with traci
 <code>error</code>. No-op when OTel or <code>METRICS_ENABLED</code> is off.</p>
 <hr />
 <h2 id="exception-capture">Exception Capture<a class="headerlink" href="#exception-capture" title="Permanent link">&para;</a></h2>
-<p><code>BaseUtils.capture_exception</code> always logs locally. When OTel is enabled and a recording span
+<p><code>archipy.helpers.errors.capture_exception</code> always logs locally. When OTel is enabled and a recording span
 is active, it records the exception on the <strong>current span</strong> and sets span status — it does not
 send to Sentry or Elastic APM:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.base_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseUtils</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">capture_exception</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">InternalError</span>
 </span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
 </span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="k">try</span><span class="p">:</span>
 </span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>    <span class="k">raise</span> <span class="n">InternalError</span><span class="p">()</span>
 </span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="k">except</span> <span class="n">InternalError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>    <span class="n">BaseUtils</span><span class="o">.</span><span class="n">capture_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>    <span class="n">capture_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
 </span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>    <span class="k">raise</span>
 </span></code></pre></div>
 <hr />
