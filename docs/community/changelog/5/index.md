@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.13.0](5.13.0.md) | 2026-10-14 | Cheaper search totals: `count_threshold` with a PostgreSQL estimate, opt-in count cache, skipped `COUNT` on short pages |
 | [5.12.1](5.12.1.md) | 2026-10-14 | Kafka consume spans end when the message is committed instead of at the next poll |
 | [5.12.0](5.12.0.md) | 2026-10-14 | SQLAlchemy, Kafka and Redis search tracing fixed; Temporal metrics scrape endpoint; `email.send` span; MinIO non-recursive listing returns folders |
 | [5.11.0](5.11.0.md) | 2026-10-13 | Security and correctness fixes across TOTP, passwords, JWT and the gRPC interceptors; **breaking:** minimum HMAC key length and handler `ValidationError` maps to `INTERNAL` |
