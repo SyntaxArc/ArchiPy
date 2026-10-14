@@ -761,3 +761,23 @@ Feature: OpenTelemetry decorators
     Then the library "httpx" should not be auto-instrumented
     And the library "httpx2" should be auto-instrumented
     And no OpenTelemetry instrumentor error should be logged
+    And no OpenTelemetry warning should be logged for "httpx"
+
+  Scenario: SQLAlchemy newer than the instrumentor range is instrumented anyway
+    Given the SQLAlchemy instrumentor is not bound yet
+    When I run auto-instrumentation of installed libraries
+    Then the library "sqlalchemy" should be auto-instrumented
+    And an OpenTelemetry warning should say that the version check is bypassed for "sqlalchemy"
+
+  Scenario: SQLAlchemy removed from the skip list is reported instead of instrumented
+    Given the SQLAlchemy instrumentor is not bound yet
+    And the OTEL instrumentation skip list is empty
+    When I run auto-instrumentation of installed libraries
+    Then the library "sqlalchemy" should not be auto-instrumented
+    And an OpenTelemetry warning should say that "sqlalchemy" emits no spans
+
+  Scenario: installed library outside the instrumentor range is warned about
+    Given the httpx instrumentor targets a library version that is not installed
+    When I run auto-instrumentation of installed libraries
+    Then the library "httpx" should not be auto-instrumented
+    And an OpenTelemetry warning should say that "httpx" emits no spans because of its version range

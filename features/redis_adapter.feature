@@ -1157,3 +1157,9 @@ Feature: Redis Testing
     Examples: Cluster shard ratio
       | adapter_type | index_name        | prefix | doc_id   | ratio |
       | cluster      | cluster-shard-knn | {srch} | {srch}:1 | 0.5   |
+
+  @needs-otel-collector
+  Scenario: Redis adapter commands emit spans
+    Given adapter spans are exported to the collector
+    When I set and get a key through the Redis adapter
+    Then the collector should have a span with attribute "db.system" containing "redis"

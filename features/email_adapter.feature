@@ -197,3 +197,9 @@ Feature: Email adapter
     And I wait 1.2 seconds
     And I take a connection from the pool
     Then the first SMTP session was closed
+
+  @needs-otel-collector
+  Scenario: httpx2 client calls emit HTTP spans
+    Given adapter spans are exported to the collector
+    When I call the Mailpit API with httpx2
+    Then the collector should have a span with attribute "http.url" containing "/api/v1/info"

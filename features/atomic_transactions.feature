@@ -293,16 +293,26 @@ Feature: SQLAlchemy Atomic Transactions
       | sync  |
       | async |
 
-  @unit
   Scenario Outline: The atomic marker is cleared once the outermost block exits
-    Given a fake <mode> session behind the atomic decorator
-    When the atomic function succeeds
-    Then the session should carry no atomic marker
+    Given the application database is initialized for <db_type>
+    When a nested atomic block succeeds on <db_type>
+    Then the atomic marker should be set in both blocks and cleared only after the outermost one
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | db_type  |
+      | postgres |
+      | mysql    |
+
+  @async
+  Scenario Outline: The atomic marker is cleared once the outermost async block exits
+    Given the application database is initialized for <db_type>
+    When a nested async atomic block succeeds on <db_type>
+    Then the atomic marker should be set in both blocks and cleared only after the outermost one
+
+    Examples:
+      | db_type  |
+      | postgres |
+      | mysql    |
 
   @unit
   Scenario Outline: Driver error codes map to specific database errors
@@ -320,3 +330,25 @@ Feature: SQLAlchemy Atomic Transactions
       | integrity   | 1451  | DatabaseConstraintError    |
       | integrity   | 23505 | DatabaseConstraintError    |
       | integrity   | 1048  | DatabaseIntegrityError     |
+
+  @needs-otel-collector
+  Scenario Outline: SQLAlchemy queries emit database spans
+    Given adapter spans are exported to the collector
+    When I run a query through the <db_type> SQLAlchemy adapter
+    Then the collector should have a database span for "<system>" containing statement "span_probe"
+
+    Examples:
+      | db_type  | system     |
+      | postgres | postgresql |
+      | mysql    | mysql      |
+
+  @async @needs-otel-collector
+  Scenario Outline: Async SQLAlchemy queries emit database spans
+    Given adapter spans are exported to the collector
+    When I run a query through the <db_type> SQLAlchemy adapter asynchronously
+    Then the collector should have a database span for "<system>" containing statement "span_probe"
+
+    Examples:
+      | db_type  | system     |
+      | postgres | postgresql |
+      | mysql    | mysql      |

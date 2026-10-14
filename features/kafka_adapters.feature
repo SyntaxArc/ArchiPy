@@ -159,3 +159,9 @@ Feature: Kafka Adapter Operations Testing
     Then the async consumer should receive 5 messages from topic "test-topic-batch-consume-async" with group "test-group-batch-consume-async"
     And I async commit the batch for topic "test-topic-batch-consume-async" with group "test-group-batch-consume-async"
     And the async commit should succeed
+
+  @needs-otel-collector
+  Scenario: Kafka producer and consumer emit spans
+    Given adapter spans are exported to the collector
+    When I produce and consume a message on topic "span-topic" through the Kafka adapters
+    Then the collector should have a span with attribute "messaging.system" containing "kafka"

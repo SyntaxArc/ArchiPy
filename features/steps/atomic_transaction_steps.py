@@ -44,6 +44,7 @@ from archipy.helpers.decorators import (
     sqlite_sqlalchemy_atomic,
     starrocks_sqlalchemy_atomic,
 )
+from archipy.helpers.decorators.sqlalchemy_transaction import ATOMIC_BLOCK_CONFIGS
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
 from archipy.models.errors import DatabaseError, InternalError
 from features.test_entity import RelatedTestEntity, TestAdminEntity, TestEntity, TestManagerEntity
@@ -2175,11 +2176,6 @@ def step_when_atomic_function_raises(context, name):
     _run_atomic_function(context, body)
 
 
-@when("the atomic function succeeds")
-def step_when_atomic_function_succeeds(context):
-    _run_atomic_function(context, lambda: None)
-
-
 @then("{name} should propagate through the atomic block unchanged")
 def step_then_propagates_unchanged(context, name):
     error = get_current_scenario_context(context).get("atomic_error")
@@ -2204,11 +2200,56 @@ def step_then_internal_error_chained(context):
     assert isinstance(error.__cause__, ValueError), f"Cause {error.__cause__!r}"
 
 
-@then("the session should carry no atomic marker")
-def step_then_no_atomic_marker(context):
-    sc = get_current_scenario_context(context)
-    assert sc.get("atomic_error") is None, f"Unexpected error {sc.get('atomic_error')!r}"
-    assert sc.get("fake_session").info == {}, f"Got {sc.get('fake_session').info!r}"
+@when("a nested atomic block succeeds on {db_type}")
+def step_when_nested_atomic_succeeds(context, db_type):
+    """Run an atomic block inside another one on the real database and record the marker at each point."""
+    flag = ATOMIC_BLOCK_CONFIGS[db_type]["flag"]
+    manager = _get_session_registry(db_type).get_sync_manager()
+    atomic = _get_atomic_decorator(db_type, is_async=False)
+    seen = {}
+
+    @atomic
+    def inner():
+        seen["inner"] = manager.get_session().info.get(flag)
+
+    @atomic
+    def outer():
+        seen["outer_before"] = manager.get_session().info.get(flag)
+        inner()
+        seen["outer_after_inner"] = manager.get_session().info.get(flag)
+
+    outer()
+    seen["after"] = manager.get_session().info.get(flag)
+    get_current_scenario_context(context).store("atomic_marker_seen", seen)
+
+
+@when("a nested async atomic block succeeds on {db_type}")
+async def step_when_nested_async_atomic_succeeds(context, db_type):
+    """Async variant of the nested atomic block check."""
+    flag = ATOMIC_BLOCK_CONFIGS[db_type]["flag"]
+    manager = _get_session_registry(db_type).get_async_manager()
+    atomic = _get_atomic_decorator(db_type, is_async=True)
+    seen = {}
+
+    @atomic
+    async def inner():
+        seen["inner"] = manager.get_session().info.get(flag)
+
+    @atomic
+    async def outer():
+        seen["outer_before"] = manager.get_session().info.get(flag)
+        await inner()
+        seen["outer_after_inner"] = manager.get_session().info.get(flag)
+
+    await outer()
+    seen["after"] = manager.get_session().info.get(flag)
+    get_current_scenario_context(context).store("atomic_marker_seen", seen)
+
+
+@then("the atomic marker should be set in both blocks and cleared only after the outermost one")
+def step_then_atomic_marker_lifecycle(context):
+    seen = get_current_scenario_context(context).get("atomic_marker_seen")
+    assert seen == {"inner": True, "outer_before": True, "outer_after_inner": True, "after": None}, f"Got {seen!r}"
 
 
 @when("a {kind} error with driver code {code} is handled by the atomic decorator")

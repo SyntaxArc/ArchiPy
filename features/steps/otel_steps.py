@@ -78,6 +78,7 @@ _OTEL_FIELDS_TO_RESTORE = (
     "METRICS_PUSHGATEWAY_TIMEOUT_SECONDS",
     "METRICS_PUSHGATEWAY_GROUPING_KEY",
     "METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN",
+    "INSTRUMENTATION_SKIP_DEP_CHECK",
 )
 
 
@@ -2311,15 +2312,103 @@ class _ErrorRecordCollector(logging.Handler):
         self.records.append(record)
 
 
+class _RecordCollector(logging.Handler):
+    """Collect every record of the logger it is attached to."""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.DEBUG)
+        self.records: list[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.records.append(record)
+
+
 def _run_auto_instrumentation(scenario_context) -> None:
     instrumentor_logger = logging.getLogger("opentelemetry.instrumentation.instrumentor")
+    archipy_logger = logging.getLogger("archipy.helpers.utils.otel_utils")
     collector = _ErrorRecordCollector()
+    archipy_collector = _RecordCollector()
+    previous_level = archipy_logger.level
     instrumentor_logger.addHandler(collector)
+    archipy_logger.addHandler(archipy_collector)
+    archipy_logger.setLevel(logging.DEBUG)
     try:
         OtelUtils._instrument_installed_libraries(BaseConfig.global_config())
     finally:
         instrumentor_logger.removeHandler(collector)
+        archipy_logger.removeHandler(archipy_collector)
+        archipy_logger.setLevel(previous_level)
     scenario_context.store("instrumentor_error_records", collector.records)
+    scenario_context.store("archipy_otel_records", archipy_collector.records)
+
+
+@given("the httpx instrumentor targets a library version that is not installed")
+def step_given_httpx_dependency_out_of_range(context):
+    """Point the httpx instrumentor at an installed library (httpx2) with an unsatisfiable version range."""
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
+    scenario_context = get_current_scenario_context(context)
+    _uninstrument_httpx()
+    original = HTTPXClientInstrumentor._instrumentation_dependencies
+    HTTPXClientInstrumentor._instrumentation_dependencies = ("httpx2 >= 9999.0",)
+    scenario_context.store("httpx_original_dependencies", original)
+
+
+@then('an OpenTelemetry warning should say that "{key}" emits no spans because of its version range')
+def step_then_warning_version_range(context, key):
+    scenario_context = get_current_scenario_context(context)
+    warnings = [r for r in scenario_context.get("archipy_otel_records") or [] if r.levelno == logging.WARNING]
+    matching = [r for r in warnings if r.args and r.args[0] == key]
+    assert matching, f"No warning for {key!r}: {[r.getMessage() for r in warnings]}"
+    message = matching[0].getMessage()
+    assert "no spans will be emitted" in message and "httpx2 >= 9999.0" in message, message
+    assert "httpx2" in message and "falls outside" in message, message
+
+
+@given("the SQLAlchemy instrumentor is not bound yet")
+def step_given_sqlalchemy_instrumentor_unbound(context):
+    """Start from an unbound SQLAlchemy instrumentor so the version check runs against the installed SQLAlchemy."""
+    from features.steps.adapter_spans_steps import _uninstrument_all
+
+    _snapshot_otel_config(get_current_scenario_context(context))
+    _uninstrument_all()
+    OtelUtils._instrumented_libraries.discard("sqlalchemy")
+
+
+@given("the OTEL instrumentation skip list is empty")
+def step_given_skip_dep_check_empty(context):
+    _snapshot_otel_config(get_current_scenario_context(context))
+    BaseConfig.global_config().OTEL.INSTRUMENTATION_SKIP_DEP_CHECK = []
+
+
+@then('an OpenTelemetry warning should say that the version check is bypassed for "{key}"')
+def step_then_warning_version_check_bypassed(context, key):
+    scenario_context = get_current_scenario_context(context)
+    warnings = [r for r in scenario_context.get("archipy_otel_records") or [] if r.levelno == logging.WARNING]
+    messages = [r.getMessage() for r in warnings if r.args and r.args[0] == key]
+    assert any("INSTRUMENTATION_SKIP_DEP_CHECK" in message and "is enabled" in message for message in messages), (
+        f"No bypass warning for {key!r}: {[r.getMessage() for r in warnings]}"
+    )
+
+
+@then('an OpenTelemetry warning should say that "{key}" emits no spans')
+def step_then_warning_no_spans(context, key):
+    scenario_context = get_current_scenario_context(context)
+    warnings = [r for r in scenario_context.get("archipy_otel_records") or [] if r.levelno == logging.WARNING]
+    messages = [r.getMessage() for r in warnings if r.args and r.args[0] == key]
+    assert any("no spans will be emitted" in message for message in messages), (
+        f"No 'no spans' warning for {key!r}: {[r.getMessage() for r in warnings]}"
+    )
+
+
+@then('no OpenTelemetry warning should be logged for "{key}"')
+def step_then_no_warning_for_library(context, key):
+    scenario_context = get_current_scenario_context(context)
+    records = scenario_context.get("archipy_otel_records") or []
+    warnings = [r for r in records if r.levelno >= logging.WARNING and r.args and r.args[0] == key]
+    assert not warnings, f"Unexpected warnings for {key!r}: {[r.getMessage() for r in warnings]}"
+    skipped = [r for r in records if r.levelno == logging.DEBUG and r.args and r.args[0] == key]
+    assert skipped, f"Expected a debug skip record for {key!r}"
 
 
 @given("the httpx instrumentor reports its target library as missing")

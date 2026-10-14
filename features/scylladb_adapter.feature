@@ -239,3 +239,9 @@ Feature: ScyllaDB Adapter
       | 1  | Widget | 100      |
     When I async insert data into table "async_inventory" with id 1, item "some_item", quantity 500
     Then the async table "async_inventory" should contain 1 row
+
+  @needs-scylladb @needs-otel-collector
+  Scenario: ScyllaDB queries emit Cassandra spans
+    Given adapter spans are exported to the collector
+    When I run a query through the ScyllaDB adapter
+    Then the collector should have a span with attribute "db.system" containing "cassandra"

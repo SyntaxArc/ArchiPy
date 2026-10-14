@@ -74,3 +74,9 @@ Feature: Vault Adapter
     Then the renewed Vault lease should be valid
     When I revoke the Vault lease
     Then revoking the Vault lease again should fail
+
+  @needs-otel-collector
+  Scenario: requests client calls emit HTTP spans
+    Given adapter spans are exported to the collector
+    When I call the Vault API with requests
+    Then the collector should have a span with attribute "http.url" containing "/v1/sys/health"

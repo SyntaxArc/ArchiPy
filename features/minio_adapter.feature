@@ -155,3 +155,10 @@ Feature: MinIO Operations Testing
     And an object "keep.txt" exists with content "Keep" in bucket "clear-bucket"
     When I clear all adapter caches
     Then object "keep.txt" should exist in bucket "clear-bucket"
+
+  @needs-otel-collector
+  Scenario: MinIO adapter calls emit boto spans
+    Given adapter spans are exported to the collector
+    When I upload and download an object through the MinIO adapter
+    Then the collector should have a span named "S3.PutObject" with attribute "rpc.service" containing "S3"
+    And the collector should have a span named "S3.GetObject" with attribute "rpc.service" containing "S3"
