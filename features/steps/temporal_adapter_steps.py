@@ -18,7 +18,9 @@ from typing import Any, TypeVar
 import httpx2
 from behave import given, then, when
 from temporalio.client import ScheduleIntervalSpec, ScheduleOverlapPolicy, SchedulePolicy, ScheduleSpec
+from temporalio.runtime import LoggingConfig, TelemetryConfig, TelemetryFilter
 
+from archipy.adapters.temporal import runtime as temporal_runtime_module
 from archipy.adapters.temporal.adapters import TemporalAdapter
 from archipy.adapters.temporal.runtime import TemporalRuntimeManager
 from archipy.adapters.temporal.worker import TemporalWorkerManager, WorkerHandle
@@ -49,6 +51,19 @@ from features.test_workflows.temporal_workflows import (
 )
 
 T = TypeVar("T")
+
+
+def _quiet_telemetry_config(**kwargs: Any) -> TelemetryConfig:
+    """Build the ``TelemetryConfig`` the runtime manager uses, with the Rust core logging errors only.
+
+    A ``Runtime`` cannot be closed, so one created for a test collector keeps exporting after that container is
+    stopped and the core warns about every failed export for the rest of the run.
+    """
+    quiet = LoggingConfig(filter=TelemetryFilter(core_level="ERROR", other_level="ERROR"))
+    return TelemetryConfig(logging=quiet, **kwargs)
+
+
+temporal_runtime_module.TelemetryConfig = _quiet_telemetry_config
 
 
 def _get_event_loop(context: Any) -> asyncio.AbstractEventLoop:
@@ -114,7 +129,8 @@ def cleanup_event_loop(context: Any) -> None:
             loop = scenario_context._event_loop
             if loop is not None and loop.is_running():
                 future = asyncio.run_coroutine_threadsafe(
-                    scenario_context.worker_manager.shutdown_all_workers(), loop,
+                    scenario_context.worker_manager.shutdown_all_workers(),
+                    loop,
                 )
                 future.result(timeout=30)
         except Exception:
@@ -348,7 +364,10 @@ def step_start_workflow_no_arg(context, workflow_name, workflow_id):
 
     async def run():
         return await adapter.start_workflow(
-            workflow_class, None, workflow_id=workflow_id, task_queue="test-queue",
+            workflow_class,
+            None,
+            workflow_id=workflow_id,
+            task_queue="test-queue",
         )
 
     handle = run_async(context, run())
@@ -376,7 +395,10 @@ def step_start_workflow_with_id(context, workflow_name, arg, workflow_id):
 
     async def run():
         return await adapter.start_workflow(
-            workflow_class, effective_arg, workflow_id=workflow_id, task_queue="test-queue",
+            workflow_class,
+            effective_arg,
+            workflow_id=workflow_id,
+            task_queue="test-queue",
         )
 
     handle = run_async(context, run())
@@ -601,7 +623,6 @@ def step_send_signal_no_value(context, signal_name, workflow_id):
 
 
 @when('I send signals to workflow "{workflow_id}":')
-
 def step_send_multiple_signals(context, workflow_id):
     """Send multiple signals to workflow from table."""
     adapter = get_temporal_adapter(context)
@@ -1135,7 +1156,9 @@ def step_workflow_should_be_cancelled(context, workflow_id):
 
     description = run_async(context, run())
     # Check if workflow is in cancelled state
-    assert description.status.name in ["CANCELLED", "CANCELED"], f"Workflow should be cancelled, status: {description.status.name}"
+    assert description.status.name in ["CANCELLED", "CANCELED"], (
+        f"Workflow should be cancelled, status: {description.status.name}"
+    )
     context.logger.info(f"Workflow {workflow_id} is cancelled")
 
 
@@ -1183,7 +1206,9 @@ def step_workflow_description_has_type(context, workflow_type):
     """Verify workflow description has expected workflow type."""
     scenario_context = get_current_scenario_context(context)
     description = scenario_context.workflow_description
-    assert description.workflow_type == workflow_type, f"Expected workflow type {workflow_type}, got {description.workflow_type}"
+    assert description.workflow_type == workflow_type, (
+        f"Expected workflow type {workflow_type}, got {description.workflow_type}"
+    )
     context.logger.info(f"Workflow description has correct type: {workflow_type}")
 
 
