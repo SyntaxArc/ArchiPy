@@ -189,6 +189,9 @@ def step_kafka_roundtrip(context, topic):
     message = None
     while message is None and time.monotonic() < deadline:
         message = consumer.poll(timeout=1)
+    # Closing the consumer ends the instrumentor's open consume span; left open it stays the current span of
+    # this thread and becomes the sampled parent of every span the next scenarios create.
+    consumer.close()
     assert message is not None, "Consumer received no message"
 
 
