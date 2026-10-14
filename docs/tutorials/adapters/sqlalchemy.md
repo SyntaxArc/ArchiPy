@@ -32,8 +32,34 @@ users, total = adapter.execute_search_query(
 )
 ```
 
-`COUNT_THRESHOLD` in the SQLAlchemy config sets the same threshold for every search that passes none. It is unset by
-default, which means the total is always exact.
+`COUNT_THRESHOLD` in the SQLAlchemy config sets the same threshold for every search that passes none. When it is unset,
+`BaseConfig.set_global()` fills it with `PAGINATION.MAX_ITEMS` (default `10000`), the deepest `page * page_size` a
+`PaginationDTO` accepts, because past that row no page can be requested and an exact total is of no use. Set
+`COUNT_THRESHOLD` to a larger number to count exactly for longer.
+
+## Telling an estimate from an exact total
+
+`execute_search_query` returns only the number, and the estimate is always above the threshold. A search output that
+extends `SearchOutputDTO` reports that as `total_count_estimated`, so an API can show "10000+" instead of an invented
+number:
+
+```python
+from archipy.models.dtos.search_output_dto import ExactSearchOutputDTO, SearchOutputDTO
+
+
+class SearchUsersOutputDTO(SearchOutputDTO):
+    items: list[UserDTO]
+
+
+class ListRolesOutputDTO(ExactSearchOutputDTO):
+    items: list[RoleDTO]
+```
+
+`SearchOutputDTO` reads `COUNT_THRESHOLD` from `POSTGRES_SQLALCHEMY` (set `count_threshold_config` in a subclass for
+another config) and is meaningful on PostgreSQL only, because the other databases count exactly.
+`ExactSearchOutputDTO` has the same fields with `total_count_estimated` always `false`, for searches that count on their
+own. A total that was counted exactly but is above the threshold, for example a first page larger than the threshold, is
+reported as estimated too.
 
 ## Count cache
 

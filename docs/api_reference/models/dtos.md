@@ -53,6 +53,15 @@ options:
 show_root_toc_entry: false
 heading_level: 3
 
+## Search Output DTO
+
+Base DTOs for paged search outputs, with `total_count` and the computed `total_count_estimated`.
+
+::: archipy.models.dtos.search_output_dto
+options:
+show_root_toc_entry: false
+heading_level: 3
+
 ## Range DTOs
 
 DTOs for expressing numeric and date range filters in queries.

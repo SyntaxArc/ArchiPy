@@ -174,6 +174,11 @@ options:
 show_root_toc_entry: false
 heading_level: 3
 
+::: archipy.configs.config_template.PaginationConfig
+options:
+show_root_toc_entry: false
+heading_level: 3
+
 ::: archipy.configs.config_template.TemporalConfig
 options:
 show_root_toc_entry: false
