@@ -9,6 +9,7 @@ import time
 import uuid
 import warnings
 
+import httpx2
 from behave import given, then, when
 from behave.runner import Context
 from features.test_helpers import get_current_scenario_context
@@ -2084,26 +2085,20 @@ def step_then_validation_error_for_field(context, field_name):
 
 @then('the metrics pull scrape endpoint should return 200 containing "{needle}"')
 def step_then_scrape_contains(context, needle):
-    import urllib.request
-
     scenario_context = get_current_scenario_context(context)
     port = scenario_context.get("metrics_pull_port")
-    url = f"http://127.0.0.1:{port}/metrics"
-    with urllib.request.urlopen(url, timeout=2) as response:
-        assert response.status == 200
-        body = response.read().decode()
+    response = httpx2.get(f"http://127.0.0.1:{port}/metrics", timeout=2)
+    assert response.status_code == 200
+    body = response.text
     assert needle in body, f"Expected {needle!r} in scrape body:\n{body[:2000]}"
 
 
 @then("the metrics pull scrape endpoint should return 200")
 def step_then_scrape_200(context):
-    import urllib.request
-
     scenario_context = get_current_scenario_context(context)
     port = scenario_context.get("metrics_pull_port")
-    url = f"http://127.0.0.1:{port}/metrics"
-    with urllib.request.urlopen(url, timeout=2) as response:
-        assert response.status == 200
+    response = httpx2.get(f"http://127.0.0.1:{port}/metrics", timeout=2)
+    assert response.status_code == 200
 
 
 @then("the metrics pull scrape port should refuse connections")
