@@ -723,6 +723,25 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  Scenario Outline: Utils FastAPI dependency denies a request when every UMA permission is ungranted
+    Given a configured sync Keycloak adapter
+    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
+    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "utilsuser" and password "pass123" using sync adapter
+    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
+    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
+    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
+    And the keycloak utils client "utils-client" guards resource "utils-doc" with scopes "read,write" and grants scope "read" to realm role "utils-reader"
+    And the keycloak utils fastapi auth requires permissions "utils-doc#write"
+    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
+    Then the keycloak utils call fails with error code "PERMISSION_DENIED"
+    And the keycloak utils error lists missing permission "utils-doc#write"
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
   Scenario Outline: Utils FastAPI dependency allows the owner of a resource
     Given a configured sync Keycloak adapter
     And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter

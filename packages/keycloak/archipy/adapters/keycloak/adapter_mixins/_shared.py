@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, NoReturn, TypeVar
 
 from keycloak.exceptions import (
@@ -159,6 +160,18 @@ class KeycloakExceptionHandlerMixin:
 
         if response_code in [503, 504] or "unavailable" in error_lower:
             raise KeycloakServiceUnavailableError(additional_data=additional_data) from exception
+
+    @classmethod
+    def _is_uma_nothing_granted(cls, exception: KeycloakError) -> bool:
+        """Return True when a UMA permission request failed only because none of the permissions is granted.
+
+        With ``response_mode=permissions`` Keycloak answers 403 ``access_denied`` / ``not_authorized`` when every
+        requested permission is denied. That is an authorization result, not a server failure.
+        """
+        if getattr(exception, "response_code", None) != HTTPStatus.FORBIDDEN:
+            return False
+        message = cls._extract_error_message(exception).lower()
+        return "not_authorized" in message or "access_denied" in message
 
     @classmethod
     def _handle_keycloak_exception(cls, exception: KeycloakError, operation: str) -> NoReturn:

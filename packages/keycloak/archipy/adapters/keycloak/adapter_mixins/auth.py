@@ -346,6 +346,8 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         try:
             results = self._openid_adapter.uma_permissions(token, permissions=perm_strs)
         except KeycloakError as e:
+            if self._is_uma_nothing_granted(e):
+                return frozenset()
             self._handle_keycloak_exception(e, "check_permissions_batch")
         if not results or not isinstance(results, list):
             return frozenset()
@@ -684,6 +686,8 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         try:
             results = await self.openid_adapter.a_uma_permissions(token, permissions=perm_strs)
         except KeycloakError as e:
+            if self._is_uma_nothing_granted(e):
+                return frozenset()
             self._handle_keycloak_exception(e, "check_permissions_batch")
         if not results or not isinstance(results, list):
             return frozenset()
