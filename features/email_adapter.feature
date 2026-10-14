@@ -1,4 +1,4 @@
-@needs-mailpit @needs-mailpit-plain
+@needs-mailpit @needs-mailpit-plain @needs-otel-collector
 Feature: Email adapter
 
   Background:
@@ -203,3 +203,64 @@ Feature: Email adapter
     Given adapter spans are exported to the collector
     When I call the Mailpit API with httpx2
     Then the collector should have a span with attribute "http.url" containing "/api/v1/info"
+
+  Scenario: Sending an email emits an SMTP client span with safe attributes
+    Given adapter spans are exported to the collector
+    And the Mailpit SMTP server is configured
+    And an email adapter
+    When I send an email to "alice@example.com, bob@example.com" with subject "Quarterly numbers" and body "Confidential body"
+    Then Mailpit holds 1 email
+    And the "email.send" span points at the active Mailpit SMTP server
+    And the "email.send" span has attribute "network.protocol.name" equal to "smtp"
+    And the "email.send" span has attribute "email.recipient_count" equal to "2"
+    And the "email.send" span has attribute "email.attachment_count" equal to "0"
+    And the "email.send" span has attribute "email.tls_mode" equal to "starttls"
+
+  Scenario: The SMTP span reports no TLS when the server does not advertise STARTTLS
+    Given adapter spans are exported to the collector
+    And the plain Mailpit SMTP server is configured
+    And an email adapter
+    When I send an email to "alice@example.com" with subject "Hello" and body "Hi there"
+    Then the "email.send" span has attribute "email.tls_mode" equal to "none"
+
+  Scenario: The SMTP span counts recipients and attachments
+    Given adapter spans are exported to the collector
+    And the Mailpit SMTP server is configured
+    And a FILE attachment "notes.txt" with content "file body"
+    And an email adapter
+    When I send the email with the attachment
+    Then the "email.send" span has attribute "email.recipient_count" equal to "1"
+    And the "email.send" span has attribute "email.attachment_count" equal to "1"
+
+  Scenario: A wrong SMTP password marks the span as failed without leaking secrets
+    Given adapter spans are exported to the collector
+    And the Mailpit SMTP server is configured
+    And SMTP credentials "mailer@example.com" and "wrong-password"
+    And an email adapter
+    When I try to send an email to "alice@example.com" with subject "Quarterly numbers" and body "Confidential body"
+    Then an unavailable error is raised for "SMTP"
+    And the "email.send" span ends with error status
+    And the "email.send" span records an exception of type "UnavailableError"
+    And no exported span exposes "wrong-password"
+    And no exported span exposes "alice@example.com"
+    And no exported span exposes "Quarterly numbers"
+    And no exported span exposes "Confidential body"
+
+  Scenario: A connection failure marks the span as failed
+    Given adapter spans are exported to the collector
+    And an SMTP endpoint on a closed port
+    And an email adapter
+    When I try to send an email to "alice@example.com" with subject "Hello" and body "Hi there"
+    Then an unavailable error is raised for "SMTP"
+    And the "email.send" span ends with error status
+
+  Scenario: A successful send does not expose the password, recipients, subject or body
+    Given adapter spans are exported to the collector
+    And the Mailpit SMTP server is configured
+    And an email adapter
+    When I send an email to "alice@example.com" with subject "Quarterly numbers" and body "Confidential body"
+    Then the "email.send" span has attribute "network.protocol.name" equal to "smtp"
+    And no exported span exposes "s3cret"
+    And no exported span exposes "alice@example.com"
+    And no exported span exposes "Quarterly numbers"
+    And no exported span exposes "Confidential body"

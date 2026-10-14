@@ -311,6 +311,24 @@ def send_notification_email(recipient: str, subject: str, body: str) -> bool:
         return True
 ```
 
+## Tracing
+
+No OpenTelemetry instrumentor exists for `smtplib`, so the adapter creates its own span. With
+`OTEL__IS_ENABLED=true` and `OTEL__TRACES_ENABLED=true`, every `send_email` call emits one
+client span:
+
+| Span         | Attribute                | Value                                                |
+|--------------|--------------------------|------------------------------------------------------|
+| `email.send` | `network.protocol.name`  | `smtp`                                               |
+|              | `server.address`         | Configured SMTP host                                 |
+|              | `server.port`            | Configured SMTP port                                 |
+|              | `email.tls_mode`         | `starttls` or `none`, as negotiated with the server  |
+|              | `email.recipient_count`  | Number of to, cc and bcc recipients                  |
+|              | `email.attachment_count` | Number of attachments                                |
+
+A failed send (unreachable server, rejected credentials) marks the span as an error and records the
+`UnavailableError`. Credentials, addresses, subjects and bodies are never added to spans.
+
 ## See Also
 
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining

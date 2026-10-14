@@ -541,3 +541,58 @@ def step_then_first_session_closed(context):
     assert sessions[0] is not sessions[-1]
     assert sessions[0].sock is None
     assert sessions[-1].sock is not None
+
+
+# --- OpenTelemetry spans (real collector container) ---
+
+
+def _email_spans(context, name):
+    from features.steps.adapter_spans_steps import _wait_for_spans
+
+    return _wait_for_spans(context, lambda span: span.name == name, f"named {name!r}")
+
+
+@then('the "{name}" span has attribute "{key}" equal to "{value}"')
+def step_span_attribute_equals(context, name, key, value):
+    span = _email_spans(context, name)[-1]
+    assert str(span.attributes.get(key)) == value, f"{key}={span.attributes.get(key)!r}, expected {value!r}"
+
+
+@then('the "{name}" span points at the active Mailpit SMTP server')
+def step_span_points_at_mailpit(context, name):
+    span = _email_spans(context, name)[-1]
+    mailpit = _mailpit()
+    assert span.attributes.get("server.address") == mailpit.host, span.attributes
+    assert span.attributes.get("server.port") == mailpit.smtp_port, span.attributes
+
+
+@then('the "{name}" span ends with error status')
+def step_span_error_status(context, name):
+    from opentelemetry.trace import StatusCode
+
+    span = _email_spans(context, name)[-1]
+    assert span.status.status_code == StatusCode.ERROR, f"status={span.status.status_code}"
+
+
+@then('the "{name}" span records an exception of type "{error_type}"')
+def step_span_records_exception(context, name, error_type):
+    span = _email_spans(context, name)[-1]
+    types = [event.attributes.get("exception.type", "") for event in span.events if event.name == "exception"]
+    assert any(error_type in exception_type for exception_type in types), f"exception types: {types}"
+
+
+@then('no exported span exposes "{secret}"')
+def step_no_span_exposes(context, secret):
+    from features.steps.adapter_spans_steps import _telemetry
+
+    telemetry = _telemetry(context)
+    telemetry.flush()
+    exposed = []
+    for span in telemetry.spans():
+        values = [span.name, span.status.description or ""]
+        values.extend(str(value) for value in span.attributes.values())
+        for event in span.events:
+            values.extend(str(value) for value in event.attributes.values())
+        if any(secret in value for value in values):
+            exposed.append(span.name)
+    assert not exposed, f"{secret!r} appears in spans {exposed}"

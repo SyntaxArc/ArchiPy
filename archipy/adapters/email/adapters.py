@@ -14,7 +14,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from queue import Queue
-from typing import TYPE_CHECKING, BinaryIO, cast, override
+from typing import TYPE_CHECKING, Any, BinaryIO, cast, override
 
 import httpx2
 from jinja2 import Template
@@ -36,6 +36,29 @@ if TYPE_CHECKING:
     from archipy.configs.config_template import EmailConfig
 
 logger = logging.getLogger(__name__)
+
+
+def _smtp_span_kind() -> object | None:
+    """Return ``SpanKind.CLIENT`` for outgoing SMTP spans, or None when OpenTelemetry is not installed."""
+    try:
+        from opentelemetry.trace import SpanKind
+    except ImportError:
+        return None
+    return SpanKind.CLIENT
+
+
+def _annotate_current_span(attributes: dict[str, Any]) -> None:
+    """Set attributes on the active span; do nothing when tracing is off or OpenTelemetry is missing.
+
+    Only low-cardinality, non-sensitive values may be passed: never credentials, addresses, subjects or bodies.
+    """
+    try:
+        from opentelemetry import trace
+    except ImportError:
+        return
+    span = trace.get_current_span()
+    if span.is_recording():
+        span.set_attributes(attributes)
 
 
 class EmailConnectionManager:
@@ -67,9 +90,12 @@ class EmailConnectionManager:
                 timeout=self.config.CONNECTION_TIMEOUT,
             )
             self.smtp_connection.ehlo()
+            tls_mode = "none"
             if self.smtp_connection.has_extn("starttls"):
                 self.smtp_connection.starttls()
                 self.smtp_connection.ehlo()
+                tls_mode = "starttls"
+            _annotate_current_span({"email.tls_mode": tls_mode})
             if self.config.USERNAME and self.config.PASSWORD:
                 self.smtp_connection.login(self.config.USERNAME, self.config.PASSWORD)
             self.last_used = DatetimeUtils.get_datetime_now()
@@ -342,6 +368,40 @@ class EmailAdapter(EmailPort):
             UnavailableError: If the SMTP server cannot be reached or the email cannot be sent
                 after ``MAX_RETRIES`` attempts.
         """
+        self._send_email_traced(
+            to_email=to_email,
+            subject=subject,
+            body=body,
+            cc=cc,
+            bcc=bcc,
+            attachments=attachments,
+            html=html,
+            template=template,
+            template_vars=template_vars,
+        )
+
+    @trace_span(name="email.send", kind=_smtp_span_kind(), attributes={"network.protocol.name": "smtp"})
+    def _send_email_traced(
+        self,
+        to_email: EmailStr | list[EmailStr],
+        subject: str,
+        body: str,
+        cc: EmailStr | list[EmailStr] | None = None,
+        bcc: EmailStr | list[EmailStr] | None = None,
+        attachments: list[str | EmailAttachmentDTO] | None = None,
+        html: bool = False,
+        template: str | None = None,
+        template_vars: dict | None = None,
+    ) -> None:
+        """Send the email inside the ``email.send`` span (SMTP client span without any message content)."""
+        _annotate_current_span(
+            {
+                "server.address": self.config.SMTP_SERVER or "",
+                "server.port": self.config.SMTP_PORT,
+                "email.recipient_count": len(self._get_all_recipients(to_email, cc, bcc)),
+                "email.attachment_count": len(attachments or []),
+            },
+        )
         connection: EmailConnectionManager | None = None
         try:
             connection = self.connection_pool.get_connection()
