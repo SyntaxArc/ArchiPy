@@ -776,6 +776,12 @@ Feature: OpenTelemetry decorators
     Then the library "sqlalchemy" should not be auto-instrumented
     And an OpenTelemetry warning should say that "sqlalchemy" emits no spans
 
+  Scenario: The Redis search guard wraps the instrumentor helper once and can be restored
+    When I guard the Redis search attributes twice
+    Then the Redis search helper should be wrapped exactly once
+    When I restore the Redis search attributes
+    Then the Redis search helper should be the upstream function
+
   Scenario: installed library outside the instrumentor range is warned about
     Given the httpx instrumentor targets a library version that is not installed
     When I run auto-instrumentation of installed libraries

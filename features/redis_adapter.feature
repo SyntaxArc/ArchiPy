@@ -1169,3 +1169,24 @@ Feature: Redis Testing
     Given adapter spans are exported to the collector
     When I set and get a key through the async Redis adapter
     Then the collector should have a span with attribute "db.system" containing "redis"
+
+  @needs-otel-collector
+  Scenario: Redis search with the instrumentor bound returns results and emits a span
+    Given adapter spans are exported to the collector
+    And a configured container
+    And search index "otel-search" exists with prefix "otelsrch:" for HASH documents
+    When I upsert search document "otelsrch:1" with title "Redis Guide" and vector "[1.0, 0.0, 0.0]" for HASH documents
+    And I search index "otel-search" for nearest vector "[0.9, 0.1, 0.0]" with k 1
+    Then the search should return at least 1 hits
+    And the top hit id should be "otelsrch:1"
+    And the collector should have a span with attribute "redis.search.index" containing "otel-search"
+
+  @async @needs-otel-collector
+  Scenario: Async Redis search with the instrumentor bound returns results and emits a span
+    Given adapter spans are exported to the collector
+    And a configured async container
+    And async search index "otel-search-async" exists with prefix "otelsrcha:" for HASH documents
+    When I upsert search document "otelsrcha:1" asynchronously with title "Async Redis" and vector "[1.0, 0.0, 0.0]" for HASH documents
+    And I search index "otel-search-async" asynchronously for nearest vector "[0.9, 0.1, 0.0]" with k 1
+    Then the async search should return at least 1 hit
+    And the collector should have a span with attribute "db.statement" containing "FT.SEARCH"

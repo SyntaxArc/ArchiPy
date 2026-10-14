@@ -2401,6 +2401,47 @@ def step_then_warning_no_spans(context, key):
     )
 
 
+@when("I guard the Redis search attributes twice")
+def step_when_guard_redis_search_twice(context):
+    from opentelemetry.instrumentation.redis import util as redis_util
+
+    # Leave the guard in place for later scenarios, whatever this one does.
+    context.add_cleanup(OtelUtils._guard_redis_search_attributes)
+    OtelUtils.restore_redis_search_attributes()
+    upstream = redis_util._add_search_attributes
+    OtelUtils._guard_redis_search_attributes()
+    first = redis_util._add_search_attributes
+    OtelUtils._guard_redis_search_attributes()
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("redis_search_upstream", upstream)
+    scenario_context.store("redis_search_first_guard", first)
+
+
+@then("the Redis search helper should be wrapped exactly once")
+def step_then_redis_search_wrapped_once(context):
+    from opentelemetry.instrumentation.redis import util as redis_util
+
+    scenario_context = get_current_scenario_context(context)
+    upstream = scenario_context.get("redis_search_upstream")
+    first = scenario_context.get("redis_search_first_guard")
+    assert first is not upstream, "The helper was not wrapped"
+    assert redis_util._add_search_attributes is first, "A second guard call wrapped the helper again"
+    assert first._archipy_original is upstream
+
+
+@when("I restore the Redis search attributes")
+def step_when_restore_redis_search(context):
+    OtelUtils.restore_redis_search_attributes()
+
+
+@then("the Redis search helper should be the upstream function")
+def step_then_redis_search_upstream(context):
+    from opentelemetry.instrumentation.redis import util as redis_util
+
+    upstream = get_current_scenario_context(context).get("redis_search_upstream")
+    assert redis_util._add_search_attributes is upstream
+
+
 @then('no OpenTelemetry warning should be logged for "{key}"')
 def step_then_no_warning_for_library(context, key):
     scenario_context = get_current_scenario_context(context)
