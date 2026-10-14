@@ -711,7 +711,7 @@ def step_produce_and_batch_consume(context, count, topic):
 
 
 @when("I commit the last message of the batch")
-def step_commit_batch(context):
+def step_commit_last_batch_message(context):
     scenario_context = get_current_scenario_context(context)
     consumer = scenario_context.get("batch_consumer")
     consumer.commit(scenario_context.get("batch_messages")[-1], asynchronous=False)
