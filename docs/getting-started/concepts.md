@@ -17,7 +17,7 @@ graph LR
     adapters -->|imports| configs
     helpers -->|imports| models
     helpers -->|imports| configs
-    models -->|imports| configs
+    configs -->|imports| models
 ```
 
 | Layer        | Directory   | Responsibility                                                                  |
@@ -27,7 +27,7 @@ graph LR
 | **Helpers**  | `helpers/`  | Pure utilities: decorators, interceptors, JWT, password, datetime               |
 | **Adapters** | `adapters/` | External service integrations: databases, caches, queues, APIs                  |
 
-> **Warning:** Imports flow inward only — `configs ← models ← helpers ← adapters`. Inner layers never import from outer
+> **Warning:** Imports flow inward only — `models ← configs ← helpers ← adapters`. Inner layers never import from outer
 > layers. Violating this rule breaks testability and creates circular dependencies.
 
 ---

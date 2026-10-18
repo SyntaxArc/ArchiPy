@@ -24,7 +24,7 @@ uv run --extra behave behave features/redis_adapter.feature:42
 - **Python 3.14+** required
 - Package manager: **`uv`** (never `pip install` directly)
 - Tests: **Behave** BDD (not pytest)
-- Import direction: `configs ← models ← helpers ← adapters`
+- Import direction: `models ← configs ← helpers ← adapters` (enforced by `make lint` via import-linter)
 
 ## Rule Index
 

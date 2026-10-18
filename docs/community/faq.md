@@ -16,7 +16,7 @@ expensive (swapping PostgreSQL for ScyllaDB requires touching business logic).
 ArchiPy enforces a strict four-layer boundary:
 
 ```
-configs ← models ← helpers ← adapters
+models ← configs ← helpers ← adapters
 ```
 
 Business logic (in your `logics/` layer) depends only on abstract ports — never on concrete database drivers.

@@ -31,13 +31,18 @@ archipy/
 ## Import Direction (one-way only)
 
 ```
-configs  ←  models  ←  helpers  ←  adapters
+models  ←  configs  ←  helpers  ←  adapters
 ```
 
-- `adapters` may import from `models`, `configs`, `helpers`.
-- `helpers` may import from `models`, `configs`.
-- `models` may import from `configs` only.
-- **Never** import upward (e.g., `models` importing from `adapters`).
+- `adapters` may import from `helpers`, `configs`, `models`.
+- `helpers` may import from `configs`, `models`.
+- `configs` may import from `models` only.
+- `models` imports from no other ArchiPy layer.
+- **Never** import upward (e.g., `models` importing from `configs`).
+- Enforced by the import-linter `layers` contract in `pyproject.toml` (`make lint`, pre-commit). Imports under
+  `TYPE_CHECKING` do not count. Add to the contract's `ignore_imports` only for a documented lazy import.
+- Models read settings (language, pagination limits) through `archipy.models.runtime_settings.get_settings()`.
+  `BaseConfig` registers itself as the provider, so applications never call `register_settings_provider`.
 
 ## Lazy Imports (ownership)
 

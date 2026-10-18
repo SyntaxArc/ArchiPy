@@ -52,7 +52,7 @@ That's it — typed config, live Redis adapter, and a TTL cache, all wired toget
 
 ## Why Use ArchiPy?
 
-- **Clean Architecture out of the box** — four strictly separated layers (configs, models, helpers, adapters) enforce
+- **Clean Architecture out of the box** — four strictly separated layers (models, configs, helpers, adapters) enforce
   dependency rules automatically
 - **Type-safe everything** — configurations, entities, DTOs, and errors all use Pydantic or SQLAlchemy with full type
   hint support
