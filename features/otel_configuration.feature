@@ -190,6 +190,38 @@ Feature: OpenTelemetry configuration
       | b3           | b3          | traceparent |
       | tracecontext | traceparent | b3          |
 
+  Scenario Outline: A trace sent to FastAPI as <header> continues through the <route> gRPC call
+    Given the global propagator is set to "<propagator>"
+    And a tracer provider that keeps its spans in memory
+    When the FastAPI app that calls gRPC servers and an HTTP service is requested at "<route>" with the header <header> "<value>"
+    Then every recorded span belongs to trace "0af7651916cd43dd8448eb211c80319c"
+    And a gRPC server span was recorded
+
+    Examples:
+      | propagator   | header      | value                                                   | route              |
+      | b3           | b3          | 0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-1     | /def-sync-client   |
+      | b3           | b3          | 0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-1     | /async-aio-client  |
+      | b3           | b3          | 0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-1     | /async-sync-client |
+      | b3           | b3          | 0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-1     | /def-aio-client    |
+      | tracecontext | traceparent | 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01 | /def-sync-client   |
+      | tracecontext | traceparent | 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01 | /async-aio-client  |
+      | tracecontext | traceparent | 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01 | /async-sync-client |
+      | tracecontext | traceparent | 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01 | /def-aio-client    |
+
+  Scenario Outline: A trace sent to FastAPI as <header> reaches an outbound <route> request in the same format
+    Given the global propagator is set to "<propagator>"
+    And a tracer provider that keeps its spans in memory
+    When the FastAPI app that calls gRPC servers and an HTTP service is requested at "<route>" with the header <header> "<value>"
+    Then every recorded span belongs to trace "0af7651916cd43dd8448eb211c80319c"
+    And the outbound HTTP request carried the header "<header>" and not "<other>"
+
+    Examples:
+      | propagator   | header      | other       | value                                                   | route   |
+      | b3           | b3          | traceparent | 0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-1     | /httpx  |
+      | b3           | b3          | traceparent | 0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-1     | /httpx2 |
+      | tracecontext | traceparent | b3          | 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01 | /httpx  |
+      | tracecontext | traceparent | b3          | 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01 | /httpx2 |
+
   Scenario: b3 propagation without its package names the install hint
     Given the b3 propagator package is not installed
     Then creating the propagator for "b3" fails with "b3_propagator_missing"

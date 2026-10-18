@@ -334,3 +334,155 @@ async def step_when_grpc_aio_roundtrip(context):
         OtelUtils._tracer_provider = original
         await server.stop(0)
     sc.store("received_metadata", seen)
+
+
+# A FastAPI request that fans out to gRPC servers and HTTP services keeps one trace
+
+
+@when('the FastAPI app that calls gRPC servers and an HTTP service is requested at "{path}" with the header {header} "{value}"')
+async def step_when_fan_out_request(context, path, header, value):
+    """Serve the fan-out app and its backends on this step's event loop, request it once, and tear everything down."""
+    import asyncio
+    from concurrent import futures
+
+    import grpc
+    import grpc.aio
+    import httpx
+    import httpx2
+    from fastapi import FastAPI
+    from opentelemetry.instrumentation.grpc import aio_server_interceptor, intercept_channel, server_interceptor
+    from opentelemetry.instrumentation.httpx import HTTPX2ClientInstrumentor, HTTPXClientInstrumentor
+
+    sc = _ctx(context)
+    provider = sc.get("memory_provider")
+
+    def handle(_request, _rpc_context):
+        return b"ok"
+
+    async def handle_async(_request, _rpc_context):
+        return b"ok"
+
+    def method(function):
+        return grpc.unary_unary_rpc_method_handler(
+            function,
+            request_deserializer=lambda payload: payload,
+            response_serializer=lambda payload: payload,
+        )
+
+    sync_server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=2),
+        interceptors=[server_interceptor(tracer_provider=provider)],
+    )
+    sync_server.add_generic_rpc_handlers((grpc.method_handlers_generic_handler("otel.Probe", {"Call": method(handle)}),))
+    sync_port = sync_server.add_insecure_port("127.0.0.1:0")
+    sync_server.start()
+
+    aio_server = grpc.aio.server(interceptors=[aio_server_interceptor(tracer_provider=provider)])
+    aio_server.add_generic_rpc_handlers(
+        (grpc.method_handlers_generic_handler("otel.Probe", {"Call": method(handle_async)}),),
+    )
+    aio_port = aio_server.add_insecure_port("127.0.0.1:0")
+    await aio_server.start()
+
+    received_http: dict[str, str] = {}
+
+    async def echo(reader, writer):
+        head = await reader.readuntil(b"\r\n\r\n")
+        for line in head.decode().split("\r\n")[1:]:
+            if ":" in line:
+                key, value = line.split(":", 1)
+                received_http[key.strip().lower()] = value.strip()
+        writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok")
+        await writer.drain()
+        writer.close()
+
+    http_server = await asyncio.start_server(echo, "127.0.0.1", 0)
+    http_port = http_server.sockets[0].getsockname()[1]
+
+    original = OtelUtils._tracer_provider
+    OtelUtils._tracer_provider = provider
+    sync_channel = intercept_channel(
+        grpc.insecure_channel(f"127.0.0.1:{sync_port}"),
+        *OtelUtils.grpc_client_interceptors(),
+    )
+
+    async def call_aio() -> str:
+        async with grpc.aio.insecure_channel(
+            f"127.0.0.1:{aio_port}",
+            interceptors=OtelUtils.async_grpc_client_interceptors(),
+        ) as channel:
+            return (await channel.unary_unary("/otel.Probe/Call")(b"x")).decode()
+
+    app = FastAPI(
+        telemetry={
+            "tracing": True,
+            "metrics": False,
+            "logs": False,
+            "tracer_provider": provider,
+            "auto_configure": False,
+        },
+    )
+
+    @app.get("/def-sync-client")
+    def def_sync_client():
+        return {"r": sync_channel.unary_unary("/otel.Probe/Call")(b"x").decode()}
+
+    @app.get("/async-aio-client")
+    async def async_aio_client():
+        return {"r": await call_aio()}
+
+    @app.get("/async-sync-client")
+    async def async_sync_client():
+        return {"r": sync_channel.unary_unary("/otel.Probe/Call")(b"x").decode()}
+
+    @app.get("/def-aio-client")
+    def def_aio_client():
+        return {"r": asyncio.run(call_aio())}
+
+    @app.get("/httpx")
+    async def call_httpx():
+        async with httpx.AsyncClient() as client:
+            HTTPXClientInstrumentor.instrument_client(client, tracer_provider=provider)
+            await client.get(f"http://127.0.0.1:{http_port}/probe")
+        return {"r": "ok"}
+
+    @app.get("/httpx2")
+    async def call_httpx2():
+        async with httpx2.AsyncClient() as client:
+            HTTPX2ClientInstrumentor.instrument_client(client, tracer_provider=provider)
+            await client.get(f"http://127.0.0.1:{http_port}/probe")
+        return {"r": "ok"}
+
+    try:
+        transport = httpx2.ASGITransport(app=app)
+        async with httpx2.AsyncClient(transport=transport, base_url="http://app") as client:
+            response = await client.get(path, headers={header: value})
+        assert response.status_code == 200, response.text
+        sc.store("received_http", received_http)
+    finally:
+        OtelUtils._tracer_provider = original
+        sync_channel.close()
+        sync_server.stop(0)
+        http_server.close()
+        await aio_server.stop(0)
+
+
+@then('every recorded span belongs to trace "{trace_id}"')
+def step_then_one_trace(context, trace_id):
+    spans = _ctx(context).get("memory_exporter").get_finished_spans()
+    assert spans
+    assert {format(span.context.trace_id, "032x") for span in spans} == {trace_id}, [span.name for span in spans]
+
+
+@then("a gRPC server span was recorded")
+def step_then_grpc_server_span(context):
+    from opentelemetry.trace import SpanKind
+
+    spans = _ctx(context).get("memory_exporter").get_finished_spans()
+    assert [span for span in spans if span.kind == SpanKind.SERVER and "otel.Probe/Call" in span.name]
+
+
+@then('the outbound HTTP request carried the header "{name}" and not "{absent}"')
+def step_then_http_headers(context, name, absent):
+    received = _ctx(context).get("received_http")
+    assert name in received and absent not in received, sorted(received)
