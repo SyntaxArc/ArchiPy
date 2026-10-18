@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from opentelemetry.trace import Status
 
 HTTP_SERVER_ERROR_MIN = 500
 _STATUS_DESC_MAX_LEN = 256
@@ -16,7 +19,7 @@ def truncate_status_description(exception: BaseException) -> str:
     return text
 
 
-def status_for_exception(exception: BaseException) -> Any | None:
+def status_for_exception(exception: BaseException) -> Status | None:
     """Map an exception to an OpenTelemetry ``Status``, or ``None`` for UNSET.
 
     ``BaseError`` with ``http_status`` below 500 leaves status UNSET (handled
@@ -57,7 +60,7 @@ def metric_status_for_exception(exception: BaseException) -> str:
     return "error"
 
 
-def status_for_cancellation() -> Any:
+def status_for_cancellation() -> Status:
     """Return an ERROR status for asyncio task cancellation.
 
     Returns:

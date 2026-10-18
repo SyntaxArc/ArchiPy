@@ -994,8 +994,7 @@ class OpentelemetryConfig(BaseModel):
     PROPAGATORS: list[Literal["tracecontext", "baggage", "b3", "b3multi", "none"]] = Field(
         default=["tracecontext", "baggage"],
         description=(
-            "Context propagators, in order. b3 and b3multi need the opentelemetry-propagator-b3 package "
-            "(archipy[otel-b3]); none disables propagation"
+            "Context propagators, in order: tracecontext, baggage, b3 (single header), b3multi or none (no propagation)"
         ),
     )
     OTLP_COMPRESSION: Literal["none", "gzip"] = Field(

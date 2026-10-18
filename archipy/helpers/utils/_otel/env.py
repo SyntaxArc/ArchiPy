@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from pydantic import TypeAdapter, ValidationError
 
@@ -39,7 +39,7 @@ def _parse_propagators(raw: str) -> list[str]:
     return [name.strip().lower() for name in raw.split(",") if name.strip()]
 
 
-def _signal_settings() -> list[tuple[str, str, Callable[[str], Any]]]:
+def _signal_settings() -> list[tuple[str, str, Callable[[str], object]]]:
     """Return ``(field, variable, parser)`` for every setting a standard variable can fill in."""
     return [
         ("SERVICE_NAME", "OTEL_SERVICE_NAME", str),
@@ -71,11 +71,11 @@ def sdk_disabled(otel: OpentelemetryConfig, environ: Mapping[str, str] | None = 
     return otel.USE_STANDARD_ENV and environ.get("OTEL_SDK_DISABLED", "").strip().lower() == "true"
 
 
-def _collect(otel: OpentelemetryConfig, environ: Mapping[str, str]) -> dict[str, Any]:
+def _collect(otel: OpentelemetryConfig, environ: Mapping[str, str]) -> dict[str, object]:
     """Return the validated values of the standard variables for the fields that ``otel`` leaves unset."""
-    updates: dict[str, Any] = {}
+    updates: dict[str, object] = {}
 
-    def accept(field: str, value: Any, variable: str) -> None:
+    def accept(field: str, value: object, variable: str) -> None:
         info = OpentelemetryConfig.model_fields[field]
         try:
             updates[field] = TypeAdapter(info.rebuild_annotation()).validate_python(value)

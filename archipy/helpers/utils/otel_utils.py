@@ -8,7 +8,7 @@ import os
 import threading
 import time
 import weakref
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar, TypeIs
 
 from archipy.helpers.utils._otel.env import apply_standard_env, sdk_disabled
 from archipy.helpers.utils._otel.exporters import (
@@ -33,9 +33,23 @@ from archipy.helpers.utils._otel.status import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
+
+    import grpc.aio
+    from opentelemetry.instrumentation.grpc._client import OpenTelemetryClientInterceptor
+    from opentelemetry.metrics import Meter
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import LogRecordExporter
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.metrics.export import MetricExporter, MetricReader
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SpanExporter
+    from opentelemetry.trace import Status, Tracer
+    from prometheus_client import CollectorRegistry
 
     from archipy.configs.base_config import BaseConfig
+    from archipy.configs.config_template import OpentelemetryConfig
 
 logger = logging.getLogger(__name__)
 
@@ -92,17 +106,17 @@ class OtelUtils:
     _import_failed: bool = False
     _instrumented_libraries: ClassVar[set[str]] = Instrumentation.libraries
 
-    _tracer_provider: Any | None = None
-    _meter_provider: Any | None = None
-    _logger_provider: Any | None = None
+    _tracer_provider: TracerProvider | None = None
+    _meter_provider: MeterProvider | None = None
+    _logger_provider: LoggerProvider | None = None
     _globals_set: bool = False
 
     _owns_tracer: bool = False
     _owns_meter: bool = False
     _owns_logger: bool = False
-    _logging_handler: Any | None = None
+    _logging_handler: LoggingHandler | None = None
     _init_pid: int | None = None
-    _shutdown_providers: ClassVar[weakref.WeakSet[Any]] = weakref.WeakSet()
+    _shutdown_providers: ClassVar[weakref.WeakSet[TracerProvider | MeterProvider | LoggerProvider]] = weakref.WeakSet()
     _init_failed_at: float | None = None
     _textmap_propagator_installed: bool = False
 
@@ -177,7 +191,7 @@ class OtelUtils:
         return cls._import_failed
 
     @classmethod
-    def get_tracer(cls, name: str) -> Any:
+    def get_tracer(cls, name: str) -> Tracer | _NoOpTracer:
         """Return a tracer from the owned tracer provider (or a no-op tracer).
 
         Args:
@@ -197,7 +211,7 @@ class OtelUtils:
         return trace.get_tracer(name)
 
     @classmethod
-    def get_meter(cls, name: str) -> Any:
+    def get_meter(cls, name: str) -> Meter | _NoOpMeter:
         """Return a meter from the owned meter provider (or a no-op meter).
 
         Args:
@@ -217,22 +231,22 @@ class OtelUtils:
         return metrics.get_meter(name)
 
     @classmethod
-    def tracer_provider(cls) -> Any | None:
+    def tracer_provider(cls) -> TracerProvider | None:
         """Return the owned or adopted tracer provider, if initialized."""
         return cls._tracer_provider
 
     @classmethod
-    def meter_provider(cls) -> Any | None:
+    def meter_provider(cls) -> MeterProvider | None:
         """Return the owned or adopted meter provider, if initialized."""
         return cls._meter_provider
 
     @classmethod
-    def logger_provider(cls) -> Any | None:
+    def logger_provider(cls) -> LoggerProvider | None:
         """Return the owned or adopted logger provider, if initialized."""
         return cls._logger_provider
 
     @classmethod
-    def metrics_registry(cls) -> Any | None:
+    def metrics_registry(cls) -> CollectorRegistry | None:
         """Return the Prometheus ``CollectorRegistry`` for pull/pushgateway metrics.
 
         Returns:
@@ -247,7 +261,7 @@ class OtelUtils:
         return truncate_status_description(exception)
 
     @staticmethod
-    def status_for_exception(exception: BaseException) -> Any | None:
+    def status_for_exception(exception: BaseException) -> Status | None:
         """Map an exception to an OpenTelemetry ``Status``, or ``None`` for UNSET.
 
         ``BaseError`` with ``http_status`` below 500 leaves status UNSET (handled client error). All other exceptions
@@ -277,7 +291,7 @@ class OtelUtils:
         return metric_status_for_exception(exception)
 
     @classmethod
-    def status_for_cancellation(cls) -> Any:
+    def status_for_cancellation(cls) -> Status:
         """Return an ERROR status for asyncio task cancellation.
 
         Returns:
@@ -389,9 +403,9 @@ class OtelUtils:
     @classmethod
     def configure_for_testing(
         cls,
-        span_exporter: Any | None = None,
-        metric_reader: Any | None = None,
-        log_exporter: Any | None = None,
+        span_exporter: SpanExporter | None = None,
+        metric_reader: MetricReader | None = None,
+        log_exporter: LogRecordExporter | None = None,
         *,
         service_name: str = "archipy-test",
     ) -> None:
@@ -491,7 +505,7 @@ class OtelUtils:
         cls._textmap_propagator_installed = True
 
     @classmethod
-    def grpc_client_interceptors(cls) -> list[Any]:
+    def grpc_client_interceptors(cls) -> list[OpenTelemetryClientInterceptor]:
         """Return sync gRPC client interceptors for outbound trace propagation.
 
         Returns:
@@ -507,7 +521,7 @@ class OtelUtils:
         return [client_interceptor(tracer_provider=cls._tracer_provider)]
 
     @classmethod
-    def async_grpc_client_interceptors(cls) -> list[Any]:
+    def async_grpc_client_interceptors(cls) -> list[grpc.aio.ClientInterceptor]:
         """Return async gRPC client interceptors for outbound trace propagation.
 
         Returns:
@@ -576,7 +590,7 @@ class OtelUtils:
 
     @classmethod
     def _shutdown_owned_providers_unlocked(cls) -> None:
-        owned: list[tuple[Any | None, bool]] = [
+        owned: list[tuple[TracerProvider | MeterProvider | LoggerProvider | None, bool]] = [
             (cls._tracer_provider, cls._owns_tracer),
             (cls._meter_provider, cls._owns_meter),
             (cls._logger_provider, cls._owns_logger),
@@ -593,11 +607,11 @@ class OtelUtils:
     @classmethod
     def _shutdown_partial(
         cls,
-        tracer: Any | None,
+        tracer: TracerProvider | None,
         owns_tracer: bool,
-        meter: Any | None,
+        meter: MeterProvider | None,
         owns_meter: bool,
-        log_provider: Any | None,
+        log_provider: LoggerProvider | None,
         owns_logger: bool,
     ) -> None:
         """Shut down providers built during a failed initialization attempt."""
@@ -615,24 +629,24 @@ class OtelUtils:
             cls._mark_provider_shutdown(provider)
 
     @staticmethod
-    def _is_concrete_provider(provider: Any, sdk_type: type) -> bool:
+    def _is_concrete_provider[T](provider: object, sdk_type: type[T]) -> TypeIs[T]:
         return isinstance(provider, sdk_type)
 
     @classmethod
-    def _is_usable_provider(cls, provider: Any) -> bool:
+    def _is_usable_provider(cls, provider: object) -> bool:
         """Return False for providers that were shut down or are otherwise unusable."""
         if provider is None or provider in cls._shutdown_providers:
             return False
         return not getattr(provider, "_shutdown", False)
 
     @classmethod
-    def _mark_provider_shutdown(cls, provider: Any | None) -> None:
+    def _mark_provider_shutdown(cls, provider: TracerProvider | MeterProvider | LoggerProvider | None) -> None:
         if provider is not None:
             # Hold the provider weakly: ``id()`` values are reused after garbage collection.
             cls._shutdown_providers.add(provider)
 
     @classmethod
-    def _existing_concrete_tracer_provider(cls) -> Any | None:
+    def _existing_concrete_tracer_provider(cls) -> TracerProvider | None:
         from opentelemetry import trace
         from opentelemetry.sdk.trace import TracerProvider
 
@@ -642,7 +656,7 @@ class OtelUtils:
         return None
 
     @classmethod
-    def _existing_concrete_meter_provider(cls) -> Any | None:
+    def _existing_concrete_meter_provider(cls) -> MeterProvider | None:
         from opentelemetry import metrics
         from opentelemetry.sdk.metrics import MeterProvider
 
@@ -652,7 +666,7 @@ class OtelUtils:
         return None
 
     @classmethod
-    def _existing_concrete_logger_provider(cls) -> Any | None:
+    def _existing_concrete_logger_provider(cls) -> LoggerProvider | None:
         from opentelemetry._logs import get_logger_provider
         from opentelemetry.sdk._logs import LoggerProvider
 
@@ -662,17 +676,17 @@ class OtelUtils:
         return None
 
     @classmethod
-    def _create_resource(cls, otel: Any) -> Any:
+    def _create_resource(cls, otel: OpentelemetryConfig) -> Resource:
         return create_resource(otel)
 
     @classmethod
-    def _acquire_provider(
+    def _acquire_provider[P](
         cls,
         *,
         signal_name: str,
-        existing: Any | None,
-        builder: Any,
-    ) -> tuple[Any, bool]:
+        existing: P | None,
+        builder: Callable[[], P],
+    ) -> tuple[P, bool]:
         """Adopt an existing provider or build a new owned one.
 
         Args:
@@ -693,7 +707,11 @@ class OtelUtils:
         return builder(), True
 
     @classmethod
-    def _publish_trace_global(cls, provider: Any, owns: bool) -> tuple[Any, bool]:
+    def _publish_trace_global(
+        cls,
+        provider: TracerProvider | None,
+        owns: bool,
+    ) -> tuple[TracerProvider | None, bool]:
         from opentelemetry import trace
 
         if not owns or provider is None or cls._globals_set:
@@ -707,7 +725,11 @@ class OtelUtils:
         return provider, True
 
     @classmethod
-    def _publish_metric_global(cls, provider: Any, owns: bool) -> tuple[Any, bool]:
+    def _publish_metric_global(
+        cls,
+        provider: MeterProvider | None,
+        owns: bool,
+    ) -> tuple[MeterProvider | None, bool]:
         from opentelemetry import metrics
 
         if not owns or provider is None or cls._globals_set:
@@ -728,9 +750,9 @@ class OtelUtils:
         otel = apply_standard_env(config.OTEL)
         resource = cls._create_resource(otel)
 
-        new_tracer: Any | None = None
-        new_meter: Any | None = None
-        new_logger: Any | None = None
+        new_tracer: TracerProvider | None = None
+        new_meter: MeterProvider | None = None
+        new_logger: LoggerProvider | None = None
         owns_tracer = False
         owns_meter = False
         owns_logger = False
@@ -787,7 +809,7 @@ class OtelUtils:
             cls._attach_logging_handler_unlocked(getattr(logging, otel.LOGS_LEVEL.upper(), logging.INFO))
 
     @classmethod
-    def _build_tracer_provider(cls, otel: Any, resource: Any) -> Any:
+    def _build_tracer_provider(cls, otel: OpentelemetryConfig, resource: Resource) -> TracerProvider:
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
@@ -805,12 +827,12 @@ class OtelUtils:
         return provider
 
     @classmethod
-    def _build_meter_provider(cls, otel: Any, resource: Any) -> Any:
+    def _build_meter_provider(cls, otel: OpentelemetryConfig, resource: Resource) -> MeterProvider:
         from opentelemetry.sdk.metrics import MeterProvider
 
         from archipy.configs.config_template import OtelMetricsExporter
 
-        readers: list[Any] = []
+        readers: list[MetricReader] = []
         if otel.METRICS_EXPORTER == OtelMetricsExporter.OTLP:
             from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 
@@ -832,7 +854,7 @@ class OtelUtils:
         return MeterProvider(resource=resource, metric_readers=readers)
 
     @classmethod
-    def _build_logger_provider(cls, otel: Any, resource: Any) -> Any:
+    def _build_logger_provider(cls, otel: OpentelemetryConfig, resource: Resource) -> LoggerProvider:
         from opentelemetry.sdk._logs import LoggerProvider
         from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, SimpleLogRecordProcessor
 
@@ -855,15 +877,15 @@ class OtelUtils:
         return provider
 
     @staticmethod
-    def _create_console_log_exporter() -> Any:
+    def _create_console_log_exporter() -> LogRecordExporter:
         """Return a console exporter that splits INFO/DEBUG to stdout and WARNING+ to stderr."""
         return create_console_log_exporter()
 
     @staticmethod
     def _resolve_otlp_endpoint(
-        otel: Any,
+        otel: OpentelemetryConfig,
         signal: str,
-        override: Any | None,
+        override: object | None,
     ) -> str:
         """Resolve the OTLP endpoint for a signal.
 
@@ -881,7 +903,7 @@ class OtelUtils:
         return resolve_otlp_endpoint(otel, signal, override)
 
     @classmethod
-    def resolve_metrics_endpoint(cls, otel: Any) -> str:
+    def resolve_metrics_endpoint(cls, otel: OpentelemetryConfig) -> str:
         """Return the resolved OTLP metrics endpoint for Temporal / callers.
 
         Args:
@@ -893,15 +915,15 @@ class OtelUtils:
         return resolve_metrics_endpoint(otel)
 
     @classmethod
-    def _create_span_exporter(cls, otel: Any) -> Any:
+    def _create_span_exporter(cls, otel: OpentelemetryConfig) -> SpanExporter:
         return create_span_exporter(otel)
 
     @classmethod
-    def _create_metric_exporter(cls, otel: Any) -> Any:
+    def _create_metric_exporter(cls, otel: OpentelemetryConfig) -> MetricExporter:
         return create_metric_exporter(otel)
 
     @classmethod
-    def _create_otlp_log_exporter(cls, otel: Any) -> Any:
+    def _create_otlp_log_exporter(cls, otel: OpentelemetryConfig) -> LogRecordExporter:
         return create_otlp_log_exporter(otel)
 
     @classmethod

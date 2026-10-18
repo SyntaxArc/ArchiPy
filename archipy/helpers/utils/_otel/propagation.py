@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from archipy.models.errors import ConfigurationError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-_B3_INSTALL_HINT = 'b3 propagation needs the optional package. Install with: uv add "archipy[otel-b3]"'
+    from opentelemetry.propagators.composite import CompositePropagator
+    from opentelemetry.propagators.textmap import TextMapPropagator
+
+_B3_INSTALL_HINT = 'b3 propagation needs opentelemetry-propagator-b3. Install with: uv add "archipy[otel]"'
 
 
-def create_propagator(names: Sequence[str]) -> Any:
+def create_propagator(names: Sequence[str]) -> CompositePropagator:
     """Return one composite propagator for the named propagators, in order.
 
     Args:
@@ -28,7 +31,7 @@ def create_propagator(names: Sequence[str]) -> Any:
     from opentelemetry.propagators.composite import CompositePropagator
     from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
-    propagators: list[Any] = []
+    propagators: list[TextMapPropagator] = []
     for name in dict.fromkeys(names):
         if name == "tracecontext":
             propagators.append(TraceContextTextMapPropagator())

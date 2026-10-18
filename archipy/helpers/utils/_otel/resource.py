@@ -4,10 +4,17 @@ from __future__ import annotations
 
 import platform
 import socket
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from opentelemetry.sdk.resources import Resource, ResourceDetector
+
+    from archipy.configs.config_template import OpentelemetryConfig
 
 
-def _host_detector() -> Any:
+def _host_detector() -> ResourceDetector:
     from opentelemetry.sdk.resources import Resource, ResourceDetector
 
     class HostResourceDetector(ResourceDetector):
@@ -19,7 +26,7 @@ def _host_detector() -> Any:
     return HostResourceDetector()
 
 
-def _detectors(names: list[str]) -> list[Any]:
+def _detectors(names: Sequence[str]) -> list[ResourceDetector]:
     from opentelemetry.sdk.resources import (
         OsResourceDetector,
         ProcessResourceDetector,
@@ -32,14 +39,14 @@ def _detectors(names: list[str]) -> list[Any]:
         "os": OsResourceDetector,
         "process": ProcessResourceDetector,
     }
-    detectors: list[Any] = []
+    detectors: list[ResourceDetector] = []
     for name in dict.fromkeys(names):
         factory = available[name]
         detectors.append(factory())
     return detectors
 
 
-def create_resource(otel: Any) -> Any:
+def create_resource(otel: OpentelemetryConfig) -> Resource:
     """Build the OpenTelemetry resource of the service.
 
     Precedence, lowest first: detected attributes, ``RESOURCE_ATTRIBUTES``, then the explicit ``SERVICE_NAME``,

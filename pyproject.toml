@@ -54,10 +54,10 @@ otel = [
     "opentelemetry-instrumentation-httpx>=0.66b1",
     "opentelemetry-instrumentation-requests>=0.66b1",
     "opentelemetry-instrumentation-threading>=0.66b1",
+    "opentelemetry-propagator-b3>=1.45.1",
     "opentelemetry-instrumentation-system-metrics>=0.66b1",
     "opentelemetry-exporter-prometheus>=0.66b1",
 ]
-otel-b3 = ["archipy[otel]", "opentelemetry-propagator-b3>=1.45.1"]
 otel-grpc = ["archipy[otel]", "opentelemetry-instrumentation-grpc>=0.66b1"]
 otel-sqlalchemy = ["archipy[otel]", "opentelemetry-instrumentation-sqlalchemy>=0.66b1"]
 otel-redis = ["archipy[otel]", "opentelemetry-instrumentation-redis>=0.66b1"]

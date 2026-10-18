@@ -57,6 +57,13 @@ class _NoOpCounter:
         """No-op."""
 
 
+class _NoOpUpDownCounter:
+    """Minimal up-down counter stub used when the opentelemetry package is not installed."""
+
+    def add(self, *_args: Any, **_kwargs: Any) -> None:
+        """No-op."""
+
+
 class _NoOpMeter:
     """Minimal meter stub used when the opentelemetry package is not installed."""
 
@@ -67,3 +74,7 @@ class _NoOpMeter:
     def create_counter(self, *_args: Any, **_kwargs: Any) -> _NoOpCounter:
         """Return a no-op counter."""
         return _NoOpCounter()
+
+    def create_up_down_counter(self, *_args: Any, **_kwargs: Any) -> _NoOpUpDownCounter:
+        """Return a no-op up-down counter."""
+        return _NoOpUpDownCounter()

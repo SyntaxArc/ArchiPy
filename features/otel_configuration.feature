@@ -145,7 +145,30 @@ Feature: OpenTelemetry configuration
       | b3multi              | x-b3-traceid,x-b3-spanid,x-b3-sampled |
       | none                 | (none)                                |
 
-  Scenario: b3 propagation without its package names the extra
+  Scenario Outline: B3 context sent as <header> continues the trace on a FastAPI route
+    Given the global propagator is set to "<propagator>"
+    And a tracer provider that keeps its spans in memory
+    When a FastAPI route with native telemetry receives the header <header> "<value>"
+    Then the server span continues trace "0af7651916cd43dd8448eb211c80319c" from parent span "b7ad6b7169203331"
+
+    Examples:
+      | propagator   | header      | value                                                   |
+      | b3           | b3          | 0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-1     |
+      | tracecontext | traceparent | 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01 |
+
+  Scenario Outline: A gRPC call carries the trace in <header> headers
+    Given the global propagator is set to "<propagator>"
+    And a tracer provider that keeps its spans in memory
+    When a gRPC client with the OpenTelemetry interceptor calls a server with the OpenTelemetry interceptor
+    Then the gRPC server received the header "<header>" and not "<other>"
+    And the gRPC server span belongs to the trace of the client span
+
+    Examples:
+      | propagator   | header      | other       |
+      | b3           | b3          | traceparent |
+      | tracecontext | traceparent | b3          |
+
+  Scenario: b3 propagation without its package names the install hint
     Given the b3 propagator package is not installed
     Then creating the propagator for "b3" fails with "b3_propagator_missing"
 

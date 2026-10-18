@@ -4,7 +4,15 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from wsgiref.simple_server import WSGIServer
+
+    from opentelemetry.sdk.metrics import MeterProvider
+    from prometheus_client import CollectorRegistry
+
+    from archipy.configs.config_template import OpentelemetryConfig
 
 # Same logger as OtelUtils, so log filters and handlers that name it keep seeing these records.
 logger = logging.getLogger("archipy.helpers.utils.otel_utils")
@@ -17,9 +25,9 @@ class MetricsExport:
     Pushgateway loop share one registry, which is dropped only when neither of them still owns it.
     """
 
-    registry: Any | None = None
-    _pull_httpd: Any | None = None
-    _pull_thread: Any | None = None
+    registry: CollectorRegistry | None = None
+    _pull_httpd: WSGIServer | None = None
+    _pull_thread: threading.Thread | None = None
     _owns_pull_scrape: bool = False
     _pushgateway_stop: threading.Event | None = None
     _pushgateway_thread: threading.Thread | None = None
@@ -41,10 +49,10 @@ class MetricsExport:
     @classmethod
     def maybe_start_pull_scrape_unlocked(
         cls,
-        otel: Any,
+        otel: OpentelemetryConfig,
         *,
         owns_meter: bool,
-        new_meter: Any | None,
+        new_meter: MeterProvider | None,
     ) -> None:
         """Start pull scrape when owned; leave providers intact on bind failure."""
         if not (otel.METRICS_ENABLED and otel.METRICS_EXPORTER == "pull"):
@@ -72,10 +80,10 @@ class MetricsExport:
     @classmethod
     def maybe_start_pushgateway_unlocked(
         cls,
-        otel: Any,
+        otel: OpentelemetryConfig,
         *,
         owns_meter: bool,
-        new_meter: Any | None,
+        new_meter: MeterProvider | None,
     ) -> None:
         """Start Pushgateway push loop when owned; never raise into the app."""
         if not (otel.METRICS_ENABLED and otel.METRICS_EXPORTER == "pushgateway"):
@@ -97,7 +105,7 @@ class MetricsExport:
             cls.stop_pushgateway_unlocked(delete_group=False)
 
     @classmethod
-    def start_pull_scrape_unlocked(cls, otel: Any) -> None:
+    def start_pull_scrape_unlocked(cls, otel: OpentelemetryConfig) -> None:
         """Start the metrics pull scrape HTTP server if not already running."""
         if cls._pull_httpd is not None:
             return
@@ -149,7 +157,7 @@ class MetricsExport:
         cls._owns_pull_scrape = False
 
     @classmethod
-    def start_pushgateway_unlocked(cls, otel: Any) -> None:
+    def start_pushgateway_unlocked(cls, otel: OpentelemetryConfig) -> None:
         """Start the daemon thread that pushes metrics to Prometheus Pushgateway."""
         if cls._pushgateway_thread is not None and cls._pushgateway_thread.is_alive():
             return

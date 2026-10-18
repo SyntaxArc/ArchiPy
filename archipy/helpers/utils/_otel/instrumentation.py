@@ -8,7 +8,13 @@ from typing import TYPE_CHECKING, Any, ClassVar
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from opentelemetry.instrumentation.dependencies import DependencyConflict
+    from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
+    from opentelemetry.metrics import MeterProvider
+    from opentelemetry.trace import Span, TracerProvider
+
     from archipy.configs.base_config import BaseConfig
+    from archipy.configs.config_template import OpentelemetryConfig
 
 # Same logger as OtelUtils, so log filters and handlers that name it keep seeing these records.
 logger = logging.getLogger("archipy.helpers.utils.otel_utils")
@@ -24,7 +30,13 @@ class Instrumentation:
     """Keys of the instrumented libraries. ``OtelUtils`` exposes this very set, and callers mutate it in place."""
 
     @classmethod
-    def instrument_installed_libraries(cls, config: BaseConfig, *, tracer_provider: Any, meter_provider: Any) -> None:
+    def instrument_installed_libraries(
+        cls,
+        config: BaseConfig,
+        *,
+        tracer_provider: TracerProvider | None,
+        meter_provider: MeterProvider | None,
+    ) -> None:
         """Best-effort auto-instrumentation of installed contrib packages.
 
         Each entry is ``(cache_key, module, class_name)``. Missing packages are
@@ -114,7 +126,7 @@ class Instrumentation:
         if getattr(original, _REDIS_SEARCH_GUARD_MARKER, None) is not None:
             return
 
-        def guarded(span: Any, response: Any, args: Any) -> None:
+        def guarded(span: Span, response: object, args: object) -> None:
             try:
                 original(span, response, args)
             except KeyError, TypeError, IndexError:
@@ -145,10 +157,10 @@ class Instrumentation:
     def _handle_instrumentation_conflict(
         cls,
         key: str,
-        conflict: Any,
+        conflict: DependencyConflict,
         target: tuple[str, str],
-        otel: Any,
-        providers: tuple[Any, Any],
+        otel: OpentelemetryConfig,
+        providers: tuple[TracerProvider | None, MeterProvider | None],
     ) -> None:
         """React to a ``DependencyConflictError`` raised by an instrumentor.
 
@@ -172,7 +184,12 @@ class Instrumentation:
             )
 
     @classmethod
-    def _instrument_ignoring_version_range(cls, key: str, instrumentor_cls: Any, providers: tuple[Any, Any]) -> None:
+    def _instrument_ignoring_version_range(
+        cls,
+        key: str,
+        instrumentor_cls: type[BaseInstrumentor],
+        providers: tuple[TracerProvider | None, MeterProvider | None],
+    ) -> None:
         """Instrument a library whose installed version is newer than the instrumentor's declared range.
 
         Some instrumentors cap the library version in their metadata long before the runtime hooks they use
@@ -201,9 +218,9 @@ class Instrumentation:
     @classmethod
     def _instrument_with_providers(
         cls,
-        instrumentor: Any,
-        tracer_provider: Any,
-        meter_provider: Any,
+        instrumentor: BaseInstrumentor,
+        tracer_provider: TracerProvider | None,
+        meter_provider: MeterProvider | None,
         *,
         skip_dep_check: bool = False,
     ) -> None:

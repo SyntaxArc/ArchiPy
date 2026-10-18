@@ -138,7 +138,7 @@ def step_then_propagator_fails(context, names, reason):
         create_propagator(names.split(","))
     except ConfigurationError as error:
         assert error.additional_data["reason"] == reason, error.additional_data
-        assert "otel-b3" in error.additional_data["hint"]
+        assert "archipy[otel]" in error.additional_data["hint"]
     else:
         raise AssertionError("the propagator was created")
 
@@ -175,3 +175,122 @@ def step_then_duration_buckets(context, buckets):
     context.add_cleanup(setattr, otel, "METRICS_DURATION_BUCKETS_S", original)
     otel.METRICS_DURATION_BUCKETS_S = list(_ctx(context).get("otel_cfg").METRICS_DURATION_BUCKETS_S)
     assert OtelUtils.duration_histogram_buckets() == expected
+
+
+# Propagation through the real server integrations
+
+
+@given('the global propagator is set to "{names}"')
+def step_given_global_propagator(context, names):
+    from opentelemetry.propagate import get_global_textmap, set_global_textmap
+
+    previous = get_global_textmap()
+    context.add_cleanup(set_global_textmap, previous)
+    set_global_textmap(create_propagator(names.split(",")))
+
+
+@given("a tracer provider that keeps its spans in memory")
+def step_given_memory_tracer_provider(context):
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    context.add_cleanup(provider.shutdown)
+    sc = _ctx(context)
+    sc.store("memory_exporter", exporter)
+    sc.store("memory_provider", provider)
+
+
+@when('a FastAPI route with native telemetry receives the header {header} "{value}"')
+def step_when_fastapi_receives_header(context, header, value):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    sc = _ctx(context)
+    app = FastAPI(
+        telemetry={
+            "tracing": True,
+            "metrics": False,
+            "logs": False,
+            "tracer_provider": sc.get("memory_provider"),
+            "auto_configure": False,
+        },
+    )
+
+    @app.get("/ping")
+    def ping():
+        return {"ok": True}
+
+    with TestClient(app) as client:
+        client.get("/ping", headers={header: value})
+
+
+@then('the server span continues trace "{trace_id}" from parent span "{span_id}"')
+def step_then_server_span_continues(context, trace_id, span_id):
+    from opentelemetry.trace import SpanKind
+
+    spans = _ctx(context).get("memory_exporter").get_finished_spans()
+    servers = [span for span in spans if span.kind == SpanKind.SERVER]
+    assert servers, [span.name for span in spans]
+    assert format(servers[0].context.trace_id, "032x") == trace_id
+    assert servers[0].parent is not None and format(servers[0].parent.span_id, "016x") == span_id
+
+
+@when("a gRPC client with the OpenTelemetry interceptor calls a server with the OpenTelemetry interceptor")
+def step_when_grpc_roundtrip(context):
+    from concurrent import futures
+
+    import grpc
+    from opentelemetry.instrumentation.grpc import intercept_channel, server_interceptor
+
+    sc = _ctx(context)
+    provider = sc.get("memory_provider")
+    seen: dict[str, str] = {}
+
+    def handle(_request, rpc_context):
+        seen.update({key: value for key, value in rpc_context.invocation_metadata()})
+        return b"ok"
+
+    handler = grpc.unary_unary_rpc_method_handler(
+        handle,
+        request_deserializer=lambda payload: payload,
+        response_serializer=lambda payload: payload,
+    )
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=2),
+        interceptors=[server_interceptor(tracer_provider=provider)],
+    )
+    server.add_generic_rpc_handlers((grpc.method_handlers_generic_handler("otel.Probe", {"Call": handler}),))
+    port = server.add_insecure_port("127.0.0.1:0")
+    server.start()
+    context.add_cleanup(server.stop, 0)
+
+    original = OtelUtils._tracer_provider
+    OtelUtils._tracer_provider = provider
+    context.add_cleanup(setattr, OtelUtils, "_tracer_provider", original)
+    channel = intercept_channel(grpc.insecure_channel(f"127.0.0.1:{port}"), *OtelUtils.grpc_client_interceptors())
+    context.add_cleanup(channel.close)
+    with provider.get_tracer("probe").start_as_current_span("client-root") as root:
+        channel.unary_unary("/otel.Probe/Call")(b"x")
+        sc.store("client_trace_id", format(root.get_span_context().trace_id, "032x"))
+    sc.store("received_metadata", seen)
+
+
+@then('the gRPC server received the header "{present}" and not "{absent}"')
+def step_then_grpc_headers(context, present, absent):
+    metadata = _ctx(context).get("received_metadata")
+    assert present in metadata and absent not in metadata, sorted(metadata)
+
+
+@then("the gRPC server span belongs to the trace of the client span")
+def step_then_grpc_trace(context):
+    from opentelemetry.trace import SpanKind
+
+    servers = [
+        span for span in _ctx(context).get("memory_exporter").get_finished_spans() if span.kind == SpanKind.SERVER
+    ]
+    assert servers
+    assert format(servers[0].context.trace_id, "032x") == _ctx(context).get("client_trace_id")

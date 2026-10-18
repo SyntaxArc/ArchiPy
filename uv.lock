@@ -307,15 +307,6 @@ otel = [
     { name = "opentelemetry-instrumentation-requests" },
     { name = "opentelemetry-instrumentation-system-metrics" },
     { name = "opentelemetry-instrumentation-threading" },
-    { name = "opentelemetry-sdk" },
-]
-otel-b3 = [
-    { name = "opentelemetry-exporter-otlp" },
-    { name = "opentelemetry-exporter-prometheus" },
-    { name = "opentelemetry-instrumentation-httpx" },
-    { name = "opentelemetry-instrumentation-requests" },
-    { name = "opentelemetry-instrumentation-system-metrics" },
-    { name = "opentelemetry-instrumentation-threading" },
     { name = "opentelemetry-propagator-b3" },
     { name = "opentelemetry-sdk" },
 ]
@@ -327,6 +318,7 @@ otel-grpc = [
     { name = "opentelemetry-instrumentation-requests" },
     { name = "opentelemetry-instrumentation-system-metrics" },
     { name = "opentelemetry-instrumentation-threading" },
+    { name = "opentelemetry-propagator-b3" },
     { name = "opentelemetry-sdk" },
 ]
 otel-kafka = [
@@ -337,6 +329,7 @@ otel-kafka = [
     { name = "opentelemetry-instrumentation-requests" },
     { name = "opentelemetry-instrumentation-system-metrics" },
     { name = "opentelemetry-instrumentation-threading" },
+    { name = "opentelemetry-propagator-b3" },
     { name = "opentelemetry-sdk" },
 ]
 otel-minio = [
@@ -347,6 +340,7 @@ otel-minio = [
     { name = "opentelemetry-instrumentation-requests" },
     { name = "opentelemetry-instrumentation-system-metrics" },
     { name = "opentelemetry-instrumentation-threading" },
+    { name = "opentelemetry-propagator-b3" },
     { name = "opentelemetry-sdk" },
 ]
 otel-redis = [
@@ -357,6 +351,7 @@ otel-redis = [
     { name = "opentelemetry-instrumentation-requests" },
     { name = "opentelemetry-instrumentation-system-metrics" },
     { name = "opentelemetry-instrumentation-threading" },
+    { name = "opentelemetry-propagator-b3" },
     { name = "opentelemetry-sdk" },
 ]
 otel-scylladb = [
@@ -367,6 +362,7 @@ otel-scylladb = [
     { name = "opentelemetry-instrumentation-requests" },
     { name = "opentelemetry-instrumentation-system-metrics" },
     { name = "opentelemetry-instrumentation-threading" },
+    { name = "opentelemetry-propagator-b3" },
     { name = "opentelemetry-sdk" },
 ]
 otel-sqlalchemy = [
@@ -377,6 +373,7 @@ otel-sqlalchemy = [
     { name = "opentelemetry-instrumentation-sqlalchemy" },
     { name = "opentelemetry-instrumentation-system-metrics" },
     { name = "opentelemetry-instrumentation-threading" },
+    { name = "opentelemetry-propagator-b3" },
     { name = "opentelemetry-sdk" },
 ]
 parsian-ipg = [
@@ -454,7 +451,6 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "apscheduler", marker = "extra == 'scheduler'", specifier = ">=3.11.3" },
-    { name = "archipy", extras = ["otel"], marker = "extra == 'otel-b3'" },
     { name = "archipy", extras = ["otel"], marker = "extra == 'otel-grpc'" },
     { name = "archipy", extras = ["otel"], marker = "extra == 'otel-kafka'" },
     { name = "archipy", extras = ["otel"], marker = "extra == 'otel-minio'" },
@@ -502,7 +498,7 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-sqlalchemy", marker = "extra == 'otel-sqlalchemy'", specifier = ">=0.66b1" },
     { name = "opentelemetry-instrumentation-system-metrics", marker = "extra == 'otel'", specifier = ">=0.66b1" },
     { name = "opentelemetry-instrumentation-threading", marker = "extra == 'otel'", specifier = ">=0.66b1" },
-    { name = "opentelemetry-propagator-b3", marker = "extra == 'otel-b3'", specifier = ">=1.45.1" },
+    { name = "opentelemetry-propagator-b3", marker = "extra == 'otel'", specifier = ">=1.45.1" },
     { name = "opentelemetry-sdk", marker = "extra == 'otel'", specifier = ">=1.45.1" },
     { name = "protobuf", marker = "extra == 'grpc'", specifier = ">=7.36.2" },
     { name = "pydantic", specifier = ">=2.14.1" },
@@ -513,7 +509,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlalchemy-async'", specifier = ">=2.1.5" },
     { name = "testcontainers", extras = ["elasticsearch", "minio", "mysql", "vault"], marker = "extra == 'testcontainers'", specifier = ">=4.15.0" },
 ]
-provides-extras = ["aiosqlite", "behave", "cache", "dependency-injection", "elasticsearch", "elasticsearch-async", "fakeredis", "fastapi", "grpc", "jwt", "kafka", "keycloak", "minio", "parsian-ipg", "parsian-ipg-async", "mysql", "mysql-async", "postgres", "redis", "saman-ipg", "scheduler", "scylladb", "sqlalchemy", "sqlalchemy-async", "starrocks", "starrocks-async", "temporalio", "testcontainers", "vault", "otel", "otel-b3", "otel-grpc", "otel-sqlalchemy", "otel-redis", "otel-kafka", "otel-scylladb", "otel-minio"]
+provides-extras = ["aiosqlite", "behave", "cache", "dependency-injection", "elasticsearch", "elasticsearch-async", "fakeredis", "fastapi", "grpc", "jwt", "kafka", "keycloak", "minio", "parsian-ipg", "parsian-ipg-async", "mysql", "mysql-async", "postgres", "redis", "saman-ipg", "scheduler", "scylladb", "sqlalchemy", "sqlalchemy-async", "starrocks", "starrocks-async", "temporalio", "testcontainers", "vault", "otel", "otel-grpc", "otel-sqlalchemy", "otel-redis", "otel-kafka", "otel-scylladb", "otel-minio"]
 
 [package.metadata.requires-dev]
 dev = [

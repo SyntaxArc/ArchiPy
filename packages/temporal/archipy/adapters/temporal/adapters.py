@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeVar, override
+from typing import TYPE_CHECKING, Any, TypeVar, cast, override
 from uuid import uuid4
 
 from temporalio.client import (
@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from opentelemetry.trace import Tracer
     from temporalio.runtime import Runtime
 
     from archipy.configs.config_template import OpentelemetryConfig, TemporalConfig
@@ -192,7 +193,8 @@ class TemporalAdapter(TemporalPort):
         # The interceptor's default tracer is bound to the first global provider; ask ArchiPy for the tracer of
         # the provider it currently owns so spans survive an OpenTelemetry re-initialization.
         tracer = OtelUtils.get_tracer("temporalio.contrib.opentelemetry")
-        connect_kwargs.setdefault("interceptors", []).append(TracingInterceptor(tracer))
+        # temporalio.contrib.opentelemetry imports opentelemetry, so the tracer is a real one, not the no-op stub.
+        connect_kwargs.setdefault("interceptors", []).append(TracingInterceptor(cast("Tracer", tracer)))
 
     def _has_tls_config(self) -> bool:
         """Check if TLS configuration is provided.

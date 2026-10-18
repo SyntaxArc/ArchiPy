@@ -15,10 +15,9 @@ Enable the relevant extras, set `OTEL__IS_ENABLED=true`, and call `AppUtils.crea
 
 | Extra                      | Purpose                                                           |
 |----------------------------|-------------------------------------------------------------------|
-| `archipy[otel]`            | SDK, OTLP exporters, httpx/requests, threading, system metrics    |
+| `archipy[otel]`            | SDK, OTLP exporters, B3 propagator, httpx/requests, threading, system metrics |
 | `archipy[otel,fastapi]`    | FastAPI native telemetry (FastAPI 0.142.2+)                       |
 | `archipy[otel-grpc]`       | gRPC server/client contrib interceptors                           |
-| `archipy[otel-b3]`         | B3 context propagation (`OTEL__PROPAGATORS`)                      |
 | `archipy[otel-sqlalchemy]` | SQLAlchemy instrumentation (covers Postgres/MySQL/SQLite via ORM) |
 | `archipy[otel-redis]`      | Redis instrumentation                                             |
 | `archipy[otel-kafka]`      | Confluent Kafka instrumentation                                   |
@@ -100,7 +99,7 @@ logger.info("OTel enabled=%s endpoint=%s", config.OTEL.IS_ENABLED, config.OTEL.O
 | `PROTOCOL`                               | `grpc`                  | `grpc` or `http/protobuf`                                                                    |
 | `TRACES_SAMPLER`                         | `parentbased_traceidratio` | `always_on`, `always_off`, `traceidratio` or the `parentbased_*` variants                 |
 | `TRACES_SAMPLE_RATIO`                    | `0.1`                   | Ratio of the `traceidratio` and `parentbased_traceidratio` samplers                          |
-| `PROPAGATORS`                            | `["tracecontext", "baggage"]` | Context propagators; `b3` and `b3multi` need `archipy[otel-b3]`, `none` disables them |
+| `PROPAGATORS`                            | `["tracecontext", "baggage"]` | Context propagators; also `b3`, `b3multi`; `none` disables them |
 | `OTLP_COMPRESSION`                       | `none`                  | `none` or `gzip` for the OTLP exports                                                        |
 | `SPAN_BATCH_*` / `LOG_BATCH_*`           | SDK defaults            | `SCHEDULE_DELAY_MS`, `EXPORT_TIMEOUT_MS`, `MAX_QUEUE_SIZE`, `MAX_EXPORT_BATCH_SIZE` of the batch processors |
 | `SERVICE_NAME` / `SERVICE_VERSION`       | `None`                  | Resource `service.name` and `service.version`                                                |

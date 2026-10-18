@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from opentelemetry.sdk.trace.sampling import Sampler
+
+    from archipy.configs.config_template import OpentelemetryConfig
 
 
-def create_sampler(otel: Any) -> Any:
+def create_sampler(otel: OpentelemetryConfig) -> Sampler:
     """Return the SDK sampler named by ``otel.TRACES_SAMPLER``; the ratio ones use ``TRACES_SAMPLE_RATIO``."""
     from opentelemetry.sdk.trace.sampling import (
         ALWAYS_OFF,
