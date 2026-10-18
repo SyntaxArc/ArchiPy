@@ -586,6 +586,8 @@ Feature: Keycloak Authentication Testing
     Then the keycloak auth dependency returns the user info of user "authuser"
     And the keycloak auth request state user roles include "auth-reader"
     And the keycloak auth request state has an empty actor chain
+    And the keycloak auth context holds user "authuser" while the dependency is active
+    And the keycloak auth context is cleared after the dependency ends
 
     Examples:
       | mode  |
@@ -617,6 +619,7 @@ Feature: Keycloak Authentication Testing
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     When the keycloak auth <mode> fastapi dependency is called without credentials
     Then the keycloak auth call fails with error code "UNAUTHENTICATED"
+    And the keycloak auth context is cleared after the dependency ends
 
     Examples:
       | mode  |

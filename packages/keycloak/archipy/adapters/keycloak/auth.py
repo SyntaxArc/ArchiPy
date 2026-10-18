@@ -574,7 +574,9 @@ def fastapi_auth(
 
     The dependency is always asynchronous: FastAPI awaits it on the event loop, whether the endpoint is a ``def``
     or an ``async def`` function. It returns the UserInfo dict and fills ``request.state`` with ``user_info``,
-    ``token_info``, ``actor_chain`` and ``user_roles``.
+    ``token_info``, ``actor_chain`` and ``user_roles``. It also sets :class:`AuthContextManager` for the request, like
+    :func:`grpc_auth` does, so code below the endpoint reads the caller with ``AuthContextManager.get_auth_context()``;
+    the context is cleared when the request ends.
 
     Args:
         resource_type_param: The parameter name in the path (e.g., 'user_uuid', 'employee_uuid')
@@ -596,7 +598,7 @@ def fastapi_auth(
         request: Request,
         token: HTTPAuthorizationCredentials = Security(security),
         keycloak: AsyncKeycloakAdapter = Depends(_get_async_keycloak_adapter),
-    ) -> dict[str, Any]:
+    ) -> AsyncIterator[dict[str, Any]]:
         if token is None:
             raise UnauthenticatedError(lang=lang)
         token_str = token.credentials
@@ -623,7 +625,11 @@ def fastapi_auth(
         request.state.token_info = token_info
         request.state.actor_chain = _parse_actor_chain(token_info)
         request.state.user_roles = user_roles
-        return user_info
+        AuthContextManager.set_auth_context(_build_auth_context(user_info, token_str, user_roles, token_info))
+        try:
+            yield user_info
+        finally:
+            AuthContextManager.clear_auth_context()
 
     return dependency
 

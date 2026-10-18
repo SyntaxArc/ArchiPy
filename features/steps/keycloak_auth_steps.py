@@ -318,10 +318,28 @@ async def _call_dependency(context, mode, credentials):
     try:
         with _adapters_for_call(sc):
             dependency = keycloak_auth.fastapi_auth(**kwargs)
-            result = await dependency(request, credentials, keycloak_auth._get_async_keycloak_adapter())
+            generator = dependency(request, credentials, keycloak_auth._get_async_keycloak_adapter())
+            try:
+                result = await anext(generator)
+                sc.store("auth_context_during", AuthContextManager.get_auth_context())
+            finally:
+                await generator.aclose()
         sc.store("result", result)
     except BaseError as error:
         sc.store("error", error)
+    sc.store("auth_context_after", AuthContextManager.get_auth_context())
+
+
+@then('the keycloak auth context holds user "{username}" while the dependency is active')
+def step_keycloak_auth_context_during(context, username):
+    auth_context = _ctx(context).get("auth_context_during")
+    assert auth_context is not None, "the auth context was not set"
+    assert auth_context.username == username, f"expected {username}, got {auth_context.username}"
+
+
+@then("the keycloak auth context is cleared after the dependency ends")
+def step_keycloak_auth_context_after(context):
+    assert _ctx(context).get("auth_context_after") is None
 
 
 @then('the keycloak auth call fails with error code "{code}"')
