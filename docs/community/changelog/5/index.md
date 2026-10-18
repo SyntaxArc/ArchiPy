@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.16.0](5.16.0.md) | 2026-10-18 | Several SQLAlchemy databases of one type, `archipy.adapters.keycloak.auth`, configurable OTel SDK with B3 and `OtelRuntime`; **breaking:** `otel-fastapi` extra removed and gRPC metrics follow the stable RPC conventions |
 | [5.15.0](5.15.0.md) | 2026-10-14 | `archipy.helpers.errors` package for FastAPI and gRPC error handling, `GrpcExceptionInterceptor`, `abort_grpc` (**behavior:** gRPC `ValidationError` is now `INVALID_ARGUMENT`) |
 | [5.14.0](5.14.0.md) | 2026-10-14 | Search output DTOs with `total_count_estimated`, `PAGINATION.MAX_ITEMS` config that drives the pagination limit and the default `COUNT_THRESHOLD` (**behavior:** PostgreSQL totals above it are estimated) |
 | [5.13.0](5.13.0.md) | 2026-10-14 | Cheaper search totals: `count_threshold` with a PostgreSQL estimate, opt-in count cache, skipped `COUNT` on short pages |
