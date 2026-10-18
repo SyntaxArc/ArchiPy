@@ -49,7 +49,19 @@ heading_level: 3
 The base SQLAlchemy adapter implements generic CRUD operations that concrete database adapters (PostgreSQL, SQLite,
 StarRocks) inherit from.
 
-::: archipy.adapters.base.sqlalchemy.adapters
+`archipy.adapters.base.sqlalchemy.adapters` re-exports everything below, so existing imports keep working.
+
+::: archipy.adapters.base.sqlalchemy.sync_adapter
+options:
+show_root_toc_entry: false
+heading_level: 3
+
+::: archipy.adapters.base.sqlalchemy.async_adapter
+options:
+show_root_toc_entry: false
+heading_level: 3
+
+::: archipy.adapters.base.sqlalchemy.mixins
 options:
 show_root_toc_entry: false
 heading_level: 3
