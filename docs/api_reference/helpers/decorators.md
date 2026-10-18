@@ -10,7 +10,8 @@ retry logic, deprecation, timing, tracing, and transaction management.
 
 Decorators are named without a `_decorator` suffix (`retry`, `timeout`, `ttl_cache`, ...) and detect `async def`
 functions automatically. The old names (`retry_decorator`, `async_trace_span`, ...) keep working and emit a
-`DeprecationWarning`; see the [Decorators tutorial](../../tutorials/helpers/decorators.md#deprecated-names).
+`DeprecationWarning` and will be removed in 6.0.0; see the
+[Decorators tutorial](../../tutorials/helpers/decorators.md#deprecated-names).
 
 ## Cache
 
@@ -51,7 +52,7 @@ heading_level: 3
 ## Tracing
 
 OpenTelemetry span decorators for functions and classes (`trace_span`, `trace_root`, `trace_class`). The old
-`async_trace_span` and `async_trace_root` names are deprecated aliases.
+`async_trace_span` and `async_trace_root` names are deprecated aliases that will be removed in 6.0.0.
 
 ::: archipy.helpers.decorators.tracing
 options:
@@ -61,7 +62,7 @@ heading_level: 3
 ## Metrics
 
 OpenTelemetry metrics decorators for duration histograms and call counters (`measure_duration`, `count_calls`). Both
-accept sync and async functions; the `async_*` names are deprecated aliases.
+accept sync and async functions; the `async_*` names are deprecated aliases that will be removed in 6.0.0.
 
 ::: archipy.helpers.decorators.metrics
 options:
@@ -81,7 +82,7 @@ heading_level: 3
 
 The SQLAlchemy atomic decorators moved to the adapters layer; see
 [Base SQLAlchemy](../adapters/base.md#atomic-transaction-decorators). The old
-`archipy.helpers.decorators` names still work and emit a `DeprecationWarning`.
+`archipy.helpers.decorators` names still work and emit a `DeprecationWarning`; they will be removed in 6.0.0.
 
 ## Deprecation Warnings
 

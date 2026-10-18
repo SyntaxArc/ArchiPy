@@ -66,7 +66,7 @@ def method_deprecation_error[**P, R](
     return decorator
 
 
-def class_deprecation_error[T: type[Any]](
+def class_deprecation_error[T: type[Any]](  # Any: patches __init__ on the class
     operation: str | None = None,
     lang: LanguageType = LanguageType.FA,
 ) -> Callable[[T], T]:
@@ -103,7 +103,7 @@ def class_deprecation_error[T: type[Any]](
 
     def decorator(cls: T) -> T:
         @wraps(cls.__init__)
-        def new_init(_self: Any, *_args: Any, **_kwargs: Any) -> None:
+        def new_init(_self: object, *_args: object, **_kwargs: object) -> None:
             operation_name = operation if operation is not None else cls.__name__
             raise DeprecationError(deprecated_feature=operation_name, lang=lang)
 

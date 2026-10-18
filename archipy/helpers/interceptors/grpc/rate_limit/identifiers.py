@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import cache
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from archipy.configs.base_config import BaseConfig
 from archipy.models.errors import InvalidTokenError, TokenExpiredError
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from archipy.configs.config_template import AuthConfig
+    from archipy.helpers.utils.jwt_utils import JWTUtils
 
 
 _METADATA_PAIR_MIN_LEN = 2
@@ -21,7 +22,7 @@ _auth_config_cache: tuple[object, AuthConfig] | None = None
 
 
 @cache
-def _jwt_utils() -> Any:  # noqa: ANN401
+def _jwt_utils() -> type[JWTUtils]:
     """Import ``JWTUtils`` once (a module-level import would create an import cycle)."""
     from archipy.helpers.utils.jwt_utils import JWTUtils  # noqa: PLC0415
 
@@ -40,7 +41,7 @@ def _resolve_auth_config() -> AuthConfig:
     return auth_config
 
 
-def invocation_metadata_to_dict(metadata_items: Iterable[Any]) -> dict[str, str]:
+def invocation_metadata_to_dict(metadata_items: Iterable[object]) -> dict[str, str]:
     """Normalize gRPC invocation metadata to a string dict.
 
     Args:
@@ -64,7 +65,7 @@ def invocation_metadata_to_dict(metadata_items: Iterable[Any]) -> dict[str, str]
     return metadata_dict
 
 
-def extract_bearer_token_from_metadata(metadata_items: Iterable[Any]) -> str | None:
+def extract_bearer_token_from_metadata(metadata_items: Iterable[object]) -> str | None:
     """Extract a Bearer token from gRPC invocation metadata.
 
     Args:
@@ -86,7 +87,7 @@ def extract_bearer_token_from_metadata(metadata_items: Iterable[Any]) -> str | N
 
 
 def resolve_jwt_access_token_sub_from_metadata(
-    metadata_items: Iterable[Any],
+    metadata_items: Iterable[object],
     *,
     auth_config: AuthConfig | None = None,
 ) -> str | None:

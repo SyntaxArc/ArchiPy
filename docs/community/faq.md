@@ -254,7 +254,7 @@ class AppConfig(BaseConfig):
 | `@method_deprecation_warning`              | Deprecation warning             |
 
 All are imported from `archipy.helpers.decorators` and work for sync and `async def` functions. The older
-`*_decorator` and `async_*` names still work but emit a `DeprecationWarning`.
+`*_decorator` and `async_*` names still work but emit a `DeprecationWarning`; they will be removed in 6.0.0.
 
 See the [Decorators tutorial](../tutorials/helpers/decorators.md) for examples.
 

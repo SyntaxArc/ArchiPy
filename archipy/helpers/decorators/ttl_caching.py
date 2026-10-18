@@ -5,17 +5,17 @@ from __future__ import annotations
 import inspect
 import threading
 from functools import wraps
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Final, cast
 
 from cachetools.keys import typedkey
 
 from archipy.helpers._deprecation import deprecated_alias
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable, Callable, Hashable, Mapping, MutableMapping
 
 
-_MISSING: Any = object()
+_MISSING: Final = object()
 
 
 class CachedFunction[**P, R]:
@@ -45,7 +45,7 @@ class CachedFunction[**P, R]:
     def __init__(
         self,
         func: Callable[..., R],
-        cache: Any,
+        cache: MutableMapping[Hashable, object],
         instance: object | None = None,
         lock: threading.RLock | None = None,
     ) -> None:
@@ -58,7 +58,7 @@ class CachedFunction[**P, R]:
             lock: Lock guarding the cache; shared between bound copies of the same decorated function.
         """
         self._func: Callable[..., R] = func
-        self._cache: Any = cache
+        self._cache: MutableMapping[Hashable, object] = cache
         self._instance: object | None = instance
         # Calls on the same cache from several threads must not race on the (non thread-safe) TTLCache
         self._lock = lock if lock is not None else threading.RLock()
@@ -92,7 +92,7 @@ class CachedFunction[**P, R]:
 
         return getattr(obj, bound_method_name)
 
-    def _make_key(self, args: tuple[Any, ...], kwargs: dict[str, Any]) -> Any | None:
+    def _make_key(self, args: tuple[object, ...], kwargs: Mapping[str, object]) -> Hashable | None:
         """Build a hashable key from the call arguments, or None if they cannot be hashed."""
         key = typedkey(*args, **kwargs)
         try:
@@ -101,7 +101,7 @@ class CachedFunction[**P, R]:
             return None
         return key
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+    def __call__(self, *args: object, **kwargs: object) -> R:
         """Call the cached function.
 
         Calls whose arguments are not hashable bypass the cache instead of failing.
@@ -118,30 +118,36 @@ class CachedFunction[**P, R]:
         call_args = args if self._instance is None else (self._instance, *args)
 
         if inspect.iscoroutinefunction(self._func):
-            return self._call_async(key, call_args, kwargs)
+            # R is the coroutine type here; the cached coroutine wrapper stands in for it
+            return cast("R", self._call_async(key, call_args, kwargs))
 
         if key is None:
             return self._func(*call_args, **kwargs)
         with self._lock:
             cached = self._cache.get(key, _MISSING)
         if cached is not _MISSING:
-            return cached
+            return cast("R", cached)
 
         result: R = self._func(*call_args, **kwargs)
         with self._lock:
             self._cache[key] = result
         return result
 
-    async def _call_async(self, key: Any | None, call_args: tuple[Any, ...], kwargs: dict[str, Any]) -> Any:
+    async def _call_async(
+        self,
+        key: Hashable | None,
+        call_args: tuple[object, ...],
+        kwargs: Mapping[str, object],
+    ) -> object:
         """Await the wrapped coroutine function and cache its awaited value."""
         if key is None:
-            return await cast("Awaitable[Any]", self._func(*call_args, **kwargs))
+            return await cast("Awaitable[object]", self._func(*call_args, **kwargs))
         with self._lock:
             cached = self._cache.get(key, _MISSING)
         if cached is not _MISSING:
             return cached
 
-        result = await cast("Awaitable[Any]", self._func(*call_args, **kwargs))
+        result = await cast("Awaitable[object]", self._func(*call_args, **kwargs))
         with self._lock:
             self._cache[key] = result
         return result
@@ -210,7 +216,7 @@ def ttl_cache[**P, R](
     from cachetools import TTLCache
 
     resolved_ttl = int(ttl_seconds) if isinstance(ttl_seconds, int) else int(ttl_seconds())
-    cache: TTLCache = TTLCache(maxsize=maxsize, ttl=resolved_ttl)
+    cache: TTLCache[Hashable, object, float] = TTLCache(maxsize=maxsize, ttl=resolved_ttl)
     lock = threading.RLock()
 
     def decorator(func: Callable[P, R]) -> CachedFunction[P, R]:

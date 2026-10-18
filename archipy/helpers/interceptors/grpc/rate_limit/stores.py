@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Protocol
 
 
 class RateLimitStore(Protocol):
@@ -22,7 +22,7 @@ class RateLimitStore(Protocol):
         saturate: bool = False,
         px: int | None = None,
         enx: bool = False,
-    ) -> list[Any]:
+    ) -> list[int]:
         """Add ``byint`` to the counter ``name`` within the bounds and return ``[new_value, applied]``.
 
         ``px`` is the time to live in milliseconds, set only when the counter is created if ``enx`` is true.
@@ -47,7 +47,7 @@ class AsyncRateLimitStore(Protocol):
         saturate: bool = False,
         px: int | None = None,
         enx: bool = False,
-    ) -> list[Any]:
+    ) -> list[int]:
         """Add ``byint`` to the counter ``name`` within the bounds and return ``[new_value, applied]``."""
         ...
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import inspect
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Never, Protocol, TypedDict, cast
 
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers._deprecation import warn_deprecated_name
@@ -13,9 +13,13 @@ from archipy.helpers.utils.otel_utils import OtelUtils
 from archipy.models.errors import InvalidArgumentError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
+    from collections.abc import Awaitable, Callable, Coroutine, Mapping
 
-    from opentelemetry.trace import Span
+    from opentelemetry.context import Context
+    from opentelemetry.trace import Span, SpanKind, Tracer
+    from opentelemetry.util.types import AttributeValue
+
+    from archipy.helpers.utils._otel.noop import _NoOpSpan, _NoOpTracer
 
 _ATTR_VALUE_MAX_LEN = 256
 _REDACTED_ATTR_VALUE = "***"
@@ -40,20 +44,34 @@ _CAPTURE_ARGS_DENYLIST: frozenset[str] = frozenset(
 )
 
 
-class _Function(Protocol):
+class _SpanDecorator(Protocol):
+    """A decorator that wraps a function in a span and keeps its signature."""
+
+    def __call__[**P, R](self, func: Callable[P, R], /) -> Callable[P, R]: ...
+
+
+class _NamedFunction[**P, R](Protocol):
     """A callable with a __name__ attribute."""
 
     __name__: str
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Any: ...
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
 
 
-class _AsyncFunction(Protocol):
-    """An async callable with a __name__ attribute."""
+class _AsyncSpanDecorator(Protocol):
+    """A decorator that wraps a coroutine function in a span and keeps its signature."""
 
-    __name__: str
+    def __call__[**P, C: Coroutine[object, Never, object]](self, func: _NamedFunction[P, C], /) -> Callable[P, C]: ...
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Coroutine[Any, Any, Any]: ...
+
+class _SpanStartOptions(TypedDict, total=False):
+    """Keyword arguments passed to ``Tracer.start_as_current_span``."""
+
+    kind: SpanKind
+    record_exception: bool
+    set_status_on_exception: bool
+    attributes: dict[str, AttributeValue]
+    context: Context
 
 
 def _is_sensitive_arg_name(arg_name: str) -> bool:
@@ -93,7 +111,7 @@ def _coerce_attr_value(value: object) -> bool | int | float | str:
     return text
 
 
-def _sanitize_attributes(attributes: dict[str, Any] | None) -> dict[str, Any] | None:
+def _sanitize_attributes(attributes: Mapping[str, object] | None) -> dict[str, AttributeValue] | None:
     """Redact sensitive keys and coerce values for safe span attributes.
 
     Args:
@@ -104,7 +122,7 @@ def _sanitize_attributes(attributes: dict[str, Any] | None) -> dict[str, Any] | 
     """
     if not attributes:
         return None
-    sanitized: dict[str, Any] = {}
+    sanitized: dict[str, AttributeValue] = {}
     for key, value in attributes.items():
         if _is_sensitive_arg_name(str(key)):
             sanitized[key] = _REDACTED_ATTR_VALUE
@@ -114,10 +132,10 @@ def _sanitize_attributes(attributes: dict[str, Any] | None) -> dict[str, Any] | 
 
 
 def _apply_capture_args(
-    span: Any,
+    span: Span | _NoOpSpan,
     signature: inspect.Signature,
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
+    args: tuple[object, ...],
+    kwargs: Mapping[str, object],
     capture_args: list[str] | None,
 ) -> None:
     """Record selected bound arguments as span attributes.
@@ -148,7 +166,7 @@ def _apply_capture_args(
             span.set_attribute(arg_name, _coerce_attr_value(bound.arguments[arg_name]))
 
 
-def _resolve_kind(kind: Any | None) -> Any:
+def _resolve_kind(kind: SpanKind | None) -> SpanKind:
     """Return the span kind, defaulting to ``SpanKind.INTERNAL``.
 
     Args:
@@ -166,10 +184,10 @@ def _resolve_kind(kind: Any | None) -> Any:
 
 def _prepare_span(
     *,
-    kind: Any | None,
-    attributes: dict[str, Any] | None,
+    kind: SpanKind | None,
+    attributes: Mapping[str, object] | None,
     root: bool,
-) -> tuple[Any, dict[str, Any]] | None:
+) -> tuple[Tracer | _NoOpTracer, _SpanStartOptions] | None:
     """Resolve the tracer and span start options, or None when tracing is inactive.
 
     Args:
@@ -195,7 +213,7 @@ def _prepare_span(
         return None
 
     # Disable SDK auto-record/status — we handle both manually for BaseError mapping.
-    start_kwargs: dict[str, Any] = {
+    start_kwargs: _SpanStartOptions = {
         "kind": resolved_kind,
         "record_exception": False,
         "set_status_on_exception": False,
@@ -211,18 +229,18 @@ def _prepare_span(
     return tracer, start_kwargs
 
 
-def _run_traced(
-    func: Callable[..., Any],
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
+def _run_traced[R](
+    func: Callable[..., R],
+    args: tuple[object, ...],
+    kwargs: Mapping[str, object],
     *,
     span_name: str,
-    kind: Any | None,
-    attributes: dict[str, Any] | None,
+    kind: SpanKind | None,
+    attributes: Mapping[str, object] | None,
     capture_args: list[str] | None,
     signature: inspect.Signature,
     root: bool,
-) -> Any:
+) -> R:
     """Execute a sync function inside an OpenTelemetry span.
 
     Args:
@@ -258,7 +276,7 @@ def _run_traced(
             raise
 
 
-def _set_code_attributes(span: Span, func: Callable[..., Any]) -> None:
+def _set_code_attributes(span: Span | _NoOpSpan, func: Callable[..., object]) -> None:
     """Record the traced function as ``code.function.name``, its fully qualified name, like the code conventions ask.
 
     Args:
@@ -270,18 +288,18 @@ def _set_code_attributes(span: Span, func: Callable[..., Any]) -> None:
     span.set_attribute("code.function.name", f"{module}.{qualname}")
 
 
-async def _run_traced_async(
-    func: Callable[..., Coroutine[Any, Any, Any]],
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
+async def _run_traced_async[T](
+    func: Callable[..., Awaitable[T]],
+    args: tuple[object, ...],
+    kwargs: Mapping[str, object],
     *,
     span_name: str,
-    kind: Any | None,
-    attributes: dict[str, Any] | None,
+    kind: SpanKind | None,
+    attributes: Mapping[str, object] | None,
     capture_args: list[str] | None,
     signature: inspect.Signature,
     root: bool,
-) -> Any:
+) -> T:
     """Execute an async function inside an OpenTelemetry span.
 
     Args:
@@ -322,15 +340,15 @@ async def _run_traced_async(
             raise
 
 
-def _traced_wrapper(
-    func: Callable[..., Any],
+def _traced_wrapper[**P, R](
+    func: Callable[P, R],
     *,
     name: str | None,
-    kind: Any | None,
-    attributes: dict[str, Any] | None,
+    kind: SpanKind | None,
+    attributes: Mapping[str, object] | None,
     capture_args: list[str] | None,
     root: bool,
-) -> Callable[..., Any]:
+) -> Callable[P, R]:
     """Wrap a sync or async function so each call runs inside an OpenTelemetry span.
 
     Args:
@@ -346,31 +364,45 @@ def _traced_wrapper(
     """
     span_name = name or getattr(func, "__name__", "unknown")
     signature = inspect.signature(func)
-    options: dict[str, Any] = {
-        "span_name": span_name,
-        "kind": kind,
-        "attributes": attributes,
-        "capture_args": capture_args,
-        "signature": signature,
-        "root": root,
-    }
 
     if inspect.iscoroutinefunction(func):
+        # R is the coroutine type here; the wrapper awaits it and returns the awaited value
+        async_func = cast("Callable[P, Awaitable[object]]", func)
 
         @functools.wraps(func)
-        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-            return await _run_traced_async(func, args, kwargs, **options)
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> object:
+            return await _run_traced_async(
+                async_func,
+                args,
+                kwargs,
+                span_name=span_name,
+                kind=kind,
+                attributes=attributes,
+                capture_args=capture_args,
+                signature=signature,
+                root=root,
+            )
 
-        return async_wrapper
+        return cast("Callable[P, R]", async_wrapper)
 
     @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        return _run_traced(func, args, kwargs, **options)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        return _run_traced(
+            func,
+            args,
+            kwargs,
+            span_name=span_name,
+            kind=kind,
+            attributes=attributes,
+            capture_args=capture_args,
+            signature=signature,
+            root=root,
+        )
 
     return wrapper
 
 
-def _require_coroutine_function(func: _Function, decorator_name: str) -> None:
+def _require_coroutine_function(func: _NamedFunction[..., object], decorator_name: str) -> None:
     """Raise when an ``async_*`` decorator is applied to a non-coroutine function.
 
     Args:
@@ -387,13 +419,13 @@ def _require_coroutine_function(func: _Function, decorator_name: str) -> None:
         )
 
 
-def trace_span[F: _Function](
+def trace_span(
     name: str | None = None,
     *,
-    kind: Any | None = None,
-    attributes: dict[str, Any] | None = None,
+    kind: SpanKind | None = None,
+    attributes: Mapping[str, object] | None = None,
     capture_args: list[str] | None = None,
-) -> Callable[[F], Callable[..., Any]]:
+) -> _SpanDecorator:
     """Decorate a sync or async function with an OpenTelemetry child span.
 
     Args:
@@ -414,7 +446,7 @@ def trace_span[F: _Function](
         ```
     """
 
-    def decorator(func: F) -> Callable[..., Any]:
+    def decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
         return _traced_wrapper(
             func,
             name=name,
@@ -427,13 +459,13 @@ def trace_span[F: _Function](
     return decorator
 
 
-def async_trace_span[F: _AsyncFunction](
+def async_trace_span(
     name: str | None = None,
     *,
-    kind: Any | None = None,
-    attributes: dict[str, Any] | None = None,
+    kind: SpanKind | None = None,
+    attributes: Mapping[str, object] | None = None,
     capture_args: list[str] | None = None,
-) -> Callable[[F], Callable[..., Coroutine[Any, Any, Any]]]:
+) -> _AsyncSpanDecorator:
     """Decorate an async function with an OpenTelemetry child span.
 
     Deprecated:
@@ -454,7 +486,7 @@ def async_trace_span[F: _AsyncFunction](
     """
     warn_deprecated_name("async_trace_span", "trace_span")
 
-    def decorator(func: F) -> Callable[..., Coroutine[Any, Any, Any]]:
+    def decorator[**P, C: Coroutine[object, Never, object]](func: _NamedFunction[P, C]) -> Callable[P, C]:
         _require_coroutine_function(func, "async_trace_span")
         return _traced_wrapper(
             func,
@@ -468,13 +500,13 @@ def async_trace_span[F: _AsyncFunction](
     return decorator
 
 
-def trace_root[F: _Function](
+def trace_root(
     name: str | None = None,
     *,
-    kind: Any | None = None,
-    attributes: dict[str, Any] | None = None,
+    kind: SpanKind | None = None,
+    attributes: Mapping[str, object] | None = None,
     capture_args: list[str] | None = None,
-) -> Callable[[F], Callable[..., Any]]:
+) -> _SpanDecorator:
     """Decorate a sync or async function with a root OpenTelemetry span.
 
     Starts the span with a fresh context detached from any parent span
@@ -491,7 +523,7 @@ def trace_root[F: _Function](
         A decorator that wraps the target function in a root span.
     """
 
-    def decorator(func: F) -> Callable[..., Any]:
+    def decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
         return _traced_wrapper(
             func,
             name=name,
@@ -504,13 +536,13 @@ def trace_root[F: _Function](
     return decorator
 
 
-def async_trace_root[F: _AsyncFunction](
+def async_trace_root(
     name: str | None = None,
     *,
-    kind: Any | None = None,
-    attributes: dict[str, Any] | None = None,
+    kind: SpanKind | None = None,
+    attributes: Mapping[str, object] | None = None,
     capture_args: list[str] | None = None,
-) -> Callable[[F], Callable[..., Coroutine[Any, Any, Any]]]:
+) -> _AsyncSpanDecorator:
     """Decorate an async function with a root OpenTelemetry span.
 
     Deprecated:
@@ -534,7 +566,7 @@ def async_trace_root[F: _AsyncFunction](
     """
     warn_deprecated_name("async_trace_root", "trace_root")
 
-    def decorator(func: F) -> Callable[..., Coroutine[Any, Any, Any]]:
+    def decorator[**P, C: Coroutine[object, Never, object]](func: _NamedFunction[P, C]) -> Callable[P, C]:
         _require_coroutine_function(func, "async_trace_root")
         return _traced_wrapper(
             func,
@@ -548,13 +580,13 @@ def async_trace_root[F: _AsyncFunction](
     return decorator
 
 
-def _wrap_method(
+def _wrap_method[**P, R](
     cls: type,
     method_name: str,
-    func: Callable[..., Any],
+    func: Callable[P, R],
     *,
     capture_args: list[str] | None,
-) -> Callable[..., Any]:
+) -> Callable[P, R]:
     """Wrap a class method with a sync or async OpenTelemetry span.
 
     Args:
@@ -569,11 +601,13 @@ def _wrap_method(
     span_name = f"{cls.__name__}.{method_name}"
     signature = inspect.signature(func)
     if inspect.iscoroutinefunction(func):
+        # R is the coroutine type here; the wrapper awaits it and returns the awaited value
+        async_func = cast("Callable[P, Awaitable[object]]", func)
 
         @functools.wraps(func)
-        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> object:
             return await _run_traced_async(
-                func,
+                async_func,
                 args,
                 kwargs,
                 span_name=span_name,
@@ -584,10 +618,10 @@ def _wrap_method(
                 root=False,
             )
 
-        return async_wrapper
+        return cast("Callable[P, R]", async_wrapper)
 
     @functools.wraps(func)
-    def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+    def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         return _run_traced(
             func,
             args,

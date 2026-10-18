@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import inspect
 import json
-from typing import TYPE_CHECKING, Any, NoReturn, overload
+from typing import TYPE_CHECKING, NoReturn, overload
 
 import grpc
 
 from archipy.models.errors import InvalidArgumentError
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Callable, Mapping
 
     from grpc.aio import ServicerContext as AsyncServicerContext
 
@@ -33,7 +33,7 @@ def grpc_status_code(status: int) -> grpc.StatusCode:
     return _STATUS_CODES.get(status, grpc.StatusCode.INTERNAL)
 
 
-def _encode_additional_data(additional_data: dict[str, Any]) -> str:
+def _encode_additional_data(additional_data: Mapping[str, object]) -> str:
     """Serialize ``additional_data`` for gRPC trailing metadata.
 
     Values that are not JSON native (UUID, datetime, Decimal, ...) fall back to ``str``. Payloads larger than
@@ -55,14 +55,18 @@ def _raise_invalid_context(reason: str) -> NoReturn:
     raise InvalidArgumentError(argument_name="grpc_context", additional_data={"reason": reason})
 
 
-def _set_error_metadata(error: BaseError, context: Any) -> None:  # noqa: ANN401 - sync and aio contexts
+def _set_error_metadata(error: BaseError, context: grpc.ServicerContext | AsyncServicerContext) -> None:
     if error.additional_data and hasattr(context, "set_trailing_metadata"):
         context.set_trailing_metadata((("additional_data", _encode_additional_data(error.additional_data)),))
 
 
-async def _abort_async(error: BaseError, context: Any) -> None:  # noqa: ANN401 - aio context
+async def _abort_async(
+    error: BaseError,
+    context: grpc.ServicerContext | AsyncServicerContext,
+    abort: Callable[[grpc.StatusCode, str], Awaitable[object]],
+) -> None:
     _set_error_metadata(error, context)
-    await context.abort(grpc_status_code(error.grpc_status), error.get_message())
+    await abort(grpc_status_code(error.grpc_status), error.get_message())
 
 
 @overload
@@ -73,7 +77,10 @@ def abort_grpc(error: BaseError, context: AsyncServicerContext) -> Awaitable[Non
 def abort_grpc(error: BaseError, context: grpc.ServicerContext) -> None: ...
 
 
-def abort_grpc(error: BaseError, context: Any) -> Awaitable[None] | None:
+def abort_grpc(
+    error: BaseError,
+    context: grpc.ServicerContext | AsyncServicerContext | None,
+) -> Awaitable[None] | None:
     """Abort a gRPC call with the status code and message of ``error``.
 
     The context kind is detected automatically. On a sync context the call is aborted immediately. On an
@@ -99,7 +106,7 @@ def abort_grpc(error: BaseError, context: Any) -> Awaitable[None] | None:
         _raise_invalid_context("abort_not_callable")
 
     if inspect.iscoroutinefunction(abort):
-        return _abort_async(error, context)
+        return _abort_async(error, context, abort)
 
     _set_error_metadata(error, context)
     abort(grpc_status_code(error.grpc_status), error.get_message())

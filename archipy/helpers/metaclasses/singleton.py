@@ -1,15 +1,15 @@
 """Singleton metaclass helpers."""
 
 import threading
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar, cast
 
 if TYPE_CHECKING:
     from collections.abc import Hashable
 
 
 # Define type constants for explicit typing
-SingletonInstance = Any
-ClassDict = dict[str, Any]
+SingletonInstance = object
+ClassDict = dict[str, object]
 ClassBases = tuple[type, ...]
 
 
@@ -75,7 +75,7 @@ class Singleton(type):
         setattr(new_class, "__thread_safe", thread_safe)
         return new_class
 
-    def __call__(cls, *args: object, **kwargs: object) -> SingletonInstance:
+    def __call__[T](cls: type[T], *args: object, **kwargs: object) -> T:
         """Create or return the Singleton instance of the class.
 
         If `thread_safe` is True, a lock is used to ensure that only one instance is created
@@ -93,20 +93,23 @@ class Singleton(type):
         Returns:
             object: The Singleton instance of the class.
         """
+        # ``cls`` is annotated as ``type[T]`` so callers get their own instance type; it is a ``Singleton`` at runtime.
+        meta = cast("Singleton", cls)
         key_function = getattr(cls, "_singleton_key", None)
         if key_function is not None:
             instance_key = (cls, key_function(*args, **kwargs))
-            if instance_key not in cls._keyed_instances:
-                with cls._lock:
-                    if instance_key not in cls._keyed_instances:
-                        cls._keyed_instances[instance_key] = super().__call__(*args, **kwargs)
-            return cls._keyed_instances[instance_key]
-        if cls not in cls._instances:
+            if instance_key not in meta._keyed_instances:
+                with meta._lock:
+                    if instance_key not in meta._keyed_instances:
+                        meta._keyed_instances[instance_key] = super(Singleton, meta).__call__(*args, **kwargs)
+            # The stores are keyed by the class, so the stored value is an instance of ``cls``.
+            return cast("T", meta._keyed_instances[instance_key])
+        if cls not in meta._instances:
             if getattr(cls, "__thread_safe", True):
-                with cls._lock:
-                    if cls not in cls._instances:
-                        cls._instances[cls] = super().__call__(*args, **kwargs)
+                with meta._lock:
+                    if cls not in meta._instances:
+                        meta._instances[cls] = super(Singleton, meta).__call__(*args, **kwargs)
             else:
                 # Two racing threads may both construct, but every caller receives the first stored instance
-                cls._instances.setdefault(cls, super().__call__(*args, **kwargs))
-        return cls._instances[cls]
+                meta._instances.setdefault(cls, super(Singleton, meta).__call__(*args, **kwargs))
+        return cast("T", meta._instances[cls])

@@ -9,13 +9,13 @@ import random
 import time
 from dataclasses import dataclass
 from functools import wraps
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 from archipy.helpers._deprecation import deprecated_alias
 from archipy.models.errors import InvalidArgumentError, ResourceExhaustedError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
 
 # Logger name kept from the former ``retry`` module so existing logging configuration still applies
 logger = logging.getLogger("archipy.helpers.decorators.retry")
@@ -90,7 +90,8 @@ def retry[**P, R](
 
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
         if inspect.iscoroutinefunction(func):
-            return cast("Callable[P, R]", _wrap_async(func, policy))
+            # R is the coroutine type here; the async wrapper awaits it and returns the awaited value
+            return cast("Callable[P, R]", _wrap_async(cast("Callable[P, Awaitable[object]]", func), policy))
         return _wrap_sync(func, policy)
 
     return decorator
@@ -123,9 +124,9 @@ class _RetryPolicy:
         return error
 
 
-def _wrap_async(func: Callable[..., Any], policy: _RetryPolicy) -> Callable[..., Any]:
+def _wrap_async[**P, T](func: Callable[P, Awaitable[T]], policy: _RetryPolicy) -> Callable[P, Awaitable[T]]:
     @wraps(func)
-    async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+    async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         last_exception: Exception | None = None
         for attempt in range(1, policy.max_attempts + 1):
             try:

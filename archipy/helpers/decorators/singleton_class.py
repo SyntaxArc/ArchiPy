@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from contextlib import AbstractContextManager
 
 
-def singleton[T: type[Any]](*, thread_safe: bool = True) -> Callable[[T], T]:
+def singleton[T: type[Any]](*, thread_safe: bool = True) -> Callable[[T], T]:  # Any: patches __new__/__init__
     """A decorator to create thread-safe Singleton classes.
 
     This decorator ensures that only one instance of a class is created. The decorated name
@@ -59,14 +59,14 @@ def singleton[T: type[Any]](*, thread_safe: bool = True) -> Callable[[T], T]:
         Returns:
             The same class, now limited to a single instance per (sub)class.
         """
-        instances: dict[type, Any] = {}
+        instances: dict[type, object] = {}
         initialized: set[type] = set()
         # Without thread safety a no-op context manager replaces the lock
-        lock: AbstractContextManager[Any] = threading.RLock() if thread_safe else nullcontext()
-        original_new = cls.__new__
-        original_init = cls.__init__
+        lock: AbstractContextManager[object] = threading.RLock() if thread_safe else nullcontext()
+        original_new: Callable[..., object] = cls.__new__
+        original_init: Callable[..., None] = cls.__init__
 
-        def singleton_new(klass: type, *args: Any, **kwargs: Any) -> Any:
+        def singleton_new(klass: type, *args: object, **kwargs: object) -> object:
             if klass not in instances:
                 with lock:
                     if klass not in instances:
@@ -76,7 +76,7 @@ def singleton[T: type[Any]](*, thread_safe: bool = True) -> Callable[[T], T]:
                             instances[klass] = original_new(klass, *args, **kwargs)
             return instances[klass]
 
-        def singleton_init(self: Any, *args: Any, **kwargs: Any) -> None:
+        def singleton_init(self: object, *args: object, **kwargs: object) -> None:
             klass = type(self)
             if klass not in initialized:
                 with lock:

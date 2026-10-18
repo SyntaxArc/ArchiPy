@@ -6,12 +6,12 @@ import inspect
 import logging
 import time
 from functools import wraps
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 from archipy.helpers._deprecation import deprecated_alias
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
 
 # Logger name kept from the former ``timing`` module so existing logging configuration still applies
 logger = logging.getLogger("archipy.helpers.decorators.timing")
@@ -52,14 +52,16 @@ def timing[**P, R](func: Callable[P, R]) -> Callable[P, R]:
     func_name = getattr(func, "__name__", "unknown")
 
     if inspect.iscoroutinefunction(func):
+        # R is the coroutine type here; the wrapper awaits it and returns the awaited value
+        async_func = cast("Callable[P, Awaitable[object]]", func)
 
         @wraps(func)
-        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> object:
             if not logger.isEnabledFor(logging.DEBUG):
-                return await func(*args, **kwargs)
+                return await async_func(*args, **kwargs)
             start_time = time.perf_counter()
             try:
-                return await func(*args, **kwargs)
+                return await async_func(*args, **kwargs)
             finally:
                 logger.debug("%s took %.4f seconds to execute.", func_name, time.perf_counter() - start_time)
 

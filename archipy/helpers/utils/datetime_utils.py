@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 import time
 from datetime import UTC, date, datetime, timedelta
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar, TypedDict
 
 import httpx2
 import jdatetime
@@ -16,6 +16,27 @@ from archipy.models.errors import UnknownError
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
+
+class _HolidayEvent(TypedDict, total=False):
+    """One entry of ``data.event_list`` in a Time.ir API response."""
+
+    jalali_year: int
+    jalali_month: int
+    jalali_day: int
+    is_holiday: bool
+
+
+class _HolidayData(TypedDict, total=False):
+    """The ``data`` object of a Time.ir API response."""
+
+    event_list: list[_HolidayEvent]
+
+
+class _HolidayResponse(TypedDict, total=False):
+    """The parts of a Time.ir API response used to read the holiday status."""
+
+    data: _HolidayData
 
 
 class DatetimeUtils:
@@ -127,7 +148,7 @@ class DatetimeUtils:
             UnknownError: If the API request fails due to a network issue, or its response is not valid JSON.
         """
         try:
-            config: Any = BaseConfig.global_config()
+            config = BaseConfig.global_config()
             response = cls._call_holiday_api(jalali_date)
             is_holiday = cls._parse_holiday_response(response, jalali_date)
 
@@ -146,19 +167,19 @@ class DatetimeUtils:
 
     @staticmethod
     @trace_span(name="datetime.get_holiday_api")
-    def _call_holiday_api(jalali_date: jdatetime.date) -> dict[str, Any]:
+    def _call_holiday_api(jalali_date: jdatetime.date) -> _HolidayResponse:
         """Calls the Time.ir API to fetch holiday data for the given Jalali date.
 
         Args:
             jalali_date (jdatetime.date): The Jalali date to fetch data for.
 
         Returns:
-            Dict[str, Any]: The JSON response from the API.
+            _HolidayResponse: The JSON response from the API.
 
         Raises:
             httpx2.HTTPError: If the API request fails.
         """
-        config: Any = BaseConfig.global_config()
+        config = BaseConfig.global_config()
         transport = httpx2.HTTPTransport(retries=config.DATETIME.MAX_RETRIES)
         url = DatetimeUtils._build_api_url(jalali_date)
         api_key = config.DATETIME.TIME_IR_API_KEY
@@ -166,7 +187,7 @@ class DatetimeUtils:
         with httpx2.Client(transport=transport, timeout=config.DATETIME.REQUEST_TIMEOUT) as client:
             response = client.get(url, headers=headers)
             response.raise_for_status()
-            result: dict[str, Any] = response.json()
+            result: _HolidayResponse = response.json()
             return result
 
     @staticmethod
@@ -179,16 +200,16 @@ class DatetimeUtils:
         Returns:
             str: The constructed API URL.
         """
-        config: Any = BaseConfig.global_config()
+        config = BaseConfig.global_config()
         base_url = config.DATETIME.TIME_IR_API_ENDPOINT
         return f"{base_url}?year={jalali_date.year}&month={jalali_date.month}&day={jalali_date.day}"
 
     @staticmethod
-    def _parse_holiday_response(response_data: dict[str, Any], jalali_date: jdatetime.date) -> bool:
+    def _parse_holiday_response(response_data: _HolidayResponse, jalali_date: jdatetime.date) -> bool:
         """Parses the API response to extract and return the holiday status.
 
         Args:
-            response_data (Dict[str, Any]): The JSON response from the API.
+            response_data (_HolidayResponse): The JSON response from the API.
             jalali_date (jdatetime.date): The Jalali date to check.
 
         Returns:

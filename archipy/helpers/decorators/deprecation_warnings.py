@@ -55,7 +55,7 @@ def method_deprecation_warning[**P, R](message: str | None = None) -> Callable[[
     return decorator
 
 
-def class_deprecation_warning[T: type[Any]](message: str | None = None) -> Callable[[T], T]:
+def class_deprecation_warning[T: type[Any]](message: str | None = None) -> Callable[[T], T]:  # Any: patches __init__
     """A decorator that issues a deprecation warning when the decorated class is instantiated.
 
     Args:
@@ -88,10 +88,10 @@ def class_deprecation_warning[T: type[Any]](message: str | None = None) -> Calla
     final_message = message if message is not None else default_message
 
     def decorator(cls: T) -> T:
-        original_init = cls.__init__
+        original_init: Callable[..., None] = cls.__init__
 
         @wraps(original_init)
-        def new_init(self: Any, *args: Any, **kwargs: Any) -> None:
+        def new_init(self: object, *args: object, **kwargs: object) -> None:
             warnings.warn(final_message, DeprecationWarning, stacklevel=2)
             original_init(self, *args, **kwargs)
 

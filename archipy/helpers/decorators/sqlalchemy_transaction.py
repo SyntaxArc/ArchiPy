@@ -21,7 +21,7 @@ _MOVED_NAMES = frozenset(
 """Names that are not deprecated on their own, so the move is what the warning reports."""
 
 
-def resolve(name: str) -> Any:
+def resolve(name: str) -> object:
     """Return ``name`` from ``archipy.adapters.base.sqlalchemy.atomic``, warning when the name moved.
 
     Names that were already deprecated (the ``*_sqlalchemy_atomic_decorator`` aliases) warn about their own
@@ -53,7 +53,7 @@ def resolve(name: str) -> Any:
     return value
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> Any:  # noqa: ANN401 - lazy re-export: typed callers must see the real attribute, not object
     """Resolve names from the real implementation module on first access."""
     if name.startswith("__"):
         raise AttributeError(name)

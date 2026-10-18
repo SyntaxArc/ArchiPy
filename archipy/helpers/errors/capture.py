@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from archipy.configs.base_config import BaseConfig
 
@@ -24,7 +23,7 @@ def capture_exception(exception: BaseException) -> None:
         "An exception occurred",
         exc_info=(type(exception), exception, exception.__traceback__),
     )
-    config: Any = BaseConfig.global_config()
+    config = BaseConfig.global_config()
 
     if not config.OTEL.IS_ENABLED or not config.OTEL.TRACES_ENABLED:
         return

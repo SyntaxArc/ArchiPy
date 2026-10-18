@@ -7,7 +7,7 @@ import inspect
 import logging
 import threading
 import time
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Never, Protocol, cast
 
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers._deprecation import warn_deprecated_name
@@ -15,26 +15,27 @@ from archipy.helpers.utils.otel_utils import OtelUtils
 from archipy.models.errors import InvalidArgumentError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
+    from collections.abc import Awaitable, Callable, Coroutine, Mapping
+
+    from opentelemetry.metrics import Counter, Histogram
+    from opentelemetry.util.types import AttributeValue
+
+    from archipy.helpers.utils._otel.noop import _NoOpCounter, _NoOpHistogram
 
 
 logger = logging.getLogger(__name__)
 
 
-class _Function(Protocol):
-    """A callable with a __name__ attribute."""
+class _MetricDecorator(Protocol):
+    """A decorator that records a metric around a function and keeps its signature."""
 
-    __name__: str
-
-    def __call__(self, *args: Any, **kwargs: Any) -> Any: ...
+    def __call__[**P, R](self, func: Callable[P, R], /) -> Callable[P, R]: ...
 
 
-class _AsyncFunction(Protocol):
-    """An async callable with a __name__ attribute."""
+class _AsyncMetricDecorator(Protocol):
+    """A decorator that records a metric around a coroutine function and keeps its signature."""
 
-    __name__: str
-
-    def __call__(self, *args: Any, **kwargs: Any) -> Coroutine[Any, Any, Any]: ...
+    def __call__[**P, C: Coroutine[object, Never, object]](self, func: Callable[P, C], /) -> Callable[P, C]: ...
 
 
 def _active_metrics_config() -> BaseConfig | None:
@@ -56,10 +57,10 @@ def _active_metrics_config() -> BaseConfig | None:
 
 
 def _merge_status_attributes(
-    attributes: dict[str, Any] | None,
+    attributes: Mapping[str, AttributeValue] | None,
     status: str,
     error_type: str | None = None,
-) -> dict[str, Any]:
+) -> dict[str, AttributeValue]:
     """Build metric attributes including a status label and, for a failure, the standard ``error.type``.
 
     Args:
@@ -70,7 +71,7 @@ def _merge_status_attributes(
     Returns:
         A new attributes dict including ``status`` and, when given, ``error.type``.
     """
-    merged: dict[str, Any] = dict(attributes) if attributes else {}
+    merged: dict[str, AttributeValue] = dict(attributes) if attributes else {}
     merged["status"] = status
     if error_type is not None:
         merged["error.type"] = error_type
@@ -100,7 +101,7 @@ def _status_for_base_exception(exc: BaseException) -> str:
     return "cancelled"
 
 
-def _safe_emit(emit: Callable[..., Any], *args: Any) -> None:
+def _safe_emit(emit: Callable[..., object], *args: object) -> None:
     """Record a metric without letting telemetry failures replace the function outcome.
 
     Args:
@@ -114,8 +115,8 @@ def _safe_emit(emit: Callable[..., Any], *args: Any) -> None:
 
 
 _CACHE_LOCK = threading.Lock()
-_HISTOGRAM_CACHE: dict[tuple[int, str, str, str], Any] = {}
-_COUNTER_CACHE: dict[tuple[int, str, str], Any] = {}
+_HISTOGRAM_CACHE: dict[tuple[int, str, str, str], Histogram | _NoOpHistogram] = {}
+_COUNTER_CACHE: dict[tuple[int, str, str], Counter | _NoOpCounter] = {}
 
 
 def clear_instrument_caches() -> None:
@@ -142,7 +143,7 @@ def _instrument_identity(module: str, instrument_name: str) -> tuple[int, str, s
     return (id(OtelUtils.meter_provider()), module, instrument_name)
 
 
-def _resolve_instrument_name(func: Callable[..., Any], name: str | None, suffix: str) -> tuple[str, str]:
+def _resolve_instrument_name(func: Callable[..., object], name: str | None, suffix: str) -> tuple[str, str]:
     """Resolve ``(module, instrument_name)`` once, when the decorator is applied.
 
     Args:
@@ -158,7 +159,7 @@ def _resolve_instrument_name(func: Callable[..., Any], name: str | None, suffix:
     return module, name or f"{module}.{qualname}.{suffix}"
 
 
-def _get_or_create_histogram(module: str, instrument_name: str, unit: str) -> Any:
+def _get_or_create_histogram(module: str, instrument_name: str, unit: str) -> Histogram | _NoOpHistogram:
     """Return a cached duration histogram, creating it if needed.
 
     Args:
@@ -185,7 +186,7 @@ def _get_or_create_histogram(module: str, instrument_name: str, unit: str) -> An
         return histogram
 
 
-def _get_or_create_counter(module: str, instrument_name: str) -> Any:
+def _get_or_create_counter(module: str, instrument_name: str) -> Counter | _NoOpCounter:
     """Return a cached call counter, creating it if needed.
 
     Args:
@@ -209,12 +210,12 @@ def _get_or_create_counter(module: str, instrument_name: str) -> Any:
         return counter
 
 
-def _instrumented(
-    func: Callable[..., Any],
+def _instrumented[**P, R, I](
+    func: Callable[P, R],
     *,
-    get_instrument: Callable[[], Any],
-    emit: Callable[[Any, float, str, str | None], None],
-) -> Callable[..., Any]:
+    get_instrument: Callable[[], I],
+    emit: Callable[[I, float, str, str | None], None],
+) -> Callable[P, R]:
     """Wrap a sync or async function so every call is recorded on a metric instrument.
 
     Args:
@@ -226,21 +227,23 @@ def _instrumented(
         The wrapped function.
     """
 
-    def record(instrument: Any, start: float, status: str, error_type: str | None) -> None:
+    def record(instrument: I, start: float, status: str, error_type: str | None) -> None:
         _safe_emit(emit, instrument, time.perf_counter() - start, status, error_type)
 
     if inspect.iscoroutinefunction(func):
+        # R is the coroutine type here; the wrapper awaits it and returns the awaited value
+        async_func = cast("Callable[P, Awaitable[object]]", func)
 
         @functools.wraps(func)
-        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> object:
             if _active_metrics_config() is None:
-                return await func(*args, **kwargs)
+                return await async_func(*args, **kwargs)
 
             instrument = get_instrument()
             start = time.perf_counter()
             status, error_type = "ok", None
             try:
-                return await func(*args, **kwargs)
+                return await async_func(*args, **kwargs)
             except BaseException as exc:
                 status = _status_for_base_exception(exc)
                 error_type = _error_type_for_status(exc, status)
@@ -248,10 +251,10 @@ def _instrumented(
             finally:
                 record(instrument, start, status, error_type)
 
-        return async_wrapper
+        return cast("Callable[P, R]", async_wrapper)
 
     @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         if _active_metrics_config() is None:
             return func(*args, **kwargs)
 
@@ -270,12 +273,12 @@ def _instrumented(
     return wrapper
 
 
-def _duration_wrapper(
-    func: Callable[..., Any],
+def _duration_wrapper[**P, R](
+    func: Callable[P, R],
     name: str | None,
     unit: str,
-    attributes: dict[str, Any] | None,
-) -> Callable[..., Any]:
+    attributes: Mapping[str, AttributeValue] | None,
+) -> Callable[P, R]:
     module, instrument_name = _resolve_instrument_name(func, name, "duration")
     return _instrumented(
         func,
@@ -287,11 +290,11 @@ def _duration_wrapper(
     )
 
 
-def _counter_wrapper(
-    func: Callable[..., Any],
+def _counter_wrapper[**P, R](
+    func: Callable[P, R],
     name: str | None,
-    attributes: dict[str, Any] | None,
-) -> Callable[..., Any]:
+    attributes: Mapping[str, AttributeValue] | None,
+) -> Callable[P, R]:
     module, instrument_name = _resolve_instrument_name(func, name, "calls")
     return _instrumented(
         func,
@@ -303,7 +306,7 @@ def _counter_wrapper(
     )
 
 
-def _require_coroutine_function(func: Callable[..., Any], decorator_name: str) -> None:
+def _require_coroutine_function(func: Callable[..., object], decorator_name: str) -> None:
     """Raise when an ``async_*`` decorator is applied to a non-coroutine function.
 
     Args:
@@ -323,12 +326,12 @@ def _require_coroutine_function(func: Callable[..., Any], decorator_name: str) -
         )
 
 
-def measure_duration[F: _Function](
+def measure_duration(
     name: str | None = None,
     *,
     unit: str = "s",
-    attributes: dict[str, Any] | None = None,
-) -> Callable[[F], Callable[..., Any]]:
+    attributes: Mapping[str, AttributeValue] | None = None,
+) -> _MetricDecorator:
     """Decorate a sync or async function to record execution duration as a histogram.
 
     Instrument name defaults to ``{module}.{qualname}.duration``. The histogram
@@ -347,18 +350,18 @@ def measure_duration[F: _Function](
         A decorator that records duration around the target function.
     """
 
-    def decorator(func: F) -> Callable[..., Any]:
+    def decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
         return _duration_wrapper(func, name, unit, attributes)
 
     return decorator
 
 
-def async_measure_duration[F: _AsyncFunction](
+def async_measure_duration(
     name: str | None = None,
     *,
     unit: str = "s",
-    attributes: dict[str, Any] | None = None,
-) -> Callable[[F], Callable[..., Coroutine[Any, Any, Any]]]:
+    attributes: Mapping[str, AttributeValue] | None = None,
+) -> _AsyncMetricDecorator:
     """Decorate an async function to record execution duration as a histogram.
 
     Deprecated:
@@ -377,18 +380,18 @@ def async_measure_duration[F: _AsyncFunction](
     """
     warn_deprecated_name("async_measure_duration", "measure_duration")
 
-    def decorator(func: F) -> Callable[..., Coroutine[Any, Any, Any]]:
+    def decorator[**P, C: Coroutine[object, Never, object]](func: Callable[P, C]) -> Callable[P, C]:
         _require_coroutine_function(func, "async_measure_duration")
         return _duration_wrapper(func, name, unit, attributes)
 
     return decorator
 
 
-def count_calls[F: _Function](
+def count_calls(
     name: str | None = None,
     *,
-    attributes: dict[str, Any] | None = None,
-) -> Callable[[F], Callable[..., Any]]:
+    attributes: Mapping[str, AttributeValue] | None = None,
+) -> _MetricDecorator:
     """Decorate a sync or async function to increment a call counter.
 
     Instrument name defaults to ``{module}.{qualname}.calls``. The counter is
@@ -406,17 +409,17 @@ def count_calls[F: _Function](
         A decorator that counts invocations of the target function.
     """
 
-    def decorator(func: F) -> Callable[..., Any]:
+    def decorator[**P, R](func: Callable[P, R]) -> Callable[P, R]:
         return _counter_wrapper(func, name, attributes)
 
     return decorator
 
 
-def async_count_calls[F: _AsyncFunction](
+def async_count_calls(
     name: str | None = None,
     *,
-    attributes: dict[str, Any] | None = None,
-) -> Callable[[F], Callable[..., Coroutine[Any, Any, Any]]]:
+    attributes: Mapping[str, AttributeValue] | None = None,
+) -> _AsyncMetricDecorator:
     """Decorate an async function to increment a call counter.
 
     Deprecated:
@@ -434,7 +437,7 @@ def async_count_calls[F: _AsyncFunction](
     """
     warn_deprecated_name("async_count_calls", "count_calls")
 
-    def decorator(func: F) -> Callable[..., Coroutine[Any, Any, Any]]:
+    def decorator[**P, C: Coroutine[object, Never, object]](func: Callable[P, C]) -> Callable[P, C]:
         _require_coroutine_function(func, "async_count_calls")
         return _counter_wrapper(func, name, attributes)
 

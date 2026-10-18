@@ -3,6 +3,8 @@
 ``request.state`` gives no hook on attribute reads, and Starlette stays untouched, so the stored value warns instead:
 each common read method of the dict, list or set emits a ``DeprecationWarning`` that names the replacement. The value
 is a real ``dict``, ``list`` or ``set`` subclass with the same content, so existing code keeps working.
+
+This module goes away in 6.0.0, when ``fastapi_auth`` stops filling ``request.state``.
 """
 
 from __future__ import annotations

@@ -41,7 +41,7 @@ class FastAPIErrorResponseDTO:
         if additional_properties:
             detail_properties.update(additional_properties)
 
-        self.model = {
+        self.model: dict[str, object] = {
             "description": exception.message_en,
             "content": {
                 "application/json": {

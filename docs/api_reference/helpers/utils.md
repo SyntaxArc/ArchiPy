@@ -66,7 +66,7 @@ heading_level: 3
 ## Error Utils
 
 Deprecated wrappers (`capture_exception`, `async_handle_fastapi_exception`, `get_fastapi_exception_responses`)
-that redirect to [`archipy.helpers.errors`](errors.md).
+that redirect to [`archipy.helpers.errors`](errors.md). They will be removed in 6.0.0.
 
 ::: archipy.helpers.utils.error_utils
 options:
@@ -104,7 +104,7 @@ heading_level: 3
 
 The Keycloak authentication guards moved to the adapters layer; see
 [Keycloak](../adapters/keycloak.md#auth-guards). `archipy.helpers.utils.keycloak_utils` still resolves the old names
-and emits a `DeprecationWarning`.
+and emits a `DeprecationWarning`; the old module will be removed in 6.0.0.
 
 ## OpenTelemetry Utils
 

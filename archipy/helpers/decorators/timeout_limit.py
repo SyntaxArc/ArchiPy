@@ -8,13 +8,14 @@ import signal
 import threading
 import time
 from functools import wraps
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 from archipy.helpers._deprecation import deprecated_alias
 from archipy.models.errors import DeadlineExceededError, FailedPreconditionError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
+    from types import FrameType
 
 
 def timeout[**P, R](seconds: float) -> Callable[[Callable[P, R]], Callable[P, R]]:
@@ -63,12 +64,14 @@ def timeout[**P, R](seconds: float) -> Callable[[Callable[P, R]], Callable[P, R]
         func_name = getattr(func, "__name__", "unknown")
 
         if inspect.iscoroutinefunction(func):
+            # R is the coroutine type here; the wrapper awaits it and returns the awaited value
+            async_func = cast("Callable[P, Awaitable[object]]", func)
 
             @wraps(func)
-            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> object:
                 try:
                     async with asyncio.timeout(seconds):
-                        return await func(*args, **kwargs)
+                        return await async_func(*args, **kwargs)
                 except TimeoutError as e:
                     raise DeadlineExceededError(timeout=seconds, operation=func_name) from e
 
@@ -82,7 +85,7 @@ def timeout[**P, R](seconds: float) -> Callable[[Callable[P, R]], Callable[P, R]
                     additional_data={"operation": func_name},
                 )
 
-            def handle_timeout(_signum: int, _frame: Any) -> None:
+            def handle_timeout(_signum: int, _frame: FrameType | None) -> None:
                 raise DeadlineExceededError(timeout=seconds, operation=func_name)
 
             previous_handler = signal.signal(signal.SIGALRM, handle_timeout)

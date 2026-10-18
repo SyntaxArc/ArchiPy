@@ -33,12 +33,14 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from datetime import datetime
 
+    from opentelemetry.trace import SpanKind
+
     from archipy.configs.config_template import EmailConfig
 
 logger = logging.getLogger(__name__)
 
 
-def _smtp_span_kind() -> object | None:
+def _smtp_span_kind() -> SpanKind | None:
     """Return ``SpanKind.CLIENT`` for outgoing SMTP spans, or None when OpenTelemetry is not installed."""
     try:
         from opentelemetry.trace import SpanKind

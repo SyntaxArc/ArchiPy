@@ -19,7 +19,7 @@ def _legacy_keycloak_utils() -> type:
     """Build the ``KeycloakUtils`` namespace whose methods delegate to the functions of the new module."""
     from archipy.adapters.keycloak import auth  # noqa: PLC0415
 
-    namespace: dict[str, Any] = {name: staticmethod(getattr(auth, name)) for name in _LEGACY_CLASS_METHODS}
+    namespace: dict[str, object] = {name: staticmethod(getattr(auth, name)) for name in _LEGACY_CLASS_METHODS}
     for old_name, new_name in _LEGACY_ASYNC_METHODS.items():
         namespace[old_name] = staticmethod(deprecated_alias(f"KeycloakUtils.{old_name}", getattr(auth, new_name)))
     namespace["_get_keycloak_adapter"] = staticmethod(auth._get_keycloak_adapter)
@@ -28,7 +28,7 @@ def _legacy_keycloak_utils() -> type:
     return type("KeycloakUtils", (), namespace)
 
 
-def __getattr__(name: str) -> Any:  # noqa: ANN401
+def __getattr__(name: str) -> Any:  # noqa: ANN401 - module __getattr__ forwards names of any type
     """Return ``name`` from ``archipy.adapters.keycloak.auth``, warning for the names that moved or were replaced."""
     if name.startswith("__"):
         raise AttributeError(name)

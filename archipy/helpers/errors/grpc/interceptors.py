@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Self
 
 import grpc
 
@@ -19,6 +19,8 @@ from archipy.helpers.interceptors.grpc.base.server_interceptor import (
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
+
+    from archipy.models.errors import BaseError
 
 
 def _is_sync_abort(error: Exception, context: grpc.ServicerContext) -> bool:
@@ -49,7 +51,7 @@ class GrpcExceptionInterceptor:
     ``grpc.aio`` servers.
     """
 
-    def __new__(cls, *, aio: bool = False, **_kwargs: Any) -> Self:  # noqa: ANN401 - forwarded to __init__
+    def __new__(cls, *, aio: bool = False, **_kwargs: object) -> Self:
         """Pick the sync or the aio variant.
 
         Args:
@@ -74,7 +76,7 @@ class GrpcExceptionInterceptor:
         """
         self._validation_errors_as_internal = validation_errors_as_internal
 
-    def _error_for(self, error: Exception) -> Any:  # noqa: ANN401 - BaseError, kept loose for the two variants
+    def _error_for(self, error: Exception) -> BaseError:
         """Capture ``error`` and return the ``BaseError`` to report."""
         capture_exception(error)
         return resolve_error(error, validation_errors_as_internal=self._validation_errors_as_internal)

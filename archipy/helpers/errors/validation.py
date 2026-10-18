@@ -3,20 +3,22 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from pydantic import ValidationError
 
 from archipy.models.errors import InvalidArgumentError
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Iterable
+
+    from pydantic_core import ErrorDetails
 
 
 class SupportsErrors(Protocol):
     """A validation failure that lists its problems (pydantic and FastAPI request validation errors)."""
 
-    def errors(self) -> Any:  # noqa: ANN401 - the two libraries return different TypedDict shapes
+    def errors(self) -> Iterable[ErrorDetails]:
         """Return the individual validation problems."""
         ...
 

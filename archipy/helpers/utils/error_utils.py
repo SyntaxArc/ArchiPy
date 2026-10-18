@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from archipy.helpers._deprecation import warn_deprecated_name
 from archipy.helpers.errors.capture import capture_exception
 
 if TYPE_CHECKING:
+    from fastapi import Request
+    from fastapi.responses import JSONResponse
+
     from archipy.models.errors import BaseError
 
 
@@ -25,7 +28,7 @@ class ErrorUtils:
         capture_exception(exception)
 
     @staticmethod
-    async def async_handle_fastapi_exception(_request: Any, exception: BaseError) -> Any:  # noqa: ANN401
+    async def async_handle_fastapi_exception(_request: Request, exception: BaseError) -> JSONResponse:
         """Deprecated: use ``archipy.helpers.errors.fastapi.handle_fastapi_exception``.
 
         Args:
@@ -44,14 +47,15 @@ class ErrorUtils:
         return await handle_fastapi_exception(_request, exception)
 
     @staticmethod
-    def get_fastapi_exception_responses(exceptions: list[type[BaseError]]) -> dict[int, dict[str, Any]]:
+    def get_fastapi_exception_responses(exceptions: list[type[BaseError]]) -> dict[int, dict[str, object]]:
         """Deprecated: use ``archipy.helpers.errors.fastapi.get_fastapi_exception_responses``.
 
         Args:
             exceptions (list[type[BaseError]]): A list of exception types to generate responses for.
 
         Returns:
-            dict[int, dict[str, Any]]: A dictionary mapping HTTP status codes to their corresponding response schemas.
+            dict[int, dict[str, object]]: A dictionary mapping HTTP status codes to their corresponding response
+                schemas.
         """
         from archipy.helpers.errors.fastapi import get_fastapi_exception_responses
 

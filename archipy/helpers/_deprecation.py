@@ -10,6 +10,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
+REMOVAL_VERSION = "6.0.0"
+"""The release that drops every name deprecated through this module."""
+
+
 def warn_deprecated_name(old_name: str, new_name: str, *, stacklevel: int = 3) -> None:
     """Emit a ``DeprecationWarning`` that points at the caller of the deprecated name.
 
@@ -18,7 +22,11 @@ def warn_deprecated_name(old_name: str, new_name: str, *, stacklevel: int = 3) -
         new_name: The replacement name.
         stacklevel: Frames to skip. The default targets the caller of the function that called this helper.
     """
-    warnings.warn(f"{old_name} is deprecated; use {new_name} instead.", DeprecationWarning, stacklevel=stacklevel)
+    warnings.warn(
+        f"{old_name} is deprecated and will be removed in {REMOVAL_VERSION}; use {new_name} instead.",
+        DeprecationWarning,
+        stacklevel=stacklevel,
+    )
 
 
 def deprecated_alias[**P, R](old_name: str, replacement: Callable[P, R]) -> Callable[P, R]:

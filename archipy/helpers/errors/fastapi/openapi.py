@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from archipy.helpers.errors.fastapi.response_dtos import FastAPIErrorResponseDTO, ValidationErrorResponseDTO
 
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from archipy.models.errors import BaseError
 
 
-def get_fastapi_exception_responses(exceptions: list[type[BaseError]]) -> dict[int, dict[str, Any]]:
+def get_fastapi_exception_responses(exceptions: list[type[BaseError]]) -> dict[int, dict[str, object]]:
     """Generates OpenAPI response documentation for the given errors.
 
     This method creates OpenAPI-compatible response schemas for FastAPI errors,
@@ -20,9 +20,9 @@ def get_fastapi_exception_responses(exceptions: list[type[BaseError]]) -> dict[i
         exceptions (list[type[BaseError]]): A list of exception types to generate responses for.
 
     Returns:
-        dict[int, dict[str, Any]]: A dictionary mapping HTTP status codes to their corresponding response schemas.
+        dict[int, dict[str, object]]: A dictionary mapping HTTP status codes to their corresponding response schemas.
     """
-    responses: dict[int, dict[str, Any]] = {}
+    responses: dict[int, dict[str, object]] = {}
 
     # Add validation error response by default
     validation_error_response = ValidationErrorResponseDTO()

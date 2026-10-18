@@ -224,7 +224,8 @@ Authentication and authorization utilities with Keycloak integration:
     The guards are now the functions `fastapi_auth` and `grpc_auth` of `archipy.adapters.keycloak.auth`.
     `fastapi_auth` returns an async dependency and `grpc_auth` detects `async def` servicer methods, so
     `async_fastapi_auth`, `async_grpc_auth` and the `KeycloakUtils` class (in `archipy.helpers.utils.keycloak_utils`)
-    are deprecated and emit a `DeprecationWarning`.
+    are deprecated and emit a `DeprecationWarning`. They will be removed in 6.0.0, together with the
+    `archipy.helpers.utils.keycloak_utils` module.
 
 ```python
 import logging
@@ -297,6 +298,7 @@ when the request ends.
     them is now a dict, list or set that emits a `DeprecationWarning` when you read it (iterate, index, `get`, `in`,
     `len`, ...), naming its replacement on `AuthContextManager.get_auth_context()`: `raw_user_info`, `token_info`,
     `actor_chain` and `roles`. The values are the same as before. The dict the dependency returns does not warn.
+    `request.state` will stop carrying this data in 6.0.0.
 
 ## See Also
 

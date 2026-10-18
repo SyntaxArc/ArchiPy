@@ -6,7 +6,7 @@ cryptographic security, token validation, and comprehensive error handling.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from archipy.configs.base_config import BaseConfig
@@ -14,6 +14,8 @@ from archipy.helpers.utils.datetime_utils import DatetimeUtils
 from archipy.models.errors import InvalidArgumentError, InvalidTokenError, TokenExpiredError
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from archipy.configs.config_template import AuthConfig
 
 
@@ -51,17 +53,17 @@ class JWTUtils:
     @classmethod
     def create_token(
         cls,
-        data: dict[str, Any],
+        data: Mapping[str, object],
         expires_in: int,
-        additional_claims: dict[str, Any] | None = None,
+        additional_claims: Mapping[str, object] | None = None,
         auth_config: AuthConfig | None = None,
     ) -> str:
         """Creates a JWT token with enhanced security features.
 
         Args:
-            data (dict[str, Any]): Base claims data to include in the token.
+            data (Mapping[str, object]): Base claims data to include in the token.
             expires_in (int): Token expiration time in seconds.
-            additional_claims (dict[str, Any] | None): Optional additional claims to include in the token. They
+            additional_claims (Mapping[str, object] | None): Optional additional claims to include in the token. They
                 cannot redefine ``iss``, ``aud``, ``jti`` or any key already present in ``data`` (for example
                 ``sub``, ``type`` and ``token_version`` of access and refresh tokens); time claims may be overridden.
             auth_config (AuthConfig | None): Optional auth configuration override.
@@ -91,7 +93,7 @@ class JWTUtils:
         if additional_claims and (reserved := (_PROTECTED_CLAIMS | data.keys()) & additional_claims.keys()):
             raise InvalidArgumentError("additional_claims", additional_data={"reserved_claims": sorted(reserved)})
 
-        to_encode = data.copy()
+        to_encode: dict[str, object] = dict(data)
         expire = DatetimeUtils.get_datetime_after_given_datetime_or_now(seconds=expires_in, datetime_given=current_time)
 
         # Add standard claims
@@ -122,14 +124,14 @@ class JWTUtils:
     def create_access_token(
         cls,
         user_uuid: UUID,
-        additional_claims: dict[str, Any] | None = None,
+        additional_claims: Mapping[str, object] | None = None,
         auth_config: AuthConfig | None = None,
     ) -> str:
         """Creates an access token for a user.
 
         Args:
             user_uuid (UUID): The user's UUID to include in the token.
-            additional_claims (dict[str, Any] | None): Optional additional claims to include in the token.
+            additional_claims (Mapping[str, object] | None): Optional additional claims to include in the token.
             auth_config (AuthConfig | None): Optional auth configuration override.
                 If not provided, uses the global config.
 
@@ -153,14 +155,14 @@ class JWTUtils:
     def create_refresh_token(
         cls,
         user_uuid: UUID,
-        additional_claims: dict[str, Any] | None = None,
+        additional_claims: Mapping[str, object] | None = None,
         auth_config: AuthConfig | None = None,
     ) -> str:
         """Creates a refresh token for a user.
 
         Args:
             user_uuid (UUID): The user's UUID to include in the token.
-            additional_claims (dict[str, Any] | None): Optional additional claims to include in the token.
+            additional_claims (Mapping[str, object] | None): Optional additional claims to include in the token.
             auth_config (AuthConfig | None): Optional auth configuration override.
                 If not provided, uses the global config.
 
@@ -186,7 +188,7 @@ class JWTUtils:
         token: str,
         verify_type: str | None = None,
         auth_config: AuthConfig | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """Decodes and verifies a JWT token with enhanced security checks.
 
         Args:
@@ -196,7 +198,7 @@ class JWTUtils:
                 If not provided, uses the global config.
 
         Returns:
-            dict[str, Any]: The decoded token payload.
+            dict[str, object]: The decoded token payload.
 
         Raises:
             TokenExpiredError: If the token has expired.
@@ -239,7 +241,7 @@ class JWTUtils:
             if payload.get("token_version") != configs.TOKEN_VERSION:
                 raise InvalidTokenError
 
-            # Ensure the return type is dict[str, Any] as declared
+            # Ensure the return type is dict[str, object] as declared
             return dict(payload)
 
         except ExpiredSignatureError as exception:
@@ -249,7 +251,7 @@ class JWTUtils:
             raise InvalidTokenError from exception
 
     @classmethod
-    def verify_access_token(cls, token: str, auth_config: AuthConfig | None = None) -> dict[str, Any]:
+    def verify_access_token(cls, token: str, auth_config: AuthConfig | None = None) -> dict[str, object]:
         """Verifies an access token.
 
         Args:
@@ -258,7 +260,7 @@ class JWTUtils:
                 If not provided, uses the global config.
 
         Returns:
-            dict[str, Any]: The decoded access token payload.
+            dict[str, object]: The decoded access token payload.
 
         Raises:
             InvalidTokenError: If the token is invalid or not an access token.
@@ -268,7 +270,7 @@ class JWTUtils:
         return cls.decode_token(token, verify_type="access", auth_config=configs)
 
     @classmethod
-    def verify_refresh_token(cls, token: str, auth_config: AuthConfig | None = None) -> dict[str, Any]:
+    def verify_refresh_token(cls, token: str, auth_config: AuthConfig | None = None) -> dict[str, object]:
         """Verifies a refresh token.
 
         Args:
@@ -277,7 +279,7 @@ class JWTUtils:
                 If not provided, uses the global config.
 
         Returns:
-            dict[str, Any]: The decoded refresh token payload.
+            dict[str, object]: The decoded refresh token payload.
 
         Raises:
             InvalidTokenError: If the token is invalid or not a refresh token.
@@ -287,11 +289,11 @@ class JWTUtils:
         return cls.decode_token(token, verify_type="refresh", auth_config=configs)
 
     @staticmethod
-    def extract_user_uuid(payload: dict[str, Any]) -> UUID:
+    def extract_user_uuid(payload: Mapping[str, object]) -> UUID:
         """Extracts the user UUID from the token payload.
 
         Args:
-            payload (dict[str, Any]): The decoded token payload.
+            payload (Mapping[str, object]): The decoded token payload.
 
         Returns:
             UUID: The user's UUID.
@@ -300,8 +302,14 @@ class JWTUtils:
             InvalidTokenError: If the user identifier is invalid or missing.
         """
         try:
-            return UUID(payload["sub"])
-        except (KeyError, ValueError) as exception:
+            subject = payload["sub"]
+        except KeyError as exception:
+            raise InvalidTokenError from exception
+        if not isinstance(subject, str):
+            raise InvalidTokenError
+        try:
+            return UUID(subject)
+        except ValueError as exception:
             raise InvalidTokenError from exception
 
     @classmethod
@@ -320,4 +328,8 @@ class JWTUtils:
             InvalidTokenError: If the token is invalid.
         """
         payload = cls.decode_token(token, auth_config=auth_config)
-        return int(payload["exp"])
+        # PyJWT has already checked that ``exp`` converts to an integer
+        expiry = payload["exp"]
+        if not isinstance(expiry, int | float | str):
+            raise InvalidTokenError
+        return int(expiry)

@@ -16,18 +16,23 @@ from archipy.models.errors import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, MutableMapping, Sequence, Set as AbstractSet
+    from collections.abc import AsyncGenerator, Callable, Sequence, Set as AbstractSet
     from contextlib import AbstractAsyncContextManager
 
     from fastapi.routing import APIRoute
     from fastapi.telemetry import TelemetryConfig
-    from grpc import aio as grpc_aio
     from grpc.aio import Server as GrpcAioServer
+    from opentelemetry.sdk._logs import LoggerProvider
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.trace import TracerProvider
+    from starlette.types import Scope
 
     CreateGrpcServerType = Callable[..., GrpcAioServer]
 else:
-    GrpcAioServer = Any
-    CreateGrpcServerType = Any
+    GrpcAioServer = Any  # Runtime stand-in for the annotation-only alias; the type checker never sees this branch
+    CreateGrpcServerType = (
+        Any  # Runtime stand-in for the annotation-only alias; the type checker never sees this branch
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +44,7 @@ try:
     GRPC_APP = True
 except ImportError:
     GRPC_APP = False
-    grpc_aio: Any = None
+    grpc_aio = None
     create_grpc_server: CreateGrpcServerType | None = None
 
 try:
@@ -147,7 +152,7 @@ class FastAPIUtils:
         app.add_middleware(HTTPSRedirectMiddleware)
 
     @staticmethod
-    def _fastapi_otel_excluded(patterns: str | None) -> Callable[[MutableMapping[str, Any]], bool] | None:
+    def _fastapi_otel_excluded(patterns: str | None) -> Callable[[Scope], bool] | None:
         """Build a native-telemetry ``exclude`` callable from comma-separated URL patterns.
 
         Args:
@@ -160,14 +165,16 @@ class FastAPIUtils:
         if not compiled:
             return None
 
-        def exclude(scope: MutableMapping[str, Any]) -> bool:
+        def exclude(scope: Scope) -> bool:
             path = scope.get("path", "")
             return any(pattern.search(path) for pattern in compiled)
 
         return exclude
 
     @staticmethod
-    def _resolve_otel_providers(config: BaseConfig) -> tuple[Any | None, Any | None, Any | None]:
+    def _resolve_otel_providers(
+        config: BaseConfig,
+    ) -> tuple[TracerProvider | None, MeterProvider | None, LoggerProvider | None]:
         """Return the tracer, meter and logger providers FastAPI should use.
 
         A provider is ``None`` when its signal is disabled or ``OtelUtils`` has none; an enabled
@@ -492,7 +499,7 @@ class AppUtils:
             [UnknownError, UnavailableError, InvalidArgumentError],
         )
         # Convert dict[int, ...] to dict[int | str, ...] for FastAPI compatibility
-        responses_dict: dict[int | str, dict[str, Any]] | None = None
+        responses_dict: dict[int | str, dict[str, object]] | None = None
         if include_common_responses and common_responses:
             responses_dict = dict(common_responses.items())
 
@@ -520,7 +527,7 @@ class AppUtils:
         return app
 
     @staticmethod
-    def _ordered_interceptors(customized_interceptors: Sequence[Any] | AbstractSet[Any]) -> list[Any]:
+    def _ordered_interceptors(customized_interceptors: Sequence[object] | AbstractSet[object]) -> list[object]:
         """Return custom interceptors in the order they run.
 
         Pass a ``list`` or ``tuple`` to control the order (first runs outermost). A ``set`` is still accepted for
@@ -530,7 +537,7 @@ class AppUtils:
             customized_interceptors: The interceptors supplied by the caller.
 
         Returns:
-            list[Any]: The interceptors as a list.
+            list[object]: The interceptors as a list.
         """
         return list(customized_interceptors)
 
@@ -538,7 +545,7 @@ class AppUtils:
     def create_async_grpc_app(
         cls,
         config: BaseConfig,
-        customized_interceptors: Sequence[Any] | AbstractSet[Any] | None = None,
+        customized_interceptors: Sequence[object] | AbstractSet[object] | None = None,
         compression: grpc.Compression | None = None,
         *,
         validation_errors_as_internal: bool = False,
@@ -554,6 +561,8 @@ class AppUtils:
         """
         from archipy.helpers.errors.grpc import GrpcExceptionInterceptor
 
+        # grpc-stubs want grpc.aio.ServerInterceptor items, which the GrpcExceptionInterceptor factory and the
+        # untyped custom interceptors are not declared as
         async_interceptors: list[Any] = [
             GrpcExceptionInterceptor(aio=True, validation_errors_as_internal=validation_errors_as_internal),
         ]
@@ -579,7 +588,7 @@ class AppUtils:
     def create_grpc_app(
         cls,
         config: BaseConfig,
-        customized_interceptors: Sequence[Any] | AbstractSet[Any] | None = None,
+        customized_interceptors: Sequence[object] | AbstractSet[object] | None = None,
         compression: grpc.Compression | None = None,
         *,
         validation_errors_as_internal: bool = False,
@@ -595,6 +604,8 @@ class AppUtils:
         """
         from archipy.helpers.errors.grpc import GrpcExceptionInterceptor
 
+        # grpc-stubs want grpc.ServerInterceptor items, which the GrpcExceptionInterceptor factory and the
+        # untyped custom interceptors are not declared as
         interceptors: list[Any] = [
             GrpcExceptionInterceptor(validation_errors_as_internal=validation_errors_as_internal),
         ]
