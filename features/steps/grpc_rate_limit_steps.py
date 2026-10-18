@@ -483,7 +483,8 @@ def step_given_grpc_identifier_fails(context):
 @given('the gRPC rate limiter trusts proxy "{host}"')
 def step_given_grpc_trusted_proxy(context, host):
     """Trust ``x-forwarded-for`` from the given proxy host."""
-    get_current_scenario_context(context).store("trusted_proxy_hosts", frozenset({host}))
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("trusted_proxy_hosts", (scenario_context.get("trusted_proxy_hosts") or frozenset()) | {host})
 
 
 @when("{count:d} decorated gRPC RPCs are invoked with forwarded client {client}")
@@ -673,3 +674,21 @@ def step_then_holds(context, name, value):
 @then('the counter "{name}" should have no time to live record')
 def step_then_no_ttl(context, name):
     assert _call(get_current_scenario_context(context), "pttl", name) == -2
+
+
+@when('the gRPC peer "{peer}" is parsed')
+def step_when_grpc_peer_parsed(context, peer):
+    """Parse a ``ServicerContext.peer()`` string."""
+    get_current_scenario_context(context).store("parsed_peer", GrpcServerRateLimitInterceptor._parse_peer(peer))
+
+
+@when("the gRPC peer is missing")
+def step_when_grpc_peer_missing(context):
+    """Parse a missing ``ServicerContext.peer()``."""
+    get_current_scenario_context(context).store("parsed_peer", GrpcServerRateLimitInterceptor._parse_peer(None))
+
+
+@then('the parsed gRPC peer should be "{host}"')
+def step_then_grpc_peer_parsed(context, host):
+    parsed = get_current_scenario_context(context).get("parsed_peer")
+    assert parsed == host, f"Expected {host!r}, got {parsed!r}"

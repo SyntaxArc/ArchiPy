@@ -190,6 +190,56 @@ Feature: gRPC server rate limit interceptor
       | async | redis  |
       | async | memory |
 
+  Scenario Outline: Callers behind a chain of trusted proxies are limited by the first untrusted hop
+    Given a <mode> gRPC rate limit interceptor allowing 1 calls per 60 seconds
+    And the interceptor counts in the <store> counter store
+    And the gRPC rate limiter trusts proxy "127.0.0.1"
+    And the gRPC rate limiter trusts proxy "10.0.0.2"
+    When 1 decorated gRPC RPCs are invoked with forwarded client 203.0.113.7, 10.0.0.2
+    Then gRPC outcome 1 should be allowed
+    When 1 decorated gRPC RPCs are invoked with forwarded client 203.0.113.7, 10.0.0.2
+    Then gRPC outcome 1 should be rate_limited
+    When 1 decorated gRPC RPCs are invoked with forwarded client 198.51.100.9, 10.0.0.2
+    Then gRPC outcome 1 should be allowed
+
+    Examples: Interceptor modes and counter stores
+      | mode  | store  |
+      | sync  | redis  |
+      | sync  | memory |
+      | async | redis  |
+      | async | memory |
+
+  Scenario Outline: A trusted proxy that sends no forwarded header is limited as one caller
+    Given a <mode> gRPC rate limit interceptor allowing 1 calls per 60 seconds
+    And the interceptor counts in the <store> counter store
+    And the gRPC rate limiter trusts proxy "127.0.0.1"
+    When 2 decorated gRPC RPCs are invoked
+    Then gRPC outcome 1 should be allowed
+    And gRPC outcome 2 should be rate_limited
+
+    Examples: Interceptor modes and counter stores
+      | mode  | store  |
+      | sync  | redis  |
+      | sync  | memory |
+      | async | redis  |
+      | async | memory |
+
+  Scenario: A missing peer is reported as unknown
+    When the gRPC peer is missing
+    Then the parsed gRPC peer should be "unknown"
+
+  Scenario Outline: A peer address is reduced to its host
+    When the gRPC peer "<peer>" is parsed
+    Then the parsed gRPC peer should be "<host>"
+
+    Examples: Peer formats
+      | peer                    | host              |
+      | ipv4:203.0.113.7:50051  | 203.0.113.7       |
+      | ipv4:203.0.113.7        | 203.0.113.7       |
+      | ipv6:[2001:db8::1]:5005 | 2001:db8::1       |
+      | unix:/tmp/grpc.sock     | /tmp/grpc.sock    |
+      | unknown-transport       | unknown-transport |
+
   Scenario Outline: A fail-open limiter runs a handler that returns nothing exactly once
     Given a <mode> gRPC rate limit interceptor allowing 3 calls per 60 seconds
     And the gRPC rate limiter fails open
@@ -266,6 +316,16 @@ Feature: gRPC server rate limit interceptor
       | sync  | user:10 | 2     | 1       | 1         |
       | async | user:11 | 1     | 2       | 0         |
       | async | user:12 | 2     | 1       | 1         |
+
+  Scenario Outline: A refund of a counter that does not exist creates nothing
+    Given a <mode> in-memory rate limit store
+    When the counter "<name>" is refunded 1 times
+    Then the counter "<name>" should have no time to live record
+
+    Examples: Store modes
+      | mode  | name     |
+      | sync  | refund:1 |
+      | async | refund:2 |
 
   Scenario Outline: An unknown counter does not exist
     Given a <mode> in-memory rate limit store
