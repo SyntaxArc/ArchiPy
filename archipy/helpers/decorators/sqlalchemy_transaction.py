@@ -19,7 +19,6 @@ from sqlalchemy.exc import (
     TimeoutError as SQLAlchemyTimeoutError,
 )
 
-from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
 from archipy.helpers._deprecation import deprecated_alias, warn_deprecated_name
 from archipy.models.errors import (
     BaseError,
@@ -40,6 +39,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
     from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort, SessionManagerPort
+    from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +178,8 @@ def _load_session_manager_registry(db_type: str) -> type[SessionManagerRegistry]
     """
     try:
         import importlib
+
+        from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
 
         module_path, class_name = ATOMIC_BLOCK_CONFIGS[db_type]["registry"].rsplit(".", 1)
         module = importlib.import_module(module_path)
