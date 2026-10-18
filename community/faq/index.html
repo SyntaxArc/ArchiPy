@@ -3904,7 +3904,7 @@
 unit testing hard (you can't call a function without a live database), and it makes changing infrastructure
 expensive (swapping PostgreSQL for ScyllaDB requires touching business logic).</p>
 <p>ArchiPy enforces a strict four-layer boundary:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>configs ← models ← helpers ← adapters
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>models ← configs ← helpers ← adapters
 </span></code></pre></div>
 <p>Business logic (in your <code>logics/</code> layer) depends only on abstract ports — never on concrete database drivers.
 Swapping the implementation means changing a single adapter class, not rewriting business code.</p>
@@ -4108,7 +4108,7 @@ values.</p>
 </tbody>
 </table>
 <p>All are imported from <code>archipy.helpers.decorators</code> and work for sync and <code>async def</code> functions. The older
-<code>*_decorator</code> and <code>async_*</code> names still work but emit a <code>DeprecationWarning</code>.</p>
+<code>*_decorator</code> and <code>async_*</code> names still work but emit a <code>DeprecationWarning</code>; they will be removed in 6.0.0.</p>
 <p>See the <a href="../../tutorials/helpers/decorators/">Decorators tutorial</a> for examples.</p>
 <h3 id="what-is-the-difference-between-singleton-decorator-and-singletonmeta-metaclass">What is the difference between <code>@singleton</code> decorator and <code>SingletonMeta</code> metaclass?<a class="headerlink" href="#what-is-the-difference-between-singleton-decorator-and-singletonmeta-metaclass" title="Permanent link">&para;</a></h3>
 <p>Both enforce the singleton pattern but suit different use cases:</p>

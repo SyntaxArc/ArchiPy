@@ -1403,6 +1403,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="SQLAlchemy Transaction Decorators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#several-databases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Several databases
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3425,6 +3442,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="SQLAlchemy Transaction Decorators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#several-databases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Several databases
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3716,10 +3750,15 @@ is restored after the call. <code>async def</code> functions are bounded with <c
 </span></code></pre></div>
 <h2 id="sqlalchemy-transaction-decorators">SQLAlchemy Transaction Decorators<a class="headerlink" href="#sqlalchemy-transaction-decorators" title="Permanent link">&para;</a></h2>
 <p>These decorators automatically manage database transactions.</p>
+<div class="admonition note">
+<p class="admonition-title">Moved to the adapters layer</p>
+<p>They now live in <code>archipy.adapters.base.sqlalchemy.atomic</code>. Importing them from <code>archipy.helpers.decorators</code> still
+works and emits a <code>DeprecationWarning</code>. The old import path will be removed in 6.0.0.</p>
+</div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">uuid</span><span class="w"> </span><span class="kn">import</span> <span class="n">UUID</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">postgres_sqlalchemy_atomic</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.base.sqlalchemy.atomic</span><span class="w"> </span><span class="kn">import</span> <span class="n">postgres_sqlalchemy_atomic</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">DatabaseQueryError</span>
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
 </span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># Configure logging</span>
@@ -3774,45 +3813,75 @@ is restored after the call. <code>async def</code> functions are bounded with <c
 </span><span id="__span-4-56"><a id="__codelineno-4-56" name="__codelineno-4-56" href="#__codelineno-4-56"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Updated email for user: </span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="__span-4-57"><a id="__codelineno-4-57" name="__codelineno-4-57" href="#__codelineno-4-57"></a>    <span class="k">return</span> <span class="n">user</span>
 </span></code></pre></div>
+<h3 id="several-databases">Several databases<a class="headerlink" href="#several-databases" title="Permanent link">&para;</a></h3>
+<p>Databases of different types (for example PostgreSQL and MySQL) work out of the box: each type has its own registry,
+config section and decorator. An atomic block on one never joins a transaction on the other, and ArchiPy does not
+provide a distributed transaction, so a failure after the first commit does not undo it.</p>
+<p>For a second database of the <strong>same</strong> type, give it its own config and its own registry, and pass the registry to the
+decorator:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.base.sqlalchemy.atomic</span><span class="w"> </span><span class="kn">import</span> <span class="n">postgres_sqlalchemy_atomic</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.postgres.sqlalchemy.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">PostgresSQLAlchemyAdapter</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.postgres.sqlalchemy.session_manager_registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">PostgresSessionManagerRegistry</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.postgres.sqlalchemy.session_managers</span><span class="w"> </span><span class="kn">import</span> <span class="n">PostgresSQlAlchemySessionManager</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.config_template</span><span class="w"> </span><span class="kn">import</span> <span class="n">PostgresSQLAlchemyConfig</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">analytics_config</span> <span class="o">=</span> <span class="n">PostgresSQLAlchemyConfig</span><span class="p">(</span><span class="n">HOST</span><span class="o">=</span><span class="s2">"analytics.internal"</span><span class="p">,</span> <span class="n">DATABASE</span><span class="o">=</span><span class="s2">"analytics"</span><span class="p">,</span> <span class="n">USERNAME</span><span class="o">=</span><span class="s2">"app"</span><span class="p">,</span> <span class="n">PASSWORD</span><span class="o">=</span><span class="s2">"..."</span><span class="p">)</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="k">class</span><span class="w"> </span><span class="nc">AnalyticsRegistry</span><span class="p">(</span><span class="n">PostgresSessionManagerRegistry</span><span class="p">):</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="sd">"""Session manager registry of the analytics database."""</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="n">AnalyticsRegistry</span><span class="o">.</span><span class="n">set_sync_manager</span><span class="p">(</span><span class="n">PostgresSQlAlchemySessionManager</span><span class="p">(</span><span class="n">analytics_config</span><span class="p">))</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="n">analytics</span> <span class="o">=</span> <span class="n">PostgresSQLAlchemyAdapter</span><span class="p">(</span><span class="n">analytics_config</span><span class="p">)</span>  <span class="c1"># shares the registry's session manager</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="nd">@postgres_sqlalchemy_atomic</span><span class="p">(</span><span class="n">registry</span><span class="o">=</span><span class="n">AnalyticsRegistry</span><span class="p">)</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="k">def</span><span class="w"> </span><span class="nf">save_event</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">EventEntity</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>    <span class="n">analytics</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</span></code></pre></div>
+<p>A session manager is created once per distinct config, so the adapter and the registry that were built from the same
+config use the same engine and session. The default registry keeps reading the global config, so code that passes no
+<code>registry</code> is unchanged. <code>sqlalchemy_atomic(db_type, registry=...)</code> takes the same argument.</p>
 <h2 id="grpc-rate-limit-decorator">gRPC Rate Limit Decorator<a class="headerlink" href="#grpc-rate-limit-decorator" title="Permanent link">&para;</a></h2>
 <p><code>grpc_rate_limit</code> declares per-RPC rate limits on gRPC servicer methods. It does <strong>not</strong> enforce limits by
 itself — enable <code>GRPC_RATE_LIMIT.IS_ENABLED</code> (or register the interceptor manually) so decorated methods are checked
 before the handler runs.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">grpc_rate_limit</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">grpc_rate_limit</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">()</span>
 </span></code></pre></div>
 <p>Set <code>GRPC_RATE_LIMIT__IS_ENABLED=true</code> so <code>AppUtils.create_grpc_app</code> / <code>create_async_grpc_app</code> register the
 matching interceptor automatically.</p>
 <p><strong>Sync servicer</strong> — <code>def</code> handlers + <code>AppUtils.create_grpc_app</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MySyncServiceServicer</span><span class="p">(</span><span class="n">pb2_grpc</span><span class="o">.</span><span class="n">MyServiceServicer</span><span class="p">):</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="nd">@grpc_rate_limit</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">Cheap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">CheapResponse</span><span class="p">()</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="nd">@grpc_rate_limit</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">seconds</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="nd">@grpc_rate_limit</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">Expensive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">ExpensiveResponse</span><span class="p">()</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="n">sync_server</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_grpc_app</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-</span></code></pre></div>
-<p><strong>Async servicer</strong> — <code>async def</code> handlers + <code>AppUtils.create_async_grpc_app</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAsyncServiceServicer</span><span class="p">(</span><span class="n">pb2_grpc</span><span class="o">.</span><span class="n">MyServiceServicer</span><span class="p">):</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MySyncServiceServicer</span><span class="p">(</span><span class="n">pb2_grpc</span><span class="o">.</span><span class="n">MyServiceServicer</span><span class="p">):</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="nd">@grpc_rate_limit</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">Cheap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">Cheap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">CheapResponse</span><span class="p">()</span>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="nd">@grpc_rate_limit</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">seconds</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 </span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="nd">@grpc_rate_limit</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">Expensive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">Expensive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
 </span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">ExpensiveResponse</span><span class="p">()</span>
 </span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
 </span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">async_server</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_async_grpc_app</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">sync_server</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_grpc_app</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>Async servicer</strong> — <code>async def</code> handlers + <code>AppUtils.create_async_grpc_app</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAsyncServiceServicer</span><span class="p">(</span><span class="n">pb2_grpc</span><span class="o">.</span><span class="n">MyServiceServicer</span><span class="p">):</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="nd">@grpc_rate_limit</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">Cheap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">CheapResponse</span><span class="p">()</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="nd">@grpc_rate_limit</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">seconds</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="nd">@grpc_rate_limit</span><span class="p">(</span><span class="n">calls_count</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">Expensive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="k">return</span> <span class="n">pb2</span><span class="o">.</span><span class="n">ExpensiveResponse</span><span class="p">()</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="n">async_server</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_async_grpc_app</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
 </span></code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> Use sync factories/interceptors with <code>def</code> handlers and async with <code>async def</code>. Manual
@@ -3880,7 +3949,7 @@ order (inner decorator first) and short-circuits on the first breach.</p>
 <h2 id="deprecated-names">Deprecated names<a class="headerlink" href="#deprecated-names" title="Permanent link">&para;</a></h2>
 <p>Decorators dropped their <code>_decorator</code> suffix and now detect <code>async def</code> functions themselves, so the separate
 <code>async_*</code> variants are no longer needed. The old names still work and emit a <code>DeprecationWarning</code> that names the
-replacement.</p>
+replacement. They will be removed in 6.0.0.</p>
 <table>
 <thead>
 <tr>
@@ -3936,7 +4005,8 @@ replacement.</p>
 </tbody>
 </table>
 <p>Import everything from <code>archipy.helpers.decorators</code>. The old submodule paths (for example
-<code>archipy.helpers.decorators.retry</code>) keep exporting the deprecated names.</p>
+<code>archipy.helpers.decorators.retry</code>) keep exporting the deprecated names until 6.0.0, which removes them with the other
+deprecated names above.</p>
 
 
 

@@ -3536,7 +3536,7 @@ import rules — is the foundation for writing maintainable, testable services.<
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    adapters --&gt;|imports| configs
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    helpers --&gt;|imports| models
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    helpers --&gt;|imports| configs
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    models --&gt;|imports| configs
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    configs --&gt;|imports| models
 </span></code></pre></div>
 <table>
 <thead>
@@ -3570,7 +3570,7 @@ import rules — is the foundation for writing maintainable, testable services.<
 </tbody>
 </table>
 <blockquote>
-<p><strong>Warning:</strong> Imports flow inward only — <code>configs ← models ← helpers ← adapters</code>. Inner layers never import from outer
+<p><strong>Warning:</strong> Imports flow inward only — <code>models ← configs ← helpers ← adapters</code>. Inner layers never import from outer
 layers. Violating this rule breaks testability and creates circular dependencies.</p>
 </blockquote>
 <hr />
@@ -3736,7 +3736,7 @@ on any exception:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Service  →  Logic (@atomic)  →  Repository  →  Adapter  →  DB
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>                 ↑___________commit / rollback____________↑
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">postgres_sqlalchemy_atomic</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.base.sqlalchemy.atomic</span><span class="w"> </span><span class="kn">import</span> <span class="n">postgres_sqlalchemy_atomic</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">models.dtos.user.domain.v1.user_dtos</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserRegistrationInputDTO</span><span class="p">,</span> <span class="n">UserRegistrationOutputDTO</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>

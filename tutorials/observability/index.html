@@ -1617,6 +1617,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#standard-otel_-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standard OTEL_* variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#metrics-exporters" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3507,6 +3518,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#standard-otel_-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standard OTEL_* variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#metrics-exporters" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3729,10 +3751,10 @@
 <tbody>
 <tr>
 <td><code>archipy[otel]</code></td>
-<td>SDK, OTLP exporters, httpx/requests, threading, system metrics</td>
+<td>SDK, OTLP exporters, B3 propagator, httpx/requests, threading, system metrics</td>
 </tr>
 <tr>
-<td><code>archipy[otel-fastapi]</code></td>
+<td><code>archipy[otel,fastapi]</code></td>
 <td>FastAPI native telemetry (FastAPI 0.142.2+)</td>
 </tr>
 <tr>
@@ -3768,7 +3790,7 @@
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[otel-fastapi,otel-grpc]"</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[otel,fastapi,otel-grpc]"</span>
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -3812,9 +3834,9 @@
 </span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"OTel enabled=</span><span class="si">%s</span><span class="s2"> endpoint=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">OTEL</span><span class="o">.</span><span class="n">IS_ENABLED</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">OTEL</span><span class="o">.</span><span class="n">OTLP_ENDPOINT</span><span class="p">)</span>
 </span></code></pre></div>
 <blockquote>
-<p><strong>Note:</strong> Do not rely on <code>OTEL_*</code> SDK autoconfiguration. ArchiPy builds
-<code>TracerProvider</code> / <code>MeterProvider</code> / <code>LoggerProvider</code> programmatically from
-<code>OpentelemetryConfig</code> only.</p>
+<p><strong>Note:</strong> ArchiPy builds <code>TracerProvider</code> / <code>MeterProvider</code> / <code>LoggerProvider</code> programmatically from
+<code>OpentelemetryConfig</code>; the SDK's own <code>OTEL_*</code> autoconfiguration is not used. Set <code>USE_STANDARD_ENV</code> to let the
+standard variables fill in unset settings (see <a href="#standard-otel_-variables">Standard <code>OTEL_*</code> variables</a>).</p>
 </blockquote>
 <h3 id="key-fields">Key fields<a class="headerlink" href="#key-fields" title="Permanent link">&para;</a></h3>
 <table>
@@ -3857,9 +3879,54 @@
 <td><code>grpc</code> or <code>http/protobuf</code></td>
 </tr>
 <tr>
+<td><code>TRACES_SAMPLER</code></td>
+<td><code>parentbased_traceidratio</code></td>
+<td><code>always_on</code>, <code>always_off</code>, <code>traceidratio</code> or the <code>parentbased_*</code> variants</td>
+</tr>
+<tr>
 <td><code>TRACES_SAMPLE_RATIO</code></td>
 <td><code>0.1</code></td>
-<td>Parent-based trace ID ratio sampler</td>
+<td>Ratio of the <code>traceidratio</code> and <code>parentbased_traceidratio</code> samplers</td>
+</tr>
+<tr>
+<td><code>PROPAGATORS</code></td>
+<td><code>["tracecontext", "baggage"]</code></td>
+<td>Context propagators; also <code>b3</code>, <code>b3multi</code>; <code>none</code> disables them</td>
+</tr>
+<tr>
+<td><code>OTLP_COMPRESSION</code></td>
+<td><code>none</code></td>
+<td><code>gzip</code> cuts realistic payloads to about half or less at some CPU cost; worth it when the collector is across a network</td>
+</tr>
+<tr>
+<td><code>SPAN_BATCH_*</code> / <code>LOG_BATCH_*</code></td>
+<td>queue 4096, batch 512</td>
+<td><code>SCHEDULE_DELAY_MS</code> (spans 5000, logs 1000), <code>EXPORT_TIMEOUT_MS</code> (30000), <code>MAX_QUEUE_SIZE</code>, <code>MAX_EXPORT_BATCH_SIZE</code> of the batch processors. Keep a batch under the 4 MiB message limit gRPC receivers apply to the decompressed message: 512 spans with 25 attributes encode to about 0.75 MiB, with a 4 KB stack trace each to about 2.5 MiB, and 1024 of those already pass 4 MiB. Batch size barely changes the gzip ratio: on realistic spans gzip cut the bytes of a gRPC export to about 0.4 of the uncompressed size (200 spans, 25 attributes and a 4 KB stack trace each, measured through a proxy). A batch size left unset follows a lowered queue size; one set above its queue size is rejected</td>
+</tr>
+<tr>
+<td><code>SERVICE_NAME</code> / <code>SERVICE_VERSION</code></td>
+<td><code>None</code></td>
+<td>Resource <code>service.name</code> and <code>service.version</code></td>
+</tr>
+<tr>
+<td><code>SERVICE_INSTANCE_ID</code></td>
+<td>generated UUID</td>
+<td>Resource <code>service.instance.id</code></td>
+</tr>
+<tr>
+<td><code>RESOURCE_DETECTORS</code></td>
+<td><code>["service_instance", "host", "os"]</code></td>
+<td>Detectors that add <code>service.instance.id</code>, <code>host.*</code>, <code>os.*</code>; <code>process</code> adds <code>process.*</code> including the full command line, so it is opt-in</td>
+</tr>
+<tr>
+<td><code>METRICS_DURATION_BUCKETS_S</code></td>
+<td>5 ms to 10 s</td>
+<td>Bucket boundaries in seconds of the duration histograms</td>
+</tr>
+<tr>
+<td><code>USE_STANDARD_ENV</code></td>
+<td><code>false</code></td>
+<td>Fill unset settings from the standard <code>OTEL_*</code> variables (see below)</td>
 </tr>
 <tr>
 <td><code>METRIC_EXPORT_INTERVAL_MS</code></td>
@@ -3958,6 +4025,66 @@
 </tr>
 </tbody>
 </table>
+<h3 id="standard-otel_-variables">Standard <code>OTEL_*</code> variables<a class="headerlink" href="#standard-otel_-variables" title="Permanent link">&para;</a></h3>
+<p>With <code>OTEL__USE_STANDARD_ENV=true</code>, the standard variables fill in every setting that ArchiPy's own config leaves
+unset. A field set in code, in an <code>OTEL__*</code> variable or in TOML always wins. An invalid value is logged and ignored, and
+so are values that are valid alone but invalid together (for example a batch size above the queue size).</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Sets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OTEL_SERVICE_NAME</code></td>
+<td><code>SERVICE_NAME</code></td>
+</tr>
+<tr>
+<td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code>, <code>OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_ENDPOINT</code></td>
+<td><code>OTLP_ENDPOINT</code>, <code>TRACES_ENDPOINT</code>, <code>METRICS_ENDPOINT</code>, <code>LOGS_ENDPOINT</code></td>
+</tr>
+<tr>
+<td><code>OTEL_EXPORTER_OTLP_PROTOCOL</code> (<code>grpc</code>, <code>http/protobuf</code>)</td>
+<td><code>PROTOCOL</code></td>
+</tr>
+<tr>
+<td><code>OTEL_EXPORTER_OTLP_HEADERS</code> (<code>k=v,k=v</code>)</td>
+<td><code>OTLP_HEADERS</code></td>
+</tr>
+<tr>
+<td><code>OTEL_EXPORTER_OTLP_TIMEOUT</code> (seconds, as the Python SDK reads it)</td>
+<td><code>TIMEOUT</code></td>
+</tr>
+<tr>
+<td><code>OTEL_EXPORTER_OTLP_COMPRESSION</code> (<code>none</code>, <code>gzip</code>)</td>
+<td><code>OTLP_COMPRESSION</code></td>
+</tr>
+<tr>
+<td><code>OTEL_TRACES_SAMPLER</code>, <code>OTEL_TRACES_SAMPLER_ARG</code></td>
+<td><code>TRACES_SAMPLER</code>, <code>TRACES_SAMPLE_RATIO</code> (the Jaeger and X-Ray samplers are not supported)</td>
+</tr>
+<tr>
+<td><code>OTEL_PROPAGATORS</code></td>
+<td><code>PROPAGATORS</code></td>
+</tr>
+<tr>
+<td><code>OTEL_BSP_*</code>, <code>OTEL_BLRP_*</code></td>
+<td><code>SPAN_BATCH_*</code>, <code>LOG_BATCH_*</code></td>
+</tr>
+<tr>
+<td><code>OTEL_METRIC_EXPORT_INTERVAL</code></td>
+<td><code>METRIC_EXPORT_INTERVAL_MS</code></td>
+</tr>
+<tr>
+<td><code>OTEL_SDK_DISABLED=true</code></td>
+<td>Keeps OpenTelemetry off, whatever <code>IS_ENABLED</code> says</td>
+</tr>
+</tbody>
+</table>
+<p><code>OTEL_RESOURCE_ATTRIBUTES</code> and <code>OTEL_SERVICE_NAME</code> also reach the resource without the switch, because the SDK's
+<code>Resource.create</code> reads them; explicit <code>RESOURCE_ATTRIBUTES</code> and <code>SERVICE_NAME</code> override them.</p>
 <h3 id="metrics-exporters">Metrics exporters<a class="headerlink" href="#metrics-exporters" title="Permanent link">&para;</a></h3>
 <p>Exactly <strong>one</strong> metrics exporter when <code>METRICS_ENABLED</code> is true — set via
 <code>METRICS_EXPORTER</code> (<code>otlp</code> | <code>pull</code> | <code>pushgateway</code>):</p>
@@ -4110,7 +4237,7 @@ requests, httpx, and httpx2 clients — their instrumentors patch at class level
 <h3 id="fastapi">FastAPI<a class="headerlink" href="#fastapi" title="Permanent link">&para;</a></h3>
 <p><code>AppUtils.create_fastapi_app</code> passes <code>FastAPIUtils.build_otel_telemetry_config(config)</code> to
 <code>FastAPI(telemetry=...)</code>. That initializes providers (idempotent) and enables FastAPI's built-in
-OpenTelemetry support (requires <code>archipy[otel-fastapi]</code>, FastAPI 0.142.2+). Traces and metrics use
+OpenTelemetry support (requires <code>archipy[otel,fastapi]</code>, FastAPI 0.142.2+). Traces and metrics use
 ArchiPy's providers; OTLP auto-configuration is always off. FastAPI log records (validation failures and
 unhandled exceptions, with stack traces) are opt-in via <code>OTEL__FASTAPI_LOGS_ENABLED=true</code> and use ArchiPy's
 logger provider. The HTTP duration
@@ -4135,13 +4262,22 @@ interceptors when OTel is enabled (requires <code>archipy[otel-grpc]</code> for 
 <ul>
 <li><strong>Traces</strong> — contrib <code>server_interceptor</code> / <code>aio_server_interceptor</code> when
   <code>TRACES_ENABLED</code></li>
-<li><strong>Metrics</strong> — ArchiPy <code>rpc.server.request.duration</code> histogram (seconds, same buckets as FastAPI's
-  <code>http.server.request.duration</code>) and <code>rpc.server.active_requests</code> up-down counter (in-flight calls,
-  like <code>http.server.active_requests</code>) when <code>METRICS_ENABLED</code> (works in metrics-only mode; no handler decorators
-  required). The duration histogram carries a <code>status</code> attribute (<code>ok</code>, <code>error</code> or <code>cancelled</code>) and the
-  <code>rpc.grpc.status_code</code> the call finished with. Handled caller errors (for example <code>NOT_FOUND</code> or
-  <code>RESOURCE_EXHAUSTED</code>) count as <code>ok</code>, and a call cancelled by the client or by its deadline counts as <code>cancelled</code>.</li>
+<li><strong>Metrics</strong> — the OpenTelemetry <code>rpc.server.call.duration</code> histogram (seconds, same buckets as FastAPI's
+  <code>http.server.request.duration</code>) and an ArchiPy <code>rpc.server.active_requests</code> up-down counter (in-flight calls; the
+  specification does not define it) when <code>METRICS_ENABLED</code> (works in metrics-only mode; no handler decorators
+  required). The duration histogram follows the RPC semantic conventions: <code>rpc.system.name</code> (<code>grpc</code>), the fully
+  qualified <code>rpc.method</code> (<code>package.Service/Method</code>) and the <code>rpc.response.status_code</code> name the call finished with
+  (<code>OK</code>, <code>NOT_FOUND</code>, <code>CANCELLED</code>, ...). <code>error.type</code> is set to the status code only for the codes the conventions
+  treat as server failures (<code>UNKNOWN</code>, <code>DEADLINE_EXCEEDED</code>, <code>UNIMPLEMENTED</code>, <code>INTERNAL</code>, <code>UNAVAILABLE</code>,
+  <code>DATA_LOSS</code>); handled caller errors such as <code>NOT_FOUND</code> or <code>RESOURCE_EXHAUSTED</code> and client cancellations carry a
+  status code but no <code>error.type</code>. A handler that raises without a status is recorded as <code>UNKNOWN</code>, which is what
+  gRPC answers.</li>
 </ul>
+<div class="admonition warning">
+<p class="admonition-title">Renamed in this release</p>
+<p>The histogram used to be <code>rpc.server.request.duration</code> with <code>rpc.system</code>, <code>rpc.service</code>, a short <code>rpc.method</code>,
+<code>rpc.grpc.status_code</code> and a custom <code>status</code> attribute. Update dashboards and alerts to the names above.</p>
+</div>
 <p>Order becomes: OTel traces (if any) → OTel metrics (if any) → exception interceptor
 → rate-limit (if enabled) → custom interceptors.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -4195,6 +4331,9 @@ ArchiPy's own SQLAlchemy bound and reports when upstream has caught up (a weekly
 <p>For async clients use <code>OtelUtils.async_grpc_client_interceptors()</code>.</p>
 <hr />
 <h2 id="tracing-decorators">Tracing Decorators<a class="headerlink" href="#tracing-decorators" title="Permanent link">&para;</a></h2>
+<p>Every decorator span records <code>code.function.name</code> (the fully qualified name of the traced function), and a span for a
+failed call also carries <code>error.type</code> (the <code>BaseError.code</code>, or the fully qualified exception class) next to the
+recorded exception event.</p>
 <p>For code outside FastAPI/gRPC — workers, schedulers, domain logic — use decorators from
 <code>archipy.helpers.decorators</code>:</p>
 <table>
@@ -4330,7 +4469,8 @@ that may embed secrets.</p>
 attribute (<code>ok</code> / <code>error</code> / <code>cancelled</code> for async cancel). Duration histograms use
 explicit second buckets and a description. <code>status</code> aligns with tracing:
 <code>BaseError</code> with HTTP status below 500 records as <code>ok</code> (handled client error), not
-<code>error</code>. No-op when OTel or <code>METRICS_ENABLED</code> is off.</p>
+<code>error</code>. A call that ends in <code>error</code> or <code>cancelled</code> also carries the standard <code>error.type</code> (the <code>BaseError.code</code>, or
+the fully qualified exception class); a call recorded as <code>ok</code> carries none. No-op when OTel or <code>METRICS_ENABLED</code> is off.</p>
 <hr />
 <h2 id="exception-capture">Exception Capture<a class="headerlink" href="#exception-capture" title="Permanent link">&para;</a></h2>
 <p><code>archipy.helpers.errors.capture_exception</code> always logs locally. When OTel is enabled and a recording span

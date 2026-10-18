@@ -3686,6 +3686,14 @@ comprehensive patterns using ArchiPy's domain-specific exceptions.</p>
 <a href="../../../api_reference/helpers/utils/#string-utils">Utils API Reference</a> for the full method list.</p>
 <h2 id="keycloak-utils">Keycloak Utils<a class="headerlink" href="#keycloak-utils" title="Permanent link">&para;</a></h2>
 <p>Authentication and authorization utilities with Keycloak integration:</p>
+<div class="admonition note">
+<p class="admonition-title">Moved to the Keycloak adapter</p>
+<p>The guards are now the functions <code>fastapi_auth</code> and <code>grpc_auth</code> of <code>archipy.adapters.keycloak.auth</code>.
+<code>fastapi_auth</code> returns an async dependency and <code>grpc_auth</code> detects <code>async def</code> servicer methods, so
+<code>async_fastapi_auth</code>, <code>async_grpc_auth</code> and the <code>KeycloakUtils</code> class (in <code>archipy.helpers.utils.keycloak_utils</code>)
+are deprecated and emit a <code>DeprecationWarning</code>. They will be removed in 6.0.0, together with the
+<code>archipy.helpers.utils.keycloak_utils</code> module.</p>
+</div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">uuid</span><span class="w"> </span><span class="kn">import</span> <span class="n">UUID</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
@@ -3694,7 +3702,7 @@ comprehensive patterns using ArchiPy's domain-specific exceptions.</p>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.keycloak_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">KeycloakUtils</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.keycloak.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">fastapi_auth</span>
 </span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.types.language_type</span><span class="w"> </span><span class="kn">import</span> <span class="n">LanguageType</span>
 </span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
 </span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="c1"># Configure logging</span>
@@ -3707,7 +3715,7 @@ comprehensive patterns using ArchiPy's domain-specific exceptions.</p>
 </span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>
 </span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="c1"># Resource-based authorization for users with role and admin access</span>
 </span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/users/</span><span class="si">{user_uuid}</span><span class="s2">/info"</span><span class="p">)</span>
-</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_user_info</span><span class="p">(</span><span class="n">user_uuid</span><span class="p">:</span> <span class="n">UUID</span><span class="p">,</span> <span class="n">user</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">KeycloakUtils</span><span class="o">.</span><span class="n">fastapi_auth</span><span class="p">(</span>
+</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_user_info</span><span class="p">(</span><span class="n">user_uuid</span><span class="p">:</span> <span class="n">UUID</span><span class="p">,</span> <span class="n">user</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">fastapi_auth</span><span class="p">(</span>
 </span><span id="__span-6-23"><a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>    <span class="n">resource_type_param</span><span class="o">=</span><span class="s2">"user_uuid"</span><span class="p">,</span>
 </span><span id="__span-6-24"><a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>    <span class="n">resource_type</span><span class="o">=</span><span class="s2">"users"</span><span class="p">,</span>
 </span><span id="__span-6-25"><a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>    <span class="n">required_roles</span><span class="o">=</span><span class="p">{</span><span class="s2">"user"</span><span class="p">},</span>
@@ -3719,9 +3727,9 @@ comprehensive patterns using ArchiPy's domain-specific exceptions.</p>
 </span><span id="__span-6-31"><a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a>        <span class="s2">"username"</span><span class="p">:</span> <span class="n">user</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"preferred_username"</span><span class="p">)</span>
 </span><span id="__span-6-32"><a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a>    <span class="p">}</span>
 </span><span id="__span-6-33"><a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a>
-</span><span id="__span-6-34"><a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a><span class="c1"># Async version for employees with multiple acceptable roles</span>
+</span><span id="__span-6-34"><a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a><span class="c1"># The dependency is async, so it works the same for def and async def endpoints</span>
 </span><span id="__span-6-35"><a id="__codelineno-6-35" name="__codelineno-6-35" href="#__codelineno-6-35"></a><span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/employees/</span><span class="si">{employee_uuid}</span><span class="s2">/info"</span><span class="p">)</span>
-</span><span id="__span-6-36"><a id="__codelineno-6-36" name="__codelineno-6-36" href="#__codelineno-6-36"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_employee_info</span><span class="p">(</span><span class="n">employee_uuid</span><span class="p">:</span> <span class="n">UUID</span><span class="p">,</span> <span class="n">employee</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">KeycloakUtils</span><span class="o">.</span><span class="n">async_fastapi_auth</span><span class="p">(</span>
+</span><span id="__span-6-36"><a id="__codelineno-6-36" name="__codelineno-6-36" href="#__codelineno-6-36"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_employee_info</span><span class="p">(</span><span class="n">employee_uuid</span><span class="p">:</span> <span class="n">UUID</span><span class="p">,</span> <span class="n">employee</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">fastapi_auth</span><span class="p">(</span>
 </span><span id="__span-6-37"><a id="__codelineno-6-37" name="__codelineno-6-37" href="#__codelineno-6-37"></a>    <span class="n">resource_type_param</span><span class="o">=</span><span class="s2">"employee_uuid"</span><span class="p">,</span>
 </span><span id="__span-6-38"><a id="__codelineno-6-38" name="__codelineno-6-38" href="#__codelineno-6-38"></a>    <span class="n">resource_type</span><span class="o">=</span><span class="s2">"employees"</span><span class="p">,</span>
 </span><span id="__span-6-39"><a id="__codelineno-6-39" name="__codelineno-6-39" href="#__codelineno-6-39"></a>    <span class="n">required_roles</span><span class="o">=</span><span class="p">{</span><span class="s2">"employee"</span><span class="p">,</span> <span class="s2">"manager"</span><span class="p">,</span> <span class="s2">"user"</span><span class="p">},</span>
@@ -3736,6 +3744,24 @@ comprehensive patterns using ArchiPy's domain-specific exceptions.</p>
 </span><span id="__span-6-48"><a id="__codelineno-6-48" name="__codelineno-6-48" href="#__codelineno-6-48"></a>
 </span><span id="__span-6-49"><a id="__codelineno-6-49" name="__codelineno-6-49" href="#__codelineno-6-49"></a><span class="n">uvicorn</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">"0.0.0.0"</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">8000</span><span class="p">)</span>  <span class="c1"># noqa: S104</span>
 </span></code></pre></div>
+<p><code>fastapi_auth</code> returns the UserInfo dict, and it sets <code>AuthContextManager</code> for the request, so code below the endpoint
+can read the caller without receiving the request:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.keycloak.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">AuthContextManager</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">audit_log</span><span class="p">(</span><span class="n">action</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">caller</span> <span class="o">=</span> <span class="n">AuthContextManager</span><span class="o">.</span><span class="n">get_auth_context</span><span class="p">()</span>  <span class="c1"># AuthenticatedUserDTO, or None outside a guarded request</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"</span><span class="si">%s</span><span class="s2"> by </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">caller</span><span class="o">.</span><span class="n">username</span> <span class="k">if</span> <span class="n">caller</span> <span class="k">else</span> <span class="s2">"anonymous"</span><span class="p">)</span>
+</span></code></pre></div>
+<p>The context is visible to <code>async def</code> and <code>def</code> endpoints, background tasks and streamed responses, and it is cleared
+when the request ends.</p>
+<div class="admonition warning">
+<p class="admonition-title"><code>request.state</code> is deprecated for the auth data</p>
+<p>The dependency still fills <code>request.state.user_info</code>, <code>token_info</code>, <code>actor_chain</code> and <code>user_roles</code>, but each of
+them is now a dict, list or set that emits a <code>DeprecationWarning</code> when you read it (iterate, index, <code>get</code>, <code>in</code>,
+<code>len</code>, ...), naming its replacement on <code>AuthContextManager.get_auth_context()</code>: <code>raw_user_info</code>, <code>token_info</code>,
+<code>actor_chain</code> and <code>roles</code>. The values are the same as before. The dict the dependency returns does not warn.
+<code>request.state</code> will stop carrying this data in 6.0.0.</p>
+</div>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <p>For more examples and detailed documentation:</p>
 <ul>
