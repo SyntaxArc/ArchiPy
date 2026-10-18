@@ -570,611 +570,611 @@ Feature: Keycloak Authentication Testing
     And the actor chain has 2 entries
     And the propagation headers carry the bearer token
 
-  # --- KeycloakUtils auth dependencies ---
-  # Real tokens issued by the Keycloak container drive KeycloakUtils.fastapi_auth, async_fastapi_auth,
-  # grpc_auth, async_grpc_auth and AuthContextManager. gRPC uses a ServicerContext fake only to record aborts.
-  Scenario Outline: Utils FastAPI dependency populates request state for a valid token
+  # --- Keycloak auth dependencies and decorators ---
+  # Real tokens issued by the Keycloak container drive keycloak.auth fastapi_auth, async_fastapi_auth (deprecated),
+  # grpc_auth, async_grpc_auth (deprecated) and AuthContextManager. gRPC uses a ServicerContext fake only to record aborts.
+  Scenario Outline: Auth FastAPI dependency populates request state for a valid token
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And the keycloak utils fastapi auth requires any of roles "utils-reader"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils dependency returns the user info of user "utilsuser"
-    And the keycloak utils request state user roles include "utils-reader"
-    And the keycloak utils request state has an empty actor chain
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak fastapi auth requires any of roles "auth-reader"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth dependency returns the user info of user "authuser"
+    And the keycloak auth request state user roles include "auth-reader"
+    And the keycloak auth request state has an empty actor chain
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency accepts a client role from resource access
+  Scenario Outline: Auth FastAPI dependency accepts a client role from resource access
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And I create a client role named "utils-operator" for client "utils-client" with description "Operator" using sync adapter
-    And I assign client role "utils-operator" of client "utils-client" to user "utilsuser" using sync adapter
-    And the keycloak utils fastapi auth requires all roles "utils-reader,utils-operator"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils request state user roles include "utils-reader,utils-operator"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And I create a client role named "auth-operator" for client "auth-client" with description "Operator" using sync adapter
+    And I assign client role "auth-operator" of client "auth-client" to user "authuser" using sync adapter
+    And the keycloak fastapi auth requires all roles "auth-reader,auth-operator"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth request state user roles include "auth-reader,auth-operator"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency rejects missing credentials
+  Scenario Outline: Auth FastAPI dependency rejects missing credentials
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    When the keycloak utils <mode> fastapi dependency is called without credentials
-    Then the keycloak utils call fails with error code "UNAUTHENTICATED"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    When the keycloak auth <mode> fastapi dependency is called without credentials
+    Then the keycloak auth call fails with error code "UNAUTHENTICATED"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency rejects a garbage token
+  Scenario Outline: Auth FastAPI dependency rejects a garbage token
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    When the keycloak utils <mode> fastapi dependency is called with token "not-a-real-jwt"
-    Then the keycloak utils call fails with error code "TOKEN_EXPIRED"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    When the keycloak auth <mode> fastapi dependency is called with token "not-a-real-jwt"
+    Then the keycloak auth call fails with error code "TOKEN_EXPIRED"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency rejects an expired token
+  Scenario Outline: Auth FastAPI dependency rejects an expired token
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-expiry-realm" with display name "Utils Expiry Realm" using sync adapter
-    And the keycloak utils realm "utils-expiry-realm" has an access token lifespan of 1 seconds
-    And I create a client named "utils-expiry-client" in realm "utils-expiry-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsexpiring" and password "pass123" using sync adapter
-    And the keycloak utils access token of user "utilsexpiring" is obtained with password "pass123"
-    When the keycloak utils access token lifespan has elapsed
-    And the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsexpiring"
-    Then the keycloak utils call fails with error code "TOKEN_EXPIRED"
+    And I create a realm named "auth-expiry-realm" with display name "Auth Expiry Realm" using sync adapter
+    And the keycloak auth realm "auth-expiry-realm" has an access token lifespan of 1 seconds
+    And I create a client named "auth-expiry-client" in realm "auth-expiry-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authexpiring" and password "pass123" using sync adapter
+    And the keycloak auth access token of user "authexpiring" is obtained with password "pass123"
+    When the keycloak auth access token lifespan has elapsed
+    And the keycloak auth <mode> fastapi dependency is called with the access token of user "authexpiring"
+    Then the keycloak auth call fails with error code "TOKEN_EXPIRED"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency rejects a caller without the required role
+  Scenario Outline: Auth FastAPI dependency rejects a caller without the required role
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And the keycloak utils fastapi auth requires any of roles "utils-admin"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils call fails with error code "PERMISSION_DENIED"
-    And the keycloak utils error lists required roles "utils-admin"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak fastapi auth requires any of roles "auth-admin"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth call fails with error code "PERMISSION_DENIED"
+    And the keycloak auth error lists required roles "auth-admin"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency requires every role when all roles are required
+  Scenario Outline: Auth FastAPI dependency requires every role when all roles are required
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And the keycloak utils fastapi auth requires all roles "utils-reader,utils-writer"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils call fails with error code "PERMISSION_DENIED"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak fastapi auth requires all roles "auth-reader,auth-writer"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth call fails with error code "PERMISSION_DENIED"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency allows a granted UMA permission
+  Scenario Outline: Auth FastAPI dependency allows a granted UMA permission
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And the keycloak utils client "utils-client" guards resource "utils-doc" with scopes "read,write" and grants scope "read" to realm role "utils-reader"
-    And the keycloak utils fastapi auth requires permissions "utils-doc#read"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils dependency returns the user info of user "utilsuser"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak auth client "auth-client" guards resource "auth-doc" with scopes "read,write" and grants scope "read" to realm role "auth-reader"
+    And the keycloak fastapi auth requires permissions "auth-doc#read"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth dependency returns the user info of user "authuser"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency denies an ungranted UMA permission
+  Scenario Outline: Auth FastAPI dependency denies an ungranted UMA permission
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And the keycloak utils client "utils-client" guards resource "utils-doc" with scopes "read,write" and grants scope "read" to realm role "utils-reader"
-    And the keycloak utils fastapi auth requires permissions "utils-doc#read,utils-doc#write"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils call fails with error code "PERMISSION_DENIED"
-    And the keycloak utils error lists missing permission "utils-doc#write"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak auth client "auth-client" guards resource "auth-doc" with scopes "read,write" and grants scope "read" to realm role "auth-reader"
+    And the keycloak fastapi auth requires permissions "auth-doc#read,auth-doc#write"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth call fails with error code "PERMISSION_DENIED"
+    And the keycloak auth error lists missing permission "auth-doc#write"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency denies a request when every UMA permission is ungranted
+  Scenario Outline: Auth FastAPI dependency denies a request when every UMA permission is ungranted
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And the keycloak utils client "utils-client" guards resource "utils-doc" with scopes "read,write" and grants scope "read" to realm role "utils-reader"
-    And the keycloak utils fastapi auth requires permissions "utils-doc#write"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils call fails with error code "PERMISSION_DENIED"
-    And the keycloak utils error lists missing permission "utils-doc#write"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak auth client "auth-client" guards resource "auth-doc" with scopes "read,write" and grants scope "read" to realm role "auth-reader"
+    And the keycloak fastapi auth requires permissions "auth-doc#write"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth call fails with error code "PERMISSION_DENIED"
+    And the keycloak auth error lists missing permission "auth-doc#write"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency allows the owner of a resource
+  Scenario Outline: Auth FastAPI dependency allows the owner of a resource
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And I create a user with username "utilsother" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsother" using sync adapter
-    And the keycloak utils access token of user "utilsother" is obtained with password "pass123"
-    And the keycloak utils fastapi auth guards resource type "users" by path parameter "user_uuid"
-    And the keycloak utils request path parameter "user_uuid" is the id of user "utilsuser"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils dependency returns the user info of user "utilsuser"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And I create a user with username "authother" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authother" using sync adapter
+    And the keycloak auth access token of user "authother" is obtained with password "pass123"
+    And the keycloak fastapi auth guards resource type "users" by path parameter "user_uuid"
+    And the keycloak auth request path parameter "user_uuid" is the id of user "authuser"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth dependency returns the user info of user "authuser"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency denies a non owner of a resource
+  Scenario Outline: Auth FastAPI dependency denies a non owner of a resource
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And I create a user with username "utilsother" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsother" using sync adapter
-    And the keycloak utils access token of user "utilsother" is obtained with password "pass123"
-    And the keycloak utils fastapi auth guards resource type "users" by path parameter "user_uuid"
-    And the keycloak utils request path parameter "user_uuid" is the id of user "utilsother"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils call fails with error code "PERMISSION_DENIED"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And I create a user with username "authother" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authother" using sync adapter
+    And the keycloak auth access token of user "authother" is obtained with password "pass123"
+    And the keycloak fastapi auth guards resource type "users" by path parameter "user_uuid"
+    And the keycloak auth request path parameter "user_uuid" is the id of user "authother"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth call fails with error code "PERMISSION_DENIED"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency lets an admin role bypass resource ownership
+  Scenario Outline: Auth FastAPI dependency lets an admin role bypass resource ownership
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And I create a user with username "utilsother" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsother" using sync adapter
-    And the keycloak utils access token of user "utilsother" is obtained with password "pass123"
-    And the keycloak utils fastapi auth guards resource type "users" by path parameter "user_uuid"
-    And the keycloak utils fastapi auth treats roles "utils-reader" as admin roles
-    And the keycloak utils request path parameter "user_uuid" is the id of user "utilsother"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils dependency returns the user info of user "utilsuser"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And I create a user with username "authother" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authother" using sync adapter
+    And the keycloak auth access token of user "authother" is obtained with password "pass123"
+    And the keycloak fastapi auth guards resource type "users" by path parameter "user_uuid"
+    And the keycloak fastapi auth treats roles "auth-reader" as admin roles
+    And the keycloak auth request path parameter "user_uuid" is the id of user "authother"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth dependency returns the user info of user "authuser"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency rejects a request missing the resource path parameter
+  Scenario Outline: Auth FastAPI dependency rejects a request missing the resource path parameter
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And the keycloak utils fastapi auth guards resource type "users" by path parameter "user_uuid"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils call fails with error code "INVALID_ARGUMENT"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak fastapi auth guards resource type "users" by path parameter "user_uuid"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth call fails with error code "INVALID_ARGUMENT"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils gRPC handler runs with the auth context for a valid token
+  Scenario Outline: Auth gRPC handler runs with the auth context for a valid token
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And the keycloak utils grpc auth requires any of roles "utils-reader"
-    When the keycloak utils <mode> grpc handler is invoked with the bearer access token of user "utilsuser"
-    Then the keycloak utils grpc handler ran as user "utilsuser" with roles including "utils-reader"
-    And the keycloak utils grpc handler returned "handled"
-    And the keycloak utils auth context is cleared
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak grpc auth requires any of roles "auth-reader"
+    When the keycloak auth <mode> grpc handler is invoked with the bearer access token of user "authuser"
+    Then the keycloak auth grpc handler ran as user "authuser" with roles including "auth-reader"
+    And the keycloak auth grpc handler returned "handled"
+    And the keycloak auth auth context is cleared
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils gRPC handler accepts a raw token without the bearer prefix
+  Scenario Outline: Auth gRPC handler accepts a raw token without the bearer prefix
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    When the keycloak utils <mode> grpc handler is invoked with the raw access token of user "utilsuser"
-    Then the keycloak utils grpc handler ran as user "utilsuser" with roles including "utils-reader"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    When the keycloak auth <mode> grpc handler is invoked with the raw access token of user "authuser"
+    Then the keycloak auth grpc handler ran as user "authuser" with roles including "auth-reader"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils gRPC handler allows the owner of a resource
+  Scenario Outline: Auth gRPC handler allows the owner of a resource
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And the keycloak utils grpc auth reads the resource from request attribute "user_id"
-    And the keycloak utils grpc request attribute "user_id" is the id of user "utilsuser"
-    When the keycloak utils <mode> grpc handler is invoked with the bearer access token of user "utilsuser"
-    Then the keycloak utils grpc handler ran as user "utilsuser" with roles including "utils-reader"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak grpc auth reads the resource from request attribute "user_id"
+    And the keycloak auth grpc request attribute "user_id" is the id of user "authuser"
+    When the keycloak auth <mode> grpc handler is invoked with the bearer access token of user "authuser"
+    Then the keycloak auth grpc handler ran as user "authuser" with roles including "auth-reader"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils gRPC handler aborts the servicer context when the token is missing
+  Scenario Outline: Auth gRPC handler aborts the servicer context when the token is missing
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    When the keycloak utils <mode> grpc handler is invoked without metadata
-    Then the keycloak utils servicer context was aborted with status "UNAUTHENTICATED"
-    And the keycloak utils grpc handler did not run
-    And the keycloak utils auth context is cleared
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    When the keycloak auth <mode> grpc handler is invoked without metadata
+    Then the keycloak auth servicer context was aborted with status "UNAUTHENTICATED"
+    And the keycloak auth grpc handler did not run
+    And the keycloak auth auth context is cleared
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils gRPC handler aborts the servicer context when the token is invalid
+  Scenario Outline: Auth gRPC handler aborts the servicer context when the token is invalid
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    When the keycloak utils <mode> grpc handler is invoked with bearer token "not-a-real-jwt"
-    Then the keycloak utils servicer context was aborted with status "UNAUTHENTICATED"
-    And the keycloak utils grpc handler did not run
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    When the keycloak auth <mode> grpc handler is invoked with bearer token "not-a-real-jwt"
+    Then the keycloak auth servicer context was aborted with status "UNAUTHENTICATED"
+    And the keycloak auth grpc handler did not run
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils gRPC handler aborts the servicer context when the role is insufficient
+  Scenario Outline: Auth gRPC handler aborts the servicer context when the role is insufficient
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And the keycloak utils grpc auth requires any of roles "utils-admin"
-    When the keycloak utils <mode> grpc handler is invoked with the bearer access token of user "utilsuser"
-    Then the keycloak utils servicer context was aborted with status "PERMISSION_DENIED"
-    And the keycloak utils grpc handler did not run
-    And the keycloak utils auth context is cleared
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak grpc auth requires any of roles "auth-admin"
+    When the keycloak auth <mode> grpc handler is invoked with the bearer access token of user "authuser"
+    Then the keycloak auth servicer context was aborted with status "PERMISSION_DENIED"
+    And the keycloak auth grpc handler did not run
+    And the keycloak auth auth context is cleared
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils gRPC handler aborts when the request lacks the resource attribute
+  Scenario Outline: Auth gRPC handler aborts when the request lacks the resource attribute
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And the keycloak utils grpc auth reads the resource from request attribute "user_id"
-    When the keycloak utils <mode> grpc handler is invoked with the bearer access token of user "utilsuser"
-    Then the keycloak utils servicer context was aborted with status "INVALID_ARGUMENT"
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak grpc auth reads the resource from request attribute "user_id"
+    When the keycloak auth <mode> grpc handler is invoked with the bearer access token of user "authuser"
+    Then the keycloak auth servicer context was aborted with status "INVALID_ARGUMENT"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils gRPC handler raises the typed error when the context is not a servicer context
+  Scenario Outline: Auth gRPC handler raises the typed error when the context is not a servicer context
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    When the keycloak utils <mode> grpc handler is invoked without metadata on a plain context
-    Then the keycloak utils call fails with error code "UNAUTHENTICATED"
-    And the keycloak utils grpc handler did not run
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    When the keycloak auth <mode> grpc handler is invoked without metadata on a plain context
+    Then the keycloak auth call fails with error code "UNAUTHENTICATED"
+    And the keycloak auth grpc handler did not run
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario: Utils sync gRPC handler wraps unexpected failures in an internal error
+  Scenario: Auth sync gRPC handler wraps unexpected failures in an internal error
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And the keycloak utils grpc handler crashes with a runtime failure
-    When the keycloak utils sync grpc handler is invoked with the bearer access token of user "utilsuser" on a plain context
-    Then the keycloak utils call fails with error code "INTERNAL_ERROR"
-    And the keycloak utils auth context is cleared
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak auth grpc handler crashes with a runtime failure
+    When the keycloak auth sync grpc handler is invoked with the bearer access token of user "authuser" on a plain context
+    Then the keycloak auth call fails with error code "INTERNAL_ERROR"
+    And the keycloak auth auth context is cleared
 
-  Scenario: Utils async gRPC handler aborts with an internal status on unexpected failures
+  Scenario: Auth async gRPC handler aborts with an internal status on unexpected failures
     Given a configured sync Keycloak adapter
-    And I create a realm named "utils-realm" with display name "Utils Realm" using sync adapter
-    And I create a client named "utils-client" in realm "utils-realm" with service accounts and update adapter using sync adapter
-    And I create a user with username "utilsuser" and password "pass123" using sync adapter
-    And I create a realm role named "utils-reader" with description "Reader" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsuser" using sync adapter
-    And the keycloak utils access token of user "utilsuser" is obtained with password "pass123"
-    And the keycloak utils grpc handler crashes with a runtime failure
-    When the keycloak utils async grpc handler is invoked with the bearer access token of user "utilsuser"
-    Then the keycloak utils servicer context was aborted with status "INTERNAL"
-    And the keycloak utils auth context is cleared
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak auth grpc handler crashes with a runtime failure
+    When the keycloak auth async grpc handler is invoked with the bearer access token of user "authuser"
+    Then the keycloak auth servicer context was aborted with status "INTERNAL"
+    And the keycloak auth auth context is cleared
 
-  Scenario: Utils auth context manager stores and returns the context
-    Given no keycloak utils auth context is set
-    When the keycloak utils auth context is set for user "user-9"
-    Then the keycloak utils auth context belongs to user "user-9"
+  Scenario: Auth auth context manager stores and returns the context
+    Given no keycloak auth auth context is set
+    When the keycloak auth auth context is set for user "user-9"
+    Then the keycloak auth auth context belongs to user "user-9"
 
-  Scenario: Utils auth context manager clears the context
-    Given the keycloak utils auth context is set for user "user-9"
-    When the keycloak utils auth context is cleared by the manager
-    Then the keycloak utils auth context is cleared
+  Scenario: Auth auth context manager clears the context
+    Given the keycloak auth auth context is set for user "user-9"
+    When the keycloak auth auth context is cleared by the manager
+    Then the keycloak auth auth context is cleared
 
-  Scenario: Utils auth context manager returns nothing when no context was set
-    Given no keycloak utils auth context is set
-    Then the keycloak utils auth context is cleared
+  Scenario: Auth auth context manager returns nothing when no context was set
+    Given no keycloak auth auth context is set
+    Then the keycloak auth auth context is cleared
 
-  # --- KeycloakUtils gRPC decorators and caching against the real Keycloak container ---
-  Scenario Outline: Utils gRPC response-stream handler keeps the auth context while streaming
-    Given a keycloak utils realm with user "utilsuser" holding realm role "utils-reader" and an access token
-    And the keycloak utils grpc auth requires any of roles "utils-reader"
-    And the keycloak utils grpc handler is a response stream
-    When the keycloak utils <mode> grpc handler is invoked with the bearer access token of user "utilsuser"
-    Then the keycloak utils grpc handler ran as user "utilsuser" with roles including "utils-reader"
-    And the keycloak utils grpc handler returned "a,b"
-    And the keycloak utils auth context is cleared
-
-    Examples:
-      | mode  |
-      | sync  |
-      | async |
-
-  Scenario Outline: Utils gRPC response-stream handler rejects a missing token
-    Given a keycloak utils realm with a client
-    And the keycloak utils grpc handler is a response stream
-    When the keycloak utils <mode> grpc handler is invoked without metadata on a plain context
-    Then the keycloak utils call fails with error code "UNAUTHENTICATED"
-    And the keycloak utils grpc handler did not run
+  # --- Keycloak auth gRPC decorators and caching against the real Keycloak container ---
+  Scenario Outline: Auth gRPC response-stream handler keeps the auth context while streaming
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And the keycloak grpc auth requires any of roles "auth-reader"
+    And the keycloak auth grpc handler is a response stream
+    When the keycloak auth <mode> grpc handler is invoked with the bearer access token of user "authuser"
+    Then the keycloak auth grpc handler ran as user "authuser" with roles including "auth-reader"
+    And the keycloak auth grpc handler returned "a,b"
+    And the keycloak auth auth context is cleared
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils gRPC handler abort is not rewritten as an internal error
-    Given a keycloak utils realm with user "utilsuser" holding realm role "utils-reader" and an access token
-    And the keycloak utils grpc auth requires any of roles "utils-reader"
-    And the keycloak utils grpc handler aborts the servicer context itself
-    When the keycloak utils <mode> grpc handler is invoked with the bearer access token of user "utilsuser"
-    Then the keycloak utils servicer context was aborted exactly once with status "RESOURCE_EXHAUSTED"
-    And the keycloak utils auth context is cleared
+  Scenario Outline: Auth gRPC response-stream handler rejects a missing token
+    Given a keycloak auth realm with a client
+    And the keycloak auth grpc handler is a response stream
+    When the keycloak auth <mode> grpc handler is invoked without metadata on a plain context
+    Then the keycloak auth call fails with error code "UNAUTHENTICATED"
+    And the keycloak auth grpc handler did not run
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario: Utils sync gRPC handler hides the cause of unexpected failures
-    Given a keycloak utils realm with user "utilsuser" holding realm role "utils-reader" and an access token
-    And the keycloak utils grpc auth requires any of roles "utils-reader"
-    And the keycloak utils grpc handler crashes with a runtime failure
-    When the keycloak utils sync grpc handler is invoked with the bearer access token of user "utilsuser" on a plain context
-    Then the keycloak utils call fails with error code "INTERNAL_ERROR"
-    And the keycloak utils error should not expose "boom"
-
-  Scenario Outline: Utils lookups are not cached unless a TTL is configured
-    Given a keycloak utils realm with user "utilsuser" holding realm role "utils-reader" and an access token
-    And the keycloak utils fastapi auth requires any of roles "utils-reader"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    And the keycloak utils sessions of user "utilsuser" are cleared
-    And the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils call fails with error code "INVALID_CREDENTIALS"
+  Scenario Outline: Auth gRPC handler abort is not rewritten as an internal error
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And the keycloak grpc auth requires any of roles "auth-reader"
+    And the keycloak auth grpc handler aborts the servicer context itself
+    When the keycloak auth <mode> grpc handler is invoked with the bearer access token of user "authuser"
+    Then the keycloak auth servicer context was aborted exactly once with status "RESOURCE_EXHAUSTED"
+    And the keycloak auth auth context is cleared
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils userinfo lookups are cached for the configured TTL
-    Given a keycloak utils realm with user "utilsuser" holding realm role "utils-reader" and an access token
-    And the keycloak utils adapter caches remote lookups for 60 seconds
-    And the keycloak utils fastapi auth requires any of roles "utils-reader"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    And the keycloak utils sessions of user "utilsuser" are cleared
-    And the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils dependency returns the user info of user "utilsuser"
+  Scenario: Auth sync gRPC handler hides the cause of unexpected failures
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And the keycloak grpc auth requires any of roles "auth-reader"
+    And the keycloak auth grpc handler crashes with a runtime failure
+    When the keycloak auth sync grpc handler is invoked with the bearer access token of user "authuser" on a plain context
+    Then the keycloak auth call fails with error code "INTERNAL_ERROR"
+    And the keycloak auth error should not expose "boom"
+
+  Scenario Outline: Auth lookups are not cached unless a TTL is configured
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And the keycloak fastapi auth requires any of roles "auth-reader"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    And the keycloak auth sessions of user "authuser" are cleared
+    And the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth call fails with error code "INVALID_CREDENTIALS"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils cached lookups are looked up again after the TTL
-    Given a keycloak utils realm with user "utilsuser" holding realm role "utils-reader" and an access token
-    And the keycloak utils adapter caches remote lookups for 60 seconds
-    And the keycloak utils fastapi auth requires any of roles "utils-reader"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    And the keycloak utils sessions of user "utilsuser" are cleared
-    And the keycloak utils cached lookups expire
-    And the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils call fails with error code "INVALID_CREDENTIALS"
+  Scenario Outline: Auth userinfo lookups are cached for the configured TTL
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And the keycloak auth adapter caches remote lookups for 60 seconds
+    And the keycloak fastapi auth requires any of roles "auth-reader"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    And the keycloak auth sessions of user "authuser" are cleared
+    And the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth dependency returns the user info of user "authuser"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils cached lookups are kept apart per token
-    Given a keycloak utils realm with user "utilsuser" holding realm role "utils-reader" and an access token
-    And I create a user with username "utilsother" and password "pass123" using sync adapter
-    And I assign realm role "utils-reader" to user "utilsother" using sync adapter
-    And the keycloak utils access token of user "utilsother" is obtained with password "pass123"
-    And the keycloak utils adapter caches remote lookups for 60 seconds
-    And the keycloak utils fastapi auth requires any of roles "utils-reader"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    And the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsother"
-    Then the keycloak utils dependency returns the user info of user "utilsother"
+  Scenario Outline: Auth cached lookups are looked up again after the TTL
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And the keycloak auth adapter caches remote lookups for 60 seconds
+    And the keycloak fastapi auth requires any of roles "auth-reader"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    And the keycloak auth sessions of user "authuser" are cleared
+    And the keycloak auth cached lookups expire
+    And the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth call fails with error code "INVALID_CREDENTIALS"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils permission lookups are cached for the configured TTL
-    Given a keycloak utils realm with user "utilsuser" holding realm role "utils-reader" and an access token
-    And the keycloak utils client "utils-client" guards resource "utils-doc-cached" with scopes "read,write" and grants scope "read" to realm role "utils-reader"
-    And the keycloak utils client "utils-client" guards resource "utils-doc-cached" with scopes "read,write" and grants scope "write" to realm role "utils-reader"
-    And the keycloak utils adapter caches remote lookups for 60 seconds
-    And the keycloak utils fastapi auth requires permissions "utils-doc-cached#read,utils-doc-cached#write"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    And the keycloak utils permission granting scope "read" on resource "utils-doc-cached" of client "utils-client" is deleted
+  Scenario Outline: Auth cached lookups are kept apart per token
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And I create a user with username "authother" and password "pass123" using sync adapter
+    And I assign realm role "auth-reader" to user "authother" using sync adapter
+    And the keycloak auth access token of user "authother" is obtained with password "pass123"
+    And the keycloak auth adapter caches remote lookups for 60 seconds
+    And the keycloak fastapi auth requires any of roles "auth-reader"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    And the keycloak auth <mode> fastapi dependency is called with the access token of user "authother"
+    Then the keycloak auth dependency returns the user info of user "authother"
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Auth permission lookups are cached for the configured TTL
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And the keycloak auth client "auth-client" guards resource "auth-doc-cached" with scopes "read,write" and grants scope "read" to realm role "auth-reader"
+    And the keycloak auth client "auth-client" guards resource "auth-doc-cached" with scopes "read,write" and grants scope "write" to realm role "auth-reader"
+    And the keycloak auth adapter caches remote lookups for 60 seconds
+    And the keycloak fastapi auth requires permissions "auth-doc-cached#read,auth-doc-cached#write"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    And the keycloak auth permission granting scope "read" on resource "auth-doc-cached" of client "auth-client" is deleted
     And the keycloak adapter's own permission cache is cleared
-    And the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils dependency returns the user info of user "utilsuser"
+    And the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth dependency returns the user info of user "authuser"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils permission lookups are not cached unless a TTL is configured
-    Given a keycloak utils realm with user "utilsuser" holding realm role "utils-reader" and an access token
-    And the keycloak utils client "utils-client" guards resource "utils-doc-uncached" with scopes "read,write" and grants scope "read" to realm role "utils-reader"
-    And the keycloak utils client "utils-client" guards resource "utils-doc-uncached" with scopes "read,write" and grants scope "write" to realm role "utils-reader"
-    And the keycloak utils fastapi auth requires permissions "utils-doc-uncached#read,utils-doc-uncached#write"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    And the keycloak utils permission granting scope "read" on resource "utils-doc-uncached" of client "utils-client" is deleted
+  Scenario Outline: Auth permission lookups are not cached unless a TTL is configured
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And the keycloak auth client "auth-client" guards resource "auth-doc-uncached" with scopes "read,write" and grants scope "read" to realm role "auth-reader"
+    And the keycloak auth client "auth-client" guards resource "auth-doc-uncached" with scopes "read,write" and grants scope "write" to realm role "auth-reader"
+    And the keycloak fastapi auth requires permissions "auth-doc-uncached#read,auth-doc-uncached#write"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    And the keycloak auth permission granting scope "read" on resource "auth-doc-uncached" of client "auth-client" is deleted
     And the keycloak adapter's own permission cache is cleared
-    And the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils call fails with error code "PERMISSION_DENIED"
+    And the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth call fails with error code "PERMISSION_DENIED"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils gRPC handler reads the bearer scheme case-insensitively
-    Given a keycloak utils realm with user "utilsuser" holding realm role "utils-reader" and an access token
-    And the keycloak utils grpc auth requires any of roles "utils-reader"
-    When the keycloak utils <mode> grpc handler is invoked with the access token of user "utilsuser" under authorization scheme "BEARER"
-    Then the keycloak utils grpc handler ran as user "utilsuser" with roles including "utils-reader"
+  Scenario Outline: Auth gRPC handler reads the bearer scheme case-insensitively
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And the keycloak grpc auth requires any of roles "auth-reader"
+    When the keycloak auth <mode> grpc handler is invoked with the access token of user "authuser" under authorization scheme "BEARER"
+    Then the keycloak auth grpc handler ran as user "authuser" with roles including "auth-reader"
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils gRPC handler rejects an empty bearer credential
-    Given a keycloak utils realm with a client
-    And the keycloak utils grpc auth requires any of roles "utils-reader"
-    When the keycloak utils <mode> grpc handler is invoked with metadata key "authorization" value "Bearer "
-    Then the keycloak utils servicer context was aborted with status "UNAUTHENTICATED"
-    And the keycloak utils grpc handler did not run
+  Scenario Outline: Auth gRPC handler rejects an empty bearer credential
+    Given a keycloak auth realm with a client
+    And the keycloak grpc auth requires any of roles "auth-reader"
+    When the keycloak auth <mode> grpc handler is invoked with metadata key "authorization" value "Bearer "
+    Then the keycloak auth servicer context was aborted with status "UNAUTHENTICATED"
+    And the keycloak auth grpc handler did not run
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils gRPC handler rejects conflicting authorization headers
-    Given a keycloak utils realm with user "utilsuser" holding realm role "utils-reader" and an access token
-    And the keycloak utils grpc auth requires any of roles "utils-reader"
-    When the keycloak utils <mode> grpc handler is invoked with a conflicting bearer token "other-token" next to the access token of user "utilsuser"
-    Then the keycloak utils servicer context was aborted with status "UNAUTHENTICATED"
-    And the keycloak utils grpc handler did not run
+  Scenario Outline: Auth gRPC handler rejects conflicting authorization headers
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And the keycloak grpc auth requires any of roles "auth-reader"
+    When the keycloak auth <mode> grpc handler is invoked with a conflicting bearer token "other-token" next to the access token of user "authuser"
+    Then the keycloak auth servicer context was aborted with status "UNAUTHENTICATED"
+    And the keycloak auth grpc handler did not run
 
     Examples:
       | mode  |
       | sync  |
       | async |
 
-  Scenario Outline: Utils FastAPI dependency rejects a token without userinfo
-    Given a keycloak utils realm with user "utilsuser" holding realm role "utils-reader" and an access token
-    And the keycloak utils fastapi auth requires any of roles "utils-reader"
-    When the keycloak utils sessions of user "utilsuser" are cleared
-    And the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils call fails with error code "INVALID_CREDENTIALS"
+  Scenario Outline: Auth FastAPI dependency rejects a token without userinfo
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And the keycloak fastapi auth requires any of roles "auth-reader"
+    When the keycloak auth sessions of user "authuser" are cleared
+    And the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth call fails with error code "INVALID_CREDENTIALS"
 
     Examples:
       | mode  |
@@ -1183,12 +1183,12 @@ Feature: Keycloak Authentication Testing
 
   # A real Keycloak cannot be made to return empty claims for a token that it just issued and that passed
   # validation, so this one defensive branch injects an empty claims result into the real adapter.
-  Scenario Outline: Utils FastAPI dependency rejects a token whose claims cannot be read
-    Given a keycloak utils realm with user "utilsuser" holding realm role "utils-reader" and an access token
-    And the keycloak utils adapter cannot read the claims of issued tokens
-    And the keycloak utils fastapi auth requires any of roles "utils-reader"
-    When the keycloak utils <mode> fastapi dependency is called with the access token of user "utilsuser"
-    Then the keycloak utils call fails with error code "TOKEN_EXPIRED"
+  Scenario Outline: Auth FastAPI dependency rejects a token whose claims cannot be read
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    And the keycloak auth adapter cannot read the claims of issued tokens
+    And the keycloak fastapi auth requires any of roles "auth-reader"
+    When the keycloak auth <mode> fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth call fails with error code "TOKEN_EXPIRED"
 
     Examples:
       | mode  |

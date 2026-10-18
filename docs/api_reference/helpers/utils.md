@@ -102,12 +102,9 @@ heading_level: 3
 
 ## Keycloak Utils
 
-Utilities for Keycloak token acquisition, validation, user info retrieval, and role checking.
-
-::: archipy.helpers.utils.keycloak_utils
-options:
-show_root_toc_entry: false
-heading_level: 3
+The Keycloak authentication guards moved to the adapters layer; see
+[Keycloak](../adapters/keycloak.md#auth-guards). `archipy.helpers.utils.keycloak_utils` still resolves the old names
+and emits a `DeprecationWarning`.
 
 ## OpenTelemetry Utils
 

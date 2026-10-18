@@ -4,6 +4,7 @@ import warnings
 
 from behave import given, then, when
 
+from archipy.adapters.keycloak import auth as keycloak_auth_module
 from archipy.helpers.decorators.deprecation_exception import class_deprecation_error, method_deprecation_error
 from archipy.helpers.decorators.deprecation_warnings import class_deprecation_warning, method_deprecation_warning
 from archipy.models.errors import DeprecationError
@@ -316,3 +317,39 @@ def step_when_imported_from_old_path(context, name, module):
 @then("the old module path should resolve to a callable")
 def step_then_old_path_callable(context):
     assert callable(get_current_scenario_context(context).get("old_path_object"))
+
+
+# Keycloak auth guards moved to archipy.adapters.keycloak.auth
+
+
+@when('the deprecated Keycloak auth function "{name}" is called')
+def step_when_deprecated_auth_function_called(context, name):
+    sc = get_current_scenario_context(context)
+    function = getattr(keycloak_auth_module, name)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        sc.store("result", function())
+    sc.store("deprecation_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+
+
+@when('"{name}" is read from the old Keycloak utils module')
+def step_when_read_from_old_keycloak_utils(context, name):
+    from archipy.helpers.utils import keycloak_utils
+
+    sc = get_current_scenario_context(context)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        sc.store("result", getattr(keycloak_utils, name))
+    sc.store("deprecation_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+
+
+@then("the Keycloak auth result is callable")
+def step_then_keycloak_auth_module_result_callable(context):
+    assert callable(get_current_scenario_context(context).get("result"))
+
+
+@then("the legacy KeycloakUtils exposes fastapi_auth, async_fastapi_auth, grpc_auth and async_grpc_auth")
+def step_then_legacy_namespace_methods(context):
+    legacy = get_current_scenario_context(context).get("result")
+    for name in ("fastapi_auth", "async_fastapi_auth", "grpc_auth", "async_grpc_auth"):
+        assert callable(getattr(legacy, name)), name

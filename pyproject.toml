@@ -139,12 +139,11 @@ name = "ArchiPy layers: adapters -> helpers -> configs -> models"
 type = "layers"
 layers = ["archipy.adapters", "archipy.helpers", "archipy.configs", "archipy.models"]
 ignore_imports = [
-    # Deprecated import path of the moved atomic decorators; remove with the shim modules
+    # Deprecated import paths of moved code (atomic decorators, Keycloak auth); remove with the shim modules
     "archipy.helpers.decorators.sqlalchemy_transaction -> archipy.adapters.base.sqlalchemy.atomic",
+    "archipy.helpers.utils.keycloak_utils -> archipy.adapters.keycloak.auth",
     # Function-scoped adapter import that helpers-configs.mdc allows (lazy, cycle-breaking)
     "archipy.helpers.interceptors.grpc.rate_limit.grpc_rate_limit_interceptor -> archipy.adapters.redis.adapters",
-    # FastAPI resolves the Depends() annotations at runtime, so the adapter classes must stay module globals
-    "archipy.helpers.utils.keycloak_utils -> archipy.adapters.keycloak.adapters",
 ]
 
 [tool.ruff]
@@ -225,7 +224,7 @@ docstring-code-line-length = "dynamic"
 # Per-file ignores
 [tool.ruff.lint.per-file-ignores]
 "archipy/helpers/interceptors/grpc/base/client_interceptor.py" = ["ANN401"]  # Allow Any type for gRPC message types
-"archipy/helpers/utils/keycloak_utils.py" = ["B008", "PLR0913", "PLR0917"]  # FastAPI Depends/Security defaults (intentional)
+"packages/keycloak/archipy/adapters/keycloak/auth.py" = ["B008", "PLR0913", "PLR0917"]  # FastAPI Depends/Security defaults (intentional)
 "archipy/helpers/utils/app_utils.py" = ["PLC0415"]  # Allow lazy imports for optional dependencies
 "archipy/helpers/utils/jwt_utils.py" = ["PLC0415"]  # Allow lazy imports for optional dependencies
 "archipy/helpers/utils/error_utils.py" = ["PLC0415"]  # Allow lazy imports for optional dependencies

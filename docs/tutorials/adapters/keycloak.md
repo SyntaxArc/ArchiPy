@@ -30,7 +30,7 @@ KEYCLOAK__CLIENT_SECRET_KEY=client-secret
 KEYCLOAK__VERIFY_SSL=true
 KEYCLOAK__TIMEOUT=10
 KEYCLOAK__TOKEN_LEEWAY_SECONDS=0  # clock-skew tolerance when validating token expiry
-KEYCLOAK__REMOTE_CACHE_TTL_SECONDS=0  # opt-in cache for KeycloakUtils UserInfo/permission lookups (0 = off)
+KEYCLOAK__REMOTE_CACHE_TTL_SECONDS=0  # opt-in cache for the keycloak auth guards' UserInfo/permission lookups (0 = off)
 ```
 
 ### Direct Configuration
@@ -541,11 +541,11 @@ async_keycloak.clear_all_caches()
 - The adapter automatically refreshes admin tokens before they expire.
 - Write operations (like user creation/updates) automatically clear relevant caches.
 - For production use, prefer the authorization code flow over direct username/password authentication.
-- `KeycloakUtils` role checks read `realm_access` and `resource_access` from the UserInfo response. Stock Keycloak
+- The auth guards' role checks read `realm_access` and `resource_access` from the UserInfo response. Stock Keycloak
   omits them there, so enable "Add to userinfo" on the realm roles and client roles mappers of the `roles` client scope.
 - Token expiry is checked locally with `KEYCLOAK__TOKEN_LEEWAY_SECONDS` (default `0`) of clock-skew tolerance; raise it
   only if your servers' clocks drift.
-- `KeycloakUtils` calls Keycloak for UserInfo (and UMA permissions) on every request. Set
+- The auth guards call Keycloak for UserInfo (and UMA permissions) on every request. Set
   `KEYCLOAK__REMOTE_CACHE_TTL_SECONDS` to a few seconds to cache those lookups per access token. A revoked token or a
   changed permission then stays accepted for up to that long, so it is off (`0`) by default.
   `clear_keycloak_remote_cache()` drops the cache.

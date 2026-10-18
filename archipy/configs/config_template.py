@@ -503,7 +503,7 @@ class KeycloakConfig(BaseModel):
         default=0.0,
         ge=0,
         description=(
-            "Seconds KeycloakUtils auth decorators/dependencies cache UserInfo and UMA permission lookups per access "
+            "Seconds the Keycloak auth decorators/dependencies cache UserInfo and UMA permission lookups per access "
             "token. 0 disables the cache. A revoked token or changed permission stays accepted for up to this long, "
             "so keep it short (a few seconds)."
         ),

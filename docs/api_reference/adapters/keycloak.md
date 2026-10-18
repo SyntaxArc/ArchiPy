@@ -25,3 +25,13 @@ Concrete Keycloak adapter wrapping the Keycloak REST API for authentication and 
 options:
 show_root_toc_entry: false
 heading_level: 3
+
+## Auth Guards
+
+FastAPI dependencies and gRPC decorators that authenticate a bearer token against Keycloak and check roles,
+permissions and resource ownership.
+
+::: archipy.adapters.keycloak.auth
+options:
+show_root_toc_entry: false
+heading_level: 3

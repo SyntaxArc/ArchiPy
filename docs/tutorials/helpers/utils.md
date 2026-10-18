@@ -220,6 +220,12 @@ String manipulation utilities. `StringUtils` provides helpers for common string 
 
 Authentication and authorization utilities with Keycloak integration:
 
+!!! note "Moved to the Keycloak adapter"
+    The guards are now the functions `fastapi_auth` and `grpc_auth` of `archipy.adapters.keycloak.auth`.
+    `fastapi_auth` returns an async dependency and `grpc_auth` detects `async def` servicer methods, so
+    `async_fastapi_auth`, `async_grpc_auth` and the `KeycloakUtils` class (in `archipy.helpers.utils.keycloak_utils`)
+    are deprecated and emit a `DeprecationWarning`.
+
 ```python
 import logging
 from uuid import UUID
@@ -229,7 +235,7 @@ from fastapi import Depends
 
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers.utils.app_utils import AppUtils
-from archipy.helpers.utils.keycloak_utils import KeycloakUtils
+from archipy.adapters.keycloak.auth import fastapi_auth
 from archipy.models.types.language_type import LanguageType
 
 # Configure logging
@@ -242,7 +248,7 @@ app = AppUtils.create_fastapi_app()
 
 # Resource-based authorization for users with role and admin access
 @app.get("/users/{user_uuid}/info")
-def get_user_info(user_uuid: UUID, user: dict = Depends(KeycloakUtils.fastapi_auth(
+def get_user_info(user_uuid: UUID, user: dict = Depends(fastapi_auth(
     resource_type_param="user_uuid",
     resource_type="users",
     required_roles={"user"},
@@ -254,9 +260,9 @@ def get_user_info(user_uuid: UUID, user: dict = Depends(KeycloakUtils.fastapi_au
         "username": user.get("preferred_username")
     }
 
-# Async version for employees with multiple acceptable roles
+# The dependency is async, so it works the same for def and async def endpoints
 @app.get("/employees/{employee_uuid}/info")
-async def get_employee_info(employee_uuid: UUID, employee: dict = Depends(KeycloakUtils.async_fastapi_auth(
+async def get_employee_info(employee_uuid: UUID, employee: dict = Depends(fastapi_auth(
     resource_type_param="employee_uuid",
     resource_type="employees",
     required_roles={"employee", "manager", "user"},

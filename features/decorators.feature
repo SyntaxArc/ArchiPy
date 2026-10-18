@@ -406,3 +406,28 @@ Feature: Helper decorators
         | grpc_rate_limit   | grpc_rate_limit_decorator            |
         | sqlalchemy_atomic | postgres_sqlalchemy_atomic_decorator |
         | sqlalchemy_atomic | _handle_db_exception                 |
+
+    Scenario Outline: Deprecated function <name> warns and builds the same guard
+      When the deprecated Keycloak auth function "<name>" is called
+      Then exactly one DeprecationWarning should name "<replacement>"
+      And the Keycloak auth result is callable
+
+      Examples:
+        | name               | replacement  |
+        | async_fastapi_auth | fastapi_auth |
+        | async_grpc_auth    | grpc_auth    |
+
+    Scenario Outline: Old path name <name> still resolves and warns
+      When "<name>" is read from the old Keycloak utils module
+      Then exactly one DeprecationWarning should name "<replacement>"
+      And the Keycloak auth result is callable
+
+      Examples:
+        | name                        | replacement                                                |
+        | AuthContextManager          | archipy.adapters.keycloak.auth.AuthContextManager          |
+        | clear_keycloak_remote_cache | archipy.adapters.keycloak.auth.clear_keycloak_remote_cache |
+
+    Scenario: The legacy KeycloakUtils namespace keeps its methods
+      When "KeycloakUtils" is read from the old Keycloak utils module
+      Then exactly one DeprecationWarning should name "the functions of archipy.adapters.keycloak.auth"
+      And the legacy KeycloakUtils exposes fastapi_auth, async_fastapi_auth, grpc_auth and async_grpc_auth

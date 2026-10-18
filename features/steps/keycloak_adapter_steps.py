@@ -10,8 +10,8 @@ from features.scenario_context import ScenarioContext
 from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
+from archipy.adapters.keycloak.auth import _build_auth_context
 from archipy.configs.base_config import BaseConfig
-from archipy.helpers.utils.keycloak_utils import _build_auth_context
 from archipy.models.types.actor_type import ActorType
 
 

@@ -9,8 +9,8 @@ from behave import given, step, then, when
 from fastapi.security import HTTPAuthorizationCredentials
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter
-from archipy.helpers.utils import keycloak_utils
-from archipy.helpers.utils.keycloak_utils import AuthContextManager, KeycloakUtils
+from archipy.adapters.keycloak import auth as keycloak_auth
+from archipy.adapters.keycloak.auth import AuthContextManager
 from archipy.models.dtos.keycloak_dtos import AuthenticatedUserDTO
 from archipy.models.errors import BaseError
 from features.test_helpers import get_current_scenario_context
@@ -158,7 +158,7 @@ def _real_sync_adapter(scenario_context):
 
 @contextmanager
 def _real_keycloak_adapters(scenario_context):
-    """Point KeycloakUtils at adapters configured for the real Keycloak container client.
+    """Point keycloak auth at adapters configured for the real Keycloak container client.
 
     The sync adapter is the scenario adapter created by the keycloak adapter steps. The async adapter is built
     fresh from the same configuration so it binds to the running event loop.
@@ -172,8 +172,8 @@ def _real_keycloak_adapters(scenario_context):
         scenario_context.store("async_configs", async_configs)
     async_adapter = AsyncKeycloakAdapter(async_configs)
     with ExitStack() as stack:
-        stack.enter_context(patch.object(keycloak_utils, "_shared_sync_adapter", lambda: sync_adapter))
-        stack.enter_context(patch.object(keycloak_utils, "_shared_async_adapter", lambda: async_adapter))
+        stack.enter_context(patch.object(keycloak_auth, "_shared_sync_adapter", lambda: sync_adapter))
+        stack.enter_context(patch.object(keycloak_auth, "_shared_async_adapter", lambda: async_adapter))
         if scenario_context.get("claims_unreadable"):
 
             async def _no_claims_async(_token):
@@ -190,43 +190,43 @@ def _adapters_for_call(scenario_context):
         yield
 
 
-UTILS_REALM = "utils-realm"
+AUTH_REALM = "auth-realm"
 
 
-@given("a keycloak utils realm with a client")
-def step_keycloak_utils_realm_with_client(context):
-    """Create the realm and client every KeycloakUtils scenario needs, against the real Keycloak container."""
+@given("a keycloak auth realm with a client")
+def step_keycloak_auth_realm_with_client(context):
+    """Create the realm and client every keycloak auth scenario needs, against the real Keycloak container."""
     context.execute_steps(
         f"""
         Given a configured sync Keycloak adapter
-        And I create a realm named "{UTILS_REALM}" with display name "Utils Realm" using sync adapter
-        And I create a client named "utils-client" in realm "{UTILS_REALM}" with service accounts and update adapter using sync adapter
+        And I create a realm named "{AUTH_REALM}" with display name "Auth Realm" using sync adapter
+        And I create a client named "auth-client" in realm "{AUTH_REALM}" with service accounts and update adapter using sync adapter
         """,
     )
-    keycloak_utils.clear_keycloak_remote_cache()
-    context.add_cleanup(keycloak_utils.clear_keycloak_remote_cache)
+    keycloak_auth.clear_keycloak_remote_cache()
+    context.add_cleanup(keycloak_auth.clear_keycloak_remote_cache)
     AuthContextManager.clear_auth_context()
     context.add_cleanup(AuthContextManager.clear_auth_context)
 
 
 @given(
-    'a keycloak utils realm with user "{username}" holding realm role "{role}" and an access token',
+    'a keycloak auth realm with user "{username}" holding realm role "{role}" and an access token',
 )
-def step_keycloak_utils_realm_with_user_token(context, username, role):
+def step_keycloak_auth_realm_with_user_token(context, username, role):
     """Realm, client, a user with the realm role and a real access token for that user."""
-    step_keycloak_utils_realm_with_client(context)
+    step_keycloak_auth_realm_with_client(context)
     context.execute_steps(
         f"""
         Given I create a user with username "{username}" and password "pass123" using sync adapter
         And I create a realm role named "{role}" with description "Reader" using sync adapter
         And I assign realm role "{role}" to user "{username}" using sync adapter
-        And the keycloak utils access token of user "{username}" is obtained with password "pass123"
+        And the keycloak auth access token of user "{username}" is obtained with password "pass123"
         """,
     )
 
 
-@given("the keycloak utils adapter caches remote lookups for {seconds:g} seconds")
-def step_keycloak_utils_cache_ttl(context, seconds):
+@given("the keycloak auth adapter caches remote lookups for {seconds:g} seconds")
+def step_keycloak_auth_cache_ttl(context, seconds):
     configs = _real_sync_adapter(_ctx(context)).configs
     # The adapter shares the global Keycloak configuration, so the previous value must come back after the scenario.
     previous = configs.REMOTE_CACHE_TTL_SECONDS
@@ -234,25 +234,25 @@ def step_keycloak_utils_cache_ttl(context, seconds):
     context.add_cleanup(lambda: setattr(configs, "REMOTE_CACHE_TTL_SECONDS", previous))
 
 
-@given("the keycloak utils adapter cannot read the claims of issued tokens")
-def step_keycloak_utils_claims_unreadable(context):
+@given("the keycloak auth adapter cannot read the claims of issued tokens")
+def step_keycloak_auth_claims_unreadable(context):
     _ctx(context).store("claims_unreadable", True)
 
 
-@when('the keycloak utils sessions of user "{username}" are cleared')
-def step_keycloak_utils_clear_sessions(context, username):
+@when('the keycloak auth sessions of user "{username}" are cleared')
+def step_keycloak_auth_clear_sessions(context, username):
     sc = _ctx(context)
     _real_sync_adapter(sc).clear_user_sessions(_user_id(sc, username))
 
 
 @when("the keycloak adapter's own permission cache is cleared")
-def step_keycloak_utils_clear_adapter_permission_cache(context):
-    """Drop the adapter-level permission cache so only the KeycloakUtils TTL cache can serve a stale answer."""
+def step_keycloak_auth_clear_adapter_permission_cache(context):
+    """Drop the adapter-level permission cache so only the keycloak auth TTL cache can serve a stale answer."""
     _real_sync_adapter(_ctx(context)).check_permissions_batch.clear_cache()
 
 
-@when('the keycloak utils permission granting scope "{scope}" on resource "{resource}" of client "{client}" is deleted')
-def step_keycloak_utils_delete_permission(context, scope, resource, client):
+@when('the keycloak auth permission granting scope "{scope}" on resource "{resource}" of client "{client}" is deleted')
+def step_keycloak_auth_delete_permission(context, scope, resource, client):
     sc = _ctx(context)
     adapter = _real_sync_adapter(sc)
     internal_id = sc.get(f"client_{client}")["internal_client_id"]
@@ -263,51 +263,51 @@ def step_keycloak_utils_delete_permission(context, scope, resource, client):
     adapter.delete_client_authz_policy(internal_id, permission_id)
 
 
-@when("the keycloak utils cached lookups expire")
-def step_keycloak_utils_cache_expires(context):
-    with keycloak_utils._remote_cache_lock:
-        for key, (_, value) in list(keycloak_utils._remote_cache.items()):
-            keycloak_utils._remote_cache[key] = (0.0, value)
+@when("the keycloak auth cached lookups expire")
+def step_keycloak_auth_cache_expires(context):
+    with keycloak_auth._remote_cache_lock:
+        for key, (_, value) in list(keycloak_auth._remote_cache.items()):
+            keycloak_auth._remote_cache[key] = (0.0, value)
 
 
-@given('the keycloak utils {surface} auth requires any of roles "{roles}"')
-def step_keycloak_utils_any_roles(context, surface, roles):
+@given('the keycloak {surface} auth requires any of roles "{roles}"')
+def step_keycloak_auth_any_roles(context, surface, roles):
     _auth_kwargs(_ctx(context)).update(required_roles=frozenset(_split(roles)), all_roles_required=False)
 
 
-@given('the keycloak utils fastapi auth requires all roles "{roles}"')
-def step_keycloak_utils_all_roles(context, roles):
+@given('the keycloak fastapi auth requires all roles "{roles}"')
+def step_keycloak_auth_all_roles(context, roles):
     _auth_kwargs(_ctx(context)).update(required_roles=frozenset(_split(roles)), all_roles_required=True)
 
 
-@given('the keycloak utils fastapi auth requires permissions "{perms}"')
-def step_keycloak_utils_required_permissions(context, perms):
+@given('the keycloak fastapi auth requires permissions "{perms}"')
+def step_keycloak_auth_required_permissions(context, perms):
     pairs = tuple(tuple(p.split("#")) for p in _split(perms))
     _auth_kwargs(_ctx(context)).update(required_permissions=pairs)
 
 
-@given('the keycloak utils fastapi auth guards resource type "{rtype}" by path parameter "{param}"')
-def step_keycloak_utils_guard_resource(context, rtype, param):
+@given('the keycloak fastapi auth guards resource type "{rtype}" by path parameter "{param}"')
+def step_keycloak_auth_guard_resource(context, rtype, param):
     _auth_kwargs(_ctx(context)).update(resource_type=rtype, resource_type_param=param)
 
 
-@given('the keycloak utils fastapi auth treats roles "{roles}" as admin roles')
-def step_keycloak_utils_admin_roles(context, roles):
+@given('the keycloak fastapi auth treats roles "{roles}" as admin roles')
+def step_keycloak_auth_admin_roles(context, roles):
     _auth_kwargs(_ctx(context)).update(admin_roles=frozenset(_split(roles)))
 
 
-@given('the keycloak utils request path parameter "{name}" is "{value}"')
-def step_keycloak_utils_path_param(context, name, value):
+@given('the keycloak auth request path parameter "{name}" is "{value}"')
+def step_keycloak_auth_path_param(context, name, value):
     _path_params(_ctx(context))[name] = value
 
 
-@when('the keycloak utils {mode} fastapi dependency is called with token "{token}"')
-async def step_keycloak_utils_call_dependency(context, mode, token):
+@when('the keycloak auth {mode} fastapi dependency is called with token "{token}"')
+async def step_keycloak_auth_call_dependency(context, mode, token):
     await _call_dependency(context, mode, HTTPAuthorizationCredentials(scheme="Bearer", credentials=token))
 
 
-@when("the keycloak utils {mode} fastapi dependency is called without credentials")
-async def step_keycloak_utils_call_dependency_anonymous(context, mode):
+@when("the keycloak auth {mode} fastapi dependency is called without credentials")
+async def step_keycloak_auth_call_dependency_anonymous(context, mode):
     await _call_dependency(context, mode, None)
 
 
@@ -318,62 +318,59 @@ async def _call_dependency(context, mode, credentials):
     kwargs = dict(_auth_kwargs(sc))
     try:
         with _adapters_for_call(sc):
-            if mode == "sync":
-                dependency = KeycloakUtils.fastapi_auth(**kwargs)
-                result = dependency(request, credentials, KeycloakUtils._get_keycloak_adapter())
-            else:
-                dependency = KeycloakUtils.async_fastapi_auth(**kwargs)
-                result = await dependency(request, credentials, KeycloakUtils._get_async_keycloak_adapter())
+            factory = keycloak_auth.fastapi_auth if mode == "sync" else keycloak_auth.async_fastapi_auth
+            dependency = factory(**kwargs)
+            result = await dependency(request, credentials, keycloak_auth._get_async_keycloak_adapter())
         sc.store("result", result)
     except BaseError as error:
         sc.store("error", error)
 
 
-@then('the keycloak utils call fails with error code "{code}"')
-def step_keycloak_utils_error_code(context, code):
+@then('the keycloak auth call fails with error code "{code}"')
+def step_keycloak_auth_error_code(context, code):
     sc = _ctx(context)
     error = sc.get("error")
     assert error is not None, "expected an error but the call succeeded"
     assert error.code == code, f"expected {code}, got {error.code}"
 
 
-@then('the keycloak utils error lists required roles "{roles}"')
-def step_keycloak_utils_error_roles(context, roles):
+@then('the keycloak auth error lists required roles "{roles}"')
+def step_keycloak_auth_error_roles(context, roles):
     error = _ctx(context).get("error")
     assert sorted(error.additional_data["required_roles"]) == sorted(_split(roles))
 
 
-@then('the keycloak utils error lists missing permission "{perm}"')
-def step_keycloak_utils_error_missing_permission(context, perm):
+@then('the keycloak auth error lists missing permission "{perm}"')
+def step_keycloak_auth_error_missing_permission(context, perm):
     error = _ctx(context).get("error")
     assert error.additional_data["missing_permissions"] == [perm]
 
 
-@then("the keycloak utils request state has an empty actor chain")
-def step_keycloak_utils_state_empty_chain(context):
+@then("the keycloak auth request state has an empty actor chain")
+def step_keycloak_auth_state_empty_chain(context):
     assert _ctx(context).get("request").state.actor_chain == []
 
 
 # gRPC
 
 
-@given('the keycloak utils grpc auth reads the resource from request attribute "{attr}"')
-def step_keycloak_utils_grpc_resource_attr(context, attr):
+@given('the keycloak grpc auth reads the resource from request attribute "{attr}"')
+def step_keycloak_auth_grpc_resource_attr(context, attr):
     _auth_kwargs(_ctx(context)).update(resource_attribute_name=attr)
 
 
-@given("the keycloak utils grpc handler is a response stream")
-def step_keycloak_utils_grpc_stream(context):
+@given("the keycloak auth grpc handler is a response stream")
+def step_keycloak_auth_grpc_stream(context):
     _ctx(context).store("handler_stream", True)
 
 
-@given("the keycloak utils grpc handler aborts the servicer context itself")
-def step_keycloak_utils_grpc_handler_aborts(context):
+@given("the keycloak auth grpc handler aborts the servicer context itself")
+def step_keycloak_auth_grpc_handler_aborts(context):
     _ctx(context).store("handler_aborts", True)
 
 
-@then('the keycloak utils servicer context was aborted exactly once with status "{status}"')
-def step_keycloak_utils_aborted_once(context, status):
+@then('the keycloak auth servicer context was aborted exactly once with status "{status}"')
+def step_keycloak_auth_aborted_once(context, status):
     sc = _ctx(context)
     assert sc.get("aborted"), f"context not aborted, error={sc.get('error')!r}"
     grpc_context = sc.get("grpc_context")
@@ -381,16 +378,16 @@ def step_keycloak_utils_aborted_once(context, status):
     assert grpc_context.abort_code == getattr(grpc.StatusCode, status)
 
 
-@then('the keycloak utils error should not expose "{text}"')
-def step_keycloak_utils_error_hides(context, text):
+@then('the keycloak auth error should not expose "{text}"')
+def step_keycloak_auth_error_hides(context, text):
     error = _ctx(context).get("error")
     assert error is not None, "expected an error but the call succeeded"
     exposed = f"{error.additional_data} {error.get_message()}"
     assert text not in exposed, f"the error exposed {text!r}: {exposed}"
 
 
-@given("the keycloak utils grpc handler crashes with a runtime failure")
-def step_keycloak_utils_grpc_crash(context):
+@given("the keycloak auth grpc handler crashes with a runtime failure")
+def step_keycloak_auth_grpc_crash(context):
     _ctx(context).store("handler_crash", True)
 
 
@@ -450,12 +447,12 @@ async def _invoke_grpc(context, mode, metadata, plain=False):
     try:
         with _adapters_for_call(sc):
             if mode == "sync":
-                wrapped = KeycloakUtils.grpc_auth(**kwargs)(handler)
+                wrapped = keycloak_auth.grpc_auth(**kwargs)(handler)
                 result = wrapped(object(), request, grpc_context)
                 if streaming:
                     result = ",".join(result)
             else:
-                wrapped = KeycloakUtils.async_grpc_auth(**kwargs)(async_handler)
+                wrapped = keycloak_auth.grpc_auth(**kwargs)(async_handler)
                 if streaming:
                     result = ",".join([item async for item in wrapped(object(), request, grpc_context)])
                 else:
@@ -471,48 +468,48 @@ async def _invoke_grpc(context, mode, metadata, plain=False):
         sc.store("aborted", True)
 
 
-@when('the keycloak utils {mode} grpc handler is invoked with bearer token "{token}"')
-async def step_keycloak_utils_grpc_bearer(context, mode, token):
+@when('the keycloak auth {mode} grpc handler is invoked with bearer token "{token}"')
+async def step_keycloak_auth_grpc_bearer(context, mode, token):
     await _invoke_grpc(context, mode, (("authorization", f"Bearer {token}"),))
 
 
-@when('the keycloak utils {mode} grpc handler is invoked with bearer token "{token}" on a plain context')
-async def step_keycloak_utils_grpc_bearer_plain(context, mode, token):
+@when('the keycloak auth {mode} grpc handler is invoked with bearer token "{token}" on a plain context')
+async def step_keycloak_auth_grpc_bearer_plain(context, mode, token):
     await _invoke_grpc(context, mode, (("authorization", f"Bearer {token}"),), plain=True)
 
 
-@when('the keycloak utils {mode} grpc handler is invoked with metadata key "{key}" value "{value}"')
-async def step_keycloak_utils_grpc_metadata(context, mode, key, value):
+@when('the keycloak auth {mode} grpc handler is invoked with metadata key "{key}" value "{value}"')
+async def step_keycloak_auth_grpc_metadata(context, mode, key, value):
     await _invoke_grpc(context, mode, ((key, value),))
 
 
-@when('the keycloak utils {mode} grpc handler is invoked with duplicate bearer tokens "{first}" and "{second}"')
-async def step_keycloak_utils_grpc_duplicate_tokens(context, mode, first, second):
+@when('the keycloak auth {mode} grpc handler is invoked with duplicate bearer tokens "{first}" and "{second}"')
+async def step_keycloak_auth_grpc_duplicate_tokens(context, mode, first, second):
     await _invoke_grpc(context, mode, (("authorization", f"Bearer {first}"), ("authorization", f"Bearer {second}")))
 
 
-@when("the keycloak utils {mode} grpc handler is invoked without metadata")
-async def step_keycloak_utils_grpc_no_metadata(context, mode):
+@when("the keycloak auth {mode} grpc handler is invoked without metadata")
+async def step_keycloak_auth_grpc_no_metadata(context, mode):
     await _invoke_grpc(context, mode, ())
 
 
-@when("the keycloak utils {mode} grpc handler is invoked without metadata on a plain context")
-async def step_keycloak_utils_grpc_no_metadata_plain(context, mode):
+@when("the keycloak auth {mode} grpc handler is invoked without metadata on a plain context")
+async def step_keycloak_auth_grpc_no_metadata_plain(context, mode):
     await _invoke_grpc(context, mode, (), plain=True)
 
 
-@then('the keycloak utils grpc handler returned "{value}"')
-def step_keycloak_utils_grpc_returned(context, value):
+@then('the keycloak auth grpc handler returned "{value}"')
+def step_keycloak_auth_grpc_returned(context, value):
     assert _ctx(context).get("handler_result") == value
 
 
-@then("the keycloak utils grpc handler did not run")
-def step_keycloak_utils_grpc_not_run(context):
+@then("the keycloak auth grpc handler did not run")
+def step_keycloak_auth_grpc_not_run(context):
     assert _handler_calls(_ctx(context)) == []
 
 
-@then('the keycloak utils servicer context was aborted with status "{status}"')
-def step_keycloak_utils_aborted(context, status):
+@then('the keycloak auth servicer context was aborted with status "{status}"')
+def step_keycloak_auth_aborted(context, status):
     sc = _ctx(context)
     assert sc.get("aborted"), f"context not aborted, error={sc.get('error')!r}"
     assert sc.get("grpc_context").abort_code == getattr(grpc.StatusCode, status)
@@ -521,14 +518,14 @@ def step_keycloak_utils_aborted(context, status):
 # AuthContextManager
 
 
-@given("no keycloak utils auth context is set")
-def step_keycloak_utils_no_context(context):
+@given("no keycloak auth auth context is set")
+def step_keycloak_auth_no_context(context):
     AuthContextManager.clear_auth_context()
     context.add_cleanup(AuthContextManager.clear_auth_context)
 
 
-@step('the keycloak utils auth context is set for user "{sub}"')
-def step_keycloak_utils_set_context(context, sub):
+@step('the keycloak auth auth context is set for user "{sub}"')
+def step_keycloak_auth_set_context(context, sub):
     AuthContextManager.set_auth_context(
         AuthenticatedUserDTO(
             user_id=sub,
@@ -542,19 +539,19 @@ def step_keycloak_utils_set_context(context, sub):
     context.add_cleanup(AuthContextManager.clear_auth_context)
 
 
-@when("the keycloak utils auth context is cleared by the manager")
-def step_keycloak_utils_clear_context(context):
+@when("the keycloak auth auth context is cleared by the manager")
+def step_keycloak_auth_clear_context(context):
     AuthContextManager.clear_auth_context()
 
 
-@then('the keycloak utils auth context belongs to user "{sub}"')
-def step_keycloak_utils_context_user(context, sub):
+@then('the keycloak auth auth context belongs to user "{sub}"')
+def step_keycloak_auth_context_user(context, sub):
     auth = AuthContextManager.get_auth_context()
     assert auth is not None and auth.user_id == sub
 
 
-@then("the keycloak utils auth context is cleared")
-def step_keycloak_utils_context_cleared(context):
+@then("the keycloak auth auth context is cleared")
+def step_keycloak_auth_context_cleared(context):
     assert AuthContextManager.get_auth_context() is None
 
 
@@ -576,7 +573,7 @@ def _access_token(sc, username):
 def _expose_roles_in_userinfo(adapter):
     """Add realm and client role claims to the UserInfo response of the current realm.
 
-    KeycloakUtils reads roles from UserInfo, but stock Keycloak only puts ``realm_access`` and ``resource_access``
+    keycloak auth reads roles from UserInfo, but stock Keycloak only puts ``realm_access`` and ``resource_access``
     in the access token. The ``roles`` client scope mappers must have "Add to userinfo" enabled.
     """
     admin = adapter.admin_adapter
@@ -587,8 +584,8 @@ def _expose_roles_in_userinfo(adapter):
             admin.update_mapper_in_client_scope(roles_scope["id"], mapper["id"], mapper)
 
 
-@given('the keycloak utils access token of user "{username}" is obtained with password "{password}"')
-def step_keycloak_utils_obtain_token(context, username, password):
+@given('the keycloak auth access token of user "{username}" is obtained with password "{password}"')
+def step_keycloak_auth_obtain_token(context, username, password):
     sc = _ctx(context)
     _expose_roles_in_userinfo(_real_sync_adapter(sc))
     token_response = _real_sync_adapter(sc).get_token(username, password)
@@ -598,25 +595,25 @@ def step_keycloak_utils_obtain_token(context, username, password):
     sc.store("access_tokens", tokens)
 
 
-@given('the keycloak utils realm "{realm}" has an access token lifespan of {seconds:d} seconds')
-def step_keycloak_utils_token_lifespan(context, realm, seconds):
+@given('the keycloak auth realm "{realm}" has an access token lifespan of {seconds:d} seconds')
+def step_keycloak_auth_token_lifespan(context, realm, seconds):
     adapter = _real_sync_adapter(_ctx(context))
     realm_representation = dict(adapter.get_realm(realm))
     realm_representation["accessTokenLifespan"] = seconds
     adapter.update_realm(realm, **realm_representation)
 
 
-@when("the keycloak utils access token lifespan has elapsed")
-def step_keycloak_utils_wait_expiry(context):
+@when("the keycloak auth access token lifespan has elapsed")
+def step_keycloak_auth_wait_expiry(context):
     # Fixed delay (not a polling loop): the token's exp claim is the only observable.
     time.sleep(3)
 
 
 @given(
-    'the keycloak utils client "{client}" guards resource "{resource}" with scopes "{scopes}" '
+    'the keycloak auth client "{client}" guards resource "{resource}" with scopes "{scopes}" '
     'and grants scope "{scope}" to realm role "{role}"',
 )
-def step_keycloak_utils_uma_setup(context, client, resource, scopes, scope, role):
+def step_keycloak_auth_uma_setup(context, client, resource, scopes, scope, role):
     sc = _ctx(context)
     adapter = _real_sync_adapter(sc)
     internal_id = sc.get(f"client_{client}")["internal_client_id"]
@@ -666,39 +663,39 @@ def step_keycloak_utils_uma_setup(context, client, resource, scopes, scope, role
         )
 
 
-@given('the keycloak utils request path parameter "{name}" is the id of user "{username}"')
-def step_keycloak_utils_path_param_user(context, name, username):
+@given('the keycloak auth request path parameter "{name}" is the id of user "{username}"')
+def step_keycloak_auth_path_param_user(context, name, username):
     sc = _ctx(context)
     _path_params(sc)[name] = _user_id(sc, username)
 
 
-@given('the keycloak utils grpc request attribute "{name}" is the id of user "{username}"')
-def step_keycloak_utils_request_attr_user(context, name, username):
+@given('the keycloak auth grpc request attribute "{name}" is the id of user "{username}"')
+def step_keycloak_auth_request_attr_user(context, name, username):
     sc = _ctx(context)
     _request_attrs(sc)[name] = _user_id(sc, username)
 
 
-@when('the keycloak utils {mode} fastapi dependency is called with the access token of user "{username}"')
-async def step_keycloak_utils_call_with_user_token(context, mode, username):
+@when('the keycloak auth {mode} fastapi dependency is called with the access token of user "{username}"')
+async def step_keycloak_auth_call_with_user_token(context, mode, username):
     sc = _ctx(context)
     token = _access_token(sc, username)
     await _call_dependency(context, mode, HTTPAuthorizationCredentials(scheme="Bearer", credentials=token))
 
 
-@when('the keycloak utils {mode} grpc handler is invoked with the bearer access token of user "{username}"')
-async def step_keycloak_utils_grpc_user_bearer(context, mode, username):
+@when('the keycloak auth {mode} grpc handler is invoked with the bearer access token of user "{username}"')
+async def step_keycloak_auth_grpc_user_bearer(context, mode, username):
     sc = _ctx(context)
     await _invoke_grpc(context, mode, (("authorization", f"Bearer {_access_token(sc, username)}"),))
 
 
-@when('the keycloak utils {mode} grpc handler is invoked with the raw access token of user "{username}"')
-async def step_keycloak_utils_grpc_user_raw(context, mode, username):
+@when('the keycloak auth {mode} grpc handler is invoked with the raw access token of user "{username}"')
+async def step_keycloak_auth_grpc_user_raw(context, mode, username):
     sc = _ctx(context)
     await _invoke_grpc(context, mode, (("authorization", _access_token(sc, username)),))
 
 
-@then('the keycloak utils dependency returns the user info of user "{username}"')
-def step_keycloak_utils_result_user(context, username):
+@then('the keycloak auth dependency returns the user info of user "{username}"')
+def step_keycloak_auth_result_user(context, username):
     sc = _ctx(context)
     assert sc.get("error") is None, f"unexpected error {sc.get('error')!r}"
     info = sc.get("result")
@@ -709,16 +706,16 @@ def step_keycloak_utils_result_user(context, username):
     assert sc.get("request").state.token_info["sub"] == info["sub"]
 
 
-@then('the keycloak utils request state user roles include "{roles}"')
-def step_keycloak_utils_state_roles_include(context, roles):
+@then('the keycloak auth request state user roles include "{roles}"')
+def step_keycloak_auth_state_roles_include(context, roles):
     sc = _ctx(context)
     assert sc.get("error") is None, f"unexpected error {sc.get('error')!r}"
     missing = set(_split(roles)) - set(sc.get("request").state.user_roles)
     assert not missing, f"missing roles {missing}; got {sc.get('request').state.user_roles}"
 
 
-@then('the keycloak utils grpc handler ran as user "{username}" with roles including "{roles}"')
-def step_keycloak_utils_grpc_ran_as(context, username, roles):
+@then('the keycloak auth grpc handler ran as user "{username}" with roles including "{roles}"')
+def step_keycloak_auth_grpc_ran_as(context, username, roles):
     sc = _ctx(context)
     assert sc.get("error") is None and not sc.get("aborted"), f"call failed: {sc.get('error')!r}"
     calls = _handler_calls(sc)
@@ -732,25 +729,25 @@ def step_keycloak_utils_grpc_ran_as(context, username, roles):
 
 
 @when(
-    'the keycloak utils {mode} grpc handler is invoked with the bearer access token of user "{username}" on a plain context',
+    'the keycloak auth {mode} grpc handler is invoked with the bearer access token of user "{username}" on a plain context',
 )
-async def step_keycloak_utils_grpc_user_bearer_plain(context, mode, username):
+async def step_keycloak_auth_grpc_user_bearer_plain(context, mode, username):
     sc = _ctx(context)
     await _invoke_grpc(context, mode, (("authorization", f"Bearer {_access_token(sc, username)}"),), plain=True)
 
 
 @when(
-    'the keycloak utils {mode} grpc handler is invoked with the access token of user "{username}" under authorization scheme "{scheme}"',
+    'the keycloak auth {mode} grpc handler is invoked with the access token of user "{username}" under authorization scheme "{scheme}"',
 )
-async def step_keycloak_utils_grpc_scheme(context, mode, username, scheme):
+async def step_keycloak_auth_grpc_scheme(context, mode, username, scheme):
     sc = _ctx(context)
     await _invoke_grpc(context, mode, (("authorization", f"{scheme} {_access_token(sc, username)}"),))
 
 
 @when(
-    'the keycloak utils {mode} grpc handler is invoked with a conflicting bearer token "{other}" next to the access token of user "{username}"',
+    'the keycloak auth {mode} grpc handler is invoked with a conflicting bearer token "{other}" next to the access token of user "{username}"',
 )
-async def step_keycloak_utils_grpc_conflicting(context, mode, other, username):
+async def step_keycloak_auth_grpc_conflicting(context, mode, other, username):
     sc = _ctx(context)
     metadata = (("authorization", f"Bearer {_access_token(sc, username)}"), ("authorization", f"Bearer {other}"))
     await _invoke_grpc(context, mode, metadata)
