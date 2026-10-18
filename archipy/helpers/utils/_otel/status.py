@@ -60,6 +60,26 @@ def metric_status_for_exception(exception: BaseException) -> str:
     return "error"
 
 
+def error_type_for_exception(exception: BaseException) -> str:
+    """Return the low-cardinality ``error.type`` of a failure.
+
+    An ArchiPy ``BaseError`` is identified by its stable ``code``; any other exception by its fully qualified class
+    name, as the OpenTelemetry error-recording convention suggests.
+
+    Args:
+        exception: The exception that ended the operation.
+
+    Returns:
+        The ``error.type`` attribute value.
+    """
+    from archipy.models.errors.base_error import BaseError
+
+    if isinstance(exception, BaseError):
+        return exception.code
+    exception_type = type(exception)
+    return f"{exception_type.__module__}.{exception_type.__qualname__}"
+
+
 def status_for_cancellation() -> Status:
     """Return an ERROR status for asyncio task cancellation.
 

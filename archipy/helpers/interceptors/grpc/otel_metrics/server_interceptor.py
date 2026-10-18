@@ -6,7 +6,7 @@ import asyncio
 import threading
 import time
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 
 from archipy.helpers.interceptors.grpc.base.server_interceptor import (
     BaseAsyncGrpcServerInterceptor,
@@ -21,53 +21,63 @@ if TYPE_CHECKING:
 
     import grpc
 
-_RPC_DURATION_INSTRUMENT = "rpc.server.request.duration"
+_RPC_DURATION_INSTRUMENT = "rpc.server.call.duration"
 _RPC_ACTIVE_INSTRUMENT = "rpc.server.active_requests"
 _RPC_METER_NAME = "archipy.grpc"
+
+
+class _Instruments(NamedTuple):
+    """The RPC instruments of one meter provider."""
+
+    duration: Any
+    active: Any
+    provider_id: int
 
 
 class _RpcInstruments:
     """Lazy, process-wide RPC instruments bound to the current meter.
 
-    Holds the ``rpc.server.request.duration`` histogram and the ``rpc.server.active_requests`` counter,
-    mirroring FastAPI's ``http.server.request.duration`` / ``http.server.active_requests`` pair.
+    Holds the OpenTelemetry ``rpc.server.call.duration`` histogram and the ``rpc.server.active_requests`` counter,
+    which is an ArchiPy metric the specification does not define.
     """
 
-    # One tuple (histogram, active, provider id) so readers never see a half-updated pair.
-    _state: ClassVar[tuple[Any, Any, int] | None] = None
+    # One tuple so readers never see a half-updated pair.
+    _state: ClassVar[_Instruments | None] = None
     _lock: ClassVar[threading.Lock] = threading.Lock()
 
     @classmethod
-    def get(cls) -> tuple[Any, Any] | None:
-        """Return the duration histogram and active-requests counter, recreating them after provider reset.
+    def get(cls) -> _Instruments | None:
+        """Return the RPC instruments, recreating them after a provider reset.
 
         Returns:
-            ``(histogram, active_requests)``, or ``None`` when metrics are unavailable.
+            The instruments, or ``None`` when metrics are unavailable.
         """
         if OtelUtils.import_failed() or OtelUtils.meter_provider() is None:
             return None
         provider_id = id(OtelUtils.meter_provider())
         state = cls._state
-        if state is not None and state[2] == provider_id:
-            return state[0], state[1]
+        if state is not None and state.provider_id == provider_id:
+            return state
         with cls._lock:
             state = cls._state
-            if state is not None and state[2] == provider_id:
-                return state[0], state[1]
+            if state is not None and state.provider_id == provider_id:
+                return state
             meter = OtelUtils.get_meter(_RPC_METER_NAME)
-            histogram = meter.create_histogram(
-                _RPC_DURATION_INSTRUMENT,
-                unit="s",
-                description="gRPC server call duration",
-                explicit_bucket_boundaries_advisory=OtelUtils.duration_histogram_buckets(),
+            cls._state = _Instruments(
+                duration=meter.create_histogram(
+                    _RPC_DURATION_INSTRUMENT,
+                    unit="s",
+                    description="gRPC server call duration",
+                    explicit_bucket_boundaries_advisory=OtelUtils.duration_histogram_buckets(),
+                ),
+                active=meter.create_up_down_counter(
+                    _RPC_ACTIVE_INSTRUMENT,
+                    unit="{request}",
+                    description="Number of active gRPC server requests",
+                ),
+                provider_id=provider_id,
             )
-            active = meter.create_up_down_counter(
-                _RPC_ACTIVE_INSTRUMENT,
-                unit="{request}",
-                description="Number of active gRPC server requests",
-            )
-            cls._state = (histogram, active, provider_id)
-            return histogram, active
+            return cls._state
 
     @classmethod
     def clear(cls) -> None:
@@ -76,77 +86,54 @@ class _RpcInstruments:
             cls._state = None
 
 
-# gRPC codes that signal a handled caller error, recorded as ``ok`` like HTTP statuses below 500.
-_CLIENT_FAULT_CODES = frozenset(
-    {
-        "INVALID_ARGUMENT",
-        "NOT_FOUND",
-        "ALREADY_EXISTS",
-        "PERMISSION_DENIED",
-        "UNAUTHENTICATED",
-        "FAILED_PRECONDITION",
-        "OUT_OF_RANGE",
-        "RESOURCE_EXHAUSTED",
-        "ABORTED",
-    },
+# gRPC codes the semantic conventions treat as server-side failures, recorded as ``error.type``.
+_SERVER_ERROR_CODES = frozenset(
+    {"UNKNOWN", "DEADLINE_EXCEEDED", "UNIMPLEMENTED", "INTERNAL", "UNAVAILABLE", "DATA_LOSS"},
 )
 
 
-def _rpc_attributes(method_name_model: MethodName, status: str, grpc_code: str | None = None) -> dict[str, str]:
-    """Build semantic-convention-ish attributes for an RPC metric recording."""
+def _rpc_attributes(method_name_model: MethodName, grpc_code: str | None) -> dict[str, str]:
+    """Build the OpenTelemetry RPC attributes: system name, fully qualified method, status code and error type."""
     attributes = {
-        "rpc.system": "grpc",
-        "rpc.service": method_name_model.service,
-        "rpc.method": method_name_model.method,
-        "status": status,
+        "rpc.system.name": "grpc",
+        "rpc.method": method_name_model.full_name.lstrip("/"),
     }
     if grpc_code is not None:
-        attributes["rpc.grpc.status_code"] = grpc_code
+        attributes["rpc.response.status_code"] = grpc_code
+    if grpc_code in _SERVER_ERROR_CODES:
+        attributes["error.type"] = grpc_code
     return attributes
 
 
-def _status_for_code(code_name: str) -> str:
-    """Map a gRPC status code name to the ``status`` metric attribute."""
-    if code_name == "OK" or code_name in _CLIENT_FAULT_CODES:
-        return "ok"
-    if code_name == "CANCELLED":
-        return "cancelled"
-    return "error"
+def _classify_failure(context: object) -> str:
+    """Return the gRPC code name of a call whose handler raised.
 
-
-def _classify_failure(exc: BaseException, context: object) -> tuple[str, str | None]:
-    """Work out the metric status and gRPC code for a call that raised ``exc``.
-
-    The metrics interceptor runs outside the exception interceptor, so ``exc`` is usually the abort signal rather
-    than the domain error. The status the call finished with is on the context, so prefer it.
+    The metrics interceptor runs outside the exception interceptor, so the exception is usually the abort signal
+    rather than the domain error. The status the call finished with is on the context, so prefer it. A handler that
+    raised without setting one is answered with ``UNKNOWN`` by gRPC, and that is what is recorded.
 
     Args:
-        exc: The exception that escaped the handler.
         context: The gRPC context of the call.
 
     Returns:
-        ``(status, grpc_code_name)``. The code name is ``None`` when the context holds no status.
+        The gRPC status code name.
     """
     code_getter = getattr(context, "code", None)
     code = code_getter() if callable(code_getter) else None
     code_name = getattr(code, "name", None)
     if isinstance(code_name, str) and code_name != "OK":
-        return _status_for_code(code_name), code_name
-    return OtelUtils.metric_status_for_exception(exc), None
+        return code_name
+    return "UNKNOWN"
 
 
 class _RpcCallRecorder:
     """Tracks one in-flight RPC: increments active requests on start, records duration on finish."""
 
-    def __init__(self, histogram: Any, active: Any, method_name_model: MethodName) -> None:
-        self._histogram = histogram
-        self._active = active
+    def __init__(self, instruments: _Instruments, method_name_model: MethodName) -> None:
+        self._histogram = instruments.duration
+        self._active = instruments.active
         self._method_name_model = method_name_model
-        self._active_attributes = {
-            "rpc.system": "grpc",
-            "rpc.service": method_name_model.service,
-            "rpc.method": method_name_model.method,
-        }
+        self._active_attributes = _rpc_attributes(method_name_model, None)
         self._finished = False
         self._active.add(1, self._active_attributes)
         self._start = time.perf_counter()
@@ -157,11 +144,10 @@ class _RpcCallRecorder:
         instruments = _RpcInstruments.get()
         if instruments is None:
             return None
-        histogram, active = instruments
-        return cls(histogram, active, method_name_model)
+        return cls(instruments, method_name_model)
 
-    def finish(self, status: str, grpc_code: str | None = None) -> None:
-        """Decrement active requests and record elapsed seconds with the call status.
+    def finish(self, grpc_code: str | None = None) -> None:
+        """Decrement active requests and record elapsed seconds with the call outcome.
 
         Idempotent: only the first call records, so a termination callback and the normal path cannot double count.
         """
@@ -171,12 +157,12 @@ class _RpcCallRecorder:
         self._active.add(-1, self._active_attributes)
         self._histogram.record(
             time.perf_counter() - self._start,
-            _rpc_attributes(self._method_name_model, status, grpc_code),
+            _rpc_attributes(self._method_name_model, grpc_code),
         )
 
 
 class GrpcServerOtelMetricsInterceptor(BaseGrpcServerInterceptor):
-    """Sync gRPC interceptor that records ``rpc.server.request.duration`` and ``rpc.server.active_requests``."""
+    """Sync gRPC interceptor that records ``rpc.server.call.duration`` and ``rpc.server.active_requests``."""
 
     def intercept(
         self,
@@ -202,18 +188,18 @@ class GrpcServerOtelMetricsInterceptor(BaseGrpcServerInterceptor):
 
         try:
             result = method(request, context)
-        except Exception as exc:
-            recorder.finish(*_classify_failure(exc, context))
+        except Exception:
+            recorder.finish(_classify_failure(context))
             raise
         if isinstance(result, Iterator):
             # Response-streaming handler: the RPC only finishes once the stream is consumed. If the client
             # cancels or the stream is never iterated, the generator's ``finally`` never runs, so also finish
             # on RPC termination to keep the active-requests counter balanced.
-            if not context.add_callback(lambda: recorder.finish("cancelled", "CANCELLED")):
+            if not context.add_callback(lambda: recorder.finish("CANCELLED")):
                 # The RPC already terminated: no callback will ever fire.
-                recorder.finish("cancelled", "CANCELLED")
+                recorder.finish("CANCELLED")
             return self._time_stream(result, recorder, context)
-        recorder.finish("ok", "OK")
+        recorder.finish("OK")
         return result
 
     @staticmethod
@@ -232,22 +218,22 @@ class GrpcServerOtelMetricsInterceptor(BaseGrpcServerInterceptor):
         Yields:
             Each response message.
         """
-        status, grpc_code = "ok", "OK"
+        grpc_code = "OK"
         try:
             yield from stream
         except GeneratorExit:
             # The client went away and gRPC closed the generator.
-            status, grpc_code = "cancelled", "CANCELLED"
+            grpc_code = "CANCELLED"
             raise
-        except Exception as exc:
-            status, grpc_code = _classify_failure(exc, context)
+        except Exception:
+            grpc_code = _classify_failure(context)
             raise
         finally:
-            recorder.finish(status, grpc_code)
+            recorder.finish(grpc_code)
 
 
 class AsyncGrpcServerOtelMetricsInterceptor(BaseAsyncGrpcServerInterceptor):
-    """Async gRPC interceptor that records ``rpc.server.request.duration`` and ``rpc.server.active_requests``."""
+    """Async gRPC interceptor that records ``rpc.server.call.duration`` and ``rpc.server.active_requests``."""
 
     async def intercept(
         self,
@@ -271,18 +257,18 @@ class AsyncGrpcServerOtelMetricsInterceptor(BaseAsyncGrpcServerInterceptor):
         if recorder is None:
             return await method(request, context)
 
-        status, grpc_code = "ok", "OK"
+        grpc_code = "OK"
         try:
             return await method(request, context)
         except asyncio.CancelledError:
             # Client cancellation or an expired deadline; ``CancelledError`` is not an ``Exception``.
-            status, grpc_code = "cancelled", "CANCELLED"
+            grpc_code = "CANCELLED"
             raise
-        except Exception as exc:
-            status, grpc_code = _classify_failure(exc, context)
+        except Exception:
+            grpc_code = _classify_failure(context)
             raise
         finally:
-            recorder.finish(status, grpc_code)
+            recorder.finish(grpc_code)
 
     async def intercept_stream(
         self,
@@ -308,15 +294,15 @@ class AsyncGrpcServerOtelMetricsInterceptor(BaseAsyncGrpcServerInterceptor):
                 yield item
             return
 
-        status, grpc_code = "ok", "OK"
+        grpc_code = "OK"
         try:
             async for item in iterate_stream_result(method(request, context)):
                 yield item
         except asyncio.CancelledError, GeneratorExit:
-            status, grpc_code = "cancelled", "CANCELLED"
+            grpc_code = "CANCELLED"
             raise
-        except Exception as exc:
-            status, grpc_code = _classify_failure(exc, context)
+        except Exception:
+            grpc_code = _classify_failure(context)
             raise
         finally:
-            recorder.finish(status, grpc_code)
+            recorder.finish(grpc_code)

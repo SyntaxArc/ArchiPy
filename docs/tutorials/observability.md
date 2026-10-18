@@ -321,12 +321,20 @@ interceptors when OTel is enabled (requires `archipy[otel-grpc]` for traces):
 
 - **Traces** — contrib `server_interceptor` / `aio_server_interceptor` when
   `TRACES_ENABLED`
-- **Metrics** — ArchiPy `rpc.server.request.duration` histogram (seconds, same buckets as FastAPI's
-  `http.server.request.duration`) and `rpc.server.active_requests` up-down counter (in-flight calls,
-  like `http.server.active_requests`) when `METRICS_ENABLED` (works in metrics-only mode; no handler decorators
-  required). The duration histogram carries a `status` attribute (`ok`, `error` or `cancelled`) and the
-  `rpc.grpc.status_code` the call finished with. Handled caller errors (for example `NOT_FOUND` or
-  `RESOURCE_EXHAUSTED`) count as `ok`, and a call cancelled by the client or by its deadline counts as `cancelled`.
+- **Metrics** — the OpenTelemetry `rpc.server.call.duration` histogram (seconds, same buckets as FastAPI's
+  `http.server.request.duration`) and an ArchiPy `rpc.server.active_requests` up-down counter (in-flight calls; the
+  specification does not define it) when `METRICS_ENABLED` (works in metrics-only mode; no handler decorators
+  required). The duration histogram follows the RPC semantic conventions: `rpc.system.name` (`grpc`), the fully
+  qualified `rpc.method` (`package.Service/Method`) and the `rpc.response.status_code` name the call finished with
+  (`OK`, `NOT_FOUND`, `CANCELLED`, ...). `error.type` is set to the status code only for the codes the conventions
+  treat as server failures (`UNKNOWN`, `DEADLINE_EXCEEDED`, `UNIMPLEMENTED`, `INTERNAL`, `UNAVAILABLE`,
+  `DATA_LOSS`); handled caller errors such as `NOT_FOUND` or `RESOURCE_EXHAUSTED` and client cancellations carry a
+  status code but no `error.type`. A handler that raises without a status is recorded as `UNKNOWN`, which is what
+  gRPC answers.
+
+!!! warning "Renamed in this release"
+    The histogram used to be `rpc.server.request.duration` with `rpc.system`, `rpc.service`, a short `rpc.method`,
+    `rpc.grpc.status_code` and a custom `status` attribute. Update dashboards and alerts to the names above.
 
 Order becomes: OTel traces (if any) → OTel metrics (if any) → exception interceptor
 → rate-limit (if enabled) → custom interceptors.
@@ -395,6 +403,10 @@ For async clients use `OtelUtils.async_grpc_client_interceptors()`.
 ---
 
 ## Tracing Decorators
+
+Every decorator span records `code.function.name` (the fully qualified name of the traced function), and a span for a
+failed call also carries `error.type` (the `BaseError.code`, or the fully qualified exception class) next to the
+recorded exception event.
 
 For code outside FastAPI/gRPC — workers, schedulers, domain logic — use decorators from
 `archipy.helpers.decorators`:
@@ -497,7 +509,8 @@ Instruments default to `{module}.{qualname}.duration` / `.calls` and record a `s
 attribute (`ok` / `error` / `cancelled` for async cancel). Duration histograms use
 explicit second buckets and a description. `status` aligns with tracing:
 `BaseError` with HTTP status below 500 records as `ok` (handled client error), not
-`error`. No-op when OTel or `METRICS_ENABLED` is off.
+`error`. A call that ends in `error` or `cancelled` also carries the standard `error.type` (the `BaseError.code`, or
+the fully qualified exception class); a call recorded as `ok` carries none. No-op when OTel or `METRICS_ENABLED` is off.
 
 ---
 

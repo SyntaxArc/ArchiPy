@@ -15,6 +15,8 @@ from archipy.models.errors import InvalidArgumentError
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
+    from opentelemetry.trace import Span
+
 _ATTR_VALUE_MAX_LEN = 256
 _REDACTED_ATTR_VALUE = "***"
 _REPR_FAILURE_PLACEHOLDER = "<unreprable>"
@@ -244,14 +246,28 @@ def _run_traced(
 
     with tracer.start_as_current_span(span_name, **start_kwargs) as span:
         _apply_capture_args(span, signature, args, kwargs, capture_args)
+        _set_code_attributes(span, func)
         try:
             return func(*args, **kwargs)
         except Exception as exc:  # repr()/callback boundary; arbitrary values
             span.record_exception(exc)
+            span.set_attribute("error.type", OtelUtils.error_type_for_exception(exc))
             status = OtelUtils.status_for_exception(exc)
             if status is not None:
                 span.set_status(status)
             raise
+
+
+def _set_code_attributes(span: Span, func: Callable[..., Any]) -> None:
+    """Record the traced function as ``code.function.name``, its fully qualified name, like the code conventions ask.
+
+    Args:
+        span: The active OpenTelemetry span.
+        func: The function the span traces.
+    """
+    module = getattr(func, "__module__", None) or type(func).__module__
+    qualname = getattr(func, "__qualname__", None) or type(func).__qualname__
+    span.set_attribute("code.function.name", f"{module}.{qualname}")
 
 
 async def _run_traced_async(
@@ -289,14 +305,17 @@ async def _run_traced_async(
 
     with tracer.start_as_current_span(span_name, **start_kwargs) as span:
         _apply_capture_args(span, signature, args, kwargs, capture_args)
+        _set_code_attributes(span, func)
         try:
             return await func(*args, **kwargs)
         except asyncio.CancelledError as exc:
             span.record_exception(exc)
+            span.set_attribute("error.type", OtelUtils.error_type_for_exception(exc))
             span.set_status(OtelUtils.status_for_cancellation())
             raise
         except Exception as exc:  # repr()/callback boundary; arbitrary values
             span.record_exception(exc)
+            span.set_attribute("error.type", OtelUtils.error_type_for_exception(exc))
             status = OtelUtils.status_for_exception(exc)
             if status is not None:
                 span.set_status(status)

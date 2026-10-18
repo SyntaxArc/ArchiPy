@@ -58,19 +58,31 @@ def _active_metrics_config() -> BaseConfig | None:
 def _merge_status_attributes(
     attributes: dict[str, Any] | None,
     status: str,
+    error_type: str | None = None,
 ) -> dict[str, Any]:
-    """Build metric attributes including a status label.
+    """Build metric attributes including a status label and, for a failure, the standard ``error.type``.
 
     Args:
         attributes: Optional static attributes from the decorator.
         status: ``"ok"``, ``"error"``, or ``"cancelled"``.
+        error_type: The ``error.type`` of a failed call; ``None`` when the call succeeded.
 
     Returns:
-        A new attributes dict including ``status``.
+        A new attributes dict including ``status`` and, when given, ``error.type``.
     """
     merged: dict[str, Any] = dict(attributes) if attributes else {}
     merged["status"] = status
+    if error_type is not None:
+        merged["error.type"] = error_type
     return merged
+
+
+def _error_type_for_status(exc: BaseException, status: str) -> str | None:
+    """Return the ``error.type`` for a call that ended with ``status``, or ``None`` when it counts as ok.
+
+    A handled client error is recorded as ``ok``, so it carries no ``error.type`` that would contradict the status.
+    """
+    return None if status == "ok" else OtelUtils.error_type_for_exception(exc)
 
 
 def _status_for_base_exception(exc: BaseException) -> str:
@@ -201,21 +213,21 @@ def _instrumented(
     func: Callable[..., Any],
     *,
     get_instrument: Callable[[], Any],
-    emit: Callable[[Any, float, str], None],
+    emit: Callable[[Any, float, str, str | None], None],
 ) -> Callable[..., Any]:
     """Wrap a sync or async function so every call is recorded on a metric instrument.
 
     Args:
         func: The function to wrap. Coroutine functions get an async wrapper.
         get_instrument: Returns the (cached) histogram or counter.
-        emit: Records one measurement as ``(instrument, elapsed_seconds, status)``.
+        emit: Records one measurement as ``(instrument, elapsed_seconds, status, error_type)``.
 
     Returns:
         The wrapped function.
     """
 
-    def record(instrument: Any, start: float, status: str) -> None:
-        _safe_emit(emit, instrument, time.perf_counter() - start, status)
+    def record(instrument: Any, start: float, status: str, error_type: str | None) -> None:
+        _safe_emit(emit, instrument, time.perf_counter() - start, status, error_type)
 
     if inspect.iscoroutinefunction(func):
 
@@ -226,14 +238,15 @@ def _instrumented(
 
             instrument = get_instrument()
             start = time.perf_counter()
-            status = "ok"
+            status, error_type = "ok", None
             try:
                 return await func(*args, **kwargs)
             except BaseException as exc:
                 status = _status_for_base_exception(exc)
+                error_type = _error_type_for_status(exc, status)
                 raise
             finally:
-                record(instrument, start, status)
+                record(instrument, start, status, error_type)
 
         return async_wrapper
 
@@ -244,14 +257,15 @@ def _instrumented(
 
         instrument = get_instrument()
         start = time.perf_counter()
-        status = "ok"
+        status, error_type = "ok", None
         try:
             return func(*args, **kwargs)
         except BaseException as exc:
             status = _status_for_base_exception(exc)
+            error_type = _error_type_for_status(exc, status)
             raise
         finally:
-            record(instrument, start, status)
+            record(instrument, start, status, error_type)
 
     return wrapper
 
@@ -266,7 +280,10 @@ def _duration_wrapper(
     return _instrumented(
         func,
         get_instrument=lambda: _get_or_create_histogram(module, instrument_name, unit),
-        emit=lambda histogram, elapsed, status: histogram.record(elapsed, _merge_status_attributes(attributes, status)),
+        emit=lambda histogram, elapsed, status, error_type: histogram.record(
+            elapsed,
+            _merge_status_attributes(attributes, status, error_type),
+        ),
     )
 
 
@@ -279,7 +296,10 @@ def _counter_wrapper(
     return _instrumented(
         func,
         get_instrument=lambda: _get_or_create_counter(module, instrument_name),
-        emit=lambda counter, _elapsed, status: counter.add(1, _merge_status_attributes(attributes, status)),
+        emit=lambda counter, _elapsed, status, error_type: counter.add(
+            1,
+            _merge_status_attributes(attributes, status, error_type),
+        ),
     )
 
 

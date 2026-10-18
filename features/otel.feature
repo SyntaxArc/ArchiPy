@@ -29,6 +29,17 @@ Feature: OpenTelemetry decorators
     Then the recorded span status should be ERROR
     And the recorded span should include an exception event
 
+  Scenario: a span records the traced function and the error type of a failure
+    Given a sync function decorated with trace_span that raises an error
+    When I call the traced sync function and it fails
+    Then the recorded span attribute "code.function.name" should end with "traced_sync"
+    And the recorded span should have attribute "error.type" equal to "builtins.RuntimeError"
+
+  Scenario: a handled client error span carries the ArchiPy error code as error type
+    Given a sync function decorated with trace_span that raises NotFoundError
+    When I call the traced sync function and it fails with NotFoundError
+    Then the recorded span should have attribute "error.type" equal to "NOT_FOUND"
+
   Scenario: trace_root starts a new root trace
     Given an ambient parent span is active
     And a sync function decorated with trace_root named "root_work"
@@ -169,18 +180,23 @@ Feature: OpenTelemetry decorators
   Scenario: FastAPI and gRPC duration histograms share unit and buckets
     When I create an instrumented FastAPI app and GET "/otel-ping"
     And I call an instrumented gRPC TestMethod
-    Then the "http.server.request.duration" and "rpc.server.request.duration" histograms should have the same unit and buckets
+    Then the "http.server.request.duration" and "rpc.server.call.duration" histograms should have the same unit and buckets
 
   Scenario: gRPC request records RPC span and handler metrics
     When I call an instrumented gRPC TestMethod
     Then a span named "/test.TestService/TestMethod" should be recorded
-    And a histogram metric named "rpc.server.request.duration" should have datapoints
+    And a histogram metric named "rpc.server.call.duration" should have datapoints
+
+  Scenario: gRPC call duration uses the OpenTelemetry RPC attributes only
+    When I call an instrumented gRPC TestMethod
+    Then the "rpc.server.call.duration" histogram has the attributes rpc.system.name "grpc", rpc.method "test.TestService/TestMethod" and rpc.response.status_code "OK"
+    And the "rpc.server.call.duration" histogram has none of the attributes "rpc.system, rpc.service, rpc.grpc.status_code, status, error.type"
 
   @async
   Scenario: async gRPC request records RPC span and handler metrics
     When I call an instrumented async gRPC TestMethod
     Then a span named "/test.TestService/TestMethod" should be recorded
-    And a histogram metric named "rpc.server.request.duration" should have datapoints
+    And a histogram metric named "rpc.server.call.duration" should have datapoints
 
   Scenario: Instrumented FastAPI server-sent events endpoint is traced and streams incrementally
     Given an instrumented FastAPI app with a server-sent events endpoint
@@ -340,8 +356,8 @@ Feature: OpenTelemetry decorators
     Given a <mode> gRPC server using the <stack> interceptor stack
     When a server-streaming RPC is invoked requesting 3 messages
     Then the gRPC stream should deliver messages "0,1,2"
-    And a histogram metric named "rpc.server.request.duration" should have status "ok"
-    And the "rpc.server.request.duration" histogram should have 1 datapoint for method "Count"
+    And a histogram metric named "rpc.server.call.duration" should have gRPC status code "OK"
+    And the "rpc.server.call.duration" histogram should have 1 datapoint for method "Count"
 
     Examples: Sync interceptor stacks
       | mode | stack   |
@@ -359,7 +375,8 @@ Feature: OpenTelemetry decorators
     When a server-streaming RPC is invoked that crashes after 1 message
     Then the gRPC stream should deliver messages "0"
     And the gRPC stream should finish with status UNKNOWN
-    And a histogram metric named "rpc.server.request.duration" should have status "error"
+    And a histogram metric named "rpc.server.call.duration" should have gRPC status code "UNKNOWN"
+    And a histogram metric named "rpc.server.call.duration" should have error type "UNKNOWN"
 
     Examples: Sync interceptor stacks
       | mode | stack   |
@@ -400,11 +417,11 @@ Feature: OpenTelemetry decorators
       | async | exception |
       | async | full      |
 
-  Scenario Outline: A handled client error is recorded as ok with its gRPC status code
+  Scenario Outline: A handled client error is recorded with its gRPC status code and no error type
     Given a <mode> gRPC server using the full interceptor stack
     When a unary RPC that aborts with RESOURCE_EXHAUSTED is invoked
-    Then a histogram metric named "rpc.server.request.duration" should have status "ok"
-    And a histogram metric named "rpc.server.request.duration" should have gRPC status code "RESOURCE_EXHAUSTED"
+    Then a histogram metric named "rpc.server.call.duration" should have gRPC status code "RESOURCE_EXHAUSTED"
+    And a histogram metric named "rpc.server.call.duration" should not have an error type
 
     Examples: Sync interceptor stack
       | mode |
@@ -436,8 +453,8 @@ Feature: OpenTelemetry decorators
   Scenario Outline: A crashed call is recorded as an internal error
     Given a <mode> gRPC server using the full interceptor stack
     When a unary RPC that crashes unexpectedly is invoked
-    Then a histogram metric named "rpc.server.request.duration" should have status "error"
-    And a histogram metric named "rpc.server.request.duration" should have gRPC status code "INTERNAL"
+    Then a histogram metric named "rpc.server.call.duration" should have gRPC status code "INTERNAL"
+    And a histogram metric named "rpc.server.call.duration" should have error type "INTERNAL"
 
     Examples: Sync interceptor stack
       | mode |
@@ -452,12 +469,12 @@ Feature: OpenTelemetry decorators
   Scenario: An async call cancelled by the client is recorded as cancelled
     Given a async gRPC server using the metrics interceptor stack
     When the client cancels an RPC while the server handler is running
-    Then a histogram metric named "rpc.server.request.duration" should have status "cancelled"
+    Then a histogram metric named "rpc.server.call.duration" should have gRPC status code "CANCELLED"
 
   Scenario Outline: A server-streaming call cancelled by the client is recorded as cancelled
     Given a <mode> gRPC server using the metrics interceptor stack
     When the client cancels a server-streaming RPC after the first message
-    Then a histogram metric named "rpc.server.request.duration" should have status "cancelled"
+    Then a histogram metric named "rpc.server.call.duration" should have gRPC status code "CANCELLED"
     And an up-down counter metric named "rpc.server.active_requests" should net to 0 with datapoints
 
     Examples: Interceptor modes
@@ -472,7 +489,7 @@ Feature: OpenTelemetry decorators
   Scenario: A sync stream on an already terminated RPC leaves no active request behind
     When a sync response stream is intercepted for an RPC that already terminated
     Then an up-down counter metric named "rpc.server.active_requests" should net to 0 with datapoints
-    And a histogram metric named "rpc.server.request.duration" should have status "cancelled"
+    And a histogram metric named "rpc.server.call.duration" should have gRPC status code "CANCELLED"
 
   Scenario: RPC instruments are created once under concurrent first use
     When 16 threads request the RPC instruments at the same time
@@ -482,19 +499,26 @@ Feature: OpenTelemetry decorators
     Given OpenTelemetry metrics-only mode for testing
     When I call an instrumented gRPC TestMethod
     Then no span named "/test.TestService/TestMethod" should be recorded
-    And a histogram metric named "rpc.server.request.duration" should have datapoints
+    And a histogram metric named "rpc.server.call.duration" should have datapoints
 
   @async
   Scenario: metrics-only async gRPC records RPC duration without span
     Given OpenTelemetry metrics-only mode for testing
     When I call an instrumented async gRPC TestMethod
     Then no span named "/test.TestService/TestMethod" should be recorded
-    And a histogram metric named "rpc.server.request.duration" should have datapoints
+    And a histogram metric named "rpc.server.call.duration" should have datapoints
 
   Scenario: measure_duration records ok status for client BaseError
     Given a sync function decorated with measure_duration named "test.notfound.duration" that raises NotFoundError
     When I call the measured sync function and it fails with NotFoundError
     Then a histogram metric named "test.notfound.duration" should have status "ok"
+    And a histogram metric named "test.notfound.duration" should not have an error type
+
+  Scenario: measure_duration records error status and the error type for a failure
+    Given a sync function decorated with measure_duration named "test.runtime.duration" that raises RuntimeError
+    When I call the measured sync function and it fails with RuntimeError
+    Then a histogram metric named "test.runtime.duration" should have status "error"
+    And a histogram metric named "test.runtime.duration" should have error type "builtins.RuntimeError"
 
   Scenario: system metrics stay off when SYSTEM_METRICS_ENABLED is false
     Given OpenTelemetry is configured for production init with system metrics disabled

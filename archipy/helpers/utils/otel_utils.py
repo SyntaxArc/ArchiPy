@@ -26,6 +26,7 @@ from archipy.helpers.utils._otel.propagation import create_propagator
 from archipy.helpers.utils._otel.resource import create_resource
 from archipy.helpers.utils._otel.sampling import create_sampler
 from archipy.helpers.utils._otel.status import (
+    error_type_for_exception,
     metric_status_for_exception,
     status_for_cancellation,
     status_for_exception,
@@ -136,6 +137,11 @@ class OtelUtils:
             return tuple(BaseConfig.global_config().OTEL.METRICS_DURATION_BUCKETS_S)
         except AssertionError:
             return DURATION_HISTOGRAM_BUCKETS_S
+
+    @staticmethod
+    def error_type_for_exception(exception: BaseException) -> str:
+        """Return the ``error.type`` attribute value of a failure (``BaseError.code`` or the exception class name)."""
+        return error_type_for_exception(exception)
 
     @staticmethod
     def is_otel_enabled(config: BaseConfig) -> bool:

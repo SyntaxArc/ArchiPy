@@ -672,6 +672,14 @@ def step_when_call_traced_sync_with_password(context, password):
     scenario_context.store("result", result)
 
 
+@then('the recorded span attribute "{attr_name}" should end with "{suffix}"')
+def step_then_span_attribute_suffix(context, attr_name, suffix):
+    scenario_context = get_current_scenario_context(context)
+    span = _span_by_name(context, scenario_context.get("expected_span_name"))
+    value = str((span.attributes or {}).get(attr_name, ""))
+    assert value.endswith(suffix), f"Expected {attr_name} to end with {suffix!r}, got {value!r}"
+
+
 @then('the recorded span should have attribute "{attr_name}" equal to "{attr_value}"')
 def step_then_span_attribute_string(context, attr_name, attr_value):
     scenario_context = get_current_scenario_context(context)
@@ -1360,13 +1368,53 @@ def step_then_histogram_status(context, instrument_name, status):
 @then('a histogram metric named "{instrument_name}" should have gRPC status code "{code}"')
 def step_then_histogram_grpc_status_code(context, instrument_name, code):
     points = _metric_datapoints(context, instrument_name)
-    codes = [point.attributes.get("rpc.grpc.status_code") for point in points]
+    codes = [point.attributes.get("rpc.response.status_code") for point in points]
     assert code in codes, f"Expected gRPC status code {code!r} in {codes!r}"
+
+
+@then(
+    'the "{instrument_name}" histogram has the attributes rpc.system.name "{system}", rpc.method "{method}" '
+    'and rpc.response.status_code "{code}"',
+)
+def step_then_rpc_attributes(context, instrument_name, system, method, code):
+    points = _metric_datapoints(context, instrument_name)
+    assert points, f"No datapoints for histogram '{instrument_name}'"
+    attributes = dict(points[0].attributes)
+    assert attributes.get("rpc.system.name") == system, attributes
+    assert attributes.get("rpc.method") == method, attributes
+    assert attributes.get("rpc.response.status_code") == code, attributes
+
+
+@then('the "{instrument_name}" histogram has none of the attributes "{names}"')
+def step_then_histogram_lacks_attributes(context, instrument_name, names):
+    points = _metric_datapoints(context, instrument_name)
+    assert points, f"No datapoints for histogram '{instrument_name}'"
+    unwanted = {name.strip() for name in names.split(",")}
+    for point in points:
+        assert not unwanted & set(point.attributes), dict(point.attributes)
+
+
+@then('a histogram metric named "{instrument_name}" should have error type "{error_type}"')
+def step_then_histogram_error_type(context, instrument_name, error_type):
+    points = _metric_datapoints(context, instrument_name)
+    types = [point.attributes.get("error.type") for point in points]
+    assert error_type in types, f"Expected error.type {error_type!r} in {types!r}"
+
+
+@then('a histogram metric named "{instrument_name}" should not have an error type')
+def step_then_histogram_no_error_type(context, instrument_name):
+    points = _metric_datapoints(context, instrument_name)
+    assert points, f"No datapoints for histogram '{instrument_name}'"
+    assert all("error.type" not in point.attributes for point in points), [dict(p.attributes) for p in points]
 
 
 @then('the "{instrument_name}" histogram should have {expected:d} datapoint for method "{method}"')
 def step_then_histogram_datapoint_count_for_method(context, instrument_name, expected, method):
-    points = [p for p in _metric_datapoints(context, instrument_name) if p.attributes.get("rpc.method") == method]
+    points = [
+        p
+        for p in _metric_datapoints(context, instrument_name)
+        if str(p.attributes.get("rpc.method", "")).endswith(f"/{method}")
+    ]
     recorded = sum(point.count for point in points)
     assert recorded == expected, f"Expected {expected} recording(s) for method {method!r}, got {recorded}"
 
@@ -1941,6 +1989,28 @@ def step_given_measure_not_found(context, instrument_name):
         raise NotFoundError(resource_type="user")
 
     scenario_context.store("measured_sync", measured)
+
+
+@given('a sync function decorated with measure_duration named "{instrument_name}" that raises RuntimeError')
+def step_given_measure_runtime_error(context, instrument_name):
+    scenario_context = get_current_scenario_context(context)
+
+    @measure_duration(name=instrument_name)
+    def measured() -> str:
+        raise RuntimeError("measured failure")
+
+    scenario_context.store("measured_sync", measured)
+
+
+@when("I call the measured sync function and it fails with RuntimeError")
+def step_when_measured_fails_runtime_error(context):
+    scenario_context = get_current_scenario_context(context)
+    try:
+        scenario_context.get("measured_sync")()
+    except RuntimeError as exc:
+        scenario_context.store("measured_error", exc)
+    else:
+        raise AssertionError("Expected RuntimeError was not raised")
 
 
 @when("I call the measured sync function and it fails with NotFoundError")
@@ -2670,8 +2740,7 @@ def step_when_threads_request_instruments(context, count):
 def step_then_same_instruments(context):
     results = get_current_scenario_context(context).get("rpc_instruments_results")
     assert all(result is not None for result in results), "Metrics were unavailable"
-    first_histogram, first_active = results[0]
-    assert all(h is first_histogram and a is first_active for h, a in results), "Instruments were created twice"
+    assert all(result is results[0] for result in results), "Instruments were created twice"
 
 
 # ---------------------------------------------------------------------------
