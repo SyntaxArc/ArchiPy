@@ -39,6 +39,30 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
         orm_config: SQLAlchemy configuration. Must match the expected config type for the database.
     """
 
+    @classmethod
+    def _default_config(cls) -> ConfigT:
+        """Return the configuration used when none is passed, normally the global config's section.
+
+        Returns:
+            The default configuration for this database.
+
+        Raises:
+            NotImplementedError: If the subclass does not define it.
+        """
+        raise NotImplementedError("Subclasses must implement _default_config")
+
+    @classmethod
+    def _singleton_key(cls, orm_config: ConfigT | None = None) -> str:
+        """Key the ``Singleton`` metaclass uses: one manager per distinct configuration.
+
+        Args:
+            orm_config: The configuration passed to the constructor, or None for the default.
+
+        Returns:
+            The configuration serialised to JSON.
+        """
+        return (cls._default_config() if orm_config is None else orm_config).model_dump_json()
+
     def __init__(self, orm_config: ConfigT) -> None:
         """Initialize the base session manager.
 
@@ -242,6 +266,30 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
     Args:
         orm_config: SQLAlchemy configuration. Must match the expected config type for the database.
     """
+
+    @classmethod
+    def _default_config(cls) -> ConfigT:
+        """Return the configuration used when none is passed, normally the global config's section.
+
+        Returns:
+            The default configuration for this database.
+
+        Raises:
+            NotImplementedError: If the subclass does not define it.
+        """
+        raise NotImplementedError("Subclasses must implement _default_config")
+
+    @classmethod
+    def _singleton_key(cls, orm_config: ConfigT | None = None) -> str:
+        """Key the ``Singleton`` metaclass uses: one manager per distinct configuration.
+
+        Args:
+            orm_config: The configuration passed to the constructor, or None for the default.
+
+        Returns:
+            The configuration serialised to JSON.
+        """
+        return (cls._default_config() if orm_config is None else orm_config).model_dump_json()
 
     def __init__(self, orm_config: ConfigT) -> None:
         """Initialize the base async session manager.

@@ -25,13 +25,19 @@ class PostgresSQlAlchemySessionManager(BaseSQLAlchemySessionManager[PostgresSQLA
         orm_config: PostgreSQL-specific configuration. If None, uses global config.
     """
 
+    @classmethod
+    @override
+    def _default_config(cls) -> PostgresSQLAlchemyConfig:
+        """Return the global config's POSTGRES_SQLALCHEMY section."""
+        return BaseConfig.global_config().POSTGRES_SQLALCHEMY
+
     def __init__(self, orm_config: PostgresSQLAlchemyConfig | None = None) -> None:
         """Initialize the PostgreSQL session manager.
 
         Args:
             orm_config: PostgreSQL-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().POSTGRES_SQLALCHEMY if orm_config is None else orm_config
+        configs = self._default_config() if orm_config is None else orm_config
         super().__init__(configs)
 
     @override
@@ -93,13 +99,19 @@ class AsyncPostgresSQlAlchemySessionManager(
         orm_config: PostgreSQL-specific configuration. If None, uses global config.
     """
 
+    @classmethod
+    @override
+    def _default_config(cls) -> PostgresSQLAlchemyConfig:
+        """Return the global config's POSTGRES_SQLALCHEMY section."""
+        return BaseConfig.global_config().POSTGRES_SQLALCHEMY
+
     def __init__(self, orm_config: PostgresSQLAlchemyConfig | None = None) -> None:
         """Initialize the async PostgreSQL session manager.
 
         Args:
             orm_config: PostgreSQL-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().POSTGRES_SQLALCHEMY if orm_config is None else orm_config
+        configs = self._default_config() if orm_config is None else orm_config
         super().__init__(configs)
 
     @override

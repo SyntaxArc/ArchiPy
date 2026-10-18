@@ -291,6 +291,42 @@ async def update_user_email(user_id: UUID, new_email: str) -> "User | None":  # 
     return user
 ```
 
+### Several databases
+
+Databases of different types (for example PostgreSQL and MySQL) work out of the box: each type has its own registry,
+config section and decorator. An atomic block on one never joins a transaction on the other, and ArchiPy does not
+provide a distributed transaction, so a failure after the first commit does not undo it.
+
+For a second database of the **same** type, give it its own config and its own registry, and pass the registry to the
+decorator:
+
+```python
+from archipy.adapters.base.sqlalchemy.atomic import postgres_sqlalchemy_atomic
+from archipy.adapters.postgres.sqlalchemy.adapters import PostgresSQLAlchemyAdapter
+from archipy.adapters.postgres.sqlalchemy.session_manager_registry import PostgresSessionManagerRegistry
+from archipy.adapters.postgres.sqlalchemy.session_managers import PostgresSQlAlchemySessionManager
+from archipy.configs.config_template import PostgresSQLAlchemyConfig
+
+analytics_config = PostgresSQLAlchemyConfig(HOST="analytics.internal", DATABASE="analytics", USERNAME="app", PASSWORD="...")
+
+
+class AnalyticsRegistry(PostgresSessionManagerRegistry):
+    """Session manager registry of the analytics database."""
+
+
+AnalyticsRegistry.set_sync_manager(PostgresSQlAlchemySessionManager(analytics_config))
+analytics = PostgresSQLAlchemyAdapter(analytics_config)  # shares the registry's session manager
+
+
+@postgres_sqlalchemy_atomic(registry=AnalyticsRegistry)
+def save_event(event: EventEntity) -> None:
+    analytics.create(event)
+```
+
+A session manager is created once per distinct config, so the adapter and the registry that were built from the same
+config use the same engine and session. The default registry keeps reading the global config, so code that passes no
+`registry` is unchanged. `sqlalchemy_atomic(db_type, registry=...)` takes the same argument.
+
 ## gRPC Rate Limit Decorator
 
 `grpc_rate_limit` declares per-RPC rate limits on gRPC servicer methods. It does **not** enforce limits by

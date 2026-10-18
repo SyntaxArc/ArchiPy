@@ -29,6 +29,16 @@ class SessionManagerRegistry:
     _sync_instance: ClassVar[SessionManagerPort | None] = None
     _async_instance: ClassVar[AsyncSessionManagerPort | None] = None
 
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        """Give every subclass its own manager slots instead of reading the parent's.
+
+        A subclass of a concrete registry, such as ``class Analytics(PostgresSessionManagerRegistry)``, can then hold
+        the session manager of another database of the same type.
+        """
+        super().__init_subclass__(**kwargs)
+        cls._sync_instance = None
+        cls._async_instance = None
+
     @classmethod
     def get_sync_manager(cls) -> SessionManagerPort:
         """Get the synchronous session manager instance.

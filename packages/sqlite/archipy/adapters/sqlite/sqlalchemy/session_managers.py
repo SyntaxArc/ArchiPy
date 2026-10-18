@@ -58,13 +58,19 @@ class SQLiteSQLAlchemySessionManager(BaseSQLAlchemySessionManager[SQLiteSQLAlche
         orm_config: SQLite-specific configuration. If None, uses global config.
     """
 
+    @classmethod
+    @override
+    def _default_config(cls) -> SQLiteSQLAlchemyConfig:
+        """Return the global config's SQLITE_SQLALCHEMY section."""
+        return BaseConfig.global_config().SQLITE_SQLALCHEMY
+
     def __init__(self, orm_config: SQLiteSQLAlchemyConfig | None = None) -> None:
         """Initialize the SQLite session manager.
 
         Args:
             orm_config: SQLite-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().SQLITE_SQLALCHEMY if orm_config is None else orm_config
+        configs = self._default_config() if orm_config is None else orm_config
         super().__init__(configs)
 
     @override
@@ -135,13 +141,19 @@ class AsyncSQLiteSQLAlchemySessionManager(
         orm_config: SQLite-specific configuration. If None, uses global config.
     """
 
+    @classmethod
+    @override
+    def _default_config(cls) -> SQLiteSQLAlchemyConfig:
+        """Return the global config's SQLITE_SQLALCHEMY section."""
+        return BaseConfig.global_config().SQLITE_SQLALCHEMY
+
     def __init__(self, orm_config: SQLiteSQLAlchemyConfig | None = None) -> None:
         """Initialize the async SQLite session manager.
 
         Args:
             orm_config: SQLite-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().SQLITE_SQLALCHEMY if orm_config is None else orm_config
+        configs = self._default_config() if orm_config is None else orm_config
         super().__init__(configs)
 
     @override

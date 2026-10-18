@@ -119,13 +119,19 @@ class StarRocksSQlAlchemySessionManager(BaseSQLAlchemySessionManager[StarRocksSQ
         orm_config: StarRocks-specific configuration. If None, uses global config.
     """
 
+    @classmethod
+    @override
+    def _default_config(cls) -> StarRocksSQLAlchemyConfig:
+        """Return the global config's STARROCKS_SQLALCHEMY section."""
+        return BaseConfig.global_config().STARROCKS_SQLALCHEMY
+
     def __init__(self, orm_config: StarRocksSQLAlchemyConfig | None = None) -> None:
         """Initialize the StarRocks session manager.
 
         Args:
             orm_config: StarRocks-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().STARROCKS_SQLALCHEMY if orm_config is None else orm_config
+        configs = self._default_config() if orm_config is None else orm_config
         super().__init__(configs)
 
     @override
@@ -212,13 +218,19 @@ class AsyncStarRocksSQlAlchemySessionManager(
         orm_config: StarRocks-specific configuration. If None, uses global config.
     """
 
+    @classmethod
+    @override
+    def _default_config(cls) -> StarRocksSQLAlchemyConfig:
+        """Return the global config's STARROCKS_SQLALCHEMY section."""
+        return BaseConfig.global_config().STARROCKS_SQLALCHEMY
+
     def __init__(self, orm_config: StarRocksSQLAlchemyConfig | None = None) -> None:
         """Initialize the async StarRocks session manager.
 
         Args:
             orm_config: StarRocks-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().STARROCKS_SQLALCHEMY if orm_config is None else orm_config
+        configs = self._default_config() if orm_config is None else orm_config
         super().__init__(configs)
 
     @override

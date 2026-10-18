@@ -208,13 +208,14 @@ def _create_async_atomic_wrapper[R](
     *,
     db_type: str,
     atomic_flag: str,
+    registry_override: type[SessionManagerRegistry] | None = None,
 ) -> Callable[..., Awaitable[R]]:
     """Wrap an async function with atomic transaction management."""
 
     @wraps(func)
     async def async_wrapper(*args: Any, **kwargs: Any) -> R:
         """Async wrapper for managing database transactions."""
-        registry = _load_session_manager_registry(db_type)
+        registry = registry_override or _load_session_manager_registry(db_type)
         session_manager: AsyncSessionManagerPort = registry.get_async_manager()
         session = session_manager.get_session()
         is_nested = session.info.get(atomic_flag, False)
@@ -254,13 +255,14 @@ def _create_sync_atomic_wrapper[R](
     *,
     db_type: str,
     atomic_flag: str,
+    registry_override: type[SessionManagerRegistry] | None = None,
 ) -> Callable[..., R]:
     """Wrap a sync function with atomic transaction management."""
 
     @wraps(func)
     def sync_wrapper(*args: Any, **kwargs: Any) -> R:
         """Synchronous wrapper for managing database transactions."""
-        registry = _load_session_manager_registry(db_type)
+        registry = registry_override or _load_session_manager_registry(db_type)
         session_manager: SessionManagerPort = registry.get_sync_manager()
         session = session_manager.get_session()
         is_nested = session.info.get(atomic_flag, False)
@@ -295,7 +297,10 @@ def _create_sync_atomic_wrapper[R](
     return sync_wrapper
 
 
-def _bind_db_type[**P, R](db_type: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
+def _bind_db_type[**P, R](
+    db_type: str,
+    registry: type[SessionManagerRegistry] | None,
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Return a decorator that applies the atomic wrapper for ``db_type`` to the function it receives.
 
     ``functools.partial`` cannot be used here: the decorated function would be passed
@@ -303,27 +308,43 @@ def _bind_db_type[**P, R](db_type: str) -> Callable[[Callable[P, R]], Callable[P
     """
 
     def apply(function: Callable[P, R]) -> Callable[P, R]:
-        return sqlalchemy_atomic(db_type, function)
+        return sqlalchemy_atomic(db_type, function, registry=registry)
 
     return apply
 
 
-def _atomic_for(db_type: str, function: Callable[..., Any] | None) -> Any:
+def _atomic_for(
+    db_type: str,
+    function: Callable[..., Any] | None,
+    registry: type[SessionManagerRegistry] | None,
+) -> Any:
     """Apply :func:`sqlalchemy_atomic` for a shortcut (typed by the shortcut's own overloads)."""
-    return sqlalchemy_atomic(db_type, function)
+    return sqlalchemy_atomic(db_type, function, registry=registry)
 
 
 @overload
-def sqlalchemy_atomic[**P, R](db_type: str, function: Callable[P, R]) -> Callable[P, R]: ...
+def sqlalchemy_atomic[**P, R](
+    db_type: str,
+    function: Callable[P, R],
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
+) -> Callable[P, R]: ...
 
 
 @overload
-def sqlalchemy_atomic[**P, R](db_type: str, function: None = None) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+def sqlalchemy_atomic[**P, R](
+    db_type: str,
+    function: None = None,
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
+) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
 def sqlalchemy_atomic[**P, R](
     db_type: str,
     function: Callable[P, R] | None = None,
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """Run a function inside a SQLAlchemy transaction for the given database type.
 
@@ -334,6 +355,9 @@ def sqlalchemy_atomic[**P, R](
     Args:
         db_type (str): The database type ("postgres", "sqlite", "starrocks", or "mysql").
         function (Callable | None): The function to wrap. If None, returns a decorator to apply later.
+        registry (type[SessionManagerRegistry] | None): Registry that supplies the session manager. Defaults to the
+            registry of ``db_type``, which reads the global config; pass a registry subclass to run on another
+            database of the same type (see the multiple databases section of the docs).
 
     Returns:
         Callable: The wrapped function, or a decorator to apply later when ``function`` is None.
@@ -370,103 +394,156 @@ def sqlalchemy_atomic[**P, R](
         )
 
     if function is None:
-        return cast("Callable[[Callable[P, R]], Callable[P, R]]", _bind_db_type(db_type))
+        return cast("Callable[[Callable[P, R]], Callable[P, R]]", _bind_db_type(db_type, registry))
 
     atomic_flag = ATOMIC_BLOCK_CONFIGS[db_type]["flag"]
     if inspect.iscoroutinefunction(function):
         return cast(
             "Callable[P, R]",
-            _create_async_atomic_wrapper(function, db_type=db_type, atomic_flag=atomic_flag),
+            _create_async_atomic_wrapper(
+                function,
+                db_type=db_type,
+                atomic_flag=atomic_flag,
+                registry_override=registry,
+            ),
         )
-    return _create_sync_atomic_wrapper(function, db_type=db_type, atomic_flag=atomic_flag)
+    return _create_sync_atomic_wrapper(function, db_type=db_type, atomic_flag=atomic_flag, registry_override=registry)
 
 
 @overload
-def postgres_sqlalchemy_atomic[**P, R](function: Callable[P, R]) -> Callable[P, R]: ...
+def postgres_sqlalchemy_atomic[**P, R](
+    function: Callable[P, R],
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
+) -> Callable[P, R]: ...
 
 
 @overload
-def postgres_sqlalchemy_atomic[**P, R](function: None = None) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+def postgres_sqlalchemy_atomic[**P, R](
+    function: None = None,
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
+) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
 def postgres_sqlalchemy_atomic[**P, R](
     function: Callable[P, R] | None = None,
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator for PostgreSQL atomic transactions; works for sync and ``async def`` functions.
 
     Args:
         function (Callable | None): The function to wrap. If None, returns a decorator to apply later.
+        registry (type[SessionManagerRegistry] | None): Registry for another database of the same type; defaults to
+            the registry that reads the global config.
 
     Returns:
         Callable: The wrapped function, or a decorator to apply later when ``function`` is None.
     """
-    return _atomic_for("postgres", function)
+    return _atomic_for("postgres", function, registry)
 
 
 @overload
-def sqlite_sqlalchemy_atomic[**P, R](function: Callable[P, R]) -> Callable[P, R]: ...
+def sqlite_sqlalchemy_atomic[**P, R](
+    function: Callable[P, R],
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
+) -> Callable[P, R]: ...
 
 
 @overload
-def sqlite_sqlalchemy_atomic[**P, R](function: None = None) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+def sqlite_sqlalchemy_atomic[**P, R](
+    function: None = None,
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
+) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
 def sqlite_sqlalchemy_atomic[**P, R](
     function: Callable[P, R] | None = None,
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator for SQLite atomic transactions; works for sync and ``async def`` functions.
 
     Args:
         function (Callable | None): The function to wrap. If None, returns a decorator to apply later.
+        registry (type[SessionManagerRegistry] | None): Registry for another database of the same type; defaults to
+            the registry that reads the global config.
 
     Returns:
         Callable: The wrapped function, or a decorator to apply later when ``function`` is None.
     """
-    return _atomic_for("sqlite", function)
+    return _atomic_for("sqlite", function, registry)
 
 
 @overload
-def starrocks_sqlalchemy_atomic[**P, R](function: Callable[P, R]) -> Callable[P, R]: ...
+def starrocks_sqlalchemy_atomic[**P, R](
+    function: Callable[P, R],
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
+) -> Callable[P, R]: ...
 
 
 @overload
-def starrocks_sqlalchemy_atomic[**P, R](function: None = None) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+def starrocks_sqlalchemy_atomic[**P, R](
+    function: None = None,
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
+) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
 def starrocks_sqlalchemy_atomic[**P, R](
     function: Callable[P, R] | None = None,
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator for StarRocks atomic transactions; works for sync and ``async def`` functions.
 
     Args:
         function (Callable | None): The function to wrap. If None, returns a decorator to apply later.
+        registry (type[SessionManagerRegistry] | None): Registry for another database of the same type; defaults to
+            the registry that reads the global config.
 
     Returns:
         Callable: The wrapped function, or a decorator to apply later when ``function`` is None.
     """
-    return _atomic_for("starrocks", function)
+    return _atomic_for("starrocks", function, registry)
 
 
 @overload
-def mysql_sqlalchemy_atomic[**P, R](function: Callable[P, R]) -> Callable[P, R]: ...
+def mysql_sqlalchemy_atomic[**P, R](
+    function: Callable[P, R],
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
+) -> Callable[P, R]: ...
 
 
 @overload
-def mysql_sqlalchemy_atomic[**P, R](function: None = None) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+def mysql_sqlalchemy_atomic[**P, R](
+    function: None = None,
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
+) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
 def mysql_sqlalchemy_atomic[**P, R](
     function: Callable[P, R] | None = None,
+    *,
+    registry: type[SessionManagerRegistry] | None = None,
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator for MySQL atomic transactions; works for sync and ``async def`` functions.
 
     Args:
         function (Callable | None): The function to wrap. If None, returns a decorator to apply later.
+        registry (type[SessionManagerRegistry] | None): Registry for another database of the same type; defaults to
+            the registry that reads the global config.
 
     Returns:
         Callable: The wrapped function, or a decorator to apply later when ``function`` is None.
     """
-    return _atomic_for("mysql", function)
+    return _atomic_for("mysql", function, registry)
 
 
 def sqlalchemy_atomic_decorator(

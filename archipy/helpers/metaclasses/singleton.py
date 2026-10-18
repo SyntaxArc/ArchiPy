@@ -1,7 +1,11 @@
 """Singleton metaclass helpers."""
 
 import threading
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
+
+if TYPE_CHECKING:
+    from collections.abc import Hashable
+
 
 # Define type constants for explicit typing
 SingletonInstance = Any
@@ -43,6 +47,7 @@ class Singleton(type):
 
     _instances: ClassVar[dict[type, SingletonInstance]] = {}  # Stores instances of Singleton classes
     _lock: ClassVar[threading.RLock] = threading.RLock()  # Lock for thread-safe instance creation
+    _keyed_instances: ClassVar[dict[tuple[type, Hashable], SingletonInstance]] = {}  # Instances of keyed singletons
 
     def __new__(
         cls,
@@ -77,6 +82,10 @@ class Singleton(type):
         even in a multi-threaded environment. If `thread_safe` is False, no locking mechanism
         is used, which may result in multiple instances being created in a multi-threaded context.
 
+        A class that defines a ``_singleton_key`` classmethod gets one instance per key instead of one per class.
+        The method receives the constructor arguments and returns a hashable key, so ``Manager(config_a)`` and
+        ``Manager(config_b)`` are two instances while repeated ``Manager(config_a)`` calls return the same one.
+
         Args:
             *args: Positional arguments to pass to the class constructor.
             **kwargs: Keyword arguments to pass to the class constructor.
@@ -84,6 +93,14 @@ class Singleton(type):
         Returns:
             object: The Singleton instance of the class.
         """
+        key_function = getattr(cls, "_singleton_key", None)
+        if key_function is not None:
+            instance_key = (cls, key_function(*args, **kwargs))
+            if instance_key not in cls._keyed_instances:
+                with cls._lock:
+                    if instance_key not in cls._keyed_instances:
+                        cls._keyed_instances[instance_key] = super().__call__(*args, **kwargs)
+            return cls._keyed_instances[instance_key]
         if cls not in cls._instances:
             if getattr(cls, "__thread_safe", True):
                 with cls._lock:

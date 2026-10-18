@@ -295,6 +295,9 @@ def _forget_session_managers(*names: str) -> None:
     for cls in list(Singleton._instances):
         if cls.__name__ in names:
             Singleton._instances.pop(cls, None)
+    for key in list(Singleton._keyed_instances):
+        if key[0].__name__ in names:
+            Singleton._keyed_instances.pop(key, None)
 
 
 def _sqlalchemy_adapter(db_type: str, *, is_async: bool):

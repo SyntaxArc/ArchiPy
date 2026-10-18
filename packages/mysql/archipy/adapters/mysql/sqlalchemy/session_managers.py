@@ -50,13 +50,19 @@ class MySQLSQlAlchemySessionManager(BaseSQLAlchemySessionManager[MySQLSQLAlchemy
         orm_config: MySQL-specific configuration. If None, uses global config.
     """
 
+    @classmethod
+    @override
+    def _default_config(cls) -> MySQLSQLAlchemyConfig:
+        """Return the global config's MYSQL_SQLALCHEMY section."""
+        return BaseConfig.global_config().MYSQL_SQLALCHEMY
+
     def __init__(self, orm_config: MySQLSQLAlchemyConfig | None = None) -> None:
         """Initialize the MySQL session manager.
 
         Args:
             orm_config: MySQL-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().MYSQL_SQLALCHEMY if orm_config is None else orm_config
+        configs = self._default_config() if orm_config is None else orm_config
         super().__init__(configs)
 
     @override
@@ -118,13 +124,19 @@ class AsyncMySQLSQlAlchemySessionManager(
         orm_config: MySQL-specific configuration. If None, uses global config.
     """
 
+    @classmethod
+    @override
+    def _default_config(cls) -> MySQLSQLAlchemyConfig:
+        """Return the global config's MYSQL_SQLALCHEMY section."""
+        return BaseConfig.global_config().MYSQL_SQLALCHEMY
+
     def __init__(self, orm_config: MySQLSQLAlchemyConfig | None = None) -> None:
         """Initialize the async MySQL session manager.
 
         Args:
             orm_config: MySQL-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().MYSQL_SQLALCHEMY if orm_config is None else orm_config
+        configs = self._default_config() if orm_config is None else orm_config
         super().__init__(configs)
 
     @override
