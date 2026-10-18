@@ -16,7 +16,7 @@ Enable the relevant extras, set `OTEL__IS_ENABLED=true`, and call `AppUtils.crea
 | Extra                      | Purpose                                                           |
 |----------------------------|-------------------------------------------------------------------|
 | `archipy[otel]`            | SDK, OTLP exporters, httpx/requests, threading, system metrics    |
-| `archipy[otel-fastapi]`    | FastAPI native telemetry (FastAPI 0.142.2+)                       |
+| `archipy[otel,fastapi]`    | FastAPI native telemetry (FastAPI 0.142.2+)                       |
 | `archipy[otel-grpc]`       | gRPC server/client contrib interceptors                           |
 | `archipy[otel-sqlalchemy]` | SQLAlchemy instrumentation (covers Postgres/MySQL/SQLite via ORM) |
 | `archipy[otel-redis]`      | Redis instrumentation                                             |
@@ -33,7 +33,7 @@ Enable the relevant extras, set `OTEL__IS_ENABLED=true`, and call `AppUtils.crea
 === "FastAPI + gRPC"
 
     ```bash
-    uv add "archipy[otel-fastapi,otel-grpc]"
+    uv add "archipy[otel,fastapi,otel-grpc]"
     ```
 
 === "Adapters"
@@ -258,7 +258,7 @@ invoke it again safely.
 
 `AppUtils.create_fastapi_app` passes `FastAPIUtils.build_otel_telemetry_config(config)` to
 `FastAPI(telemetry=...)`. That initializes providers (idempotent) and enables FastAPI's built-in
-OpenTelemetry support (requires `archipy[otel-fastapi]`, FastAPI 0.142.2+). Traces and metrics use
+OpenTelemetry support (requires `archipy[otel,fastapi]`, FastAPI 0.142.2+). Traces and metrics use
 ArchiPy's providers; OTLP auto-configuration is always off. FastAPI log records (validation failures and
 unhandled exceptions, with stack traces) are opt-in via `OTEL__FASTAPI_LOGS_ENABLED=true` and use ArchiPy's
 logger provider. The HTTP duration

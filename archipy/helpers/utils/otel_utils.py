@@ -41,7 +41,7 @@ DURATION_HISTOGRAM_BUCKETS_S: tuple[float, ...] = (
 _REDIS_SEARCH_GUARD_MARKER = "_archipy_original"
 _REDIS_SEARCH_ATTRIBUTES_NAME = "_add_search_attributes"
 _OTEL_INSTALL_HINT = 'OpenTelemetry requires the optional dependency. Install with: uv add "archipy[otel]"'
-_OTEL_FASTAPI_HINT = 'FastAPI OTel instrumentation requires: uv add "archipy[otel-fastapi]"'
+_OTEL_FASTAPI_HINT = 'FastAPI OTel instrumentation requires: uv add "archipy[otel,fastapi]"'
 _OTEL_GRPC_HINT = 'gRPC OTel instrumentation requires: uv add "archipy[otel-grpc]"'
 
 

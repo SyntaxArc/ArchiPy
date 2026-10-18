@@ -57,7 +57,6 @@ otel = [
     "opentelemetry-instrumentation-system-metrics>=0.66b1",
     "opentelemetry-exporter-prometheus>=0.66b1",
 ]
-otel-fastapi = ["archipy[otel]", "fastapi>=0.143.3"]
 otel-grpc = ["archipy[otel]", "opentelemetry-instrumentation-grpc>=0.66b1"]
 otel-sqlalchemy = ["archipy[otel]", "opentelemetry-instrumentation-sqlalchemy>=0.66b1"]
 otel-redis = ["archipy[otel]", "opentelemetry-instrumentation-redis>=0.66b1"]

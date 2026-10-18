@@ -309,16 +309,6 @@ otel = [
     { name = "opentelemetry-instrumentation-threading" },
     { name = "opentelemetry-sdk" },
 ]
-otel-fastapi = [
-    { name = "fastapi" },
-    { name = "opentelemetry-exporter-otlp" },
-    { name = "opentelemetry-exporter-prometheus" },
-    { name = "opentelemetry-instrumentation-httpx" },
-    { name = "opentelemetry-instrumentation-requests" },
-    { name = "opentelemetry-instrumentation-system-metrics" },
-    { name = "opentelemetry-instrumentation-threading" },
-    { name = "opentelemetry-sdk" },
-]
 otel-grpc = [
     { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-exporter-prometheus" },
@@ -453,7 +443,6 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "apscheduler", marker = "extra == 'scheduler'", specifier = ">=3.11.3" },
-    { name = "archipy", extras = ["otel"], marker = "extra == 'otel-fastapi'" },
     { name = "archipy", extras = ["otel"], marker = "extra == 'otel-grpc'" },
     { name = "archipy", extras = ["otel"], marker = "extra == 'otel-kafka'" },
     { name = "archipy", extras = ["otel"], marker = "extra == 'otel-minio'" },
@@ -484,7 +473,6 @@ requires-dist = [
     { name = "dependency-injector", marker = "extra == 'dependency-injection'", specifier = ">=4.49.1" },
     { name = "elasticsearch", extras = ["async"], marker = "extra == 'elasticsearch-async'", specifier = ">=9.5.1" },
     { name = "fakeredis", marker = "extra == 'fakeredis'", specifier = ">=2.40.0" },
-    { name = "fastapi", marker = "extra == 'otel-fastapi'", specifier = ">=0.143.3" },
     { name = "fastapi", extras = ["all"], marker = "extra == 'fastapi'", specifier = ">=0.143.3" },
     { name = "grpcio", marker = "extra == 'grpc'", specifier = ">=1.84.0" },
     { name = "grpcio-health-checking", marker = "extra == 'grpc'", specifier = ">=1.84.0" },
@@ -512,7 +500,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlalchemy-async'", specifier = ">=2.1.5" },
     { name = "testcontainers", extras = ["elasticsearch", "minio", "mysql", "vault"], marker = "extra == 'testcontainers'", specifier = ">=4.15.0" },
 ]
-provides-extras = ["aiosqlite", "behave", "cache", "dependency-injection", "elasticsearch", "elasticsearch-async", "fakeredis", "fastapi", "grpc", "jwt", "kafka", "keycloak", "minio", "parsian-ipg", "parsian-ipg-async", "mysql", "mysql-async", "postgres", "redis", "saman-ipg", "scheduler", "scylladb", "sqlalchemy", "sqlalchemy-async", "starrocks", "starrocks-async", "temporalio", "testcontainers", "vault", "otel", "otel-fastapi", "otel-grpc", "otel-sqlalchemy", "otel-redis", "otel-kafka", "otel-scylladb", "otel-minio"]
+provides-extras = ["aiosqlite", "behave", "cache", "dependency-injection", "elasticsearch", "elasticsearch-async", "fakeredis", "fastapi", "grpc", "jwt", "kafka", "keycloak", "minio", "parsian-ipg", "parsian-ipg-async", "mysql", "mysql-async", "postgres", "redis", "saman-ipg", "scheduler", "scylladb", "sqlalchemy", "sqlalchemy-async", "starrocks", "starrocks-async", "temporalio", "testcontainers", "vault", "otel", "otel-grpc", "otel-sqlalchemy", "otel-redis", "otel-kafka", "otel-scylladb", "otel-minio"]
 
 [package.metadata.requires-dev]
 dev = [

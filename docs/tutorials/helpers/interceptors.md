@@ -33,7 +33,7 @@ grpc_server = AppUtils.create_grpc_app(config)
 logger.info("Apps created with OTel auto-instrumentation")
 ```
 
-Install `archipy[otel-fastapi]` and/or `archipy[otel-grpc]` as needed. Full config and decorator
+Install `archipy[otel,fastapi]` and/or `archipy[otel-grpc]` as needed. Full config and decorator
 reference: [Observability](../observability.md).
 
 ## gRPC Interceptors
