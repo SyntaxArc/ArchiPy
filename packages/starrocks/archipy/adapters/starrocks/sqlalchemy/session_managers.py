@@ -131,7 +131,7 @@ class StarRocksSQlAlchemySessionManager(BaseSQLAlchemySessionManager[StarRocksSQ
         Args:
             orm_config: StarRocks-specific configuration. If None, uses global config.
         """
-        configs = self._default_config() if orm_config is None else orm_config
+        configs = orm_config or self._default_config()
         super().__init__(configs)
 
     @override
@@ -230,7 +230,7 @@ class AsyncStarRocksSQlAlchemySessionManager(
         Args:
             orm_config: StarRocks-specific configuration. If None, uses global config.
         """
-        configs = self._default_config() if orm_config is None else orm_config
+        configs = orm_config or self._default_config()
         super().__init__(configs)
 
     @override

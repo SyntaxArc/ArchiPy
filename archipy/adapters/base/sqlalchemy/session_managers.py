@@ -61,7 +61,7 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
         Returns:
             The configuration serialised to JSON.
         """
-        return (cls._default_config() if orm_config is None else orm_config).model_dump_json()
+        return (orm_config or cls._default_config()).model_dump_json()
 
     def __init__(self, orm_config: ConfigT) -> None:
         """Initialize the base session manager.
@@ -289,7 +289,7 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
         Returns:
             The configuration serialised to JSON.
         """
-        return (cls._default_config() if orm_config is None else orm_config).model_dump_json()
+        return (orm_config or cls._default_config()).model_dump_json()
 
     def __init__(self, orm_config: ConfigT) -> None:
         """Initialize the base async session manager.

@@ -37,7 +37,7 @@ class PostgresSQlAlchemySessionManager(BaseSQLAlchemySessionManager[PostgresSQLA
         Args:
             orm_config: PostgreSQL-specific configuration. If None, uses global config.
         """
-        configs = self._default_config() if orm_config is None else orm_config
+        configs = orm_config or self._default_config()
         super().__init__(configs)
 
     @override
@@ -111,7 +111,7 @@ class AsyncPostgresSQlAlchemySessionManager(
         Args:
             orm_config: PostgreSQL-specific configuration. If None, uses global config.
         """
-        configs = self._default_config() if orm_config is None else orm_config
+        configs = orm_config or self._default_config()
         super().__init__(configs)
 
     @override

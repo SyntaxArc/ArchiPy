@@ -62,7 +62,7 @@ class MySQLSQlAlchemySessionManager(BaseSQLAlchemySessionManager[MySQLSQLAlchemy
         Args:
             orm_config: MySQL-specific configuration. If None, uses global config.
         """
-        configs = self._default_config() if orm_config is None else orm_config
+        configs = orm_config or self._default_config()
         super().__init__(configs)
 
     @override
@@ -136,7 +136,7 @@ class AsyncMySQLSQlAlchemySessionManager(
         Args:
             orm_config: MySQL-specific configuration. If None, uses global config.
         """
-        configs = self._default_config() if orm_config is None else orm_config
+        configs = orm_config or self._default_config()
         super().__init__(configs)
 
     @override
