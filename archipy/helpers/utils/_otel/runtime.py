@@ -5,11 +5,10 @@ from __future__ import annotations
 import atexit
 import logging
 import os
-import threading
 import time
-import weakref
-from typing import TYPE_CHECKING, ClassVar, TypeIs
+from typing import TYPE_CHECKING, TypeIs
 
+from archipy.helpers.utils._otel import provider_lifecycle, providers
 from archipy.helpers.utils._otel.env import apply_standard_env, sdk_disabled
 from archipy.helpers.utils._otel.exporters import (
     create_console_log_exporter,
@@ -20,11 +19,12 @@ from archipy.helpers.utils._otel.exporters import (
     resolve_otlp_endpoint,
 )
 from archipy.helpers.utils._otel.instrumentation import Instrumentation
+from archipy.helpers.utils._otel.logging_handler import attach_logging_handler, detach_logging_handler
 from archipy.helpers.utils._otel.metrics_export import MetricsExport
 from archipy.helpers.utils._otel.noop import _NoOpMeter, _NoOpTracer
+from archipy.helpers.utils._otel.process_state import _ProcessState
 from archipy.helpers.utils._otel.propagation import create_propagator
 from archipy.helpers.utils._otel.resource import create_resource
-from archipy.helpers.utils._otel.sampling import create_sampler
 from archipy.helpers.utils._otel.status import (
     error_type_for_exception,
     metric_status_for_exception,
@@ -34,6 +34,8 @@ from archipy.helpers.utils._otel.status import (
 )
 
 if TYPE_CHECKING:
+    import threading
+    import weakref
     from collections.abc import Callable, Sequence
 
     import grpc.aio
@@ -63,19 +65,7 @@ from archipy.helpers.utils._otel.constants import (
 
 logger = logging.getLogger("archipy.helpers.utils.otel_utils")
 
-
-class _ProcessState:
-    """What is true for the whole process, whichever runtime asks.
-
-    OpenTelemetry's own globals (the tracer, meter and logger providers, the textmap propagator) and the
-    monkey-patching of instrumented libraries are process-wide and first-call-wins, so a second runtime has to see
-    what the first one published.
-    """
-
-    lock: ClassVar[threading.Lock] = threading.Lock()
-    globals_set: ClassVar[bool] = False
-    propagator_installed: ClassVar[bool] = False
-    shutdown_providers: ClassVar[weakref.WeakSet[TracerProvider | MeterProvider | LoggerProvider]] = weakref.WeakSet()
+__all__ = ["OtelRuntime", "_ProcessState"]
 
 
 class OtelRuntime:
@@ -377,21 +367,10 @@ class OtelRuntime:
         Returns:
             True when every provider flushed successfully (or none exist).
         """
-        ok = True
         # Flush outside the lock: a slow exporter must not block initialization or shutdown on other threads.
         with _ProcessState.lock:
-            providers = (self._tracer_provider, self._meter_provider, self._logger_provider)
-        for provider in providers:
-            if provider is None or not hasattr(provider, "force_flush"):
-                continue
-            try:
-                result = provider.force_flush(timeout_millis)
-                if result is False:
-                    ok = False
-            except Exception:
-                logger.debug("Error during OTel force_flush", exc_info=True)
-                ok = False
-        return ok
+            known = (self._tracer_provider, self._meter_provider, self._logger_provider)
+        return provider_lifecycle.flush_providers(known, timeout_millis)
 
     def shutdown(self) -> None:
         """Flush and shut down ArchiPy-owned providers; detach logging handler.
@@ -583,33 +562,19 @@ class OtelRuntime:
         _RpcInstruments.clear()
 
     def _force_flush_unlocked(self, timeout_millis: int) -> bool:
-        ok = True
-        for provider in (self._tracer_provider, self._meter_provider, self._logger_provider):
-            if provider is None or not hasattr(provider, "force_flush"):
-                continue
-            try:
-                result = provider.force_flush(timeout_millis)
-                if result is False:
-                    ok = False
-            except Exception:
-                logger.debug("Error during OTel force_flush", exc_info=True)
-                ok = False
-        return ok
+        return provider_lifecycle.flush_providers(
+            (self._tracer_provider, self._meter_provider, self._logger_provider),
+            timeout_millis,
+        )
 
     def _shutdown_owned_providers_unlocked(self) -> None:
-        owned: list[tuple[TracerProvider | MeterProvider | LoggerProvider | None, bool]] = [
-            (self._tracer_provider, self._owns_tracer),
-            (self._meter_provider, self._owns_meter),
-            (self._logger_provider, self._owns_logger),
-        ]
-        for provider, owns in owned:
-            if not owns or provider is None:
-                continue
-            try:
-                provider.shutdown()
-            except Exception:
-                logger.debug("Error shutting down OTel provider", exc_info=True)
-            self._mark_provider_shutdown(provider)
+        provider_lifecycle.shutdown_owned(
+            (
+                (self._tracer_provider, self._owns_tracer),
+                (self._meter_provider, self._owns_meter),
+                (self._logger_provider, self._owns_logger),
+            ),
+        )
 
     def _shutdown_partial(
         self,
@@ -621,60 +586,30 @@ class OtelRuntime:
         owns_logger: bool,
     ) -> None:
         """Shut down providers built during a failed initialization attempt."""
-        for provider, owns in (
-            (tracer, owns_tracer),
-            (meter, owns_meter),
-            (log_provider, owns_logger),
-        ):
-            if not owns or provider is None:
-                continue
-            try:
-                provider.shutdown()
-            except Exception:
-                logger.debug("Error shutting down partial OTel provider", exc_info=True)
-            self._mark_provider_shutdown(provider)
+        provider_lifecycle.shutdown_owned(
+            ((tracer, owns_tracer), (meter, owns_meter), (log_provider, owns_logger)),
+            "Error shutting down partial OTel provider",
+        )
 
     @staticmethod
     def _is_concrete_provider[T](provider: object, sdk_type: type[T]) -> TypeIs[T]:
-        return isinstance(provider, sdk_type)
+        return provider_lifecycle.is_concrete_provider(provider, sdk_type)
 
     def _is_usable_provider(self, provider: object) -> bool:
         """Return False for providers that were shut down or are otherwise unusable."""
-        if provider is None or provider in _ProcessState.shutdown_providers:
-            return False
-        return not getattr(provider, "_shutdown", False)
+        return provider_lifecycle.is_usable_provider(provider)
 
     def _mark_provider_shutdown(self, provider: TracerProvider | MeterProvider | LoggerProvider | None) -> None:
-        if provider is not None:
-            # Hold the provider weakly: ``id()`` values are reused after garbage collection.
-            _ProcessState.shutdown_providers.add(provider)
+        provider_lifecycle.mark_provider_shutdown(provider)
 
     def _existing_concrete_tracer_provider(self) -> TracerProvider | None:
-        from opentelemetry import trace
-        from opentelemetry.sdk.trace import TracerProvider
-
-        current = trace.get_tracer_provider()
-        if self._is_concrete_provider(current, TracerProvider) and self._is_usable_provider(current):
-            return current
-        return None
+        return provider_lifecycle.existing_concrete_tracer_provider()
 
     def _existing_concrete_meter_provider(self) -> MeterProvider | None:
-        from opentelemetry import metrics
-        from opentelemetry.sdk.metrics import MeterProvider
-
-        current = metrics.get_meter_provider()
-        if self._is_concrete_provider(current, MeterProvider) and self._is_usable_provider(current):
-            return current
-        return None
+        return provider_lifecycle.existing_concrete_meter_provider()
 
     def _existing_concrete_logger_provider(self) -> LoggerProvider | None:
-        from opentelemetry._logs import get_logger_provider
-        from opentelemetry.sdk._logs import LoggerProvider
-
-        current = get_logger_provider()
-        if self._is_concrete_provider(current, LoggerProvider) and self._is_usable_provider(current):
-            return current
-        return None
+        return provider_lifecycle.existing_concrete_logger_provider()
 
     def _create_resource(self, otel: OpentelemetryConfig) -> Resource:
         return create_resource(otel)
@@ -686,58 +621,22 @@ class OtelRuntime:
         existing: P | None,
         builder: Callable[[], P],
     ) -> tuple[P, bool]:
-        """Adopt an existing provider or build a new owned one.
-
-        Args:
-            signal_name: Signal label for warning messages (e.g. ``"trace"``).
-            existing: Concrete global provider to adopt, or None.
-            builder: Zero-arg callable that builds a new provider.
-
-        Returns:
-            Tuple of ``(provider, owns_provider)``.
-        """
-        if existing is not None:
-            logger.warning(
-                "Adopting existing %s provider; ArchiPy OTEL %s exporter configuration is ignored for this process",
-                signal_name,
-                signal_name,
-            )
-            return existing, False
-        return builder(), True
+        """Adopt an existing provider or build a new owned one (see ``provider_lifecycle.acquire_provider``)."""
+        return provider_lifecycle.acquire_provider(signal_name=signal_name, existing=existing, builder=builder)
 
     def _publish_trace_global(
         self,
         provider: TracerProvider | None,
         owns: bool,
     ) -> tuple[TracerProvider | None, bool]:
-        from opentelemetry import trace
-
-        if not owns or provider is None or _ProcessState.globals_set:
-            return provider, owns
-        trace.set_tracer_provider(provider)
-        after = self._existing_concrete_tracer_provider()
-        if after is not None and after is not provider:
-            self._shutdown_partial(provider, True, None, False, None, False)
-            logger.warning("Global TracerProvider was set by another library; adopting it")
-            return after, False
-        return provider, True
+        return provider_lifecycle.publish_trace_global(provider, owns)
 
     def _publish_metric_global(
         self,
         provider: MeterProvider | None,
         owns: bool,
     ) -> tuple[MeterProvider | None, bool]:
-        from opentelemetry import metrics
-
-        if not owns or provider is None or _ProcessState.globals_set:
-            return provider, owns
-        metrics.set_meter_provider(provider)
-        after = self._existing_concrete_meter_provider()
-        if after is not None and after is not provider:
-            self._shutdown_partial(None, False, provider, True, None, False)
-            logger.warning("Global MeterProvider was set by another library; adopting it")
-            return after, False
-        return provider, True
+        return provider_lifecycle.publish_metric_global(provider, owns)
 
     def _build_providers(self, config: BaseConfig) -> None:
         """Build providers transactionally and publish only on full success."""
@@ -805,69 +704,21 @@ class OtelRuntime:
             self._attach_logging_handler_unlocked(getattr(logging, otel.LOGS_LEVEL.upper(), logging.INFO))
 
     def _build_tracer_provider(self, otel: OpentelemetryConfig, resource: Resource) -> TracerProvider:
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-        provider = TracerProvider(resource=resource, sampler=create_sampler(otel))
-        exporter = self._create_span_exporter(otel)
-        provider.add_span_processor(
-            BatchSpanProcessor(
-                exporter,
-                max_queue_size=otel.SPAN_BATCH_MAX_QUEUE_SIZE,
-                schedule_delay_millis=otel.SPAN_BATCH_SCHEDULE_DELAY_MS,
-                max_export_batch_size=otel.SPAN_BATCH_MAX_EXPORT_BATCH_SIZE,
-                export_timeout_millis=otel.SPAN_BATCH_EXPORT_TIMEOUT_MS,
-            ),
-        )
-        return provider
+        return providers.build_tracer_provider(otel, resource, self._create_span_exporter)
 
     def _build_meter_provider(self, otel: OpentelemetryConfig, resource: Resource) -> MeterProvider:
-        from opentelemetry.sdk.metrics import MeterProvider
-
-        from archipy.configs.config_template import OtelMetricsExporter
-
-        readers: list[MetricReader] = []
-        if otel.METRICS_EXPORTER == OtelMetricsExporter.OTLP:
-            from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-
-            exporter = self._create_metric_exporter(otel)
-            readers.append(
-                PeriodicExportingMetricReader(
-                    exporter,
-                    export_interval_millis=otel.METRIC_EXPORT_INTERVAL_MS,
-                ),
-            )
-        elif otel.METRICS_EXPORTER in {OtelMetricsExporter.PULL, OtelMetricsExporter.PUSHGATEWAY}:
-            from opentelemetry.exporter.prometheus import PrometheusMetricReader
-            from prometheus_client import CollectorRegistry
-
-            registry = CollectorRegistry(auto_describe=True)
+        provider, registry = providers.build_meter_provider(otel, resource, self._create_metric_exporter)
+        if registry is not None:
             self._metrics.registry = registry
-            readers.append(PrometheusMetricReader(registry=registry))
-
-        return MeterProvider(resource=resource, metric_readers=readers)
+        return provider
 
     def _build_logger_provider(self, otel: OpentelemetryConfig, resource: Resource) -> LoggerProvider:
-        from opentelemetry.sdk._logs import LoggerProvider
-        from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, SimpleLogRecordProcessor
-
-        from archipy.configs.config_template import OtelLogsExporter
-
-        provider = LoggerProvider(resource=resource)
-        if otel.LOGS_EXPORTER == OtelLogsExporter.CONSOLE:
-            provider.add_log_record_processor(SimpleLogRecordProcessor(self._create_console_log_exporter()))
-        else:
-            exporter = self._create_otlp_log_exporter(otel)
-            provider.add_log_record_processor(
-                BatchLogRecordProcessor(
-                    exporter,
-                    max_queue_size=otel.LOG_BATCH_MAX_QUEUE_SIZE,
-                    schedule_delay_millis=otel.LOG_BATCH_SCHEDULE_DELAY_MS,
-                    max_export_batch_size=otel.LOG_BATCH_MAX_EXPORT_BATCH_SIZE,
-                    export_timeout_millis=otel.LOG_BATCH_EXPORT_TIMEOUT_MS,
-                ),
-            )
-        return provider
+        return providers.build_logger_provider(
+            otel,
+            resource,
+            self._create_console_log_exporter,
+            self._create_otlp_log_exporter,
+        )
 
     @staticmethod
     def _create_console_log_exporter() -> LogRecordExporter:
@@ -918,34 +769,13 @@ class OtelRuntime:
     def _attach_logging_handler_unlocked(self, level: int) -> None:
         if self._logging_handler_attached or self._logger_provider is None:
             return
-        from opentelemetry.sdk._logs import LoggingHandler
-
-        class _DropOtelInternalLogs(logging.Filter):
-            """Drop records from ``opentelemetry.*`` to avoid export feedback loops."""
-
-            def filter(self, record: logging.LogRecord) -> bool:
-                return not record.name.startswith("opentelemetry")
-
-        handler = LoggingHandler(level=level, logger_provider=self._logger_provider)
-        handler.addFilter(_DropOtelInternalLogs())
-        logging.getLogger().addHandler(handler)
-        self._logging_handler = handler
+        self._logging_handler = attach_logging_handler(level, self._logger_provider)
         self._logging_handler_attached = True
 
     def _detach_logging_handler_unlocked(self) -> None:
-        if not self._logging_handler_attached or self._logging_handler is None:
-            self._logging_handler_attached = False
-            self._logging_handler = None
-            return
-        root = logging.getLogger()
-        try:
-            root.removeHandler(self._logging_handler)
-        except Exception:
-            logger.debug("Error removing OTel logging handler", exc_info=True)
-        try:
-            self._logging_handler.close()
-        except Exception:
-            logger.debug("Error closing OTel logging handler", exc_info=True)
+        handler = self._logging_handler
+        if self._logging_handler_attached and handler is not None:
+            detach_logging_handler(handler)
         self._logging_handler = None
         self._logging_handler_attached = False
 
