@@ -486,3 +486,96 @@ def step_then_grpc_server_span(context):
 def step_then_http_headers(context, name, absent):
     received = _ctx(context).get("received_http")
     assert name in received and absent not in received, sorted(received)
+
+
+# Side effects of the defaults: validation, the bytes on the wire, and the size of a full batch
+
+
+@then('the config setting "{name}" is {value:d}')
+def step_then_config_setting(context, name, value):
+    assert getattr(_ctx(context).get("otel_cfg"), name) == value
+
+
+def _finished_spans(count: int, attributes: int):
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    tracer = provider.get_tracer("batch-probe")
+    for index in range(count):
+        with tracer.start_as_current_span(f"operation-{index}") as span:
+            for number in range(attributes):
+                span.set_attribute(f"app.attribute.{number}", f"value-{index}-{number}-" + "x" * 40)
+    provider.shutdown()
+    return exporter.get_finished_spans()
+
+
+@when("the HTTP span exporter of the config sends one span to a local collector")
+def step_when_http_export(context):
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    captured: dict[str, object] = {}
+
+    class Collector(BaseHTTPRequestHandler):
+        def do_POST(self):
+            captured["headers"] = {key.lower(): value for key, value in self.headers.items()}
+            captured["body"] = self.rfile.read(int(self.headers["Content-Length"]))
+            self.send_response(200)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def log_message(self, *_args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Collector)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    context.add_cleanup(server.server_close)
+    context.add_cleanup(server.shutdown)
+
+    sc = _ctx(context)
+    otel = sc.get("otel_cfg").model_copy(update={"TRACES_ENDPOINT": f"http://127.0.0.1:{server.server_port}/v1/traces"})
+    exporter = OtelUtils._create_span_exporter(otel)
+    context.add_cleanup(exporter.shutdown)
+    result = exporter.export(_finished_spans(1, 3))
+    assert result.name == "SUCCESS", result
+    sc.store("collector_capture", captured)
+
+
+@then("the collector received a valid trace request {state}")
+def step_then_collector_request(context, state):
+    import gzip
+
+    from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceRequest
+
+    capture = _ctx(context).get("collector_capture")
+    encoding = capture["headers"].get("content-encoding")
+    body = capture["body"]
+    if state == "gzip-encoded":
+        assert encoding == "gzip", capture["headers"]
+        body = gzip.decompress(body)
+    else:
+        assert encoding is None, capture["headers"]
+    assert ExportTraceServiceRequest.FromString(body).resource_spans
+
+
+@then("a full default batch of spans with {attributes:d} attributes each encodes to under {mebibytes:d} MiB")
+def step_then_batch_size(context, attributes, mebibytes):
+    from opentelemetry.exporter.otlp.proto.common.trace_encoder import encode_spans
+
+    otel = _ctx(context).get("otel_cfg")
+    payload = encode_spans(_finished_spans(otel.SPAN_BATCH_MAX_EXPORT_BATCH_SIZE, attributes)).SerializeToString()
+    _ctx(context).store("full_batch_payload", payload)
+    assert len(payload) < mebibytes * 1024 * 1024, f"{len(payload)} bytes for {otel.SPAN_BATCH_MAX_EXPORT_BATCH_SIZE} spans"
+
+
+@then("gzip makes that batch at least {ratio:d} times smaller")
+def step_then_gzip_ratio(context, ratio):
+    import gzip
+
+    payload = _ctx(context).get("full_batch_payload")
+    assert len(payload) / len(gzip.compress(payload)) >= ratio, (len(payload), len(gzip.compress(payload)))

@@ -314,7 +314,8 @@ Feature: OpenTelemetry configuration
     Given an OpenTelemetry config built from:
       """
       {
-        "USE_STANDARD_ENV": true
+        "USE_STANDARD_ENV": true,
+        "SPAN_BATCH_MAX_EXPORT_BATCH_SIZE": 500
       }
       """
     And the standard OTEL environment:
@@ -324,6 +325,59 @@ Feature: OpenTelemetry configuration
     When the standard environment is applied
     Then the effective setting "SPAN_BATCH_MAX_QUEUE_SIZE" is 4096
     And the effective setting "SPAN_BATCH_SCHEDULE_DELAY_MS" is 5000
+
+  Scenario Outline: Lowering only the <signal> queue size shrinks the unset batch size with it
+    Given an OpenTelemetry config built from:
+      """
+      {
+        "<queue_field>": 100
+      }
+      """
+    Then the config setting "<batch_field>" is 100
+    And the config setting "<other_batch_field>" is 1024
+
+    Examples:
+      | signal | queue_field               | batch_field                      | other_batch_field                |
+      | span   | SPAN_BATCH_MAX_QUEUE_SIZE | SPAN_BATCH_MAX_EXPORT_BATCH_SIZE | LOG_BATCH_MAX_EXPORT_BATCH_SIZE  |
+      | log    | LOG_BATCH_MAX_QUEUE_SIZE  | LOG_BATCH_MAX_EXPORT_BATCH_SIZE  | SPAN_BATCH_MAX_EXPORT_BATCH_SIZE |
+
+  Scenario: A queue size from the standard environment shrinks the unset batch size too
+    Given an OpenTelemetry config built from:
+      """
+      {
+        "USE_STANDARD_ENV": true
+      }
+      """
+    And the standard OTEL environment:
+      | name                    | value |
+      | OTEL_BSP_MAX_QUEUE_SIZE | 100   |
+    When the standard environment is applied
+    Then the effective setting "SPAN_BATCH_MAX_QUEUE_SIZE" is 100
+    And the effective setting "SPAN_BATCH_MAX_EXPORT_BATCH_SIZE" is 100
+
+  Scenario Outline: The <setting> OTLP export is <state> on the wire
+    Given an OpenTelemetry config built from:
+      """
+      {
+        "PROTOCOL": "http/protobuf",
+        "OTLP_COMPRESSION": "<setting>"
+      }
+      """
+    When the HTTP span exporter of the config sends one span to a local collector
+    Then the collector received a valid trace request <state>
+
+    Examples:
+      | setting | state        |
+      | gzip    | gzip-encoded |
+      | none    | unencoded    |
+
+  Scenario: A full default batch of heavy spans stays under the gRPC message limit and compresses well
+    Given an OpenTelemetry config built from:
+      """
+      {}
+      """
+    Then a full default batch of spans with 25 attributes each encodes to under 4 MiB
+    And gzip makes that batch at least 3 times smaller
 
   Scenario Outline: OTEL_SDK_DISABLED switches OpenTelemetry off only for a config that reads the standard variables
     Given an OpenTelemetry config built from:

@@ -131,11 +131,9 @@ def apply_standard_env(otel: OpentelemetryConfig, environ: Mapping[str, str] | N
     if not otel.USE_STANDARD_ENV:
         return otel
     updates = _collect(otel, os.environ if environ is None else environ)
-    effective = otel.model_copy(update=updates, deep=True)
-    effective.__pydantic_fields_set__.update(updates)
     try:
-        OpentelemetryConfig.model_validate(effective.model_dump())
+        # Only the fields the config set go back in, so an unset batch size can still follow a lowered queue size.
+        return OpentelemetryConfig.model_validate({**otel.model_dump(exclude_unset=True), **updates})
     except ValidationError, ConfigurationError:
         logger.warning("Ignoring the standard OTEL_* variables: together they make an invalid configuration")
         return otel
-    return effective

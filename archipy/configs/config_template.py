@@ -1166,6 +1166,30 @@ class OpentelemetryConfig(BaseModel):
         ),
     )
 
+    def _fit_batch_sizes_to_queues(self) -> None:
+        """Keep each batch no larger than its queue.
+
+        A batch size left unset follows a queue that was lowered, so setting only ``*_MAX_QUEUE_SIZE`` below the default
+        batch size just works. A batch size set explicitly above its queue is a mistake and is rejected.
+
+        Raises:
+            ConfigurationError: If an explicit batch size exceeds its queue size.
+        """
+        for batch_field, queue_field in (
+            ("SPAN_BATCH_MAX_EXPORT_BATCH_SIZE", "SPAN_BATCH_MAX_QUEUE_SIZE"),
+            ("LOG_BATCH_MAX_EXPORT_BATCH_SIZE", "LOG_BATCH_MAX_QUEUE_SIZE"),
+        ):
+            batch_size, queue_size = getattr(self, batch_field), getattr(self, queue_field)
+            if batch_size <= queue_size:
+                continue
+            if batch_field in self.model_fields_set:
+                raise ConfigurationError(
+                    operation="otel",
+                    reason="batch_size_exceeds_queue_size",
+                    additional_data={"max_export_batch_size": batch_size, "max_queue_size": queue_size},
+                )
+            setattr(self, batch_field, queue_size)
+
     @model_validator(mode="after")
     def validate_otel_config(self) -> Self:
         """Validate signal switches, metrics exporters, and log level."""
@@ -1191,16 +1215,7 @@ class OpentelemetryConfig(BaseModel):
                 },
             )
 
-        for batch_size, queue_size in (
-            (self.SPAN_BATCH_MAX_EXPORT_BATCH_SIZE, self.SPAN_BATCH_MAX_QUEUE_SIZE),
-            (self.LOG_BATCH_MAX_EXPORT_BATCH_SIZE, self.LOG_BATCH_MAX_QUEUE_SIZE),
-        ):
-            if batch_size > queue_size:
-                raise ConfigurationError(
-                    operation="otel",
-                    reason="batch_size_exceeds_queue_size",
-                    additional_data={"max_export_batch_size": batch_size, "max_queue_size": queue_size},
-                )
+        self._fit_batch_sizes_to_queues()
 
         buckets = self.METRICS_DURATION_BUCKETS_S
         if buckets[0] <= 0 or any(low >= high for low, high in pairwise(buckets)):
