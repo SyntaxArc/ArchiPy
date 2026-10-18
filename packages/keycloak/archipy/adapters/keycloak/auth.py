@@ -19,7 +19,6 @@ from fastapi import Depends, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
-from archipy.helpers._deprecation import warn_deprecated_name
 from archipy.models.dtos.keycloak_dtos import ActorDTO, AuthenticatedUserDTO
 from archipy.models.errors import (
     BaseError,
@@ -748,52 +747,8 @@ def grpc_auth(
     return decorator
 
 
-def async_fastapi_auth(
-    resource_type_param: str | None = None,
-    resource_type: str | None = None,
-    required_roles: frozenset[str] | None = None,
-    all_roles_required: bool = False,
-    required_permissions: tuple[tuple[str, str], ...] | None = None,
-    admin_roles: frozenset[str] | None = None,
-    lang: LanguageType = DEFAULT_LANG,
-) -> Callable:
-    """Deprecated: use :func:`fastapi_auth`, whose dependency is always asynchronous."""
-    warn_deprecated_name("async_fastapi_auth", "fastapi_auth")
-    return fastapi_auth(
-        resource_type_param,
-        resource_type,
-        required_roles,
-        all_roles_required,
-        required_permissions,
-        admin_roles,
-        lang,
-    )
-
-
-def async_grpc_auth(
-    required_roles: frozenset[str] | None = None,
-    all_roles_required: bool = False,
-    required_permissions: tuple[tuple[str, str], ...] | None = None,
-    resource_attribute_name: str | None = None,
-    admin_roles: frozenset[str] | None = None,
-    lang: LanguageType = DEFAULT_LANG,
-) -> Callable[[Callable], Callable]:
-    """Deprecated: use :func:`grpc_auth`, which detects ``async def`` methods itself."""
-    warn_deprecated_name("async_grpc_auth", "grpc_auth")
-    return grpc_auth(
-        required_roles,
-        all_roles_required,
-        required_permissions,
-        resource_attribute_name,
-        admin_roles,
-        lang,
-    )
-
-
 __all__ = [
     "AuthContextManager",
-    "async_fastapi_auth",
-    "async_grpc_auth",
     "clear_keycloak_remote_cache",
     "fastapi_auth",
     "grpc_auth",

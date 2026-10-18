@@ -3,13 +3,12 @@ import inspect
 import warnings
 
 from behave import given, then, when
+from features.test_helpers import get_current_scenario_context
 
-from archipy.adapters.keycloak import auth as keycloak_auth_module
 from archipy.helpers.decorators.deprecation_exception import class_deprecation_error, method_deprecation_error
 from archipy.helpers.decorators.deprecation_warnings import class_deprecation_warning, method_deprecation_warning
 from archipy.models.errors import DeprecationError
 from archipy.models.types.language_type import LanguageType
-from features.test_helpers import get_current_scenario_context
 
 
 def _kwargs(**kwargs):
@@ -322,10 +321,14 @@ def step_then_old_path_callable(context):
 # Keycloak auth guards moved to archipy.adapters.keycloak.auth
 
 
-@when('the deprecated Keycloak auth function "{name}" is called')
+@when('the deprecated KeycloakUtils method "{name}" is called')
 def step_when_deprecated_auth_function_called(context, name):
+    from archipy.helpers.utils import keycloak_utils
+
     sc = get_current_scenario_context(context)
-    function = getattr(keycloak_auth_module, name)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        function = getattr(keycloak_utils.KeycloakUtils, name)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         sc.store("result", function())

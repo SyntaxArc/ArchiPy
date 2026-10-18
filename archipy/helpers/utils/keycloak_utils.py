@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from archipy.helpers._deprecation import warn_deprecated_name
+from archipy.helpers._deprecation import deprecated_alias, warn_deprecated_name
 
 _MOVED_NAMES = frozenset({"AuthContextManager", "clear_keycloak_remote_cache"})
-_LEGACY_CLASS_METHODS = ("fastapi_auth", "async_fastapi_auth", "grpc_auth", "async_grpc_auth")
+_LEGACY_CLASS_METHODS = ("fastapi_auth", "grpc_auth")
+_LEGACY_ASYNC_METHODS = {"async_fastapi_auth": "fastapi_auth", "async_grpc_auth": "grpc_auth"}
 
 
 def _legacy_keycloak_utils() -> type:
@@ -19,6 +20,8 @@ def _legacy_keycloak_utils() -> type:
     from archipy.adapters.keycloak import auth  # noqa: PLC0415
 
     namespace: dict[str, Any] = {name: staticmethod(getattr(auth, name)) for name in _LEGACY_CLASS_METHODS}
+    for old_name, new_name in _LEGACY_ASYNC_METHODS.items():
+        namespace[old_name] = staticmethod(deprecated_alias(f"KeycloakUtils.{old_name}", getattr(auth, new_name)))
     namespace["_get_keycloak_adapter"] = staticmethod(auth._get_keycloak_adapter)
     namespace["_get_async_keycloak_adapter"] = staticmethod(auth._get_async_keycloak_adapter)
     namespace["__doc__"] = "Deprecated namespace; use the functions of ``archipy.adapters.keycloak.auth``."

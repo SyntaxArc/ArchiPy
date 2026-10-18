@@ -7,14 +7,13 @@ import grpc
 import grpc.aio
 from behave import given, step, then, when
 from fastapi.security import HTTPAuthorizationCredentials
+from features.test_helpers import get_current_scenario_context
 
-from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter
 from archipy.adapters.keycloak import auth as keycloak_auth
+from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter
 from archipy.adapters.keycloak.auth import AuthContextManager
 from archipy.models.dtos.keycloak_dtos import AuthenticatedUserDTO
 from archipy.models.errors import BaseError
-from features.test_helpers import get_current_scenario_context
-
 
 
 class _Aborted(Exception):
@@ -318,8 +317,7 @@ async def _call_dependency(context, mode, credentials):
     kwargs = dict(_auth_kwargs(sc))
     try:
         with _adapters_for_call(sc):
-            factory = keycloak_auth.fastapi_auth if mode == "sync" else keycloak_auth.async_fastapi_auth
-            dependency = factory(**kwargs)
+            dependency = keycloak_auth.fastapi_auth(**kwargs)
             result = await dependency(request, credentials, keycloak_auth._get_async_keycloak_adapter())
         sc.store("result", result)
     except BaseError as error:

@@ -407,8 +407,8 @@ Feature: Helper decorators
         | sqlalchemy_atomic | postgres_sqlalchemy_atomic_decorator |
         | sqlalchemy_atomic | _handle_db_exception                 |
 
-    Scenario Outline: Deprecated function <name> warns and builds the same guard
-      When the deprecated Keycloak auth function "<name>" is called
+    Scenario Outline: Deprecated KeycloakUtils method <name> warns and builds the same guard
+      When the deprecated KeycloakUtils method "<name>" is called
       Then exactly one DeprecationWarning should name "<replacement>"
       And the Keycloak auth result is callable
 

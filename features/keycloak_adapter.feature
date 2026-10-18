@@ -571,8 +571,8 @@ Feature: Keycloak Authentication Testing
     And the propagation headers carry the bearer token
 
   # --- Keycloak auth dependencies and decorators ---
-  # Real tokens issued by the Keycloak container drive keycloak.auth fastapi_auth, async_fastapi_auth (deprecated),
-  # grpc_auth, async_grpc_auth (deprecated) and AuthContextManager. gRPC uses a ServicerContext fake only to record aborts.
+  # Real tokens issued by the Keycloak container drive keycloak.auth fastapi_auth, grpc_auth and
+  # AuthContextManager. gRPC uses a ServicerContext fake only to record aborts.
   Scenario Outline: Auth FastAPI dependency populates request state for a valid token
     Given a configured sync Keycloak adapter
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
