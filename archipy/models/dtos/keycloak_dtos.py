@@ -25,6 +25,7 @@ class AuthenticatedUserDTO(BaseDTO):
     token: SecretStr
     raw_user_info: dict[str, Any]
     actor_chain: list[ActorDTO] = Field(default_factory=list)
+    token_info: dict[str, Any] = Field(default_factory=dict)
 
     @property
     def is_impersonated(self) -> bool:

@@ -1,5 +1,6 @@
 import asyncio
 import time
+import warnings
 from contextlib import ExitStack, contextmanager
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -339,6 +340,43 @@ def step_keycloak_auth_context_during(context, username):
     auth_context = _ctx(context).get("auth_context_during")
     assert auth_context is not None, "the auth context was not set"
     assert auth_context.username == username, f"expected {username}, got {auth_context.username}"
+
+
+@then('reading "{field}" from the request state warns and names "{replacement}"')
+def step_keycloak_auth_state_read_warns(context, field, replacement):
+    state = _ctx(context).get("request").state
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        list(getattr(state, field))
+    deprecations = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+    assert deprecations, "reading the request state did not warn"
+    message = str(deprecations[0].message)
+    assert f"request.state.{field}" in message and replacement in message, message
+    assert deprecations[0].filename.endswith("keycloak_auth_steps.py"), deprecations[0].filename
+
+
+@then("the value the keycloak auth dependency returned does not warn when it is read")
+def step_keycloak_auth_returned_value_silent(context):
+    result = _ctx(context).get("result")
+    assert type(result) is dict
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        list(result.items())
+    assert not [w for w in caught if issubclass(w.category, DeprecationWarning)]
+
+
+@then("the request state keeps the same content as the auth context")
+def step_keycloak_auth_state_matches_context(context):
+    sc = _ctx(context)
+    state = sc.get("request").state
+    during = sc.get("auth_context_during")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        assert dict(state.user_info) == during.raw_user_info
+        assert set(state.user_roles) == set(during.roles)
+        assert list(state.actor_chain) == list(during.actor_chain)
+        assert dict(state.token_info) == during.token_info
+    assert during.token_info.get("sub") == during.user_id
 
 
 @then("the keycloak auth context is cleared after the dependency ends")

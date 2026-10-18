@@ -589,6 +589,27 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth context holds user "authuser" while the dependency is active
     And the keycloak auth context is cleared after the dependency ends
 
+  Scenario Outline: Reading <field> from the request state warns and points to the auth context
+    Given a configured sync Keycloak adapter
+    And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
+    And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "authuser" and password "pass123" using sync adapter
+    And I create a realm role named "auth-reader" with description "Reader" using sync adapter
+    And I assign realm role "auth-reader" to user "authuser" using sync adapter
+    And the keycloak auth access token of user "authuser" is obtained with password "pass123"
+    And the keycloak fastapi auth requires any of roles "auth-reader"
+    When the keycloak auth fastapi dependency is called with the access token of user "authuser"
+    Then reading "<field>" from the request state warns and names "<replacement>"
+    And the value the keycloak auth dependency returned does not warn when it is read
+    And the request state keeps the same content as the auth context
+
+    Examples:
+      | field       | replacement                                         |
+      | user_info   | AuthContextManager.get_auth_context().raw_user_info |
+      | token_info  | AuthContextManager.get_auth_context().token_info    |
+      | actor_chain | AuthContextManager.get_auth_context().actor_chain   |
+      | user_roles  | AuthContextManager.get_auth_context().roles         |
+
   Scenario: Auth FastAPI dependency accepts a client role from resource access
     Given a configured sync Keycloak adapter
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter

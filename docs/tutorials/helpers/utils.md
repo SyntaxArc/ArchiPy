@@ -278,8 +278,8 @@ async def get_employee_info(employee_uuid: UUID, employee: dict = Depends(fastap
 uvicorn.run(app, host="0.0.0.0", port=8000)  # noqa: S104
 ```
 
-`fastapi_auth` returns the UserInfo dict and fills `request.state`, and it also sets `AuthContextManager` for the
-request, so code below the endpoint can read the caller without receiving the request:
+`fastapi_auth` returns the UserInfo dict, and it sets `AuthContextManager` for the request, so code below the endpoint
+can read the caller without receiving the request:
 
 ```python
 from archipy.adapters.keycloak.auth import AuthContextManager
@@ -291,6 +291,12 @@ def audit_log(action: str) -> None:
 
 The context is visible to `async def` and `def` endpoints, background tasks and streamed responses, and it is cleared
 when the request ends.
+
+!!! warning "`request.state` is deprecated for the auth data"
+    The dependency still fills `request.state.user_info`, `token_info`, `actor_chain` and `user_roles`, but each of
+    them is now a dict, list or set that emits a `DeprecationWarning` when you read it (iterate, index, `get`, `in`,
+    `len`, ...), naming its replacement on `AuthContextManager.get_auth_context()`: `raw_user_info`, `token_info`,
+    `actor_chain` and `roles`. The values are the same as before. The dict the dependency returns does not warn.
 
 ## See Also
 

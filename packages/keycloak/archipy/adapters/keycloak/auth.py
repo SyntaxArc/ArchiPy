@@ -19,6 +19,7 @@ from fastapi import Depends, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
+from archipy.adapters.keycloak.deprecated_state import deprecated_dict, deprecated_list, deprecated_set
 from archipy.models.dtos.keycloak_dtos import ActorDTO, AuthenticatedUserDTO
 from archipy.models.errors import (
     BaseError,
@@ -523,6 +524,7 @@ def _build_auth_context(
         token=token_str,
         raw_user_info=user_info,
         actor_chain=actors,
+        token_info=dict(token_info or {}),
     )
 
 
@@ -588,10 +590,13 @@ def fastapi_auth(
     """FastAPI dependency for Keycloak authentication and resource-based authorization.
 
     The dependency is always asynchronous: FastAPI awaits it on the event loop, whether the endpoint is a ``def``
-    or an ``async def`` function. It returns the UserInfo dict and fills ``request.state`` with ``user_info``,
-    ``token_info``, ``actor_chain`` and ``user_roles``. It also sets :class:`AuthContextManager` for the request, like
-    :func:`grpc_auth` does, so code below the endpoint reads the caller with ``AuthContextManager.get_auth_context()``;
-    the context is cleared when the request ends.
+    or an ``async def`` function. It returns the UserInfo dict and sets :class:`AuthContextManager` for the request,
+    like :func:`grpc_auth` does, so code below the endpoint reads the caller with
+    ``AuthContextManager.get_auth_context()``; the context is cleared when the request ends.
+
+    ``request.state.user_info``, ``token_info``, ``actor_chain`` and ``user_roles`` are still filled, but they are
+    deprecated: each is a dict, list or set that emits a ``DeprecationWarning`` when read and names the matching
+    attribute of the auth context (``raw_user_info``, ``token_info``, ``actor_chain``, ``roles``).
 
     Args:
         resource_type_param: The parameter name in the path (e.g., 'user_uuid', 'employee_uuid')
@@ -636,10 +641,16 @@ def fastapi_auth(
             resource_type,
         )
 
-        request.state.user_info = user_info
-        request.state.token_info = token_info
-        request.state.actor_chain = _parse_actor_chain(token_info)
-        request.state.user_roles = user_roles
+        # Still filled for existing code, but each read warns: AuthContextManager carries the same data.
+        context_access = "AuthContextManager.get_auth_context()"
+        request.state.user_info = deprecated_dict(user_info, "user_info", f"{context_access}.raw_user_info")
+        request.state.token_info = deprecated_dict(token_info or {}, "token_info", f"{context_access}.token_info")
+        request.state.actor_chain = deprecated_list(
+            _parse_actor_chain(token_info),
+            "actor_chain",
+            f"{context_access}.actor_chain",
+        )
+        request.state.user_roles = deprecated_set(user_roles, "user_roles", f"{context_access}.roles")
         # UserInfo without ``sub`` cannot name a caller; keep serving it, as before, without an auth context.
         auth_token = (
             AuthContextManager.set_auth_context(_build_auth_context(user_info, token_str, user_roles, token_info))
