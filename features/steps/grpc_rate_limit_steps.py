@@ -1,3 +1,4 @@
+import asyncio
 import socket
 import time
 import uuid
@@ -16,7 +17,9 @@ from archipy.helpers.interceptors.grpc.base.server_interceptor import (
 )
 from archipy.helpers.interceptors.grpc.rate_limit import (
     AsyncGrpcServerRateLimitInterceptor,
+    AsyncInMemoryRateLimitStore,
     GrpcServerRateLimitInterceptor,
+    InMemoryRateLimitStore,
 )
 from archipy.helpers.utils.app_utils import AsyncGrpcAPIUtils, GrpcAPIUtils
 from archipy.helpers.utils.jwt_utils import JWTUtils
@@ -58,66 +61,43 @@ class _CustomBackendError(Exception):
     """Error of a caller-supplied store that means its backend is down."""
 
 
-class _InMemoryRateLimitStore:
-    """Counter store with the INCREX and PTTL behaviour the interceptors use, kept in process memory."""
+class _FailingRateLimitStore:
+    """Counter store whose backend is always down, with the error the caller named as an unavailable backend."""
 
-    def __init__(self, *, failing: bool = False) -> None:
-        self._counters: dict[str, tuple[int, float | None]] = {}
-        self._failing = failing
-
-    def increx(self, name, *, byint=None, lbound=None, ubound=None, saturate=False, px=None, enx=False):
-        if self._failing:
-            raise _CustomBackendError
-        value, expires_at = self._counters.get(name, (0, None))
-        if expires_at is not None and time.monotonic() >= expires_at:
-            value, expires_at = 0, None
-        created = name not in self._counters or expires_at is None and value == 0
-        step = byint or 0
-        new_value = value + step
-        if ubound is not None and new_value > ubound:
-            return [value, False]
-        if lbound is not None and new_value < lbound:
-            new_value = int(lbound) if saturate else value
-        if created and enx and px is not None:
-            expires_at = time.monotonic() + px / 1000
-        self._counters[name] = (new_value, expires_at)
-        return [new_value, True]
+    def increx(self, name, **kwargs):
+        raise _CustomBackendError
 
     def pttl(self, name):
-        if self._failing:
-            raise _CustomBackendError
-        _, expires_at = self._counters.get(name, (0, None))
-        if expires_at is None:
-            return -2
-        return max(0, int((expires_at - time.monotonic()) * 1000))
+        raise _CustomBackendError
 
 
-class _AsyncInMemoryRateLimitStore:
-    """The awaitable counterpart of ``_InMemoryRateLimitStore``."""
-
-    def __init__(self, *, failing: bool = False) -> None:
-        self._store = _InMemoryRateLimitStore(failing=failing)
+class _AsyncFailingRateLimitStore:
+    """The awaitable counterpart of ``_FailingRateLimitStore``."""
 
     async def increx(self, name, **kwargs):
-        return self._store.increx(name, **kwargs)
+        raise _CustomBackendError
 
     async def pttl(self, name):
-        return self._store.pttl(name)
+        raise _CustomBackendError
 
 
 def _create_interceptor_with_store(scenario_context, config: BaseConfig):
     """Build the interceptor straight from its constructor with a store the caller passes."""
     failing = scenario_context.get("custom_store") == "failing"
+    memory_store = scenario_context.get("memory_counter_store")
+    if memory_store is None:
+        memory_store = AsyncInMemoryRateLimitStore() if _is_async_mode(scenario_context) else InMemoryRateLimitStore()
+        scenario_context.store("memory_counter_store", memory_store)
     rate_limit_config = _rate_limit_config_for_scenario(scenario_context, config)
     if _is_async_mode(scenario_context):
         return AsyncGrpcServerRateLimitInterceptor(
             rate_limit_config=rate_limit_config,
-            store=_AsyncInMemoryRateLimitStore(failing=failing),
+            store=_AsyncFailingRateLimitStore() if failing else memory_store,
             store_errors=(_CustomBackendError,),
         )
     return GrpcServerRateLimitInterceptor(
         rate_limit_config=rate_limit_config,
-        store=_InMemoryRateLimitStore(failing=failing),
+        store=_FailingRateLimitStore() if failing else memory_store,
         store_errors=(_CustomBackendError,),
     )
 
@@ -127,8 +107,7 @@ def _create_interceptor(scenario_context):
     config = BaseConfig.global_config()
     if scenario_context.get("custom_store"):
         interceptor = _create_interceptor_with_store(scenario_context, config)
-        scenario_context.store("grpc_interceptor", interceptor)
-        return interceptor
+        return _finish_interceptor(scenario_context, interceptor)
     original_rate_limit = config.GRPC_RATE_LIMIT
     config.GRPC_RATE_LIMIT = _rate_limit_config_for_scenario(scenario_context, config)
     interceptors: list[object] = []
@@ -144,7 +123,11 @@ def _create_interceptor(scenario_context):
         raise RuntimeError(
             "Expected exactly one gRPC rate-limit interceptor; set GRPC_RATE_LIMIT__IS_ENABLED=true",
         )
-    interceptor = interceptors[0]
+    return _finish_interceptor(scenario_context, interceptors[0])
+
+
+def _finish_interceptor(scenario_context, interceptor):
+    """Apply the scenario's proxy and identifier settings to the interceptor and keep it in the scenario context."""
     if scenario_context.get("trusted_proxy_hosts"):
         interceptor._trusted_proxy_hosts = scenario_context.get("trusted_proxy_hosts")
     if scenario_context.get("failing_identifier"):
@@ -330,10 +313,12 @@ def step_given_grpc_rate_limit_interceptor(context, mode, calls_count, seconds):
     scenario_context.store("multi_window", False)
 
 
-@given("the interceptor is built with a store passed by the caller")
-def step_given_interceptor_with_caller_store(context):
-    """Build the interceptor from its constructor with an in-memory store instead of Redis."""
-    get_current_scenario_context(context).store("custom_store", "memory")
+@given("the interceptor counts in the {store} counter store")
+def step_given_interceptor_counter_store(context, store):
+    """Count in Redis through the default adapter, or in memory through a store passed to the constructor."""
+    assert store in {"redis", "memory"}, store
+    if store == "memory":
+        get_current_scenario_context(context).store("custom_store", "memory")
 
 
 @given("the interceptor is built with a caller store whose backend is down")
@@ -557,7 +542,7 @@ def step_then_grpc_handler_run_count(context, expected):
 
 @then("the gRPC burst window counter should be {expected:d}")
 def step_then_grpc_burst_counter(context, expected):
-    """Assert the Redis counter of the burst window (first declared window) for the default caller."""
+    """Assert the counter of the burst window (first declared window) for the default caller."""
     scenario_context = get_current_scenario_context(context)
     interceptor = scenario_context.get("grpc_interceptor")
     window = RateLimitUtils.compute_rate_limit_window(
@@ -565,7 +550,13 @@ def step_then_grpc_burst_counter(context, expected):
         seconds=scenario_context.get("burst_seconds"),
     )
     key = interceptor._build_rate_limit_key("127.0.0.1", _build_method_name(scenario_context), window)
-    stored = RedisAdapter().get(key)
+    store = interceptor._store
+    if isinstance(store, InMemoryRateLimitStore):
+        stored = store.increx(key, byint=0)[0]
+    elif isinstance(store, AsyncInMemoryRateLimitStore):
+        stored = asyncio.run(store.increx(key, byint=0))[0]
+    else:
+        stored = RedisAdapter().get(key)
     assert int(stored) == expected, f"Expected burst counter {expected}, found {stored!r}"
 
 
@@ -621,3 +612,64 @@ def step_then_same_auth_config(context):
     first, second = get_current_scenario_context(context).get("grpc_auth_configs")
     assert first is second
     assert first is BaseConfig.global_config().AUTH
+
+
+def _call(scenario_context, method: str, *args, **kwargs):
+    store = scenario_context.get("memory_store")
+    if scenario_context.get("memory_store_mode") == "async":
+        return asyncio.run(getattr(store, method)(*args, **kwargs))
+    return getattr(store, method)(*args, **kwargs)
+
+
+@given("a {mode} in-memory rate limit store")
+def step_given_memory_store(context, mode):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("memory_store_mode", mode)
+    scenario_context.store(
+        "memory_store", AsyncInMemoryRateLimitStore() if mode == "async" else InMemoryRateLimitStore()
+    )
+
+
+@when('the counter "{name}" is incremented {times:d} times with a limit of {limit:d} per {window:d} ms')
+def step_when_increment(context, name, times, limit, window):
+    scenario_context = get_current_scenario_context(context)
+    results = [
+        _call(scenario_context, "increx", name, byint=1, ubound=limit, saturate=True, px=window, enx=True)
+        for _ in range(times)
+    ]
+    scenario_context.store("memory_store_results", results)
+
+
+@when("{milliseconds:d} ms pass")
+def step_when_ms_pass(context, milliseconds):
+    time.sleep(milliseconds / 1000)
+
+
+@when('the counter "{name}" is refunded {times:d} times')
+def step_when_refund(context, name, times):
+    scenario_context = get_current_scenario_context(context)
+    for _ in range(times):
+        _call(scenario_context, "increx", name, byint=-1, lbound=0, saturate=True)
+
+
+@then("the last increment should apply {applied:d}")
+def step_then_last_applied(context, applied):
+    results = get_current_scenario_context(context).get("memory_store_results")
+    assert results[-1][1] == applied, results
+
+
+@then('the counter "{name}" should have a time to live below {limit:d} ms')
+def step_then_ttl_below(context, name, limit):
+    ttl = _call(get_current_scenario_context(context), "pttl", name)
+    assert 0 < ttl < limit, ttl
+
+
+@then('the counter "{name}" should hold {value:d}')
+def step_then_holds(context, name, value):
+    result = _call(get_current_scenario_context(context), "increx", name, byint=0)
+    assert result[0] == value, result
+
+
+@then('the counter "{name}" should have no time to live record')
+def step_then_no_ttl(context, name):
+    assert _call(get_current_scenario_context(context), "pttl", name) == -2
