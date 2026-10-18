@@ -420,3 +420,17 @@ Feature: OpenTelemetry configuration
       | [1.0, 0.5] |
       | [0, 1.0]   |
       | [1.0, 1.0] |
+
+  Scenario: A swapped-in runtime owns separate providers and the first one comes back untouched
+    Given a second OpenTelemetry runtime is in use with in-memory exporters
+    Then the facade delegates to the second runtime and its tracer provider is its own
+    When the first runtime is put back
+    Then the facade delegates to the first runtime and its providers are untouched
+
+  Scenario: Runtimes share what is process-wide
+    Given a second OpenTelemetry runtime is in use with in-memory exporters
+    Then both runtimes see the same process-wide OpenTelemetry state
+
+  Scenario: A private name set through the facade lands on the runtime
+    When a private name "_initialized" is set through the OtelUtils facade
+    Then the default runtime holds the new value and no copy sits on the facade class

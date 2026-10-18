@@ -19,36 +19,35 @@ logger = logging.getLogger("archipy.helpers.utils.otel_utils")
 
 
 class MetricsExport:
-    """State and workers of the two Prometheus metrics export modes.
+    """State and workers of the two Prometheus metrics export modes of one runtime.
 
-    ``OtelUtils`` owns the lock and calls the ``*_unlocked`` methods with it held. The pull scrape server and the
+    The runtime owns the lock and calls the ``*_unlocked`` methods with it held. The pull scrape server and the
     Pushgateway loop share one registry, which is dropped only when neither of them still owns it.
     """
 
-    registry: CollectorRegistry | None = None
-    _pull_httpd: WSGIServer | None = None
-    _pull_thread: threading.Thread | None = None
-    _owns_pull_scrape: bool = False
-    _pushgateway_stop: threading.Event | None = None
-    _pushgateway_thread: threading.Thread | None = None
-    _pushgateway_config: dict[str, Any] | None = None
-    _owns_pushgateway: bool = False
+    def __init__(self) -> None:
+        self.registry: CollectorRegistry | None = None
+        self._pull_httpd: WSGIServer | None = None
+        self._pull_thread: threading.Thread | None = None
+        self._owns_pull_scrape = False
+        self._pushgateway_stop: threading.Event | None = None
+        self._pushgateway_thread: threading.Thread | None = None
+        self._pushgateway_config: dict[str, Any] | None = None
+        self._owns_pushgateway = False
 
-    @classmethod
-    def drop_handles(cls) -> None:
+    def drop_handles(self) -> None:
         """Forget the registry, servers and threads without stopping them, as a forked child must."""
-        cls._pull_httpd = None
-        cls._pull_thread = None
-        cls.registry = None
-        cls._owns_pull_scrape = False
-        cls._pushgateway_stop = None
-        cls._pushgateway_thread = None
-        cls._pushgateway_config = None
-        cls._owns_pushgateway = False
+        self._pull_httpd = None
+        self._pull_thread = None
+        self.registry = None
+        self._owns_pull_scrape = False
+        self._pushgateway_stop = None
+        self._pushgateway_thread = None
+        self._pushgateway_config = None
+        self._owns_pushgateway = False
 
-    @classmethod
     def maybe_start_pull_scrape_unlocked(
-        cls,
+        self,
         otel: OpentelemetryConfig,
         *,
         owns_meter: bool,
@@ -64,7 +63,7 @@ class MetricsExport:
             )
             return
         try:
-            cls.start_pull_scrape_unlocked(otel)
+            self.start_pull_scrape_unlocked(otel)
         except Exception:
             logger.warning(
                 "Metrics pull scrape server failed to start on %s:%s; "
@@ -73,13 +72,12 @@ class MetricsExport:
                 otel.METRICS_PULL_PORT,
                 exc_info=True,
             )
-            cls._pull_httpd = None
-            cls._pull_thread = None
-            cls._owns_pull_scrape = False
+            self._pull_httpd = None
+            self._pull_thread = None
+            self._owns_pull_scrape = False
 
-    @classmethod
     def maybe_start_pushgateway_unlocked(
-        cls,
+        self,
         otel: OpentelemetryConfig,
         *,
         owns_meter: bool,
@@ -95,23 +93,22 @@ class MetricsExport:
             )
             return
         try:
-            cls.start_pushgateway_unlocked(otel)
+            self.start_pushgateway_unlocked(otel)
         except Exception:
             logger.warning(
                 "Metrics Pushgateway push loop failed to start; "
                 "continuing without push (traces/logs/metrics providers remain active)",
                 exc_info=True,
             )
-            cls.stop_pushgateway_unlocked(delete_group=False)
+            self.stop_pushgateway_unlocked(delete_group=False)
 
-    @classmethod
-    def start_pull_scrape_unlocked(cls, otel: OpentelemetryConfig) -> None:
+    def start_pull_scrape_unlocked(self, otel: OpentelemetryConfig) -> None:
         """Start the metrics pull scrape HTTP server if not already running."""
-        if cls._pull_httpd is not None:
+        if self._pull_httpd is not None:
             return
         from prometheus_client import start_http_server
 
-        registry = cls.registry
+        registry = self.registry
         if registry is None:
             msg = "Metrics pull registry missing before scrape server start"
             raise RuntimeError(msg)
@@ -121,26 +118,25 @@ class MetricsExport:
             addr=str(otel.METRICS_PULL_HOST),
             registry=registry,
         )
-        cls._pull_httpd = httpd
-        cls._pull_thread = thread
-        cls._owns_pull_scrape = True
+        self._pull_httpd = httpd
+        self._pull_thread = thread
+        self._owns_pull_scrape = True
         logger.info(
             "Metrics pull scrape server listening on http://%s:%s/metrics",
             otel.METRICS_PULL_HOST,
             otel.METRICS_PULL_PORT,
         )
 
-    @classmethod
-    def stop_pull_scrape_unlocked(cls) -> None:
+    def stop_pull_scrape_unlocked(self) -> None:
         """Stop the ArchiPy-owned metrics pull scrape HTTP server."""
-        if not cls._owns_pull_scrape:
-            cls._pull_httpd = None
-            cls._pull_thread = None
+        if not self._owns_pull_scrape:
+            self._pull_httpd = None
+            self._pull_thread = None
             # Keep registry when pushgateway (or another owner) still needs it.
-            if not cls._owns_pushgateway:
-                cls.registry = None
+            if not self._owns_pushgateway:
+                self.registry = None
             return
-        httpd = cls._pull_httpd
+        httpd = self._pull_httpd
         if httpd is not None:
             try:
                 httpd.shutdown()
@@ -150,18 +146,17 @@ class MetricsExport:
                 httpd.server_close()
             except Exception:
                 logger.debug("Error closing metrics pull scrape server socket", exc_info=True)
-        cls._pull_httpd = None
-        cls._pull_thread = None
-        if not cls._owns_pushgateway:
-            cls.registry = None
-        cls._owns_pull_scrape = False
+        self._pull_httpd = None
+        self._pull_thread = None
+        if not self._owns_pushgateway:
+            self.registry = None
+        self._owns_pull_scrape = False
 
-    @classmethod
-    def start_pushgateway_unlocked(cls, otel: OpentelemetryConfig) -> None:
+    def start_pushgateway_unlocked(self, otel: OpentelemetryConfig) -> None:
         """Start the daemon thread that pushes metrics to Prometheus Pushgateway."""
-        if cls._pushgateway_thread is not None and cls._pushgateway_thread.is_alive():
+        if self._pushgateway_thread is not None and self._pushgateway_thread.is_alive():
             return
-        registry = cls.registry
+        registry = self.registry
         if registry is None:
             msg = "Metrics registry missing before Pushgateway start"
             raise RuntimeError(msg)
@@ -178,8 +173,8 @@ class MetricsExport:
         delete_on_shutdown = bool(otel.METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN)
 
         stop_event = threading.Event()
-        cls._pushgateway_stop = stop_event
-        cls._pushgateway_config = {
+        self._pushgateway_stop = stop_event
+        self._pushgateway_config = {
             "gateway": gateway_url,
             "job": job,
             "grouping_key": grouping_key,
@@ -221,8 +216,8 @@ class MetricsExport:
             daemon=True,
         )
         thread.start()
-        cls._pushgateway_thread = thread
-        cls._owns_pushgateway = True
+        self._pushgateway_thread = thread
+        self._owns_pushgateway = True
         logger.info(
             "Metrics Pushgateway push loop started (gateway=%s job=%s interval=%ss)",
             gateway_url,
@@ -230,14 +225,13 @@ class MetricsExport:
             interval,
         )
 
-    @classmethod
-    def stop_pushgateway_unlocked(cls, *, delete_group: bool = True) -> None:
+    def stop_pushgateway_unlocked(self, *, delete_group: bool = True) -> None:
         """Stop the Pushgateway push loop and optionally delete the grouping key."""
-        stop_event = cls._pushgateway_stop
-        thread = cls._pushgateway_thread
-        config = cls._pushgateway_config
-        registry = cls.registry
-        owned = cls._owns_pushgateway
+        stop_event = self._pushgateway_stop
+        thread = self._pushgateway_thread
+        config = self._pushgateway_config
+        registry = self.registry
+        owned = self._owns_pushgateway
 
         if stop_event is not None:
             stop_event.set()
@@ -264,9 +258,9 @@ class MetricsExport:
             except Exception:
                 logger.warning("Failed to delete Pushgateway metrics group on shutdown", exc_info=True)
 
-        cls._pushgateway_stop = None
-        cls._pushgateway_thread = None
-        cls._pushgateway_config = None
-        cls._owns_pushgateway = False
-        if owned and not cls._owns_pull_scrape:
-            cls.registry = None
+        self._pushgateway_stop = None
+        self._pushgateway_thread = None
+        self._pushgateway_config = None
+        self._owns_pushgateway = False
+        if owned and not self._owns_pull_scrape:
+            self.registry = None

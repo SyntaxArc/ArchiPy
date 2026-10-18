@@ -710,3 +710,78 @@ def step_when_grpc_export(context, count, compression):
 def step_then_grpc_bytes(context, fraction):
     sent = _ctx(context).get("grpc_bytes_sent")
     assert sent["gzip"] < fraction * sent["none"], sent
+
+
+# Runtimes: the object that owns the providers can be swapped, the process-wide state cannot
+
+
+@given("a second OpenTelemetry runtime is in use with in-memory exporters")
+def step_given_second_runtime(context):
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    from archipy.helpers.utils.otel_utils import OtelRuntime
+
+    sc = _ctx(context)
+    first = OtelUtils.runtime()
+    sc.store("first_runtime", first)
+    sc.store("first_tracer_provider", first._tracer_provider)
+    second = OtelRuntime()
+    previous = OtelUtils.set_runtime(second)
+    context.add_cleanup(OtelUtils.set_runtime, previous)
+    second.configure_for_testing(span_exporter=InMemorySpanExporter(), service_name="second-runtime")
+    context.add_cleanup(second.reset_for_testing)
+    sc.store("second_runtime", second)
+
+
+@then("the facade delegates to the second runtime and its tracer provider is its own")
+def step_then_second_runtime_owns(context):
+    sc = _ctx(context)
+    assert OtelUtils.runtime() is sc.get("second_runtime")
+    provider = OtelUtils.tracer_provider()
+    assert provider is not None
+    assert provider is not sc.get("first_tracer_provider")
+    assert provider is sc.get("second_runtime")._tracer_provider
+
+
+@when("the first runtime is put back")
+def step_when_first_runtime_back(context):
+    OtelUtils.set_runtime(_ctx(context).get("first_runtime"))
+
+
+@then("the facade delegates to the first runtime and its providers are untouched")
+def step_then_first_runtime_back(context):
+    sc = _ctx(context)
+    assert OtelUtils.runtime() is sc.get("first_runtime")
+    assert OtelUtils.tracer_provider() is sc.get("first_tracer_provider")
+
+
+@then("both runtimes see the same process-wide OpenTelemetry state")
+def step_then_shared_process_state(context):
+    sc = _ctx(context)
+    first, second = sc.get("first_runtime"), sc.get("second_runtime")
+    original = first._globals_set
+    context.add_cleanup(setattr, first, "_globals_set", original)
+    first._globals_set = not original
+    assert second._globals_set is (not original)
+    assert first._instrumented_libraries is second._instrumented_libraries
+    assert first._lock is second._lock
+    assert first._shutdown_providers is second._shutdown_providers
+
+
+@when('a private name "{name}" is set through the OtelUtils facade')
+def step_when_facade_set_private(context, name):
+    runtime = OtelUtils.runtime()
+    original = getattr(runtime, name)
+    context.add_cleanup(setattr, runtime, name, original)
+    setattr(OtelUtils, name, not original)
+    _ctx(context).store("facade_name", name)
+    _ctx(context).store("facade_original", original)
+
+
+@then("the default runtime holds the new value and no copy sits on the facade class")
+def step_then_facade_forwarded(context):
+    sc = _ctx(context)
+    name = sc.get("facade_name")
+    assert getattr(OtelUtils.runtime(), name) is (not sc.get("facade_original"))
+    assert name not in vars(OtelUtils)
+    assert getattr(OtelUtils, name) is (not sc.get("facade_original"))

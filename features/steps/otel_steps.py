@@ -7,6 +7,7 @@ import logging
 import threading
 import time
 import uuid
+from unittest.mock import patch
 
 import httpx2
 from behave import given, then, when
@@ -1547,17 +1548,11 @@ def step_when_init_metric_exporter_fails(context):
     config.OTEL.PROTOCOL = "http/protobuf"
     config.OTEL.OTLP_ENDPOINT = "http://localhost:4318"
 
-    original = OtelUtils.__dict__["_create_metric_exporter"]
-
-    @classmethod
-    def _boom(cls, otel):
+    def _boom(_otel):
         raise RuntimeError("metric exporter boom")
 
-    OtelUtils._create_metric_exporter = _boom
-    try:
+    with patch.object(OtelUtils.runtime(), "_create_metric_exporter", _boom):
         OtelUtils.init_otel_if_needed(config)
-    finally:
-        OtelUtils._create_metric_exporter = original
     scenario_context.store("otel_enabled_for_test", True)
 
 
@@ -2763,15 +2758,13 @@ def _fail_provider_construction(context):
     config.OTEL.OTLP_ENDPOINT = "http://localhost:4318"
 
     attempts: list[int] = []
-    original = OtelUtils.__dict__["_build_providers"]
-
-    @classmethod
-    def _boom(cls, _config):
+    def _boom(_config):
         attempts.append(1)
         raise RuntimeError("provider construction boom")
 
-    OtelUtils._build_providers = _boom
-    context.add_cleanup(setattr, OtelUtils, "_build_providers", original)
+    patcher = patch.object(OtelUtils.runtime(), "_build_providers", _boom)
+    patcher.start()
+    context.add_cleanup(patcher.stop)
     context.add_cleanup(OtelUtils.reset_for_testing)
     scenario_context.store("provider_attempts", attempts)
     scenario_context.store("otel_enabled_for_test", True)
