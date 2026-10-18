@@ -6,7 +6,7 @@ import asyncio
 import threading
 import time
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
+from typing import TYPE_CHECKING, ClassVar
 
 from archipy.helpers.interceptors.grpc.base.server_interceptor import (
     BaseAsyncGrpcServerInterceptor,
@@ -15,6 +15,7 @@ from archipy.helpers.interceptors.grpc.base.server_interceptor import (
     iterate_stream_result,
 )
 from archipy.helpers.utils.otel_utils import OtelUtils
+from archipy.models.dtos.otel_dtos import RpcInstrumentsDTO
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
@@ -26,14 +27,6 @@ _RPC_ACTIVE_INSTRUMENT = "rpc.server.active_requests"
 _RPC_METER_NAME = "archipy.grpc"
 
 
-class _Instruments(NamedTuple):
-    """The RPC instruments of one meter provider."""
-
-    duration: Any
-    active: Any
-    provider_id: int
-
-
 class _RpcInstruments:
     """Lazy, process-wide RPC instruments bound to the current meter.
 
@@ -42,11 +35,11 @@ class _RpcInstruments:
     """
 
     # One tuple so readers never see a half-updated pair.
-    _state: ClassVar[_Instruments | None] = None
+    _state: ClassVar[RpcInstrumentsDTO | None] = None
     _lock: ClassVar[threading.Lock] = threading.Lock()
 
     @classmethod
-    def get(cls) -> _Instruments | None:
+    def get(cls) -> RpcInstrumentsDTO | None:
         """Return the RPC instruments, recreating them after a provider reset.
 
         Returns:
@@ -63,7 +56,7 @@ class _RpcInstruments:
             if state is not None and state.provider_id == provider_id:
                 return state
             meter = OtelUtils.get_meter(_RPC_METER_NAME)
-            cls._state = _Instruments(
+            cls._state = RpcInstrumentsDTO(
                 duration=meter.create_histogram(
                     _RPC_DURATION_INSTRUMENT,
                     unit="s",
@@ -129,7 +122,7 @@ def _classify_failure(context: object) -> str:
 class _RpcCallRecorder:
     """Tracks one in-flight RPC: increments active requests on start, records duration on finish."""
 
-    def __init__(self, instruments: _Instruments, method_name_model: MethodName) -> None:
+    def __init__(self, instruments: RpcInstrumentsDTO, method_name_model: MethodName) -> None:
         self._histogram = instruments.duration
         self._active = instruments.active
         self._method_name_model = method_name_model
