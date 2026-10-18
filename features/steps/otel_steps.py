@@ -2820,3 +2820,31 @@ def step_then_provider_unusable_while_alive(context):
 @then("the shut down provider registry should no longer hold it")
 def step_then_registry_released(context):
     assert get_current_scenario_context(context).get("registry_size_change") >= 1
+
+
+@when("I create every observable instrument on the no-op meter")
+def step_when_noop_observables(context):
+    from archipy.helpers.utils._otel.noop import _NoOpGauge, _NoOpMeter
+
+    meter = _NoOpMeter()
+    gauge = meter.create_gauge("sync_gauge")
+    gauge.set(1)
+    assert isinstance(gauge, _NoOpGauge)
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store(
+        "noop_observables",
+        [
+            meter.create_observable_counter("c", callbacks=[]),
+            meter.create_observable_gauge("g", callbacks=[]),
+            meter.create_observable_up_down_counter("u", callbacks=[]),
+        ],
+    )
+
+
+@then("each no-op observable instrument should be the no-op stub")
+def step_then_noop_observables(context):
+    from archipy.helpers.utils._otel.noop import _NoOpObservableInstrument
+
+    instruments = get_current_scenario_context(context).get("noop_observables")
+    assert len(instruments) == 3
+    assert all(isinstance(i, _NoOpObservableInstrument) for i in instruments)

@@ -64,6 +64,17 @@ class _NoOpUpDownCounter:
         """No-op."""
 
 
+class _NoOpGauge:
+    """Minimal gauge stub used when the opentelemetry package is not installed."""
+
+    def set(self, *_args: Any, **_kwargs: Any) -> None:
+        """No-op."""
+
+
+class _NoOpObservableInstrument:
+    """Minimal observable instrument stub used when the opentelemetry package is not installed."""
+
+
 class _NoOpMeter:
     """Minimal meter stub used when the opentelemetry package is not installed."""
 
@@ -78,3 +89,19 @@ class _NoOpMeter:
     def create_up_down_counter(self, *_args: Any, **_kwargs: Any) -> _NoOpUpDownCounter:
         """Return a no-op up-down counter."""
         return _NoOpUpDownCounter()
+
+    def create_gauge(self, *_args: Any, **_kwargs: Any) -> _NoOpGauge:
+        """Return a no-op gauge."""
+        return _NoOpGauge()
+
+    def create_observable_counter(self, *_args: Any, **_kwargs: Any) -> _NoOpObservableInstrument:
+        """Return a no-op observable counter."""
+        return _NoOpObservableInstrument()
+
+    def create_observable_gauge(self, *_args: Any, **_kwargs: Any) -> _NoOpObservableInstrument:
+        """Return a no-op observable gauge."""
+        return _NoOpObservableInstrument()
+
+    def create_observable_up_down_counter(self, *_args: Any, **_kwargs: Any) -> _NoOpObservableInstrument:
+        """Return a no-op observable up-down counter."""
+        return _NoOpObservableInstrument()

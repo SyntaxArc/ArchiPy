@@ -690,6 +690,10 @@ Feature: OpenTelemetry decorators
     Then no span named "missing_dep_span" should be recorded
     And the traced sync function result should be "ok"
 
+  Scenario: no-op meter hands out inert observable instruments
+    When I create every observable instrument on the no-op meter
+    Then each no-op observable instrument should be the no-op stub
+
   Scenario: logs are exported through the logging handler
     Given OpenTelemetry is configured for testing with log export
     When I emit an INFO log message "otel-log-probe"
