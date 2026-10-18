@@ -77,8 +77,9 @@ archipy/
 │   └── temporal/      # Temporal workflow adapter
 ├── configs/           # Configuration management
 │   ├── base_config.py
-│   ├── config_template.py
-│   └── environment_type.py
+│   ├── config_template.py  # Re-exports the config classes
+│   ├── environment_type.py
+│   └── sections/           # One module per config section
 ├── helpers/           # Utility functions and patterns
 │   ├── decorators/
 │   ├── interceptors/
