@@ -334,7 +334,7 @@ Feature: OpenTelemetry configuration
       }
       """
     Then the config setting "<batch_field>" is 100
-    And the config setting "<other_batch_field>" is 1024
+    And the config setting "<other_batch_field>" is 512
 
     Examples:
       | signal | queue_field               | batch_field                      | other_batch_field                |
@@ -371,13 +371,23 @@ Feature: OpenTelemetry configuration
       | gzip    | gzip-encoded |
       | none    | unencoded    |
 
-  Scenario: A full default batch of heavy spans stays under the gRPC message limit and compresses well
+  Scenario: gRPC gzip compression shrinks what crosses the wire
     Given an OpenTelemetry config built from:
       """
       {}
       """
-    Then a full default batch of spans with 25 attributes each encodes to under 4 MiB
-    And gzip makes that batch at least 3 times smaller
+    And a gRPC trace collector behind a byte-counting proxy
+    When the gRPC span exporter of the config sends 200 spans through the proxy with compression "none"
+    And the gRPC span exporter of the config sends 200 spans through the proxy with compression "gzip"
+    Then the gzip export sent less than 0.7 of the bytes of the uncompressed export
+
+  Scenario: A full default batch of error spans stays under the gRPC message limit
+    Given an OpenTelemetry config built from:
+      """
+      {}
+      """
+    Then a full default batch of spans with 25 attributes and a 4000 character stack trace each encodes to under 4 MiB
+    And gzip makes that batch at least 1.5 times smaller
 
   Scenario Outline: OTEL_SDK_DISABLED switches OpenTelemetry off only for a config that reads the standard variables
     Given an OpenTelemetry config built from:

@@ -1001,7 +1001,8 @@ class OpentelemetryConfig(BaseModel):
         default="gzip",
         description=(
             "Compression of OTLP exports for traces, metrics and logs. gzip is the only algorithm the OTLP "
-            "specification defines, so every collector accepts it; use none for a collector on the same host"
+            "specification defines, so every collector accepts it, and it roughly halves realistic payloads; "
+            "use none for a collector on the same host"
         ),
     )
     SPAN_BATCH_SCHEDULE_DELAY_MS: int = Field(
@@ -1020,11 +1021,11 @@ class OpentelemetryConfig(BaseModel):
         description="Spans the batch processor queues before it drops new ones (a few MB of memory at most)",
     )
     SPAN_BATCH_MAX_EXPORT_BATCH_SIZE: int = Field(
-        default=1024,
+        default=512,
         ge=1,
         description=(
-            "Largest span batch of one export; at most SPAN_BATCH_MAX_QUEUE_SIZE. Larger batches compress better, "
-            "and 1024 spans stay well under the 4 MiB message limit gRPC receivers apply by default"
+            "Largest span batch of one export; at most SPAN_BATCH_MAX_QUEUE_SIZE. gRPC receivers reject messages over "
+            "4 MiB by default, and spans with long SQL or stack traces reach several KB each, so keep batches small"
         ),
     )
     LOG_BATCH_SCHEDULE_DELAY_MS: int = Field(
@@ -1043,7 +1044,7 @@ class OpentelemetryConfig(BaseModel):
         description="Log records the batch processor queues before it drops new ones (LOGS_EXPORTER=otlp)",
     )
     LOG_BATCH_MAX_EXPORT_BATCH_SIZE: int = Field(
-        default=1024,
+        default=512,
         ge=1,
         description="Largest log batch of one export; at most LOG_BATCH_MAX_QUEUE_SIZE (LOGS_EXPORTER=otlp)",
     )

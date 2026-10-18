@@ -496,19 +496,32 @@ def step_then_config_setting(context, name, value):
     assert getattr(_ctx(context).get("otel_cfg"), name) == value
 
 
-def _finished_spans(count: int, attributes: int):
+def _finished_spans(count: int, attributes: int, stack_trace_chars: int = 0):
+    """Return finished spans whose attribute values are random, so compression ratios are realistic, not best case."""
+    import random
+    import string
+
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import SimpleSpanProcessor
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    generator = random.Random(1)  # noqa: S311 - reproducible test data, not security
+    alphabet = string.ascii_lowercase + string.digits
+
+    def text(length: int) -> str:
+        return "".join(generator.choices(alphabet, k=length))
 
     exporter = InMemorySpanExporter()
     provider = TracerProvider()
     provider.add_span_processor(SimpleSpanProcessor(exporter))
     tracer = provider.get_tracer("batch-probe")
     for index in range(count):
-        with tracer.start_as_current_span(f"operation-{index}") as span:
+        with tracer.start_as_current_span(f"operation-{index % 7}") as span:
             for number in range(attributes):
-                span.set_attribute(f"app.attribute.{number}", f"value-{index}-{number}-" + "x" * 40)
+                span.set_attribute(f"app.attribute.{number}", text(40))
+            if stack_trace_chars:
+                frames = ["  File \"/app/" + text(12) + ".py\", line " + str(generator.randint(1, 900)) for _ in range(stack_trace_chars // 40)]
+                span.add_event("exception", {"exception.type": "ValueError", "exception.stacktrace": "\n".join(frames)})
     provider.shutdown()
     return exporter.get_finished_spans()
 
@@ -563,19 +576,137 @@ def step_then_collector_request(context, state):
     assert ExportTraceServiceRequest.FromString(body).resource_spans
 
 
-@then("a full default batch of spans with {attributes:d} attributes each encodes to under {mebibytes:d} MiB")
-def step_then_batch_size(context, attributes, mebibytes):
+@then(
+    "a full default batch of spans with {attributes:d} attributes and a {stack_chars:d} character stack trace each "
+    "encodes to under {mebibytes:d} MiB",
+)
+def step_then_batch_size(context, attributes, stack_chars, mebibytes):
     from opentelemetry.exporter.otlp.proto.common.trace_encoder import encode_spans
 
     otel = _ctx(context).get("otel_cfg")
-    payload = encode_spans(_finished_spans(otel.SPAN_BATCH_MAX_EXPORT_BATCH_SIZE, attributes)).SerializeToString()
+    count = otel.SPAN_BATCH_MAX_EXPORT_BATCH_SIZE
+    payload = encode_spans(_finished_spans(count, attributes, stack_chars)).SerializeToString()
     _ctx(context).store("full_batch_payload", payload)
-    assert len(payload) < mebibytes * 1024 * 1024, f"{len(payload)} bytes for {otel.SPAN_BATCH_MAX_EXPORT_BATCH_SIZE} spans"
+    assert len(payload) < mebibytes * 1024 * 1024, f"{len(payload)} bytes for {count} spans"
 
 
-@then("gzip makes that batch at least {ratio:d} times smaller")
+@then("gzip makes that batch at least {ratio:f} times smaller")
 def step_then_gzip_ratio(context, ratio):
     import gzip
 
     payload = _ctx(context).get("full_batch_payload")
     assert len(payload) / len(gzip.compress(payload)) >= ratio, (len(payload), len(gzip.compress(payload)))
+
+
+# gRPC compression: the handler cannot see it, so count the bytes that cross a proxy in front of a real server
+
+
+class _CountingProxy:
+    """TCP proxy that forwards to a target port and counts the bytes the client sends."""
+
+    def __init__(self, target_port: int) -> None:
+        import socket
+        import threading
+
+        self._target_port = target_port
+        self._lock = threading.Lock()
+        self._sent = 0
+        self._listener = socket.socket()
+        self._listener.bind(("127.0.0.1", 0))
+        self._listener.listen()
+        self.port = self._listener.getsockname()[1]
+        self._sockets = [self._listener]
+        threading.Thread(target=self._accept, daemon=True).start()
+
+    def _accept(self) -> None:
+        import socket
+        import threading
+
+        while True:
+            try:
+                client, _ = self._listener.accept()
+            except OSError:
+                return
+            upstream = socket.create_connection(("127.0.0.1", self._target_port))
+            self._sockets.extend([client, upstream])
+            threading.Thread(target=self._pump, args=(client, upstream, True), daemon=True).start()
+            threading.Thread(target=self._pump, args=(upstream, client, False), daemon=True).start()
+
+    def _pump(self, source, destination, counted: bool) -> None:
+        try:
+            while data := source.recv(65536):
+                if counted:
+                    with self._lock:
+                        self._sent += len(data)
+                destination.sendall(data)
+        except OSError:
+            return
+
+    def reset(self) -> None:
+        with self._lock:
+            self._sent = 0
+
+    @property
+    def bytes_sent(self) -> int:
+        with self._lock:
+            return self._sent
+
+    def close(self) -> None:
+        for sock in self._sockets:
+            try:
+                sock.close()
+            except OSError:
+                continue
+
+
+@given("a gRPC trace collector behind a byte-counting proxy")
+def step_given_grpc_collector_proxy(context):
+    from concurrent import futures
+
+    import grpc
+
+    def export(_request, _rpc_context):
+        return b""
+
+    handler = grpc.unary_unary_rpc_method_handler(
+        export,
+        request_deserializer=lambda payload: payload,
+        response_serializer=lambda payload: payload,
+    )
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
+    server.add_generic_rpc_handlers(
+        (grpc.method_handlers_generic_handler("opentelemetry.proto.collector.trace.v1.TraceService", {"Export": handler}),),
+    )
+    port = server.add_insecure_port("127.0.0.1:0")
+    server.start()
+    proxy = _CountingProxy(port)
+    context.add_cleanup(server.stop, 0)
+    context.add_cleanup(proxy.close)
+    _ctx(context).store("collector_proxy", proxy)
+
+
+@when('the gRPC span exporter of the config sends {count:d} spans through the proxy with compression "{compression}"')
+def step_when_grpc_export(context, count, compression):
+    sc = _ctx(context)
+    proxy = sc.get("collector_proxy")
+    otel = sc.get("otel_cfg").model_copy(
+        update={
+            "PROTOCOL": "grpc",
+            "OTLP_COMPRESSION": compression,
+            "TRACES_ENDPOINT": f"http://127.0.0.1:{proxy.port}",
+        },
+    )
+    exporter = OtelUtils._create_span_exporter(otel)
+    context.add_cleanup(exporter.shutdown)
+    proxy.reset()
+    result = exporter.export(_finished_spans(count, 25, 4000))
+    assert result.name == "SUCCESS", result
+    sent = sc.get("grpc_bytes_sent") or {}
+    sent[compression] = proxy.bytes_sent
+    sc.store("grpc_bytes_sent", sent)
+
+
+@then("the gzip export sent less than {fraction:f} of the bytes of the uncompressed export")
+def step_then_grpc_bytes(context, fraction):
+    sent = _ctx(context).get("grpc_bytes_sent")
+    assert sent["gzip"] < fraction * sent["none"], sent
