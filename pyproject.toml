@@ -139,8 +139,7 @@ name = "ArchiPy layers: adapters -> helpers -> configs -> models"
 type = "layers"
 layers = ["archipy.adapters", "archipy.helpers", "archipy.configs", "archipy.models"]
 ignore_imports = [
-    # Function-scoped adapter imports that helpers-configs.mdc allows (lazy, cycle-breaking)
-    "archipy.helpers.decorators.sqlalchemy_transaction -> archipy.adapters.base.sqlalchemy.session_manager_registry",
+    # Function-scoped adapter import that helpers-configs.mdc allows (lazy, cycle-breaking)
     "archipy.helpers.interceptors.grpc.rate_limit.grpc_rate_limit_interceptor -> archipy.adapters.redis.adapters",
     # FastAPI resolves the Depends() annotations at runtime, so the adapter classes must stay module globals
     "archipy.helpers.utils.keycloak_utils -> archipy.adapters.keycloak.adapters",

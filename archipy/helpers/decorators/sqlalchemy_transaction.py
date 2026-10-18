@@ -10,7 +10,7 @@ import asyncio
 import inspect
 import logging
 from functools import cache, wraps
-from typing import TYPE_CHECKING, Any, NoReturn, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, NoReturn, Protocol, TypeVar, cast, overload, runtime_checkable
 
 from sqlalchemy.exc import (
     IntegrityError,
@@ -39,7 +39,6 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
     from archipy.adapters.base.sqlalchemy.session_manager_ports import AsyncSessionManagerPort, SessionManagerPort
-    from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -163,8 +162,23 @@ def _is_control_flow_exception(exception: BaseException) -> bool:
     return not isinstance(exception, Exception)
 
 
+@runtime_checkable
+class _SessionManagerRegistryLike(Protocol):
+    """What the atomic decorators need from a session manager registry; adapters' registries satisfy it structurally."""
+
+    @classmethod
+    def get_sync_manager(cls) -> SessionManagerPort:
+        """Return the synchronous session manager."""
+        ...
+
+    @classmethod
+    def get_async_manager(cls) -> AsyncSessionManagerPort:
+        """Return the asynchronous session manager."""
+        ...
+
+
 @cache
-def _load_session_manager_registry(db_type: str) -> type[SessionManagerRegistry]:
+def _load_session_manager_registry(db_type: str) -> type[_SessionManagerRegistryLike]:
     """Load the session manager registry class for a database type.
 
     Args:
@@ -179,12 +193,10 @@ def _load_session_manager_registry(db_type: str) -> type[SessionManagerRegistry]
     try:
         import importlib
 
-        from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
-
         module_path, class_name = ATOMIC_BLOCK_CONFIGS[db_type]["registry"].rsplit(".", 1)
         module = importlib.import_module(module_path)
         registry_class = getattr(module, class_name)
-        if not isinstance(registry_class, type) or not issubclass(registry_class, SessionManagerRegistry):
+        if not isinstance(registry_class, type) or not issubclass(registry_class, _SessionManagerRegistryLike):
             raise DatabaseConfigurationError(
                 database=db_type,
                 additional_data={"registry_path": ATOMIC_BLOCK_CONFIGS[db_type]["registry"]},
