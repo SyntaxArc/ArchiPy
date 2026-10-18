@@ -1,0 +1,36 @@
+name: Docs Check
+
+on:
+  pull_request:
+    branches: [ '*' ]
+    paths:
+      - 'docs/**'
+      - 'archipy/**'
+      - 'packages/**'
+      - '.github/workflows/docs-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v7
+
+      - name: Cache UV
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-3.14-${{ hashFiles('uv.lock') }}
+
+      - name: Build the docs in strict mode
+        run: make docs-check

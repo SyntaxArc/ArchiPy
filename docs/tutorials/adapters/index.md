@@ -61,7 +61,7 @@ Creating custom adapters is straightforward:
 2. Implement the adapter class
 3. Optionally create a mock implementation
 
-See the [Concepts](../../concepts.md) guide for more details on creating custom adapters.
+See the [Concepts](../../getting-started/concepts.md) guide for more details on creating custom adapters.
 
 ## See Also
 

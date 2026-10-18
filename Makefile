@@ -3,7 +3,7 @@ PYTHON := uv run
 UV := uv
 PRE_COMMIT := uv run pre-commit
 PROJECT_NAME := archipy
-PYTHON_FILES := $(PROJECT_NAME) features/steps scripts
+PYTHON_FILES := $(PROJECT_NAME) packages features/steps scripts
 # Collect git-changed Python files (staged + unstaged, existing files only)
 GIT_CHANGED_PY_FILES := $(shell git diff --name-only HEAD -- '*.py' | grep '^$(PROJECT_NAME)/' | xargs -r ls -d 2>/dev/null)
 
@@ -230,6 +230,11 @@ docs-serve-no-api: ## Serve MkDocs documentation without API auto-generation (fa
 docs-build: ## Build MkDocs documentation (balanced mode)
 	@echo "${BLUE}Building documentation...${NC}"
 	$(UV) run --group docs mkdocs build -f docs/mkdocs.yml
+
+.PHONY: docs-check
+docs-check: ## Build the docs in strict mode: broken links and API reference errors fail
+	@echo "${BLUE}Checking documentation...${NC}"
+	$(UV) run --group docs mkdocs build --strict -f docs/mkdocs.yml -d $$(mktemp -d)
 
 .PHONY: docs-build-fast
 docs-build-fast: ## Build MkDocs documentation with fast config
