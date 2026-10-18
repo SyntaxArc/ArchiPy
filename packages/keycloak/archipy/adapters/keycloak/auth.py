@@ -95,13 +95,13 @@ def clear_keycloak_remote_cache() -> None:
         _remote_cache.clear()
 
 
-def _cached_sync_lookup(
+def _cached_sync_lookup[T](
     keycloak: KeycloakAdapter,
     operation: str,
     token_str: str,
     extra: object,
-    fetch: Callable[[], Any],
-) -> Any:  # noqa: ANN401
+    fetch: Callable[[], T],
+) -> T:
     """Run a remote Keycloak lookup through the opt-in TTL cache; only truthy results are cached."""
     ttl = _remote_cache_ttl(keycloak)
     if ttl <= 0:
@@ -116,13 +116,13 @@ def _cached_sync_lookup(
     return value
 
 
-async def _cached_async_lookup(
+async def _cached_async_lookup[T](
     keycloak: AsyncKeycloakAdapter,
     operation: str,
     token_str: str,
     extra: object,
-    fetch: Callable[[], Awaitable[Any]],
-) -> Any:  # noqa: ANN401
+    fetch: Callable[[], Awaitable[T]],
+) -> T:
     """Async variant of :func:`_cached_sync_lookup`."""
     ttl = _remote_cache_ttl(keycloak)
     if ttl <= 0:

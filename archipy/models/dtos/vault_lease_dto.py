@@ -1,10 +1,9 @@
 """DTO for HashiCorp Vault dynamic secret leases."""
 
-from typing import Any
-
 from pydantic import Field, NonNegativeInt
 
 from archipy.models.dtos.base_dtos import BaseDTO
+from archipy.models.types import JsonValue
 
 
 class VaultLeaseDTO(BaseDTO):
@@ -20,4 +19,4 @@ class VaultLeaseDTO(BaseDTO):
     lease_id: str = Field(description="Unique lease identifier")
     lease_duration: NonNegativeInt = Field(description="Lease TTL in seconds")
     renewable: bool = Field(description="Whether the lease can be renewed")
-    data: dict[str, Any] = Field(default_factory=dict, description="Secret payload for the lease")
+    data: dict[str, JsonValue] = Field(default_factory=dict, description="Secret payload for the lease")
