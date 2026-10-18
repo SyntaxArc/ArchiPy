@@ -156,10 +156,22 @@ Feature: OpenTelemetry configuration
       | b3           | b3          | 0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-1     |
       | tracecontext | traceparent | 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01 |
 
-  Scenario Outline: A gRPC call carries the trace in <header> headers
+  Scenario Outline: A sync gRPC call carries the trace in <header> headers
     Given the global propagator is set to "<propagator>"
     And a tracer provider that keeps its spans in memory
     When a gRPC client with the OpenTelemetry interceptor calls a server with the OpenTelemetry interceptor
+    Then the gRPC server received the header "<header>" and not "<other>"
+    And the gRPC server span belongs to the trace of the client span
+
+    Examples:
+      | propagator   | header      | other       |
+      | b3           | b3          | traceparent |
+      | tracecontext | traceparent | b3          |
+
+  Scenario Outline: An async gRPC call carries the trace in <header> headers
+    Given the global propagator is set to "<propagator>"
+    And a tracer provider that keeps its spans in memory
+    When an async gRPC client with the OpenTelemetry interceptor calls an async server with the OpenTelemetry interceptor
     Then the gRPC server received the header "<header>" and not "<other>"
     And the gRPC server span belongs to the trace of the client span
 

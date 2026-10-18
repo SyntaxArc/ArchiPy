@@ -294,3 +294,43 @@ def step_then_grpc_trace(context):
     ]
     assert servers
     assert format(servers[0].context.trace_id, "032x") == _ctx(context).get("client_trace_id")
+
+
+@when("an async gRPC client with the OpenTelemetry interceptor calls an async server with the OpenTelemetry interceptor")
+async def step_when_grpc_aio_roundtrip(context):
+    import grpc
+    import grpc.aio
+    from opentelemetry.instrumentation.grpc import aio_server_interceptor
+
+    sc = _ctx(context)
+    provider = sc.get("memory_provider")
+    seen: dict[str, str] = {}
+
+    async def handle(_request, rpc_context):
+        seen.update({key: value for key, value in rpc_context.invocation_metadata()})
+        return b"ok"
+
+    handler = grpc.unary_unary_rpc_method_handler(
+        handle,
+        request_deserializer=lambda payload: payload,
+        response_serializer=lambda payload: payload,
+    )
+    server = grpc.aio.server(interceptors=[aio_server_interceptor(tracer_provider=provider)])
+    server.add_generic_rpc_handlers((grpc.method_handlers_generic_handler("otel.Probe", {"Call": handler}),))
+    port = server.add_insecure_port("127.0.0.1:0")
+    await server.start()
+
+    original = OtelUtils._tracer_provider
+    OtelUtils._tracer_provider = provider
+    try:
+        async with grpc.aio.insecure_channel(
+            f"127.0.0.1:{port}",
+            interceptors=OtelUtils.async_grpc_client_interceptors(),
+        ) as channel:
+            with provider.get_tracer("probe").start_as_current_span("client-root") as root:
+                await channel.unary_unary("/otel.Probe/Call")(b"x")
+                sc.store("client_trace_id", format(root.get_span_context().trace_id, "032x"))
+    finally:
+        OtelUtils._tracer_provider = original
+        await server.stop(0)
+    sc.store("received_metadata", seen)
