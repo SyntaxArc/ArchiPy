@@ -9,6 +9,7 @@ import contextlib
 import logging
 import os
 from enum import StrEnum
+from itertools import pairwise
 from typing import Literal, Self
 from urllib.parse import urlparse
 
@@ -49,6 +50,17 @@ class OtelLogsExporter(StrEnum):
 
     CONSOLE = "console"
     OTLP = "otlp"
+
+
+class OtelSampler(StrEnum):
+    """Trace sampler of the OpenTelemetry SDK, named as in the ``OTEL_TRACES_SAMPLER`` specification."""
+
+    ALWAYS_ON = "always_on"
+    ALWAYS_OFF = "always_off"
+    TRACEIDRATIO = "traceidratio"
+    PARENTBASED_ALWAYS_ON = "parentbased_always_on"
+    PARENTBASED_ALWAYS_OFF = "parentbased_always_off"
+    PARENTBASED_TRACEIDRATIO = "parentbased_traceidratio"
 
 
 class ElasticsearchConfig(BaseModel):
@@ -916,9 +928,10 @@ class StarRocksSQLAlchemyConfig(SQLAlchemyConfig):
 class OpentelemetryConfig(BaseModel):
     """Configuration settings for OpenTelemetry observability.
 
-    Controls OTLP export of traces, metrics, and logs. Providers are built
-    programmatically from this config — ``OTEL_*`` environment-variable
-    autoconfiguration is not used.
+    Controls OTLP export of traces, metrics, and logs. Providers are built programmatically from this config.
+    The SDK's own ``OTEL_*`` autoconfiguration is not used. With ``USE_STANDARD_ENV`` the standard variables fill in the
+    settings that this config leaves unset, and an explicitly set field always wins. The resource also reads
+    ``OTEL_SERVICE_NAME`` and ``OTEL_RESOURCE_ATTRIBUTES``, because the SDK's ``Resource.create`` does.
     """
 
     IS_ENABLED: bool = Field(default=False, description="Master switch for OpenTelemetry")
@@ -962,11 +975,98 @@ class OpentelemetryConfig(BaseModel):
         description="Headers sent with each OTLP export (auth tokens, routing metadata)",
     )
     TIMEOUT: float = Field(default=10.0, ge=0.1, description="OTLP export timeout in seconds")
+    TRACES_SAMPLER: OtelSampler = Field(
+        default=OtelSampler.PARENTBASED_TRACEIDRATIO,
+        description=(
+            "Trace sampler. The default keeps the parent's decision and samples new traces at TRACES_SAMPLE_RATIO; "
+            "the *_always_on / *_always_off samplers ignore the ratio"
+        ),
+    )
     TRACES_SAMPLE_RATIO: float = Field(
         default=0.1,
         ge=0.0,
         le=1.0,
-        description="Parent-based trace ID ratio sampler (inbound sampled traces always continue)",
+        description=(
+            "Sampling ratio of the traceidratio and parentbased_traceidratio samplers "
+            "(with the parent-based sampler, inbound sampled traces always continue)"
+        ),
+    )
+    PROPAGATORS: list[Literal["tracecontext", "baggage", "b3", "b3multi", "none"]] = Field(
+        default=["tracecontext", "baggage"],
+        description=(
+            "Context propagators, in order. b3 and b3multi need the opentelemetry-propagator-b3 package "
+            "(archipy[otel-b3]); none disables propagation"
+        ),
+    )
+    OTLP_COMPRESSION: Literal["none", "gzip"] = Field(
+        default="none",
+        description="Compression of OTLP exports for traces, metrics and logs",
+    )
+    SPAN_BATCH_SCHEDULE_DELAY_MS: int = Field(
+        default=5000,
+        ge=1,
+        description="Delay between two span exports of the batch processor in milliseconds",
+    )
+    SPAN_BATCH_EXPORT_TIMEOUT_MS: int = Field(
+        default=30000,
+        ge=1,
+        description="Time the batch span processor allows one export in milliseconds",
+    )
+    SPAN_BATCH_MAX_QUEUE_SIZE: int = Field(
+        default=2048,
+        ge=1,
+        description="Spans the batch processor queues before it drops new ones",
+    )
+    SPAN_BATCH_MAX_EXPORT_BATCH_SIZE: int = Field(
+        default=512,
+        ge=1,
+        description="Largest span batch of one export; at most SPAN_BATCH_MAX_QUEUE_SIZE",
+    )
+    LOG_BATCH_SCHEDULE_DELAY_MS: int = Field(
+        default=1000,
+        ge=1,
+        description="Delay between two log exports of the batch processor in milliseconds (LOGS_EXPORTER=otlp)",
+    )
+    LOG_BATCH_EXPORT_TIMEOUT_MS: int = Field(
+        default=30000,
+        ge=1,
+        description="Time the batch log processor allows one export in milliseconds (LOGS_EXPORTER=otlp)",
+    )
+    LOG_BATCH_MAX_QUEUE_SIZE: int = Field(
+        default=2048,
+        ge=1,
+        description="Log records the batch processor queues before it drops new ones (LOGS_EXPORTER=otlp)",
+    )
+    LOG_BATCH_MAX_EXPORT_BATCH_SIZE: int = Field(
+        default=512,
+        ge=1,
+        description="Largest log batch of one export; at most LOG_BATCH_MAX_QUEUE_SIZE (LOGS_EXPORTER=otlp)",
+    )
+    USE_STANDARD_ENV: bool = Field(
+        default=False,
+        description=(
+            "Read the standard OTEL_* environment variables (OTEL_EXPORTER_OTLP_*, OTEL_TRACES_SAMPLER*, "
+            "OTEL_PROPAGATORS, OTEL_BSP_*, OTEL_BLRP_*, OTEL_METRIC_EXPORT_INTERVAL, OTEL_SERVICE_NAME) for every "
+            "setting of this config that is not set explicitly. Invalid values are logged and ignored"
+        ),
+    )
+    SERVICE_VERSION: str | None = Field(default=None, description="OTel resource service.version")
+    SERVICE_INSTANCE_ID: str | None = Field(
+        default=None,
+        description="OTel resource service.instance.id (a UUID from the service_instance detector when unset)",
+    )
+    RESOURCE_DETECTORS: list[Literal["service_instance", "host", "os", "process"]] = Field(
+        default=["service_instance", "host", "os"],
+        description=(
+            "Resource detectors that add service.instance.id, host.*, os.* or process.* attributes. process records "
+            "the full command line, which may hold secrets, so it is opt-in. Explicit settings and "
+            "RESOURCE_ATTRIBUTES override detected values"
+        ),
+    )
+    METRICS_DURATION_BUCKETS_S: list[float] = Field(
+        default=[0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0],
+        min_length=1,
+        description="Explicit bucket boundaries in seconds of the duration histograms ArchiPy records",
     )
     RESOURCE_ATTRIBUTES: dict[str, str] = Field(
         default_factory=dict,
@@ -1084,6 +1184,25 @@ class OpentelemetryConfig(BaseModel):
                 additional_data={
                     "hint": "Set METRICS_PUSHGATEWAY_URL when METRICS_EXPORTER=pushgateway",
                 },
+            )
+
+        for batch_size, queue_size in (
+            (self.SPAN_BATCH_MAX_EXPORT_BATCH_SIZE, self.SPAN_BATCH_MAX_QUEUE_SIZE),
+            (self.LOG_BATCH_MAX_EXPORT_BATCH_SIZE, self.LOG_BATCH_MAX_QUEUE_SIZE),
+        ):
+            if batch_size > queue_size:
+                raise ConfigurationError(
+                    operation="otel",
+                    reason="batch_size_exceeds_queue_size",
+                    additional_data={"max_export_batch_size": batch_size, "max_queue_size": queue_size},
+                )
+
+        buckets = self.METRICS_DURATION_BUCKETS_S
+        if buckets[0] <= 0 or any(low >= high for low, high in pairwise(buckets)):
+            raise ConfigurationError(
+                operation="otel",
+                reason="invalid_duration_buckets",
+                additional_data={"hint": "METRICS_DURATION_BUCKETS_S must be positive and strictly increasing"},
             )
 
         valid_levels = {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"}

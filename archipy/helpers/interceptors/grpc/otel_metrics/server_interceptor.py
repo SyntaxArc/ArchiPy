@@ -14,7 +14,7 @@ from archipy.helpers.interceptors.grpc.base.server_interceptor import (
     MethodName,
     iterate_stream_result,
 )
-from archipy.helpers.utils.otel_utils import DURATION_HISTOGRAM_BUCKETS_S, OtelUtils
+from archipy.helpers.utils.otel_utils import OtelUtils
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
@@ -59,7 +59,7 @@ class _RpcInstruments:
                 _RPC_DURATION_INSTRUMENT,
                 unit="s",
                 description="gRPC server call duration",
-                explicit_bucket_boundaries_advisory=DURATION_HISTOGRAM_BUCKETS_S,
+                explicit_bucket_boundaries_advisory=OtelUtils.duration_histogram_buckets(),
             )
             active = meter.create_up_down_counter(
                 _RPC_ACTIVE_INSTRUMENT,

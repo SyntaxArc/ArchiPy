@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers._deprecation import warn_deprecated_name
-from archipy.helpers.utils.otel_utils import DURATION_HISTOGRAM_BUCKETS_S, OtelUtils
+from archipy.helpers.utils.otel_utils import OtelUtils
 from archipy.models.errors import InvalidArgumentError
 
 if TYPE_CHECKING:
@@ -167,7 +167,7 @@ def _get_or_create_histogram(module: str, instrument_name: str, unit: str) -> An
             instrument_name,
             unit=unit,
             description="Function execution duration",
-            explicit_bucket_boundaries_advisory=DURATION_HISTOGRAM_BUCKETS_S,
+            explicit_bucket_boundaries_advisory=OtelUtils.duration_histogram_buckets(),
         )
         _HISTOGRAM_CACHE[cache_key] = histogram
         return histogram

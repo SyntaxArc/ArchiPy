@@ -18,6 +18,7 @@ Enable the relevant extras, set `OTEL__IS_ENABLED=true`, and call `AppUtils.crea
 | `archipy[otel]`            | SDK, OTLP exporters, httpx/requests, threading, system metrics    |
 | `archipy[otel,fastapi]`    | FastAPI native telemetry (FastAPI 0.142.2+)                       |
 | `archipy[otel-grpc]`       | gRPC server/client contrib interceptors                           |
+| `archipy[otel-b3]`         | B3 context propagation (`OTEL__PROPAGATORS`)                      |
 | `archipy[otel-sqlalchemy]` | SQLAlchemy instrumentation (covers Postgres/MySQL/SQLite via ORM) |
 | `archipy[otel-redis]`      | Redis instrumentation                                             |
 | `archipy[otel-kafka]`      | Confluent Kafka instrumentation                                   |
@@ -83,9 +84,9 @@ BaseConfig.set_global(config)
 logger.info("OTel enabled=%s endpoint=%s", config.OTEL.IS_ENABLED, config.OTEL.OTLP_ENDPOINT)
 ```
 
-> **Note:** Do not rely on `OTEL_*` SDK autoconfiguration. ArchiPy builds
-> `TracerProvider` / `MeterProvider` / `LoggerProvider` programmatically from
-> `OpentelemetryConfig` only.
+> **Note:** ArchiPy builds `TracerProvider` / `MeterProvider` / `LoggerProvider` programmatically from
+> `OpentelemetryConfig`; the SDK's own `OTEL_*` autoconfiguration is not used. Set `USE_STANDARD_ENV` to let the
+> standard variables fill in unset settings (see [Standard `OTEL_*` variables](#standard-otel_-variables)).
 
 ### Key fields
 
@@ -97,7 +98,16 @@ logger.info("OTel enabled=%s endpoint=%s", config.OTEL.IS_ENABLED, config.OTEL.O
 | `METRICS_ENDPOINT`                       | `None`                  | Optional per-signal OTLP metrics URL override                                                |
 | `LOGS_ENDPOINT`                          | `None`                  | Optional per-signal OTLP logs URL override                                                   |
 | `PROTOCOL`                               | `grpc`                  | `grpc` or `http/protobuf`                                                                    |
-| `TRACES_SAMPLE_RATIO`                    | `0.1`                   | Parent-based trace ID ratio sampler                                                          |
+| `TRACES_SAMPLER`                         | `parentbased_traceidratio` | `always_on`, `always_off`, `traceidratio` or the `parentbased_*` variants                 |
+| `TRACES_SAMPLE_RATIO`                    | `0.1`                   | Ratio of the `traceidratio` and `parentbased_traceidratio` samplers                          |
+| `PROPAGATORS`                            | `["tracecontext", "baggage"]` | Context propagators; `b3` and `b3multi` need `archipy[otel-b3]`, `none` disables them |
+| `OTLP_COMPRESSION`                       | `none`                  | `none` or `gzip` for the OTLP exports                                                        |
+| `SPAN_BATCH_*` / `LOG_BATCH_*`           | SDK defaults            | `SCHEDULE_DELAY_MS`, `EXPORT_TIMEOUT_MS`, `MAX_QUEUE_SIZE`, `MAX_EXPORT_BATCH_SIZE` of the batch processors |
+| `SERVICE_NAME` / `SERVICE_VERSION`       | `None`                  | Resource `service.name` and `service.version`                                                |
+| `SERVICE_INSTANCE_ID`                    | generated UUID          | Resource `service.instance.id`                                                               |
+| `RESOURCE_DETECTORS`                     | `["service_instance", "host", "os"]` | Detectors that add `service.instance.id`, `host.*`, `os.*`; `process` adds `process.*` including the full command line, so it is opt-in |
+| `METRICS_DURATION_BUCKETS_S`             | 5 ms to 10 s            | Bucket boundaries in seconds of the duration histograms                                      |
+| `USE_STANDARD_ENV`                       | `false`                 | Fill unset settings from the standard `OTEL_*` variables (see below)                         |
 | `METRIC_EXPORT_INTERVAL_MS`              | `60000`                 | Periodic OTLP metric export interval                                                         |
 | `METRICS_EXPORTER`                       | `otlp`                  | Unique exporter: `otlp`, `pull`, or `pushgateway`                                            |
 | `METRICS_PULL_HOST`                      | `0.0.0.0`               | Pull scrape bind host (unauthenticated)                                                      |
@@ -117,6 +127,29 @@ logger.info("OTel enabled=%s endpoint=%s", config.OTEL.IS_ENABLED, config.OTEL.O
 | `FASTAPI_LOGS_ENABLED`                   | `false`                 | FastAPI log records for validation failures and unhandled exceptions (includes stack traces) |
 | `RESOURCE_ATTRIBUTES`                    | `{}`                    | Extra OTel resource attributes                                                               |
 | `LOGS_LEVEL`                             | `INFO`                  | Minimum level for the root-logger handler                                                    |
+
+### Standard `OTEL_*` variables
+
+With `OTEL__USE_STANDARD_ENV=true`, the standard variables fill in every setting that ArchiPy's own config leaves
+unset. A field set in code, in an `OTEL__*` variable or in TOML always wins. An invalid value is logged and ignored, and
+so are values that are valid alone but invalid together (for example a batch size above the queue size).
+
+| Variable                                                    | Sets                                                              |
+|-------------------------------------------------------------|-------------------------------------------------------------------|
+| `OTEL_SERVICE_NAME`                                         | `SERVICE_NAME`                                                    |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_ENDPOINT` | `OTLP_ENDPOINT`, `TRACES_ENDPOINT`, `METRICS_ENDPOINT`, `LOGS_ENDPOINT` |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` (`grpc`, `http/protobuf`)     | `PROTOCOL`                                                        |
+| `OTEL_EXPORTER_OTLP_HEADERS` (`k=v,k=v`)                    | `OTLP_HEADERS`                                                    |
+| `OTEL_EXPORTER_OTLP_TIMEOUT` (seconds, as the Python SDK reads it) | `TIMEOUT`                                                  |
+| `OTEL_EXPORTER_OTLP_COMPRESSION` (`none`, `gzip`)           | `OTLP_COMPRESSION`                                                |
+| `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG`            | `TRACES_SAMPLER`, `TRACES_SAMPLE_RATIO` (the Jaeger and X-Ray samplers are not supported) |
+| `OTEL_PROPAGATORS`                                          | `PROPAGATORS`                                                     |
+| `OTEL_BSP_*`, `OTEL_BLRP_*`                                 | `SPAN_BATCH_*`, `LOG_BATCH_*`                                     |
+| `OTEL_METRIC_EXPORT_INTERVAL`                               | `METRIC_EXPORT_INTERVAL_MS`                                       |
+| `OTEL_SDK_DISABLED=true`                                    | Keeps OpenTelemetry off, whatever `IS_ENABLED` says               |
+
+`OTEL_RESOURCE_ATTRIBUTES` and `OTEL_SERVICE_NAME` also reach the resource without the switch, because the SDK's
+`Resource.create` reads them; explicit `RESOURCE_ATTRIBUTES` and `SERVICE_NAME` override them.
 
 ### Metrics exporters
 

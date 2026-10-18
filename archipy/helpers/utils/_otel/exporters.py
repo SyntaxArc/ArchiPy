@@ -97,49 +97,63 @@ def resolve_metrics_endpoint(otel: Any) -> str:
     return resolve_otlp_endpoint(otel, "metrics", getattr(otel, "METRICS_ENDPOINT", None))
 
 
+def _compression(otel: Any) -> Any:
+    """Return the gzip or no-compression value of the exporter family ``otel.PROTOCOL`` selects."""
+    if otel.PROTOCOL == "http/protobuf":
+        from opentelemetry.exporter.otlp.proto.http import Compression
+
+        return Compression.Gzip if otel.OTLP_COMPRESSION == "gzip" else None
+    import grpc
+
+    return grpc.Compression.Gzip if otel.OTLP_COMPRESSION == "gzip" else None
+
+
 def create_span_exporter(otel: Any) -> Any:
     headers = dict(otel.OTLP_HEADERS) or None
+    compression = _compression(otel)
     endpoint = resolve_otlp_endpoint(otel, "traces", getattr(otel, "TRACES_ENDPOINT", None))
     if otel.PROTOCOL == "http/protobuf":
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
             OTLPSpanExporter,
         )
 
-        return OTLPSpanExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT)
+        return OTLPSpanExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT, compression=compression)
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
         OTLPSpanExporter,
     )
 
-    return OTLPSpanExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT)
+    return OTLPSpanExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT, compression=compression)
 
 
 def create_metric_exporter(otel: Any) -> Any:
     headers = dict(otel.OTLP_HEADERS) or None
+    compression = _compression(otel)
     endpoint = resolve_metrics_endpoint(otel)
     if otel.PROTOCOL == "http/protobuf":
         from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
             OTLPMetricExporter,
         )
 
-        return OTLPMetricExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT)
+        return OTLPMetricExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT, compression=compression)
     from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
         OTLPMetricExporter,
     )
 
-    return OTLPMetricExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT)
+    return OTLPMetricExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT, compression=compression)
 
 
 def create_otlp_log_exporter(otel: Any) -> Any:
     headers = dict(otel.OTLP_HEADERS) or None
+    compression = _compression(otel)
     endpoint = resolve_otlp_endpoint(otel, "logs", getattr(otel, "LOGS_ENDPOINT", None))
     if otel.PROTOCOL == "http/protobuf":
         from opentelemetry.exporter.otlp.proto.http._log_exporter import (
             OTLPLogExporter,
         )
 
-        return OTLPLogExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT)
+        return OTLPLogExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT, compression=compression)
     from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
         OTLPLogExporter,
     )
 
-    return OTLPLogExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT)
+    return OTLPLogExporter(endpoint=endpoint, headers=headers, timeout=otel.TIMEOUT, compression=compression)

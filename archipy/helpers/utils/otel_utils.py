@@ -10,6 +10,7 @@ import time
 import weakref
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from archipy.helpers.utils._otel.env import apply_standard_env, sdk_disabled
 from archipy.helpers.utils._otel.exporters import (
     create_console_log_exporter,
     create_metric_exporter,
@@ -21,6 +22,9 @@ from archipy.helpers.utils._otel.exporters import (
 from archipy.helpers.utils._otel.instrumentation import Instrumentation
 from archipy.helpers.utils._otel.metrics_export import MetricsExport
 from archipy.helpers.utils._otel.noop import _NoOpMeter, _NoOpTracer
+from archipy.helpers.utils._otel.propagation import create_propagator
+from archipy.helpers.utils._otel.resource import create_resource
+from archipy.helpers.utils._otel.sampling import create_sampler
 from archipy.helpers.utils._otel.status import (
     metric_status_for_exception,
     status_for_cancellation,
@@ -29,9 +33,13 @@ from archipy.helpers.utils._otel.status import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from archipy.configs.base_config import BaseConfig
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_PROPAGATORS = ["tracecontext", "baggage"]
 
 _DEFAULT_FLUSH_TIMEOUT_MS = 30_000
 _INIT_RETRY_BACKOFF_SECONDS = 30.0
@@ -65,11 +73,11 @@ class OtelUtils:
     interop (e.g. Temporal ``TracingInterceptor``), but internal callers use
     ``get_tracer`` / ``get_meter`` against owned or adopted providers.
 
-    Providers are built programmatically from ``BaseConfig.OTEL`` only —
-    ``OTEL_*`` environment-variable autoconfiguration is not used. On init,
-    ArchiPy installs a W3C TraceContext + Baggage composite textmap propagator
-    (idempotent) so cross-service ``traceparent`` / ``baggage`` carriers stay
-    locked to the intended default.
+    Providers are built programmatically from ``BaseConfig.OTEL``. The SDK's ``OTEL_*``
+    autoconfiguration is not used; with ``OTEL.USE_STANDARD_ENV`` the standard variables fill in
+    the settings the config leaves unset. On init, ArchiPy installs the composite textmap
+    propagator named by ``OTEL.PROPAGATORS`` (W3C TraceContext + Baggage by default,
+    idempotent) so cross-service carriers stay locked to the intended ones.
 
     Initialization is transactional: providers are published only after all enabled
     signals succeed. Pre-existing concrete global providers are adopted (not replaced)
@@ -97,6 +105,23 @@ class OtelUtils:
     _shutdown_providers: ClassVar[weakref.WeakSet[Any]] = weakref.WeakSet()
     _init_failed_at: float | None = None
     _textmap_propagator_installed: bool = False
+
+    @staticmethod
+    def duration_histogram_buckets() -> tuple[float, ...]:
+        """Return the explicit bucket boundaries, in seconds, of the duration histograms ArchiPy records.
+
+        Reads ``OTEL.METRICS_DURATION_BUCKETS_S`` from the global config, and falls back to
+        ``DURATION_HISTOGRAM_BUCKETS_S`` while no global config is set.
+
+        Returns:
+            The bucket boundaries.
+        """
+        from archipy.configs.base_config import BaseConfig
+
+        try:
+            return tuple(BaseConfig.global_config().OTEL.METRICS_DURATION_BUCKETS_S)
+        except AssertionError:
+            return DURATION_HISTOGRAM_BUCKETS_S
 
     @staticmethod
     def is_otel_enabled(config: BaseConfig) -> bool:
@@ -267,7 +292,7 @@ class OtelUtils:
         Args:
             config: Application configuration.
         """
-        if not config.OTEL.IS_ENABLED or cls._import_failed:
+        if not config.OTEL.IS_ENABLED or cls._import_failed or sdk_disabled(config.OTEL):
             return
 
         current_pid = os.getpid()
@@ -286,7 +311,7 @@ class OtelUtils:
             if cls._initialized and cls._init_pid is not None and cls._init_pid != current_pid:
                 cls._reset_after_fork()
             try:
-                cls._install_textmap_propagator_unlocked()
+                cls._install_textmap_propagator_unlocked(apply_standard_env(config.OTEL).PROPAGATORS)
                 cls._build_providers(config)
                 cls._instrument_installed_libraries(config)
                 cls._register_atexit()
@@ -384,7 +409,7 @@ class OtelUtils:
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
         with cls._lock:
-            cls._install_textmap_propagator_unlocked()
+            cls._install_textmap_propagator_unlocked(_DEFAULT_PROPAGATORS)
             resource = Resource.create({"service.name": service_name})
             tracer_provider = TracerProvider(resource=resource)
             if span_exporter is not None:
@@ -449,28 +474,20 @@ class OtelUtils:
             # Keep global textmap propagator; first-call-wins across scenarios.
 
     @classmethod
-    def _install_textmap_propagator_unlocked(cls) -> None:
-        """Install W3C TraceContext + Baggage as the global textmap propagator.
+    def _install_textmap_propagator_unlocked(cls, names: Sequence[str]) -> None:
+        """Install the named propagators as the global textmap propagator.
 
-        Idempotent. Locks ArchiPy's intended carriers (``traceparent``,
-        ``tracestate``, ``baggage``) so another library cannot silently replace
-        the default composite before ``init_otel_if_needed``.
+        Idempotent. Locks ArchiPy's intended carriers (W3C ``traceparent``, ``tracestate`` and ``baggage`` by default)
+        so another library cannot silently replace the default composite before ``init_otel_if_needed``.
+
+        Args:
+            names: Propagator names from ``OTEL.PROPAGATORS``.
         """
         if cls._textmap_propagator_installed:
             return
-        from opentelemetry.baggage.propagation import W3CBaggagePropagator
         from opentelemetry.propagate import set_global_textmap
-        from opentelemetry.propagators.composite import CompositePropagator
-        from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
-        set_global_textmap(
-            CompositePropagator(
-                [
-                    TraceContextTextMapPropagator(),
-                    W3CBaggagePropagator(),
-                ],
-            ),
-        )
+        set_global_textmap(create_propagator(names))
         cls._textmap_propagator_installed = True
 
     @classmethod
@@ -646,14 +663,7 @@ class OtelUtils:
 
     @classmethod
     def _create_resource(cls, otel: Any) -> Any:
-        from opentelemetry.sdk.resources import Resource
-
-        resource_attrs: dict[str, Any] = dict(otel.RESOURCE_ATTRIBUTES)
-        if otel.SERVICE_NAME:
-            resource_attrs["service.name"] = otel.SERVICE_NAME
-        if otel.ENVIRONMENT is not None:
-            resource_attrs["deployment.environment.name"] = str(otel.ENVIRONMENT)
-        return Resource.create(resource_attrs)
+        return create_resource(otel)
 
     @classmethod
     def _acquire_provider(
@@ -715,7 +725,7 @@ class OtelUtils:
         """Build providers transactionally and publish only on full success."""
         from opentelemetry._logs import set_logger_provider
 
-        otel = config.OTEL
+        otel = apply_standard_env(config.OTEL)
         resource = cls._create_resource(otel)
 
         new_tracer: Any | None = None
@@ -780,12 +790,18 @@ class OtelUtils:
     def _build_tracer_provider(cls, otel: Any, resource: Any) -> Any:
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.sdk.trace.sampling import ParentBasedTraceIdRatio
 
-        sampler = ParentBasedTraceIdRatio(otel.TRACES_SAMPLE_RATIO)
-        provider = TracerProvider(resource=resource, sampler=sampler)
+        provider = TracerProvider(resource=resource, sampler=create_sampler(otel))
         exporter = cls._create_span_exporter(otel)
-        provider.add_span_processor(BatchSpanProcessor(exporter))
+        provider.add_span_processor(
+            BatchSpanProcessor(
+                exporter,
+                max_queue_size=otel.SPAN_BATCH_MAX_QUEUE_SIZE,
+                schedule_delay_millis=otel.SPAN_BATCH_SCHEDULE_DELAY_MS,
+                max_export_batch_size=otel.SPAN_BATCH_MAX_EXPORT_BATCH_SIZE,
+                export_timeout_millis=otel.SPAN_BATCH_EXPORT_TIMEOUT_MS,
+            ),
+        )
         return provider
 
     @classmethod
@@ -827,7 +843,15 @@ class OtelUtils:
             provider.add_log_record_processor(SimpleLogRecordProcessor(cls._create_console_log_exporter()))
         else:
             exporter = cls._create_otlp_log_exporter(otel)
-            provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
+            provider.add_log_record_processor(
+                BatchLogRecordProcessor(
+                    exporter,
+                    max_queue_size=otel.LOG_BATCH_MAX_QUEUE_SIZE,
+                    schedule_delay_millis=otel.LOG_BATCH_SCHEDULE_DELAY_MS,
+                    max_export_batch_size=otel.LOG_BATCH_MAX_EXPORT_BATCH_SIZE,
+                    export_timeout_millis=otel.LOG_BATCH_EXPORT_TIMEOUT_MS,
+                ),
+            )
         return provider
 
     @staticmethod

@@ -309,6 +309,16 @@ otel = [
     { name = "opentelemetry-instrumentation-threading" },
     { name = "opentelemetry-sdk" },
 ]
+otel-b3 = [
+    { name = "opentelemetry-exporter-otlp" },
+    { name = "opentelemetry-exporter-prometheus" },
+    { name = "opentelemetry-instrumentation-httpx" },
+    { name = "opentelemetry-instrumentation-requests" },
+    { name = "opentelemetry-instrumentation-system-metrics" },
+    { name = "opentelemetry-instrumentation-threading" },
+    { name = "opentelemetry-propagator-b3" },
+    { name = "opentelemetry-sdk" },
+]
 otel-grpc = [
     { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-exporter-prometheus" },
@@ -444,6 +454,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "apscheduler", marker = "extra == 'scheduler'", specifier = ">=3.11.3" },
+    { name = "archipy", extras = ["otel"], marker = "extra == 'otel-b3'" },
     { name = "archipy", extras = ["otel"], marker = "extra == 'otel-grpc'" },
     { name = "archipy", extras = ["otel"], marker = "extra == 'otel-kafka'" },
     { name = "archipy", extras = ["otel"], marker = "extra == 'otel-minio'" },
@@ -491,6 +502,7 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-sqlalchemy", marker = "extra == 'otel-sqlalchemy'", specifier = ">=0.66b1" },
     { name = "opentelemetry-instrumentation-system-metrics", marker = "extra == 'otel'", specifier = ">=0.66b1" },
     { name = "opentelemetry-instrumentation-threading", marker = "extra == 'otel'", specifier = ">=0.66b1" },
+    { name = "opentelemetry-propagator-b3", marker = "extra == 'otel-b3'", specifier = ">=1.45.1" },
     { name = "opentelemetry-sdk", marker = "extra == 'otel'", specifier = ">=1.45.1" },
     { name = "protobuf", marker = "extra == 'grpc'", specifier = ">=7.36.2" },
     { name = "pydantic", specifier = ">=2.14.1" },
@@ -501,7 +513,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlalchemy-async'", specifier = ">=2.1.5" },
     { name = "testcontainers", extras = ["elasticsearch", "minio", "mysql", "vault"], marker = "extra == 'testcontainers'", specifier = ">=4.15.0" },
 ]
-provides-extras = ["aiosqlite", "behave", "cache", "dependency-injection", "elasticsearch", "elasticsearch-async", "fakeredis", "fastapi", "grpc", "jwt", "kafka", "keycloak", "minio", "parsian-ipg", "parsian-ipg-async", "mysql", "mysql-async", "postgres", "redis", "saman-ipg", "scheduler", "scylladb", "sqlalchemy", "sqlalchemy-async", "starrocks", "starrocks-async", "temporalio", "testcontainers", "vault", "otel", "otel-grpc", "otel-sqlalchemy", "otel-redis", "otel-kafka", "otel-scylladb", "otel-minio"]
+provides-extras = ["aiosqlite", "behave", "cache", "dependency-injection", "elasticsearch", "elasticsearch-async", "fakeredis", "fastapi", "grpc", "jwt", "kafka", "keycloak", "minio", "parsian-ipg", "parsian-ipg-async", "mysql", "mysql-async", "postgres", "redis", "saman-ipg", "scheduler", "scylladb", "sqlalchemy", "sqlalchemy-async", "starrocks", "starrocks-async", "temporalio", "testcontainers", "vault", "otel", "otel-b3", "otel-grpc", "otel-sqlalchemy", "otel-redis", "otel-kafka", "otel-scylladb", "otel-minio"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -2948,6 +2960,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f4/31/40004e9e55b1e5694ef3a7526f0b7637df44196fc68a8b7d248a3684680f/opentelemetry_propagator_aws_xray-1.0.2.tar.gz", hash = "sha256:6b2cee5479d2ef0172307b66ed2ed151f598a0fd29b3c01133ac87ca06326260", size = 10994, upload-time = "2024-08-05T17:45:57.601Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ea/89/849a0847871fd9745315896ad9e23d6479db84d90b8b36c4c26dc46e92b8/opentelemetry_propagator_aws_xray-1.0.2-py3-none-any.whl", hash = "sha256:1c99181ee228e99bddb638a0c911a297fa21f1c3a0af951f841e79919b5f1934", size = 10856, upload-time = "2024-08-05T17:45:56.492Z" },
+]
+
+[[package]]
+name = "opentelemetry-propagator-b3"
+version = "1.45.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-api" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d3/29/3a3e0ab089773324faaa4fe40c13cfc6a0a78410368578a30ee3453fc2a3/opentelemetry_propagator_b3-1.45.1.tar.gz", hash = "sha256:0f7d346b2cc2e9ec157c4e5c03f787d8631e61edc4b71978bb3bca2bb228db94", size = 9476, upload-time = "2026-10-06T17:33:10.358Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6a/ed/425cf8b9b312bbe6d42d94283e19946d54f48963a1104c5ad65b51f8b332/opentelemetry_propagator_b3-1.45.1-py3-none-any.whl", hash = "sha256:cd811519968dced23dda1240f2adf488e579d1361340a666af8540cd8a1e17ac", size = 8333, upload-time = "2026-10-06T17:32:50.935Z" },
 ]
 
 [[package]]
