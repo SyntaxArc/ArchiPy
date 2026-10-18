@@ -69,7 +69,7 @@ clean: ## Remove build artifacts and cache directories
 	rm -rf dist/
 	rm -rf build/
 	rm -rf .pytest_cache/
-	rm -rf .coverage
+	rm -rf .coverage .coverage.* coverage.xml
 	rm -rf htmlcov/
 	rm -rf .ty_cache/
 	find . -type d -name __pycache__ -exec rm -rf {} +
@@ -104,6 +104,15 @@ check-instrumentor-compat: ## Check whether OTel instrumentors now support the l
 behave: ## Run tests with behave
 	@echo "${BLUE}Running tests...${NC}"
 	$(UV) run --extra behave behave
+
+.PHONY: coverage
+coverage: ## Run behave under coverage (FEATURE=features/x.feature for one feature)
+	@echo "${BLUE}Running tests with coverage...${NC}"
+	rm -f .coverage .coverage.*
+	$(UV) run --extra behave coverage run -m behave $(FEATURE)
+	$(UV) run coverage combine
+	$(UV) run coverage report
+	$(UV) run coverage xml
 
 .PHONY: test
 test: behave ## Run tests (alias for behave)
