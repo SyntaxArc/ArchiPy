@@ -286,6 +286,15 @@ def step_when_new_name_imported(context, new_name):
     sc.store("deprecation_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
 
 
+@when('the decorator name "{name}" is imported from the module "{module}"')
+def step_when_name_imported_from_module(context, name, module):
+    sc = get_current_scenario_context(context)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        sc.store("imported_object", getattr(importlib.import_module(module), name))
+    sc.store("deprecation_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+
+
 @then("it should be a function and not a module")
 def step_then_function_not_module(context):
     imported = get_current_scenario_context(context).get("imported_object")

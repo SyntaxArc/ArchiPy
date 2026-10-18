@@ -1,12 +1,14 @@
 """Reusable decorator helpers for ArchiPy."""
 
-import importlib
 from typing import TYPE_CHECKING
 
 from archipy.models.errors import ConfigurationError, InvalidArgumentError
 
 # Old module paths stay importable as thin shims; they must load before the decorator names are bound below.
-from . import _legacy_modules  # noqa: F401
+from . import (
+    _legacy_modules,  # noqa: F401
+    sqlalchemy_transaction as _sqlalchemy_transaction,
+)
 from .deprecation_exception import class_deprecation_error, method_deprecation_error
 from .deprecation_warnings import class_deprecation_warning, method_deprecation_warning
 from .grpc_rate_limit_window import grpc_rate_limit, grpc_rate_limit_decorator
@@ -22,18 +24,12 @@ from .ttl_caching import ttl_cache, ttl_cache_decorator
 globals().pop("sqlalchemy_atomic", None)
 
 
-# SQLAlchemy decorators are imported lazily to avoid requiring SQLAlchemy
-# when using archipy without the sqlalchemy extra (e.g., archipy[scylladb])
-class _SQLAlchemyDecorators:
-    """Container for lazily loaded SQLAlchemy decorators."""
-
-    _cache: dict[str, object] | None = None
-
-
+# SQLAlchemy decorators moved to archipy.adapters.base.sqlalchemy.atomic; they are resolved lazily from there to avoid
+# requiring SQLAlchemy when using archipy without the sqlalchemy extra (e.g., archipy[scylladb])
 # Type stubs for IDE support - these are only used for static type checking
 # The actual implementations are provided via __getattr__ at runtime
 if TYPE_CHECKING:
-    from .sqlalchemy_transaction import (
+    from archipy.adapters.base.sqlalchemy.atomic import (
         async_mysql_sqlalchemy_atomic_decorator,
         async_postgres_sqlalchemy_atomic_decorator,
         async_sqlite_sqlalchemy_atomic_decorator,
@@ -71,12 +67,13 @@ _SQLALCHEMY_DECORATOR_NAMES = frozenset(
 
 
 def __getattr__(name: str) -> object:
-    """Lazy import for SQLAlchemy decorators.
+    """Lazy import for the deprecated SQLAlchemy decorator names.
 
     This function is called when an attribute is not found in the module.
-    It allows us to defer importing SQLAlchemy-related decorators until they're
-    actually accessed, preventing SQLAlchemy from being required when using
-    archipy without the sqlalchemy extra.
+    It defers importing the SQLAlchemy decorators until they're accessed,
+    preventing SQLAlchemy from being required when using archipy without the
+    sqlalchemy extra. Names that moved to ``archipy.adapters.base.sqlalchemy.atomic``
+    emit a ``DeprecationWarning``.
 
     Args:
         name: The name of the attribute to import.
@@ -91,18 +88,10 @@ def __getattr__(name: str) -> object:
     if name not in _SQLALCHEMY_DECORATOR_NAMES:
         raise InvalidArgumentError(argument_name=name, additional_data={"module": __name__})
 
-    if _SQLAlchemyDecorators._cache is None:
-        try:
-            sqlalchemy_transaction = importlib.import_module(".sqlalchemy_transaction", __name__)
-        except ImportError as e:
-            raise ConfigurationError(operation="import", reason="sqlalchemy_extra_required") from e
-
-        _SQLAlchemyDecorators._cache = {
-            decorator_name: getattr(sqlalchemy_transaction, decorator_name)
-            for decorator_name in _SQLALCHEMY_DECORATOR_NAMES
-        }
-
-    return _SQLAlchemyDecorators._cache[name]
+    try:
+        return _sqlalchemy_transaction.resolve(name)
+    except ImportError as e:
+        raise ConfigurationError(operation="import", reason="sqlalchemy_extra_required") from e
 
 
 __all__ = [

@@ -129,7 +129,7 @@ else:
 ```python
 import logging
 
-from archipy.helpers.decorators import starrocks_sqlalchemy_atomic
+from archipy.adapters.base.sqlalchemy.atomic import starrocks_sqlalchemy_atomic
 from archipy.models.errors import DatabaseQueryError
 
 # Configure logging
@@ -174,7 +174,7 @@ import asyncio
 import logging
 
 from archipy.adapters.starrocks.sqlalchemy.adapters import AsyncStarrocksSQLAlchemyAdapter
-from archipy.helpers.decorators import starrocks_sqlalchemy_atomic
+from archipy.adapters.base.sqlalchemy.atomic import starrocks_sqlalchemy_atomic
 from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
 # Configure logging

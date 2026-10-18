@@ -227,11 +227,15 @@ fetch_user_data.clear_cache()
 
 These decorators automatically manage database transactions.
 
+!!! note "Moved to the adapters layer"
+    They now live in `archipy.adapters.base.sqlalchemy.atomic`. Importing them from `archipy.helpers.decorators` still
+    works and emits a `DeprecationWarning`.
+
 ```python
 import logging
 from uuid import UUID
 
-from archipy.helpers.decorators import postgres_sqlalchemy_atomic
+from archipy.adapters.base.sqlalchemy.atomic import postgres_sqlalchemy_atomic
 from archipy.models.errors import DatabaseQueryError
 
 # Configure logging

@@ -402,7 +402,7 @@ entire transaction is automatically rolled back.
 ```python
 import logging
 
-from archipy.helpers.decorators import postgres_sqlalchemy_atomic
+from archipy.adapters.base.sqlalchemy.atomic import postgres_sqlalchemy_atomic
 from archipy.models.errors import AlreadyExistsError, DatabaseQueryError
 
 logger = logging.getLogger(__name__)
@@ -673,7 +673,7 @@ asyncio.run(async_create_user("async_alice", "async@example.com"))
 import asyncio
 import logging
 
-from archipy.helpers.decorators import postgres_sqlalchemy_atomic
+from archipy.adapters.base.sqlalchemy.atomic import postgres_sqlalchemy_atomic
 from archipy.models.errors import DatabaseQueryError
 
 logger = logging.getLogger(__name__)

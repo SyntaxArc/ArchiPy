@@ -300,7 +300,7 @@ import logging
 from datetime import timedelta
 
 from archipy.adapters.temporal import AtomicActivity
-from archipy.helpers.decorators import postgres_sqlalchemy_atomic
+from archipy.adapters.base.sqlalchemy.atomic import postgres_sqlalchemy_atomic
 from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
 # Configure logging

@@ -53,3 +53,12 @@ StarRocks) inherit from.
 options:
 show_root_toc_entry: false
 heading_level: 3
+
+## Atomic Transaction Decorators
+
+Decorators that wrap a function in a SQLAlchemy transaction, rolling back on failure.
+
+::: archipy.adapters.base.sqlalchemy.atomic
+options:
+show_root_toc_entry: false
+heading_level: 3

@@ -357,15 +357,40 @@ Feature: Helper decorators
       And no DeprecationWarning should have been emitted
 
       Examples:
-        | new                        |
-        | retry                      |
-        | timeout                    |
-        | timing                     |
-        | singleton                  |
-        | ttl_cache                  |
-        | grpc_rate_limit            |
-        | sqlalchemy_atomic          |
-        | postgres_sqlalchemy_atomic |
+        | new             |
+        | retry           |
+        | timeout         |
+        | timing          |
+        | singleton       |
+        | ttl_cache       |
+        | grpc_rate_limit |
+
+    Scenario Outline: Moved name <name> still resolves from the decorators package and warns
+      When the new decorator name "<name>" is imported from the decorators package
+      Then it should be a function and not a module
+      And exactly one DeprecationWarning should name "archipy.adapters.base.sqlalchemy.atomic.<name>"
+      And the DeprecationWarning should point at the calling code
+
+      Examples:
+        | name                        |
+        | sqlalchemy_atomic           |
+        | postgres_sqlalchemy_atomic  |
+        | mysql_sqlalchemy_atomic     |
+        | sqlite_sqlalchemy_atomic    |
+        | starrocks_sqlalchemy_atomic |
+
+    Scenario Outline: Name <name> is exported from the adapters module without a warning
+      When the decorator name "<name>" is imported from the module "archipy.adapters.base.sqlalchemy.atomic"
+      Then it should be a function and not a module
+      And no DeprecationWarning should have been emitted
+
+      Examples:
+        | name                        |
+        | sqlalchemy_atomic           |
+        | postgres_sqlalchemy_atomic  |
+        | mysql_sqlalchemy_atomic     |
+        | sqlite_sqlalchemy_atomic    |
+        | starrocks_sqlalchemy_atomic |
 
     Scenario Outline: Old module path <module> still exports <name>
       When "<name>" is imported from the old module path "<module>"

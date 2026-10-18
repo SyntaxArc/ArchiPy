@@ -139,6 +139,8 @@ name = "ArchiPy layers: adapters -> helpers -> configs -> models"
 type = "layers"
 layers = ["archipy.adapters", "archipy.helpers", "archipy.configs", "archipy.models"]
 ignore_imports = [
+    # Deprecated import path of the moved atomic decorators; remove with the shim modules
+    "archipy.helpers.decorators.sqlalchemy_transaction -> archipy.adapters.base.sqlalchemy.atomic",
     # Function-scoped adapter import that helpers-configs.mdc allows (lazy, cycle-breaking)
     "archipy.helpers.interceptors.grpc.rate_limit.grpc_rate_limit_interceptor -> archipy.adapters.redis.adapters",
     # FastAPI resolves the Depends() annotations at runtime, so the adapter classes must stay module globals
@@ -245,6 +247,7 @@ docstring-code-line-length = "dynamic"
 "archipy/helpers/utils/otel_utils.py" = ["PLC0415", "ANN401", "PLR0913", "PLR0917"]  # Lazy optional deps; provider/instrumentor union types
 "archipy/helpers/interceptors/grpc/otel_metrics/server_interceptor.py" = ["ANN401"]  # OTel histogram handle is dynamically typed
 "archipy/adapters/base/sqlalchemy/session_managers.py" = ["PLC0415"]  # Lazy sqlalchemy.ext.asyncio (needs greenlet via sqlalchemy-async)
+"archipy/adapters/base/sqlalchemy/atomic.py" = ["ANN401", "PLC0415", "PLR0913", "PLR0917"]  # Atomic decorators: Any in wrappers, lazy registry import
 "archipy/models/errors/base_error.py" = ["PLC0415"]  # Circular import workaround
 "archipy/helpers/utils/string_utils_constants.py" = ["RUF003"]  # Intentional Persian/Arabic glyph documentation in comments
 "archipy/models/types/persian_digit_type.py" = ["RUF001", "RUF002"]  # Intentional Persian digit glyphs

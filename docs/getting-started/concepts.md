@@ -185,7 +185,7 @@ Service  →  Logic (@atomic)  →  Repository  →  Adapter  →  DB
 ```
 
 ```python
-from archipy.helpers.decorators import postgres_sqlalchemy_atomic
+from archipy.adapters.base.sqlalchemy.atomic import postgres_sqlalchemy_atomic
 from models.dtos.user.domain.v1.user_dtos import UserRegistrationInputDTO, UserRegistrationOutputDTO
 
 

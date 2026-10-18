@@ -37,14 +37,14 @@ from archipy.adapters.starrocks.sqlalchemy.adapters import (
 from archipy.adapters.starrocks.sqlalchemy.session_manager_registry import StarRocksSessionManagerRegistry
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import SQLiteSQLAlchemyConfig
-from archipy.helpers.decorators import (
+from archipy.adapters.base.sqlalchemy.atomic import (
+    ATOMIC_BLOCK_CONFIGS,
     mysql_sqlalchemy_atomic,
     postgres_sqlalchemy_atomic,
     sqlalchemy_atomic,
     sqlite_sqlalchemy_atomic,
     starrocks_sqlalchemy_atomic,
 )
-from archipy.helpers.decorators.sqlalchemy_transaction import ATOMIC_BLOCK_CONFIGS
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
 from archipy.models.errors import DatabaseError, InternalError
 from features.test_entity import RelatedTestEntity, TestAdminEntity, TestEntity, TestManagerEntity
@@ -2122,7 +2122,7 @@ _RAISABLE = {
 def step_given_fake_atomic_session(context, mode):
     from unittest import mock
 
-    from archipy.helpers.decorators import sqlalchemy_transaction as atomic_module
+    from archipy.adapters.base.sqlalchemy import atomic as atomic_module
 
     sc = get_current_scenario_context(context)
     session = _FakeSession(is_async=mode == "async")
@@ -2254,7 +2254,7 @@ def step_then_atomic_marker_lifecycle(context):
 def step_when_driver_error_handled(context, kind, code):
     from sqlalchemy.exc import IntegrityError, OperationalError
 
-    from archipy.helpers.decorators.sqlalchemy_transaction import _handle_db_exception
+    from archipy.adapters.base.sqlalchemy.atomic import _handle_db_exception
 
     class _DriverError(Exception):
         pass

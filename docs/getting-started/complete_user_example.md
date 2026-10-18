@@ -422,7 +422,7 @@ class UserRepository:
 # logics/user/user_registration_logic.py
 import logging
 
-from archipy.helpers.decorators import postgres_sqlalchemy_atomic
+from archipy.adapters.base.sqlalchemy.atomic import postgres_sqlalchemy_atomic
 
 from models.dtos.user.domain.v1.user_dtos import UserRegistrationInputDTO, UserRegistrationOutputDTO
 from models.dtos.user.repository.user_dtos import CreateUserCommandDTO, SearchUsersQueryDTO
@@ -467,7 +467,7 @@ class UserRegistrationLogic:
 # logics/user/user_query_logic.py
 import logging
 
-from archipy.helpers.decorators import postgres_sqlalchemy_atomic
+from archipy.adapters.base.sqlalchemy.atomic import postgres_sqlalchemy_atomic
 from archipy.models.errors import NotFoundError
 
 from models.dtos.user.domain.v1.user_dtos import (

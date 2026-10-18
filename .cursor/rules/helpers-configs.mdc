@@ -13,7 +13,7 @@ Canonical owner for `archipy/helpers/` and `archipy/configs/`. Layer summary: `a
 ```
 archipy/helpers/
 ├── utils/          # Pure / mostly-pure utility classes and functions
-├── decorators/     # Cross-cutting decorators (atomic, retry, etc.)
+├── decorators/     # Cross-cutting decorators (retry, tracing, caching, etc.)
 ├── interceptors/   # Framework interceptors (e.g. gRPC)
 └── metaclasses/    # Shared metaclasses (e.g. Singleton)
 ```

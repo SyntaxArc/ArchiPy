@@ -116,7 +116,7 @@ else:
 ```python
 import logging
 
-from archipy.helpers.decorators import sqlite_sqlalchemy_atomic
+from archipy.adapters.base.sqlalchemy.atomic import sqlite_sqlalchemy_atomic
 from archipy.models.errors import DatabaseQueryError
 
 # Configure logging
@@ -155,7 +155,7 @@ import asyncio
 import logging
 
 from archipy.adapters.sqlite.sqlalchemy.adapters import AsyncSQLiteSQLAlchemyAdapter
-from archipy.helpers.decorators import sqlite_sqlalchemy_atomic
+from archipy.adapters.base.sqlalchemy.atomic import sqlite_sqlalchemy_atomic
 from archipy.models.errors import DatabaseQueryError, DatabaseConnectionError
 
 # Configure logging

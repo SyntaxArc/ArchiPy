@@ -79,12 +79,9 @@ heading_level: 3
 
 ## SQLAlchemy Atomic
 
-Decorator that wraps a function in a SQLAlchemy database transaction, rolling back on failure.
-
-::: archipy.helpers.decorators.sqlalchemy_transaction
-options:
-show_root_toc_entry: false
-heading_level: 3
+The SQLAlchemy atomic decorators moved to the adapters layer; see
+[Base SQLAlchemy](../adapters/base.md#atomic-transaction-decorators). The old
+`archipy.helpers.decorators` names still work and emit a `DeprecationWarning`.
 
 ## Deprecation Warnings
 
