@@ -228,6 +228,16 @@ interceptor = GrpcServerRateLimitInterceptor(
 )
 ```
 
+For tests, local development and single-process servers, `InMemoryRateLimitStore` (and `AsyncInMemoryRateLimitStore`
+for the async interceptor) counts in an in-memory SQLite database and needs no Redis. Every server process counts on its
+own, so use Redis when several processes must share one limit.
+
+```python
+from archipy.helpers.interceptors.grpc.rate_limit import InMemoryRateLimitStore
+
+interceptor = GrpcServerRateLimitInterceptor(store=InMemoryRateLimitStore())
+```
+
 Connection, OS and timeout errors always count as an unavailable backend. `store_errors` adds the error types your
 store raises for the same case.
 
