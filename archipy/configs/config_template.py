@@ -998,11 +998,11 @@ class OpentelemetryConfig(BaseModel):
         ),
     )
     OTLP_COMPRESSION: Literal["none", "gzip"] = Field(
-        default="gzip",
+        default="none",
         description=(
             "Compression of OTLP exports for traces, metrics and logs. gzip is the only algorithm the OTLP "
-            "specification defines, so every collector accepts it, and it roughly halves realistic payloads; "
-            "use none for a collector on the same host"
+            "specification defines, so every collector accepts it, and it cuts realistic payloads to about "
+            "half or less; it costs CPU on the export thread, so it is worth it when the collector is across a network"
         ),
     )
     SPAN_BATCH_SCHEDULE_DELAY_MS: int = Field(

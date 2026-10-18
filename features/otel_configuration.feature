@@ -70,20 +70,10 @@ Feature: OpenTelemetry configuration
       | grpc          |
       | http/protobuf |
 
-  Scenario: Exporters compress with gzip by default
+  Scenario: Exporters do not compress by default
     Given an OpenTelemetry config built from:
       """
       {}
-      """
-    When the OTLP exporters are created from the config
-    Then every OTLP exporter compresses with gzip
-
-  Scenario: Exporters do not compress when asked not to
-    Given an OpenTelemetry config built from:
-      """
-      {
-        "OTLP_COMPRESSION": "none"
-      }
       """
     When the OTLP exporters are created from the config
     Then no OTLP exporter compresses
@@ -239,7 +229,7 @@ Feature: OpenTelemetry configuration
       | OTEL_EXPORTER_OTLP_PROTOCOL    | http/protobuf         |
       | OTEL_EXPORTER_OTLP_HEADERS     | a=b,c=d               |
       | OTEL_EXPORTER_OTLP_TIMEOUT     | 3                     |
-      | OTEL_EXPORTER_OTLP_COMPRESSION | none                  |
+      | OTEL_EXPORTER_OTLP_COMPRESSION | gzip                  |
       | OTEL_TRACES_SAMPLER            | traceidratio          |
       | OTEL_TRACES_SAMPLER_ARG        | 0.5                   |
       | OTEL_PROPAGATORS               | tracecontext          |
@@ -252,7 +242,7 @@ Feature: OpenTelemetry configuration
     And the effective setting "PROTOCOL" is "http/protobuf"
     And the effective setting "OTLP_HEADERS" is {"a": "b", "c": "d"}
     And the effective setting "TIMEOUT" is 3.0
-    And the effective setting "OTLP_COMPRESSION" is "none"
+    And the effective setting "OTLP_COMPRESSION" is "gzip"
     And the effective setting "TRACES_SAMPLER" is "traceidratio"
     And the effective setting "TRACES_SAMPLE_RATIO" is 0.5
     And the effective setting "PROPAGATORS" is ["tracecontext"]
@@ -305,7 +295,7 @@ Feature: OpenTelemetry configuration
       | OTEL_BSP_MAX_QUEUE_SIZE        | many          |
       | OTEL_BSP_SCHEDULE_DELAY        | 750           |
     When the standard environment is applied
-    Then the effective setting "OTLP_COMPRESSION" is "gzip"
+    Then the effective setting "OTLP_COMPRESSION" is "none"
     And the effective setting "TRACES_SAMPLER" is "parentbased_traceidratio"
     And the effective setting "SPAN_BATCH_MAX_QUEUE_SIZE" is 4096
     And the effective setting "SPAN_BATCH_SCHEDULE_DELAY_MS" is 750
