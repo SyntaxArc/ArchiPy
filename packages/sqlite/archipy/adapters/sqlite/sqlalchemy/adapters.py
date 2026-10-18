@@ -30,7 +30,7 @@ class SQLiteSQLAlchemyAdapter(BaseSQLAlchemyAdapter[SQLiteSQLAlchemyConfig]):
         Args:
             orm_config: SQLite-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().SQLITE_SQLALCHEMY if orm_config is None else orm_config
+        configs = orm_config or BaseConfig.global_config().SQLITE_SQLALCHEMY
         super().__init__(configs)
 
     @override
@@ -62,7 +62,7 @@ class AsyncSQLiteSQLAlchemyAdapter(AsyncBaseSQLAlchemyAdapter[SQLiteSQLAlchemyCo
         Args:
             orm_config: SQLite-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().SQLITE_SQLALCHEMY if orm_config is None else orm_config
+        configs = orm_config or BaseConfig.global_config().SQLITE_SQLALCHEMY
         super().__init__(configs)
 
     @override

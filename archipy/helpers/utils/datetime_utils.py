@@ -341,7 +341,7 @@ class DatetimeUtils:
         Returns:
             datetime: The resulting datetime after subtraction.
         """
-        datetime_given = cls.get_datetime_now() if datetime_given is None else datetime_given
+        datetime_given = datetime_given or cls.get_datetime_now()
         return datetime_given - timedelta(weeks=weeks, days=days, hours=hours, minutes=minutes, seconds=seconds)
 
     @classmethod
@@ -367,5 +367,5 @@ class DatetimeUtils:
         Returns:
             datetime: The resulting datetime after addition.
         """
-        datetime_given = cls.get_datetime_now() if datetime_given is None else datetime_given
+        datetime_given = datetime_given or cls.get_datetime_now()
         return datetime_given + timedelta(weeks=weeks, days=days, hours=hours, minutes=minutes, seconds=seconds)

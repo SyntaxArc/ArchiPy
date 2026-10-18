@@ -54,7 +54,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             redis_config (RedisConfig, optional): Configuration settings for Redis.
                 If None, retrieves from global config. Defaults to None.
         """
-        configs: RedisConfig = BaseConfig.global_config().REDIS if redis_config is None else redis_config
+        configs: RedisConfig = redis_config or BaseConfig.global_config().REDIS
         self._configs = configs
         self._search_client: Redis | RedisCluster | None = None
         self._set_clients(configs)
@@ -299,7 +299,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             redis_config (RedisConfig, optional): Configuration settings for Redis.
                 If None, retrieves from global config. Defaults to None.
         """
-        configs: RedisConfig = BaseConfig.global_config().REDIS if redis_config is None else redis_config
+        configs: RedisConfig = redis_config or BaseConfig.global_config().REDIS
         self._configs = configs
         self._search_client: AsyncRedis | AsyncRedisCluster | None = None
         self._set_clients(configs)

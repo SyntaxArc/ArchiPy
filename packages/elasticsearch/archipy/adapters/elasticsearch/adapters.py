@@ -43,9 +43,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
             elasticsearch_config (ElasticsearchConfig, optional): Configuration settings for Elasticsearch.
                 If None, retrieves from global config. Defaults to None.
         """
-        configs: ElasticsearchConfig = (
-            BaseConfig.global_config().ELASTIC if elasticsearch_config is None else elasticsearch_config
-        )
+        configs: ElasticsearchConfig = elasticsearch_config or BaseConfig.global_config().ELASTIC
         self.client = self._get_client(configs)
 
     @staticmethod
@@ -329,9 +327,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
             elasticsearch_config (ElasticsearchConfig, optional): Configuration settings for Elasticsearch.
                 If None, retrieves from global config. Defaults to None.
         """
-        configs: ElasticsearchConfig = (
-            BaseConfig.global_config().ELASTIC if elasticsearch_config is None else elasticsearch_config
-        )
+        configs: ElasticsearchConfig = elasticsearch_config or BaseConfig.global_config().ELASTIC
         self.client = self._get_client(configs)
 
     @staticmethod

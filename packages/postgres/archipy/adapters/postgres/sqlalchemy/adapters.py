@@ -30,7 +30,7 @@ class PostgresSQLAlchemyAdapter(BaseSQLAlchemyAdapter[PostgresSQLAlchemyConfig])
         Args:
             orm_config: PostgreSQL-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().POSTGRES_SQLALCHEMY if orm_config is None else orm_config
+        configs = orm_config or BaseConfig.global_config().POSTGRES_SQLALCHEMY
         super().__init__(configs)
 
     @override
@@ -62,7 +62,7 @@ class AsyncPostgresSQLAlchemyAdapter(AsyncBaseSQLAlchemyAdapter[PostgresSQLAlche
         Args:
             orm_config: PostgreSQL-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().POSTGRES_SQLALCHEMY if orm_config is None else orm_config
+        configs = orm_config or BaseConfig.global_config().POSTGRES_SQLALCHEMY
         super().__init__(configs)
 
     @override

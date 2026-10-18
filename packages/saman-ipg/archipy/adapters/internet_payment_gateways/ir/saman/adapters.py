@@ -46,7 +46,7 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
         Raises:
             InvalidArgumentError: If TERMINAL_ID is not configured.
         """
-        configs = BaseConfig.global_config().SAMAN_SHAPARAK if config is None else config
+        configs = config or BaseConfig.global_config().SAMAN_SHAPARAK
 
         if not configs.TERMINAL_ID:
             raise InvalidArgumentError(argument_name="TERMINAL_ID")
@@ -288,7 +288,7 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
         Raises:
             InvalidArgumentError: If TERMINAL_ID is not configured.
         """
-        configs = BaseConfig.global_config().SAMAN_SHAPARAK if config is None else config
+        configs = config or BaseConfig.global_config().SAMAN_SHAPARAK
 
         if not configs.TERMINAL_ID:
             raise InvalidArgumentError(argument_name="TERMINAL_ID")

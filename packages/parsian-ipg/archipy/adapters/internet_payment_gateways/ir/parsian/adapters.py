@@ -54,7 +54,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
         Raises:
             InvalidArgumentError: If LOGIN_ACCOUNT is not a valid string.
         """
-        configs = BaseConfig.global_config().PARSIAN_SHAPARAK if config is None else config
+        configs = config or BaseConfig.global_config().PARSIAN_SHAPARAK
         if not configs.LOGIN_ACCOUNT or not isinstance(configs.LOGIN_ACCOUNT, str):
             raise InvalidArgumentError(argument_name="LOGIN_ACCOUNT")
 
@@ -228,7 +228,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
         Raises:
             InvalidArgumentError: If LOGIN_ACCOUNT is not a valid string.
         """
-        configs = BaseConfig.global_config().PARSIAN_SHAPARAK if config is None else config
+        configs = config or BaseConfig.global_config().PARSIAN_SHAPARAK
         if not configs.LOGIN_ACCOUNT or not isinstance(configs.LOGIN_ACCOUNT, str):
             raise InvalidArgumentError(argument_name="LOGIN_ACCOUNT")
 

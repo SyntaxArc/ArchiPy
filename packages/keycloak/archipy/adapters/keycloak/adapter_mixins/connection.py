@@ -41,9 +41,7 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
         Args:
             keycloak_configs: Optional Keycloak configuration. If None, global config is used.
         """
-        self.configs: KeycloakConfig = (
-            BaseConfig.global_config().KEYCLOAK if keycloak_configs is None else keycloak_configs
-        )
+        self.configs: KeycloakConfig = keycloak_configs or BaseConfig.global_config().KEYCLOAK
 
         # Initialize the OpenID client for authentication
         self._openid_adapter = self._get_openid_client(self.configs)
@@ -220,9 +218,7 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
         Args:
             keycloak_configs: Optional Keycloak configuration. If None, global config is used.
         """
-        self.configs: KeycloakConfig = (
-            BaseConfig.global_config().KEYCLOAK if keycloak_configs is None else keycloak_configs
-        )
+        self.configs: KeycloakConfig = keycloak_configs or BaseConfig.global_config().KEYCLOAK
 
         # Initialize the OpenID client for authentication
         self.openid_adapter = self._get_openid_client(self.configs)

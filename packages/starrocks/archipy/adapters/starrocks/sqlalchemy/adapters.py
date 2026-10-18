@@ -30,7 +30,7 @@ class StarrocksSQLAlchemyAdapter(BaseSQLAlchemyAdapter[StarRocksSQLAlchemyConfig
         Args:
             orm_config: Starrocks-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().STARROCKS_SQLALCHEMY if orm_config is None else orm_config
+        configs = orm_config or BaseConfig.global_config().STARROCKS_SQLALCHEMY
         super().__init__(configs)
 
     @override
@@ -62,7 +62,7 @@ class AsyncStarrocksSQLAlchemyAdapter(AsyncBaseSQLAlchemyAdapter[StarRocksSQLAlc
         Args:
             orm_config: Starrocks-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().STARROCKS_SQLALCHEMY if orm_config is None else orm_config
+        configs = orm_config or BaseConfig.global_config().STARROCKS_SQLALCHEMY
         super().__init__(configs)
 
     @override

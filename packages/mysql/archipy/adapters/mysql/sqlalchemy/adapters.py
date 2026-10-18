@@ -30,7 +30,7 @@ class MySQLSQLAlchemyAdapter(BaseSQLAlchemyAdapter[MySQLSQLAlchemyConfig]):
         Args:
             orm_config: MySQL-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().MYSQL_SQLALCHEMY if orm_config is None else orm_config
+        configs = orm_config or BaseConfig.global_config().MYSQL_SQLALCHEMY
         super().__init__(configs)
 
     @override
@@ -62,7 +62,7 @@ class AsyncMySQLSQLAlchemyAdapter(AsyncBaseSQLAlchemyAdapter[MySQLSQLAlchemyConf
         Args:
             orm_config: MySQL-specific configuration. If None, uses global config.
         """
-        configs = BaseConfig.global_config().MYSQL_SQLALCHEMY if orm_config is None else orm_config
+        configs = orm_config or BaseConfig.global_config().MYSQL_SQLALCHEMY
         super().__init__(configs)
 
     @override
