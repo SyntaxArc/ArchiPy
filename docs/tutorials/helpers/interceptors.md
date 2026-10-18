@@ -212,6 +212,25 @@ When `GRPC_RATE_LIMIT__FAIL_CLOSED=true`, a rate limiter that cannot be created 
 Undecorated servicer methods are never rate-limited. Stacked decorators add multiple windows; all
 windows must pass before the RPC handler runs.
 
+#### Counter store
+
+By default the interceptors count in Redis through a `RedisAdapter` (or `AsyncRedisAdapter`) built from the global
+config. Pass `store=` to count somewhere else, for example in memory in a test. A store only needs the two methods of
+`RateLimitStore` (`AsyncRateLimitStore` for the async interceptor): `increx` and `pttl`, with the semantics of the Redis
+`INCREX` and `PTTL` commands.
+
+```python
+from archipy.helpers.interceptors.grpc.rate_limit import GrpcServerRateLimitInterceptor
+
+interceptor = GrpcServerRateLimitInterceptor(
+    store=MyStore(),
+    store_errors=(MyBackendError,),  # backend failures that follow GRPC_RATE_LIMIT__FAIL_CLOSED
+)
+```
+
+Connection, OS and timeout errors always count as an unavailable backend. `store_errors` adds the error types your
+store raises for the same case.
+
 ## FastAPI Rate Limiting
 
 ArchiPy no longer ships a FastAPI rate-limit handler. Use the official

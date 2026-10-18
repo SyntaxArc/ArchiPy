@@ -6,8 +6,11 @@ from archipy.helpers.interceptors.grpc.rate_limit.grpc_rate_limit_interceptor im
     AsyncGrpcServerRateLimitInterceptor,
     GrpcServerRateLimitInterceptor,
 )
+from archipy.helpers.interceptors.grpc.rate_limit.stores import AsyncRateLimitStore, RateLimitStore
 
 __all__ = [
     "AsyncGrpcServerRateLimitInterceptor",
+    "AsyncRateLimitStore",
     "GrpcServerRateLimitInterceptor",
+    "RateLimitStore",
 ]

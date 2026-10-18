@@ -1,4 +1,5 @@
 import socket
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
@@ -12,6 +13,10 @@ from archipy.helpers.interceptors.grpc.base.server_interceptor import (
     BaseAsyncGrpcServerInterceptor,
     BaseGrpcServerInterceptor,
     MethodName,
+)
+from archipy.helpers.interceptors.grpc.rate_limit import (
+    AsyncGrpcServerRateLimitInterceptor,
+    GrpcServerRateLimitInterceptor,
 )
 from archipy.helpers.utils.app_utils import AsyncGrpcAPIUtils, GrpcAPIUtils
 from archipy.helpers.utils.jwt_utils import JWTUtils
@@ -49,9 +54,81 @@ def _rate_limit_config_for_scenario(scenario_context, config: BaseConfig):
     return config.GRPC_RATE_LIMIT.model_copy(update=updates) if updates else config.GRPC_RATE_LIMIT
 
 
+class _CustomBackendError(Exception):
+    """Error of a caller-supplied store that means its backend is down."""
+
+
+class _InMemoryRateLimitStore:
+    """Counter store with the INCREX and PTTL behaviour the interceptors use, kept in process memory."""
+
+    def __init__(self, *, failing: bool = False) -> None:
+        self._counters: dict[str, tuple[int, float | None]] = {}
+        self._failing = failing
+
+    def increx(self, name, *, byint=None, lbound=None, ubound=None, saturate=False, px=None, enx=False):
+        if self._failing:
+            raise _CustomBackendError
+        value, expires_at = self._counters.get(name, (0, None))
+        if expires_at is not None and time.monotonic() >= expires_at:
+            value, expires_at = 0, None
+        created = name not in self._counters or expires_at is None and value == 0
+        step = byint or 0
+        new_value = value + step
+        if ubound is not None and new_value > ubound:
+            return [value, False]
+        if lbound is not None and new_value < lbound:
+            new_value = int(lbound) if saturate else value
+        if created and enx and px is not None:
+            expires_at = time.monotonic() + px / 1000
+        self._counters[name] = (new_value, expires_at)
+        return [new_value, True]
+
+    def pttl(self, name):
+        if self._failing:
+            raise _CustomBackendError
+        _, expires_at = self._counters.get(name, (0, None))
+        if expires_at is None:
+            return -2
+        return max(0, int((expires_at - time.monotonic()) * 1000))
+
+
+class _AsyncInMemoryRateLimitStore:
+    """The awaitable counterpart of ``_InMemoryRateLimitStore``."""
+
+    def __init__(self, *, failing: bool = False) -> None:
+        self._store = _InMemoryRateLimitStore(failing=failing)
+
+    async def increx(self, name, **kwargs):
+        return self._store.increx(name, **kwargs)
+
+    async def pttl(self, name):
+        return self._store.pttl(name)
+
+
+def _create_interceptor_with_store(scenario_context, config: BaseConfig):
+    """Build the interceptor straight from its constructor with a store the caller passes."""
+    failing = scenario_context.get("custom_store") == "failing"
+    rate_limit_config = _rate_limit_config_for_scenario(scenario_context, config)
+    if _is_async_mode(scenario_context):
+        return AsyncGrpcServerRateLimitInterceptor(
+            rate_limit_config=rate_limit_config,
+            store=_AsyncInMemoryRateLimitStore(failing=failing),
+            store_errors=(_CustomBackendError,),
+        )
+    return GrpcServerRateLimitInterceptor(
+        rate_limit_config=rate_limit_config,
+        store=_InMemoryRateLimitStore(failing=failing),
+        store_errors=(_CustomBackendError,),
+    )
+
+
 def _create_interceptor(scenario_context):
     """Build the sync or async rate-limit interceptor via AppUtils setup helpers."""
     config = BaseConfig.global_config()
+    if scenario_context.get("custom_store"):
+        interceptor = _create_interceptor_with_store(scenario_context, config)
+        scenario_context.store("grpc_interceptor", interceptor)
+        return interceptor
     original_rate_limit = config.GRPC_RATE_LIMIT
     config.GRPC_RATE_LIMIT = _rate_limit_config_for_scenario(scenario_context, config)
     interceptors: list[object] = []
@@ -172,7 +249,7 @@ def _make_redis_unreachable(scenario_context, interceptor) -> None:
         },
     )
     adapter_class = AsyncRedisAdapter if _is_async_mode(scenario_context) else RedisAdapter
-    interceptor._redis_client = adapter_class(redis_config=redis_config)
+    interceptor._store = adapter_class(redis_config=redis_config)
 
 
 async def _call_real_server(
@@ -253,6 +330,18 @@ def step_given_grpc_rate_limit_interceptor(context, mode, calls_count, seconds):
     scenario_context.store("multi_window", False)
 
 
+@given("the interceptor is built with a store passed by the caller")
+def step_given_interceptor_with_caller_store(context):
+    """Build the interceptor from its constructor with an in-memory store instead of Redis."""
+    get_current_scenario_context(context).store("custom_store", "memory")
+
+
+@given("the interceptor is built with a caller store whose backend is down")
+def step_given_interceptor_with_failing_store(context):
+    """Build the interceptor with a store that raises an error the caller named as an unavailable backend."""
+    get_current_scenario_context(context).store("custom_store", "failing")
+
+
 @given(
     "a {mode} gRPC rate limit interceptor with burst {burst_calls:d} calls per {burst_seconds:d} seconds "
     "and sustained {sustained_calls:d} calls per {sustained_seconds:d} seconds",
@@ -330,6 +419,15 @@ async def step_when_undecorated_grpc_rpcs_invoked(context, count):
         _build_handler(scenario_context, decorated=False),
         count,
     )
+    scenario_context.store("grpc_outcomes", outcomes)
+
+
+@when("1 decorated gRPC RPC is invoked")
+async def step_when_one_decorated_grpc_rpc(context):
+    """Invoke one decorated RPC through the interceptor as built for the scenario."""
+    scenario_context = get_current_scenario_context(context)
+    interceptor = _create_interceptor(scenario_context)
+    outcomes = await _call_real_server(scenario_context, interceptor, _build_handler(scenario_context), 1)
     scenario_context.store("grpc_outcomes", outcomes)
 
 

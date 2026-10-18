@@ -142,7 +142,7 @@ ignore_imports = [
     # Deprecated import paths of moved code (atomic decorators, Keycloak auth); remove with the shim modules
     "archipy.helpers.decorators.sqlalchemy_transaction -> archipy.adapters.base.sqlalchemy.atomic",
     "archipy.helpers.utils.keycloak_utils -> archipy.adapters.keycloak.auth",
-    # Function-scoped adapter import that helpers-configs.mdc allows (lazy, cycle-breaking)
+    # Function-scoped import of the default Redis store; helpers-configs.mdc allows it and a store= argument replaces it
     "archipy.helpers.interceptors.grpc.rate_limit.grpc_rate_limit_interceptor -> archipy.adapters.redis.adapters",
 ]
 
@@ -257,7 +257,8 @@ docstring-code-line-length = "dynamic"
 "archipy/helpers/utils/datetime_utils.py" = ["PLR0913", "PLR0917"]  # Datetime helper public API arity
 "archipy/helpers/utils/string_utils.py" = ["PLR0913"]  # Persian normalization flag arity
 "archipy/helpers/utils/rate_limit_utils.py" = ["PLR0913", "PLR0917"]  # Rate-limit window computation arity
-"archipy/helpers/interceptors/grpc/rate_limit/grpc_rate_limit_interceptor.py" = ["PLR0913"]  # gRPC interceptor mirrors rate-limit config arity
+"archipy/helpers/interceptors/grpc/rate_limit/stores.py" = ["PLR0913", "PLR0917"]  # Store ports mirror the Redis INCREX arity
+"archipy/helpers/interceptors/grpc/rate_limit/grpc_rate_limit_interceptor.py" = ["PLR0913", "PLR0917"]  # gRPC interceptor mirrors rate-limit config arity
 "archipy/configs/vault_settings_source.py" = ["PLR0913", "PLR0917"]  # Vault settings source mirrors hvac client arity
 "archipy/models/dtos/redis/search/search_query_dto.py" = ["PLR0913"]  # RedisSearch query factory arity
 

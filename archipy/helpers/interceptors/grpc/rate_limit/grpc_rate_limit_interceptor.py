@@ -27,8 +27,8 @@ if TYPE_CHECKING:
 
     import grpc
 
-    from archipy.adapters.redis.adapters import AsyncRedisAdapter, RedisAdapter
     from archipy.configs.config_template import GrpcRateLimitConfig
+    from archipy.helpers.interceptors.grpc.rate_limit.stores import AsyncRateLimitStore, RateLimitStore
     from archipy.models.dtos.rate_limit_window_dto import RateLimitWindowDTO
 
 logger = logging.getLogger(__name__)
@@ -283,8 +283,23 @@ class GrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseGrpcSer
         identifier_fn: Callable[[grpc.ServicerContext, MethodName], str] | None = None,
         identity_from_access_token: bool | None = None,
         trusted_proxy_hosts: frozenset[str] | None = None,
+        store: RateLimitStore | None = None,
+        store_errors: tuple[type[BaseException], ...] = (),
     ) -> None:
-        """Initialize the sync gRPC rate-limit interceptor."""
+        """Initialize the sync gRPC rate-limit interceptor.
+
+        Args:
+            rate_limit_config: Rate-limit settings. When None, ``GRPC_RATE_LIMIT`` from global config is used.
+            key_prefix: Override for ``GRPC_RATE_LIMIT.KEY_PREFIX``.
+            fail_closed: Override for ``GRPC_RATE_LIMIT.FAIL_CLOSED``.
+            skip_methods: Full gRPC method names excluded from rate limiting.
+            identifier_fn: Custom identity resolver for an RPC.
+            identity_from_access_token: Override for ``GRPC_RATE_LIMIT.IDENTITY_FROM_ACCESS_TOKEN``.
+            trusted_proxy_hosts: Peer hosts whose ``x-forwarded-for`` header is trusted.
+            store: Counter store. When None, a ``RedisAdapter`` built from the global config is used.
+            store_errors: Exception types of ``store`` that mean the backend is unavailable, besides the connection,
+                OS and timeout errors every store may raise. They follow the ``fail_closed`` setting.
+        """
         super().__init__(
             rate_limit_config=rate_limit_config,
             key_prefix=key_prefix,
@@ -294,18 +309,24 @@ class GrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseGrpcSer
             trusted_proxy_hosts=trusted_proxy_hosts,
         )
         self._identifier_fn = identifier_fn
-        self._redis_client: RedisAdapter = self._create_redis_client()
+        if store is None:
+            store, default_errors = self._create_default_store()
+            store_errors = (*default_errors, *store_errors)
+        self._store: RateLimitStore = store
+        self._unavailable_errors = (ConnectionError, OSError, TimeoutError, *store_errors)
 
     @staticmethod
-    def _create_redis_client() -> RedisAdapter:
-        """Lazily initialized sync Redis client for rate limiting."""
+    def _create_default_store() -> tuple[RateLimitStore, tuple[type[BaseException], ...]]:
+        """Build the default Redis store and the Redis errors that mean it is unavailable."""
+        from redis.exceptions import RedisError  # noqa: PLC0415
+
         from archipy.adapters.redis.adapters import RedisAdapter  # noqa: PLC0415
 
-        return RedisAdapter()
+        return RedisAdapter(), (RedisError,)
 
     def _check(self, key: str, window: RateLimitWindowDTO) -> tuple[int, int]:
         """Increment the rate-limit counter and return limit state."""
-        new_value, applied = self._redis_client.increx(
+        new_value, applied = self._store.increx(
             key,
             byint=1,
             ubound=window.calls_count,
@@ -316,16 +337,14 @@ class GrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseGrpcSer
         if applied:
             remaining = max(0, window.calls_count - int(new_value))
             return 0, remaining
-        return self._redis_client.pttl(key), 0
+        return self._store.pttl(key), 0
 
     def _refund(self, keys: Sequence[str]) -> None:
         """Give back the quota consumed in earlier windows by a call that a later window rejected."""
-        from redis.exceptions import RedisError  # noqa: PLC0415
-
         for key in keys:
             try:
-                self._redis_client.increx(key, byint=-1, lbound=0, saturate=True)
-            except ConnectionError, OSError, TimeoutError, RedisError:
+                self._store.increx(key, byint=-1, lbound=0, saturate=True)
+            except self._unavailable_errors:
                 logger.debug("Could not refund rate-limit quota for %s", key, exc_info=True)
 
     def intercept(
@@ -336,8 +355,6 @@ class GrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseGrpcSer
         method_name_model: MethodName,
     ) -> object:
         """Enforce stacked rate-limit windows before invoking the RPC handler."""
-        from redis.exceptions import RedisError  # noqa: PLC0415
-
         windows = self._windows_for(method, method_name_model)
         if not windows:
             return method(request, context)
@@ -355,7 +372,7 @@ class GrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseGrpcSer
             key = self._build_rate_limit_key(identity, method_name_model, window)
             try:
                 pexpire, _remaining = self._check(key, window)
-            except (ConnectionError, OSError, TimeoutError, RedisError) as exc:
+            except self._unavailable_errors as exc:
                 if self._fail_closed:
                     self._abort_unavailable_sync(context, detail="Rate limiter unavailable")
                     raise RuntimeError("unreachable") from exc
@@ -383,8 +400,14 @@ class AsyncGrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseAs
         identifier_fn: Callable[[grpc.aio.ServicerContext, MethodName], str] | None = None,
         identity_from_access_token: bool | None = None,
         trusted_proxy_hosts: frozenset[str] | None = None,
+        store: AsyncRateLimitStore | None = None,
+        store_errors: tuple[type[BaseException], ...] = (),
     ) -> None:
-        """Initialize the async gRPC rate-limit interceptor."""
+        """Initialize the async gRPC rate-limit interceptor.
+
+        Takes the same arguments as :class:`GrpcServerRateLimitInterceptor`, except that ``store`` is an
+        :class:`AsyncRateLimitStore` and defaults to an ``AsyncRedisAdapter`` built from the global config.
+        """
         super().__init__(
             rate_limit_config=rate_limit_config,
             key_prefix=key_prefix,
@@ -394,18 +417,24 @@ class AsyncGrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseAs
             trusted_proxy_hosts=trusted_proxy_hosts,
         )
         self._identifier_fn = identifier_fn
-        self._redis_client: AsyncRedisAdapter = self._create_redis_client()
+        if store is None:
+            store, default_errors = self._create_default_store()
+            store_errors = (*default_errors, *store_errors)
+        self._store: AsyncRateLimitStore = store
+        self._unavailable_errors = (ConnectionError, OSError, TimeoutError, *store_errors)
 
     @staticmethod
-    def _create_redis_client() -> AsyncRedisAdapter:
-        """Lazily initialized async Redis client for rate limiting."""
+    def _create_default_store() -> tuple[AsyncRateLimitStore, tuple[type[BaseException], ...]]:
+        """Build the default async Redis store and the Redis errors that mean it is unavailable."""
+        from redis.exceptions import RedisError  # noqa: PLC0415
+
         from archipy.adapters.redis.adapters import AsyncRedisAdapter  # noqa: PLC0415
 
-        return AsyncRedisAdapter()
+        return AsyncRedisAdapter(), (RedisError,)
 
     async def _check(self, key: str, window: RateLimitWindowDTO) -> tuple[int, int]:
         """Increment the rate-limit counter and return limit state."""
-        new_value, applied = await self._redis_client.increx(
+        new_value, applied = await self._store.increx(
             key,
             byint=1,
             ubound=window.calls_count,
@@ -416,16 +445,14 @@ class AsyncGrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseAs
         if applied:
             remaining = max(0, window.calls_count - int(new_value))
             return 0, remaining
-        return await self._redis_client.pttl(key), 0
+        return await self._store.pttl(key), 0
 
     async def _refund(self, keys: Sequence[str]) -> None:
         """Give back the quota consumed in earlier windows by a call that a later window rejected."""
-        from redis.exceptions import RedisError  # noqa: PLC0415
-
         for key in keys:
             try:
-                await self._redis_client.increx(key, byint=-1, lbound=0, saturate=True)
-            except ConnectionError, OSError, TimeoutError, RedisError:
+                await self._store.increx(key, byint=-1, lbound=0, saturate=True)
+            except self._unavailable_errors:
                 logger.debug("Could not refund rate-limit quota for %s", key, exc_info=True)
 
     async def _enforce_rate_limit_windows_async(
@@ -438,8 +465,6 @@ class AsyncGrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseAs
 
         Returns once the call may proceed, including when the limiter is fail-open and Redis is unavailable.
         """
-        from redis.exceptions import RedisError  # noqa: PLC0415
-
         identity = await self._resolve_identity_async(context, method_name_model)
         if identity is None:
             return
@@ -449,7 +474,7 @@ class AsyncGrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseAs
             key = self._build_rate_limit_key(identity, method_name_model, window)
             try:
                 pexpire, _remaining = await self._check(key, window)
-            except (ConnectionError, OSError, TimeoutError, RedisError) as exc:
+            except self._unavailable_errors as exc:
                 if self._fail_closed:
                     await self._abort_unavailable_async(context, detail="Rate limiter unavailable")
                     raise RuntimeError("unreachable") from exc

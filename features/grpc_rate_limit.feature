@@ -80,6 +80,31 @@ Feature: gRPC server rate limit interceptor
       | sync  |
       | async |
 
+  Scenario Outline: A store passed to the interceptor replaces Redis
+    Given a <mode> gRPC rate limit interceptor allowing 3 calls per 60 seconds
+    And the interceptor is built with a store passed by the caller
+    When 4 decorated gRPC RPCs are invoked
+    Then gRPC outcome 1 should be allowed
+    And gRPC outcome 2 should be allowed
+    And gRPC outcome 3 should be allowed
+    And gRPC outcome 4 should be rate_limited
+
+    Examples: Interceptor modes
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: An error type the caller names for its store follows the fail-closed setting
+    Given a <mode> gRPC rate limit interceptor allowing 3 calls per 60 seconds
+    And the interceptor is built with a caller store whose backend is down
+    When 1 decorated gRPC RPC is invoked
+    Then gRPC outcome 1 should be unavailable
+
+    Examples: Interceptor modes
+      | mode  |
+      | sync  |
+      | async |
+
   Scenario Outline: A call rejected by a later window gives its earlier window quota back
     Given a <mode> gRPC rate limit interceptor with burst 3 calls per 60 seconds and sustained 2 calls per 60 seconds
     When 4 decorated gRPC RPCs are invoked
