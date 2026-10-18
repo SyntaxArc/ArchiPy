@@ -244,6 +244,7 @@ docstring-code-line-length = "dynamic"
 "packages/scylladb/archipy/adapters/scylladb/*" = ["S608"]  # False positives - parameterized CQL with %s placeholders (also # nosec B608)
 "archipy/helpers/decorators/*" = ["ANN401", "PLR0913", "PLC0415", "PLR0917"]  # Allow Any, many params, lazy imports in decorators
 "archipy/helpers/utils/otel_utils.py" = ["PLC0415", "ANN401", "PLR0913", "PLR0917"]  # Lazy optional deps; provider/instrumentor union types
+"archipy/helpers/utils/_otel/*" = ["PLC0415", "ANN401", "PLR0913", "PLR0917"]  # Same as otel_utils: lazy optional deps, dynamic OTel types
 "archipy/helpers/interceptors/grpc/otel_metrics/server_interceptor.py" = ["ANN401"]  # OTel histogram handle is dynamically typed
 "archipy/adapters/base/sqlalchemy/session_managers.py" = ["PLC0415"]  # Lazy sqlalchemy.ext.asyncio (needs greenlet via sqlalchemy-async)
 "archipy/adapters/base/sqlalchemy/atomic.py" = ["ANN401", "PLC0415", "PLR0913", "PLR0917"]  # Atomic decorators: Any in wrappers, lazy registry import
