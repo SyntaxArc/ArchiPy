@@ -998,8 +998,11 @@ class OpentelemetryConfig(BaseModel):
         ),
     )
     OTLP_COMPRESSION: Literal["none", "gzip"] = Field(
-        default="none",
-        description="Compression of OTLP exports for traces, metrics and logs",
+        default="gzip",
+        description=(
+            "Compression of OTLP exports for traces, metrics and logs. gzip is the only algorithm the OTLP "
+            "specification defines, so every collector accepts it; use none for a collector on the same host"
+        ),
     )
     SPAN_BATCH_SCHEDULE_DELAY_MS: int = Field(
         default=5000,
@@ -1012,14 +1015,17 @@ class OpentelemetryConfig(BaseModel):
         description="Time the batch span processor allows one export in milliseconds",
     )
     SPAN_BATCH_MAX_QUEUE_SIZE: int = Field(
-        default=2048,
+        default=4096,
         ge=1,
-        description="Spans the batch processor queues before it drops new ones",
+        description="Spans the batch processor queues before it drops new ones (a few MB of memory at most)",
     )
     SPAN_BATCH_MAX_EXPORT_BATCH_SIZE: int = Field(
-        default=512,
+        default=1024,
         ge=1,
-        description="Largest span batch of one export; at most SPAN_BATCH_MAX_QUEUE_SIZE",
+        description=(
+            "Largest span batch of one export; at most SPAN_BATCH_MAX_QUEUE_SIZE. Larger batches compress better, "
+            "and 1024 spans stay well under the 4 MiB message limit gRPC receivers apply by default"
+        ),
     )
     LOG_BATCH_SCHEDULE_DELAY_MS: int = Field(
         default=1000,
@@ -1032,12 +1038,12 @@ class OpentelemetryConfig(BaseModel):
         description="Time the batch log processor allows one export in milliseconds (LOGS_EXPORTER=otlp)",
     )
     LOG_BATCH_MAX_QUEUE_SIZE: int = Field(
-        default=2048,
+        default=4096,
         ge=1,
         description="Log records the batch processor queues before it drops new ones (LOGS_EXPORTER=otlp)",
     )
     LOG_BATCH_MAX_EXPORT_BATCH_SIZE: int = Field(
-        default=512,
+        default=1024,
         ge=1,
         description="Largest log batch of one export; at most LOG_BATCH_MAX_QUEUE_SIZE (LOGS_EXPORTER=otlp)",
     )
