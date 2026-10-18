@@ -4,8 +4,8 @@ from typing import ClassVar
 
 from pydantic import NonNegativeInt, computed_field
 
-from archipy.configs.base_config import BaseConfig
 from archipy.models.dtos.base_dtos import BaseDTO
+from archipy.models.runtime_settings import get_settings
 
 
 class SearchOutputDTO(BaseDTO):
@@ -46,10 +46,7 @@ class SearchOutputDTO(BaseDTO):
     @property
     def total_count_estimated(self) -> bool:
         """Whether ``total_count`` is above the configured threshold, so it is a database estimate."""
-        try:
-            sqlalchemy_config = getattr(BaseConfig.global_config(), self.count_threshold_config, None)
-        except AssertionError:
-            return False
+        sqlalchemy_config = getattr(get_settings(), self.count_threshold_config, None)
         threshold: int | None = getattr(sqlalchemy_config, "COUNT_THRESHOLD", None)
         return threshold is not None and self.total_count > threshold
 

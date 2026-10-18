@@ -5,10 +5,9 @@ from typing import ClassVar, Self, TypeVar
 
 from pydantic import Field, PositiveInt, model_validator
 
-from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import PaginationConfig
 from archipy.models.dtos.base_dtos import BaseDTO
 from archipy.models.errors import OutOfRangeError
+from archipy.models.runtime_settings import DEFAULT_PAGINATION_MAX_ITEMS, get_settings
 
 # Generic types
 T = TypeVar("T", bound=Enum)
@@ -71,14 +70,12 @@ class PaginationDTO(BaseDTO):
     def _max_items(cls) -> int:
         """Return the page limit: the class override, else ``PAGINATION.MAX_ITEMS`` of the global config.
 
-        Falls back to the ``PaginationConfig`` default when no global config is set.
+        Falls back to ``DEFAULT_PAGINATION_MAX_ITEMS`` when no global config is set.
         """
         if cls.MAX_ITEMS is not None:
             return cls.MAX_ITEMS
-        try:
-            return BaseConfig.global_config().PAGINATION.MAX_ITEMS
-        except AssertionError:
-            return PaginationConfig().MAX_ITEMS
+        pagination = getattr(get_settings(), "PAGINATION", None)
+        return getattr(pagination, "MAX_ITEMS", DEFAULT_PAGINATION_MAX_ITEMS)
 
     @property
     def offset(self) -> int:

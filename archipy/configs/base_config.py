@@ -53,6 +53,7 @@ from archipy.configs.config_template import (
 )
 from archipy.configs.environment_type import EnvironmentType
 from archipy.models.errors import ConfigurationError
+from archipy.models.runtime_settings import register_settings_provider
 from archipy.models.types import LanguageType
 
 R = TypeVar("R", bound="BaseConfig")  # Runtime Config
@@ -304,3 +305,6 @@ class BaseConfig[R](BaseSettings):
         if hasattr(config, "customize") and callable(config.customize):
             config.customize()
         cls.__global_config = config
+
+
+register_settings_provider(BaseConfig.global_config)

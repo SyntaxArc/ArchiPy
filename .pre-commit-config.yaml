@@ -87,6 +87,12 @@ repos:
         files: \.(py|pyi)$
         language: system
         exclude: ^(features|scripts|\.agents)/
+      - id: import-linter
+        name: import-linter
+        entry: uv run lint-imports
+        files: \.(py|pyi)$
+        language: system
+        pass_filenames: false
       - id: gherkin-format
         name: gherkin-format
         entry: uv run gherkin-formatter

@@ -2,6 +2,7 @@
 
 from typing import Any, ClassVar
 
+from archipy.models.runtime_settings import get_settings
 from archipy.models.types.language_type import LanguageType
 
 
@@ -45,12 +46,7 @@ class BaseError(Exception):
             *args: Additional arguments for the base Exception class.
         """
         if lang is None:
-            try:
-                from archipy.configs.base_config import BaseConfig
-
-                self.lang = BaseConfig.global_config().LANGUAGE
-            except ImportError, AssertionError:
-                self.lang = LanguageType.FA
+            self.lang = getattr(get_settings(), "LANGUAGE", LanguageType.FA)
         else:
             self.lang = lang
 

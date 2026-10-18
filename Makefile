@@ -88,6 +88,7 @@ lint: ## Run all linters
 	$(PYTHON) ruff check --config pyproject.toml $(PYTHON_FILES)
 	$(PYTHON) ruff check --config pyproject.toml --exclude '' --select F features scripts
 	$(PYTHON) ty check --fix $(PYTHON_FILES)
+	$(PYTHON) lint-imports
 
 .PHONY: security
 security: ## Run security scan with Bandit

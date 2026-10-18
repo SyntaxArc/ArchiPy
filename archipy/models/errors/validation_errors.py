@@ -24,9 +24,9 @@ try:
 except ImportError:
     GRPC_AVAILABLE = False
 
-from archipy.helpers.utils.string_utils import StringUtils
 from archipy.models.errors.base_error import BaseError
 from archipy.models.types.language_type import LanguageType
+from archipy.models.types.persian_digit_type import ENGLISH_TO_PERSIAN_DIGITS_TABLE
 
 
 class InvalidArgumentError(BaseError):
@@ -157,7 +157,7 @@ class InvalidPhoneNumberError(BaseError):
 
         # Convert numbers to Persian if language is FA
         if self.lang == LanguageType.FA:
-            message = StringUtils.convert_english_number_to_persian(message)
+            message = message.translate(ENGLISH_TO_PERSIAN_DIGITS_TABLE)
 
         return message
 
@@ -195,7 +195,7 @@ class InvalidLandlineNumberError(BaseError):
 
         # Convert numbers to Persian if language is FA
         if self.lang == LanguageType.FA:
-            message = StringUtils.convert_english_number_to_persian(message)
+            message = message.translate(ENGLISH_TO_PERSIAN_DIGITS_TABLE)
 
         return message
 
@@ -233,7 +233,7 @@ class InvalidNationalCodeError(BaseError):
 
         # Convert numbers to Persian if language is FA
         if self.lang == LanguageType.FA:
-            message = StringUtils.convert_english_number_to_persian(message)
+            message = message.translate(ENGLISH_TO_PERSIAN_DIGITS_TABLE)
 
         return message
 

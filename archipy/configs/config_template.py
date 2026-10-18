@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field, HttpUrl, PostgresDsn, SecretStr, field_validator, model_validator
 
 from archipy.models.errors import ConfigurationError, FailedPreconditionError, InvalidArgumentError
+from archipy.models.runtime_settings import DEFAULT_PAGINATION_MAX_ITEMS
 
 TLS_CERT_PARTS_REQUIRED = 3
 
@@ -1267,7 +1268,7 @@ class PaginationConfig(BaseModel):
     """
 
     MAX_ITEMS: int = Field(
-        default=10000,
+        default=DEFAULT_PAGINATION_MAX_ITEMS,
         ge=1,
         description="Largest page * page_size a pagination request may reach. Also the default COUNT_THRESHOLD of "
         "the SQLAlchemy configs",

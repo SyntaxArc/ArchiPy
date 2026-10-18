@@ -4,6 +4,7 @@ import re
 from re import compile as re_compile
 
 from archipy.helpers.utils.string_utils_constants import StringUtilsConstants
+from archipy.models.types.persian_digit_type import ENGLISH_TO_PERSIAN_DIGITS_TABLE
 
 
 class StringUtils(StringUtilsConstants):
@@ -216,20 +217,7 @@ class StringUtils(StringUtilsConstants):
         Returns:
             str: The text with English numbers converted to Persian numbers.
         """
-        table = {
-            48: 1776,  # 0
-            49: 1777,  # 1
-            50: 1778,  # 2
-            51: 1779,  # 3
-            52: 1780,  # 4
-            53: 1781,  # 5
-            54: 1782,  # 6
-            55: 1783,  # 7
-            56: 1784,  # 8
-            57: 1785,  # 9
-            44: 1548,  # ,
-        }
-        return text.translate(table)
+        return text.translate(ENGLISH_TO_PERSIAN_DIGITS_TABLE)
 
     @classmethod
     def convert_numbers_to_english(cls, text: str) -> str:
