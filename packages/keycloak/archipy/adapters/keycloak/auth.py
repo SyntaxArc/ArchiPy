@@ -8,7 +8,7 @@ import inspect
 import logging
 import threading
 import time
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 from functools import cache
 from typing import TYPE_CHECKING, Any, NoReturn
 
@@ -535,12 +535,19 @@ _auth_context_var: ContextVar[AuthenticatedUserDTO | None] = ContextVar("auth_co
 
 
 class AuthContextManager:
-    """Manager for handling auth context in gRPC services."""
+    """Manager for the authenticated caller of the current gRPC call or FastAPI request."""
 
     @staticmethod
-    def set_auth_context(auth_context: AuthenticatedUserDTO) -> None:
-        """Set the auth context for the current request."""
-        _auth_context_var.set(auth_context)
+    def set_auth_context(auth_context: AuthenticatedUserDTO) -> Token[AuthenticatedUserDTO | None]:
+        """Set the auth context for the current request.
+
+        Args:
+            auth_context: The authenticated caller.
+
+        Returns:
+            A token that ``clear_auth_context`` accepts to restore the context that was set before.
+        """
+        return _auth_context_var.set(auth_context)
 
     @staticmethod
     def get_auth_context() -> AuthenticatedUserDTO | None:
@@ -548,9 +555,17 @@ class AuthContextManager:
         return _auth_context_var.get()
 
     @staticmethod
-    def clear_auth_context() -> None:
-        """Clear the auth context for the current request."""
-        _auth_context_var.set(None)
+    def clear_auth_context(token: Token[AuthenticatedUserDTO | None] | None = None) -> None:
+        """Clear the auth context for the current request.
+
+        Args:
+            token: The value ``set_auth_context`` returned. When given, the context set before that call is restored,
+                so nested guards do not drop the outer caller. Without it the context is set to None.
+        """
+        if token is None:
+            _auth_context_var.set(None)
+        else:
+            _auth_context_var.reset(token)
 
 
 def _get_keycloak_adapter() -> KeycloakAdapter:
@@ -625,11 +640,17 @@ def fastapi_auth(
         request.state.token_info = token_info
         request.state.actor_chain = _parse_actor_chain(token_info)
         request.state.user_roles = user_roles
-        AuthContextManager.set_auth_context(_build_auth_context(user_info, token_str, user_roles, token_info))
+        # UserInfo without ``sub`` cannot name a caller; keep serving it, as before, without an auth context.
+        auth_token = (
+            AuthContextManager.set_auth_context(_build_auth_context(user_info, token_str, user_roles, token_info))
+            if user_info.get("sub")
+            else None
+        )
         try:
             yield user_info
         finally:
-            AuthContextManager.clear_auth_context()
+            if auth_token is not None:
+                AuthContextManager.clear_auth_context(auth_token)
 
     return dependency
 

@@ -1,3 +1,4 @@
+import asyncio
 import time
 from contextlib import ExitStack, contextmanager
 from types import SimpleNamespace
@@ -5,7 +6,10 @@ from unittest.mock import patch
 
 import grpc
 import grpc.aio
+import httpx
 from behave import given, step, then, when
+from fastapi import BackgroundTasks, Depends, FastAPI
+from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials
 from features.test_helpers import get_current_scenario_context
 
@@ -300,17 +304,17 @@ def step_keycloak_auth_path_param(context, name, value):
     _path_params(_ctx(context))[name] = value
 
 
-@when('the keycloak auth {mode} fastapi dependency is called with token "{token}"')
-async def step_keycloak_auth_call_dependency(context, mode, token):
-    await _call_dependency(context, mode, HTTPAuthorizationCredentials(scheme="Bearer", credentials=token))
+@when('the keycloak auth fastapi dependency is called with token "{token}"')
+async def step_keycloak_auth_call_dependency(context, token):
+    await _call_dependency(context, HTTPAuthorizationCredentials(scheme="Bearer", credentials=token))
 
 
-@when("the keycloak auth {mode} fastapi dependency is called without credentials")
-async def step_keycloak_auth_call_dependency_anonymous(context, mode):
-    await _call_dependency(context, mode, None)
+@when("the keycloak auth fastapi dependency is called without credentials")
+async def step_keycloak_auth_call_dependency_anonymous(context):
+    await _call_dependency(context, None)
 
 
-async def _call_dependency(context, mode, credentials):
+async def _call_dependency(context, credentials):
     sc = _ctx(context)
     request = SimpleNamespace(path_params=dict(_path_params(sc)), state=SimpleNamespace())
     sc.store("request", request)
@@ -534,13 +538,13 @@ def step_keycloak_auth_aborted(context, status):
 # AuthContextManager
 
 
-@given("no keycloak auth auth context is set")
+@given("no keycloak auth context is set")
 def step_keycloak_auth_no_context(context):
     AuthContextManager.clear_auth_context()
     context.add_cleanup(AuthContextManager.clear_auth_context)
 
 
-@step('the keycloak auth auth context is set for user "{sub}"')
+@step('the keycloak auth context is set for user "{sub}"')
 def step_keycloak_auth_set_context(context, sub):
     AuthContextManager.set_auth_context(
         AuthenticatedUserDTO(
@@ -555,18 +559,27 @@ def step_keycloak_auth_set_context(context, sub):
     context.add_cleanup(AuthContextManager.clear_auth_context)
 
 
-@when("the keycloak auth auth context is cleared by the manager")
+@when('the keycloak auth context of user "{sub}" is set and then cleared with its token')
+def step_keycloak_auth_nested_context(context, sub):
+    token = AuthContextManager.set_auth_context(
+        AuthenticatedUserDTO(user_id=sub, username=sub, email="", roles=[], token="t", raw_user_info={"sub": sub}),
+    )
+    assert AuthContextManager.get_auth_context().user_id == sub
+    AuthContextManager.clear_auth_context(token)
+
+
+@when("the keycloak auth context is cleared by the manager")
 def step_keycloak_auth_clear_context(context):
     AuthContextManager.clear_auth_context()
 
 
-@then('the keycloak auth auth context belongs to user "{sub}"')
+@then('the keycloak auth context belongs to user "{sub}"')
 def step_keycloak_auth_context_user(context, sub):
     auth = AuthContextManager.get_auth_context()
     assert auth is not None and auth.user_id == sub
 
 
-@then("the keycloak auth auth context is cleared")
+@then("the keycloak auth context is cleared")
 def step_keycloak_auth_context_cleared(context):
     assert AuthContextManager.get_auth_context() is None
 
@@ -691,11 +704,11 @@ def step_keycloak_auth_request_attr_user(context, name, username):
     _request_attrs(sc)[name] = _user_id(sc, username)
 
 
-@when('the keycloak auth {mode} fastapi dependency is called with the access token of user "{username}"')
-async def step_keycloak_auth_call_with_user_token(context, mode, username):
+@when('the keycloak auth fastapi dependency is called with the access token of user "{username}"')
+async def step_keycloak_auth_call_with_user_token(context, username):
     sc = _ctx(context)
     token = _access_token(sc, username)
-    await _call_dependency(context, mode, HTTPAuthorizationCredentials(scheme="Bearer", credentials=token))
+    await _call_dependency(context, HTTPAuthorizationCredentials(scheme="Bearer", credentials=token))
 
 
 @when('the keycloak auth {mode} grpc handler is invoked with the bearer access token of user "{username}"')
@@ -767,3 +780,87 @@ async def step_keycloak_auth_grpc_conflicting(context, mode, other, username):
     sc = _ctx(context)
     metadata = (("authorization", f"Bearer {_access_token(sc, username)}"), ("authorization", f"Bearer {other}"))
     await _invoke_grpc(context, mode, metadata)
+
+
+# A real FastAPI app: the auth context must reach async and sync endpoints, background tasks and streamed bodies
+
+
+def _caller_name():
+    auth_context = AuthContextManager.get_auth_context()
+    return auth_context.username if auth_context is not None else None
+
+
+@given("a FastAPI app whose routes are guarded by the keycloak fastapi auth")
+def step_keycloak_auth_fastapi_app(context):
+    sc = _ctx(context)
+    guard = keycloak_auth.fastapi_auth(**_auth_kwargs(sc))
+    app = FastAPI()
+    background_seen = []
+    sc.store("background_seen", background_seen)
+
+    @app.get("/async")
+    async def async_route(user: dict = Depends(guard)):  # noqa: B008
+        return {"username": _caller_name()}
+
+    @app.get("/sync")
+    def sync_route(user: dict = Depends(guard)):  # noqa: B008
+        return {"username": _caller_name()}
+
+    @app.get("/background")
+    async def background_route(tasks: BackgroundTasks, user: dict = Depends(guard)):  # noqa: B008
+        tasks.add_task(lambda: background_seen.append(_caller_name()))
+        return {"username": _caller_name()}
+
+    @app.get("/stream")
+    async def stream_route(user: dict = Depends(guard)):  # noqa: B008
+        async def body():
+            yield f"{_caller_name()}|"
+            await asyncio.sleep(0)
+            yield f"{_caller_name()}"
+
+        return StreamingResponse(body())
+
+    @app.get("/open")
+    async def open_route():
+        return {"username": _caller_name()}
+
+    sc.store("fastapi_app", app)
+
+
+@when('the guarded app is requested at "{path}" with the access token of user "{username}"')
+async def step_keycloak_auth_request_with_token(context, path, username):
+    await _request_app(context, path, {"Authorization": f"Bearer {_access_token(_ctx(context), username)}"})
+
+
+@when('the guarded app is requested at "{path}" without credentials')
+async def step_keycloak_auth_request_anonymous(context, path):
+    await _request_app(context, path, {})
+
+
+async def _request_app(context, path, headers):
+    sc = _ctx(context)
+    transport = httpx.ASGITransport(app=sc.get("fastapi_app"))
+    with _adapters_for_call(sc):
+        async with httpx.AsyncClient(transport=transport, base_url="http://guarded") as client:
+            sc.store("app_response", await client.get(path, headers=headers))
+
+
+@then('the app response reports the caller "{username}" every time it reads the auth context')
+def step_keycloak_auth_response_caller(context, username):
+    response = _ctx(context).get("app_response")
+    assert response.status_code == 200, f"{response.status_code}: {response.text}"
+    reported = response.text.count(username)
+    assert reported >= 1, response.text
+    assert "null" not in response.text and "None" not in response.text, response.text
+
+
+@then('the background task saw the caller "{username}"')
+def step_keycloak_auth_background_caller(context, username):
+    assert _ctx(context).get("background_seen") == [username]
+
+
+@then("the app response reports no caller")
+def step_keycloak_auth_response_no_caller(context):
+    response = _ctx(context).get("app_response")
+    assert response.status_code == 200, f"{response.status_code}: {response.text}"
+    assert response.json() == {"username": None}

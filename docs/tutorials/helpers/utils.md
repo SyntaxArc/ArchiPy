@@ -278,6 +278,20 @@ async def get_employee_info(employee_uuid: UUID, employee: dict = Depends(fastap
 uvicorn.run(app, host="0.0.0.0", port=8000)  # noqa: S104
 ```
 
+`fastapi_auth` returns the UserInfo dict and fills `request.state`, and it also sets `AuthContextManager` for the
+request, so code below the endpoint can read the caller without receiving the request:
+
+```python
+from archipy.adapters.keycloak.auth import AuthContextManager
+
+def audit_log(action: str) -> None:
+    caller = AuthContextManager.get_auth_context()  # AuthenticatedUserDTO, or None outside a guarded request
+    logger.info("%s by %s", action, caller.username if caller else "anonymous")
+```
+
+The context is visible to `async def` and `def` endpoints, background tasks and streamed responses, and it is cleared
+when the request ends.
+
 ## See Also
 
 For more examples and detailed documentation:
