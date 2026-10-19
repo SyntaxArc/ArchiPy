@@ -456,34 +456,42 @@ async def step_bulk_operation(context: Context) -> None:
 
             if action in {"index", "create"}:
                 doc_content = ast.literal_eval(row["document"]) if row["document"] else {}
-                bulk_actions.append({
-                    "_op_type": action,
-                    "_index": actual_index_name,
-                    "_id": doc_id,
-                    "_source": doc_content,
-                })
+                bulk_actions.append(
+                    {
+                        "_op_type": action,
+                        "_index": actual_index_name,
+                        "_id": doc_id,
+                        "_source": doc_content,
+                    }
+                )
             elif action == "update":
                 doc_content = ast.literal_eval(row["document"]) if row["document"] else {}
                 if "doc" in doc_content:
-                    bulk_actions.append({
-                        "_op_type": "update",
-                        "_index": actual_index_name,
-                        "_id": doc_id,
-                        **doc_content,
-                    })
+                    bulk_actions.append(
+                        {
+                            "_op_type": "update",
+                            "_index": actual_index_name,
+                            "_id": doc_id,
+                            **doc_content,
+                        }
+                    )
                 else:
-                    bulk_actions.append({
-                        "_op_type": "update",
+                    bulk_actions.append(
+                        {
+                            "_op_type": "update",
+                            "_index": actual_index_name,
+                            "_id": doc_id,
+                            "doc": doc_content,
+                        }
+                    )
+            elif action == "delete":
+                bulk_actions.append(
+                    {
+                        "_op_type": "delete",
                         "_index": actual_index_name,
                         "_id": doc_id,
-                        "doc": doc_content,
-                    })
-            elif action == "delete":
-                bulk_actions.append({
-                    "_op_type": "delete",
-                    "_index": actual_index_name,
-                    "_id": doc_id,
-                })
+                    }
+                )
 
         if is_async:
             result = await adapter.bulk(actions=bulk_actions)
@@ -510,6 +518,11 @@ async def step_scan_documents(context: Context, index_name: str, query_text: str
     query = {"query": {"match": {"title": query_text}}}
 
     try:
+        # A search only sees refreshed documents; under load the one-second refresh interval may not have passed.
+        if is_async:
+            await adapter.client.indices.refresh(index=actual_index_name)
+        else:
+            adapter.client.indices.refresh(index=actual_index_name)
         if is_async:
             hits = [document async for document in adapter.scan(query=query, index=actual_index_name)]
         else:
