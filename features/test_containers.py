@@ -683,6 +683,8 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
 
         global_config = BaseConfig.global_config()
         global_config.ELASTIC.HOSTS = [f"http://{self.host}:{self.port}"]
+        # Loaded CI runners answer index creation slower than the 1s library default.
+        global_config.ELASTIC.REQUEST_TIMEOUT = 30.0
 
         logger.info("Elasticsearch container started on %s:%s", self.host, self.port)
 
