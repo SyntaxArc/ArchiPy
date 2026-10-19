@@ -3,10 +3,11 @@ from types import SimpleNamespace
 
 import grpc
 from behave import given, then, when
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, WebSocket
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, ValidationError
 from starlette.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import RedisMode
@@ -646,7 +647,9 @@ def step_given_rate_limit_enabled_failing_redis(context, fail_closed):
 def step_when_rate_limit_interceptor_set_up(context, mode):
     scenario_context = get_current_scenario_context(context)
     config = scenario_context.get("rate_limit_config")
-    setup = GrpcAPIUtils.setup_rate_limit_interceptor if mode == "sync" else AsyncGrpcAPIUtils.setup_rate_limit_interceptor
+    setup = (
+        GrpcAPIUtils.setup_rate_limit_interceptor if mode == "sync" else AsyncGrpcAPIUtils.setup_rate_limit_interceptor
+    )
     interceptors: list = []
     error = None
     try:
@@ -668,3 +671,55 @@ def step_then_rate_limit_setup_continues(context):
     scenario_context = get_current_scenario_context(context)
     assert scenario_context.get("setup_error") is None
     assert scenario_context.get("setup_interceptors") == []
+
+
+def _add_echo_websocket(app: FastAPI) -> None:
+    @app.websocket("/ws")
+    async def echo(websocket: WebSocket):
+        await websocket.accept()
+        await websocket.send_text("connected")
+        await websocket.close()
+
+
+def _store_websocket_app(context, configure) -> None:
+    scenario_context = get_current_scenario_context(context)
+    test_config = BaseConfig.global_config()
+    _reset_optional_middleware_config(test_config.FASTAPI)
+    configure(test_config.FASTAPI)
+    app = AppUtils.create_fastapi_app(test_config, configure_exception_handlers=False)
+    _add_echo_websocket(app)
+    scenario_context.store("app", app)
+
+
+@given('a FastAPI app with TrustedHost middleware enabled for "{host}" and an echo WebSocket')
+def step_given_trusted_host_websocket_app(context, host):
+    def configure(fastapi_config):
+        fastapi_config.TRUSTED_HOST_MIDDLEWARE_IS_ENABLED = True
+        fastapi_config.TRUSTED_HOST_MIDDLEWARE_ALLOWED_HOSTS = [host]
+
+    _store_websocket_app(context, configure)
+
+
+@given("a FastAPI app with HTTPS redirect middleware {state} and an echo WebSocket")
+def step_given_https_redirect_websocket_app(context, state):
+    _store_websocket_app(
+        context,
+        lambda fastapi_config: setattr(fastapi_config, "HTTPS_REDIRECT_MIDDLEWARE_IS_ENABLED", state == "enabled"),
+    )
+
+
+@when('a WebSocket client connects with the host "{host}"')
+def step_when_websocket_connects_with_host(context, host):
+    scenario_context = get_current_scenario_context(context)
+    client = TestClient(get_current_scenario_context(context).get("app"))
+    try:
+        with client.websocket_connect("/ws", headers={"host": host}) as websocket:
+            scenario_context.store("ws_message", websocket.receive_text())
+        scenario_context.store("ws_handshake", "accepted")
+    except Exception:  # noqa: BLE001 - a refused handshake raises WebSocketDisconnect or a denial response
+        scenario_context.store("ws_handshake", "refused")
+
+
+@then("the WebSocket handshake should be {outcome}")
+def step_then_websocket_handshake_outcome(context, outcome):
+    assert get_current_scenario_context(context).get("ws_handshake") == outcome

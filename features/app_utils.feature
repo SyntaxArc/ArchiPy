@@ -253,3 +253,24 @@ Feature: App Utilities
       | async | true        | raise the initialization error   |
       | sync  | false       | continue without the interceptor |
       | async | false       | continue without the interceptor |
+
+  Scenario Outline: TrustedHost middleware checks the host of a WebSocket handshake
+    Given a FastAPI app with TrustedHost middleware enabled for "testserver" and an echo WebSocket
+    When a WebSocket client connects with the host "<host>"
+    Then the WebSocket handshake should be <outcome>
+
+    Examples: Hosts
+      | host         | outcome  |
+      | testserver   | accepted |
+      | evil.com     | refused  |
+      | attacker.org | refused  |
+
+  Scenario Outline: HTTPS redirect middleware <effect> a plain WebSocket handshake
+    Given a FastAPI app with HTTPS redirect middleware <state> and an echo WebSocket
+    When a WebSocket client connects with the host "testserver"
+    Then the WebSocket handshake should be <outcome>
+
+    Examples: Redirect settings
+      | effect       | state    | outcome  |
+      | redirects    | enabled  | refused  |
+      | leaves alone | disabled | accepted |
