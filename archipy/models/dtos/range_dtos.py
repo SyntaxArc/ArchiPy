@@ -1,7 +1,7 @@
 """DTOs for numeric and date range values."""
 
 from datetime import date, datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import ClassVar, Protocol, Self, TypeVar, cast
 
 from pydantic import field_validator, model_validator
@@ -79,7 +79,7 @@ class DecimalRangeDTO(BaseRangeDTO[Decimal]):
             return None
         try:
             return Decimal(value)
-        except (TypeError, ValueError) as e:
+        except (TypeError, ValueError, InvalidOperation) as e:
             raise InvalidArgumentError(argument_name="value") from e
 
 
