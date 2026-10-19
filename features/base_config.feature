@@ -123,6 +123,13 @@ Feature: Base Configuration System
       | userpass    | no password is set               | PASSWORD              |
       | kubernetes  | no role is set                   | KUBERNETES_ROLE       |
       | jwt         | no role is set                   | JWT_ROLE              |
+      | jwt         | no jwt is set                    | JWT or JWT_FILE       |
+      | aws         | no access key is set             | AWS_ACCESS_KEY        |
+      | azure       | no role is set                   | AZURE_ROLE            |
+      | azure       | no jwt is set                    | AZURE_JWT             |
+      | gcp         | no role is set                   | GCP_ROLE              |
+      | gcp         | no jwt is set                    | GCP_JWT               |
+      | github      | no github token is set           | GITHUB_TOKEN          |
       | token       | no address is set                | VAULT.ADDR            |
       | token       | only a client certificate is set | CLIENT_KEY_PATH       |
 

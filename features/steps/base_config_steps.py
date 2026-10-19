@@ -395,6 +395,9 @@ _VAULT_PROBLEMS = {
     "no username is set": {},
     "no password is set": {"USERNAME": "user"},
     "no role is set": {},
+    "no jwt is set": {"JWT_ROLE": "role", "AZURE_ROLE": "role", "GCP_ROLE": "role"},
+    "no access key is set": {},
+    "no github token is set": {},
     "no address is set": {"ADDR": None, "TOKEN": "t"},
     "only a client certificate is set": {"TOKEN": "t", "CLIENT_CERT_PATH": "/tmp/client.pem"},
 }
