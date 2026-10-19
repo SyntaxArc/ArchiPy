@@ -1,5 +1,7 @@
 """Step definitions for Kafka adapter BDD tests."""
 
+import asyncio
+import socket
 import time
 
 from behave import given, then, when
@@ -12,6 +14,7 @@ from archipy.adapters.kafka.adapters import (
     KafkaConsumerAdapter,
     KafkaProducerAdapter,
 )
+from archipy.models import errors as archipy_errors
 from archipy.models.errors import UnavailableError
 
 
@@ -46,7 +49,9 @@ def get_kafka_consumer_adapter(context, topic_name, group_id):
     scenario_context = get_current_scenario_context(context)
     key = f"consumer_{topic_name}_{group_id}"
     if not hasattr(scenario_context, key) or getattr(scenario_context, key) is None:
-        consumer = KafkaConsumerAdapter(group_id=group_id, topic_list=[topic_name], kafka_configs=_get_kafka_config(context))
+        consumer = KafkaConsumerAdapter(
+            group_id=group_id, topic_list=[topic_name], kafka_configs=_get_kafka_config(context)
+        )
         setattr(scenario_context, key, consumer)
     return getattr(scenario_context, key)
 
@@ -66,7 +71,9 @@ def get_async_kafka_consumer_adapter(context, topic_name, group_id):
     scenario_context = get_current_scenario_context(context)
     key = f"async_consumer_{topic_name}_{group_id}"
     if not hasattr(scenario_context, key) or getattr(scenario_context, key) is None:
-        consumer = AsyncKafkaConsumerAdapter(group_id=group_id, topic_list=[topic_name], kafka_configs=_get_kafka_config(context))
+        consumer = AsyncKafkaConsumerAdapter(
+            group_id=group_id, topic_list=[topic_name], kafka_configs=_get_kafka_config(context)
+        )
         setattr(scenario_context, key, consumer)
     return getattr(scenario_context, key)
 
@@ -416,7 +423,9 @@ def step_received_message_has_key(context, expected_key):
     assert messages and len(messages) > 0, "No messages found in scenario context"
     actual_key = messages[0].key()
     assert actual_key is not None, "Message has no key"
-    assert actual_key.decode("utf-8") == expected_key, f"Expected key '{expected_key}', got '{actual_key.decode('utf-8')}'"
+    assert actual_key.decode("utf-8") == expected_key, (
+        f"Expected key '{expected_key}', got '{actual_key.decode('utf-8')}'"
+    )
     context.logger.info(f"Verified message key '{expected_key}'")
 
 
@@ -558,7 +567,9 @@ def step_health_check_pass(context):
 # ---------------------------------------------------------------------------
 
 
-@then('the async consumer should receive message "{expected_message}" from topic "{topic_name}" with group "{group_id}"')
+@then(
+    'the async consumer should receive message "{expected_message}" from topic "{topic_name}" with group "{group_id}"'
+)
 async def step_async_consumer_receive(context, expected_message, topic_name, group_id):
     """Assert that an async consumer receives the expected single message."""
     adapter = get_async_kafka_consumer_adapter(context, topic_name, group_id)
@@ -598,7 +609,9 @@ def step_async_received_message_has_key(context, expected_key):
     assert messages and len(messages) > 0, "No messages found in scenario context"
     actual_key = messages[0].key()
     assert actual_key is not None, "Message has no key"
-    assert actual_key.decode("utf-8") == expected_key, f"Expected key '{expected_key}', got '{actual_key.decode('utf-8')}'"
+    assert actual_key.decode("utf-8") == expected_key, (
+        f"Expected key '{expected_key}', got '{actual_key.decode('utf-8')}'"
+    )
     context.logger.info(f"Async verified message key '{expected_key}'")
 
 
@@ -832,3 +845,262 @@ def step_ended_consume_spans_only(context, count, topic):
         timeout=10,
     )
     assert len(spans) == count, f"Expected {count} ended consume spans, got {len(spans)}"
+
+
+# ---------------------------------------------------------------------------
+# Hot paths: unreachable broker, error translation, assign, poll, close
+# ---------------------------------------------------------------------------
+
+
+def _closed_port_config(context, **updates):
+    """Build a KafkaConfig whose only broker is a local port nobody listens on."""
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    return _get_kafka_config(context).model_copy(update={"BROKERS_LIST": [f"127.0.0.1:{port}"], **updates})
+
+
+def _capture_error(context, operation):
+    """Run ``operation`` and keep the raised exception (or None) in the scenario context."""
+    scenario_context = get_current_scenario_context(context)
+    try:
+        operation()
+    except Exception as e:
+        scenario_context.store("kafka_operation_error", e)
+    else:
+        scenario_context.store("kafka_operation_error", None)
+
+
+@given("an unreachable Kafka broker")
+def step_unreachable_broker(context):
+    """Point the scenario at a closed local port, so every call fails within about a second."""
+    get_current_scenario_context(context).store("kafka_unreachable_config", _closed_port_config(context))
+
+
+@when("I validate the health of a {mode} producer on that broker")
+def step_validate_health_unreachable(context, mode):
+    """Run the producer health check against the unreachable broker."""
+    config = get_current_scenario_context(context).get("kafka_unreachable_config")
+    if mode == "sync":
+        _capture_error(context, KafkaProducerAdapter("health-topic", kafka_configs=config).validate_healthiness)
+    else:
+        _capture_error(
+            context,
+            lambda: asyncio.run(AsyncKafkaProducerAdapter("health-topic", kafka_configs=config).validate_healthiness()),
+        )
+
+
+@when("I list topics with the {adapter_kind} adapter on that broker")
+def step_list_topics_unreachable(context, adapter_kind):
+    """List topics through the admin, sync producer or async producer adapter against the unreachable broker."""
+    config = get_current_scenario_context(context).get("kafka_unreachable_config")
+    if adapter_kind == "admin":
+        _capture_error(context, lambda: KafkaAdminAdapter(config).list_topics(timeout=1))
+    elif adapter_kind == "sync producer":
+        _capture_error(context, lambda: KafkaProducerAdapter("t", kafka_configs=config).list_topics(timeout=1))
+    else:
+        _capture_error(
+            context,
+            lambda: asyncio.run(AsyncKafkaProducerAdapter("t", kafka_configs=config).list_topics(timeout=1)),
+        )
+
+
+@when("I produce {count:d} messages with a producer whose queue holds only {capacity:d} message on that broker")
+def step_produce_into_full_queue(context, count, capacity):
+    """Produce more messages than the local queue holds while the broker cannot accept any."""
+    config = _closed_port_config(context, QUEUE_BUFFERING_MAX_MESSAGES=capacity)
+    producer = KafkaProducerAdapter("full-queue-topic", kafka_configs=config)
+
+    def produce_all():
+        for index in range(count):
+            producer.produce(f"queued-{index}")
+
+    _capture_error(context, produce_all)
+
+
+@when("I use a {mode} {role} configured with an invalid setting")
+def step_use_invalid_configuration(context, mode, role):
+    """Create the adapter with a rejected librdkafka setting and use it once (async adapters build lazily)."""
+    if role == "producer":
+        config = _get_kafka_config(context).model_copy(update={"ACKS": "bogus"})
+    else:
+        config = _get_kafka_config(context).model_copy(update={"AUTO_OFFSET_RESET": "bogus"})
+
+    def use():
+        if mode == "sync" and role == "producer":
+            KafkaProducerAdapter("invalid-config-topic", kafka_configs=config)
+        elif mode == "sync":
+            KafkaConsumerAdapter("invalid-config-group", topic_list=["invalid-config-topic"], kafka_configs=config)
+        elif role == "producer":
+            asyncio.run(AsyncKafkaProducerAdapter("invalid-config-topic", kafka_configs=config).produce("x"))
+        else:
+            asyncio.run(
+                AsyncKafkaConsumerAdapter(
+                    "invalid-config-group",
+                    topic_list=["invalid-config-topic"],
+                    kafka_configs=config,
+                ).poll(timeout=1),
+            )
+
+    _capture_error(context, use)
+
+
+@when("I create a {mode} consumer with {arguments}")
+def step_create_consumer_with_arguments(context, mode, arguments):
+    """Create a consumer with an invalid combination of topic and partition lists."""
+    from confluent_kafka import TopicPartition
+
+    config = _get_kafka_config(context)
+    topics = ["argument-topic"] if arguments == "both topics and partitions" else None
+    partitions = [TopicPartition("argument-topic", 0)] if arguments == "both topics and partitions" else None
+    consumer_class = KafkaConsumerAdapter if mode == "sync" else AsyncKafkaConsumerAdapter
+    _capture_error(
+        context,
+        lambda: consumer_class("argument-group", topic_list=topics, partition_list=partitions, kafka_configs=config),
+    )
+
+
+@then('the Kafka operation should raise "{error_name}"')
+def step_operation_should_raise(context, error_name):
+    """Assert the captured exception is the named ArchiPy error."""
+    error = get_current_scenario_context(context).get("kafka_operation_error")
+    expected = getattr(archipy_errors, error_name)
+    assert isinstance(error, expected), f"Expected {error_name}, got {error!r}"
+
+
+@given('a single partition topic named "{topic_name}"')
+def step_single_partition_topic(context, topic_name):
+    """Create a one partition topic so that partition 0 holds every message."""
+    adapter = get_kafka_admin_adapter(context)
+    adapter.create_topic(topic_name, num_partitions=1, replication_factor=1)
+    assert wait_for_topic_condition(adapter, lambda name, topics: name in topics, topic_name)
+
+
+def _poll_until_message(poll, deadline_seconds=20):
+    """Poll once per second until a message arrives or the deadline passes."""
+    deadline = time.monotonic() + deadline_seconds
+    message = None
+    while message is None and time.monotonic() < deadline:
+        message = poll(1)
+    return message
+
+
+async def _async_poll_until_message(consumer, deadline_seconds=20):
+    deadline = time.monotonic() + deadline_seconds
+    message = None
+    while message is None and time.monotonic() < deadline:
+        message = await consumer.poll(timeout=1)
+    return message
+
+
+@then('a {mode} consumer assigned to partition 0 of topic "{topic_name}" should receive message "{expected}"')
+def step_assigned_consumer_receives(context, mode, topic_name, expected):
+    """Read a message through a consumer that was assigned a partition instead of subscribing."""
+    from confluent_kafka import TopicPartition
+
+    config = _get_kafka_config(context)
+    partitions = [TopicPartition(topic_name, 0)]
+    if mode == "sync":
+        consumer = KafkaConsumerAdapter("assigned-group-sync", partition_list=partitions, kafka_configs=config)
+        try:
+            message = _poll_until_message(consumer.poll)
+        finally:
+            consumer.close()
+    else:
+
+        async def run():
+            consumer = AsyncKafkaConsumerAdapter(
+                "assigned-group-async", partition_list=partitions, kafka_configs=config
+            )
+            try:
+                return await _async_poll_until_message(consumer)
+            finally:
+                await consumer.close()
+
+        message = asyncio.run(run())
+    assert message is not None, "Assigned consumer received no message"
+    assert message.value().decode("utf-8") == expected
+
+
+@then('a {mode} consumer polling topic "{topic_name}" with group "{group_id}" should receive message "{expected}"')
+def step_poll_receives(context, mode, topic_name, group_id, expected):
+    """Poll a single message (not a batch) through a freshly created consumer."""
+    config = _get_kafka_config(context)
+    if mode == "sync":
+        consumer = KafkaConsumerAdapter(group_id, topic_list=[topic_name], kafka_configs=config)
+        try:
+            message = _poll_until_message(consumer.poll)
+        finally:
+            consumer.close()
+    else:
+
+        async def run():
+            consumer = AsyncKafkaConsumerAdapter(group_id, topic_list=[topic_name], kafka_configs=config)
+            try:
+                return await _async_poll_until_message(consumer)
+            finally:
+                await consumer.close()
+
+        message = asyncio.run(run())
+    assert message is not None, "Consumer polled no message"
+    assert message.value().decode("utf-8") == expected
+
+
+@then('a {mode} consumer polling the empty topic "{topic_name}" with group "{group_id}" should receive nothing')
+def step_poll_receives_nothing(context, mode, topic_name, group_id):
+    """Polling a topic without messages returns None instead of failing."""
+    config = _get_kafka_config(context)
+    if mode == "sync":
+        consumer = KafkaConsumerAdapter(group_id, topic_list=[topic_name], kafka_configs=config)
+        try:
+            message = consumer.poll(timeout=1)
+        finally:
+            consumer.close()
+    else:
+
+        async def run():
+            consumer = AsyncKafkaConsumerAdapter(group_id, topic_list=[topic_name], kafka_configs=config)
+            try:
+                return await consumer.poll(timeout=1)
+            finally:
+                await consumer.close()
+
+        message = asyncio.run(run())
+    assert message is None, f"Expected no message, got {message!r}"
+
+
+@when('a {mode} producer for topic "{topic_name}" produces "{message}" without flushing and is closed')
+def step_produce_and_close(context, mode, topic_name, message):
+    """Closing a producer must flush what is still queued."""
+    config = _get_kafka_config(context)
+    if mode == "sync":
+        producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+        producer.produce(message)
+        producer.close()
+    else:
+
+        async def run():
+            producer = AsyncKafkaProducerAdapter(topic_name, kafka_configs=config)
+            await producer.produce(message)
+            await producer.close()
+
+        asyncio.run(run())
+
+
+@then('a {mode} producer for topic "{topic_name}" should list that topic')
+def step_producer_lists_topic(context, mode, topic_name):
+    """List one topic through a producer and find it in the metadata."""
+    config = _get_kafka_config(context)
+    if mode == "sync":
+        metadata = KafkaProducerAdapter(topic_name, kafka_configs=config).list_topics(topic=topic_name, timeout=5)
+    else:
+
+        async def run():
+            producer = AsyncKafkaProducerAdapter(topic_name, kafka_configs=config)
+            try:
+                return await producer.list_topics(topic=topic_name, timeout=5)
+            finally:
+                await producer.close()
+
+        metadata = asyncio.run(run())
+    assert topic_name in metadata.topics, f"{topic_name} missing from {list(metadata.topics)}"
