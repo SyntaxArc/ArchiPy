@@ -50,7 +50,7 @@ def get_kafka_consumer_adapter(context, topic_name, group_id):
     key = f"consumer_{topic_name}_{group_id}"
     if not hasattr(scenario_context, key) or getattr(scenario_context, key) is None:
         consumer = KafkaConsumerAdapter(
-            group_id=group_id, topic_list=[topic_name], kafka_configs=_get_kafka_config(context)
+            group_id=group_id, topic_list=[topic_name], kafka_configs=_get_kafka_config(context),
         )
         setattr(scenario_context, key, consumer)
     return getattr(scenario_context, key)
@@ -72,10 +72,35 @@ def get_async_kafka_consumer_adapter(context, topic_name, group_id):
     key = f"async_consumer_{topic_name}_{group_id}"
     if not hasattr(scenario_context, key) or getattr(scenario_context, key) is None:
         consumer = AsyncKafkaConsumerAdapter(
-            group_id=group_id, topic_list=[topic_name], kafka_configs=_get_kafka_config(context)
+            group_id=group_id, topic_list=[topic_name], kafka_configs=_get_kafka_config(context),
         )
         setattr(scenario_context, key, consumer)
     return getattr(scenario_context, key)
+
+
+CONSUME_DEADLINE_SECONDS = 60
+
+
+def _consume_until(adapter, count, deadline_seconds=CONSUME_DEADLINE_SECONDS):
+    """Consume from a sync consumer until count messages arrive or the deadline passes.
+
+    A fresh consumer group needs a join/rebalance before the first fetch, which can exceed a
+    single poll timeout on a loaded host, so one batch_consume call is not enough.
+    """
+    messages = []
+    deadline = time.monotonic() + deadline_seconds
+    while len(messages) < count and time.monotonic() < deadline:
+        messages.extend(adapter.batch_consume(messages_number=count - len(messages), timeout=5))
+    return messages
+
+
+async def _async_consume_until(adapter, count, deadline_seconds=CONSUME_DEADLINE_SECONDS):
+    """Async variant of _consume_until."""
+    messages = []
+    deadline = time.monotonic() + deadline_seconds
+    while len(messages) < count and time.monotonic() < deadline:
+        messages.extend(await adapter.batch_consume(messages_number=count - len(messages), timeout=5))
+    return messages
 
 
 def wait_for_topic_condition(adapter, condition_func, topic_name, max_retries=5, initial_delay=0.5):
@@ -388,7 +413,7 @@ def step_consumer_receive(context, expected_message, topic_name, group_id):
     """Assert that a consumer receives the expected single message."""
     adapter = get_kafka_consumer_adapter(context, topic_name, group_id)
     try:
-        messages = adapter.batch_consume(messages_number=1, timeout=10)
+        messages = _consume_until(adapter, 1)
         assert len(messages) > 0, "No messages received"
         received_message = messages[0].value().decode("utf-8")
         assert received_message == expected_message, f"Expected '{expected_message}', got '{received_message}'"
@@ -405,7 +430,7 @@ def step_consumer_receive_multiple(context, count, topic_name, group_id):
     """Assert that a consumer receives the expected number of messages."""
     adapter = get_kafka_consumer_adapter(context, topic_name, group_id)
     try:
-        messages = adapter.batch_consume(messages_number=count, timeout=10)
+        messages = _consume_until(adapter, count)
         assert len(messages) == count, f"Expected {count} messages, got {len(messages)}"
         scenario_context = get_current_scenario_context(context)
         scenario_context.last_messages = messages
@@ -568,13 +593,13 @@ def step_health_check_pass(context):
 
 
 @then(
-    'the async consumer should receive message "{expected_message}" from topic "{topic_name}" with group "{group_id}"'
+    'the async consumer should receive message "{expected_message}" from topic "{topic_name}" with group "{group_id}"',
 )
 async def step_async_consumer_receive(context, expected_message, topic_name, group_id):
     """Assert that an async consumer receives the expected single message."""
     adapter = get_async_kafka_consumer_adapter(context, topic_name, group_id)
     try:
-        messages = await adapter.batch_consume(messages_number=1, timeout=10)
+        messages = await _async_consume_until(adapter, 1)
         assert len(messages) > 0, "No async messages received"
         received_message = messages[0].value().decode("utf-8")
         assert received_message == expected_message, f"Expected '{expected_message}', got '{received_message}'"
@@ -591,7 +616,7 @@ async def step_async_consumer_receive_multiple(context, count, topic_name, group
     """Assert that an async consumer receives the expected number of messages."""
     adapter = get_async_kafka_consumer_adapter(context, topic_name, group_id)
     try:
-        messages = await adapter.batch_consume(messages_number=count, timeout=10)
+        messages = await _async_consume_until(adapter, count)
         assert len(messages) == count, f"Expected {count} messages, got {len(messages)}"
         scenario_context = get_current_scenario_context(context)
         scenario_context.last_messages = messages
@@ -1010,7 +1035,7 @@ def step_assigned_consumer_receives(context, mode, topic_name, expected):
 
         async def run():
             consumer = AsyncKafkaConsumerAdapter(
-                "assigned-group-async", partition_list=partitions, kafka_configs=config
+                "assigned-group-async", partition_list=partitions, kafka_configs=config,
             )
             try:
                 return await _async_poll_until_message(consumer)

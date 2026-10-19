@@ -82,8 +82,8 @@ async def step_cluster_running(context: Context) -> None:
         if not elasticsearch_container or not elasticsearch_container._is_running:
             raise ValueError("Elasticsearch container is not running")
 
-        # Wait a bit for Elasticsearch to be fully ready
-        time.sleep(2)
+        # Container start already waited for yellow cluster health; re-check cheaply per scenario.
+        elasticsearch_container._wait_until_ready(timeout=60)
 
         _log_operation(context, "Cluster status", "Elasticsearch cluster is running")
         _store_result(scenario_context, "elasticsearch_container", elasticsearch_container)
@@ -462,7 +462,7 @@ async def step_bulk_operation(context: Context) -> None:
                         "_index": actual_index_name,
                         "_id": doc_id,
                         "_source": doc_content,
-                    }
+                    },
                 )
             elif action == "update":
                 doc_content = ast.literal_eval(row["document"]) if row["document"] else {}
@@ -473,7 +473,7 @@ async def step_bulk_operation(context: Context) -> None:
                             "_index": actual_index_name,
                             "_id": doc_id,
                             **doc_content,
-                        }
+                        },
                     )
                 else:
                     bulk_actions.append(
@@ -482,7 +482,7 @@ async def step_bulk_operation(context: Context) -> None:
                             "_index": actual_index_name,
                             "_id": doc_id,
                             "doc": doc_content,
-                        }
+                        },
                     )
             elif action == "delete":
                 bulk_actions.append(
@@ -490,7 +490,7 @@ async def step_bulk_operation(context: Context) -> None:
                         "_op_type": "delete",
                         "_index": actual_index_name,
                         "_id": doc_id,
-                    }
+                    },
                 )
 
         if is_async:

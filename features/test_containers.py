@@ -679,6 +679,7 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
 
         self.host = self._container.get_container_host_ip()
         self.port = int(self._container.get_exposed_port(9200))
+        self._wait_until_ready()
 
         global_config = BaseConfig.global_config()
         global_config.ELASTIC.HOSTS = [f"http://{self.host}:{self.port}"]
@@ -686,6 +687,26 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         logger.info("Elasticsearch container started on %s:%s", self.host, self.port)
 
         return self._container
+
+    def _wait_until_ready(self, timeout: float = 120.0) -> None:
+        """Block until the cluster reports at least yellow health (primary shards allocated).
+
+        The container wait strategy only checks that HTTP answers, which happens before the
+        master is elected and shards can be allocated; index creation then fails under load.
+        """
+        url = f"http://{self.host}:{self.port}/_cluster/health"
+        deadline = time.monotonic() + timeout
+        last_error = "no response"
+        while time.monotonic() < deadline:
+            try:
+                response = httpx2.get(url, params={"wait_for_status": "yellow", "timeout": "5s"}, timeout=10)
+                if response.status_code == 200 and response.json().get("status") in ("yellow", "green"):
+                    return
+                last_error = f"HTTP {response.status_code}: {response.text[:200]}"
+            except (httpx2.HTTPError, ValueError) as e:
+                last_error = str(e)
+            time.sleep(1)
+        raise TimeoutError(f"Elasticsearch cluster not ready after {timeout}s: {last_error}")
 
     def stop(self) -> None:
         """Stop the Elasticsearch container."""
@@ -784,6 +805,7 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
         self.host = self._container.get_container_host_ip()
         self.port = mapped_port
         self.bootstrap_servers = f"localhost:{self.port}"
+        self._wait_until_ready()
 
         global_config = BaseConfig.global_config()
         global_config.KAFKA.BROKERS_LIST = [self.bootstrap_servers]
@@ -792,6 +814,24 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
         logger.info("Bootstrap servers: %s", self.bootstrap_servers)
 
         return self._container
+
+    def _wait_until_ready(self, timeout: float = 120.0) -> None:
+        """Block until the broker answers a metadata request and reports a controller."""
+        from confluent_kafka.admin import AdminClient
+
+        admin = AdminClient({"bootstrap.servers": self.bootstrap_servers})
+        deadline = time.monotonic() + timeout
+        last_error = "no response"
+        while time.monotonic() < deadline:
+            try:
+                metadata = admin.list_topics(timeout=5)
+                if metadata.brokers and metadata.controller_id >= 0:
+                    return
+                last_error = "no brokers or controller in metadata"
+            except Exception as e:  # noqa: BLE001 - any client error means not ready yet
+                last_error = str(e)
+            time.sleep(1)
+        raise TimeoutError(f"Kafka broker not ready after {timeout}s: {last_error}")
 
     def stop(self) -> None:
         """Stop the Kafka container."""
