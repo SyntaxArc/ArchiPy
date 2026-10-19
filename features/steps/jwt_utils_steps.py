@@ -234,3 +234,94 @@ def step_when_decoded_with_short_key(context, length):
         scenario_context.store("claims_error", None)
     except InvalidArgumentError as e:
         scenario_context.store("claims_error", e)
+
+
+@given("a valid {kind} token")
+def step_given_valid_token_of_kind(context, kind):
+    scenario_context = get_current_scenario_context(context)
+    create = JWTUtils.create_access_token if kind == "access" else JWTUtils.create_refresh_token
+    scenario_context.store(
+        "token", create(scenario_context.get("user_uuid"), auth_config=BaseConfig.global_config().AUTH)
+    )
+
+
+@when("the token is verified as a {required} token")
+def step_when_token_verified_as(context, required):
+    scenario_context = get_current_scenario_context(context)
+    verify = JWTUtils.verify_access_token if required == "access" else JWTUtils.verify_refresh_token
+    try:
+        verify(scenario_context.get("token"), auth_config=BaseConfig.global_config().AUTH)
+        scenario_context.store("is_verified", True)
+    except InvalidTokenError:
+        scenario_context.store("is_verified", False)
+
+
+@when("the token is decoded after the configured token version changes")
+def step_when_decoded_after_version_change(context):
+    scenario_context = get_current_scenario_context(context)
+    auth_config = BaseConfig.global_config().AUTH
+    newer = auth_config.model_copy(update={"TOKEN_VERSION": auth_config.TOKEN_VERSION + 1})
+    try:
+        JWTUtils.decode_token(scenario_context.get("token"), auth_config=newer)
+        scenario_context.store("decode_error", None)
+    except Exception as error:
+        scenario_context.store("decode_error", error)
+
+
+_SUBJECT_PAYLOADS = {
+    "a valid subject": lambda: {"sub": str(uuid4())},
+    "a missing subject": lambda: {},
+    "a numeric subject": lambda: {"sub": 42},
+    "a malformed subject": lambda: {"sub": "not-a-uuid"},
+}
+
+
+@when("the user UUID is extracted from {case}")
+def step_when_user_uuid_extracted(context, case):
+    scenario_context = get_current_scenario_context(context)
+    try:
+        JWTUtils.extract_user_uuid(_SUBJECT_PAYLOADS[case]())
+        scenario_context.store("extraction_error", None)
+    except InvalidTokenError as error:
+        scenario_context.store("extraction_error", error)
+
+
+@then("the extraction should {outcome}")
+def step_then_extraction_outcome(context, outcome):
+    error = get_current_scenario_context(context).get("extraction_error")
+    if outcome == "succeed":
+        assert error is None, error
+    else:
+        assert isinstance(error, InvalidTokenError), error
+
+
+@when("the token expiry is read")
+def step_when_token_expiry_read(context):
+    scenario_context = get_current_scenario_context(context)
+    try:
+        scenario_context.store(
+            "token_expiry",
+            JWTUtils.get_token_expiry(scenario_context.get("token"), auth_config=BaseConfig.global_config().AUTH),
+        )
+        scenario_context.store("decode_error", None)
+    except Exception as error:
+        scenario_context.store("decode_error", error)
+
+
+@then("the expiry should match the expiry claim")
+def step_then_expiry_matches_claim(context):
+    scenario_context = get_current_scenario_context(context)
+    payload = JWTUtils.decode_token(scenario_context.get("token"), auth_config=BaseConfig.global_config().AUTH)
+    assert scenario_context.get("token_expiry") == int(payload["exp"])
+
+
+@when("a token is created from {case}")
+def step_when_token_created_from(context, case):
+    scenario_context = get_current_scenario_context(context)
+    arguments = {"empty data": ({}, 60), "a zero expiry": ({"sub": "x"}, 0), "a negative expiry": ({"sub": "x"}, -5)}
+    data, expires_in = arguments[case]
+    try:
+        JWTUtils.create_token(data, expires_in, auth_config=BaseConfig.global_config().AUTH)
+        scenario_context.store("claims_error", None)
+    except InvalidArgumentError as error:
+        scenario_context.store("claims_error", error)

@@ -102,3 +102,54 @@ Feature: JWT Utilities
     And a valid access token
     When the token is decoded with a 8 byte signing key
     Then a token claims error should be raised
+
+  Scenario Outline: A <kind> token is checked against the token type that is required
+    Given a valid user UUID
+    And a valid <kind> token
+    When the token is verified as a <required> token
+    Then the verification should <outcome>
+
+    Examples: Token type checks
+      | kind    | required | outcome |
+      | access  | access   | succeed |
+      | refresh | refresh  | succeed |
+      | access  | refresh  | fail    |
+      | refresh | access   | fail    |
+
+  Scenario: A token issued under an older token version is refused
+    Given a valid user UUID
+    And a valid access token
+    When the token is decoded after the configured token version changes
+    Then an InvalidTokenError should be raised
+
+  Scenario Outline: The user UUID is read from the subject claim of <case>
+    When the user UUID is extracted from <case>
+    Then the extraction should <outcome>
+
+    Examples: Subject claims
+      | case                | outcome |
+      | a valid subject     | succeed |
+      | a missing subject   | fail    |
+      | a numeric subject   | fail    |
+      | a malformed subject | fail    |
+
+  Scenario: The token expiry is the expiry claim of the token
+    Given a valid user UUID
+    And a valid access token
+    When the token expiry is read
+    Then the expiry should match the expiry claim
+
+  Scenario: The token expiry of an invalid token is refused
+    Given an invalid token
+    When the token expiry is read
+    Then an InvalidTokenError should be raised
+
+  Scenario Outline: A token is not created from <case>
+    When a token is created from <case>
+    Then a token claims error should be raised
+
+    Examples: Invalid inputs
+      | case              |
+      | empty data        |
+      | a zero expiry     |
+      | a negative expiry |
