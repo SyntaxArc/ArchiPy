@@ -29,6 +29,7 @@ from cassandra.policies import (
     RoundRobinPolicy,
     TokenAwarePolicy,
 )
+from cassandra.protocol import RequestValidationException
 from cassandra.query import BatchStatement, PreparedStatement, SimpleStatement
 
 from archipy.adapters.scylladb.ports import AsyncScyllaDBPort, ScyllaDBPort
@@ -87,7 +88,7 @@ class ScyllaDBExceptionHandlerMixin:
         if isinstance(exception, AuthenticationFailed) or "authentication" in error_msg:
             raise InvalidCredentialsError() from exception
 
-        if isinstance(exception, InvalidRequest):
+        if isinstance(exception, InvalidRequest | RequestValidationException):
             raise InvalidArgumentError(argument_name=operation) from exception
 
         if "protocol" in error_msg:
@@ -311,7 +312,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         session = self.get_session()
         try:
             result = session.execute(query, params) if params else session.execute(query)
-        except (DriverException, NoHostAvailable) as e:
+        except (DriverException, NoHostAvailable, RequestValidationException) as e:
             self._handle_scylladb_exception(e, "execute")
             raise
         else:
@@ -336,7 +337,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                     return cached_method(query)
             # Direct prepare without cache
             prepared = session.prepare(query)
-        except (DriverException, NoHostAvailable) as e:
+        except (DriverException, NoHostAvailable, RequestValidationException) as e:
             self._handle_scylladb_exception(e, "prepare")
             raise
         else:
@@ -351,7 +352,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 session = self.get_session()
                 try:
                     prepared = session.prepare(query)
-                except (DriverException, NoHostAvailable) as e:
+                except (DriverException, NoHostAvailable, RequestValidationException) as e:
                     self._handle_scylladb_exception(e, "prepare")
                     raise
                 else:
@@ -379,7 +380,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         session = self.get_session()
         try:
             result = session.execute(statement, params) if params else session.execute(statement)
-        except (DriverException, NoHostAvailable) as e:
+        except (DriverException, NoHostAvailable, RequestValidationException) as e:
             self._handle_scylladb_exception(e, "execute_prepared")
             raise
         else:
@@ -617,7 +618,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 batch.add(SimpleStatement(stmt))
 
             session.execute(batch)
-        except (DriverException, NoHostAvailable) as e:
+        except (DriverException, NoHostAvailable, RequestValidationException) as e:
             self._handle_scylladb_exception(e, "batch_execute")
             raise
 
@@ -771,12 +772,10 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         try:
             session = self.get_session()
-            cluster = self._cluster
 
-            # Get pool state for each host
+            # Get pool state for each host (driver returns {host: state})
             hosts_stats: list[_HostPoolStat] = []
-            for host in cluster.metadata.all_hosts():
-                host_pool = session.get_pool_state(host)
+            for host, host_pool in session.get_pool_state().items():
                 if host_pool:
                     hosts_stats.append(
                         {
@@ -970,7 +969,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             future = session.execute_async(query, params) if params else session.execute_async(query)
             result = await self._await_future(future)
-        except (DriverException, NoHostAvailable) as e:
+        except (DriverException, NoHostAvailable, RequestValidationException) as e:
             self._handle_scylladb_exception(e, "execute")
             raise
         else:
@@ -995,7 +994,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                     return await cached_method(query)
             # Direct prepare without cache
             prepared = session.prepare(query)
-        except (DriverException, NoHostAvailable) as e:
+        except (DriverException, NoHostAvailable, RequestValidationException) as e:
             self._handle_scylladb_exception(e, "prepare")
             raise
         else:
@@ -1010,7 +1009,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 session = await self.get_session()
                 try:
                     prepared = session.prepare(query)
-                except (DriverException, NoHostAvailable) as e:
+                except (DriverException, NoHostAvailable, RequestValidationException) as e:
                     self._handle_scylladb_exception(e, "prepare")
                     raise
                 else:
@@ -1039,7 +1038,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             future = session.execute_async(statement, params) if params else session.execute_async(statement)
             result = await self._await_future(future)
-        except (DriverException, NoHostAvailable) as e:
+        except (DriverException, NoHostAvailable, RequestValidationException) as e:
             self._handle_scylladb_exception(e, "execute_prepared")
             raise
         else:
@@ -1278,7 +1277,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
             future = session.execute_async(batch)
             await self._await_future(future)
-        except (DriverException, NoHostAvailable) as e:
+        except (DriverException, NoHostAvailable, RequestValidationException) as e:
             self._handle_scylladb_exception(e, "batch_execute")
             raise
 
@@ -1437,12 +1436,10 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         try:
             session = await self.get_session()
-            cluster = self._cluster
 
-            # Get pool state for each host
+            # Get pool state for each host (driver returns {host: state})
             hosts_stats: list[_HostPoolStat] = []
-            for host in cluster.metadata.all_hosts():
-                host_pool = session.get_pool_state(host)
+            for host, host_pool in session.get_pool_state().items():
                 if host_pool:
                     hosts_stats.append(
                         {
