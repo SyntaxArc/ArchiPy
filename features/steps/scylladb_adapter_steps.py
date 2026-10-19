@@ -1,7 +1,7 @@
 """Step definitions for ScyllaDB adapter Behave tests."""
 
 import logging
-from inspect import iscoroutinefunction
+from inspect import isawaitable, iscoroutinefunction
 from typing import Any
 
 from behave import given, then, when
@@ -10,6 +10,7 @@ from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.scylladb.adapters import AsyncScyllaDBAdapter, ScyllaDBAdapter
 from archipy.configs.base_config import BaseConfig
+from archipy.models import errors
 from archipy.models.errors import NotFoundError
 
 logger = logging.getLogger(__name__)
@@ -578,9 +579,9 @@ def step_verify_keyspace_context(context: Context, keyspace: str) -> None:
         keyspace (str): Expected keyspace name.
     """
     scenario_context = _get_scenario_context(context)
-    assert (
-        scenario_context.current_keyspace == keyspace
-    ), f"Expected keyspace '{keyspace}', got '{scenario_context.current_keyspace}'"
+    assert scenario_context.current_keyspace == keyspace, (
+        f"Expected keyspace '{keyspace}', got '{scenario_context.current_keyspace}'"
+    )
     logger.info("Keyspace context verified: %s", keyspace)
 
 
@@ -687,7 +688,7 @@ def step_verify_table_not_exists(context: Context, table: str) -> None:
     try:
         adapter.select(table)
         raise AssertionError(f"Table '{table}' still exists")
-    except (RuntimeError, NotFoundError, Exception):
+    except RuntimeError, NotFoundError, Exception:
         # Table doesn't exist, as expected (or connection error during cleanup)
         logger.info("Table '%s' does not exist (as expected)", table)
 
@@ -1036,3 +1037,275 @@ async def step_async_insert_with_if_not_exists(context: Context, table: str, id:
     adapter = get_scylladb_adapter(context)
     await adapter.insert(table=table, data={"id": id, "item": item, "quantity": quantity}, if_not_exists=True)
     logger.info("Inserted user data into '%s'", table)
+
+
+# Hot-path steps shared by sync and async adapters (mode follows the @async tag)
+
+
+async def _call_adapter(adapter: Any, method: str, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
+    """Call an adapter method and await the result when the adapter is async.
+
+    Args:
+        adapter (Any): Sync or async ScyllaDB adapter.
+        method (str): Method name.
+        *args (Any): Positional arguments.
+        **kwargs (Any): Keyword arguments.
+
+    Returns:
+        Any: The method result.
+    """
+    result = getattr(adapter, method)(*args, **kwargs)
+    if isawaitable(result):
+        result = await result
+    return result
+
+
+async def _run_scylladb_operation(adapter: Any, operation: str, table: str) -> Any:  # noqa: ANN401
+    """Run one named hot-path operation against a users-shaped table.
+
+    Args:
+        adapter (Any): Sync or async ScyllaDB adapter.
+        operation (str): Operation name.
+        table (str): Table name.
+
+    Returns:
+        Any: Normalised result for assertions.
+    """
+    if operation == "insert":
+        await _call_adapter(adapter, "insert", table, {"id": 1, "name": "alpha", "age": 30})
+    elif operation == "insert if not exists":
+        await _call_adapter(adapter, "insert", table, {"id": 1, "name": "other", "age": 1}, if_not_exists=True)
+    elif operation == "select":
+        rows = await _call_adapter(adapter, "select", table, conditions={"id": 1})
+        return ",".join(row.name for row in rows)
+    elif operation == "select columns":
+        rows = await _call_adapter(adapter, "select", table, columns=["name"], conditions={"id": 1})
+        return ",".join(f"{row.name}:{hasattr(row, 'age')}" for row in rows)
+    elif operation == "update":
+        await _call_adapter(adapter, "update", table, {"name": "beta"}, {"id": 1})
+    elif operation == "delete":
+        await _call_adapter(adapter, "delete", table, {"id": 1})
+    elif operation == "count":
+        return str(await _call_adapter(adapter, "count", table, {"id": 1}))
+    elif operation == "exists":
+        return str(await _call_adapter(adapter, "exists", table, {"id": 1}))
+    elif operation == "drop":
+        await _call_adapter(adapter, "drop_table", table)
+    else:
+        raise ValueError(f"Unknown ScyllaDB operation: {operation}")
+    return None
+
+
+@given('a ScyllaDB adapter with keyspace "{keyspace}" and a users table "{table}"')
+async def step_adapter_keyspace_users_table(context: Context, keyspace: str, table: str) -> None:
+    """Create the adapter, keyspace and a users table in the current mode.
+
+    Args:
+        context (Context): Behave context.
+        keyspace (str): Keyspace name.
+        table (str): Table name.
+    """
+    adapter = get_scylladb_adapter(context)
+    await _call_adapter(adapter, "create_keyspace", keyspace, 1)
+    await _call_adapter(adapter, "use_keyspace", keyspace)
+    await _call_adapter(
+        adapter,
+        "create_table",
+        f"CREATE TABLE IF NOT EXISTS {table} (id int PRIMARY KEY, name text, age int)",
+    )
+    scenario_context = _get_scenario_context(context)
+    scenario_context.scylla_error = None
+    scenario_context.scylla_result = None
+
+
+@when('I run ScyllaDB operation "{operation}" on table "{table}"')
+async def step_run_scylladb_operation(context: Context, operation: str, table: str) -> None:
+    """Run a named operation and record the result or the raised error.
+
+    Args:
+        context (Context): Behave context.
+        operation (str): Operation name.
+        table (str): Table name.
+    """
+    adapter = get_scylladb_adapter(context)
+    scenario_context = _get_scenario_context(context)
+    scenario_context.scylla_error = None
+    try:
+        scenario_context.scylla_result = await _run_scylladb_operation(adapter, operation, table)
+    except Exception as e:  # noqa: BLE001
+        scenario_context.scylla_error = e
+
+
+@when('I run ScyllaDB {kind} with CQL "{cql}"')
+async def step_run_scylladb_cql(context: Context, kind: str, cql: str) -> None:
+    """Run raw CQL through execute, prepare or batch_execute and record the outcome.
+
+    Args:
+        context (Context): Behave context.
+        kind (str): One of execute, prepare, batch.
+        cql (str): CQL text.
+    """
+    adapter = get_scylladb_adapter(context)
+    scenario_context = _get_scenario_context(context)
+    scenario_context.scylla_error = None
+    try:
+        if kind == "execute":
+            await _call_adapter(adapter, "execute", cql)
+        elif kind == "prepare":
+            await _call_adapter(adapter, "prepare", cql)
+        elif kind == "batch":
+            await _call_adapter(adapter, "batch_execute", [cql])
+        else:
+            raise ValueError(f"Unknown ScyllaDB CQL kind: {kind}")
+    except Exception as e:  # noqa: BLE001
+        scenario_context.scylla_error = e
+
+
+@when('I execute a prepared ScyllaDB insert into "{table}" twice')
+async def step_prepared_insert_twice(context: Context, table: str) -> None:
+    """Prepare the same statement twice and execute it with bound parameters.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+    """
+    adapter = get_scylladb_adapter(context)
+    query = f"INSERT INTO {table} (id, name, age) VALUES (:id, :name, :age)"
+    first = await _call_adapter(adapter, "prepare", query)
+    second = await _call_adapter(adapter, "prepare", query)
+    scenario_context = _get_scenario_context(context)
+    scenario_context.scylla_prepared_reused = first is second
+    await _call_adapter(adapter, "execute_prepared", first, {"id": 1, "name": "alpha", "age": 30})
+    await _call_adapter(adapter, "execute_prepared", second, {"id": 2, "name": "beta", "age": 31})
+
+
+@when("I close the ScyllaDB adapter")
+async def step_close_scylladb_adapter(context: Context) -> None:
+    """Close the adapter.
+
+    Args:
+        context (Context): Behave context.
+    """
+    adapter = get_scylladb_adapter(context)
+    await _call_adapter(adapter, "close")
+
+
+@when("I check the ScyllaDB adapter health")
+async def step_check_scylladb_health(context: Context) -> None:
+    """Run the health check and store connection state and result.
+
+    Args:
+        context (Context): Behave context.
+    """
+    adapter = get_scylladb_adapter(context)
+    scenario_context = _get_scenario_context(context)
+    scenario_context.scylla_connected = await _call_adapter(adapter, "is_connected")
+    scenario_context.scylla_health = await _call_adapter(adapter, "health_check")
+
+
+@when("I read the ScyllaDB pool statistics with monitoring enabled")
+async def step_read_scylladb_pool_stats(context: Context) -> None:
+    """Read pool statistics from a monitoring-enabled adapter in the current mode.
+
+    Args:
+        context (Context): Behave context.
+    """
+    config = BaseConfig.global_config().SCYLLADB.model_copy(update={"ENABLE_CONNECTION_POOL_MONITORING": True})
+    adapter_class = AsyncScyllaDBAdapter if _is_async_scenario(context) else ScyllaDBAdapter
+    adapter = adapter_class(config)
+    try:
+        stats = await _call_adapter(adapter, "get_pool_stats")
+    finally:
+        await _call_adapter(adapter, "close")
+    _get_scenario_context(context).pool_stats = stats
+
+
+@then("the ScyllaDB call should succeed")
+def step_scylladb_call_succeeds(context: Context) -> None:
+    """Assert that the last recorded call raised nothing.
+
+    Args:
+        context (Context): Behave context.
+    """
+    error = _get_scenario_context(context).scylla_error
+    assert error is None, f"Expected success, got {error!r}"
+
+
+@then("the ScyllaDB call should raise {error_name}")
+def step_scylladb_call_raises(context: Context, error_name: str) -> None:
+    """Assert that the last recorded call raised the named ArchiPy error.
+
+    Args:
+        context (Context): Behave context.
+        error_name (str): Error class name from archipy.models.errors.
+    """
+    error = _get_scenario_context(context).scylla_error
+    expected = getattr(errors, error_name)
+    assert isinstance(error, expected), f"Expected {error_name}, got {error!r}"
+
+
+@then('the ScyllaDB result should be "{expected}"')
+def step_scylladb_result_is(context: Context, expected: str) -> None:
+    """Assert the normalised result of the last operation.
+
+    Args:
+        context (Context): Behave context.
+        expected (str): Expected normalised result.
+    """
+    scenario_context = _get_scenario_context(context)
+    assert scenario_context.scylla_error is None, f"Operation failed: {scenario_context.scylla_error!r}"
+    assert scenario_context.scylla_result == expected, f"Expected '{expected}', got '{scenario_context.scylla_result}'"
+
+
+@then("the ScyllaDB result should be empty")
+def step_scylladb_result_is_empty(context: Context) -> None:
+    """Assert the last select returned no rows.
+
+    Args:
+        context (Context): Behave context.
+    """
+    scenario_context = _get_scenario_context(context)
+    assert scenario_context.scylla_error is None, f"Operation failed: {scenario_context.scylla_error!r}"
+    assert scenario_context.scylla_result == "", f"Expected no rows, got '{scenario_context.scylla_result}'"
+
+
+@then("the prepared ScyllaDB statement should have been reused")
+def step_prepared_reused(context: Context) -> None:
+    """Assert that the prepared statement cache returned the same statement.
+
+    Args:
+        context (Context): Behave context.
+    """
+    assert _get_scenario_context(context).scylla_prepared_reused is True
+
+
+@then('the ScyllaDB adapter should report connected "{expected}" and health "{status}"')
+def step_scylladb_health_is(context: Context, expected: str, status: str) -> None:
+    """Assert connection state and health status.
+
+    Args:
+        context (Context): Behave context.
+        expected (str): Expected is_connected value as text.
+        status (str): Expected health status.
+    """
+    scenario_context = _get_scenario_context(context)
+    assert str(scenario_context.scylla_connected) == expected, f"connected={scenario_context.scylla_connected}"
+    assert scenario_context.scylla_health["status"] == status, scenario_context.scylla_health
+    if status == "healthy":
+        assert scenario_context.scylla_health["error"] is None
+        assert scenario_context.scylla_health["latency_ms"] > 0
+    else:
+        assert scenario_context.scylla_health["error"]
+
+
+@then("the ScyllaDB pool statistics should list the connected host")
+def step_scylladb_pool_stats_hosts(context: Context) -> None:
+    """Assert pool statistics were collected without error.
+
+    Args:
+        context (Context): Behave context.
+    """
+    stats = _get_scenario_context(context).pool_stats
+    assert stats["monitoring_enabled"] is True, stats
+    assert "error" not in stats, stats
+    assert stats["total_hosts"] >= 1, stats

@@ -251,3 +251,122 @@ Feature: ScyllaDB Adapter
     Given adapter spans are exported to the collector
     When I run a query through the async ScyllaDB adapter
     Then the collector should have a span with attribute "db.system" containing "cassandra"
+
+  @needs-scylladb
+  Scenario Outline: CRUD round trip through the adapter
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
+    When I run ScyllaDB operation "insert" on table "<table>"
+    And I run ScyllaDB operation "select" on table "<table>"
+    Then the ScyllaDB result should be "alpha"
+    When I run ScyllaDB operation "select columns" on table "<table>"
+    Then the ScyllaDB result should be "alpha:False"
+    When I run ScyllaDB operation "update" on table "<table>"
+    And I run ScyllaDB operation "select" on table "<table>"
+    Then the ScyllaDB result should be "beta"
+    When I run ScyllaDB operation "insert if not exists" on table "<table>"
+    And I run ScyllaDB operation "select" on table "<table>"
+    Then the ScyllaDB result should be "beta"
+    When I run ScyllaDB operation "count" on table "<table>"
+    Then the ScyllaDB result should be "1"
+    When I run ScyllaDB operation "exists" on table "<table>"
+    Then the ScyllaDB result should be "True"
+    When I run ScyllaDB operation "delete" on table "<table>"
+    And I run ScyllaDB operation "select" on table "<table>"
+    Then the ScyllaDB result should be empty
+    When I run ScyllaDB operation "exists" on table "<table>"
+    Then the ScyllaDB result should be "False"
+
+    Examples: Sync
+      | table    |
+      | crud_syn |
+
+    @async
+    Examples: Async
+      | table     |
+      | crud_asyn |
+
+  @needs-scylladb
+  Scenario Outline: Operations on a missing table fail with NotFoundError
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "present_<mode>"
+    When I run ScyllaDB operation "<operation>" on table "missing_<mode>"
+    Then the ScyllaDB call should raise NotFoundError
+
+    Examples: Sync
+      | mode | operation |
+      | syn  | select    |
+      | syn  | insert    |
+      | syn  | update    |
+      | syn  | delete    |
+      | syn  | count     |
+      | syn  | exists    |
+
+    @async
+    Examples: Async
+      | mode | operation |
+      | asyn | select    |
+      | asyn | insert    |
+      | asyn | update    |
+      | asyn | delete    |
+      | asyn | count     |
+      | asyn | exists    |
+
+  @needs-scylladb
+  Scenario Outline: Invalid CQL and identifiers are translated to ArchiPy errors
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "bad_<mode>"
+    When I run ScyllaDB <kind> with CQL "<cql>"
+    Then the ScyllaDB call should raise <error>
+
+    Examples: Sync
+      | mode | kind    | cql                                           | error                |
+      | syn  | execute | SELECT * FROM missing_table_syn               | NotFoundError        |
+      | syn  | prepare | SELECT * FROM missing_table_syn               | NotFoundError        |
+      | syn  | batch   | INSERT INTO missing_table_syn (id) VALUES (1) | NotFoundError        |
+      | syn  | execute | SELECT FROM WHERE                             | InvalidArgumentError |
+
+    @async
+    Examples: Async
+      | mode | kind    | cql                                            | error                |
+      | asyn | execute | SELECT * FROM missing_table_asyn               | NotFoundError        |
+      | asyn | prepare | SELECT * FROM missing_table_asyn               | NotFoundError        |
+      | asyn | batch   | INSERT INTO missing_table_asyn (id) VALUES (1) | NotFoundError        |
+      | asyn | execute | SELECT FROM WHERE                              | InvalidArgumentError |
+
+  @needs-scylladb
+  Scenario Outline: Prepared statements are cached and executed with bound parameters
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
+    When I execute a prepared ScyllaDB insert into "<table>" twice
+    Then the prepared ScyllaDB statement should have been reused
+    And the table "<table>" should contain 2 rows
+
+    Examples: Sync
+      | table    |
+      | prep_syn |
+
+  @needs-scylladb @async
+  Scenario: Async prepared statements are cached and executed with bound parameters
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "prep_asyn"
+    When I execute a prepared ScyllaDB insert into "prep_asyn" twice
+    Then the prepared ScyllaDB statement should have been reused
+    And the async table "prep_asyn" should contain 2 rows
+
+  @needs-scylladb
+  Scenario Outline: Closed adapter reports unhealthy and rejects queries
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "life_<mode>"
+    When I check the ScyllaDB adapter health
+    Then the ScyllaDB adapter should report connected "True" and health "healthy"
+    When I read the ScyllaDB pool statistics with monitoring enabled
+    Then the ScyllaDB pool statistics should list the connected host
+    When I close the ScyllaDB adapter
+    And I check the ScyllaDB adapter health
+    Then the ScyllaDB adapter should report connected "False" and health "unhealthy"
+    When I run ScyllaDB operation "select" on table "life_<mode>"
+    Then the ScyllaDB call should raise ServiceUnavailableError
+
+    Examples: Sync
+      | mode |
+      | syn  |
+
+    @async
+    Examples: Async
+      | mode |
+      | asyn |
