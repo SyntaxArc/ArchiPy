@@ -291,6 +291,27 @@ def _summary(runs: list[FeatureRun], wall_seconds: float) -> str:
     return "\n".join(lines)
 
 
+def _write_github_summary(runs: list[FeatureRun], wall_seconds: float) -> None:
+    """Add the result table to the job summary when running in GitHub Actions."""
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    done = sorted((run for run in runs if run.return_code is not None), key=lambda item: item.seconds, reverse=True)
+    lines = [
+        "### Behave features",
+        "",
+        f"{len(done)} features in {wall_seconds:.0f}s (about {sum(run.seconds for run in done):.0f}s one after another)",
+        "",
+        "| feature | time | passed | failed | result |",
+        "| --- | ---: | ---: | ---: | --- |",
+    ]
+    for run in done:
+        result = "ok" if run.ok else ("timeout" if run.timed_out else "**FAILED**")
+        lines.append(f"| {run.name} | {run.seconds:.1f}s | {run.passed} | {run.failed} | {result} |")
+    with Path(path).open("a", encoding="utf-8") as summary:
+        summary.write("\n".join(lines) + "\n")
+
+
 def _combine_coverage() -> None:
     """Merge the per-process coverage data files and print the report."""
     for command in (["combine", "-q"], ["report"], ["xml", "-q"]):
@@ -353,8 +374,10 @@ def main(argv: list[str]) -> int:
         _save_durations(runs, _load_durations())
         print(_summary(runs, time.monotonic() - started))
         return 130
+    wall_seconds = time.monotonic() - started
     _save_durations(runs, _load_durations())
-    print(_summary(runs, time.monotonic() - started))
+    print(_summary(runs, wall_seconds))
+    _write_github_summary(runs, wall_seconds)
     if arguments.coverage:
         _combine_coverage()
     return 0 if all(run.ok for run in runs) else 1

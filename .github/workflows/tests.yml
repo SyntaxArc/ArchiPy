@@ -11,6 +11,12 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # A standard runner has 4 CPUs and 16 GB: one behave process per feature, 4 at a time, 2 of them with a heavy
+      # container (Kafka, Keycloak, Elasticsearch, StarRocks, ...). Raise both on a larger runner.
+      BEHAVE_JOBS: 4
+      BEHAVE_HEAVY_JOBS: 2
     strategy:
       matrix:
         python-version: ["3.14"]
@@ -35,5 +41,13 @@ jobs:
     - name: Install dependencies
       run: make install-dev
 
-    - name: Run Behave tests
+    - name: Run Behave features in parallel
       run: make behave
+
+    - name: Upload feature logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: behave-logs
+        path: .behave-logs/
+        retention-days: 7
