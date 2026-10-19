@@ -136,3 +136,37 @@ Feature: Base Configuration System
       | token file |
       | approle    |
       | userpass   |
+
+  Scenario Outline: A <section> configuration with <problem> is <outcome>
+    When a <section> configuration is built with <problem>
+    Then the configuration should be <outcome>
+
+    Examples: Configuration checks
+      | section  | problem                                 | outcome  |
+      | Kafka    | SASL_SSL without credentials            | rejected |
+      | Kafka    | SASL_SSL with credentials               | accepted |
+      | Kafka    | auto commit and no offset reset         | rejected |
+      | Kafka    | a heartbeat longer than the session     | rejected |
+      | Redis    | cluster mode without nodes              | rejected |
+      | Redis    | cluster mode with nodes                 | accepted |
+      | Redis    | sentinel mode without a service name    | rejected |
+      | Redis    | standalone mode without a host          | rejected |
+      | ScyllaDB | no contact points                       | rejected |
+      | ScyllaDB | a username without a password           | rejected |
+      | ScyllaDB | a minimum pool above the maximum        | rejected |
+      | Temporal | only a client certificate               | rejected |
+      | Temporal | a run timeout above the execution one   | rejected |
+      | Temporal | a keep alive timeout above the interval | rejected |
+
+  Scenario Outline: The <environment> environment reports its kind and log level
+    When the environment type <environment> is inspected
+    Then it should be production <production>, test <test>, dev <dev>, local <local> and log at <level>
+
+    Examples: Environment kinds
+      | environment | production | test  | dev   | local | level   |
+      | PRODUCTION  | True       | False | False | False | WARNING |
+      | BETA        | False      | True  | False | False | INFO    |
+      | ALPHA       | False      | True  | False | False | INFO    |
+      | TEST        | False      | True  | False | False | INFO    |
+      | DEV         | False      | False | True  | False | DEBUG   |
+      | LOCAL       | False      | False | False | True  | DEBUG   |

@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 import uuid
@@ -9,7 +10,16 @@ from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.vault.adapters import VaultAdapter
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import PostgresSQLAlchemyConfig, StarRocksSQLAlchemyConfig, VaultConfig
+from archipy.configs.config_template import (
+    KafkaConfig,
+    PostgresSQLAlchemyConfig,
+    RedisConfig,
+    ScyllaDBConfig,
+    StarRocksSQLAlchemyConfig,
+    TemporalConfig,
+    VaultConfig,
+)
+from archipy.configs.environment_type import EnvironmentType
 from archipy.configs.vault_settings_source import create_vault_client
 from archipy.models.errors import ConfigurationError
 
@@ -466,3 +476,80 @@ def step_then_vault_client_authenticated(context):
     scenario_context = get_current_scenario_context(context)
     assert scenario_context.get("vault_config_error") is None, scenario_context.get("vault_config_error")
     assert scenario_context.get("vault_client").is_authenticated()
+
+
+_SECTION_SETTINGS = {
+    ("Kafka", "SASL_SSL without credentials"): (KafkaConfig, {"SECURITY_PROTOCOL": "SASL_SSL"}),
+    (
+        "Kafka",
+        "SASL_SSL with credentials",
+    ): (
+        KafkaConfig,
+        {"SECURITY_PROTOCOL": "SASL_SSL", "SASL_MECHANISM": "PLAIN", "USERNAME": "user", "PASSWORD": "pass"},
+    ),
+    ("Kafka", "auto commit and no offset reset"): (
+        KafkaConfig,
+        {"ENABLE_AUTO_COMMIT": True, "AUTO_OFFSET_RESET": "none"},
+    ),
+    ("Kafka", "a heartbeat longer than the session"): (
+        KafkaConfig,
+        {"HEARTBEAT_INTERVAL_MS": 20000, "SESSION_TIMEOUT_MS": 10000},
+    ),
+    ("Redis", "cluster mode without nodes"): (RedisConfig, {"MODE": "CLUSTER"}),
+    ("Redis", "cluster mode with nodes"): (RedisConfig, {"MODE": "CLUSTER", "CLUSTER_NODES": ["localhost:7000"]}),
+    ("Redis", "sentinel mode without a service name"): (
+        RedisConfig,
+        {"MODE": "SENTINEL", "SENTINEL_NODES": ["localhost:26379"]},
+    ),
+    ("Redis", "standalone mode without a host"): (RedisConfig, {"MODE": "STANDALONE", "MASTER_HOST": ""}),
+    ("ScyllaDB", "no contact points"): (ScyllaDBConfig, {"CONTACT_POINTS": []}),
+    ("ScyllaDB", "a username without a password"): (ScyllaDBConfig, {"USERNAME": "user"}),
+    ("ScyllaDB", "a minimum pool above the maximum"): (
+        ScyllaDBConfig,
+        {"MIN_CONNECTIONS_PER_HOST": 10, "MAX_CONNECTIONS_PER_HOST": 2},
+    ),
+    ("Temporal", "only a client certificate"): (TemporalConfig, {"TLS_CLIENT_CERT": "/tmp/client.pem"}),
+    ("Temporal", "a run timeout above the execution one"): (
+        TemporalConfig,
+        {"WORKFLOW_RUN_TIMEOUT": 7200, "WORKFLOW_EXECUTION_TIMEOUT": 3600},
+    ),
+    ("Temporal", "a keep alive timeout above the interval"): (
+        TemporalConfig,
+        {"KEEP_ALIVE_TIMEOUT_MS": 60000, "KEEP_ALIVE_INTERVAL_MS": 30000},
+    ),
+}
+
+
+@when("a {section} configuration is built with {problem}")
+def step_when_section_config_built(context, section, problem):
+    config_class, settings = _SECTION_SETTINGS[(section, problem)]
+    scenario_context = get_current_scenario_context(context)
+    try:
+        config_class(**settings)
+        scenario_context.store("section_config_error", None)
+    except Exception as error:
+        scenario_context.store("section_config_error", error)
+
+
+@then("the configuration should be {outcome}")
+def step_then_section_config_outcome(context, outcome):
+    error = get_current_scenario_context(context).get("section_config_error")
+    if outcome == "accepted":
+        assert error is None, error
+    else:
+        assert error is not None, "Expected the configuration to be rejected"
+
+
+@when("the environment type {environment} is inspected")
+def step_when_environment_inspected(context, environment):
+    get_current_scenario_context(context).store("environment_type", EnvironmentType[environment])
+
+
+@then(
+    "it should be production {production}, test {test}, dev {dev}, local {local} and log at {level}",
+)
+def step_then_environment_kind(context, production, test, dev, local, level):
+    environment = get_current_scenario_context(context).get("environment_type")
+    actual = (environment.is_production, environment.is_test, environment.is_dev, environment.is_local)
+    assert actual == (production == "True", test == "True", dev == "True", local == "True"), actual
+    assert environment.log_level == getattr(logging, level), environment.log_level
