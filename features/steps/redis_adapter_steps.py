@@ -104,6 +104,7 @@ def step_given_configured_adapter(context, adapter_type):
         scenario_context.adapter = redis_adapter
         logger.info("Redis cluster adapter configured successfully")
 
+
 @given(r"a configured async (?P<adapter_type>mock|container|cluster)")
 def step_given_configured_async_adapter(context, adapter_type):
     """Set up an async Redis adapter instance (mock or container) for testing."""
@@ -133,6 +134,7 @@ def step_given_configured_async_adapter(context, adapter_type):
         scenario_context.async_adapter = async_redis_adapter
         logger.info("Async Redis cluster adapter configured successfully")
 
+
 # Synchronous Redis Mock Steps
 @when(r'I store the key "(?P<key>[^"]+)" with value "(?P<value>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
 def step_when_store_key_in_adapter(context, key, value, adapter_type):
@@ -144,7 +146,6 @@ def step_when_store_key_in_adapter(context, key, value, adapter_type):
     logger.info(f"Storing key '{key}' with value '{value}' in {adapter_type}")
     result = redis_adapter.set(key, value)
     store_result(context, f"store_result_{key}", result)
-
 
 
 @then(r"the sync store operation should succeed")
@@ -302,7 +303,9 @@ def step_then_sync_list_contains_values(context, list_name, expected_values):
     logger.info("Sync list contents verified successfully")
 
 
-@when(r'I assign "(?P<field>[^"]+)" to "(?P<value>[^"]+)" in the hash "(?P<hash_name>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
+@when(
+    r'I assign "(?P<field>[^"]+)" to "(?P<value>[^"]+)" in the hash "(?P<hash_name>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+)
 def step_when_assign_hash_field_in_adapter(context, field, hash_name, value, adapter_type):
     """Assign a field-value pair to a hash in the Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -331,13 +334,15 @@ def step_then_sync_hash_assignment_succeeds(context):
     logger.info(f"Verifying sync hash assignment for '{field}' in '{hash_name}'")
     assert result in (1, None), f"Sync hash assignment failed: returned {result}"
     value = scenario_context.adapter.hget(hash_name, field)
-    assert (
-        value == expected_value
-    ), f"Field '{field}' in '{hash_name}' not set correctly: expected '{expected_value}', got '{value}'"
+    assert value == expected_value, (
+        f"Field '{field}' in '{hash_name}' not set correctly: expected '{expected_value}', got '{value}'"
+    )
     logger.info("Sync hash assignment verified successfully")
 
 
-@when(r'I retrieve the "(?P<field>[^"]+)" field from the hash "(?P<hash_name>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
+@when(
+    r'I retrieve the "(?P<field>[^"]+)" field from the hash "(?P<hash_name>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+)
 def step_when_retrieve_hash_field_in_adapter(context, field, hash_name, adapter_type):
     """Retrieve a field from a hash in the Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -418,7 +423,9 @@ def step_then_sync_set_contains_members(context, set_name, expected_members):
 
 
 # Asynchronous Redis Mock Steps
-@when(r'I store the key "(?P<key>[^"]+)" with value "(?P<value>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
+@when(
+    r'I store the key "(?P<key>[^"]+)" with value "(?P<value>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+)
 async def step_when_store_key_in_async_adapter(context, key, value, adapter_type):
     """Store a key-value pair in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -585,7 +592,9 @@ async def step_then_async_list_contains_values(context, list_name, expected_valu
     logger.info("Async list contents verified successfully")
 
 
-@when(r'I assign "(?P<field>[^"]+)" to "(?P<value>[^"]+)" in the hash "(?P<hash_name>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
+@when(
+    r'I assign "(?P<field>[^"]+)" to "(?P<value>[^"]+)" in the hash "(?P<hash_name>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+)
 async def step_when_assign_hash_field_in_async_adapter(context, field, hash_name, value, adapter_type):
     """Assign a field-value pair to a hash in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -614,13 +623,15 @@ async def step_then_async_hash_assignment_succeeds(context):
     logger.info(f"Verifying async hash assignment for '{field}' in '{hash_name}'")
     assert result in (1, None), f"Async hash assignment failed: returned {result}"
     value = await scenario_context.async_adapter.hget(hash_name, field)
-    assert (
-        value == expected_value
-    ), f"Field '{field}' in '{hash_name}' not set correctly: expected '{expected_value}', got '{value}'"
+    assert value == expected_value, (
+        f"Field '{field}' in '{hash_name}' not set correctly: expected '{expected_value}', got '{value}'"
+    )
     logger.info("Async hash assignment verified successfully")
 
 
-@when(r'I retrieve the "(?P<field>[^"]+)" field from the hash "(?P<hash_name>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
+@when(
+    r'I retrieve the "(?P<field>[^"]+)" field from the hash "(?P<hash_name>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+)
 async def step_when_retrieve_hash_field_in_async_adapter(context, field, hash_name, adapter_type):
     """Retrieve a field from a hash in the async Redis mock."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
@@ -927,9 +938,11 @@ async def step_when_inspect_keys_in_async_cluster_slot(context, key):
     store_result(context, "cluster_slot_keys", keys_in_slot)
     store_result(context, "inspected_cluster_key", key)
 
+
 # ---------------------------------------------------------------------------
 # Helper parsers
 # ---------------------------------------------------------------------------
+
 
 def _parse_mapping(text: str) -> dict[str, str]:
     """Parse comma-separated key=value pairs into a dict."""
@@ -1026,9 +1039,10 @@ async def _collect_async_scan_keys(adapter, pattern: str) -> list[str]:
 # Strings, expiry, counters, multi-key (sync)
 # ---------------------------------------------------------------------------
 
+
 @when(
     r'I store the key "(?P<key>[^"]+)" with value "(?P<value>[^"]+)" '
-    r'and expiry (?P<seconds>\d+) seconds in (?P<adapter_type>mock|container|cluster)',
+    r"and expiry (?P<seconds>\d+) seconds in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_store_key_with_expiry(context, key, value, seconds, adapter_type):
     """Store a key-value pair with TTL."""
@@ -1152,7 +1166,9 @@ def step_then_sync_append_length(context, length):
     assert actual == int(length), f"Expected append length {length}, got {actual}"
 
 
-@when(r'I create a (?P<redis_type>string|list|hash|set|zset) key "(?P<key>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
+@when(
+    r'I create a (?P<redis_type>string|list|hash|set|zset) key "(?P<key>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+)
 def step_when_create_key_by_type(context, redis_type, key, adapter_type):
     """Create a key of a specific Redis type."""
     scenario_context = get_current_scenario_context(context)
@@ -1201,7 +1217,7 @@ def step_then_sync_counter_value(context, expected):
 
 @when(
     r'I mset "(?P<key1>[^"]+)" to "(?P<val1>[^"]+)" and "(?P<key2>[^"]+)" to "(?P<val2>[^"]+)" '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_mset(context, key1, val1, key2, val2, adapter_type):
     """Mset multiple keys."""
@@ -1263,6 +1279,7 @@ def step_then_scanned_keys_include(context, key1, key2):
 # Lists, sets, sorted sets, hashes (sync)
 # ---------------------------------------------------------------------------
 
+
 @when(r'I lpush "(?P<values>[^"]+)" to list "(?P<list_name>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
 def step_when_lpush(context, values, list_name, adapter_type):
     """Lpush values to a list."""
@@ -1301,7 +1318,7 @@ def step_when_rpop(context, list_name, adapter_type):
 
 @when(
     r'I lrem (?P<count>\d+) "(?P<value>[^"]+)" from list "(?P<list_name>[^"]+)" '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_lrem(context, count, value, list_name, adapter_type):
     """Remove elements from a list."""
@@ -1311,7 +1328,7 @@ def step_when_lrem(context, count, value, list_name, adapter_type):
 
 @when(
     r'I lset index (?P<index>\d+) to "(?P<value>[^"]+)" in list "(?P<list_name>[^"]+)" '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_lset(context, index, value, list_name, adapter_type):
     """Set a list element by index."""
@@ -1319,7 +1336,9 @@ def step_when_lset(context, index, value, list_name, adapter_type):
     scenario_context.adapter.lset(list_name, int(index), value)
 
 
-@when(r'I check if "(?P<member>[^"]+)" is a member of set "(?P<set_name>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
+@when(
+    r'I check if "(?P<member>[^"]+)" is a member of set "(?P<set_name>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+)
 def step_when_sismember(context, member, set_name, adapter_type):
     """Check set membership."""
     scenario_context = get_current_scenario_context(context)
@@ -1368,7 +1387,7 @@ def step_then_sync_set_union(context, expected):
 
 @when(
     r'I zadd members "(?P<members>[^"]+)" to sorted set "(?P<name>[^"]+)" '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_zadd(context, members, name, adapter_type):
     """Add members to a sorted set."""
@@ -1385,7 +1404,9 @@ def step_then_sync_zcard(context, name, count):
     assert cardinality == int(count), f"Expected zcard {count}, got {cardinality}"
 
 
-@when(r'I get zscore of "(?P<member>[^"]+)" in sorted set "(?P<name>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
+@when(
+    r'I get zscore of "(?P<member>[^"]+)" in sorted set "(?P<name>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+)
 def step_when_zscore(context, member, name, adapter_type):
     """Get zscore of a member."""
     scenario_context = get_current_scenario_context(context)
@@ -1429,7 +1450,7 @@ def step_then_sync_zrank(context, expected):
 
 @when(
     r'I zrange sorted set "(?P<name>[^"]+)" from (?P<start>-?\d+) to (?P<end>-?\d+) '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_zrange(context, name, start, end, adapter_type):
     """Get zrange of a sorted set."""
@@ -1440,7 +1461,7 @@ def step_when_zrange(context, name, start, end, adapter_type):
 
 @when(
     r'I zrevrange sorted set "(?P<name>[^"]+)" from (?P<start>-?\d+) to (?P<end>-?\d+) '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_zrevrange(context, name, start, end, adapter_type):
     """Get zrevrange of a sorted set."""
@@ -1451,7 +1472,7 @@ def step_when_zrevrange(context, name, start, end, adapter_type):
 
 @when(
     r'I zrangebyscore sorted set "(?P<name>[^"]+)" from (?P<min_score>\d+) to (?P<max_score>\d+) '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_zrangebyscore(context, name, min_score, max_score, adapter_type):
     """Get zrangebyscore of a sorted set."""
@@ -1470,7 +1491,7 @@ def step_then_sync_zrange_members(context, expected):
 
 @when(
     r'I zcount sorted set "(?P<name>[^"]+)" from (?P<min_score>\d+) to (?P<max_score>\d+) '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_zcount(context, name, min_score, max_score, adapter_type):
     """Count members in score range."""
@@ -1488,7 +1509,7 @@ def step_then_sync_zcount(context, expected):
 
 @when(
     r'I zincrby (?P<amount>\d+) "(?P<member>[^"]+)" in sorted set "(?P<name>[^"]+)" '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_zincrby(context, amount, member, name, adapter_type):
     """Increment sorted set member score."""
@@ -1521,7 +1542,7 @@ def step_then_sync_zpop_result(context, expected):
 
 @when(
     r'I hset mapping "(?P<mapping>[^"]+)" in hash "(?P<hash_name>[^"]+)" '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_hset_mapping(context, mapping, hash_name, adapter_type):
     """Set multiple hash fields."""
@@ -1540,7 +1561,7 @@ def step_then_sync_hlen(context, hash_name, count):
 
 @when(
     r'I check if field "(?P<field>[^"]+)" exists in hash "(?P<hash_name>[^"]+)" '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_hexists(context, field, hash_name, adapter_type):
     """Check if hash field exists."""
@@ -1553,7 +1574,11 @@ def step_when_hexists(context, field, hash_name, adapter_type):
 def step_then_sync_hexists(context, expected):
     """Verify hexists result."""
     prev_step = next(
-        (s for s in reversed(context.scenario.steps) if s.step_type == "when" and "field" in s.name and "exists in hash" in s.name),
+        (
+            s
+            for s in reversed(context.scenario.steps)
+            if s.step_type == "when" and "field" in s.name and "exists in hash" in s.name
+        ),
         None,
     )
     field = prev_step.name.split('"')[1] if prev_step else None
@@ -1565,7 +1590,7 @@ def step_then_sync_hexists(context, expected):
 
 @when(
     r'I hmget fields "(?P<fields>[^"]+)" from hash "(?P<hash_name>[^"]+)" '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_hmget(context, fields, hash_name, adapter_type):
     """Get multiple hash fields."""
@@ -1611,7 +1636,7 @@ def step_then_sync_hash_values(context, expected):
 
 @when(
     r'I delete field "(?P<field>[^"]+)" from hash "(?P<hash_name>[^"]+)" '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_hdel(context, field, hash_name, adapter_type):
     """Delete a hash field."""
@@ -1622,6 +1647,7 @@ def step_when_hdel(context, field, hash_name, adapter_type):
 # ---------------------------------------------------------------------------
 # Pubsub and pipeline (sync)
 # ---------------------------------------------------------------------------
+
 
 @when(r'I publish "(?P<message>[^"]+)" to channel "(?P<channel>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
 def step_when_publish(context, message, channel, adapter_type):
@@ -1678,7 +1704,7 @@ def step_then_pubsub_channels_include(context, channel):
 
 @when(
     r'I run pipeline setting "(?P<key>[^"]+)" to "(?P<value>[^"]+)" and incrementing "(?P<cnt_key>[^"]+)" by 1 '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_run_pipeline(context, key, value, cnt_key, adapter_type):
     """Execute a pipeline with set, incrby, and get."""
@@ -1702,9 +1728,10 @@ def step_then_sync_pipeline_results(context, expected):
 # Async steps (strings, expiry, counters, multi-key)
 # ---------------------------------------------------------------------------
 
+
 @when(
     r'I store the key "(?P<key>[^"]+)" with value "(?P<value>[^"]+)" '
-    r'and expiry (?P<seconds>\d+) seconds in async (?P<adapter_type>mock|container|cluster)',
+    r"and expiry (?P<seconds>\d+) seconds in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_store_key_with_expiry(context, key, value, seconds, adapter_type):
     """Store a key-value pair with TTL asynchronously."""
@@ -1830,7 +1857,7 @@ async def step_then_async_append_length(context, length):
 
 @when(
     r'I create a (?P<redis_type>string|list|hash|set|zset) key "(?P<key>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_create_key_by_type(context, redis_type, key, adapter_type):
     """Create a key of a specific Redis type asynchronously."""
@@ -1890,7 +1917,7 @@ async def step_then_async_counter_value(context, expected):
 
 @when(
     r'I mset "(?P<key1>[^"]+)" to "(?P<val1>[^"]+)" and "(?P<key2>[^"]+)" to "(?P<val2>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_mset(context, key1, val1, key2, val2, adapter_type):
     """Mset multiple keys asynchronously."""
@@ -1936,6 +1963,7 @@ async def step_when_async_scan_keys(context, pattern, adapter_type):
 # Async steps (lists, sets, sorted sets, hashes)
 # ---------------------------------------------------------------------------
 
+
 @when(r'I lpush "(?P<values>[^"]+)" to list "(?P<list_name>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
 async def step_when_async_lpush(context, values, list_name, adapter_type):
     """Lpush values to a list asynchronously."""
@@ -1974,7 +2002,7 @@ async def step_when_async_rpop(context, list_name, adapter_type):
 
 @when(
     r'I lrem (?P<count>\d+) "(?P<value>[^"]+)" from list "(?P<list_name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_lrem(context, count, value, list_name, adapter_type):
     """Remove elements from a list asynchronously."""
@@ -1984,7 +2012,7 @@ async def step_when_async_lrem(context, count, value, list_name, adapter_type):
 
 @when(
     r'I lset index (?P<index>\d+) to "(?P<value>[^"]+)" in list "(?P<list_name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_lset(context, index, value, list_name, adapter_type):
     """Set a list element by index asynchronously."""
@@ -1994,7 +2022,7 @@ async def step_when_async_lset(context, index, value, list_name, adapter_type):
 
 @when(
     r'I check if "(?P<member>[^"]+)" is a member of set "(?P<set_name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_sismember(context, member, set_name, adapter_type):
     """Check set membership asynchronously."""
@@ -2044,7 +2072,7 @@ async def step_then_async_set_union(context, expected):
 
 @when(
     r'I zadd members "(?P<members>[^"]+)" to sorted set "(?P<name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_zadd(context, members, name, adapter_type):
     """Add members to a sorted set asynchronously."""
@@ -2063,7 +2091,7 @@ async def step_then_async_zcard(context, name, count):
 
 @when(
     r'I get zscore of "(?P<member>[^"]+)" in sorted set "(?P<name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_zscore(context, member, name, adapter_type):
     """Get zscore of a member asynchronously."""
@@ -2087,7 +2115,7 @@ async def step_then_async_zscore(context, expected):
 
 @when(
     r'I get zrank of "(?P<member>[^"]+)" in sorted set "(?P<name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_zrank(context, member, name, adapter_type):
     """Get zrank of a member asynchronously."""
@@ -2111,7 +2139,7 @@ async def step_then_async_zrank(context, expected):
 
 @when(
     r'I zrange sorted set "(?P<name>[^"]+)" from (?P<start>-?\d+) to (?P<end>-?\d+) '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_zrange(context, name, start, end, adapter_type):
     """Get zrange of a sorted set asynchronously."""
@@ -2122,7 +2150,7 @@ async def step_when_async_zrange(context, name, start, end, adapter_type):
 
 @when(
     r'I zrevrange sorted set "(?P<name>[^"]+)" from (?P<start>-?\d+) to (?P<end>-?\d+) '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_zrevrange(context, name, start, end, adapter_type):
     """Get zrevrange of a sorted set asynchronously."""
@@ -2133,7 +2161,7 @@ async def step_when_async_zrevrange(context, name, start, end, adapter_type):
 
 @when(
     r'I zrangebyscore sorted set "(?P<name>[^"]+)" from (?P<min_score>\d+) to (?P<max_score>\d+) '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_zrangebyscore(context, name, min_score, max_score, adapter_type):
     """Get zrangebyscore of a sorted set asynchronously."""
@@ -2152,7 +2180,7 @@ async def step_then_async_zrange_members(context, expected):
 
 @when(
     r'I zcount sorted set "(?P<name>[^"]+)" from (?P<min_score>\d+) to (?P<max_score>\d+) '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_zcount(context, name, min_score, max_score, adapter_type):
     """Count members in score range asynchronously."""
@@ -2170,7 +2198,7 @@ async def step_then_async_zcount(context, expected):
 
 @when(
     r'I zincrby (?P<amount>\d+) "(?P<member>[^"]+)" in sorted set "(?P<name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_zincrby(context, amount, member, name, adapter_type):
     """Increment sorted set member score asynchronously."""
@@ -2181,7 +2209,7 @@ async def step_when_async_zincrby(context, amount, member, name, adapter_type):
 
 @when(
     r'I zrem "(?P<member>[^"]+)" from sorted set "(?P<name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_zrem(context, member, name, adapter_type):
     """Remove member from sorted set asynchronously."""
@@ -2206,7 +2234,7 @@ async def step_then_async_zpop_result(context, expected):
 
 @when(
     r'I hset mapping "(?P<mapping>[^"]+)" in hash "(?P<hash_name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_hset_mapping(context, mapping, hash_name, adapter_type):
     """Set multiple hash fields asynchronously."""
@@ -2225,7 +2253,7 @@ async def step_then_async_hlen(context, hash_name, count):
 
 @when(
     r'I check if field "(?P<field>[^"]+)" exists in hash "(?P<hash_name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_hexists(context, field, hash_name, adapter_type):
     """Check if hash field exists asynchronously."""
@@ -2238,7 +2266,11 @@ async def step_when_async_hexists(context, field, hash_name, adapter_type):
 async def step_then_async_hexists(context, expected):
     """Verify async hexists result."""
     prev_step = next(
-        (s for s in reversed(context.scenario.steps) if s.step_type == "when" and "field" in s.name and "exists in hash" in s.name),
+        (
+            s
+            for s in reversed(context.scenario.steps)
+            if s.step_type == "when" and "field" in s.name and "exists in hash" in s.name
+        ),
         None,
     )
     field = prev_step.name.split('"')[1] if prev_step else None
@@ -2250,7 +2282,7 @@ async def step_then_async_hexists(context, expected):
 
 @when(
     r'I hmget fields "(?P<fields>[^"]+)" from hash "(?P<hash_name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_hmget(context, fields, hash_name, adapter_type):
     """Get multiple hash fields asynchronously."""
@@ -2296,7 +2328,7 @@ async def step_then_async_hash_values(context, expected):
 
 @when(
     r'I delete field "(?P<field>[^"]+)" from hash "(?P<hash_name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_hdel(context, field, hash_name, adapter_type):
     """Delete a hash field asynchronously."""
@@ -2308,7 +2340,10 @@ async def step_when_async_hdel(context, field, hash_name, adapter_type):
 # Pubsub and pipeline (async)
 # ---------------------------------------------------------------------------
 
-@when(r'I publish "(?P<message>[^"]+)" to channel "(?P<channel>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
+
+@when(
+    r'I publish "(?P<message>[^"]+)" to channel "(?P<channel>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+)
 async def step_when_async_publish(context, message, channel, adapter_type):
     """Publish a message to a channel asynchronously."""
     scenario_context = get_current_scenario_context(context)
@@ -2356,7 +2391,7 @@ async def step_when_async_pubsub_channels(context, pattern, adapter_type):
 
 @when(
     r'I run pipeline setting "(?P<key>[^"]+)" to "(?P<value>[^"]+)" and incrementing "(?P<cnt_key>[^"]+)" by 1 '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_run_pipeline(context, key, value, cnt_key, adapter_type):
     """Execute a pipeline with set, incrby, and get asynchronously."""
@@ -2383,7 +2418,7 @@ async def step_then_async_pipeline_results(context, expected):
 
 @when(
     r'I arset index (?P<index>\d+) to "(?P<values>[^"]+)" in array "(?P<name>[^"]+)" '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_arset(context, index, values, name, adapter_type):
     """Set contiguous values in a Redis 8.8 array."""
@@ -2403,7 +2438,7 @@ def step_then_sync_arlen(context, name, count):
 
 @when(
     r'I get array index (?P<index>\d+) from "(?P<name>[^"]+)" '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_arget(context, index, name, adapter_type):
     """Get a value from a Redis 8.8 array by index."""
@@ -2421,7 +2456,7 @@ def step_then_sync_array_value(context, expected):
 
 @when(
     r'I delete array index (?P<index>\d+) from "(?P<name>[^"]+)" '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_ardel(context, index, name, adapter_type):
     """Delete an index from a Redis 8.8 array."""
@@ -2431,7 +2466,7 @@ def step_when_ardel(context, index, name, adapter_type):
 
 @when(
     r'I arring size (?P<size>\d+) with "(?P<values>[^"]+)" into array "(?P<name>[^"]+)" '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_arring(context, size, values, name, adapter_type):
     """Insert values into an array ring buffer."""
@@ -2447,7 +2482,7 @@ def step_when_arring(context, size, values, name, adapter_type):
 
 @when(
     r'I arset index (?P<index>\d+) to "(?P<values>[^"]+)" in array "(?P<name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_arset(context, index, values, name, adapter_type):
     """Set contiguous values in a Redis 8.8 array asynchronously."""
@@ -2467,7 +2502,7 @@ async def step_then_async_arlen(context, name, count):
 
 @when(
     r'I get array index (?P<index>\d+) from "(?P<name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_arget(context, index, name, adapter_type):
     """Get a value from a Redis 8.8 array by index asynchronously."""
@@ -2485,7 +2520,7 @@ async def step_then_async_array_value(context, expected):
 
 @when(
     r'I arring size (?P<size>\d+) with "(?P<values>[^"]+)" into array "(?P<name>[^"]+)" '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_arring(context, size, values, name, adapter_type):
     """Insert values into an array ring buffer asynchronously."""
@@ -2501,7 +2536,7 @@ async def step_when_async_arring(context, size, values, name, adapter_type):
 
 @when(
     r'I increx key "(?P<key>[^"]+)" by (?P<amount>\d+) with upper bound (?P<ubound>\d+) '
-    r'and expiry (?P<seconds>\d+) seconds in (?P<adapter_type>mock|container|cluster)',
+    r"and expiry (?P<seconds>\d+) seconds in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_increx(context, key, amount, ubound, seconds, adapter_type):
     """Increment a windowed counter using INCREX."""
@@ -2536,7 +2571,9 @@ def step_then_sync_increx_applied(context, expected):
     )
     key = prev_step.name.split('"')[1] if prev_step else None
     result = get_result(context, f"increx_result_{key}")
-    assert result is not None and int(result[1]) == int(expected), f"Expected applied increment {expected}, got {result}"
+    assert result is not None and int(result[1]) == int(expected), (
+        f"Expected applied increment {expected}, got {result}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -2546,7 +2583,7 @@ def step_then_sync_increx_applied(context, expected):
 
 @when(
     r'I increx key "(?P<key>[^"]+)" by (?P<amount>\d+) with upper bound (?P<ubound>\d+) '
-    r'and expiry (?P<seconds>\d+) seconds in async (?P<adapter_type>mock|container|cluster)',
+    r"and expiry (?P<seconds>\d+) seconds in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_increx(context, key, amount, ubound, seconds, adapter_type):
     """Increment a windowed counter using INCREX asynchronously."""
@@ -2581,7 +2618,9 @@ async def step_then_async_increx_applied(context, expected):
     )
     key = prev_step.name.split('"')[1] if prev_step else None
     result = get_result(context, f"async_increx_result_{key}")
-    assert result is not None and int(result[1]) == int(expected), f"Expected applied increment {expected}, got {result}"
+    assert result is not None and int(result[1]) == int(expected), (
+        f"Expected applied increment {expected}, got {result}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -2591,7 +2630,7 @@ async def step_then_async_increx_applied(context, expected):
 
 @when(
     r'I zunion sets "(?P<set1>[^"]+)" and "(?P<set2>[^"]+)" with COUNT aggregator '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_zunion_count(context, set1, set2, adapter_type):
     """Compute sorted set union with COUNT aggregator."""
@@ -2610,7 +2649,7 @@ def step_then_sync_zunion_count_score(context, member, expected):
 
 @when(
     r'I zinter sets "(?P<set1>[^"]+)" and "(?P<set2>[^"]+)" with COUNT aggregator '
-    r'in (?P<adapter_type>mock|container|cluster)',
+    r"in (?P<adapter_type>mock|container|cluster)",
 )
 def step_when_zinter_count(context, set1, set2, adapter_type):
     """Compute sorted set intersection with COUNT aggregator."""
@@ -2634,7 +2673,7 @@ def step_then_sync_zinter_count_score(context, member, expected):
 
 @when(
     r'I zunion sets "(?P<set1>[^"]+)" and "(?P<set2>[^"]+)" with COUNT aggregator '
-    r'in async (?P<adapter_type>mock|container|cluster)',
+    r"in async (?P<adapter_type>mock|container|cluster)",
 )
 async def step_when_async_zunion_count(context, set1, set2, adapter_type):
     """Compute sorted set union with COUNT aggregator asynchronously."""
@@ -2780,10 +2819,7 @@ def _search_index_field_names(info: dict) -> list[str]:
             raw_name = attribute.get("identifier") or attribute.get("attribute")
             field_name = str(raw_name) if raw_name is not None else None
         elif isinstance(attribute, (list, tuple)):
-            decoded = [
-                item.decode() if isinstance(item, bytes) else str(item)
-                for item in attribute
-            ]
+            decoded = [item.decode() if isinstance(item, bytes) else str(item) for item in attribute]
             if "identifier" in decoded:
                 field_name = decoded[decoded.index("identifier") + 1]
         if field_name is None:
@@ -2800,7 +2836,7 @@ def _get_search_document(context, doc_id: str, index_name: str) -> dict:
 
 @given(
     r'search index "(?P<index_name>[^"]+)" exists with prefix "(?P<prefix>[^"]+)"'
-    r'(?: and algorithm (?P<algorithm>FLAT|HNSW|SVS-VAMANA))? for (?P<index_type>HASH|JSON) documents',
+    r"(?: and algorithm (?P<algorithm>FLAT|HNSW|SVS-VAMANA))? for (?P<index_type>HASH|JSON) documents",
 )
 def step_given_search_index_exists(context, index_name, prefix, index_type, algorithm=None):
     """Create a search index if it does not already exist."""
@@ -2851,7 +2887,7 @@ def step_when_create_search_index(context, index_name, prefix, index_type):
 
 @when(
     r'I create search index "(?P<index_name>[^"]+)" with prefix "(?P<prefix>[^"]+)" and algorithm '
-    r'(?P<algorithm>FLAT|HNSW|SVS-VAMANA) for (?P<index_type>HASH|JSON) documents',
+    r"(?P<algorithm>FLAT|HNSW|SVS-VAMANA) for (?P<index_type>HASH|JSON) documents",
 )
 def step_when_create_search_index_with_algorithm(context, index_name, prefix, algorithm, index_type):
     """Create a search index with a specific vector algorithm."""
@@ -2888,7 +2924,7 @@ def step_when_range_search(context, index_name, radius, vector):
 
 @when(
     r'I search index "(?P<index_name>[^"]+)" for nearest vector "(?P<vector>[^"]+)" with k (?P<k>\d+) '
-    r'and shard_k_ratio (?P<ratio>[\d.]+)',
+    r"and shard_k_ratio (?P<ratio>[\d.]+)",
 )
 def step_when_knn_search_with_shard_ratio(context, index_name, vector, k, ratio):
     """Run a KNN search with cluster shard ratio tuning."""
@@ -2906,7 +2942,7 @@ def step_when_knn_search_with_shard_ratio(context, index_name, vector, k, ratio)
 
 @when(
     r'I upsert search document "(?P<doc_id>[^"]+)" with title "(?P<title>[^"]+)" and vector "(?P<vector>[^"]+)" '
-    r'for (?P<index_type>HASH|JSON) documents',
+    r"for (?P<index_type>HASH|JSON) documents",
 )
 def step_when_upsert_search_document(context, doc_id, title, vector, index_type):
     """Upsert a HASH or JSON search document with a vector embedding."""
@@ -2948,7 +2984,7 @@ async def step_when_upsert_search_document_async(context, doc_id, title, vector,
 
 @given(
     r'search document "(?P<doc_id>[^"]+)" exists with title "(?P<title>[^"]+)" and vector "(?P<vector>[^"]+)" '
-    r'for (?P<index_type>HASH|JSON) documents',
+    r"for (?P<index_type>HASH|JSON) documents",
 )
 def step_given_search_document_exists(context, doc_id, title, vector, index_type):
     """Seed a HASH or JSON document in the active search index."""
@@ -3044,7 +3080,7 @@ def step_when_drop_search_index(context, index_name):
 
 @when(
     r'I add field "(?P<field_name>[^"]+)" as numeric to search index "(?P<index_name>[^"]+)" '
-    r'for (?P<index_type>HASH|JSON) documents',
+    r"for (?P<index_type>HASH|JSON) documents",
 )
 def step_when_add_numeric_field_to_search_index(context, field_name, index_name, index_type):
     """Add a numeric field to an existing search index schema."""
@@ -3185,3 +3221,256 @@ def step_then_aggregation_rows(context, count):
     result = get_result(context, "aggregation_result")
     assert result is not None
     assert len(result["rows"]) >= int(count)
+
+
+# ---------------------------------------------------------------------------
+# Hot-path hash, set, key and connection commands (sync)
+# ---------------------------------------------------------------------------
+
+
+@when(r'I read the whole hash "(?P<name>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
+def step_when_read_whole_hash(context, name, adapter_type):
+    """Read every field of a hash with hgetall."""
+    scenario_context = get_current_scenario_context(context)
+    store_result(context, "sync_whole_hash", scenario_context.adapter.hgetall(name))
+
+
+@then(r'the sync whole hash should be "(?P<expected>[^"]+)"')
+def step_then_whole_hash(context, expected):
+    """Verify hgetall returned the expected field-value pairs."""
+    expected_hash = dict(pair.split("=", 1) for pair in expected.split(","))
+    whole_hash = {str(k): str(v) for k, v in get_result(context, "sync_whole_hash").items()}
+    assert whole_hash == expected_hash, f"Expected {expected_hash}, got {whole_hash}"
+
+
+@when(r'I list the values of hash "(?P<name>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
+def step_when_list_hash_values(context, name, adapter_type):
+    """List hash values with hvals."""
+    scenario_context = get_current_scenario_context(context)
+    store_result(context, "sync_hvals", scenario_context.adapter.hvals(name))
+
+
+@then(r'the sync hash value list should be "(?P<expected>[^"]+)"')
+def step_then_hash_value_list(context, expected):
+    """Verify hvals returned the expected values regardless of order."""
+    expected_values = sorted(v.strip() for v in expected.split(","))
+    values = sorted(str(v) for v in get_result(context, "sync_hvals"))
+    assert values == expected_values, f"Expected {expected_values}, got {values}"
+
+
+@when(
+    r'I scan the set "(?P<name>[^"]+)" for members matching "(?P<pattern>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+)
+def step_when_sscan(context, name, pattern, adapter_type):
+    """Scan set members with sscan."""
+    scenario_context = get_current_scenario_context(context)
+    _cursor, members = scenario_context.adapter.sscan(name, 0, pattern)
+    store_result(context, "sync_set_scan", members)
+
+
+@when(
+    r'I iterate the set "(?P<name>[^"]+)" for members matching "(?P<pattern>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+)
+def step_when_sscan_iter(context, name, pattern, adapter_type):
+    """Iterate set members with sscan_iter."""
+    scenario_context = get_current_scenario_context(context)
+    members = list(scenario_context.adapter.sscan_iter(name, pattern))
+    store_result(context, "sync_set_scan", members)
+
+
+@then(r'the sync set scan should return "(?P<expected>[^"]+)"')
+def step_then_set_scan(context, expected):
+    """Verify the members returned by a set scan."""
+    expected_members = sorted(m.strip() for m in expected.split(","))
+    members = sorted(str(m) for m in get_result(context, "sync_set_scan"))
+    assert members == expected_members, f"Expected {expected_members}, got {members}"
+
+
+@when(r'I pop (?P<count>\d+) members from the set "(?P<name>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
+def step_when_spop_count(context, count, name, adapter_type):
+    """Pop several set members at once."""
+    scenario_context = get_current_scenario_context(context)
+    store_result(context, "sync_popped", scenario_context.adapter.spop(name, int(count)))
+
+
+@then(r"the sync popped member count should be (?P<count>\d+)")
+def step_then_popped_count(context, count):
+    """Verify how many members spop returned."""
+    popped = get_result(context, "sync_popped")
+    assert len(popped) == int(count), f"Expected {count} popped members, got {popped}"
+
+
+@when(r'I count the existing keys "(?P<key1>[^"]+)" and "(?P<key2>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
+def step_when_exists_count(context, key1, key2, adapter_type):
+    """Count how many of two keys exist."""
+    scenario_context = get_current_scenario_context(context)
+    store_result(context, "sync_exists_count", scenario_context.adapter.exists(key1, key2))
+
+
+@then(r"the sync existing key count should be (?P<count>\d+)")
+def step_then_exists_count(context, count):
+    """Verify the number of existing keys."""
+    actual = get_result(context, "sync_exists_count")
+    assert actual == int(count), f"Expected {count} existing keys, got {actual}"
+
+
+@when(r'I delete the keys "(?P<key1>[^"]+)" and "(?P<key2>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
+def step_when_delete_two_keys(context, key1, key2, adapter_type):
+    """Delete two keys in one call."""
+    scenario_context = get_current_scenario_context(context)
+    store_result(context, "sync_deleted_count", scenario_context.adapter.delete(key1, key2))
+
+
+@then(r"the sync deleted key count should be (?P<count>\d+)")
+def step_then_deleted_count(context, count):
+    """Verify the number of deleted keys."""
+    actual = get_result(context, "sync_deleted_count")
+    assert actual == int(count), f"Expected {count} deleted keys, got {actual}"
+
+
+@when(r"I ping the server in (?P<adapter_type>mock|container|cluster)")
+def step_when_ping(context, adapter_type):
+    """Ping the Redis server."""
+    scenario_context = get_current_scenario_context(context)
+    store_result(context, "sync_ping", scenario_context.adapter.ping())
+
+
+@then(r"the sync ping should succeed")
+def step_then_ping(context):
+    """Verify the ping succeeded."""
+    assert get_result(context, "sync_ping") in (True, "PONG", b"PONG")
+
+
+# ---------------------------------------------------------------------------
+# Hot-path hash, set, key and connection commands (async)
+# ---------------------------------------------------------------------------
+
+
+@when(r'I read the whole hash "(?P<name>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
+async def step_when_read_whole_hash_async(context, name, adapter_type):
+    """Read every field of a hash with hgetall."""
+    scenario_context = get_current_scenario_context(context)
+    store_result(context, "async_whole_hash", await scenario_context.async_adapter.hgetall(name))
+
+
+@then(r'the async whole hash should be "(?P<expected>[^"]+)"')
+async def step_then_whole_hash_async(context, expected):
+    """Verify hgetall returned the expected field-value pairs."""
+    expected_hash = dict(pair.split("=", 1) for pair in expected.split(","))
+    whole_hash = {str(k): str(v) for k, v in get_result(context, "async_whole_hash").items()}
+    assert whole_hash == expected_hash, f"Expected {expected_hash}, got {whole_hash}"
+
+
+@when(r'I list the values of hash "(?P<name>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
+async def step_when_list_hash_values_async(context, name, adapter_type):
+    """List hash values with hvals."""
+    scenario_context = get_current_scenario_context(context)
+    store_result(context, "async_hvals", await scenario_context.async_adapter.hvals(name))
+
+
+@then(r'the async hash value list should be "(?P<expected>[^"]+)"')
+async def step_then_hash_value_list_async(context, expected):
+    """Verify hvals returned the expected values regardless of order."""
+    expected_values = sorted(v.strip() for v in expected.split(","))
+    values = sorted(str(v) for v in get_result(context, "async_hvals"))
+    assert values == expected_values, f"Expected {expected_values}, got {values}"
+
+
+@when(
+    r'I scan the set "(?P<name>[^"]+)" for members matching "(?P<pattern>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+)
+async def step_when_sscan_async(context, name, pattern, adapter_type):
+    """Scan set members with sscan."""
+    scenario_context = get_current_scenario_context(context)
+    _cursor, members = await scenario_context.async_adapter.sscan(name, 0, pattern)
+    store_result(context, "async_set_scan", members)
+
+
+@when(
+    r'I iterate the set "(?P<name>[^"]+)" for members matching "(?P<pattern>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+)
+async def step_when_sscan_iter_async(context, name, pattern, adapter_type):
+    """Iterate set members with sscan_iter."""
+    scenario_context = get_current_scenario_context(context)
+    member_iterator = await scenario_context.async_adapter.sscan_iter(name, pattern)
+    members = [member async for member in member_iterator]
+    store_result(context, "async_set_scan", members)
+
+
+@then(r'the async set scan should return "(?P<expected>[^"]+)"')
+async def step_then_set_scan_async(context, expected):
+    """Verify the members returned by a set scan."""
+    expected_members = sorted(m.strip() for m in expected.split(","))
+    members = sorted(str(m) for m in get_result(context, "async_set_scan"))
+    assert members == expected_members, f"Expected {expected_members}, got {members}"
+
+
+@when(r'I pop (?P<count>\d+) members from the set "(?P<name>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
+async def step_when_spop_count_async(context, count, name, adapter_type):
+    """Pop several set members at once."""
+    scenario_context = get_current_scenario_context(context)
+    store_result(context, "async_popped", await scenario_context.async_adapter.spop(name, int(count)))
+
+
+@then(r"the async popped member count should be (?P<count>\d+)")
+async def step_then_popped_count_async(context, count):
+    """Verify how many members spop returned."""
+    popped = get_result(context, "async_popped")
+    assert len(popped) == int(count), f"Expected {count} popped members, got {popped}"
+
+
+@when(
+    r'I count the existing keys "(?P<key1>[^"]+)" and "(?P<key2>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+)
+async def step_when_exists_count_async(context, key1, key2, adapter_type):
+    """Count how many of two keys exist."""
+    scenario_context = get_current_scenario_context(context)
+    store_result(context, "async_exists_count", await scenario_context.async_adapter.exists(key1, key2))
+
+
+@then(r"the async existing key count should be (?P<count>\d+)")
+async def step_then_exists_count_async(context, count):
+    """Verify the number of existing keys."""
+    actual = get_result(context, "async_exists_count")
+    assert actual == int(count), f"Expected {count} existing keys, got {actual}"
+
+
+@when(r'I delete the keys "(?P<key1>[^"]+)" and "(?P<key2>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
+async def step_when_delete_two_keys_async(context, key1, key2, adapter_type):
+    """Delete two keys in one call."""
+    scenario_context = get_current_scenario_context(context)
+    store_result(context, "async_deleted_count", await scenario_context.async_adapter.delete(key1, key2))
+
+
+@then(r"the async deleted key count should be (?P<count>\d+)")
+async def step_then_deleted_count_async(context, count):
+    """Verify the number of deleted keys."""
+    actual = get_result(context, "async_deleted_count")
+    assert actual == int(count), f"Expected {count} deleted keys, got {actual}"
+
+
+@when(r"I ping the server in async (?P<adapter_type>mock|container|cluster)")
+async def step_when_ping_async(context, adapter_type):
+    """Ping the Redis server."""
+    scenario_context = get_current_scenario_context(context)
+    store_result(context, "async_ping", await scenario_context.async_adapter.ping())
+
+
+@then(r"the async ping should succeed")
+async def step_then_ping_async(context):
+    """Verify the ping succeeded."""
+    assert get_result(context, "async_ping") in (True, "PONG", b"PONG")
+
+
+@then(r"the sync whole hash should be empty")
+def step_then_whole_hash_empty(context):
+    """Verify hgetall on a missing hash returns an empty mapping."""
+    whole_hash = get_result(context, "sync_whole_hash")
+    assert whole_hash == {}, f"Expected empty hash, got {whole_hash}"
+
+
+@then(r"the async whole hash should be empty")
+async def step_then_whole_hash_empty_async(context):
+    """Verify hgetall on a missing hash returns an empty mapping."""
+    whole_hash = get_result(context, "async_whole_hash")
+    assert whole_hash == {}, f"Expected empty hash, got {whole_hash}"

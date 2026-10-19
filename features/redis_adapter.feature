@@ -1190,3 +1190,123 @@ Feature: Redis Testing
     And I search index "otel-search-async" asynchronously for nearest vector "[0.9, 0.1, 0.0]" with k 1
     Then the async search should return at least 1 hit
     And the collector should have a span with attribute "db.statement" containing "FT.SEARCH"
+
+  Scenario Outline: Read a whole hash and list its values
+    Given a configured <adapter_type>
+    When I hset mapping "name=Alice,city=Paris" in hash "bdd-s-hot-hash" in <adapter_type>
+    And I read the whole hash "bdd-s-hot-hash" in <adapter_type>
+    Then the sync whole hash should be "name=Alice,city=Paris"
+    When I list the values of hash "bdd-s-hot-hash" in <adapter_type>
+    Then the sync hash value list should be "Alice, Paris"
+    When I read the whole hash "bdd-s-hot-missing" in <adapter_type>
+    Then the sync whole hash should be empty
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Scan and pop set members
+    Given a configured <adapter_type>
+    When I add "apple, apricot, banana, cherry" to the set "bdd-s-hot-set" in <adapter_type>
+    And I scan the set "bdd-s-hot-set" for members matching "ap*" in <adapter_type>
+    Then the sync set scan should return "apple, apricot"
+    When I iterate the set "bdd-s-hot-set" for members matching "*an*" in <adapter_type>
+    Then the sync set scan should return "banana"
+    When I pop 2 members from the set "bdd-s-hot-set" in <adapter_type>
+    Then the sync popped member count should be 2
+    And the sync set "bdd-s-hot-set" should have 2 members
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Count and delete several keys
+    Given a configured <adapter_type>
+    When I mset "{bdd-s-hot-keys}:1" to "a" and "{bdd-s-hot-keys}:2" to "b" in <adapter_type>
+    And I count the existing keys "{bdd-s-hot-keys}:1" and "{bdd-s-hot-keys}:2" in <adapter_type>
+    Then the sync existing key count should be 2
+    When I delete the keys "{bdd-s-hot-keys}:1" and "{bdd-s-hot-keys}:2" in <adapter_type>
+    Then the sync deleted key count should be 2
+    When I count the existing keys "{bdd-s-hot-keys}:1" and "{bdd-s-hot-keys}:2" in <adapter_type>
+    Then the sync existing key count should be 0
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Ping the server
+    Given a configured <adapter_type>
+    When I ping the server in <adapter_type>
+    Then the sync ping should succeed
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Read a whole hash and list its values asynchronously
+    Given a configured async <adapter_type>
+    When I hset mapping "name=Alice,city=Paris" in hash "bdd-a-hot-hash" in async <adapter_type>
+    And I read the whole hash "bdd-a-hot-hash" in async <adapter_type>
+    Then the async whole hash should be "name=Alice,city=Paris"
+    When I list the values of hash "bdd-a-hot-hash" in async <adapter_type>
+    Then the async hash value list should be "Alice, Paris"
+    When I read the whole hash "bdd-a-hot-missing" in async <adapter_type>
+    Then the async whole hash should be empty
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Scan and pop set members asynchronously
+    Given a configured async <adapter_type>
+    When I add "apple, apricot, banana, cherry" to the set "bdd-a-hot-set" in async <adapter_type>
+    And I scan the set "bdd-a-hot-set" for members matching "ap*" in async <adapter_type>
+    Then the async set scan should return "apple, apricot"
+    When I iterate the set "bdd-a-hot-set" for members matching "*an*" in async <adapter_type>
+    Then the async set scan should return "banana"
+    When I pop 2 members from the set "bdd-a-hot-set" in async <adapter_type>
+    Then the async popped member count should be 2
+    And the async set "bdd-a-hot-set" should have 2 members
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Count and delete several keys asynchronously
+    Given a configured async <adapter_type>
+    When I mset "{bdd-a-hot-keys}:1" to "a" and "{bdd-a-hot-keys}:2" to "b" in async <adapter_type>
+    And I count the existing keys "{bdd-a-hot-keys}:1" and "{bdd-a-hot-keys}:2" in async <adapter_type>
+    Then the async existing key count should be 2
+    When I delete the keys "{bdd-a-hot-keys}:1" and "{bdd-a-hot-keys}:2" in async <adapter_type>
+    Then the async deleted key count should be 2
+    When I count the existing keys "{bdd-a-hot-keys}:1" and "{bdd-a-hot-keys}:2" in async <adapter_type>
+    Then the async existing key count should be 0
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Ping the server asynchronously
+    Given a configured async <adapter_type>
+    When I ping the server in async <adapter_type>
+    Then the async ping should succeed
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
