@@ -29,6 +29,7 @@ from archipy.adapters.kafka.ports import (
 )
 from archipy.configs.base_config import BaseConfig
 from archipy.models.errors import (
+    BaseError,
     ConfigurationError,
     ConnectionTimeoutError,
     InternalError,
@@ -641,7 +642,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
         """
         try:
             self.list_topics(timeout=1)
-        except _KAFKA_CLIENT_ERRORS as e:
+        except (*_KAFKA_CLIENT_ERRORS, BaseError) as e:
             raise UnavailableError(resource_type="Kafka") from e
 
     @override
@@ -837,7 +838,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
         """
         try:
             await self.list_topics(timeout=1)
-        except _KAFKA_CLIENT_ERRORS as e:
+        except (*_KAFKA_CLIENT_ERRORS, BaseError) as e:
             raise UnavailableError(resource_type="Kafka") from e
 
     @override
