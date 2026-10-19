@@ -310,14 +310,14 @@ def _parse_arguments(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
         "-j",
         "--jobs",
         type=int,
-        default=int(os.environ.get("BEHAVE_JOBS", min(4, os.cpu_count() or 1))),
-        help="features to run at the same time (default: BEHAVE_JOBS or min(4, CPUs))",
+        default=int(os.environ.get("BEHAVE_JOBS", min(6, os.cpu_count() or 1))),
+        help="features to run at the same time (default: BEHAVE_JOBS or min(6, CPUs))",
     )
     parser.add_argument(
         "--heavy-jobs",
         type=int,
-        default=int(os.environ.get("BEHAVE_HEAVY_JOBS", 2)),
-        help="of those, features with a heavy container to run at the same time (default: BEHAVE_HEAVY_JOBS or 2)",
+        default=int(os.environ.get("BEHAVE_HEAVY_JOBS", 3)),
+        help="of those, features with a heavy container to run at the same time (default: BEHAVE_HEAVY_JOBS or 3)",
     )
     parser.add_argument("--timeout", type=float, default=None, help="seconds a single feature may run")
     parser.add_argument("--coverage", action="store_true", help="run under coverage and combine the data files")
