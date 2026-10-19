@@ -479,7 +479,7 @@ exclude_dirs = ["features", "docs", "scripts"]
 skips = ["B101", "B301", "B403"]
 
 [tool.coverage.run]
-source = ["archipy"]
+source = ["archipy", "packages"]
 branch = true
 parallel = true
 
