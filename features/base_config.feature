@@ -107,3 +107,32 @@ Feature: Base Configuration System
       | read_committed  | accepted |
       | SERIALIZABLE    | rejected |
       | REPEATABLE READ | rejected |
+
+  Scenario Outline: A Vault client is refused when <problem>
+    When a Vault client is built for <auth_method> auth when <problem>
+    Then a ConfigurationError should be raised
+    And the error should mention "<fragment>"
+
+    Examples: Incomplete Vault settings
+      | auth_method | problem                          | fragment              |
+      | token       | no token is set                  | TOKEN or TOKEN_FILE   |
+      | token       | the token file cannot be read    | Failed to read secret |
+      | approle     | no role id is set                | APPROLE_ROLE_ID       |
+      | approle     | no secret id is set              | APPROLE_SECRET_ID     |
+      | userpass    | no username is set               | USERNAME              |
+      | userpass    | no password is set               | PASSWORD              |
+      | kubernetes  | no role is set                   | KUBERNETES_ROLE       |
+      | jwt         | no role is set                   | JWT_ROLE              |
+      | token       | no address is set                | VAULT.ADDR            |
+      | token       | only a client certificate is set | CLIENT_KEY_PATH       |
+
+  Scenario Outline: A Vault client logs in with <method>
+    Given Vault accepts <method> logins for a test identity
+    When a Vault client is built for the test identity
+    Then the Vault client should be authenticated
+
+    Examples: Login methods
+      | method     |
+      | token file |
+      | approle    |
+      | userpass   |

@@ -1,4 +1,7 @@
 import os
+import tempfile
+import uuid
+from pathlib import Path
 
 from behave import given, then, when
 from features.environment import TestConfig
@@ -6,7 +9,8 @@ from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.vault.adapters import VaultAdapter
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import PostgresSQLAlchemyConfig, StarRocksSQLAlchemyConfig
+from archipy.configs.config_template import PostgresSQLAlchemyConfig, StarRocksSQLAlchemyConfig, VaultConfig
+from archipy.configs.vault_settings_source import create_vault_client
 from archipy.models.errors import ConfigurationError
 
 
@@ -369,3 +373,96 @@ def step_then_starrocks_outcome(context, outcome):
         assert scenario_context.get("starrocks_config").ISOLATION_LEVEL == "READ COMMITTED"
     else:
         assert error is not None, "Expected the isolation level to be rejected"
+
+
+_UNUSED_VAULT_ADDR = "http://127.0.0.1:8200"
+
+_VAULT_PROBLEMS = {
+    "no token is set": {},
+    "the token file cannot be read": {"TOKEN_FILE": "/nonexistent/vault-token"},
+    "no role id is set": {},
+    "no secret id is set": {"APPROLE_ROLE_ID": "role"},
+    "no username is set": {},
+    "no password is set": {"USERNAME": "user"},
+    "no role is set": {},
+    "no address is set": {"ADDR": None, "TOKEN": "t"},
+    "only a client certificate is set": {"TOKEN": "t", "CLIENT_CERT_PATH": "/tmp/client.pem"},
+}
+
+
+@when("a Vault client is built for {auth_method} auth when {problem}")
+def step_when_vault_client_built_with_problem(context, auth_method, problem):
+    scenario_context = get_current_scenario_context(context)
+    settings = {"ENABLED": True, "ADDR": _UNUSED_VAULT_ADDR, "AUTH_METHOD": auth_method, **_VAULT_PROBLEMS[problem]}
+    try:
+        create_vault_client(VaultConfig(**settings))
+        scenario_context.store("vault_config_error", None)
+    except Exception as error:
+        scenario_context.store("vault_config_error", error)
+
+
+@then('the error should mention "{fragment}"')
+def step_then_error_mentions(context, fragment):
+    error = get_current_scenario_context(context).get("vault_config_error")
+    assert fragment in str(error) or fragment in repr(getattr(error, "additional_data", "")), repr(error)
+
+
+def _vault_admin_client():
+    from hvac import Client
+
+    vault = TestConfig.global_config().VAULT
+    return Client(url=vault.ADDR, token=vault.TOKEN)
+
+
+@given("Vault accepts {method} logins for a test identity")
+def step_given_vault_accepts_logins(context, method):
+    scenario_context = get_current_scenario_context(context)
+    vault = TestConfig.global_config().VAULT
+    settings = {"ENABLED": True, "ADDR": vault.ADDR}
+    admin = _vault_admin_client()
+    suffix = uuid.uuid4().hex[:8]
+    if method == "token file":
+        token_file = Path(tempfile.mkdtemp(prefix="archipy_vault_")) / "token"
+        token_file.write_text(f"{vault.TOKEN}\n", encoding="utf-8")
+        settings.update({"AUTH_METHOD": "token", "TOKEN_FILE": str(token_file)})
+    elif method == "approle":
+        mount = f"approle{suffix}"
+        admin.sys.enable_auth_method("approle", path=mount)
+        admin.auth.approle.create_or_update_approle("test-role", token_policies=["default"], mount_point=mount)
+        role_id = admin.auth.approle.read_role_id("test-role", mount_point=mount)["data"]["role_id"]
+        secret_id = admin.auth.approle.generate_secret_id("test-role", mount_point=mount)["data"]["secret_id"]
+        settings.update(
+            {
+                "AUTH_METHOD": "approle",
+                "APPROLE_ROLE_ID": role_id,
+                "APPROLE_SECRET_ID": secret_id,
+                "APPROLE_MOUNT_POINT": mount,
+            },
+        )
+    else:
+        mount = f"userpass{suffix}"
+        admin.sys.enable_auth_method("userpass", path=mount)
+        admin.auth.userpass.create_or_update_user("alice", "s3cret-pass", policies=["default"], mount_point=mount)
+        settings.update(
+            {"AUTH_METHOD": "userpass", "USERNAME": "alice", "PASSWORD": "s3cret-pass", "USERPASS_MOUNT_POINT": mount},
+        )
+    scenario_context.store("vault_login_settings", settings)
+
+
+@when("a Vault client is built for the test identity")
+def step_when_vault_client_built_for_identity(context):
+    scenario_context = get_current_scenario_context(context)
+    try:
+        scenario_context.store(
+            "vault_client", create_vault_client(VaultConfig(**scenario_context.get("vault_login_settings")))
+        )
+        scenario_context.store("vault_config_error", None)
+    except Exception as error:
+        scenario_context.store("vault_config_error", error)
+
+
+@then("the Vault client should be authenticated")
+def step_then_vault_client_authenticated(context):
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("vault_config_error") is None, scenario_context.get("vault_config_error")
+    assert scenario_context.get("vault_client").is_authenticated()
