@@ -1379,6 +1379,8 @@ class MailpitTestContainer(metaclass=Singleton, thread_safe=True):
             DockerContainer(self.image)
             .with_exposed_ports(self.SMTP_PORT, self.API_PORT)
             .with_env("MP_SMTP_AUTH", f"{self.USERNAME}:{self.PASSWORD}")
+            # Mailpit resolves the name of every SMTP client; with no DNS in the container each connection waits 20 s.
+            .with_env("MP_SMTP_DISABLE_RDNS", "true")
             .with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["mailpit"])
         )
         if self.WITH_TLS:
