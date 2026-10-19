@@ -10,9 +10,12 @@ from archipy.adapters.base.sqlalchemy.atomic import sqlite_sqlalchemy_atomic
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
 from archipy.adapters.sqlite.sqlalchemy.adapters import SQLiteSQLAlchemyAdapter
 from archipy.adapters.sqlite.sqlalchemy.session_manager_registry import SQLiteSessionManagerRegistry
-from archipy.adapters.sqlite.sqlalchemy.session_managers import SQLiteSQLAlchemySessionManager
+from archipy.adapters.sqlite.sqlalchemy.session_managers import (
+    AsyncSQLiteSQLAlchemySessionManager,
+    SQLiteSQLAlchemySessionManager,
+)
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import SQLiteSQLAlchemyConfig
+from archipy.configs.config_template import PostgresSQLAlchemyConfig, SQLiteSQLAlchemyConfig
 from archipy.models import errors
 from features.test_helpers import get_current_scenario_context
 
@@ -201,3 +204,14 @@ def step_then_registry_hands_out_manager(context):
     scenario_context = get_current_scenario_context(context)
     assert scenario_context.get("registry_error") is None, scenario_context.get("registry_error")
     assert scenario_context.get("registry_manager") is not None
+
+
+@when("a {mode} SQLite session manager is built with {problem}")
+def step_when_sqlite_manager_built_with_problem(context, mode, problem):
+    manager_class = AsyncSQLiteSQLAlchemySessionManager if mode == "async" else SQLiteSQLAlchemySessionManager
+    config = (
+        PostgresSQLAlchemyConfig()
+        if problem == "a PostgreSQL configuration"
+        else SQLiteSQLAlchemyConfig(DRIVER_NAME="no_such_dialect+no_such_driver", DATABASE=":memory:")
+    )
+    _remember_registry_outcome(context, lambda: manager_class(config))

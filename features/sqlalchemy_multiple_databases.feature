@@ -73,3 +73,14 @@ Feature: Several SQLAlchemy databases of the same type
       | mode  |
       | sync  |
       | async |
+
+  Scenario Outline: A <mode> SQLite session manager refuses <problem>
+    When a <mode> SQLite session manager is built with <problem>
+    Then the registry should refuse with <error>
+
+    Examples: Invalid session manager settings
+      | mode  | problem                    | error                   |
+      | sync  | a PostgreSQL configuration | InvalidArgumentError    |
+      | async | a PostgreSQL configuration | InvalidArgumentError    |
+      | sync  | an unknown driver          | DatabaseConnectionError |
+      | async | an unknown driver          | DatabaseConnectionError |
