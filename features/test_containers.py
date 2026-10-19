@@ -46,6 +46,7 @@ CONTAINER_MEM_LIMITS: dict[str, str] = {
     "starrocks": "1280m",
     "redis": "64m",
     "kafka": "1024m",
+    "elasticsearch": "3072m",
     "temporal": "384m",
     "mailpit": "64m",
     "otel-collector": "128m",
@@ -664,6 +665,7 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         self._container = ElasticSearchContainer(image=self.image)
         # Default ES heap can OOM-kill the container (exit 137) on shared CI/dev hosts.
         self._container.with_env("ES_JAVA_OPTS", "-Xms2g -Xmx2g")
+        self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["elasticsearch"])
         self._container.with_env("discovery.type", "single-node")
         if self._container._wait_strategy is not None:
             # ES startup can exceed the default 120s on loaded machines; allow up to 5 minutes.
