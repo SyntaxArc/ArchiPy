@@ -14,7 +14,7 @@ dependencies = [
 
 [project.optional-dependencies]
 sync = ["zeep>=4.3.3", "requests[socks]>=2.34.2"]
-async = ["zeep[async]>=4.3.3", "httpx2[socks]>=2.13.1"]
+async = ["zeep[async]>=4.3.3", "httpx2[socks]>=2.14.0"]
 
 [build-system]
 requires = ["hatchling"]

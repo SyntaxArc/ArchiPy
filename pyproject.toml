@@ -11,7 +11,7 @@ dependencies = [
     "pydantic>=2.14.1",
     "pydantic-settings>=2.16.0",
     "pydantic-extra-types>=2.11.1",
-    "httpx2>=2.13.1",
+    "httpx2>=2.14.0",
     "jdatetime>=6.1.1",
 ]
 license = { file = "LICENSE" }
@@ -25,7 +25,7 @@ dependency-injection = ["dependency-injector>=4.49.1"]
 elasticsearch = ["archipy-elasticsearch==0.1.0"]  # Pinned to core version on publish flow!
 elasticsearch-async = ["archipy-elasticsearch==0.1.0", "elasticsearch[async]>=9.5.1"]  # Pinned to core version on publish flow!
 fakeredis = ["fakeredis>=2.40.0"]
-fastapi = ["fastapi[all]>=0.143.3"]
+fastapi = ["fastapi[all]>=0.146.0"]
 grpc = ["grpcio>=1.84.0", "grpcio-health-checking>=1.84.0", "protobuf>=7.36.2"]
 jwt = ["pyjwt>=2.15.1"]
 kafka = ["archipy-kafka==0.1.0"]  # Pinned to core version on publish flow!
@@ -97,9 +97,9 @@ dev = [
     "bandit>=1.9.4",
     "boto3-stubs>=1.43.114",
     "codespell>=2.4.3",
-    "coverage>=7.6.0",
+    "coverage>=7.16.2",
     "gherkin-formatter>=0.1.3",
-    "import-linter>=2.0",
+    "import-linter>=2.15",
     "pre-commit-hooks>=6.0.0",
     "pre-commit>=4.7.0",
     "ruff>=0.17.1",
