@@ -2127,7 +2127,9 @@ def step_given_fake_atomic_session(context, mode):
     sc = get_current_scenario_context(context)
     session = _FakeSession(is_async=mode == "async")
     patcher = mock.patch.object(
-        atomic_module, "_load_session_manager_registry", lambda _db_type: _fake_registry(session),
+        atomic_module,
+        "_load_session_manager_registry",
+        lambda _db_type: _fake_registry(session),
     )
     patcher.start()
     context.add_cleanup(patcher.stop)
@@ -2663,3 +2665,163 @@ def step_when_search_shaped_descriptions_with_threshold(context, page, size, sha
         )
 
     _store_search(context, *search())
+
+
+def _adapter_for_mode(context, mode: str):
+    """Return the scenario's sync or async SQLAlchemy adapter."""
+    return get_async_adapter(context) if mode == "async" else get_adapter(context)
+
+
+async def _run_atomic(context, mode: str, operation):
+    """Run ``operation(adapter)`` in an atomic block of the scenario's database, awaiting it in async mode."""
+    db_type = get_current_scenario_context(context).get("db_type", "sqlite")
+    adapter = _adapter_for_mode(context, mode)
+    atomic_decorator = _get_atomic_decorator(db_type, is_async=mode == "async")
+    if mode == "async":
+
+        @atomic_decorator
+        async def run_async():
+            return await operation(adapter)
+
+        return await run_async()
+
+    @atomic_decorator
+    def run_sync():
+        return _drive_sync(operation(adapter))
+
+    return run_sync()
+
+
+def _drive_sync(coroutine):
+    """Finish a coroutine that never awaits, which is what the shared steps do with a sync adapter."""
+    try:
+        coroutine.send(None)
+    except StopIteration as done:
+        return done.value
+    raise AssertionError("A sync adapter operation must not suspend")
+
+
+@when("{count:d} entities are created through the {mode} adapter")
+async def step_when_entities_created_through_adapter(context, count, mode):
+    """Create entities through the adapter's ``create`` and remember their UUIDs."""
+    scenario_context = get_current_scenario_context(context)
+    expected = [(uuid.uuid4(), f"Adapter entity {index}") for index in range(count)]
+
+    async def create_all(adapter):
+        for entity_uuid, description in expected:
+            created = adapter.create(
+                TestEntityFactory.create_test_entity(test_uuid=entity_uuid, description=description)
+            )
+            if inspect.isawaitable(created):
+                await created
+
+    await _run_atomic(context, mode, create_all)
+    scenario_context.store("adapter_entities", expected)
+    scenario_context.store("adapter_entity_uuids", [entity_uuid for entity_uuid, _ in expected])
+
+
+@then("every created entity should be fetched by UUID through the {mode} adapter")
+async def step_then_entities_fetched_by_uuid(context, mode):
+    """Fetch each created entity by UUID and compare its description."""
+    scenario_context = get_current_scenario_context(context)
+    entities = scenario_context.get("adapter_entities")
+
+    async def fetch_all(adapter):
+        fetched = []
+        for entity_uuid, _ in entities:
+            result = adapter.get_by_uuid(TestEntity, entity_uuid)
+            fetched.append(await result if inspect.isawaitable(result) else result)
+        return [None if found is None else found.description for found in fetched]
+
+    descriptions = await _run_atomic(context, mode, fetch_all)
+    for (entity_uuid, description), found in zip(entities, descriptions, strict=True):
+        assert found == description, f"Entity {entity_uuid} came back as {found!r}, expected {description!r}"
+
+
+@when("a random UUID is fetched through the {mode} adapter")
+async def step_when_random_uuid_fetched(context, mode):
+    """Fetch an entity by a UUID nothing stored."""
+
+    async def fetch(adapter):
+        result = adapter.get_by_uuid(TestEntity, uuid.uuid4())
+        return (await result if inspect.isawaitable(result) else result) is not None
+
+    get_current_scenario_context(context).store("fetched_entity", await _run_atomic(context, mode, fetch))
+
+
+@then("no entity should be returned")
+def step_then_no_entity_returned(context):
+    assert get_current_scenario_context(context).get("fetched_entity") is False
+
+
+@when("the created entities are deleted through the {mode} adapter by {method}")
+async def step_when_entities_deleted_through_adapter(context, mode, method):
+    """Delete the created entities one by one, or with ``bulk_delete``."""
+    scenario_context = get_current_scenario_context(context)
+    uuids = scenario_context.get("adapter_entity_uuids")
+
+    async def delete_all(adapter):
+        async def maybe_await(value):
+            return await value if inspect.isawaitable(value) else value
+
+        entities = [await maybe_await(adapter.get_by_uuid(TestEntity, entity_uuid)) for entity_uuid in uuids]
+        if method == "bulk":
+            await maybe_await(adapter.bulk_delete(entities))
+        else:
+            for entity in entities:
+                await maybe_await(adapter.delete(entity))
+
+    await _run_atomic(context, mode, delete_all)
+
+
+@then("no created entity should be fetched by UUID through the {mode} adapter")
+async def step_then_no_created_entity_fetched(context, mode):
+    uuids = get_current_scenario_context(context).get("adapter_entity_uuids")
+
+    async def fetch_all(adapter):
+        found = []
+        for entity_uuid in uuids:
+            result = adapter.get_by_uuid(TestEntity, entity_uuid)
+            found.append((await result if inspect.isawaitable(result) else result) is not None)
+        return found
+
+    assert not any(await _run_atomic(context, mode, fetch_all))
+
+
+@when("a statement on a missing table is run as {statement_kind} through the {mode} adapter")
+async def step_when_missing_table_statement(context, statement_kind, mode):
+    """Run a SELECT on a table that does not exist and keep the error the adapter raises."""
+    from sqlalchemy import text
+
+    scenario_context = get_current_scenario_context(context)
+    statement = text("SELECT * FROM table_that_does_not_exist")
+
+    async def run(adapter):
+        result = getattr(adapter, statement_kind)(statement)
+        return await result if inspect.isawaitable(result) else result
+
+    try:
+        await _run_atomic(context, mode, run)
+    except Exception as error:
+        scenario_context.store("adapter_error", error)
+    else:
+        scenario_context.store("adapter_error", None)
+
+
+@then("a DatabaseQueryError should be raised")
+def step_then_database_query_error_raised(context):
+    from archipy.models.errors import DatabaseQueryError
+
+    error = get_current_scenario_context(context).get("adapter_error")
+    assert isinstance(error, DatabaseQueryError), f"Expected DatabaseQueryError, got {error!r}"
+
+
+@then("the {mode} adapter should remain usable")
+async def step_then_adapter_remains_usable(context, mode):
+    from sqlalchemy import text
+
+    async def run(adapter):
+        result = adapter.execute(text("SELECT 1"))
+        return await result if inspect.isawaitable(result) else result
+
+    assert await _run_atomic(context, mode, run) is not None

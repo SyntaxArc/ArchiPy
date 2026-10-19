@@ -739,3 +739,93 @@ Feature: SQLAlchemy Atomic Transactions
       | sqlite    | distinct |
       | starrocks | distinct |
       | starrocks | grouped  |
+
+  Scenario Outline: Entities are fetched by UUID through the <mode> adapter
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    When 2 entities are created through the <mode> adapter
+    Then every created entity should be fetched by UUID through the <mode> adapter
+
+    Examples: Sync adapter
+      | db_type  | mode |
+      | postgres | sync |
+      | sqlite   | sync |
+      | mysql    | sync |
+
+    @async
+    Examples: Async adapter
+      | db_type  | mode  |
+      | postgres | async |
+      | sqlite   | async |
+      | mysql    | async |
+
+  Scenario Outline: An unknown UUID returns no entity through the <mode> adapter
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    When a random UUID is fetched through the <mode> adapter
+    Then no entity should be returned
+
+    Examples: Sync adapter
+      | db_type  | mode |
+      | postgres | sync |
+      | sqlite   | sync |
+      | mysql    | sync |
+
+    @async
+    Examples: Async adapter
+      | db_type  | mode  |
+      | postgres | async |
+      | sqlite   | async |
+      | mysql    | async |
+
+  Scenario Outline: Entities deleted through the <mode> adapter by <method> are gone
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    When 3 entities are created through the <mode> adapter
+    And the created entities are deleted through the <mode> adapter by <method>
+    Then no created entity should be fetched by UUID through the <mode> adapter
+
+    Examples: Sync adapter
+      | db_type  | mode | method |
+      | postgres | sync | delete |
+      | postgres | sync | bulk   |
+      | sqlite   | sync | delete |
+      | sqlite   | sync | bulk   |
+      | mysql    | sync | delete |
+      | mysql    | sync | bulk   |
+
+    @async
+    Examples: Async adapter
+      | db_type  | mode  | method |
+      | postgres | async | delete |
+      | postgres | async | bulk   |
+      | sqlite   | async | delete |
+      | sqlite   | async | bulk   |
+      | mysql    | async | delete |
+      | mysql    | async | bulk   |
+
+  Scenario Outline: A failing <statement_kind> through the <mode> adapter raises a database query error
+    Given the application database is initialized for <db_type>
+    And test entities are defined
+    When a statement on a missing table is run as <statement_kind> through the <mode> adapter
+    Then a DatabaseQueryError should be raised
+    And the <mode> adapter should remain usable
+
+    Examples: Sync adapter
+      | db_type  | mode | statement_kind |
+      | postgres | sync | execute        |
+      | postgres | sync | scalars        |
+      | sqlite   | sync | execute        |
+      | sqlite   | sync | scalars        |
+      | mysql    | sync | execute        |
+      | mysql    | sync | scalars        |
+
+    @async
+    Examples: Async adapter
+      | db_type  | mode  | statement_kind |
+      | postgres | async | execute        |
+      | postgres | async | scalars        |
+      | sqlite   | async | execute        |
+      | sqlite   | async | scalars        |
+      | mysql    | async | execute        |
+      | mysql    | async | scalars        |
