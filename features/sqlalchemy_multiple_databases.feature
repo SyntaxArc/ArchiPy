@@ -54,3 +54,22 @@ Feature: Several SQLAlchemy databases of the same type
       | async | nothing      | InvalidArgumentError   |
       | sync  | a plain text | InvalidEntityTypeError |
       | async | a plain text | InvalidEntityTypeError |
+
+  Scenario Outline: A <mode> SQLite registry builds its default session manager on first use
+    When the <mode> session manager is requested from a fresh SQLite registry
+    Then the registry should hand out a session manager
+
+    Examples: Session manager kinds
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: A <mode> SQLite registry reports a connection error when its default manager cannot be built
+    Given the global SQLite driver name is invalid
+    When the <mode> session manager is requested from a fresh SQLite registry
+    Then the registry should refuse with DatabaseConnectionError
+
+    Examples: Session manager kinds
+      | mode  |
+      | sync  |
+      | async |

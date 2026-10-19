@@ -11,6 +11,7 @@ from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionMan
 from archipy.adapters.sqlite.sqlalchemy.adapters import SQLiteSQLAlchemyAdapter
 from archipy.adapters.sqlite.sqlalchemy.session_manager_registry import SQLiteSessionManagerRegistry
 from archipy.adapters.sqlite.sqlalchemy.session_managers import SQLiteSQLAlchemySessionManager
+from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import SQLiteSQLAlchemyConfig
 from archipy.models import errors
 from features.test_helpers import get_current_scenario_context
@@ -172,3 +173,31 @@ def step_when_invalid_manager_registered(context, value, mode):
 def step_then_registry_refuses(context, error_name):
     error = get_current_scenario_context(context).get("registry_error")
     assert isinstance(error, getattr(errors, error_name)), f"Expected {error_name}, got {error!r}"
+
+
+@given("the global SQLite driver name is invalid")
+def step_given_invalid_sqlite_driver(context):
+    sqlite_config = BaseConfig.global_config().SQLITE_SQLALCHEMY
+    original = sqlite_config.DRIVER_NAME
+    sqlite_config.DRIVER_NAME = "no_such_dialect+no_such_driver"
+    context.add_cleanup(setattr, sqlite_config, "DRIVER_NAME", original)
+
+
+@when("the {mode} session manager is requested from a fresh SQLite registry")
+def step_when_manager_requested_from_fresh_sqlite_registry(context, mode):
+    registry = type("FreshSQLiteRegistry", (SQLiteSessionManagerRegistry,), {})
+    getter = registry.get_async_manager if mode == "async" else registry.get_sync_manager
+    scenario_context = get_current_scenario_context(context)
+    try:
+        scenario_context.store("registry_manager", getter())
+        scenario_context.store("registry_error", None)
+    except Exception as error:
+        scenario_context.store("registry_manager", None)
+        scenario_context.store("registry_error", error)
+
+
+@then("the registry should hand out a session manager")
+def step_then_registry_hands_out_manager(context):
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("registry_error") is None, scenario_context.get("registry_error")
+    assert scenario_context.get("registry_manager") is not None
