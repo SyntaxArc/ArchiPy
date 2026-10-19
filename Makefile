@@ -69,7 +69,7 @@ clean: ## Remove build artifacts and cache directories
 	rm -rf dist/
 	rm -rf build/
 	rm -rf .pytest_cache/
-	rm -rf .coverage .coverage.* coverage.xml
+	rm -rf .coverage .coverage.* coverage.xml .behave-logs .behave_durations.json
 	rm -rf htmlcov/
 	rm -rf .ty_cache/
 	find . -type d -name __pycache__ -exec rm -rf {} +
@@ -100,19 +100,24 @@ check-instrumentor-compat: ## Check whether OTel instrumentors now support the l
 	@echo "${BLUE}Checking OpenTelemetry instrumentor compatibility...${NC}"
 	./scripts/check_instrumentor_compat.sh
 
+# Features that run at the same time, and how many of those may start a heavy container
+BEHAVE_JOBS ?= 6
+BEHAVE_HEAVY_JOBS ?= 3
+
 .PHONY: behave
-behave: ## Run tests with behave
-	@echo "${BLUE}Running tests...${NC}"
+behave: ## Run all features in parallel, one behave process per feature (BEHAVE_JOBS=N, FEATURE=features/x.feature)
+	@echo "${BLUE}Running tests in parallel...${NC}"
+	$(UV) run --extra behave python scripts/behave_parallel.py --jobs $(BEHAVE_JOBS) --heavy-jobs $(BEHAVE_HEAVY_JOBS) $(FEATURE) $(if $(BEHAVE_ARGS),-- $(BEHAVE_ARGS))
+
+.PHONY: behave-seq
+behave-seq: ## Run all features one after another in a single behave process
+	@echo "${BLUE}Running tests sequentially...${NC}"
 	$(UV) run --extra behave behave
 
 .PHONY: coverage
-coverage: ## Run behave under coverage (FEATURE=features/x.feature for one feature)
+coverage: ## Run the features in parallel under coverage (FEATURE=features/x.feature for one feature)
 	@echo "${BLUE}Running tests with coverage...${NC}"
-	rm -f .coverage .coverage.*
-	$(UV) run --extra behave coverage run -m behave $(FEATURE)
-	$(UV) run coverage combine
-	$(UV) run coverage report
-	$(UV) run coverage xml
+	$(UV) run --extra behave python scripts/behave_parallel.py --coverage --jobs $(BEHAVE_JOBS) --heavy-jobs $(BEHAVE_HEAVY_JOBS) $(FEATURE)
 
 .PHONY: test
 test: behave ## Run tests (alias for behave)

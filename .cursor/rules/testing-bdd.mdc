@@ -30,7 +30,7 @@ uv run --extra behave behave features/file_name.feature
 uv run --extra behave behave features/file_name.feature:42
 ```
 
-`make behave` runs scenarios **sequentially** (one after another — not parallel workers). That is independent of the red→green workflow, which still means **one new failing scenario at a time** while implementing.
+`make behave` runs the **features in parallel**, one `behave` process per feature file (`scripts/behave_parallel.py`; `BEHAVE_JOBS=N` sets how many run at once, `BEHAVE_HEAVY_JOBS` limits the ones that start a heavy container, logs are in `.behave-logs/`). Scenarios inside a feature still run one after another, and `make behave-seq` runs everything in one process. Features must stay independent of each other: each starts its own containers from its `@needs-*` tags. That is independent of the red→green workflow, which still means **one new failing scenario at a time** while implementing.
 
 No mutable globals across scenarios — `get_current_scenario_context(context)` / `ScenarioContext` only.
 

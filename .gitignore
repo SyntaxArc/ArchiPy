@@ -243,3 +243,7 @@ cython_debug/
 bandit-report.json
 
 .gitattributes
+
+# Parallel behave runner
+.behave-logs/
+.behave_durations.json
