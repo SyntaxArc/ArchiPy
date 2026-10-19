@@ -101,7 +101,7 @@ check-instrumentor-compat: ## Check whether OTel instrumentors now support the l
 	./scripts/check_instrumentor_compat.sh
 
 # Features that run at the same time, and how many of those may start a heavy container
-BEHAVE_JOBS ?= 6
+BEHAVE_JOBS ?= 8
 BEHAVE_HEAVY_JOBS ?= 3
 
 .PHONY: behave

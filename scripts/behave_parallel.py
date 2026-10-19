@@ -310,8 +310,8 @@ def _parse_arguments(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
         "-j",
         "--jobs",
         type=int,
-        default=int(os.environ.get("BEHAVE_JOBS", min(6, os.cpu_count() or 1))),
-        help="features to run at the same time (default: BEHAVE_JOBS or min(6, CPUs))",
+        default=int(os.environ.get("BEHAVE_JOBS", min(8, os.cpu_count() or 1))),
+        help="features to run at the same time (default: BEHAVE_JOBS or min(8, CPUs))",
     )
     parser.add_argument(
         "--heavy-jobs",
