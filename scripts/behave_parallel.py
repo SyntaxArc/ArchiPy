@@ -145,7 +145,7 @@ def _command(run: FeatureRun, *, coverage: bool, behave_args: list[str]) -> list
     base = [sys.executable, "-m"]
     if coverage:
         base += ["coverage", "run", "-m"]
-    return [*base, "behave", _display(run.path), "-f", "progress", "--no-color", *behave_args]
+    return [*base, "behave", _display(run.path), "-f", "plain", "--no-color", *behave_args]
 
 
 def _terminate(process: subprocess.Popen[bytes]) -> None:
