@@ -7,6 +7,7 @@ import asyncio
 import uuid
 
 from behave import given, when, then
+from elasticsearch import BadRequestError
 from behave.runner import Context
 
 from features.test_helpers import get_current_scenario_context
@@ -67,6 +68,23 @@ def get_actual_index_name(context: Context, index_name: str) -> str:
 
 
 # Background and setup steps
+
+def _already_exists(error: BadRequestError) -> bool:
+    """A retry after a client timeout can race the first, slow but successful, create request."""
+    return "resource_already_exists_exception" in str(error)
+
+
+async def _create_index(adapter, is_async: bool, **kwargs):
+    """Create an index, treating "already exists" from a transport-level retry as success."""
+    try:
+        if is_async:
+            return await adapter.create_index(**kwargs)
+        return adapter.create_index(**kwargs)
+    except BadRequestError as e:
+        if not _already_exists(e):
+            raise
+        return {"acknowledged": True}
+
 @given("an Elasticsearch cluster is running")
 async def step_cluster_running(context: Context) -> None:
     """Verify that the Elasticsearch cluster is running."""
@@ -107,10 +125,7 @@ async def step_index_exists(context: Context, index_name: str) -> None:
 
     try:
         # Create the index with unique name
-        if is_async:
-            await adapter.create_index(index=unique_index_name)
-        else:
-            adapter.create_index(index=unique_index_name)
+        await _create_index(adapter, is_async, index=unique_index_name)
 
         # Store the unique name for cleanup
         created_indices = scenario_context.get("created_indices", [])
@@ -392,10 +407,7 @@ async def step_create_index(context: Context, index_name: str, shards: str, repl
             index_name_mapping[index_name] = actual_index_name
             scenario_context.store("index_name_mapping", index_name_mapping)
 
-        if is_async:
-            result = await adapter.create_index(index=actual_index_name, body=index_body)
-        else:
-            result = adapter.create_index(index=actual_index_name, body=index_body)
+        result = await _create_index(adapter, is_async, index=actual_index_name, body=index_body)
 
         _store_result(scenario_context, "last_create_index_result", result)
 
