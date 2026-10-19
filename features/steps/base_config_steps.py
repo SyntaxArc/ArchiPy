@@ -6,6 +6,7 @@ from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.vault.adapters import VaultAdapter
 from archipy.configs.base_config import BaseConfig
+from archipy.configs.config_template import PostgresSQLAlchemyConfig, StarRocksSQLAlchemyConfig
 from archipy.models.errors import ConfigurationError
 
 
@@ -83,9 +84,9 @@ def step_when_initialize_base_config(context):
 @then('the ENVIRONMENT should be "{expected_value}"')
 def step_then_check_environment_variable(context, expected_value):
     test_config = BaseConfig.global_config()
-    assert (
-        test_config.ENVIRONMENT.name == expected_value
-    ), f"Expected '{expected_value}', but got '{test_config.ENVIRONMENT.name}'"
+    assert test_config.ENVIRONMENT.name == expected_value, (
+        f"Expected '{expected_value}', but got '{test_config.ENVIRONMENT.name}'"
+    )
 
 
 def _vault_adapter() -> VaultAdapter:
@@ -300,3 +301,71 @@ def step_then_pagination_rejected(context, page, size):
     except OutOfRangeError:
         return
     raise AssertionError(f"Expected OutOfRangeError for page {page} with size {size}")
+
+
+@when('a PostgreSQL configuration is built from the DSN "{dsn}"')
+def step_when_postgres_config_from_dsn(context, dsn):
+    get_current_scenario_context(context).store("postgres_config", PostgresSQLAlchemyConfig(POSTGRES_DSN=dsn))
+
+
+@when('a PostgreSQL configuration is built with the host "{host}" and the DSN "{dsn}"')
+def step_when_postgres_config_from_dsn_with_host(context, host, dsn):
+    get_current_scenario_context(context).store(
+        "postgres_config",
+        PostgresSQLAlchemyConfig(POSTGRES_DSN=dsn, HOST=host),
+    )
+
+
+@when(
+    'a PostgreSQL configuration is built from the parts user "{user}", password "{password}", host "{host}", '
+    'port {port:d} and database "{database}"',
+)
+def step_when_postgres_config_from_parts(context, user, password, host, port, database):
+    get_current_scenario_context(context).store(
+        "postgres_config",
+        PostgresSQLAlchemyConfig(
+            DRIVER_NAME="postgresql+psycopg",
+            USERNAME=user,
+            PASSWORD=password,
+            HOST=host,
+            PORT=port,
+            DATABASE=database,
+        ),
+    )
+
+
+@then(
+    'the PostgreSQL connection parts should be user "{user}", password "{password}", host "{host}", '
+    'port {port:d} and database "{database}"',
+)
+def step_then_postgres_parts(context, user, password, host, port, database):
+    config = get_current_scenario_context(context).get("postgres_config")
+    actual = (config.USERNAME, config.PASSWORD or "(none)", config.HOST, config.PORT, config.DATABASE)
+    assert actual == (user, password, host, port, database), actual
+
+
+@then('the PostgreSQL DSN should be "{dsn}"')
+def step_then_postgres_dsn(context, dsn):
+    config = get_current_scenario_context(context).get("postgres_config")
+    assert str(config.POSTGRES_DSN) == dsn, str(config.POSTGRES_DSN)
+
+
+@when('a StarRocks configuration is built with the isolation level "{level}"')
+def step_when_starrocks_config(context, level):
+    scenario_context = get_current_scenario_context(context)
+    try:
+        scenario_context.store("starrocks_config", StarRocksSQLAlchemyConfig(ISOLATION_LEVEL=level))
+        scenario_context.store("starrocks_error", None)
+    except Exception as error:
+        scenario_context.store("starrocks_error", error)
+
+
+@then("the StarRocks configuration should be {outcome}")
+def step_then_starrocks_outcome(context, outcome):
+    scenario_context = get_current_scenario_context(context)
+    error = scenario_context.get("starrocks_error")
+    if outcome == "accepted":
+        assert error is None, error
+        assert scenario_context.get("starrocks_config").ISOLATION_LEVEL == "READ COMMITTED"
+    else:
+        assert error is not None, "Expected the isolation level to be rejected"

@@ -79,3 +79,31 @@ Feature: Base Configuration System
     When the global configuration is set
     Then pagination of page 5 with size 10 should be accepted
     And pagination of page 6 with size 10 should be rejected as out of range
+
+  Scenario Outline: A PostgreSQL DSN fills the connection parts it carries
+    When a PostgreSQL configuration is built from the DSN "<dsn>"
+    Then the PostgreSQL connection parts should be user "<user>", password "<password>", host "<host>", port <port> and database "<database>"
+
+    Examples: DSN forms
+      | dsn                                                    | user  | password | host        | port | database |
+      | postgresql+psycopg://alice:s3cret@db.internal:5433/app | alice | s3cret   | db.internal | 5433 | app      |
+      | postgresql+psycopg://bob@db.internal:5432/app          | bob   | (none)   | db.internal | 5432 | app      |
+
+  Scenario: PostgreSQL connection parts build the DSN
+    When a PostgreSQL configuration is built from the parts user "alice", password "s3cret", host "db.internal", port 5433 and database "app"
+    Then the PostgreSQL DSN should be "postgresql+psycopg://alice:s3cret@db.internal:5433/app"
+
+  Scenario: Connection parts that are set win over the DSN
+    When a PostgreSQL configuration is built with the host "override.internal" and the DSN "postgresql+psycopg://alice:s3cret@db.internal:5433/app"
+    Then the PostgreSQL connection parts should be user "alice", password "s3cret", host "override.internal", port 5433 and database "app"
+
+  Scenario Outline: A StarRocks isolation level of <level> is <outcome>
+    When a StarRocks configuration is built with the isolation level "<level>"
+    Then the StarRocks configuration should be <outcome>
+
+    Examples: Isolation levels
+      | level           | outcome  |
+      | READ COMMITTED  | accepted |
+      | read_committed  | accepted |
+      | SERIALIZABLE    | rejected |
+      | REPEATABLE READ | rejected |

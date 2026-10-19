@@ -149,7 +149,7 @@ def _extract_postgres_host_port_from_url(parsed: object, config: PostgresSQLAlch
         host, port_str = host_part.split(":", 1)
         if config.HOST is None:
             config.HOST = host
-        if config.PORT is None:
+        if config.PORT is None or "PORT" not in config.model_fields_set:
             with contextlib.suppress(ValueError):
                 config.PORT = int(port_str)
     elif host_part and config.HOST is None:

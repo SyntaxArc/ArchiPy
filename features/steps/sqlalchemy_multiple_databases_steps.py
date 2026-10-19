@@ -7,10 +7,12 @@ from behave import given, then, when
 from sqlalchemy import text
 
 from archipy.adapters.base.sqlalchemy.atomic import sqlite_sqlalchemy_atomic
+from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
 from archipy.adapters.sqlite.sqlalchemy.adapters import SQLiteSQLAlchemyAdapter
 from archipy.adapters.sqlite.sqlalchemy.session_manager_registry import SQLiteSessionManagerRegistry
 from archipy.adapters.sqlite.sqlalchemy.session_managers import SQLiteSQLAlchemySessionManager
 from archipy.configs.config_template import SQLiteSQLAlchemyConfig
+from archipy.models import errors
 from features.test_helpers import get_current_scenario_context
 
 
@@ -109,7 +111,9 @@ def step_when_item_added_atomic_fails(context, value, name):
         get_current_scenario_context(context).store("multi_db_error", error)
 
 
-@when('an item "{first_value}" is added on "{first}" and "{second_value}" on "{second}" in nested atomic blocks, then the outer block fails')
+@when(
+    'an item "{first_value}" is added on "{first}" and "{second_value}" on "{second}" in nested atomic blocks, then the outer block fails'
+)
 def step_when_nested_blocks(context, first_value, first, second_value, second):
     first_registry = _database(context, first)["registry"]
     second_registry = _database(context, second)["registry"]
@@ -133,3 +137,38 @@ def step_when_nested_blocks(context, first_value, first, second_value, second):
 @then('the database "{name}" holds {count:d} items')
 def step_then_database_holds(context, name, count):
     assert _count(_database(context, name)["path"]) == count
+
+
+def _scratch_registry():
+    """Return a registry subclass that holds no session manager, so no other scenario is touched."""
+    return type("ScratchRegistry", (SessionManagerRegistry,), {})
+
+
+def _remember_registry_outcome(context, action):
+    scenario_context = get_current_scenario_context(context)
+    try:
+        action()
+        scenario_context.store("registry_error", None)
+    except Exception as error:
+        scenario_context.store("registry_error", error)
+
+
+@when("the {mode} session manager is requested from an empty registry")
+def step_when_manager_requested_from_empty_registry(context, mode):
+    registry = _scratch_registry()
+    getter = registry.get_async_manager if mode == "async" else registry.get_sync_manager
+    _remember_registry_outcome(context, getter)
+
+
+@when("{value} is registered as the {mode} session manager")
+def step_when_invalid_manager_registered(context, value, mode):
+    registry = _scratch_registry()
+    manager = None if value == "nothing" else "not a session manager"
+    setter = registry.set_async_manager if mode == "async" else registry.set_sync_manager
+    _remember_registry_outcome(context, lambda: setter(manager))
+
+
+@then("the registry should refuse with {error_name}")
+def step_then_registry_refuses(context, error_name):
+    error = get_current_scenario_context(context).get("registry_error")
+    assert isinstance(error, getattr(errors, error_name)), f"Expected {error_name}, got {error!r}"

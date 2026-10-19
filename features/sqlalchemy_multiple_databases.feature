@@ -34,3 +34,23 @@ Feature: Several SQLAlchemy databases of the same type
     When an item "e" is added on "first" and "f" on "second" in nested atomic blocks, then the outer block fails
     Then the database "first" holds 0 items
     And the database "second" holds 1 items
+
+  Scenario Outline: A registry that holds no <mode> session manager refuses to hand one out
+    When the <mode> session manager is requested from an empty registry
+    Then the registry should refuse with InternalError
+
+    Examples: Session manager kinds
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: A registry refuses <value> as its <mode> session manager
+    When <value> is registered as the <mode> session manager
+    Then the registry should refuse with <error>
+
+    Examples: Invalid session managers
+      | mode  | value        | error                  |
+      | sync  | nothing      | InvalidArgumentError   |
+      | async | nothing      | InvalidArgumentError   |
+      | sync  | a plain text | InvalidEntityTypeError |
+      | async | a plain text | InvalidEntityTypeError |
