@@ -236,6 +236,25 @@ class DatabaseSerializationError(DatabaseError):
     )
 
 
+class DatabaseResourceExhaustedError(DatabaseError):
+    """Exception raised when the database server runs out of a resource such as memory or connections.
+
+    The condition is usually transient, so callers may retry with backoff.
+    """
+
+    code: ClassVar[str] = "DATABASE_RESOURCE_EXHAUSTED_ERROR"
+    message_en: ClassVar[str] = "Database resources exhausted"
+    message_fa: ClassVar[str] = "منابع پایگاه داده تمام شده است"
+    http_status: ClassVar[int] = (
+        HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE and HTTPStatus is not None else 503
+    )
+    grpc_status: ClassVar[int] = (
+        StatusCode.RESOURCE_EXHAUSTED.value[0]
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.RESOURCE_EXHAUSTED.value, tuple)
+        else (StatusCode.RESOURCE_EXHAUSTED.value if GRPC_AVAILABLE and StatusCode is not None else 8)
+    )
+
+
 class DatabaseConfigurationError(DatabaseError):
     """Exception raised for database configuration errors."""
 

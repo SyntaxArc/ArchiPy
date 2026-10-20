@@ -20,6 +20,17 @@ from sqlalchemy.exc import (
     TimeoutError as SQLAlchemyTimeoutError,
 )
 
+from archipy.adapters.base.sqlalchemy.driver_errors import (
+    MYSQL_CONSTRAINT_ERRNOS,
+    MYSQL_DEADLOCK,
+    MYSQL_LOCK_WAIT_TIMEOUT,
+    PG_CONSTRAINT_STATES,
+    PG_DEADLOCK,
+    PG_SERIALIZATION,
+    classify_driver_error,
+    driver_error_code,
+    log_driver_error,
+)
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
 from archipy.helpers._deprecation import deprecated_alias, warn_deprecated_name
 from archipy.models.errors import (
@@ -67,27 +78,14 @@ ATOMIC_BLOCK_CONFIGS = {
 # Type variables for function return types
 R = TypeVar("R")
 
-# Driver error codes that need specific domain errors (PostgreSQL SQLSTATE / MySQL-compatible errno)
-_PG_SERIALIZATION = "40001"
-_PG_DEADLOCK = "40P01"
-_PG_CONSTRAINT_STATES = frozenset({"23503", "23505"})
-_MYSQL_DEADLOCK = 1213
-_MYSQL_LOCK_WAIT_TIMEOUT = 1205
-_MYSQL_CONSTRAINT_ERRNOS = frozenset({1062, 1451, 1452})
-
-
-def _driver_error_code(exception: SQLAlchemyError) -> str | int | None:
-    """Return the driver-level error code: PostgreSQL ``pgcode`` or MySQL-style ``errno`` (first arg)."""
-    orig = getattr(exception, "orig", None)
-    if not orig:
-        return None
-    pgcode = getattr(orig, "pgcode", None) or getattr(orig, "sqlstate", None)
-    if pgcode:
-        return pgcode
-    args = getattr(orig, "args", ())
-    if args and isinstance(args[0], int):
-        return args[0]
-    return None
+# Driver error codes live in driver_errors; the names below are kept for backwards compatibility.
+_PG_SERIALIZATION = PG_SERIALIZATION
+_PG_DEADLOCK = PG_DEADLOCK
+_PG_CONSTRAINT_STATES = PG_CONSTRAINT_STATES
+_MYSQL_DEADLOCK = MYSQL_DEADLOCK
+_MYSQL_LOCK_WAIT_TIMEOUT = MYSQL_LOCK_WAIT_TIMEOUT
+_MYSQL_CONSTRAINT_ERRNOS = MYSQL_CONSTRAINT_ERRNOS
+_driver_error_code = driver_error_code
 
 
 def _handle_operational_error(exception: OperationalError, db_type: str) -> NoReturn:
@@ -137,10 +135,19 @@ def _handle_db_exception(exception: BaseException, db_type: str, func_name: str)
         DatabaseConnectionError: If a connection-related error occurs.
         DatabaseIntegrityError: If an integrity constraint violation occurs.
         DatabaseTimeoutError: If a database operation times out.
+        DatabaseResourceExhaustedError: If the server runs out of memory or connections.
         DatabaseConstraintError: If a constraint violation occurs.
         DatabaseError: If a generic exception occurs within a database transaction.
     """
     logger.debug("Exception in %s atomic block (func: %s): %s", db_type, func_name, exception)
+
+    if isinstance(exception, SQLAlchemyError):
+        # Errors that reach the atomic block raw (flush/commit failures) never pass through an adapter method,
+        # so log the driver detail here before it is hidden behind the domain error.
+        error_class = classify_driver_error(exception)
+        log_driver_error(exception, error_class or DatabaseQueryError, db_type)
+        if error_class is not None:
+            raise error_class(database=db_type) from exception
 
     if isinstance(exception, OperationalError):
         _handle_operational_error(exception, db_type)
