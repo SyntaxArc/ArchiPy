@@ -1,4 +1,6 @@
 import asyncio
+import subprocess
+import sys
 import threading
 import time
 
@@ -720,3 +722,50 @@ def step_when_call_child_method(context, arg):
 def step_then_child_method_result(context, expected):
     """Verify the child result."""
     assert get_current_scenario_context(context).get("child_result") == expected
+
+
+_BLOCK_CACHETOOLS = """
+import sys
+
+class _Blocker:
+    def find_spec(self, name, path=None, target=None):
+        if name == "cachetools" or name.startswith("cachetools."):
+            raise ModuleNotFoundError(f"No module named {name!r}")
+
+sys.meta_path.insert(0, _Blocker())
+import archipy.helpers.decorators as decorators
+print("IMPORTED")
+try:
+    decorators.ttl_cache(ttl_seconds=1)
+except Exception as exception:
+    print(type(exception).__name__, exception.additional_data)
+"""
+
+
+@given("cachetools is not installed")
+def step_given_no_cachetools(context):
+    get_current_scenario_context(context).store("block_cachetools", True)
+
+
+@when("I import archipy.helpers.decorators")
+def step_when_import_decorators(context):
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", _BLOCK_CACHETOOLS],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    get_current_scenario_context(context).store("import_result", result)
+
+
+@then("the import should succeed")
+def step_then_import_succeeds(context):
+    result = get_current_scenario_context(context).get("import_result")
+    assert "IMPORTED" in result.stdout, f"Import failed: {result.stderr[-500:]}"
+
+
+@then('decorating with ttl_cache should fail with a message mentioning "{text}"')
+def step_then_ttl_cache_fails(context, text):
+    result = get_current_scenario_context(context).get("import_result")
+    assert "ConfigurationError" in result.stdout and text in result.stdout, result.stdout

@@ -7,15 +7,29 @@ import threading
 from functools import wraps
 from typing import TYPE_CHECKING, Final, cast
 
-from cachetools.keys import typedkey
-
 from archipy.helpers._deprecation import deprecated_alias
+from archipy.models.errors import ConfigurationError
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Hashable, Mapping, MutableMapping
 
 
 _MISSING: Final = object()
+
+
+def _require_cachetools() -> None:
+    """Fail with an install hint when the optional ``cachetools`` dependency is missing.
+
+    Raises:
+        ConfigurationError: If ``cachetools`` is not installed (``archipy[cache]`` extra).
+    """
+    try:
+        import cachetools  # noqa: F401
+    except ImportError as exception:
+        raise ConfigurationError(
+            operation="ttl_cache",
+            reason="cachetools is not installed; install it with archipy[cache]",
+        ) from exception
 
 
 class CachedFunction[**P, R]:
@@ -94,6 +108,8 @@ class CachedFunction[**P, R]:
 
     def _make_key(self, args: tuple[object, ...], kwargs: Mapping[str, object]) -> Hashable | None:
         """Build a hashable key from the call arguments, or None if they cannot be hashed."""
+        from cachetools.keys import typedkey
+
         key = typedkey(*args, **kwargs)
         try:
             hash(key)
@@ -182,6 +198,9 @@ def ttl_cache[**P, R](
     Returns:
         Decorated function with TTL caching and a clear_cache() method.
 
+    Raises:
+        ConfigurationError: If ``cachetools`` is not installed (``archipy[cache]`` extra).
+
     Example:
         ```python
         class DataService:
@@ -213,6 +232,7 @@ def ttl_cache[**P, R](
         - Access to the cache is guarded by a lock, so it is safe to call from several threads
         - Cache is shared across all instances of a class (not per-instance)
     """
+    _require_cachetools()
     from cachetools import TTLCache
 
     resolved_ttl = int(ttl_seconds) if isinstance(ttl_seconds, int) else int(ttl_seconds())

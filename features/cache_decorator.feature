@@ -160,3 +160,9 @@ Feature: TTL Cache Decorator
     Given a parent and child class with same-named cached methods
     When I call the child method with argument 3
     Then the child method result should be "child:base:3"
+
+  Scenario: Decorators import without the cache extra
+    Given cachetools is not installed
+    When I import archipy.helpers.decorators
+    Then the import should succeed
+    And decorating with ttl_cache should fail with a message mentioning "archipy[cache]"
