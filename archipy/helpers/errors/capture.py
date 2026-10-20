@@ -20,7 +20,9 @@ def capture_exception(exception: BaseException) -> None:
         exception (BaseException): The exception to capture and report.
     """
     logger.error(
-        "An exception occurred",
+        "An exception occurred: %s: %s",
+        type(exception).__name__,
+        exception,
         exc_info=(type(exception), exception, exception.__traceback__),
     )
     config = BaseConfig.global_config()
