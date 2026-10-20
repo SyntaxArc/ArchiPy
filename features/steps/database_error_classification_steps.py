@@ -119,9 +119,15 @@ def step_then_log(context, level, code):
     assert matching, f"No {level} record with code={code}: {[r.getMessage() for r in records]}"
 
 
-@given("the DatabaseResourceExhaustedError type")
-def step_given_error_type(context):
-    get_current_scenario_context(context).store("error_type", errors_pkg.DatabaseResourceExhaustedError)
+@given("the {error_name} type")
+def step_given_error_type(context, error_name):
+    get_current_scenario_context(context).store("error_type", getattr(errors_pkg, error_name))
+
+
+@then("it should be a subclass of DatabaseQueryError")
+def step_then_query_error_subclass(context):
+    error_type = get_current_scenario_context(context).get("error_type")
+    assert issubclass(error_type, errors_pkg.DatabaseQueryError), f"{error_type.__name__} is not a DatabaseQueryError"
 
 
 @then("its HTTP status should be {http_status:d} and its gRPC status should be {grpc_status:d}")

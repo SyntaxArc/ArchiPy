@@ -56,3 +56,17 @@ Feature: Database driver error classification
   Scenario: Resource exhaustion maps to HTTP 503 and gRPC RESOURCE_EXHAUSTED
     Given the DatabaseResourceExhaustedError type
     Then its HTTP status should be 503 and its gRPC status should be 8
+
+  Scenario Outline: Classified errors can still be caught as DatabaseQueryError
+    Given the <domain_error> type
+    Then it should be a subclass of DatabaseQueryError
+
+    Examples:
+      | domain_error                   |
+      | DatabaseConnectionError        |
+      | DatabaseTimeoutError           |
+      | DatabaseConstraintError        |
+      | DatabaseIntegrityError         |
+      | DatabaseDeadlockError          |
+      | DatabaseSerializationError     |
+      | DatabaseResourceExhaustedError |

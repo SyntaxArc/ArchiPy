@@ -58,22 +58,6 @@ class DatabaseError(BaseError):
         super().__init__(lang=lang, additional_data=data or None)
 
 
-class DatabaseConnectionError(DatabaseError):
-    """Exception raised for database connection errors."""
-
-    code: ClassVar[str] = "DATABASE_CONNECTION_ERROR"
-    message_en: ClassVar[str] = "Failed to connect to the database"
-    message_fa: ClassVar[str] = "خطا در اتصال به پایگاه داده"
-    http_status: ClassVar[int] = (
-        HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE and HTTPStatus is not None else 503
-    )
-    grpc_status: ClassVar[int] = (
-        StatusCode.UNAVAILABLE.value[0]
-        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.UNAVAILABLE.value, tuple)
-        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE and StatusCode is not None else 14)
-    )
-
-
 class DatabaseQueryError(DatabaseError):
     """Exception raised for database query errors."""
 
@@ -103,6 +87,22 @@ class DatabaseQueryError(DatabaseError):
         if additional_data:
             data.update(additional_data)
         super().__init__(database=database, lang=lang, additional_data=data or None)
+
+
+class DatabaseConnectionError(DatabaseQueryError):
+    """Exception raised for database connection errors."""
+
+    code: ClassVar[str] = "DATABASE_CONNECTION_ERROR"
+    message_en: ClassVar[str] = "Failed to connect to the database"
+    message_fa: ClassVar[str] = "خطا در اتصال به پایگاه داده"
+    http_status: ClassVar[int] = (
+        HTTPStatus.SERVICE_UNAVAILABLE.value if HTTP_AVAILABLE and HTTPStatus is not None else 503
+    )
+    grpc_status: ClassVar[int] = (
+        StatusCode.UNAVAILABLE.value[0]
+        if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.UNAVAILABLE.value, tuple)
+        else (StatusCode.UNAVAILABLE.value if GRPC_AVAILABLE and StatusCode is not None else 14)
+    )
 
 
 class DatabaseTransactionError(DatabaseError):
@@ -136,7 +136,7 @@ class DatabaseTransactionError(DatabaseError):
         super().__init__(database=database, lang=lang, additional_data=data or None)
 
 
-class DatabaseTimeoutError(DatabaseError):
+class DatabaseTimeoutError(DatabaseQueryError):
     """Exception raised for database timeout errors."""
 
     code: ClassVar[str] = "DATABASE_TIMEOUT_ERROR"
@@ -165,7 +165,7 @@ class DatabaseTimeoutError(DatabaseError):
         super().__init__(database=database, lang=lang, additional_data=data or None)
 
 
-class DatabaseConstraintError(DatabaseError):
+class DatabaseConstraintError(DatabaseQueryError):
     """Exception raised for database constraint violations."""
 
     code: ClassVar[str] = "DATABASE_CONSTRAINT_ERROR"
@@ -194,7 +194,7 @@ class DatabaseConstraintError(DatabaseError):
         super().__init__(database=database, lang=lang, additional_data=data or None)
 
 
-class DatabaseIntegrityError(DatabaseError):
+class DatabaseIntegrityError(DatabaseQueryError):
     """Exception raised for database integrity violations."""
 
     code: ClassVar[str] = "DATABASE_INTEGRITY_ERROR"
@@ -208,7 +208,7 @@ class DatabaseIntegrityError(DatabaseError):
     )
 
 
-class DatabaseDeadlockError(DatabaseError):
+class DatabaseDeadlockError(DatabaseQueryError):
     """Exception raised for database deadlock errors."""
 
     code: ClassVar[str] = "DATABASE_DEADLOCK_ERROR"
@@ -222,7 +222,7 @@ class DatabaseDeadlockError(DatabaseError):
     )
 
 
-class DatabaseSerializationError(DatabaseError):
+class DatabaseSerializationError(DatabaseQueryError):
     """Exception raised for database serialization errors."""
 
     code: ClassVar[str] = "DATABASE_SERIALIZATION_ERROR"
@@ -236,7 +236,7 @@ class DatabaseSerializationError(DatabaseError):
     )
 
 
-class DatabaseResourceExhaustedError(DatabaseError):
+class DatabaseResourceExhaustedError(DatabaseQueryError):
     """Exception raised when the database server runs out of a resource such as memory or connections.
 
     The condition is usually transient, so callers may retry with backoff.
