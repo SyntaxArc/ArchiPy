@@ -26,6 +26,7 @@ Feature: Database driver error classification
       | starrocks | 1064        | Memory of process exceed limit. try consume:1342177280 Backend: 10.0.10.45, Used: 51805246184, Limit: 54611626843. Mem usage has exceed the limit of BE | DatabaseResourceExhaustedError |
       | starrocks | 1064        | Memory limit exceeded                                                                                                                                   | DatabaseResourceExhaustedError |
       | starrocks | 1064        | You have an error in your SQL syntax                                                                                                                    | none                           |
+      | starrocks | 1064        | You have an error in your SQL syntax near 'out of memory'                                                                                               | none                           |
       | sqlite    | SQLITE_BUSY | database is locked                                                                                                                                      | DatabaseDeadlockError          |
 
   Scenario: The driver error code is read from the cause of an adapted driver error

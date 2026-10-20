@@ -61,6 +61,8 @@ _MYSQL_RESOURCE_MESSAGE: Final = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+_MYSQL_SYNTAX_MESSAGE: Final = re.compile(r"error in your sql syntax", re.IGNORECASE)
+
 # SQLite error names
 SQLITE_DEADLOCK_NAMES: Final = frozenset({"SQLITE_BUSY", "SQLITE_LOCKED"})
 
@@ -140,16 +142,23 @@ def _classify_errno(errno: int) -> type[DatabaseError] | None:
 
 def _classify_errno_message(exception: BaseException) -> type[DatabaseError] | None:
     """Classify MySQL-family errors whose errno is too generic (StarRocks reports memory limits as 1064)."""
-    if _MYSQL_RESOURCE_MESSAGE.search(str(_driver_exception(exception))):
+    message = str(_driver_exception(exception))
+    # Syntax errors quote the offending SQL, which could contain the resource keywords by chance.
+    if _MYSQL_SYNTAX_MESSAGE.search(message):
+        return None
+    if _MYSQL_RESOURCE_MESSAGE.search(message):
         return DatabaseResourceExhaustedError
     return None
 
 
 def driver_error_details(exception: BaseException) -> dict[str, Any]:
-    """Collect loggable driver detail. Bind parameters are never included."""
+    """Collect loggable driver detail. Bind parameters are never included; the statement only at DEBUG level."""
     driver_error = _driver_exception(exception)
     root = getattr(driver_error, "__cause__", None) or driver_error
-    statement = (exception.statement or "") if isinstance(exception, DBAPIError) else ""
+    # The statement may inline literal values, so it is only collected when DEBUG logging is enabled.
+    statement = ""
+    if isinstance(exception, DBAPIError) and logger.isEnabledFor(logging.DEBUG):
+        statement = exception.statement or ""
     message = getattr(root, "message", None) or getattr(driver_error, "args", None) or str(root)
     if isinstance(message, tuple):
         message = " ".join(str(part) for part in message)
