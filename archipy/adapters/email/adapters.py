@@ -17,7 +17,6 @@ from queue import Queue
 from typing import TYPE_CHECKING, Any, BinaryIO, cast, override
 
 import httpx2
-from jinja2 import Template
 from pydantic import EmailStr, HttpUrl, ValidationError
 
 from archipy.adapters.email.ports import EmailPort
@@ -26,7 +25,7 @@ from archipy.helpers.decorators.tracing import trace_span
 from archipy.helpers.utils.base_utils import BaseUtils
 from archipy.helpers.utils.datetime_utils import DatetimeUtils
 from archipy.models.dtos.email_dtos import EmailAttachmentDTO
-from archipy.models.errors import InvalidArgumentError, UnavailableError
+from archipy.models.errors import ConfigurationError, InvalidArgumentError, UnavailableError
 from archipy.models.types.email_types import EmailAttachmentDispositionType, EmailAttachmentType
 
 if TYPE_CHECKING:
@@ -467,6 +466,13 @@ class EmailAdapter(EmailPort):
             msg["Bcc"] = bcc if isinstance(bcc, str) else ", ".join(bcc)
 
         if template:
+            try:
+                from jinja2 import Template
+            except ImportError as exception:
+                raise ConfigurationError(
+                    operation="email_template",
+                    reason="jinja2 is not installed; install it to render email templates",
+                ) from exception
             body = Template(template).render(**(template_vars or {}))
 
         msg.attach(MIMEText(body, "html" if html else "plain"))
