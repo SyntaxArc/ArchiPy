@@ -7,7 +7,6 @@ from fastapi import Depends, FastAPI, WebSocket
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, ValidationError
 from starlette.testclient import TestClient
-from starlette.websockets import WebSocketDisconnect
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import RedisMode
