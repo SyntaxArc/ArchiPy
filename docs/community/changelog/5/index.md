@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.17.0](5.17.0.md) | 2026-10-20 | In-memory SQLite rate-limit stores for gRPC, a `UnavailableError` for unreachable Kafka brokers, ScyllaDB CQL and PostgreSQL DSN port fixes, and a split of the SQLAlchemy, config and OTel modules |
 | [5.16.1](5.16.1.md) | 2026-10-18 | No-op OTel meter gains `create_gauge` and observable instruments |
 | [5.16.0](5.16.0.md) | 2026-10-18 | Several SQLAlchemy databases of one type, `archipy.adapters.keycloak.auth`, configurable OTel SDK with B3 and `OtelRuntime`; **breaking:** `otel-fastapi` extra removed and gRPC metrics follow the stable RPC conventions |
 | [5.15.0](5.15.0.md) | 2026-10-14 | `archipy.helpers.errors` package for FastAPI and gRPC error handling, `GrpcExceptionInterceptor`, `abort_grpc` (**behavior:** gRPC `ValidationError` is now `INVALID_ARGUMENT`) |
