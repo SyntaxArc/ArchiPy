@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, NoReturn
 
 from archipy.models.entities import BaseEntity
-from archipy.models.errors import InvalidEntityTypeError
+from archipy.models.errors import ConfigurationError, InvalidEntityTypeError
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -66,10 +66,20 @@ def _build_count_cache(config: SQLAlchemyConfig) -> Callable[[_CountRequest], in
 
 
 def _build_async_count_cache(config: SQLAlchemyConfig) -> Callable[[_CountRequest], Awaitable[int]] | None:
-    """Create the cached async count runner when the config enables it (needs the ``cache`` extra)."""
+    """Create the cached async count runner when the config enables it (needs the ``cache`` extra).
+
+    Raises:
+        ConfigurationError: If the count cache is enabled but ``async-lru`` is not installed.
+    """
     if not config.COUNT_CACHE_ENABLED:
         return None
-    from async_lru import alru_cache  # noqa: PLC0415  # optional "cache" extra
+    try:
+        from async_lru import alru_cache  # noqa: PLC0415  # optional "cache" extra
+    except ImportError as exception:
+        raise ConfigurationError(
+            operation="count_cache",
+            reason="async-lru is not installed; install it with archipy[cache]",
+        ) from exception
 
     return alru_cache(ttl=config.COUNT_CACHE_TTL_SECONDS, maxsize=config.COUNT_CACHE_MAX_SIZE)(
         _run_async_count_request,

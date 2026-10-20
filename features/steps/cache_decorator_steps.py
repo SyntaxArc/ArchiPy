@@ -769,3 +769,45 @@ def step_then_import_succeeds(context):
 def step_then_ttl_cache_fails(context, text):
     result = get_current_scenario_context(context).get("import_result")
     assert "ConfigurationError" in result.stdout and text in result.stdout, result.stdout
+
+
+_BLOCK_ASYNC_LRU = """
+import sys
+
+class _Blocker:
+    def find_spec(self, name, path=None, target=None):
+        if name == "async_lru" or name.startswith("async_lru."):
+            raise ModuleNotFoundError(f"No module named {name!r}")
+
+sys.meta_path.insert(0, _Blocker())
+from archipy.adapters.base.sqlalchemy.query_helpers import _build_async_count_cache
+from archipy.configs.config_template import SQLAlchemyConfig
+
+try:
+    _build_async_count_cache(SQLAlchemyConfig(COUNT_CACHE_ENABLED=True))
+except Exception as exception:
+    print(type(exception).__name__, exception.additional_data)
+"""
+
+
+@given("async-lru is not installed")
+def step_given_no_async_lru(context):
+    get_current_scenario_context(context).store("block_async_lru", True)
+
+
+@when("I build the async SQLAlchemy count cache")
+def step_when_build_async_count_cache(context):
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", _BLOCK_ASYNC_LRU],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    get_current_scenario_context(context).store("build_result", result)
+
+
+@then('building should fail with a message mentioning "{text}"')
+def step_then_build_fails(context, text):
+    result = get_current_scenario_context(context).get("build_result")
+    assert "ConfigurationError" in result.stdout and text in result.stdout, f"{result.stdout} {result.stderr[-300:]}"

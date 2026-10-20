@@ -166,3 +166,8 @@ Feature: TTL Cache Decorator
     When I import archipy.helpers.decorators
     Then the import should succeed
     And decorating with ttl_cache should fail with a message mentioning "archipy[cache]"
+
+  Scenario: Async count cache reports the missing cache extra
+    Given async-lru is not installed
+    When I build the async SQLAlchemy count cache
+    Then building should fail with a message mentioning "archipy[cache]"
