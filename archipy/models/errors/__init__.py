@@ -39,6 +39,7 @@ from archipy.models.errors.database_errors import (
     DatabaseSerializationError,
     DatabaseTimeoutError,
     DatabaseTransactionError,
+    DatabaseUnknownOutcomeError,
 )
 from archipy.models.errors.keycloak_errors import (
     ClientAlreadyExistsError,
@@ -128,6 +129,7 @@ __all__ = [
     "DatabaseSerializationError",
     "DatabaseTimeoutError",
     "DatabaseTransactionError",
+    "DatabaseUnknownOutcomeError",
     "DeadlineExceededError",
     "DeadlockDetectedError",
     "DeprecationError",

@@ -29,6 +29,7 @@ from archipy.models.errors import (
     DatabaseResourceExhaustedError,
     DatabaseSerializationError,
     DatabaseTimeoutError,
+    DatabaseUnknownOutcomeError,
 )
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,7 @@ PG_CONSTRAINT_STATES: Final = frozenset({"23503", "23505"})  # foreign_key_viola
 PG_CONNECTION_CLASS: Final = "08"
 PG_RESOURCE_CLASS: Final = "53"  # insufficient_resources: out_of_memory, disk_full, too_many_connections
 PG_INTEGRITY_CLASS: Final = "23"
+PG_STATEMENT_COMPLETION_UNKNOWN: Final = "40003"
 
 # MySQL-compatible errno
 MYSQL_DEADLOCK: Final = 1213
@@ -61,6 +63,8 @@ _MYSQL_RESOURCE_MESSAGE: Final = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+_SQL_STRING_LITERAL: Final = re.compile(r"'(?:[^']|'')*'")
+_SQL_NUMBER_LITERAL: Final = re.compile(r"(?<![\w$.])\d+(?:\.\d+)?(?![\w$])")
 _MYSQL_SYNTAX_MESSAGE: Final = re.compile(r"error in your sql syntax", re.IGNORECASE)
 
 # SQLite error names
@@ -105,14 +109,22 @@ def classify_driver_error(exception: BaseException) -> type[DatabaseError] | Non
     Returns ``None`` when the code is missing or not recognised, so callers can fall back to other strategies.
     """
     code = driver_error_code(exception)
-    if code is None:
-        return None
+    classified = _classify_code(code, exception) if code is not None else None
+    if classified is None and isinstance(exception, DBAPIError) and exception.connection_invalidated:
+        # The dialect recognised a disconnect even though the driver exposes no usable code.
+        return DatabaseConnectionError
+    return classified
+
+
+def _classify_code(code: str | int, exception: BaseException) -> type[DatabaseError] | None:
     if isinstance(code, int):
         return _classify_errno(code) or _classify_errno_message(exception)
     if code == PG_SERIALIZATION:
         return DatabaseSerializationError
     if code == PG_DEADLOCK or code in SQLITE_DEADLOCK_NAMES:
         return DatabaseDeadlockError
+    if code == PG_STATEMENT_COMPLETION_UNKNOWN:
+        return DatabaseUnknownOutcomeError
     if code in (PG_QUERY_CANCELED, PG_LOCK_NOT_AVAILABLE):
         return DatabaseTimeoutError
     if code in PG_CONSTRAINT_STATES:
@@ -151,6 +163,11 @@ def _classify_errno_message(exception: BaseException) -> type[DatabaseError] | N
     return None
 
 
+def sanitize_statement(statement: str) -> str:
+    """Replace string and numeric literals in a SQL statement with ``?`` so values never reach the logs."""
+    return _SQL_NUMBER_LITERAL.sub("?", _SQL_STRING_LITERAL.sub("?", statement))
+
+
 def driver_error_details(exception: BaseException) -> dict[str, Any]:
     """Collect loggable driver detail. Bind parameters are never included; the statement only at DEBUG level."""
     driver_error = _driver_exception(exception)
@@ -158,21 +175,21 @@ def driver_error_details(exception: BaseException) -> dict[str, Any]:
     # The statement may inline literal values, so it is only collected when DEBUG logging is enabled.
     statement = ""
     if isinstance(exception, DBAPIError) and logger.isEnabledFor(logging.DEBUG):
-        statement = exception.statement or ""
+        statement = sanitize_statement(exception.statement or "")
     message = getattr(root, "message", None) or getattr(driver_error, "args", None) or str(root)
     if isinstance(message, tuple):
         message = " ".join(str(part) for part in message)
     return {
-        "db.error_code": driver_error_code(exception),
-        "db.error_class": type(root).__name__,
+        "db.response.status_code": driver_error_code(exception),
+        "error.type": type(root).__name__,
         "db.error_message": str(message),
         "db.error_detail": getattr(root, "detail", None),
         "db.error_hint": getattr(root, "hint", None),
         "db.constraint": getattr(root, "constraint_name", None),
         "db.table": getattr(root, "table_name", None),
         "db.column": getattr(root, "column_name", None),
-        "db.statement": statement[:MAX_STATEMENT_LOG_CHARS],
-        "db.statement_truncated": len(statement) > MAX_STATEMENT_LOG_CHARS,
+        "db.query.text": statement[:MAX_STATEMENT_LOG_CHARS],
+        "db.query.text_truncated": len(statement) > MAX_STATEMENT_LOG_CHARS,
     }
 
 
@@ -196,7 +213,7 @@ def log_driver_error(
         "Database error %s (database=%s, code=%s): %s",
         domain_error.__name__,
         database,
-        details["db.error_code"],
+        details["db.response.status_code"],
         details["db.error_message"],
         extra={"db.name": database, "db.domain_error": domain_error.__name__, **details},
     )

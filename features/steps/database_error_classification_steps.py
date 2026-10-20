@@ -55,6 +55,18 @@ def step_given_driver_error(context, family, code, message):
     scenario_context.store("db_error", _wrap(_build_driver_error(family, code, message)))
 
 
+@given('a "{family}" driver error with code "{code}" raised by statement "{statement}"')
+def step_given_driver_error_with_statement(context, family, code, statement):
+    driver_error = _build_driver_error(family, code, "driver failure")
+    get_current_scenario_context(context).store("db_error", OperationalError(statement, None, driver_error))
+
+
+@given("a driver error without a code that SQLAlchemy flagged as a disconnect")
+def step_given_disconnect(context):
+    wrapped = OperationalError("SELECT 1", None, Exception("server closed the connection"), connection_invalidated=True)
+    get_current_scenario_context(context).store("db_error", wrapped)
+
+
 @given('an adapted driver error whose cause has SQLSTATE "{sqlstate}"')
 def step_given_adapted_driver_error(context, sqlstate):
     adapted = Exception("adapted driver error without a code")
@@ -84,12 +96,21 @@ def step_then_domain_error(context, expected):
 
 @when("the adapter exception handler processes the driver error")
 def step_when_handler(context):
+    _process_with_handler(context, logging.DEBUG)
+
+
+@when("the adapter exception handler processes the driver error at DEBUG level")
+def step_when_handler_debug(context):
+    _process_with_handler(context, logging.DEBUG)
+
+
+def _process_with_handler(context, level):
     scenario_context = get_current_scenario_context(context)
     handler = _ListHandler()
     logger = logging.getLogger("archipy.adapters.base.sqlalchemy.driver_errors")
     logger.addHandler(handler)
     previous_level = logger.level
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(level)
     try:
         SQLAlchemyExceptionHandlerMixin._handle_db_exception(scenario_context.get("db_error"), "test_db")
     except errors_pkg.BaseError as exception:
@@ -135,3 +156,16 @@ def step_then_statuses(context, http_status, grpc_status):
     error_type = get_current_scenario_context(context).get("error_type")
     assert error_type.http_status == http_status
     assert error_type.grpc_status == grpc_status
+
+
+@then("its retryable flag should be {expected}")
+def step_then_retryable(context, expected):
+    error_type = get_current_scenario_context(context).get("error_type")
+    assert error_type.retryable is (expected == "true"), f"{error_type.__name__}.retryable is {error_type.retryable}"
+
+
+@then('the logged statement should be "{expected}"')
+def step_then_logged_statement(context, expected):
+    records = get_current_scenario_context(context).get("log_records")
+    statements = [getattr(r, "db.query.text", None) for r in records]
+    assert expected in statements, f"Expected {expected!r} in {statements}"

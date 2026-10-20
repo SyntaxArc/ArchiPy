@@ -32,6 +32,7 @@ class DatabaseError(BaseError):
     """Base class for all database-related errors."""
 
     code: ClassVar[str] = "DATABASE_ERROR"
+    retryable: ClassVar[bool] = False
     message_en: ClassVar[str] = "Database error occurred"
     message_fa: ClassVar[str] = "خطای پایگاه داده رخ داده است"
     http_status: ClassVar[int] = (
@@ -212,6 +213,7 @@ class DatabaseDeadlockError(DatabaseQueryError):
     """Exception raised for database deadlock errors."""
 
     code: ClassVar[str] = "DATABASE_DEADLOCK_ERROR"
+    retryable: ClassVar[bool] = True
     message_en: ClassVar[str] = "Database deadlock detected"
     message_fa: ClassVar[str] = "قفل‌شدگی پایگاه داده تشخیص داده شد"
     http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
@@ -226,6 +228,7 @@ class DatabaseSerializationError(DatabaseQueryError):
     """Exception raised for database serialization errors."""
 
     code: ClassVar[str] = "DATABASE_SERIALIZATION_ERROR"
+    retryable: ClassVar[bool] = True
     message_en: ClassVar[str] = "Database serialization failure"
     message_fa: ClassVar[str] = "خطای سریال‌سازی پایگاه داده"
     http_status: ClassVar[int] = HTTPStatus.CONFLICT.value if HTTP_AVAILABLE and HTTPStatus is not None else 409
@@ -243,6 +246,7 @@ class DatabaseResourceExhaustedError(DatabaseQueryError):
     """
 
     code: ClassVar[str] = "DATABASE_RESOURCE_EXHAUSTED_ERROR"
+    retryable: ClassVar[bool] = True
     message_en: ClassVar[str] = "Database resources exhausted"
     message_fa: ClassVar[str] = "منابع پایگاه داده تمام شده است"
     http_status: ClassVar[int] = (
@@ -253,6 +257,17 @@ class DatabaseResourceExhaustedError(DatabaseQueryError):
         if GRPC_AVAILABLE and StatusCode is not None and isinstance(StatusCode.RESOURCE_EXHAUSTED.value, tuple)
         else (StatusCode.RESOURCE_EXHAUSTED.value if GRPC_AVAILABLE and StatusCode is not None else 8)
     )
+
+
+class DatabaseUnknownOutcomeError(DatabaseQueryError):
+    """Exception raised when the database cannot tell whether a statement completed.
+
+    The outcome is unknown, so the operation must not be retried blindly unless it is idempotent.
+    """
+
+    code: ClassVar[str] = "DATABASE_UNKNOWN_OUTCOME_ERROR"
+    message_en: ClassVar[str] = "Database statement outcome is unknown"
+    message_fa: ClassVar[str] = "نتیجه اجرای دستور پایگاه داده نامشخص است"
 
 
 class DatabaseConfigurationError(DatabaseError):

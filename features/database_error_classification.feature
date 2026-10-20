@@ -17,6 +17,7 @@ Feature: Database driver error classification
       | postgres  | 23502       | null value in column                                                                                                                                    | DatabaseIntegrityError         |
       | postgres  | 08006       | connection failure                                                                                                                                      | DatabaseConnectionError        |
       | postgres  | 53200       | out of memory                                                                                                                                           | DatabaseResourceExhaustedError |
+      | postgres  | 40003       | statement completion unknown                                                                                                                            | DatabaseUnknownOutcomeError    |
       | postgres  | 42703       | column does not exist                                                                                                                                   | none                           |
       | mysql     | 1213        | Deadlock found                                                                                                                                          | DatabaseDeadlockError          |
       | mysql     | 1205        | Lock wait timeout exceeded                                                                                                                              | DatabaseTimeoutError           |
@@ -70,3 +71,27 @@ Feature: Database driver error classification
       | DatabaseDeadlockError          |
       | DatabaseSerializationError     |
       | DatabaseResourceExhaustedError |
+      | DatabaseUnknownOutcomeError    |
+
+  Scenario: A disconnect flagged by SQLAlchemy without a driver code is a connection error
+    Given a driver error without a code that SQLAlchemy flagged as a disconnect
+    When the driver error is classified
+    Then the domain error should be "DatabaseConnectionError"
+
+  Scenario Outline: Only transient database errors are marked retryable
+    Given the <domain_error> type
+    Then its retryable flag should be <retryable>
+
+    Examples:
+      | domain_error                   | retryable |
+      | DatabaseSerializationError     | true      |
+      | DatabaseDeadlockError          | true      |
+      | DatabaseResourceExhaustedError | true      |
+      | DatabaseUnknownOutcomeError    | false     |
+      | DatabaseConstraintError        | false     |
+      | DatabaseQueryError             | false     |
+
+  Scenario: Logged statements carry no literal values
+    Given a "postgres" driver error with code "23505" raised by statement "INSERT INTO users (name, age) VALUES ('bob''s', 42) WHERE id = 7"
+    When the adapter exception handler processes the driver error at DEBUG level
+    Then the logged statement should be "INSERT INTO users (name, age) VALUES (?, ?) WHERE id = ?"
