@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.18.2](5.18.2.md) | 2026-10-20 | Async SQLAlchemy count cache reports a missing `async-lru` as `ConfigurationError` |
 | [5.18.1](5.18.1.md) | 2026-10-20 | `archipy.helpers.decorators` imports without the `cache` extra; `ttl_cache` raises `ConfigurationError` with an install hint |
 | [5.18.0](5.18.0.md) | 2026-10-20 | Database errors classified by driver code, `DatabaseResourceExhaustedError`, `DatabaseUnknownOutcomeError` and a `retryable` flag; **behavior:** serialization failures and deadlocks from adapter methods now raise specific errors |
 | [5.17.0](5.17.0.md) | 2026-10-20 | In-memory SQLite rate-limit stores for gRPC, a `UnavailableError` for unreachable Kafka brokers, ScyllaDB CQL and PostgreSQL DSN port fixes, and a split of the SQLAlchemy, config and OTel modules |
