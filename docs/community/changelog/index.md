@@ -9,7 +9,7 @@ All notable changes to ArchiPy are documented here, organized by major version s
 
 ## [5.x Series](5/index.md)
 
-40 releases — from 5.0.0 to 5.19.0
+41 releases — from 5.0.0 to 5.19.1
 
 ## [4.x Series](4/index.md)
 
