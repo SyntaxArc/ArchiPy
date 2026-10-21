@@ -328,6 +328,15 @@ Feature: Temporal Adapter Operations
     And the exported Temporal spans should share one trace id
     And the exported RunActivity span should carry messaging attributes for task queue "otel-trace-queue"
 
+  Scenario: Temporal tracing is disabled when another library registered a plain tracer provider first
+    Given a Temporal test container is running
+    And a Temporal adapter is configured
+    And a Temporal worker manager is configured
+    Given Temporal traces are exported to the collector after another library registered a plain tracer provider
+    And a worker is started for task queue "otel-plain-provider-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "plain"
+    Then the Temporal client should not carry a tracing interceptor
+
   Scenario: Temporal runtime manager reuses one runtime until it is reset
     Given Temporal metrics and traces are exported to the collector
     Then the Temporal runtime manager should reuse one runtime until it is reset

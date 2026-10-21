@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from opentelemetry.sdk._logs import LoggerProvider
-    from opentelemetry.sdk.metrics import MeterProvider
-    from opentelemetry.sdk.trace import TracerProvider
+
+    from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider, OwnedTracerProvider
 
 
 class _ProcessState:
@@ -23,4 +23,6 @@ class _ProcessState:
     lock: ClassVar[threading.Lock] = threading.Lock()
     globals_set: ClassVar[bool] = False
     propagator_installed: ClassVar[bool] = False
-    shutdown_providers: ClassVar[weakref.WeakSet[TracerProvider | MeterProvider | LoggerProvider]] = weakref.WeakSet()
+    shutdown_providers: ClassVar[weakref.WeakSet[OwnedTracerProvider | OwnedMeterProvider | LoggerProvider]] = (
+        weakref.WeakSet()
+    )

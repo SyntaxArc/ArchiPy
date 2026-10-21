@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 
+
 logger = logging.getLogger("archipy.helpers.utils.otel_utils")
 
 

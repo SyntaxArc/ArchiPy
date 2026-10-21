@@ -14,6 +14,7 @@ from collections.abc import Callable
 from types import SimpleNamespace
 from typing import Any
 
+from opentelemetry import trace
 from opentelemetry.trace import StatusCode
 
 from archipy.helpers.utils.otel_utils import OtelUtils
@@ -233,3 +234,15 @@ async def wait_for_metric_async(reader: CollectorTelemetry, name: str, timeout: 
         await asyncio.sleep(SETTLE_SECONDS)
         if name in reader.metrics():
             return
+
+
+def reset_otel_for_testing() -> None:
+    """Reset ArchiPy's OpenTelemetry state and forget the global tracer provider for the next scenario.
+
+    ``OtelUtils.reset_for_testing`` leaves the OpenTelemetry globals alone because they are set-once. Libraries that
+    resolve the global tracer provider themselves (Temporal's interceptor) would then keep using a shut-down one, so
+    scenarios clear it. OpenTelemetry has no public way to do that; its own tests reset the same two attributes.
+    """
+    OtelUtils.reset_for_testing()
+    trace._TRACER_PROVIDER_SET_ONCE._done = False
+    trace._TRACER_PROVIDER = None

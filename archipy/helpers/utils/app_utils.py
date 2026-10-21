@@ -23,9 +23,9 @@ if TYPE_CHECKING:
     from fastapi.telemetry import TelemetryConfig
     from grpc.aio import Server as GrpcAioServer
     from opentelemetry.sdk._logs import LoggerProvider
-    from opentelemetry.sdk.metrics import MeterProvider
-    from opentelemetry.sdk.trace import TracerProvider
     from starlette.types import Scope
+
+    from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider, OwnedTracerProvider
 
     CreateGrpcServerType = Callable[..., GrpcAioServer]
 else:
@@ -174,7 +174,7 @@ class FastAPIUtils:
     @staticmethod
     def _resolve_otel_providers(
         config: BaseConfig,
-    ) -> tuple[TracerProvider | None, MeterProvider | None, LoggerProvider | None]:
+    ) -> tuple[OwnedTracerProvider | None, OwnedMeterProvider | None, LoggerProvider | None]:
         """Return the tracer, meter and logger providers FastAPI should use.
 
         A provider is ``None`` when its signal is disabled or ``OtelUtils`` has none; an enabled

@@ -8,7 +8,7 @@ import os
 import time
 from typing import TYPE_CHECKING, TypeIs
 
-from archipy.helpers.utils._otel import provider_lifecycle, providers
+from archipy.helpers.utils._otel import provider_lifecycle, providers, temporal_providers
 from archipy.helpers.utils._otel.env import apply_standard_env, sdk_disabled
 from archipy.helpers.utils._otel.exporters import (
     create_console_log_exporter,
@@ -43,16 +43,15 @@ if TYPE_CHECKING:
     from opentelemetry.metrics import Meter
     from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
     from opentelemetry.sdk._logs.export import LogRecordExporter
-    from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import MetricExporter, MetricReader
     from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import SpanExporter
     from opentelemetry.trace import Status, Tracer
     from prometheus_client import CollectorRegistry
 
     from archipy.configs.base_config import BaseConfig
     from archipy.configs.config_template import OpentelemetryConfig
+    from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider, OwnedTracerProvider
 
 from archipy.helpers.utils._otel.constants import (
     _DEFAULT_FLUSH_TIMEOUT_MS,
@@ -93,8 +92,8 @@ class OtelRuntime:
         self._logging_handler_attached = False
         self._atexit_registered = False
         self._import_failed = False
-        self._tracer_provider: TracerProvider | None = None
-        self._meter_provider: MeterProvider | None = None
+        self._tracer_provider: OwnedTracerProvider | None = None
+        self._meter_provider: OwnedMeterProvider | None = None
         self._logger_provider: LoggerProvider | None = None
         self._owns_tracer = False
         self._owns_meter = False
@@ -125,7 +124,7 @@ class OtelRuntime:
         _ProcessState.propagator_installed = value
 
     @property
-    def _shutdown_providers(self) -> weakref.WeakSet[TracerProvider | MeterProvider | LoggerProvider]:
+    def _shutdown_providers(self) -> weakref.WeakSet[OwnedTracerProvider | OwnedMeterProvider | LoggerProvider]:
         return _ProcessState.shutdown_providers
 
     @property
@@ -244,11 +243,11 @@ class OtelRuntime:
             return self._meter_provider.get_meter(name)
         return metrics.get_meter(name)
 
-    def tracer_provider(self) -> TracerProvider | None:
+    def tracer_provider(self) -> OwnedTracerProvider | None:
         """Return the owned or adopted tracer provider, if initialized."""
         return self._tracer_provider
 
-    def meter_provider(self) -> MeterProvider | None:
+    def meter_provider(self) -> OwnedMeterProvider | None:
         """Return the owned or adopted meter provider, if initialized."""
         return self._meter_provider
 
@@ -413,13 +412,12 @@ class OtelRuntime:
         """
         from opentelemetry import metrics, trace
         from opentelemetry.sdk.resources import Resource
-        from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
         with _ProcessState.lock:
             self._install_textmap_propagator_unlocked(_DEFAULT_PROPAGATORS)
             resource = Resource.create({"service.name": service_name})
-            tracer_provider = TracerProvider(resource=resource)
+            tracer_provider = temporal_providers.new_tracer_provider(resource)
             if span_exporter is not None:
                 tracer_provider.add_span_processor(SimpleSpanProcessor(span_exporter))
             self._tracer_provider = tracer_provider
@@ -430,7 +428,9 @@ class OtelRuntime:
             if metric_reader is not None:
                 from opentelemetry.sdk.metrics import MeterProvider
 
-                meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+                meter_provider = temporal_providers.wrap_meter_provider(
+                    MeterProvider(resource=resource, metric_readers=[metric_reader]),
+                )
                 self._meter_provider = meter_provider
                 self._owns_meter = True
                 if not _ProcessState.globals_set:
@@ -578,9 +578,9 @@ class OtelRuntime:
 
     def _shutdown_partial(
         self,
-        tracer: TracerProvider | None,
+        tracer: OwnedTracerProvider | None,
         owns_tracer: bool,
-        meter: MeterProvider | None,
+        meter: OwnedMeterProvider | None,
         owns_meter: bool,
         log_provider: LoggerProvider | None,
         owns_logger: bool,
@@ -599,13 +599,16 @@ class OtelRuntime:
         """Return False for providers that were shut down or are otherwise unusable."""
         return provider_lifecycle.is_usable_provider(provider)
 
-    def _mark_provider_shutdown(self, provider: TracerProvider | MeterProvider | LoggerProvider | None) -> None:
+    def _mark_provider_shutdown(
+        self,
+        provider: OwnedTracerProvider | OwnedMeterProvider | LoggerProvider | None,
+    ) -> None:
         provider_lifecycle.mark_provider_shutdown(provider)
 
-    def _existing_concrete_tracer_provider(self) -> TracerProvider | None:
+    def _existing_concrete_tracer_provider(self) -> OwnedTracerProvider | None:
         return provider_lifecycle.existing_concrete_tracer_provider()
 
-    def _existing_concrete_meter_provider(self) -> MeterProvider | None:
+    def _existing_concrete_meter_provider(self) -> OwnedMeterProvider | None:
         return provider_lifecycle.existing_concrete_meter_provider()
 
     def _existing_concrete_logger_provider(self) -> LoggerProvider | None:
@@ -626,16 +629,16 @@ class OtelRuntime:
 
     def _publish_trace_global(
         self,
-        provider: TracerProvider | None,
+        provider: OwnedTracerProvider | None,
         owns: bool,
-    ) -> tuple[TracerProvider | None, bool]:
+    ) -> tuple[OwnedTracerProvider | None, bool]:
         return provider_lifecycle.publish_trace_global(provider, owns)
 
     def _publish_metric_global(
         self,
-        provider: MeterProvider | None,
+        provider: OwnedMeterProvider | None,
         owns: bool,
-    ) -> tuple[MeterProvider | None, bool]:
+    ) -> tuple[OwnedMeterProvider | None, bool]:
         return provider_lifecycle.publish_metric_global(provider, owns)
 
     def _build_providers(self, config: BaseConfig) -> None:
@@ -645,8 +648,8 @@ class OtelRuntime:
         otel = apply_standard_env(config.OTEL)
         resource = self._create_resource(otel)
 
-        new_tracer: TracerProvider | None = None
-        new_meter: MeterProvider | None = None
+        new_tracer: OwnedTracerProvider | None = None
+        new_meter: OwnedMeterProvider | None = None
         new_logger: LoggerProvider | None = None
         owns_tracer = False
         owns_meter = False
@@ -703,10 +706,10 @@ class OtelRuntime:
         if otel.LOGS_ENABLED and new_logger is not None:
             self._attach_logging_handler_unlocked(getattr(logging, otel.LOGS_LEVEL.upper(), logging.INFO))
 
-    def _build_tracer_provider(self, otel: OpentelemetryConfig, resource: Resource) -> TracerProvider:
+    def _build_tracer_provider(self, otel: OpentelemetryConfig, resource: Resource) -> OwnedTracerProvider:
         return providers.build_tracer_provider(otel, resource, self._create_span_exporter)
 
-    def _build_meter_provider(self, otel: OpentelemetryConfig, resource: Resource) -> MeterProvider:
+    def _build_meter_provider(self, otel: OpentelemetryConfig, resource: Resource) -> OwnedMeterProvider:
         provider, registry = providers.build_meter_provider(otel, resource, self._create_metric_exporter)
         if registry is not None:
             self._metrics.registry = registry

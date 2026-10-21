@@ -609,9 +609,35 @@ Feature: OpenTelemetry decorators
     Then the provider should have been reported as unusable while alive
     And the shut down provider registry should no longer hold it
 
-  Scenario: Temporal TracingInterceptor append preserves caller interceptors
-    When I append a Temporal TracingInterceptor to connect kwargs that already have a sentinel
-    Then the Temporal connect kwargs should keep the sentinel and include a TracingInterceptor
+  Scenario: Owned providers are replay-safe when Temporal is installed
+    Then the owned tracer and meter providers should be Temporal replay-safe providers
+
+  Scenario: ArchiPy adopts a replay-safe tracer provider that another library registered first
+    Given another library registered a replay-safe tracer provider before ArchiPy initialized OpenTelemetry
+    When ArchiPy initializes OpenTelemetry
+    Then ArchiPy should use that tracer provider
+
+  Scenario: Enabling traces after a metrics-only initialization still publishes the tracer provider globally
+    Given OpenTelemetry was initialized with traces disabled
+    When traces are enabled and OpenTelemetry initializes again
+    Then the global tracer provider should be the one ArchiPy owns
+
+  Scenario: Providers stay plain SDK providers when temporalio is not installed
+    Given temporalio cannot be imported
+    When I reset OpenTelemetry for testing and initialize it again
+    Then the owned tracer and meter providers should be plain SDK providers
+
+  Scenario: Temporal tracing plugin passes opentelemetry through the workflow sandbox
+    When the Temporal tracing plugin configures a sandboxed worker
+    Then the workflow sandbox should pass opentelemetry through
+
+  Scenario: Temporal tracing plugin can be registered next to the stock OpenTelemetry plugin
+    When the stock OpenTelemetry plugin and the Temporal tracing plugin configure the same client
+    Then the plugin names should differ and the client should carry both interceptors
+
+  Scenario: Temporal tracing plugin append preserves caller plugins
+    When I append the Temporal tracing plugin to connect kwargs that already have a sentinel
+    Then the Temporal connect kwargs should keep the sentinel and include the tracing plugin
 
   Scenario: distributed FastAPI calls FastAPI share one trace
     When FastAPI upstream calls FastAPI downstream over HTTP

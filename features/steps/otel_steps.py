@@ -7,13 +7,14 @@ import logging
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from unittest.mock import patch
 
 import httpx2
 from behave import given, then, when
 from behave.runner import Context
 from features.test_helpers import get_current_scenario_context
-from features.test_helpers_otel import CollectorTelemetry
+from features.test_helpers_otel import CollectorTelemetry, reset_otel_for_testing
 from opentelemetry import trace
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -104,7 +105,7 @@ def _setup_otel_testing(context: Context) -> None:
     """Enable OTel and install in-memory exporters for the current scenario."""
     scenario_context = get_current_scenario_context(context)
     _snapshot_otel_config(scenario_context)
-    OtelUtils.reset_for_testing()
+    reset_otel_for_testing()
 
     config = BaseConfig.global_config()
     _reset_otel_config_defaults()
@@ -133,15 +134,19 @@ def _setup_collector_otel(
     service_name: str | None = None,
     environment: str | None = None,
     protocol: str = "grpc",
+    before_init: Callable[[], None] | None = None,
 ) -> CollectorTelemetry:
     """Initialize the real OTel providers so they export over OTLP/gRPC to the collector test container.
+
+    ``before_init`` runs after the reset and before ArchiPy initializes, to play another library that registers a
+    provider first.
 
     Every scenario gets its own ``service.name`` so the readers only see this scenario's telemetry.
     """
     scenario_context = get_current_scenario_context(context)
     _snapshot_otel_config(scenario_context)
     collector = scenario_context.get("test_containers").get_container("otel-collector")
-    OtelUtils.reset_for_testing()
+    reset_otel_for_testing()
 
     config = BaseConfig.global_config()
     _reset_otel_config_defaults()
@@ -162,6 +167,8 @@ def _setup_collector_otel(
     if environment is not None:
         otel.ENVIRONMENT = environment
 
+    if before_init is not None:
+        before_init()
     OtelUtils.init_otel_if_needed(config)
     assert OtelUtils._initialized, "OpenTelemetry did not initialize against the collector"
 
@@ -227,7 +234,7 @@ def teardown_otel_testing(context: Context) -> None:
         except OSError:
             pass
         scenario_context.store("metrics_pull_blocker", None)
-    OtelUtils.reset_for_testing()
+    reset_otel_for_testing()
     try:
         config = BaseConfig.global_config()
         config.OTEL.IS_ENABLED = False
@@ -1060,9 +1067,164 @@ def step_then_grpc_otel_prepended(context):
     assert any("Otel" in type(item).__name__ or "OpenTelemetry" in type(item).__name__ for item in interceptors[:-1])
 
 
-@when("I append a Temporal TracingInterceptor to connect kwargs that already have a sentinel")
+@then("the owned tracer and meter providers should be Temporal replay-safe providers")
+def step_then_providers_replay_safe(context):
+    try:
+        from temporalio.contrib.opentelemetry import ReplaySafeMeterProvider, ReplaySafeTracerProvider
+    except ImportError:
+        context.scenario.skip("temporalio is not installed")
+        return
+
+    for provider, expected in (
+        (OtelUtils.tracer_provider(), ReplaySafeTracerProvider),
+        (OtelUtils.meter_provider(), ReplaySafeMeterProvider),
+    ):
+        assert isinstance(provider, expected), f"{type(provider).__name__} is not a {expected.__name__}"
+
+
+@given("another library registered a replay-safe tracer provider before ArchiPy initialized OpenTelemetry")
+def step_given_other_library_replay_safe(context):
+    try:
+        from temporalio.contrib.opentelemetry import create_tracer_provider
+    except ImportError:
+        context.scenario.skip("temporalio is not installed")
+        return
+    reset_otel_for_testing()
+    provider = create_tracer_provider()
+    trace.set_tracer_provider(provider)
+    get_current_scenario_context(context).store("other_library_provider", provider)
+
+
+@when("ArchiPy initializes OpenTelemetry")
+def step_when_archipy_initializes(context):
+    if context.scenario.status == "skipped":
+        return
+    OtelUtils.init_otel_if_needed(BaseConfig.global_config())
+
+
+@then("ArchiPy should use that tracer provider")
+def step_then_archipy_uses_provider(context):
+    if context.scenario.status == "skipped":
+        return
+    assert OtelUtils.tracer_provider() is get_current_scenario_context(context).get("other_library_provider")
+
+
+@when("I reset OpenTelemetry for testing and initialize it again")
+def step_when_reset_and_init(context):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("previous_global_tracer_provider", trace.get_tracer_provider())
+    reset_otel_for_testing()
+    OtelUtils.init_otel_if_needed(BaseConfig.global_config())
+
+
+@given("OpenTelemetry was initialized with traces disabled")
+def step_given_otel_traces_disabled(context):
+    reset_otel_for_testing()
+    BaseConfig.global_config().OTEL.TRACES_ENABLED = False
+    OtelUtils.init_otel_if_needed(BaseConfig.global_config())
+    assert isinstance(trace.get_tracer_provider(), trace.ProxyTracerProvider), "a tracer provider was published"
+    assert OtelUtils.tracer_provider() is None
+
+
+@when("traces are enabled and OpenTelemetry initializes again")
+def step_when_traces_enabled_later(context):
+    OtelUtils.reset_for_testing()
+    BaseConfig.global_config().OTEL.TRACES_ENABLED = True
+    OtelUtils.init_otel_if_needed(BaseConfig.global_config())
+
+
+@then("the global tracer provider should be the one ArchiPy owns")
+def step_then_global_is_owned(context):
+    owned = OtelUtils.tracer_provider()
+    assert owned is not None, "ArchiPy did not build a tracer provider"
+    assert trace.get_tracer_provider() is owned, "the owned tracer provider was not published globally"
+
+
+@given("temporalio cannot be imported")
+def step_given_temporalio_missing(context):
+    import sys
+
+    blocked = patch.dict(
+        sys.modules,
+        {"temporalio": None, "temporalio.contrib": None, "temporalio.contrib.opentelemetry": None},
+    )
+    blocked.start()
+    context.add_cleanup(blocked.stop)
+
+
+@then("the owned tracer and meter providers should be plain SDK providers")
+def step_then_plain_sdk_providers(context):
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.trace import TracerProvider
+
+    assert type(OtelUtils.tracer_provider()) is TracerProvider, type(OtelUtils.tracer_provider())
+    assert type(OtelUtils.meter_provider()) is MeterProvider, type(OtelUtils.meter_provider())
+
+
+@when("the Temporal tracing plugin configures a sandboxed worker")
+def step_when_plugin_configures_sandbox(context):
+    try:
+        from temporalio.client import Client
+        from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner
+
+        from archipy.adapters.temporal.tracing import MessagingOpenTelemetryPlugin
+    except ImportError:
+        context.scenario.skip("temporalio is not installed")
+        return
+    # A lazy client never dials the server; the plugin only reads its interceptors while configuring the worker.
+    client = asyncio.run(Client.connect("localhost:7233", lazy=True))
+    configured = MessagingOpenTelemetryPlugin().configure_worker(
+        {"client": client, "workflow_runner": SandboxedWorkflowRunner()},
+    )
+    get_current_scenario_context(context).store("configured_workflow_runner", configured["workflow_runner"])
+
+
+@then("the workflow sandbox should pass opentelemetry through")
+def step_then_sandbox_passthrough(context):
+    if context.scenario.status == "skipped":
+        return
+    runner = get_current_scenario_context(context).get("configured_workflow_runner")
+    assert "opentelemetry" in runner.restrictions.passthrough_modules, runner.restrictions.passthrough_modules
+
+
+@when("the stock OpenTelemetry plugin and the Temporal tracing plugin configure the same client")
+def step_when_both_plugins_configure_client(context):
+    try:
+        from temporalio.contrib.opentelemetry import OpenTelemetryPlugin
+
+        from archipy.adapters.temporal.tracing import MessagingOpenTelemetryPlugin
+    except ImportError:
+        context.scenario.skip("temporalio is not installed")
+        return
+    stock = OpenTelemetryPlugin()
+    ours = MessagingOpenTelemetryPlugin()
+    config = ours.configure_client(stock.configure_client({"interceptors": []}))
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("plugin_names", (stock.name(), ours.name()))
+    scenario_context.store("client_interceptors", config["interceptors"])
+
+
+@then("the plugin names should differ and the client should carry both interceptors")
+def step_then_both_plugins_coexist(context):
+    if context.scenario.status == "skipped":
+        return
+    from archipy.adapters.temporal.tracing import MessagingOpenTelemetryInterceptor
+
+    scenario_context = get_current_scenario_context(context)
+    stock_name, our_name = scenario_context.get("plugin_names")
+    assert stock_name != our_name, stock_name
+    interceptors = scenario_context.get("client_interceptors")
+    assert len(interceptors) == 2, interceptors
+    assert sum(isinstance(item, MessagingOpenTelemetryInterceptor) for item in interceptors) == 1, interceptors
+
+
+@when("I append the Temporal tracing plugin to connect kwargs that already have a sentinel")
 def step_when_temporal_append_with_sentinel(context):
-    from archipy.adapters.temporal.adapters import TemporalAdapter
+    try:
+        from archipy.adapters.temporal.adapters import TemporalAdapter
+    except ImportError:
+        context.scenario.skip("temporalio is not installed")
+        return
 
     scenario_context = get_current_scenario_context(context)
 
@@ -1070,22 +1232,24 @@ def step_when_temporal_append_with_sentinel(context):
         pass
 
     sentinel = _SentinelInterceptor()
-    connect_kwargs = {"interceptors": [sentinel]}
-    TemporalAdapter._append_tracing_interceptor(connect_kwargs)
+    connect_kwargs = {"plugins": [sentinel]}
+    TemporalAdapter._append_tracing_plugin(connect_kwargs)
     scenario_context.store("temporal_connect_kwargs", connect_kwargs)
     scenario_context.store("temporal_sentinel", sentinel)
 
 
-@then("the Temporal connect kwargs should keep the sentinel and include a TracingInterceptor")
+@then("the Temporal connect kwargs should keep the sentinel and include the tracing plugin")
 def step_then_temporal_append_preserved(context):
-    from temporalio.contrib.opentelemetry import TracingInterceptor
+    if context.scenario.status == "skipped":
+        return
+    from archipy.adapters.temporal.tracing import MessagingOpenTelemetryPlugin
 
     scenario_context = get_current_scenario_context(context)
     kwargs = scenario_context.get("temporal_connect_kwargs")
     sentinel = scenario_context.get("temporal_sentinel")
-    interceptors = kwargs["interceptors"]
-    assert interceptors[0] is sentinel
-    assert isinstance(interceptors[1], TracingInterceptor)
+    plugins = kwargs["plugins"]
+    assert plugins[0] is sentinel
+    assert isinstance(plugins[1], MessagingOpenTelemetryPlugin)
 
 
 @then("all finished spans should share one trace id")
@@ -1536,7 +1700,7 @@ def step_then_external_still_usable(context):
 @when("OpenTelemetry initialization fails while creating the metric exporter")
 def step_when_init_metric_exporter_fails(context):
     scenario_context = get_current_scenario_context(context)
-    OtelUtils.reset_for_testing()
+    reset_otel_for_testing()
     OtelUtils._globals_set = False
     config = BaseConfig.global_config()
     _reset_otel_config_defaults()
@@ -1643,7 +1807,7 @@ def step_given_console_logs_captured(context):
     from opentelemetry.sdk.resources import Resource
 
     scenario_context = get_current_scenario_context(context)
-    OtelUtils.reset_for_testing()
+    reset_otel_for_testing()
 
     stdout_buf = io.StringIO()
     stderr_buf = io.StringIO()
@@ -1874,7 +2038,7 @@ def _configure_pull_metrics(context) -> None:
     from archipy.configs.config_template import OtelMetricsExporter
 
     scenario_context = get_current_scenario_context(context)
-    OtelUtils.reset_for_testing()
+    reset_otel_for_testing()
     OtelUtils._globals_set = False
 
     port = _free_tcp_port()
@@ -1905,7 +2069,7 @@ def step_given_otlp_only_reserved_port(context):
     from archipy.configs.config_template import OtelMetricsExporter
 
     scenario_context = get_current_scenario_context(context)
-    OtelUtils.reset_for_testing()
+    reset_otel_for_testing()
     OtelUtils._globals_set = False
 
     port = _free_tcp_port()
@@ -1931,7 +2095,7 @@ def step_given_system_metrics_off(context):
     from archipy.configs.config_template import OtelMetricsExporter
 
     scenario_context = get_current_scenario_context(context)
-    OtelUtils.reset_for_testing()
+    reset_otel_for_testing()
     OtelUtils._globals_set = False
 
     config = BaseConfig.global_config()
@@ -2091,7 +2255,7 @@ def step_given_pull_busy_port_with_traces(context):
     from archipy.configs.config_template import OtelMetricsExporter
 
     scenario_context = get_current_scenario_context(context)
-    OtelUtils.reset_for_testing()
+    reset_otel_for_testing()
     OtelUtils._globals_set = False
 
     port = _free_tcp_port()
@@ -2181,7 +2345,7 @@ def _configure_pushgateway(context, *, url: str | None = None, delete_on_shutdow
 
     scenario_context = get_current_scenario_context(context)
     _snapshot_otel_config(scenario_context)
-    OtelUtils.reset_for_testing()
+    reset_otel_for_testing()
     OtelUtils._globals_set = False
     pushgateway = _pushgateway_container(context)
     pushgateway.clear()
@@ -2746,7 +2910,7 @@ def step_then_same_instruments(context):
 def _fail_provider_construction(context):
     """Make provider construction raise, counting attempts; restored when the scenario ends."""
     scenario_context = get_current_scenario_context(context)
-    OtelUtils.reset_for_testing()
+    reset_otel_for_testing()
     OtelUtils._globals_set = False
     config = BaseConfig.global_config()
     _reset_otel_config_defaults()
@@ -2765,7 +2929,7 @@ def _fail_provider_construction(context):
     patcher = patch.object(OtelUtils.runtime(), "_build_providers", _boom)
     patcher.start()
     context.add_cleanup(patcher.stop)
-    context.add_cleanup(OtelUtils.reset_for_testing)
+    context.add_cleanup(reset_otel_for_testing)
     scenario_context.store("provider_attempts", attempts)
     scenario_context.store("otel_enabled_for_test", True)
     return config

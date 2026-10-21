@@ -11,7 +11,7 @@ import asyncio
 import socket
 import threading
 import time
-from collections.abc import Coroutine
+from collections.abc import Callable, Coroutine
 from datetime import timedelta
 from typing import Any, TypeVar
 
@@ -23,6 +23,7 @@ from temporalio.runtime import LoggingConfig, TelemetryConfig, TelemetryFilter
 from archipy.adapters.temporal import runtime as temporal_runtime_module
 from archipy.adapters.temporal.adapters import TemporalAdapter
 from archipy.adapters.temporal.runtime import TemporalRuntimeManager
+from archipy.adapters.temporal.tracing import MessagingOpenTelemetryInterceptor
 from archipy.adapters.temporal.worker import TemporalWorkerManager, WorkerHandle
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import OtelMetricsExporter, TemporalConfig
@@ -1486,7 +1487,13 @@ TEMPORAL_METRICS_ABSENT_WAIT_SECONDS = 3.0
 _runtime_endpoint: str | None = None
 
 
-def _enable_temporal_otel(context, *, enable_metrics: bool, protocol: str = "grpc") -> None:
+def _enable_temporal_otel(
+    context,
+    *,
+    enable_metrics: bool,
+    protocol: str = "grpc",
+    before_init: Callable[[], None] | None = None,
+) -> None:
     """Point OpenTelemetry at the collector container and rebuild the Temporal adapter and worker manager.
 
     The Temporal ``Runtime`` is a process singleton that cannot change its endpoint, so it is only reset when
@@ -1498,7 +1505,7 @@ def _enable_temporal_otel(context, *, enable_metrics: bool, protocol: str = "grp
 
     scenario_context = get_current_scenario_context(context)
     collector = scenario_context.get("test_containers").get_container("otel-collector")
-    _setup_collector_otel(context, traces=True, metrics=True, protocol=protocol)
+    _setup_collector_otel(context, traces=True, metrics=True, protocol=protocol, before_init=before_init)
     collector.mark()
 
     endpoint = BaseConfig.global_config().OTEL.OTLP_ENDPOINT
@@ -1686,6 +1693,7 @@ def step_run_activity_span_has_messaging_attributes(context, task_queue):
     expected = {
         "messaging.system": "temporal",
         "messaging.operation": "process",
+        "messaging.operation.type": "process",
         "messaging.destination.name": task_queue,
     }
     for span in run_spans:
@@ -1770,14 +1778,34 @@ def step_temporal_otel_enabled_http(context) -> None:
     _enable_temporal_otel(context, enable_metrics=True, protocol="http/protobuf")
 
 
+@given("Temporal traces are exported to the collector after another library registered a plain tracer provider")
+def step_temporal_otel_plain_provider(context) -> None:
+    """Enable OpenTelemetry against the collector, but let another library register a plain SDK provider first."""
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider
+
+    _enable_temporal_otel(
+        context,
+        enable_metrics=True,
+        before_init=lambda: trace.set_tracer_provider(TracerProvider()),
+    )
+
+
+@then("the Temporal client should not carry a tracing interceptor")
+def step_temporal_client_has_no_tracing_interceptor(context):
+    """Check the connected client was built without ArchiPy's tracing interceptor."""
+    adapter = get_temporal_adapter(context)
+    client = run_async(context, adapter.get_client())
+    interceptors = client.config(active_config=True).get("interceptors") or []
+    assert not any(isinstance(item, MessagingOpenTelemetryInterceptor) for item in interceptors), interceptors
+
+
 @then("the Temporal client should carry a tracing interceptor")
 def step_temporal_client_has_tracing_interceptor(context):
     """Check the real connected client was built with the OpenTelemetry tracing interceptor."""
-    from temporalio.contrib.opentelemetry import TracingInterceptor
-
     adapter = get_temporal_adapter(context)
     client = run_async(context, adapter.get_client())
-    interceptors = client.config().get("interceptors") or []
-    assert any(isinstance(item, TracingInterceptor) for item in interceptors), (
-        f"No TracingInterceptor on the client: {interceptors!r}"
+    interceptors = client.config(active_config=True).get("interceptors") or []
+    assert any(isinstance(item, MessagingOpenTelemetryInterceptor) for item in interceptors), (
+        f"No MessagingOpenTelemetryInterceptor on the client: {interceptors!r}"
     )

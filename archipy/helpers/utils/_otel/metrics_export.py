@@ -9,10 +9,10 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from wsgiref.simple_server import WSGIServer
 
-    from opentelemetry.sdk.metrics import MeterProvider
     from prometheus_client import CollectorRegistry
 
     from archipy.configs.config_template import OpentelemetryConfig
+    from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider
 
 # Same logger as OtelUtils, so log filters and handlers that name it keep seeing these records.
 logger = logging.getLogger("archipy.helpers.utils.otel_utils")
@@ -51,7 +51,7 @@ class MetricsExport:
         otel: OpentelemetryConfig,
         *,
         owns_meter: bool,
-        new_meter: MeterProvider | None,
+        new_meter: OwnedMeterProvider | None,
     ) -> None:
         """Start pull scrape when owned; leave providers intact on bind failure."""
         if not (otel.METRICS_ENABLED and otel.METRICS_EXPORTER == "pull"):
@@ -81,7 +81,7 @@ class MetricsExport:
         otel: OpentelemetryConfig,
         *,
         owns_meter: bool,
-        new_meter: MeterProvider | None,
+        new_meter: OwnedMeterProvider | None,
     ) -> None:
         """Start Pushgateway push loop when owned; never raise into the app."""
         if not (otel.METRICS_ENABLED and otel.METRICS_EXPORTER == "pushgateway"):

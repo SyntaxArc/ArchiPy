@@ -18,9 +18,7 @@ if TYPE_CHECKING:
     from opentelemetry.metrics import Meter
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk._logs.export import LogRecordExporter
-    from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import MetricReader
-    from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import SpanExporter
     from opentelemetry.trace import Status, Tracer
     from prometheus_client import CollectorRegistry
@@ -28,6 +26,7 @@ if TYPE_CHECKING:
     from archipy.configs.base_config import BaseConfig
     from archipy.configs.config_template import OpentelemetryConfig
     from archipy.helpers.utils._otel.noop import _NoOpMeter, _NoOpTracer
+    from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider, OwnedTracerProvider
 
 __all__ = [
     "DURATION_HISTOGRAM_BUCKETS_S",
@@ -146,12 +145,12 @@ class OtelUtils(metaclass=_OtelUtilsMeta):
         return cls._runtime.get_meter(name)
 
     @classmethod
-    def tracer_provider(cls) -> TracerProvider | None:
+    def tracer_provider(cls) -> OwnedTracerProvider | None:
         """Return the owned or adopted tracer provider, if any."""
         return cls._runtime.tracer_provider()
 
     @classmethod
-    def meter_provider(cls) -> MeterProvider | None:
+    def meter_provider(cls) -> OwnedMeterProvider | None:
         """Return the owned or adopted meter provider, if any."""
         return cls._runtime.meter_provider()
 

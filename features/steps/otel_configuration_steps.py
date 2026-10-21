@@ -40,7 +40,9 @@ def step_when_tracer_provider(context):
     otel = sc.get("otel_cfg")
     provider = OtelUtils._build_tracer_provider(otel, OtelUtils._create_resource(otel))
     context.add_cleanup(provider.shutdown)
-    sc.store("tracer_provider_built", provider)
+    # With temporalio installed the builder returns a replay-safe wrapper around the SDK provider; these steps assert
+    # on the SDK provider's sampler and span processor.
+    sc.store("tracer_provider_built", getattr(provider, "_tracer_provider", provider))
 
 
 @then('the sampler description contains "{text}"')

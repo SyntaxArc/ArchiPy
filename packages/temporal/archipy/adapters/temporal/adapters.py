@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeVar, cast, override
+from typing import TYPE_CHECKING, Any, TypeVar, override
 from uuid import uuid4
 
 from temporalio.client import (
@@ -25,6 +25,7 @@ from temporalio.client import (
     WorkflowHandle,
 )
 from temporalio.common import RetryPolicy
+from temporalio.contrib.opentelemetry import ReplaySafeTracerProvider
 from temporalio.service import RetryConfig
 
 from archipy.configs.base_config import BaseConfig
@@ -40,7 +41,6 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from opentelemetry.trace import Tracer
     from temporalio.runtime import Runtime
 
     from archipy.configs.config_template import OpentelemetryConfig, TemporalConfig
@@ -125,12 +125,12 @@ class TemporalAdapter(TemporalPort):
                     if runtime is not None:
                         connect_kwargs["runtime"] = runtime
 
-                # Attach OTel tracing interceptor when traces are enabled
+                # Attach OTel tracing plugin when traces are enabled
                 if otel.IS_ENABLED and otel.TRACES_ENABLED:
                     from archipy.helpers.utils.otel_utils import OtelUtils
 
                     OtelUtils.init_otel_if_needed(global_config)
-                    self._append_tracing_interceptor(connect_kwargs)
+                    self._append_tracing_plugin(connect_kwargs)
 
                 self._client = await Client.connect(
                     f"{self.config.HOST}:{self.config.PORT}",
@@ -180,20 +180,25 @@ class TemporalAdapter(TemporalPort):
         )
 
     @staticmethod
-    def _append_tracing_interceptor(connect_kwargs: dict[str, Any]) -> None:
-        """Append ArchiPy's Temporal tracing interceptor without discarding existing ones.
+    def _append_tracing_plugin(connect_kwargs: dict[str, Any]) -> None:
+        """Append ArchiPy's Temporal OpenTelemetry plugin without discarding existing plugins.
+
+        Skipped with a warning when the global tracer provider is not replay-safe.
 
         Args:
             connect_kwargs: Keyword arguments passed to ``Client.connect``.
         """
-        from archipy.adapters.temporal.tracing import ArchiPyTracingInterceptor
+        from archipy.adapters.temporal.tracing import MessagingOpenTelemetryPlugin
         from archipy.helpers.utils.otel_utils import OtelUtils
 
-        # The interceptor's default tracer is bound to the first global provider; ask ArchiPy for the tracer of
-        # the provider it currently owns so spans survive an OpenTelemetry re-initialization.
-        tracer = OtelUtils.get_tracer("temporalio.contrib.opentelemetry")
-        # temporalio.contrib.opentelemetry imports opentelemetry, so the tracer is a real one, not the no-op stub.
-        connect_kwargs.setdefault("interceptors", []).append(ArchiPyTracingInterceptor(cast("Tracer", tracer)))
+        # The plugin needs a replay-safe provider; ArchiPy builds one itself, but a provider another library
+        # registered first is adopted as is, and workers with workflows would then fail to start.
+        if not isinstance(OtelUtils.tracer_provider(), ReplaySafeTracerProvider):
+            logger.warning(
+                "Temporal tracing is disabled: the global TracerProvider is not a temporalio ReplaySafeTracerProvider",
+            )
+            return
+        connect_kwargs.setdefault("plugins", []).append(MessagingOpenTelemetryPlugin())
 
     def _has_tls_config(self) -> bool:
         """Check if TLS configuration is provided.

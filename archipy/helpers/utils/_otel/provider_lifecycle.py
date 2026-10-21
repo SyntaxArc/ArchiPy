@@ -5,14 +5,15 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, TypeIs
 
+from archipy.helpers.utils._otel import temporal_providers
 from archipy.helpers.utils._otel.process_state import _ProcessState
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
     from opentelemetry.sdk._logs import LoggerProvider
-    from opentelemetry.sdk.metrics import MeterProvider
-    from opentelemetry.sdk.trace import TracerProvider
+
+    from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider, OwnedTracerProvider
 
 logger = logging.getLogger("archipy.helpers.utils.otel_utils")
 
@@ -29,14 +30,14 @@ def is_usable_provider(provider: object) -> bool:
     return not getattr(provider, "_shutdown", False)
 
 
-def mark_provider_shutdown(provider: TracerProvider | MeterProvider | LoggerProvider | None) -> None:
+def mark_provider_shutdown(provider: OwnedTracerProvider | OwnedMeterProvider | LoggerProvider | None) -> None:
     """Remember that a provider was shut down."""
     if provider is not None:
         # Hold the provider weakly: ``id()`` values are reused after garbage collection.
         _ProcessState.shutdown_providers.add(provider)
 
 
-def existing_concrete_tracer_provider() -> TracerProvider | None:
+def existing_concrete_tracer_provider() -> OwnedTracerProvider | None:
     """Return the usable concrete global tracer provider, if any."""
     from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider
@@ -44,10 +45,13 @@ def existing_concrete_tracer_provider() -> TracerProvider | None:
     current = trace.get_tracer_provider()
     if is_concrete_provider(current, TracerProvider) and is_usable_provider(current):
         return current
+    replay_safe = temporal_providers.as_replay_safe_tracer_provider(current)
+    if replay_safe is not None and is_usable_provider(replay_safe):
+        return replay_safe
     return None
 
 
-def existing_concrete_meter_provider() -> MeterProvider | None:
+def existing_concrete_meter_provider() -> OwnedMeterProvider | None:
     """Return the usable concrete global meter provider, if any."""
     from opentelemetry import metrics
     from opentelemetry.sdk.metrics import MeterProvider
@@ -55,6 +59,9 @@ def existing_concrete_meter_provider() -> MeterProvider | None:
     current = metrics.get_meter_provider()
     if is_concrete_provider(current, MeterProvider) and is_usable_provider(current):
         return current
+    replay_safe = temporal_providers.as_replay_safe_meter_provider(current)
+    if replay_safe is not None and is_usable_provider(replay_safe):
+        return replay_safe
     return None
 
 
@@ -96,7 +103,7 @@ def acquire_provider[P](
 
 
 def shutdown_owned(
-    providers: Iterable[tuple[TracerProvider | MeterProvider | LoggerProvider | None, bool]],
+    providers: Iterable[tuple[OwnedTracerProvider | OwnedMeterProvider | LoggerProvider | None, bool]],
     error_message: str = "Error shutting down OTel provider",
 ) -> None:
     """Shut down every provider ArchiPy owns and mark it as shut down.
@@ -116,7 +123,7 @@ def shutdown_owned(
 
 
 def flush_providers(
-    providers: Iterable[TracerProvider | MeterProvider | LoggerProvider | None],
+    providers: Iterable[OwnedTracerProvider | OwnedMeterProvider | LoggerProvider | None],
     timeout_millis: int,
 ) -> bool:
     """Force-flush every provider that supports it.
@@ -142,11 +149,15 @@ def flush_providers(
     return ok
 
 
-def publish_trace_global(provider: TracerProvider | None, owns: bool) -> tuple[TracerProvider | None, bool]:
+def publish_trace_global(provider: OwnedTracerProvider | None, owns: bool) -> tuple[OwnedTracerProvider | None, bool]:
     """Set an owned tracer provider as the global one, or adopt the one another library set first."""
     from opentelemetry import trace
 
-    if not owns or provider is None or _ProcessState.globals_set:
+    if not owns or provider is None:
+        return provider, owns
+    # Publish whenever the tracer global is still unset, even if another signal already set its own: libraries that
+    # resolve the global tracer provider themselves (Temporal's interceptor) would otherwise never see ArchiPy's.
+    if _ProcessState.globals_set and not isinstance(trace.get_tracer_provider(), trace.ProxyTracerProvider):
         return provider, owns
     trace.set_tracer_provider(provider)
     after = existing_concrete_tracer_provider()
@@ -157,7 +168,7 @@ def publish_trace_global(provider: TracerProvider | None, owns: bool) -> tuple[T
     return provider, True
 
 
-def publish_metric_global(provider: MeterProvider | None, owns: bool) -> tuple[MeterProvider | None, bool]:
+def publish_metric_global(provider: OwnedMeterProvider | None, owns: bool) -> tuple[OwnedMeterProvider | None, bool]:
     """Set an owned meter provider as the global one, or adopt the one another library set first."""
     from opentelemetry import metrics
 

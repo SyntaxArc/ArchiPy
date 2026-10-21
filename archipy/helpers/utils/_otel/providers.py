@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from archipy.helpers.utils._otel import temporal_providers
 from archipy.helpers.utils._otel.exporters import (
     create_console_log_exporter,
     create_metric_exporter,
@@ -17,21 +18,20 @@ if TYPE_CHECKING:
 
     from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk._logs.export import LogRecordExporter
-    from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import MetricExporter, MetricReader
     from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import SpanExporter
     from prometheus_client import CollectorRegistry
 
     from archipy.configs.config_template import OpentelemetryConfig
+    from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider, OwnedTracerProvider
 
 
 def build_tracer_provider(
     otel: OpentelemetryConfig,
     resource: Resource,
     span_exporter_factory: Callable[[OpentelemetryConfig], SpanExporter] = create_span_exporter,
-) -> TracerProvider:
+) -> OwnedTracerProvider:
     """Build a tracer provider with the configured sampler and a batch span processor.
 
     Args:
@@ -42,10 +42,9 @@ def build_tracer_provider(
     Returns:
         The tracer provider.
     """
-    from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-    provider = TracerProvider(resource=resource, sampler=create_sampler(otel))
+    provider = temporal_providers.new_tracer_provider(resource, create_sampler(otel))
     exporter = span_exporter_factory(otel)
     provider.add_span_processor(
         BatchSpanProcessor(
@@ -63,7 +62,7 @@ def build_meter_provider(
     otel: OpentelemetryConfig,
     resource: Resource,
     metric_exporter_factory: Callable[[OpentelemetryConfig], MetricExporter] = create_metric_exporter,
-) -> tuple[MeterProvider, CollectorRegistry | None]:
+) -> tuple[OwnedMeterProvider, CollectorRegistry | None]:
     """Build a meter provider for the configured metrics exporter.
 
     Args:
@@ -97,7 +96,7 @@ def build_meter_provider(
         registry = CollectorRegistry(auto_describe=True)
         readers.append(PrometheusMetricReader(registry=registry))
 
-    return MeterProvider(resource=resource, metric_readers=readers), registry
+    return temporal_providers.wrap_meter_provider(MeterProvider(resource=resource, metric_readers=readers)), registry
 
 
 def build_logger_provider(
