@@ -327,12 +327,14 @@ Feature: Temporal Adapter Operations
       | RunActivity:greeting_activity   |
     And the exported Temporal spans should share one trace id
     And the exported RunActivity span should carry messaging attributes for task queue "otel-trace-queue"
+    And the exported RunWorkflow span should carry messaging attributes for task queue "otel-trace-queue"
 
   Scenario Outline: Elastic APM Server shows Temporal activities as messaging transactions <route>
     Given Temporal traces are exported to Elastic APM Server <route>
     And a worker is started for task queue "otel-apm-queue" with GreetingWorkflow
     When I execute workflow "GreetingWorkflow" with argument "apm"
     Then Elastic APM Server should store a "messaging" transaction named "RunActivity:greeting_activity"
+    And Elastic APM Server should store a "messaging" transaction named "RunWorkflow:GreetingWorkflow"
 
     Examples:
       | route                 |
