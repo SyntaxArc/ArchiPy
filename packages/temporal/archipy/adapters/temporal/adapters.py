@@ -181,20 +181,19 @@ class TemporalAdapter(TemporalPort):
 
     @staticmethod
     def _append_tracing_interceptor(connect_kwargs: dict[str, Any]) -> None:
-        """Append Temporal ``TracingInterceptor`` without discarding existing ones.
+        """Append ArchiPy's Temporal tracing interceptor without discarding existing ones.
 
         Args:
             connect_kwargs: Keyword arguments passed to ``Client.connect``.
         """
-        from temporalio.contrib.opentelemetry import TracingInterceptor
-
+        from archipy.adapters.temporal.tracing import ArchiPyTracingInterceptor
         from archipy.helpers.utils.otel_utils import OtelUtils
 
         # The interceptor's default tracer is bound to the first global provider; ask ArchiPy for the tracer of
         # the provider it currently owns so spans survive an OpenTelemetry re-initialization.
         tracer = OtelUtils.get_tracer("temporalio.contrib.opentelemetry")
         # temporalio.contrib.opentelemetry imports opentelemetry, so the tracer is a real one, not the no-op stub.
-        connect_kwargs.setdefault("interceptors", []).append(TracingInterceptor(cast("Tracer", tracer)))
+        connect_kwargs.setdefault("interceptors", []).append(ArchiPyTracingInterceptor(cast("Tracer", tracer)))
 
     def _has_tls_config(self) -> bool:
         """Check if TLS configuration is provided.
