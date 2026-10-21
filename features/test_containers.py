@@ -1925,6 +1925,7 @@ class ApmServerTestContainer(metaclass=Singleton, thread_safe=True):
         base = f"{self.elasticsearch_url}/{self.TRACES_INDEX}"
         # The test process is instrumented too; its own queries must not show up as traces of the scenario.
         with suppress_instrumentation():
+            self._wait_for_shards(self.TRACES_INDEX)
             httpx2.post(f"{base}/_refresh", timeout=10)
             response = httpx2.post(
                 f"{base}/_search",
@@ -1947,10 +1948,25 @@ class ApmServerTestContainer(metaclass=Singleton, thread_safe=True):
         response.raise_for_status()
         return [hit["_source"] for hit in response.json()["hits"]["hits"]]
 
+    def _wait_for_shards(self, index: str) -> None:
+        """Block until the primary shards of every index matching ``index`` are allocated.
+
+        APM Server creates its data streams on the first event, so a search straight after that hits backing
+        indices whose shards are still initializing and Elasticsearch answers 503. A pattern matching no index
+        reports green at once, which leaves the poll to retry until the data arrives.
+        """
+        response = httpx2.get(
+            f"{self.elasticsearch_url}/_cluster/health/{index}",
+            params={"wait_for_status": "yellow", "timeout": "10s"},
+            timeout=15,
+        )
+        response.raise_for_status()
+
     def _search(self, index: str, body: dict) -> list[dict]:
         base = f"{self.elasticsearch_url}/{index}"
         # The test process is instrumented too; its own queries must not show up as telemetry of the scenario.
         with suppress_instrumentation():
+            self._wait_for_shards(index)
             httpx2.post(f"{base}/_refresh", timeout=10)
             response = httpx2.post(f"{base}/_search", json={"size": 200, **body}, timeout=10)
         if response.status_code == 404:
