@@ -1722,12 +1722,12 @@ def step_temporal_spans_share_trace(context):
     assert len(trace_ids) == 1, f"Expected one trace id, got {len(trace_ids)} for {[s.name for s in spans]}"
 
 
-@then('the exported RunActivity span should carry messaging attributes for task queue "{task_queue}"')
-def step_run_activity_span_has_messaging_attributes(context, task_queue):
-    """Assert the activity span has the attributes Elastic APM maps to the ``messaging`` transaction type."""
+@then('the exported {span_prefix} span should carry messaging attributes for task queue "{task_queue}"')
+def step_run_span_has_messaging_attributes(context, span_prefix, task_queue):
+    """Assert the span has the attributes Elastic APM maps to the ``messaging`` transaction type."""
     spans = get_current_scenario_context(context).get("temporal_spans")
-    run_spans = [span for span in spans if span.name.startswith("RunActivity:")]
-    assert run_spans, f"No RunActivity span among {[span.name for span in spans]}"
+    run_spans = [span for span in spans if span.name.startswith(f"{span_prefix}:")]
+    assert run_spans, f"No {span_prefix} span among {[span.name for span in spans]}"
     expected = {
         "messaging.system": "temporal",
         "messaging.operation": "process",
