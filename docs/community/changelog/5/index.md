@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.19.0](5.19.0.md) | 2026-10-21 | Temporal activity spans carry messaging attributes via `MessagingOpenTelemetryPlugin`, replay-safe tracer and meter providers; **behavior:** Temporal tracing is skipped when a plain tracer provider was registered first |
 | [5.18.3](5.18.3.md) | 2026-10-20 | Email adapter imports without `jinja2`; template rendering raises `ConfigurationError` with an install hint |
 | [5.18.2](5.18.2.md) | 2026-10-20 | Async SQLAlchemy count cache reports a missing `async-lru` as `ConfigurationError` |
 | [5.18.1](5.18.1.md) | 2026-10-20 | `archipy.helpers.decorators` imports without the `cache` extra; `ttl_cache` raises `ConfigurationError` with an install hint |
