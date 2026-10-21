@@ -389,6 +389,19 @@ class OrderSagaWorkflow:
         self._notes.append(note)
         return len(self._notes)
 
+    @add_note.validator
+    def validate_note(self, note: str) -> None:
+        """Reject blank notes before they reach the history.
+
+        Args:
+            note (str): The note text.
+
+        Raises:
+            ValueError: If the note is blank.
+        """
+        if not note.strip():
+            raise ValueError("note must not be blank")
+
     @workflow.run
     async def run(self, order: dict[str, Any]) -> dict[str, Any]:
         """Run the saga.

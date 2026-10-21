@@ -91,6 +91,21 @@ Feature: Temporal Adapter Operations
       | approve | completed   | reserve_inventory,charge_payment,ship_order,notify_customer | none                             |
       | cancel  | compensated | reserve_inventory,charge_payment                            | refund_payment,release_inventory |
 
+  Scenario: Order saga update validator rejects a blank note
+    Given a worker is started for task queue "test-queue" with OrderSagaWorkflow
+    When I start the order saga "test-saga-blank" with payment succeeding on attempt 1 and shipping failure false requiring approval
+    And I wait for 1 seconds
+    And I try to add a blank note to the order saga "test-saga-blank"
+    And I send signal "approve" to workflow "test-saga-blank"
+    Then the blank note should be rejected by the update validator
+    And the order saga "test-saga-blank" should end completed after steps reserve_inventory,charge_payment,ship_order,notify_customer with compensations none
+
+  Scenario: Order saga starts and updates in one update-with-start request
+    Given a worker is started for task queue "test-queue" with OrderSagaWorkflow
+    When I add the note "rush" to a new order saga "test-saga-uws" with update-with-start
+    Then the update result should be 1
+    And the order saga should end completed after steps reserve_inventory,charge_payment,ship_order,notify_customer with compensations none
+
   # Signal and Query Operations
   Scenario: Send signal to running workflow
     Given a worker is started for task queue "test-queue" with SignalQueryWorkflow
@@ -390,16 +405,40 @@ Feature: Temporal Adapter Operations
     And the exported Temporal spans should share one trace id
     And the exported StartActivity span should carry messaging "send" attributes for task queue "otel-saga-queue"
     And the collector should have exported Temporal workflow and activity spans:
-      | name                  |
-      | HandleSignal:<signal> |
-      | HandleUpdate:add_note |
-      | HandleQuery:get_state |
+      | name                    |
+      | HandleSignal:<signal>   |
+      | HandleUpdate:add_note   |
+      | HandleQuery:get_state   |
+      | ValidateUpdate:add_note |
     And the exported HandleSignal span should carry messaging attributes for task queue "otel-saga-queue"
+    And the exported ValidateUpdate span should carry messaging attributes for task queue "otel-saga-queue"
+    And the collector should have exported Temporal workflow and activity spans:
+      | name                         |
+      | SignalWorkflow:<signal>      |
+      | QueryWorkflow:get_state      |
+      | StartWorkflowUpdate:add_note |
+    And the exported SignalWorkflow span should carry messaging "send" attributes without a destination
+    And the exported QueryWorkflow span should carry messaging "send" attributes without a destination
+    And the exported StartWorkflowUpdate span should carry messaging "send" attributes without a destination
 
     Examples:
       | signal  | status      | steps                                                       | compensations                    | last_span                        |
       | approve | completed   | reserve_inventory,charge_payment,ship_order,notify_customer | none                             | RunWorkflow:NotificationWorkflow |
       | cancel  | compensated | reserve_inventory,charge_payment                            | refund_payment,release_inventory | RunActivity:release_inventory    |
+
+  Scenario: Temporal tracing marks update-with-start and a standalone activity as sends
+    Given Temporal metrics and traces are exported to the collector
+    And a worker is started for task queue "otel-send-queue" with OrderSagaWorkflow
+    When I add the note "rush" to a new order saga "otel-saga-uws" with update-with-start
+    And I run a standalone greeting activity for "solo" on the last worker queue
+    Then the collector should have exported Temporal workflow and activity spans:
+      | name                                           |
+      | StartUpdateWithStartWorkflow:OrderSagaWorkflow |
+      | StartActivity:greeting_activity                |
+      | RunActivity:greeting_activity                  |
+    And the exported StartUpdateWithStartWorkflow span should carry messaging "send" attributes for task queue "otel-send-queue"
+    And the exported StartActivity span should carry messaging "send" attributes for task queue "otel-send-queue"
+    And the standalone activity should return "Hello, solo!"
 
   Scenario Outline: Elastic APM Server shows the saga as linked messaging transactions <route>
     Given Temporal traces are exported to Elastic APM Server <route>
@@ -414,6 +453,10 @@ Feature: Temporal Adapter Operations
     And Elastic APM Server should store a "messaging" transaction named "HandleUpdate:add_note"
     And Elastic APM Server should store a "messaging" transaction named "HandleSignal:approve"
     And Elastic APM Server should store a "messaging" transaction named "HandleQuery:get_state"
+    And Elastic APM Server should store a "messaging" transaction named "ValidateUpdate:add_note"
+    And Elastic APM Server should store a "messaging" transaction named "SignalWorkflow:approve"
+    And Elastic APM Server should store a "messaging" transaction named "QueryWorkflow:get_state"
+    And Elastic APM Server should store a "messaging" transaction named "StartWorkflowUpdate:add_note"
     And Elastic APM Server should store 3 "messaging" transactions named "RunActivity:charge_payment"
     And Elastic APM Server should store a "messaging" transaction named "RunWorkflow:NotificationWorkflow"
     And Elastic APM Server should store a "messaging" span named "StartChildWorkflow:NotificationWorkflow"

@@ -18,8 +18,11 @@ from temporalio import activity, workflow
 from temporalio.client import (
     ActivityHandle,
     OutboundInterceptor,
+    QueryWorkflowInput,
+    SignalWorkflowInput,
     StartActivityInput as ClientStartActivityInput,
     StartWorkflowInput,
+    StartWorkflowUpdateInput,
     StartWorkflowUpdateWithStartInput,
     WorkflowHandle,
     WorkflowUpdateHandle,
@@ -43,11 +46,13 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
-def _set_messaging_attributes(task_queue: str, operation: str = "process") -> None:
-    """Mark the current span as a messaging operation on the given task queue.
+def _set_messaging_attributes(task_queue: str | None, operation: str = "process") -> None:
+    """Mark the current span as a messaging operation, on the given task queue when there is one.
 
     Args:
-        task_queue (str): The Temporal task queue the work was consumed from (``process``) or dispatched to (``send``).
+        task_queue (str | None): The Temporal task queue the work was consumed from (``process``) or dispatched to
+            (``send``). ``None`` for calls addressed to a workflow id, whose destination is left out: Elastic APM
+            turns it into a service-map node, and workflow ids are unbounded.
         operation (str): The messaging operation, ``process`` for the worker side or ``send`` for the starting side.
     """
     span = trace.get_current_span()
@@ -55,11 +60,12 @@ def _set_messaging_attributes(task_queue: str, operation: str = "process") -> No
     # ``messaging.operation`` is deprecated for ``messaging.operation.type``; backends still read the old key.
     span.set_attribute("messaging.operation", operation)
     span.set_attribute("messaging.operation.type", operation)
-    span.set_attribute("messaging.destination.name", task_queue)
+    if task_queue is not None:
+        span.set_attribute("messaging.destination.name", task_queue)
 
 
 class _MessagingClientInterceptor(OutboundInterceptor):
-    """Adds ``send`` attributes to the ``StartWorkflow`` span that ``OpenTelemetryInterceptor`` opened around it."""
+    """Adds ``send`` attributes to the client spans that ``OpenTelemetryInterceptor`` opened around the call."""
 
     @override
     async def start_workflow(self, input: StartWorkflowInput) -> WorkflowHandle[Any, Any]:
@@ -73,6 +79,42 @@ class _MessagingClientInterceptor(OutboundInterceptor):
         """
         _set_messaging_attributes(input.task_queue, "send")
         return await super().start_workflow(input)
+
+    @override
+    async def signal_workflow(self, input: SignalWorkflowInput) -> None:
+        """Mark the ``SignalWorkflow`` span as a send to a running workflow.
+
+        Args:
+            input (SignalWorkflowInput): The signal input.
+        """
+        _set_messaging_attributes(None, "send")
+        await super().signal_workflow(input)
+
+    @override
+    async def query_workflow(self, input: QueryWorkflowInput) -> Any:
+        """Mark the ``QueryWorkflow`` span as a send to a running workflow.
+
+        Args:
+            input (QueryWorkflowInput): The query input.
+
+        Returns:
+            Any: The query result.
+        """
+        _set_messaging_attributes(None, "send")
+        return await super().query_workflow(input)
+
+    @override
+    async def start_workflow_update(self, input: StartWorkflowUpdateInput) -> WorkflowUpdateHandle[Any]:
+        """Mark the ``StartWorkflowUpdate`` span as a send to a running workflow.
+
+        Args:
+            input (StartWorkflowUpdateInput): The update input.
+
+        Returns:
+            WorkflowUpdateHandle[Any]: The handle of the started update.
+        """
+        _set_messaging_attributes(None, "send")
+        return await super().start_workflow_update(input)
 
     @override
     async def start_update_with_start_workflow(

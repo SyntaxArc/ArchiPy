@@ -17,6 +17,8 @@ from typing import Any, TypeVar
 
 import httpx2
 from behave import given, then, when
+from temporalio.client import WithStartWorkflowOperation
+from temporalio.common import WorkflowIDConflictPolicy
 from temporalio.client import ScheduleIntervalSpec, ScheduleOverlapPolicy, SchedulePolicy, ScheduleSpec
 from temporalio.runtime import LoggingConfig, TelemetryConfig, TelemetryFilter
 
@@ -1329,6 +1331,95 @@ def step_add_note_to_order_saga(context, note, workflow_id):
         return await handle.execute_update("add_note", note)
 
     get_current_scenario_context(context).update_result = run_async(context, run())
+
+
+@when('I add the note "{note}" to a new order saga "{workflow_id}" with update-with-start')
+def step_update_with_start_order_saga(context, note, workflow_id):
+    """Start ``OrderSagaWorkflow`` and send ``add_note`` in the same request."""
+    adapter = get_temporal_adapter(context)
+    order = _order_saga_input()
+
+    async def run():
+        client = await adapter.get_client()
+        start = WithStartWorkflowOperation(
+            OrderSagaWorkflow.run,
+            order,
+            id=workflow_id,
+            task_queue=_last_task_queue(context),
+            id_conflict_policy=WorkflowIDConflictPolicy.USE_EXISTING,
+        )
+        update_result = await client.execute_update_with_start_workflow(
+            OrderSagaWorkflow.add_note,
+            note,
+            start_workflow_operation=start,
+        )
+        workflow_result = await (await start.workflow_handle()).result()
+        return update_result, workflow_result
+
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.update_result, scenario_context.workflow_result = run_async(context, run())
+
+
+@when('I try to add a blank note to the order saga "{workflow_id}"')
+def step_add_blank_note(context, workflow_id):
+    """Send a blank ``add_note`` update and keep the error the validator raised."""
+    adapter = get_temporal_adapter(context)
+
+    async def run():
+        handle = await adapter.get_workflow_handle(workflow_id)
+        try:
+            await handle.execute_update("add_note", " ")
+        except Exception as error:
+            return error
+        return None
+
+    get_current_scenario_context(context).update_error = run_async(context, run())
+
+
+@when('I run a standalone greeting activity for "{name}" on the last worker queue')
+def step_standalone_activity(context, name):
+    """Start the greeting activity straight from the client, without a workflow."""
+    adapter = get_temporal_adapter(context)
+
+    async def run():
+        from uuid import uuid4
+
+        client = await adapter.get_client()
+        return await client.execute_activity(
+            greeting_activity,
+            name,
+            id=f"standalone-{uuid4()}",
+            task_queue=_last_task_queue(context),
+            start_to_close_timeout=timedelta(seconds=10),
+        )
+
+    get_current_scenario_context(context).activity_result = run_async(context, run())
+
+
+@then("the blank note should be rejected by the update validator")
+def step_blank_note_rejected(context):
+    """Assert the update failed instead of being recorded."""
+    error = get_current_scenario_context(context).update_error
+    assert error is not None, "The blank note was accepted"
+
+
+@then('the standalone activity should return "{expected}"')
+def step_standalone_activity_result(context, expected):
+    """Assert the standalone activity result."""
+    actual = get_current_scenario_context(context).activity_result
+    assert actual == expected, f"Activity result {actual!r} != {expected!r}"
+
+
+@then('the exported {span_prefix} span should carry messaging "{operation}" attributes without a destination')
+def step_span_has_messaging_attributes_without_destination(context, span_prefix, operation):
+    """Assert a span addressed to a workflow id carries the messaging type but no destination."""
+    spans = get_current_scenario_context(context).get("temporal_spans")
+    matching = [span for span in spans if span.name.startswith(f"{span_prefix}:")]
+    assert matching, f"No {span_prefix} span among {[span.name for span in spans]}"
+    for span in matching:
+        assert span.attributes.get("messaging.system") == "temporal", f"{span.name}: {dict(span.attributes)}"
+        assert span.attributes.get("messaging.operation.type") == operation, f"{span.name}: {dict(span.attributes)}"
+        assert "messaging.destination.name" not in span.attributes, f"{span.name}: {dict(span.attributes)}"
 
 
 @then("the update result should be {expected:d}")
