@@ -41,6 +41,7 @@ class TestConfig(BaseConfig):
     MAILPIT__IMAGE: str
     OTEL_COLLECTOR__IMAGE: str
     PUSHGATEWAY__IMAGE: str
+    APM_SERVER__IMAGE: str
     TESTCONTAINERS_RYUK_CONTAINER_IMAGE: str | None = None
 
     def __init__(self, **kwargs) -> None:

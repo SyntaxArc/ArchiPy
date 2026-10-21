@@ -3,11 +3,13 @@
 import datetime
 import json
 import logging
+import os
 import tempfile
 import time
 from pathlib import Path
 
 import httpx2
+from opentelemetry.instrumentation.utils import suppress_instrumentation
 from testcontainers.community.mysql import MySqlContainer
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
@@ -50,6 +52,8 @@ CONTAINER_MEM_LIMITS: dict[str, str] = {
     "mailpit": "64m",
     "otel-collector": "128m",
     "pushgateway": "64m",
+    "apm-server": "256m",
+    "otel-collector-apm": "128m",
 }
 
 # Test data is tiny and throwaway: small buffers, and no durability work.
@@ -93,6 +97,8 @@ TAG_CONTAINER_MAP: dict[str, str] = {
     "needs-mailpit-plain": "mailpit-plain",
     "needs-otel-collector": "otel-collector",
     "needs-pushgateway": "pushgateway",
+    "needs-apm-server": "apm-server",
+    "needs-apm-collector": "otel-collector-apm",
 }
 
 
@@ -647,6 +653,41 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
         logger.info("Keycloak container stopped")
 
 
+def _build_elasticsearch_container(image: str) -> ElasticSearchContainer:
+    container = ElasticSearchContainer(image=image)
+    # Default ES heap can OOM-kill the container (exit 137) on shared CI/dev hosts.
+    container.with_env("ES_JAVA_OPTS", "-Xms1g -Xmx1g")
+    container.with_env("discovery.type", "single-node")
+    if container._wait_strategy is not None:
+        # ES startup can exceed the default 120s on loaded machines; allow up to 5 minutes.
+        container._wait_strategy = container._wait_strategy.with_startup_timeout(300)
+    return container
+
+
+def _wait_for_elasticsearch(url: str, timeout: float = 120.0) -> None:
+    """Block until the cluster reports at least yellow health (primary shards allocated).
+
+    The container wait strategy only checks that HTTP answers, which happens before the master is elected and
+    shards can be allocated; index creation then fails under load.
+    """
+    deadline = time.monotonic() + timeout
+    last_error = "no response"
+    while time.monotonic() < deadline:
+        try:
+            response = httpx2.get(
+                f"{url}/_cluster/health",
+                params={"wait_for_status": "yellow", "timeout": "5s"},
+                timeout=10,
+            )
+            if response.status_code == 200 and response.json().get("status") in ("yellow", "green"):
+                return
+            last_error = f"HTTP {response.status_code}: {response.text[:200]}"
+        except (httpx2.HTTPError, ValueError) as e:
+            last_error = str(e)
+        time.sleep(1)
+    raise TimeoutError(f"Elasticsearch cluster not ready after {timeout}s: {last_error}")
+
+
 @ContainerManager.register("elasticsearch")
 class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
     def __init__(self, config: ElasticsearchConfig | None = None, image: str | None = None) -> None:
@@ -661,18 +702,16 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         self.password: str | None = self.config.HTTP_PASSWORD.get_secret_value() if self.config.HTTP_PASSWORD else None
         self.cluster_name: str = "test-cluster"
 
-        self._container = ElasticSearchContainer(image=self.image)
-        # Default ES heap can OOM-kill the container (exit 137) on shared CI/dev hosts.
-        self._container.with_env("ES_JAVA_OPTS", "-Xms1g -Xmx1g")
-        self._container.with_env("discovery.type", "single-node")
-        if self._container._wait_strategy is not None:
-            # ES startup can exceed the default 120s on loaded machines; allow up to 5 minutes.
-            self._container._wait_strategy = self._container._wait_strategy.with_startup_timeout(300)
+        self._container: ElasticSearchContainer | None = _build_elasticsearch_container(self.image)
 
     def start(self) -> ElasticSearchContainer:
         """Start the Elasticsearch container."""
         if self._is_running:
             return self._container
+
+        if self._container is None:
+            # The container is gone after stop(); build a fresh one so the test run can start it again.
+            self._container = _build_elasticsearch_container(self.image)
 
         self._container.start()
         self._is_running = True
@@ -691,24 +730,7 @@ class ElasticsearchTestContainer(metaclass=Singleton, thread_safe=True):
         return self._container
 
     def _wait_until_ready(self, timeout: float = 120.0) -> None:
-        """Block until the cluster reports at least yellow health (primary shards allocated).
-
-        The container wait strategy only checks that HTTP answers, which happens before the
-        master is elected and shards can be allocated; index creation then fails under load.
-        """
-        url = f"http://{self.host}:{self.port}/_cluster/health"
-        deadline = time.monotonic() + timeout
-        last_error = "no response"
-        while time.monotonic() < deadline:
-            try:
-                response = httpx2.get(url, params={"wait_for_status": "yellow", "timeout": "5s"}, timeout=10)
-                if response.status_code == 200 and response.json().get("status") in ("yellow", "green"):
-                    return
-                last_error = f"HTTP {response.status_code}: {response.text[:200]}"
-            except (httpx2.HTTPError, ValueError) as e:
-                last_error = str(e)
-            time.sleep(1)
-        raise TimeoutError(f"Elasticsearch cluster not ready after {timeout}s: {last_error}")
+        _wait_for_elasticsearch(f"http://{self.host}:{self.port}", timeout)
 
     def stop(self) -> None:
         """Stop the Elasticsearch container."""
@@ -1518,6 +1540,19 @@ service:
       exporters: [file/logs]
 """
 
+# Same collector, but every signal is also forwarded to Elastic APM Server over OTLP/gRPC, as a collector-based
+# production setup does (Elastic advises the ``otlp`` exporter, not the ``elasticsearch`` one).
+OTEL_COLLECTOR_APM_CONFIG_TEMPLATE: str = (
+    OTEL_COLLECTOR_CONFIG.replace(
+        "exporters:\n  file/traces:",
+        "exporters:\n  otlp/apm:\n    endpoint: {apm_endpoint}\n    tls:\n      insecure: true\n  file/traces:",
+        1,
+    )
+    .replace("[file/traces]", "[file/traces, otlp/apm]")
+    .replace("[file/metrics]", "[file/metrics, otlp/apm]")
+    .replace("[file/logs]", "[file/logs, otlp/apm]")
+)
+
 
 @ContainerManager.register("otel-collector")
 class OtelCollectorTestContainer(metaclass=Singleton, thread_safe=True):
@@ -1532,6 +1567,7 @@ class OtelCollectorTestContainer(metaclass=Singleton, thread_safe=True):
     GRPC_PORT = 4317
     HTTP_PORT = 4318
     SIGNALS = ("traces", "metrics", "logs")
+    SHARED_KEY = "otel_collector"
 
     def __init__(self, image: str | None = None) -> None:
         """Initialize the collector test container.
@@ -1545,9 +1581,19 @@ class OtelCollectorTestContainer(metaclass=Singleton, thread_safe=True):
         self._work_dir: tempfile.TemporaryDirectory | None = None
         self._offsets: dict[str, int] = dict.fromkeys(self.SIGNALS, 0)
         self._is_running = False
+        self._shared_out_dir: Path | None = None
         self.host: str | None = None
         self.grpc_endpoint: str | None = None
         self.http_endpoint: str | None = None
+
+    @property
+    def out_dir(self) -> Path:
+        """Directory the collector writes its OTLP JSON lines to."""
+        if self._shared_out_dir is not None:
+            return self._shared_out_dir
+        if self._work_dir is None:
+            raise RuntimeError("OpenTelemetry Collector is not running")
+        return Path(self._work_dir.name) / "out"
 
     def _build(self) -> DockerContainer:
         self._work_dir = tempfile.TemporaryDirectory()
@@ -1558,20 +1604,36 @@ class OtelCollectorTestContainer(metaclass=Singleton, thread_safe=True):
         out_dir.mkdir()
         # The collector runs as an unprivileged user and must be able to create the output files.
         out_dir.chmod(0o777)
-        (config_dir / "config.yaml").write_text(OTEL_COLLECTOR_CONFIG)
+        (config_dir / "config.yaml").write_text(self._config())
         return (
             DockerContainer(self.image)
             .with_exposed_ports(self.GRPC_PORT, self.HTTP_PORT)
             .with_volume_mapping(str(config_dir), "/otel-config", "ro")
             .with_volume_mapping(str(out_dir), "/otel-out", "rw")
             .with_command("--config=/otel-config/config.yaml")
-            .with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["otel-collector"])
+            .with_kwargs(
+                mem_limit=CONTAINER_MEM_LIMITS["otel-collector"],
+                extra_hosts={"host.docker.internal": "host-gateway"},
+            )
         )
 
-    def start(self) -> DockerContainer:
-        """Start the collector and wait until its OTLP receivers are listening."""
+    def _config(self) -> str:
+        return OTEL_COLLECTOR_CONFIG
+
+    def start(self) -> DockerContainer | None:
+        """Start the collector and wait until its OTLP receivers are listening, or adopt the shared one."""
         if self._is_running:
             return self._container
+
+        shared = shared_telemetry_stack()
+        if shared is not None and self.SHARED_KEY in shared:
+            entry = shared[self.SHARED_KEY]
+            self.grpc_endpoint = entry["grpc"]
+            self.http_endpoint = entry["http"]
+            self._shared_out_dir = Path(entry["out_dir"])
+            self._offsets = dict.fromkeys(self.SIGNALS, 0)
+            self._is_running = True
+            return None
 
         if self._container is None:
             self._container = self._build()
@@ -1600,6 +1662,7 @@ class OtelCollectorTestContainer(metaclass=Singleton, thread_safe=True):
 
         self._container = None
         self._work_dir = None
+        self._shared_out_dir = None
         self._is_running = False
         self.host = None
         self.grpc_endpoint = None
@@ -1608,9 +1671,7 @@ class OtelCollectorTestContainer(metaclass=Singleton, thread_safe=True):
         logger.info("OpenTelemetry Collector stopped")
 
     def _signal_path(self, signal: str) -> Path:
-        if self._work_dir is None:
-            raise RuntimeError("OpenTelemetry Collector is not running")
-        return Path(self._work_dir.name) / "out" / f"{signal}.jsonl"
+        return self.out_dir / f"{signal}.jsonl"
 
     def mark(self) -> None:
         """Remember the current end of every signal file so later reads ignore older data."""
@@ -1715,3 +1776,237 @@ class PushgatewayTestContainer(metaclass=Singleton, thread_safe=True):
         """Delete every stored group through the admin API."""
         response = httpx2.put(f"{self.url}/api/v1/admin/wipe", timeout=5)
         response.raise_for_status()
+
+
+APM_SERVER_CONFIG_TEMPLATE = """\
+apm-server:
+  host: "0.0.0.0:8200"
+  auth.anonymous.enabled: true
+  # Standalone mode without Kibana: the apm-data plugin of Elasticsearch already ships the index templates.
+  data_streams.wait_for_integration: false
+output.elasticsearch:
+  hosts: ["{elasticsearch_url}"]
+  # Index what arrived almost at once; the default of one second only slows the assertions down.
+  flush_interval: 100ms
+"""
+
+# A parallel run starts the collector and the Elastic APM stack once for every feature process
+# (``scripts/behave_parallel.py`` through ``python -m features.shared_telemetry_stack``) and passes their
+# endpoints here as JSON: ``elasticsearch_url`` and ``apm_endpoint`` for APM Server, and one
+# ``{"grpc", "http", "out_dir"}`` entry per collector (``otel_collector``, ``apm_collector``).
+SHARED_TELEMETRY_ENV = "ARCHIPY_SHARED_TELEMETRY"
+
+
+def shared_telemetry_stack() -> dict | None:
+    """Return the endpoints of the stack another process started, or None when this process owns its own."""
+    raw = os.environ.get(SHARED_TELEMETRY_ENV)
+    return json.loads(raw) if raw else None
+
+
+
+@ContainerManager.register("apm-server")
+class ApmServerTestContainer(metaclass=Singleton, thread_safe=True):
+    """Test container for the official Elastic APM Server in standalone mode, with an Elasticsearch of its own.
+
+    It accepts OTLP over gRPC and HTTP on one port and stores traces, metrics and logs in the APM data streams, so
+    tests can check what Elastic APM would show (for example ``transaction.type``). Kibana is not needed.
+
+    When ``ARCHIPY_SHARED_TELEMETRY`` is set, another process already runs the stack and this class only points at it;
+    every scenario exports under its own ``service.name``, so scenarios sharing the stack do not see each other.
+    """
+
+    PORT = 8200
+    TRACES_INDEX = "traces-apm*"
+
+    def __init__(self, image: str | None = None) -> None:
+        """Initialize the APM Server test container.
+
+        Args:
+            image: Docker image override. Defaults to APM_SERVER__IMAGE from TestConfig.
+        """
+        self.name = "apm-server"
+        self.image = image or BaseConfig.global_config().APM_SERVER__IMAGE
+        self._container: DockerContainer | None = None
+        self._elasticsearch: ElasticSearchContainer | None = None
+        self._work_dir: tempfile.TemporaryDirectory | None = None
+        self._is_running = False
+        self.host: str | None = None
+        self.grpc_endpoint: str | None = None
+        self.http_endpoint: str | None = None
+        self.port: int | None = None
+        self.elasticsearch_url: str | None = None
+
+    def _build(self, elasticsearch_port: int) -> DockerContainer:
+        self._work_dir = tempfile.TemporaryDirectory()
+        config_path = Path(self._work_dir.name) / "apm-server.yml"
+        # APM Server rejects a config file that other users can write.
+        config_path.write_text(
+            APM_SERVER_CONFIG_TEMPLATE.format(elasticsearch_url=f"http://host.docker.internal:{elasticsearch_port}"),
+        )
+        config_path.chmod(0o644)
+        return (
+            DockerContainer(self.image)
+            .with_exposed_ports(self.PORT)
+            .with_volume_mapping(str(config_path), "/usr/share/apm-server/apm-server.yml", "ro")
+            .with_kwargs(
+                mem_limit=CONTAINER_MEM_LIMITS["apm-server"],
+                extra_hosts={"host.docker.internal": "host-gateway"},
+            )
+        )
+
+    def start(self) -> DockerContainer | None:
+        """Start Elasticsearch and APM Server and wait until the intake answers, or adopt the shared stack."""
+        if self._is_running:
+            return self._container
+
+        shared = shared_telemetry_stack()
+        if shared is not None and "apm_endpoint" in shared:
+            self.elasticsearch_url = shared["elasticsearch_url"]
+            self.grpc_endpoint = shared["apm_endpoint"]
+            self.http_endpoint = self.grpc_endpoint
+            self.port = int(self.grpc_endpoint.rsplit(":", 1)[1])
+            self._is_running = True
+            return None
+
+        self._elasticsearch = _build_elasticsearch_container(BaseConfig.global_config().ELASTIC__IMAGE)
+        self._elasticsearch.start()
+        elasticsearch_host = self._elasticsearch.get_container_host_ip()
+        elasticsearch_port = int(self._elasticsearch.get_exposed_port(9200))
+        self.elasticsearch_url = f"http://{elasticsearch_host}:{elasticsearch_port}"
+        _wait_for_elasticsearch(self.elasticsearch_url)
+
+        self._container = self._build(elasticsearch_port)
+        self._container.start()
+        wait_for_logs(self._container, r"no longer blocking ingestion", timeout=120)
+        self._is_running = True
+
+        self.host = self._container.get_container_host_ip()
+        port = self._container.get_exposed_port(self.PORT)
+        self.port = int(port)
+        self.grpc_endpoint = f"http://{self.host}:{port}"
+        self.http_endpoint = self.grpc_endpoint
+
+        logger.info("Elastic APM Server started at %s", self.http_endpoint)
+        return self._container
+
+    def stop(self) -> None:
+        """Stop APM Server and its Elasticsearch; a shared stack belongs to the process that started it."""
+        if not self._is_running:
+            return
+
+        if self._container:
+            self._container.stop()
+        if self._elasticsearch:
+            self._elasticsearch.stop()
+        if self._work_dir:
+            self._work_dir.cleanup()
+
+        self._container = None
+        self._elasticsearch = None
+        self._work_dir = None
+        self._is_running = False
+        self.host = None
+        self.grpc_endpoint = None
+        self.http_endpoint = None
+        self.port = None
+        self.elasticsearch_url = None
+
+        logger.info("Elastic APM Server stopped")
+
+    def events(self, service_name: str) -> list[dict]:
+        """Return the stored APM transactions and spans of one service.
+
+        Args:
+            service_name: ``service.name`` the application exported with.
+
+        Returns:
+            list[dict]: Each document's ``_source`` limited to the event kind, name, type and subtype fields.
+        """
+        base = f"{self.elasticsearch_url}/{self.TRACES_INDEX}"
+        # The test process is instrumented too; its own queries must not show up as traces of the scenario.
+        with suppress_instrumentation():
+            httpx2.post(f"{base}/_refresh", timeout=10)
+            response = httpx2.post(
+                f"{base}/_search",
+                json={
+                    "size": 200,
+                    "query": {"term": {"service.name": service_name}},
+                    "_source": [
+                        "processor.event",
+                        "transaction.name",
+                        "transaction.type",
+                        "span.name",
+                        "span.type",
+                        "span.subtype",
+                    ],
+                },
+                timeout=10,
+            )
+        if response.status_code == 404:
+            return []
+        response.raise_for_status()
+        return [hit["_source"] for hit in response.json()["hits"]["hits"]]
+
+    def _search(self, index: str, body: dict) -> list[dict]:
+        base = f"{self.elasticsearch_url}/{index}"
+        # The test process is instrumented too; its own queries must not show up as telemetry of the scenario.
+        with suppress_instrumentation():
+            httpx2.post(f"{base}/_refresh", timeout=10)
+            response = httpx2.post(f"{base}/_search", json={"size": 200, **body}, timeout=10)
+        if response.status_code == 404:
+            return []
+        response.raise_for_status()
+        return [hit["_source"] for hit in response.json()["hits"]["hits"]]
+
+    def metric_names(self, service_name: str, labels: dict[str, str] | None = None) -> set[str]:
+        """Return the names of the application metrics stored for one service.
+
+        Args:
+            service_name: ``service.name`` the application exported with.
+            labels: Optional metric labels every stored document must carry (for example ``task_queue``).
+
+        Returns:
+            set[str]: The metric field names Elastic APM stored (for example ``test.work.calls``).
+        """
+        filters = [{"term": {"service.name": service_name}}]
+        filters += [{"term": {f"labels.{key}": value}} for key, value in (labels or {}).items()]
+        documents = self._search("metrics-apm.app.*", {"query": {"bool": {"filter": filters}}})
+        # Application metrics are stored as top-level fields next to the metadata objects.
+        metadata = {"@timestamp", "agent", "cloud", "data_stream", "ecs", "event", "host", "labels", "metricset"}
+        metadata |= {"observer", "processor", "service", "tags", "timestamp_us", "_metric_descriptions"}
+        return {key for document in documents for key in document if key not in metadata}
+
+    def logs(self, service_name: str) -> list[dict]:
+        """Return the stored application logs of one service with their message and trace id."""
+        return self._search(
+            "logs-apm.app.*",
+            {"query": {"term": {"service.name": service_name}}, "_source": ["message", "log.level", "trace.id"]},
+        )
+
+    def transactions(self, service_name: str) -> list[dict]:
+        """Return the stored APM transactions of one service."""
+        return [item for item in self.events(service_name) if item["processor"]["event"] == "transaction"]
+
+
+@ContainerManager.register("otel-collector-apm")
+class ApmForwardingCollectorTestContainer(OtelCollectorTestContainer):
+    """OpenTelemetry Collector that also forwards every signal to the Elastic APM Server container.
+
+    It keeps the file exporters of ``OtelCollectorTestContainer``, so tests can read what the collector received
+    and, through ``ApmServerTestContainer``, what Elasticsearch stored.
+    """
+
+    SHARED_KEY = "apm_collector"
+
+    def __init__(self, image: str | None = None) -> None:
+        """Initialize the forwarding collector.
+
+        Args:
+            image: Docker image override. Defaults to OTEL_COLLECTOR__IMAGE from TestConfig.
+        """
+        super().__init__(image)
+        self.name = "otel-collector-apm"
+
+    def _config(self) -> str:
+        apm_server = ContainerManager.get_container("apm-server")
+        return OTEL_COLLECTOR_APM_CONFIG_TEMPLATE.format(apm_endpoint=f"host.docker.internal:{apm_server.port}")

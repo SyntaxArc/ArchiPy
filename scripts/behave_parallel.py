@@ -345,6 +345,51 @@ def _parse_arguments(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
     return parser.parse_args(own), behave_args
 
 
+APM_TAGS = frozenset({"needs-apm-server", "needs-apm-collector"})
+COLLECTOR_TAG = "needs-otel-collector"
+SHARED_TELEMETRY_ENV = "ARCHIPY_SHARED_TELEMETRY"
+SHARED_TELEMETRY_START_TIMEOUT_SECONDS = 600
+
+
+def _start_shared_telemetry_stack(runs: list[FeatureRun]) -> subprocess.Popen | None:
+    """Start the collector and the Elastic APM stack once and export their endpoints to the feature processes.
+
+    Without this every feature process would start its own collector, Elasticsearch and APM Server. Only the parts
+    a selected feature asks for through its tags are started.
+    """
+    tags = set().union(*(_feature_tags(run.path) for run in runs))
+    share_apm = bool(tags & APM_TAGS)
+    share_collector = share_apm or COLLECTOR_TAG in tags
+    if not share_collector:
+        return None
+    command = [sys.executable, "-m", "features.shared_telemetry_stack", "--collector"]
+    if share_apm:
+        command.append("--apm")
+    print("Starting the shared telemetry containers...", flush=True)
+    stack = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE, text=True)
+    result: list[str] = []
+    reader = threading.Thread(target=lambda: result.append(stack.stdout.readline()), daemon=True)
+    reader.start()
+    reader.join(SHARED_TELEMETRY_START_TIMEOUT_SECONDS)
+    if not result or not result[0].strip():
+        _stop_shared_telemetry_stack(stack)
+        raise RuntimeError("The shared telemetry containers did not start")
+    os.environ[SHARED_TELEMETRY_ENV] = result[0].strip()
+    print(f"Shared telemetry containers ready: {result[0].strip()}", flush=True)
+    return stack
+
+
+def _stop_shared_telemetry_stack(stack: subprocess.Popen | None) -> None:
+    if stack is None:
+        return
+    stack.send_signal(signal.SIGTERM)
+    try:
+        stack.wait(timeout=120)
+    except subprocess.TimeoutExpired:
+        stack.kill()
+    os.environ.pop(SHARED_TELEMETRY_ENV, None)
+
+
 def main(argv: list[str]) -> int:
     """Run the features and return the exit code: 0 when every feature passed."""
     arguments, behave_args = _parse_arguments(argv)
@@ -368,12 +413,15 @@ def main(argv: list[str]) -> int:
         behave_args=behave_args,
     )
     started = time.monotonic()
+    telemetry_stack = _start_shared_telemetry_stack(runs)
     try:
         runner.run_all(runs)
     except KeyboardInterrupt:
         _save_durations(runs, _load_durations())
         print(_summary(runs, time.monotonic() - started))
         return 130
+    finally:
+        _stop_shared_telemetry_stack(telemetry_stack)
     wall_seconds = time.monotonic() - started
     _save_durations(runs, _load_durations())
     print(_summary(runs, wall_seconds))
