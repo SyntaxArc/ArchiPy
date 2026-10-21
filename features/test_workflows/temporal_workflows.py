@@ -11,15 +11,22 @@ from typing import Any
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
+from temporalio.exceptions import ActivityError, ApplicationError
 
 # Import activities - using with_start_activity to reference them
 with workflow.unsafe.imports_passed_through():
     from features.test_workflows.temporal_activities import (
         calculation_activity,
+        charge_payment,
         data_processing_activity,
         failing_activity,
         greeting_activity,
         long_running_activity,
+        notify_customer,
+        refund_payment,
+        release_inventory,
+        reserve_inventory,
+        ship_order,
     )
 
 
@@ -306,3 +313,136 @@ class ConcurrentActivitiesWorkflow:
 
         results = await asyncio.gather(*tasks)
         return list(results)
+
+
+@workflow.defn(name="NotificationWorkflow")
+class NotificationWorkflow:
+    """Child workflow that notifies the customer once an order shipped."""
+
+    @workflow.run
+    async def run(self, order_id: str) -> str:
+        """Run the notification activity.
+
+        Args:
+            order_id (str): Order identifier.
+
+        Returns:
+            str: Notification message.
+        """
+        return await workflow.execute_activity(
+            notify_customer,
+            order_id,
+            start_to_close_timeout=timedelta(seconds=10),
+        )
+
+
+@workflow.defn(name="OrderSagaWorkflow")
+class OrderSagaWorkflow:
+    """Order saga: reserve, charge (with retries), optionally wait for approval, ship, notify via a child workflow.
+
+    When a step fails, the compensations of the completed steps run in reverse order. It also exposes a signal
+    (``approve`` / ``cancel``), a query (``get_state``) and an update (``add_note``) so one workflow covers the Temporal features.
+    """
+
+    def __init__(self) -> None:
+        self._steps: list[str] = []
+        self._compensations: list[str] = []
+        self._notes: list[str] = []
+        self._approved = False
+        self._cancelled = False
+        self._status = "running"
+
+    @workflow.signal
+    async def approve(self) -> None:
+        """Approve the order so a saga waiting for approval continues."""
+        self._approved = True
+
+    @workflow.signal
+    async def cancel(self) -> None:
+        """Cancel the order while it waits for approval, which reverts the completed steps."""
+        self._cancelled = True
+
+    @workflow.query
+    def get_state(self) -> dict[str, Any]:
+        """Return the saga progress.
+
+        Returns:
+            dict[str, Any]: Status, completed steps, run compensations and notes.
+        """
+        return {
+            "status": self._status,
+            "steps": self._steps,
+            "compensations": self._compensations,
+            "notes": self._notes,
+        }
+
+    @workflow.update
+    async def add_note(self, note: str) -> int:
+        """Attach a note to the order.
+
+        Args:
+            note (str): The note text.
+
+        Returns:
+            int: The number of notes now attached.
+        """
+        self._notes.append(note)
+        return len(self._notes)
+
+    @workflow.run
+    async def run(self, order: dict[str, Any]) -> dict[str, Any]:
+        """Run the saga.
+
+        Args:
+            order (dict[str, Any]): ``order_id``, ``payment_succeeds_on_attempt``, ``fail_shipping`` and
+                ``require_approval``.
+
+        Returns:
+            dict[str, Any]: The final state, with status ``completed`` or ``compensated``.
+        """
+        order_id = order["order_id"]
+        timeout = timedelta(seconds=10)
+        payment_retry = RetryPolicy(
+            maximum_attempts=4,
+            initial_interval=timedelta(milliseconds=100),
+            backoff_coefficient=1.0,
+        )
+        try:
+            await workflow.execute_activity(reserve_inventory, order_id, start_to_close_timeout=timeout)
+            self._steps.append("reserve_inventory")
+            await workflow.execute_activity(
+                charge_payment,
+                args=[order_id, order.get("payment_succeeds_on_attempt", 1)],
+                start_to_close_timeout=timeout,
+                retry_policy=payment_retry,
+            )
+            self._steps.append("charge_payment")
+            if order.get("require_approval"):
+                await workflow.wait_condition(lambda: self._approved or self._cancelled, timeout=timedelta(seconds=30))
+                if self._cancelled:
+                    raise ApplicationError("order cancelled", non_retryable=True)
+            await workflow.execute_activity(
+                ship_order,
+                args=[order_id, order.get("fail_shipping", False)],
+                start_to_close_timeout=timeout,
+                retry_policy=RetryPolicy(maximum_attempts=1),
+            )
+            self._steps.append("ship_order")
+            await workflow.execute_child_workflow(
+                NotificationWorkflow.run,
+                order_id,
+                id=f"{workflow.info().workflow_id}-notify",
+            )
+            self._steps.append("notify_customer")
+            self._status = "completed"
+        except (ActivityError, ApplicationError):
+            # Undo the completed steps, last first.
+            for step, name, compensation in (
+                ("charge_payment", "refund_payment", refund_payment),
+                ("reserve_inventory", "release_inventory", release_inventory),
+            ):
+                if step in self._steps:
+                    await workflow.execute_activity(compensation, order_id, start_to_close_timeout=timeout)
+                    self._compensations.append(name)
+            self._status = "compensated"
+        return self.get_state()

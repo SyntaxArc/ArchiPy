@@ -33,11 +33,17 @@ from features.test_helpers import get_current_scenario_context
 from features.test_helpers_otel import CollectorTelemetry
 from features.test_workflows.temporal_activities import (
     calculation_activity,
+    charge_payment,
     counter_activity,
     data_processing_activity,
     failing_activity,
     greeting_activity,
     long_running_activity,
+    notify_customer,
+    refund_payment,
+    release_inventory,
+    reserve_inventory,
+    ship_order,
     status_activity,
 )
 from features.test_workflows.temporal_workflows import (
@@ -46,6 +52,8 @@ from features.test_workflows.temporal_workflows import (
     DataProcessingWorkflow,
     GreetingWorkflow,
     LongRunningWorkflow,
+    NotificationWorkflow,
+    OrderSagaWorkflow,
     RetryWorkflow,
     ScheduledWorkflow,
     SignalQueryWorkflow,
@@ -228,6 +236,8 @@ async def start_test_worker(
             DataProcessingWorkflow,
             LongRunningWorkflow,
             ConcurrentActivitiesWorkflow,
+            OrderSagaWorkflow,
+            NotificationWorkflow,
         ]
 
     if activities is None:
@@ -239,6 +249,12 @@ async def start_test_worker(
             failing_activity,
             counter_activity,
             status_activity,
+            reserve_inventory,
+            release_inventory,
+            charge_payment,
+            refund_payment,
+            ship_order,
+            notify_customer,
         ]
 
     worker_handle = await worker_manager.start_worker(
@@ -330,6 +346,7 @@ def step_start_worker_with_workflow(context, task_queue, workflow_name):
         "DataProcessingWorkflow": DataProcessingWorkflow,
         "LongRunningWorkflow": LongRunningWorkflow,
         "ConcurrentActivitiesWorkflow": ConcurrentActivitiesWorkflow,
+        "OrderSagaWorkflow": OrderSagaWorkflow,
     }
 
     workflow_class = workflow_map.get(workflow_name)
@@ -1238,6 +1255,118 @@ def step_workflow_should_complete_successfully(context, workflow_id):
     context.logger.info(f"Workflow {workflow_id} completed successfully")
 
 
+def _order_saga_input(**overrides: Any) -> dict[str, Any]:
+    """Build the ``OrderSagaWorkflow`` input; defaults are a first-attempt payment, no approval and no failure."""
+    return {
+        "order_id": "order-1",
+        "payment_succeeds_on_attempt": 1,
+        "fail_shipping": False,
+        "require_approval": False,
+        **overrides,
+    }
+
+
+def _last_task_queue(context) -> str:
+    """Return the task queue of the scenario's last worker, or the shared default."""
+    last_worker = getattr(get_current_scenario_context(context), "last_worker", None)
+    return last_worker.task_queue if last_worker else "test-queue"
+
+
+@when(
+    "I execute the order saga with payment succeeding on attempt {attempt:d} "
+    "and shipping failure {fail_shipping:w}",
+)
+def step_execute_order_saga(context, attempt, fail_shipping):
+    """Run ``OrderSagaWorkflow`` to its end and keep the returned state."""
+    adapter = get_temporal_adapter(context)
+    order = _order_saga_input(payment_succeeds_on_attempt=attempt, fail_shipping=fail_shipping == "true")
+
+    async def run():
+        from uuid import uuid4
+
+        client = await adapter.get_client()
+        return await client.execute_workflow(
+            OrderSagaWorkflow.run,
+            order,
+            id=f"saga-{uuid4()}",
+            task_queue=_last_task_queue(context),
+        )
+
+    get_current_scenario_context(context).workflow_result = run_async(context, run())
+
+
+@when(
+    'I start the order saga "{workflow_id}" with payment succeeding on attempt {attempt:d} '
+    "and shipping failure {fail_shipping:w} requiring approval",
+)
+def step_start_order_saga_with_approval(context, workflow_id, attempt, fail_shipping):
+    """Start ``OrderSagaWorkflow`` that waits for the ``approve`` or ``cancel`` signal after the payment."""
+    adapter = get_temporal_adapter(context)
+    order = _order_saga_input(
+        payment_succeeds_on_attempt=attempt,
+        fail_shipping=fail_shipping == "true",
+        require_approval=True,
+    )
+
+    async def run():
+        return await adapter.start_workflow(
+            OrderSagaWorkflow,
+            order,
+            workflow_id=workflow_id,
+            task_queue=_last_task_queue(context),
+        )
+
+    run_async(context, run())
+
+
+@when('I add the note "{note}" to the order saga "{workflow_id}"')
+def step_add_note_to_order_saga(context, note, workflow_id):
+    """Send the ``add_note`` update and keep the note count it returns."""
+    adapter = get_temporal_adapter(context)
+
+    async def run():
+        handle = await adapter.get_workflow_handle(workflow_id)
+        return await handle.execute_update("add_note", note)
+
+    get_current_scenario_context(context).update_result = run_async(context, run())
+
+
+@then("the update result should be {expected:d}")
+def step_update_result(context, expected):
+    """Assert the value the last workflow update returned."""
+    actual = get_current_scenario_context(context).update_result
+    assert actual == expected, f"Update result {actual!r} != {expected!r}"
+
+
+def _assert_order_saga_state(state: dict[str, Any], status: str, steps: str, compensations: str) -> None:
+    """Assert the saga status, completed steps and the compensations that ran (comma separated, ``none`` for empty)."""
+    expected_steps = [] if steps == "none" else steps.split(",")
+    expected_compensations = [] if compensations == "none" else compensations.split(",")
+    assert state["status"] == status, f"Saga status {state['status']!r} != {status!r}: {state}"
+    assert state["steps"] == expected_steps, f"Saga steps {state['steps']} != {expected_steps}"
+    assert state["compensations"] == expected_compensations, (
+        f"Compensations {state['compensations']} != {expected_compensations}"
+    )
+
+
+@then("the order saga should end {status:w} after steps {steps} with compensations {compensations}")
+def step_order_saga_result(context, status, steps, compensations):
+    """Assert the state ``OrderSagaWorkflow`` returned to the client that executed it."""
+    _assert_order_saga_state(get_current_scenario_context(context).workflow_result, status, steps, compensations)
+
+
+@then('the order saga "{workflow_id}" should end {status:w} after steps {steps} with compensations {compensations}')
+def step_started_order_saga_result(context, workflow_id, status, steps, compensations):
+    """Wait for a started ``OrderSagaWorkflow`` and assert the state it returned."""
+    adapter = get_temporal_adapter(context)
+
+    async def run():
+        handle = await adapter.get_workflow_handle(workflow_id)
+        return await handle.result()
+
+    _assert_order_saga_state(run_async(context, run()), status, steps, compensations)
+
+
 # Then steps - Signal and Query Operations
 @then("the query result should be {expected:d}")
 def step_query_result_should_be_int(context, expected):
@@ -1723,15 +1852,16 @@ def step_temporal_spans_share_trace(context):
 
 
 @then('the exported {span_prefix} span should carry messaging attributes for task queue "{task_queue}"')
-def step_run_span_has_messaging_attributes(context, span_prefix, task_queue):
-    """Assert the span has the attributes Elastic APM maps to the ``messaging`` transaction type."""
+@then('the exported {span_prefix} span should carry messaging "{operation}" attributes for task queue "{task_queue}"')
+def step_run_span_has_messaging_attributes(context, span_prefix, task_queue, operation="process"):
+    """Assert the span has the attributes Elastic APM maps to the ``messaging`` type."""
     spans = get_current_scenario_context(context).get("temporal_spans")
     run_spans = [span for span in spans if span.name.startswith(f"{span_prefix}:")]
     assert run_spans, f"No {span_prefix} span among {[span.name for span in spans]}"
     expected = {
         "messaging.system": "temporal",
-        "messaging.operation": "process",
-        "messaging.operation.type": "process",
+        "messaging.operation": operation,
+        "messaging.operation.type": operation,
         "messaging.destination.name": task_queue,
     }
     for span in run_spans:

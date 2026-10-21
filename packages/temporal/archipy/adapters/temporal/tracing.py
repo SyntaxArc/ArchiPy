@@ -15,34 +15,123 @@ from typing import TYPE_CHECKING, Any, override
 
 from opentelemetry import trace
 from temporalio import activity, workflow
+from temporalio.client import (
+    ActivityHandle,
+    OutboundInterceptor,
+    StartActivityInput as ClientStartActivityInput,
+    StartWorkflowInput,
+    StartWorkflowUpdateWithStartInput,
+    WorkflowHandle,
+    WorkflowUpdateHandle,
+)
 from temporalio.contrib.opentelemetry import OpenTelemetryInterceptor
 from temporalio.plugin import SimplePlugin
 from temporalio.worker import (
     ActivityInboundInterceptor,
     ExecuteActivityInput,
+    StartActivityInput,
+    StartChildWorkflowInput,
     WorkflowInterceptorClassInput,
+    WorkflowOutboundInterceptor,
     WorkflowRunner,
 )
 from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner
 
-from archipy.models.errors import InvalidArgumentError
+from archipy.models.errors import ConfigurationError, InvalidArgumentError
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
 
-def _set_messaging_attributes(task_queue: str) -> None:
-    """Mark the current span as a messaging ``process`` operation on the given task queue.
+def _set_messaging_attributes(task_queue: str, operation: str = "process") -> None:
+    """Mark the current span as a messaging operation on the given task queue.
 
     Args:
-        task_queue (str): The Temporal task queue the activity or workflow task was consumed from.
+        task_queue (str): The Temporal task queue the work was consumed from (``process``) or dispatched to (``send``).
+        operation (str): The messaging operation, ``process`` for the worker side or ``send`` for the starting side.
     """
     span = trace.get_current_span()
     span.set_attribute("messaging.system", "temporal")
     # ``messaging.operation`` is deprecated for ``messaging.operation.type``; backends still read the old key.
-    span.set_attribute("messaging.operation", "process")
-    span.set_attribute("messaging.operation.type", "process")
+    span.set_attribute("messaging.operation", operation)
+    span.set_attribute("messaging.operation.type", operation)
     span.set_attribute("messaging.destination.name", task_queue)
+
+
+class _MessagingClientInterceptor(OutboundInterceptor):
+    """Adds ``send`` attributes to the ``StartWorkflow`` span that ``OpenTelemetryInterceptor`` opened around it."""
+
+    @override
+    async def start_workflow(self, input: StartWorkflowInput) -> WorkflowHandle[Any, Any]:
+        """Mark the ``StartWorkflow`` span as a send to the workflow task queue.
+
+        Args:
+            input (StartWorkflowInput): The start workflow input.
+
+        Returns:
+            WorkflowHandle[Any, Any]: The handle of the started workflow.
+        """
+        _set_messaging_attributes(input.task_queue, "send")
+        return await super().start_workflow(input)
+
+    @override
+    async def start_update_with_start_workflow(
+        self,
+        input: StartWorkflowUpdateWithStartInput,
+    ) -> WorkflowUpdateHandle[Any]:
+        """Mark the ``StartUpdateWithStartWorkflow`` span as a send to the workflow task queue.
+
+        Args:
+            input (StartWorkflowUpdateWithStartInput): The update-with-start input.
+
+        Returns:
+            WorkflowUpdateHandle[Any]: The handle of the started update.
+        """
+        _set_messaging_attributes(input.start_workflow_input.task_queue, "send")
+        return await super().start_update_with_start_workflow(input)
+
+    @override
+    async def start_activity(self, input: ClientStartActivityInput) -> ActivityHandle[Any]:
+        """Mark the client ``StartActivity`` span as a send to the activity task queue.
+
+        Args:
+            input (ClientStartActivityInput): The standalone start activity input.
+
+        Returns:
+            ActivityHandle[Any]: The handle of the started activity.
+        """
+        _set_messaging_attributes(input.task_queue, "send")
+        return await super().start_activity(input)
+
+
+class _MessagingWorkflowOutboundInterceptor(WorkflowOutboundInterceptor):
+    """Adds ``send`` attributes to the ``StartActivity`` / ``StartChildWorkflow`` spans opened around it."""
+
+    @override
+    def start_activity(self, input: StartActivityInput) -> Any:
+        """Mark the ``StartActivity`` span as a send to the activity task queue.
+
+        Args:
+            input (StartActivityInput): The start activity input; no task queue means the workflow's own.
+
+        Returns:
+            Any: The activity handle.
+        """
+        _set_messaging_attributes(input.task_queue or workflow.info().task_queue, "send")
+        return super().start_activity(input)
+
+    @override
+    async def start_child_workflow(self, input: StartChildWorkflowInput) -> Any:
+        """Mark the ``StartChildWorkflow`` span as a send to the child's task queue.
+
+        Args:
+            input (StartChildWorkflowInput): The start child workflow input; no task queue means the workflow's own.
+
+        Returns:
+            Any: The child workflow handle.
+        """
+        _set_messaging_attributes(input.task_queue or workflow.info().task_queue, "send")
+        return await super().start_child_workflow(input)
 
 
 class _MessagingActivityInterceptor(ActivityInboundInterceptor):
@@ -77,6 +166,20 @@ class MessagingOpenTelemetryInterceptor(OpenTelemetryInterceptor):
             add_temporal_spans (bool): Whether to open the ``StartWorkflow``, ``RunActivity``, etc. spans.
         """
         super().__init__(add_temporal_spans)
+        # Without spans the current span belongs to the caller (e.g. an HTTP request), which must stay untouched.
+        self._mark_spans = add_temporal_spans
+
+    @override
+    def intercept_client(self, next: OutboundInterceptor) -> OutboundInterceptor:
+        """Wrap the next client interceptor so it runs inside the ``StartWorkflow`` span.
+
+        Args:
+            next (OutboundInterceptor): The next interceptor in the chain.
+
+        Returns:
+            OutboundInterceptor: The span-opening interceptor, around the messaging one when spans are enabled.
+        """
+        return super().intercept_client(_MessagingClientInterceptor(next) if self._mark_spans else next)
 
     @override
     def intercept_activity(self, next: ActivityInboundInterceptor) -> ActivityInboundInterceptor:
@@ -88,7 +191,7 @@ class MessagingOpenTelemetryInterceptor(OpenTelemetryInterceptor):
         Returns:
             ActivityInboundInterceptor: The span-opening interceptor around the messaging one.
         """
-        return super().intercept_activity(_MessagingActivityInterceptor(next))
+        return super().intercept_activity(_MessagingActivityInterceptor(next) if self._mark_spans else next)
 
     @override
     def workflow_interceptor_class(self, input: WorkflowInterceptorClassInput) -> Any:
@@ -104,12 +207,23 @@ class MessagingOpenTelemetryInterceptor(OpenTelemetryInterceptor):
             Any: The ``OpenTelemetryInterceptor`` workflow interceptor class, extended with the messaging attributes.
         """
         base = super().workflow_interceptor_class(input)
+        if not hasattr(base, "_workflow_maybe_span"):
+            raise ConfigurationError(
+                operation="workflow_interceptor_class",
+                reason="temporalio no longer provides `_workflow_maybe_span`; update MessagingOpenTelemetryInterceptor",
+            )
+        mark_spans = self._mark_spans
 
         class MessagingWorkflowInterceptor(base):  # ty: ignore[unsupported-base]
+            @override
+            def init(self, outbound: WorkflowOutboundInterceptor) -> None:
+                super().init(_MessagingWorkflowOutboundInterceptor(outbound) if mark_spans else outbound)
+
             @contextmanager
-            def _workflow_maybe_span(self, name: str) -> Generator[None]:
-                with super()._workflow_maybe_span(name):
-                    _set_messaging_attributes(workflow.info().task_queue)
+            def _workflow_maybe_span(self, *args: Any, **kwargs: Any) -> Generator[None]:
+                with super()._workflow_maybe_span(*args, **kwargs):
+                    if mark_spans:
+                        _set_messaging_attributes(workflow.info().task_queue)
                     yield
 
         return MessagingWorkflowInterceptor

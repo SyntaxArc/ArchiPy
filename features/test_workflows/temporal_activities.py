@@ -9,6 +9,7 @@ import asyncio
 from typing import Any
 
 from temporalio import activity
+from temporalio.exceptions import ApplicationError
 
 
 @activity.defn(name="greeting_activity")
@@ -146,3 +147,100 @@ async def status_activity(status: str) -> str:
     """
     await asyncio.sleep(0.05)
     return status
+
+
+@activity.defn(name="reserve_inventory")
+async def reserve_inventory(order_id: str) -> str:
+    """Reserve stock for an order (first saga step).
+
+    Args:
+        order_id (str): Order identifier.
+
+    Returns:
+        str: Reservation message.
+    """
+    await asyncio.sleep(0.05)
+    return f"reserved:{order_id}"
+
+
+@activity.defn(name="release_inventory")
+async def release_inventory(order_id: str) -> str:
+    """Compensate ``reserve_inventory`` by releasing the stock.
+
+    Args:
+        order_id (str): Order identifier.
+
+    Returns:
+        str: Release message.
+    """
+    await asyncio.sleep(0.05)
+    return f"released:{order_id}"
+
+
+@activity.defn(name="charge_payment")
+async def charge_payment(order_id: str, succeed_on_attempt: int) -> str:
+    """Charge the customer, failing until the given attempt so the retry policy is exercised.
+
+    Args:
+        order_id (str): Order identifier.
+        succeed_on_attempt (int): First activity attempt (1-based) that succeeds.
+
+    Returns:
+        str: Charge message.
+
+    Raises:
+        RuntimeError: While the current attempt is below ``succeed_on_attempt``.
+    """
+    await asyncio.sleep(0.05)
+    attempt = activity.info().attempt
+    if attempt < succeed_on_attempt:
+        raise RuntimeError(f"payment gateway unavailable (attempt {attempt})")
+    return f"charged:{order_id}"
+
+
+@activity.defn(name="refund_payment")
+async def refund_payment(order_id: str) -> str:
+    """Compensate ``charge_payment`` by refunding the customer.
+
+    Args:
+        order_id (str): Order identifier.
+
+    Returns:
+        str: Refund message.
+    """
+    await asyncio.sleep(0.05)
+    return f"refunded:{order_id}"
+
+
+@activity.defn(name="ship_order")
+async def ship_order(order_id: str, should_fail: bool) -> str:
+    """Ship the order, optionally failing without a retry to trigger the saga compensation.
+
+    Args:
+        order_id (str): Order identifier.
+        should_fail (bool): Whether shipping fails.
+
+    Returns:
+        str: Shipping message.
+
+    Raises:
+        ApplicationError: Non-retryable, when ``should_fail`` is True.
+    """
+    await asyncio.sleep(0.05)
+    if should_fail:
+        raise ApplicationError("carrier rejected the parcel", non_retryable=True)
+    return f"shipped:{order_id}"
+
+
+@activity.defn(name="notify_customer")
+async def notify_customer(order_id: str) -> str:
+    """Notify the customer (run by the child workflow).
+
+    Args:
+        order_id (str): Order identifier.
+
+    Returns:
+        str: Notification message.
+    """
+    await asyncio.sleep(0.05)
+    return f"notified:{order_id}"

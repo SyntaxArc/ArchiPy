@@ -88,6 +88,17 @@ def step_apm_server_span(context, span_type, subtype) -> None:
     assert matching, f"No {span_type}/{subtype} span stored: {stored}"
 
 
+@then('Elastic APM Server should store a "{span_type}" span named "{name}"')
+def step_apm_server_named_span(context, span_type, name) -> None:
+    """Check Elasticsearch holds the named span with the type Elastic APM derived."""
+    matching, stored = wait_for_apm_events(
+        context,
+        lambda event: event["processor"]["event"] == "span" and event["span"].get("name") == name,
+    )
+    types = {event["span"]["type"] for event in matching}
+    assert types == {span_type}, f"{name}: span types {types}, stored {stored}"
+
+
 @then('Elastic APM Server should store a transaction of type "{transaction_type}"')
 def step_apm_server_transaction_type(context, transaction_type) -> None:
     """Check Elasticsearch holds a transaction of the type Elastic APM derived."""
@@ -108,6 +119,24 @@ def step_apm_server_transaction(context, transaction_type, name) -> None:
     )
     types = [event["transaction"]["type"] for event in matching]
     assert types == [transaction_type], f"{name}: transaction types {types}, stored {stored}"
+
+
+@then('Elastic APM Server should store {count:d} "{transaction_type}" transactions named "{name}"')
+def step_apm_server_transactions(context, count, transaction_type, name) -> None:
+    """Check Elasticsearch holds the expected number of the named transaction, for example one per retry attempt."""
+    deadline = time.monotonic() + APM_POLL_TIMEOUT_SECONDS
+    types: list[str] = []
+    stored: list[dict] = []
+    while time.monotonic() < deadline:
+        matching, stored = wait_for_apm_events(
+            context,
+            lambda event: event["processor"]["event"] == "transaction" and event["transaction"].get("name") == name,
+        )
+        types = [event["transaction"]["type"] for event in matching]
+        if len(types) >= count:
+            break
+        time.sleep(0.5)
+    assert types == [transaction_type] * count, f"{name}: transaction types {types}, stored {stored}"
 
 
 @given("OpenTelemetry traces, metrics and logs are exported to Elastic APM Server {route}")

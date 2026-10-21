@@ -65,6 +65,32 @@ Feature: Temporal Adapter Operations
       | search_attributes | test_attribute |
     Then the workflow should start successfully
 
+  # Saga: several activities with retries, compensation, a child workflow, signal, query and update
+  Scenario: Order saga retries the payment and completes
+    Given a worker is started for task queue "test-queue" with OrderSagaWorkflow
+    When I execute the order saga with payment succeeding on attempt 3 and shipping failure false
+    Then the order saga should end completed after steps reserve_inventory,charge_payment,ship_order,notify_customer with compensations none
+
+  Scenario: Order saga reverts the completed activities when shipping fails
+    Given a worker is started for task queue "test-queue" with OrderSagaWorkflow
+    When I execute the order saga with payment succeeding on attempt 2 and shipping failure true
+    Then the order saga should end compensated after steps reserve_inventory,charge_payment with compensations refund_payment,release_inventory
+
+  Scenario Outline: Order saga is driven by an update, a query and the <signal> signal
+    Given a worker is started for task queue "test-queue" with OrderSagaWorkflow
+    When I start the order saga "test-saga-<signal>" with payment succeeding on attempt 2 and shipping failure false requiring approval
+    And I wait for 1 seconds
+    And I add the note "gift wrap" to the order saga "test-saga-<signal>"
+    And I query workflow "test-saga-<signal>" with query "get_state"
+    And I send signal "<signal>" to workflow "test-saga-<signal>"
+    Then the update result should be 1
+    And the order saga "test-saga-<signal>" should end <status> after steps <steps> with compensations <compensations>
+
+    Examples:
+      | signal  | status      | steps                                                       | compensations                    |
+      | approve | completed   | reserve_inventory,charge_payment,ship_order,notify_customer | none                             |
+      | cancel  | compensated | reserve_inventory,charge_payment                            | refund_payment,release_inventory |
+
   # Signal and Query Operations
   Scenario: Send signal to running workflow
     Given a worker is started for task queue "test-queue" with SignalQueryWorkflow
@@ -328,6 +354,8 @@ Feature: Temporal Adapter Operations
     And the exported Temporal spans should share one trace id
     And the exported RunActivity span should carry messaging attributes for task queue "otel-trace-queue"
     And the exported RunWorkflow span should carry messaging attributes for task queue "otel-trace-queue"
+    And the exported StartWorkflow span should carry messaging "send" attributes for task queue "otel-trace-queue"
+    And the exported StartActivity span should carry messaging "send" attributes for task queue "otel-trace-queue"
 
   Scenario Outline: Elastic APM Server shows Temporal activities as messaging transactions <route>
     Given Temporal traces are exported to Elastic APM Server <route>
@@ -335,6 +363,60 @@ Feature: Temporal Adapter Operations
     When I execute workflow "GreetingWorkflow" with argument "apm"
     Then Elastic APM Server should store a "messaging" transaction named "RunActivity:greeting_activity"
     And Elastic APM Server should store a "messaging" transaction named "RunWorkflow:GreetingWorkflow"
+    And Elastic APM Server should store a "messaging" transaction named "StartWorkflow:GreetingWorkflow"
+    And Elastic APM Server should store a "messaging" span named "StartActivity:greeting_activity"
+
+    Examples:
+      | route                 |
+      | directly              |
+      | through the collector |
+
+  Scenario Outline: Temporal tracing exports a saga with retries, an update, a query and the <signal> signal
+    Given Temporal metrics and traces are exported to the collector
+    And a worker is started for task queue "otel-saga-queue" with OrderSagaWorkflow
+    When I start the order saga "otel-saga-<signal>" with payment succeeding on attempt 3 and shipping failure false requiring approval
+    And I wait for 1 seconds
+    And I add the note "trace" to the order saga "otel-saga-<signal>"
+    And I query workflow "otel-saga-<signal>" with query "get_state"
+    And I send signal "<signal>" to workflow "otel-saga-<signal>"
+    Then the order saga "otel-saga-<signal>" should end <status> after steps <steps> with compensations <compensations>
+    And the collector should have exported Temporal workflow and activity spans:
+      | name                            |
+      | StartWorkflow:OrderSagaWorkflow |
+      | RunWorkflow:OrderSagaWorkflow   |
+      | StartActivity:reserve_inventory |
+      | RunActivity:charge_payment      |
+      | <last_span>                     |
+    And the exported Temporal spans should share one trace id
+    And the exported StartActivity span should carry messaging "send" attributes for task queue "otel-saga-queue"
+    And the collector should have exported Temporal workflow and activity spans:
+      | name                  |
+      | HandleSignal:<signal> |
+      | HandleUpdate:add_note |
+      | HandleQuery:get_state |
+    And the exported HandleSignal span should carry messaging attributes for task queue "otel-saga-queue"
+
+    Examples:
+      | signal  | status      | steps                                                       | compensations                    | last_span                        |
+      | approve | completed   | reserve_inventory,charge_payment,ship_order,notify_customer | none                             | RunWorkflow:NotificationWorkflow |
+      | cancel  | compensated | reserve_inventory,charge_payment                            | refund_payment,release_inventory | RunActivity:release_inventory    |
+
+  Scenario Outline: Elastic APM Server shows the saga as linked messaging transactions <route>
+    Given Temporal traces are exported to Elastic APM Server <route>
+    And a worker is started for task queue "otel-apm-queue" with OrderSagaWorkflow
+    When I start the order saga "apm-saga-1" with payment succeeding on attempt 3 and shipping failure false requiring approval
+    And I wait for 1 seconds
+    And I add the note "apm" to the order saga "apm-saga-1"
+    And I query workflow "apm-saga-1" with query "get_state"
+    And I send signal "approve" to workflow "apm-saga-1"
+    Then the order saga "apm-saga-1" should end completed after steps reserve_inventory,charge_payment,ship_order,notify_customer with compensations none
+    And Elastic APM Server should store a "messaging" transaction named "RunWorkflow:OrderSagaWorkflow"
+    And Elastic APM Server should store a "messaging" transaction named "HandleUpdate:add_note"
+    And Elastic APM Server should store a "messaging" transaction named "HandleSignal:approve"
+    And Elastic APM Server should store a "messaging" transaction named "HandleQuery:get_state"
+    And Elastic APM Server should store 3 "messaging" transactions named "RunActivity:charge_payment"
+    And Elastic APM Server should store a "messaging" transaction named "RunWorkflow:NotificationWorkflow"
+    And Elastic APM Server should store a "messaging" span named "StartChildWorkflow:NotificationWorkflow"
 
     Examples:
       | route                 |
