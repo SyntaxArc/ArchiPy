@@ -109,6 +109,11 @@ behave: ## Run all features in parallel, one behave process per feature (BEHAVE_
 	@echo "${BLUE}Running tests in parallel...${NC}"
 	$(UV) run --extra behave python scripts/behave_parallel.py --jobs $(BEHAVE_JOBS) --heavy-jobs $(BEHAVE_HEAVY_JOBS) $(FEATURE) $(if $(BEHAVE_ARGS),-- $(BEHAVE_ARGS))
 
+.PHONY: pull-test-images
+pull-test-images: ## Pull every Docker image the tests use (from .env.test), 4 at a time
+	@echo "${BLUE}Pulling test images...${NC}"
+	@grep -h '_IMAGE=' .env.test | cut -d= -f2 | xargs -P 4 -n 1 docker pull
+
 .PHONY: behave-seq
 behave-seq: ## Run all features one after another in a single behave process
 	@echo "${BLUE}Running tests sequentially...${NC}"
