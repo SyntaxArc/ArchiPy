@@ -1,5 +1,5 @@
 # features/minio_operations.feature
-@needs-minio
+@needs-minio @needs-apm-server @needs-apm-collector
 Feature: MinIO Operations Testing
   As a developer
   I want to test MinIO storage operations
@@ -162,3 +162,13 @@ Feature: MinIO Operations Testing
     When I upload and download an object through the MinIO adapter
     Then the collector should have a span named "S3.PutObject" with attribute "rpc.service" containing "S3"
     And the collector should have a span named "S3.GetObject" with attribute "rpc.service" containing "S3"
+
+  Scenario Outline: MinIO adapter spans reach Elastic APM Server <route>
+    Given adapter spans are exported to Elastic APM Server <route>
+    When I upload and download an object through the MinIO adapter
+    Then Elastic APM Server should store a span of type "external" with subtype "aws-api"
+
+    Examples:
+      | route                 |
+      | directly              |
+      | through the collector |

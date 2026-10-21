@@ -11,6 +11,8 @@ from pathlib import Path
 
 import httpx2
 from behave import given, then, when
+from opentelemetry import trace
+from features.steps.elastic_apm_steps import apm_endpoint
 from features.steps.otel_steps import _setup_collector_otel
 from features.test_helpers import get_current_scenario_context
 from features.test_helpers_otel import CollectorTelemetry
@@ -95,10 +97,33 @@ def _attribute_matches(span, key: str, expected: str) -> bool:
 @given("adapter spans are exported to the collector")
 def step_adapter_spans_enabled(context):
     """Start OpenTelemetry against the collector with every instrumentor freshly bound."""
+    _enable_adapter_spans(context)
+
+
+@given("adapter spans are exported to Elastic APM Server {route}")
+def step_adapter_spans_enabled_for_apm(context, route):
+    """Start OpenTelemetry against Elastic APM Server, directly or through the forwarding collector."""
+    _enable_adapter_spans(context, apm_endpoint(get_current_scenario_context(context), route))
+    _open_request_span(context)
+
+
+def _open_request_span(context) -> None:
+    """Keep a server span open for the scenario, as the request an adapter call normally runs inside.
+
+    Elastic APM turns a root span into a transaction; only spans below one keep the type and subtype of the
+    adapter call (``db``/``redis``), so the adapter spans must have a parent. It ends when the scenario ends.
+    """
+    request_span = trace.get_tracer("archipy.bdd").start_span("bdd-request", kind=trace.SpanKind.SERVER)
+    scope = trace.use_span(request_span, end_on_exit=True)
+    scope.__enter__()
+    context.add_cleanup(lambda: scope.__exit__(None, None, None))
+
+
+def _enable_adapter_spans(context, otlp_endpoint: str | None = None) -> None:
     _uninstrument_all()
     # Leave no instrumentor bound for the scenarios of other features that share this process.
     context.add_cleanup(_uninstrument_all)
-    telemetry = _setup_collector_otel(context, traces=True, metrics=False)
+    telemetry = _setup_collector_otel(context, traces=True, metrics=False, otlp_endpoint=otlp_endpoint)
     _collector(context).mark()
     get_current_scenario_context(context).store("adapter_span_telemetry", telemetry)
     for key in ("sqlalchemy", "redis", "cassandra", "confluent_kafka", "botocore", "httpx2", "requests"):

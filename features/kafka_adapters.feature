@@ -1,5 +1,5 @@
 # features/kafka_operations.feature
-@needs-kafka
+@needs-kafka @needs-apm-server @needs-apm-collector
 Feature: Kafka Adapter Operations Testing
   As a developer
   I want to test Kafka adapter operations
@@ -167,11 +167,32 @@ Feature: Kafka Adapter Operations Testing
     Then the collector should have a span with attribute "messaging.system" containing "kafka"
     And no span of this thread should be left active
 
+  Scenario Outline: Kafka adapter spans reach Elastic APM Server <route>
+    Given adapter spans are exported to Elastic APM Server <route>
+    When I produce and consume a message on topic "apm-topic" through the Kafka adapters
+    Then Elastic APM Server should store a transaction of type "messaging"
+
+    Examples:
+      | route                 |
+      | directly              |
+      | through the collector |
+
   @needs-otel-collector
   Scenario: Async Kafka producer and consumer emit spans
     Given adapter spans are exported to the collector
     When I produce and consume a message on topic "span-topic-async" through the async Kafka adapters
     Then the collector should have a span with attribute "messaging.system" containing "kafka"
+
+  @async
+  Scenario Outline: Async Kafka adapter spans reach Elastic APM Server <route>
+    Given adapter spans are exported to Elastic APM Server <route>
+    When I produce and consume a message on topic "apm-topic-async" through the async Kafka adapters
+    Then Elastic APM Server should store a transaction of type "messaging"
+
+    Examples:
+      | route                 |
+      | directly              |
+      | through the collector |
 
   @needs-otel-collector
   Scenario: Kafka consume span ends when the message is committed

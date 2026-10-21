@@ -1,4 +1,4 @@
-@needs-redis @needs-redis-cluster
+@needs-redis @needs-redis-cluster @needs-apm-server @needs-apm-collector
 Feature: Redis Testing
   As a developer
   I want to test Redis operations with both mocks and real containers
@@ -1164,11 +1164,32 @@ Feature: Redis Testing
     When I set and get a key through the Redis adapter
     Then the collector should have a span with attribute "db.system" containing "redis"
 
+  Scenario Outline: Redis adapter spans reach Elastic APM Server <route>
+    Given adapter spans are exported to Elastic APM Server <route>
+    When I set and get a key through the Redis adapter
+    Then Elastic APM Server should store a span of type "db" with subtype "redis"
+
+    Examples:
+      | route                 |
+      | directly              |
+      | through the collector |
+
   @async @needs-otel-collector
   Scenario: Async Redis adapter commands emit spans
     Given adapter spans are exported to the collector
     When I set and get a key through the async Redis adapter
     Then the collector should have a span with attribute "db.system" containing "redis"
+
+  @async
+  Scenario Outline: Async Redis adapter spans reach Elastic APM Server <route>
+    Given adapter spans are exported to Elastic APM Server <route>
+    When I set and get a key through the async Redis adapter
+    Then Elastic APM Server should store a span of type "db" with subtype "redis"
+
+    Examples:
+      | route                 |
+      | directly              |
+      | through the collector |
 
   @needs-otel-collector
   Scenario: Redis search with the instrumentor bound returns results and emits a span

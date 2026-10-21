@@ -1,4 +1,4 @@
-@needs-temporal @needs-otel-collector
+@needs-temporal @needs-otel-collector @needs-apm-server @needs-apm-collector
 Feature: Temporal Adapter Operations
   As a developer
   I want to test Temporal adapter operations
@@ -327,6 +327,28 @@ Feature: Temporal Adapter Operations
       | RunActivity:greeting_activity   |
     And the exported Temporal spans should share one trace id
     And the exported RunActivity span should carry messaging attributes for task queue "otel-trace-queue"
+
+  Scenario Outline: Elastic APM Server shows Temporal activities as messaging transactions <route>
+    Given Temporal traces are exported to Elastic APM Server <route>
+    And a worker is started for task queue "otel-apm-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "apm"
+    Then Elastic APM Server should store a "messaging" transaction named "RunActivity:greeting_activity"
+
+    Examples:
+      | route                 |
+      | directly              |
+      | through the collector |
+
+  Scenario Outline: Elastic APM Server stores Temporal SDK metrics <route>
+    Given Temporal metrics and traces are exported to Elastic APM Server <route>
+    And a worker is started for task queue "<task_queue>" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "metrics"
+    Then Elastic APM Server should store the Temporal metric "temporal_workflow_completed" for task queue "<task_queue>"
+
+    Examples:
+      | route                 | task_queue              |
+      | directly              | otel-apm-metrics-direct |
+      | through the collector | otel-apm-metrics-via    |
 
   Scenario: Temporal tracing is disabled when another library registered a plain tracer provider first
     Given a Temporal test container is running

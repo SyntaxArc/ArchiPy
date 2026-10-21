@@ -135,11 +135,12 @@ def _setup_collector_otel(
     environment: str | None = None,
     protocol: str = "grpc",
     before_init: Callable[[], None] | None = None,
+    otlp_endpoint: str | None = None,
 ) -> CollectorTelemetry:
     """Initialize the real OTel providers so they export over OTLP/gRPC to the collector test container.
 
     ``before_init`` runs after the reset and before ArchiPy initializes, to play another library that registers a
-    provider first.
+    provider first. ``otlp_endpoint`` sends the telemetry somewhere else than the collector (Elastic APM Server).
 
     Every scenario gets its own ``service.name`` so the readers only see this scenario's telemetry.
     """
@@ -158,7 +159,9 @@ def _setup_collector_otel(
     otel.LOGS_EXPORTER = OtelLogsExporter.OTLP if logs else OtelLogsExporter.CONSOLE
     otel.METRICS_EXPORTER = OtelMetricsExporter.OTLP
     otel.PROTOCOL = protocol
-    otel.OTLP_ENDPOINT = collector.http_endpoint if protocol == "http/protobuf" else collector.grpc_endpoint
+    otel.OTLP_ENDPOINT = otlp_endpoint or (
+        collector.http_endpoint if protocol == "http/protobuf" else collector.grpc_endpoint
+    )
     # Metrics leave the process only when a scenario flushes, so every read sees a complete snapshot.
     otel.METRIC_EXPORT_INTERVAL_MS = 60_000
     otel.SYSTEM_METRICS_ENABLED = False

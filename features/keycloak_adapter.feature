@@ -1,5 +1,5 @@
 # features/keycloak_auth.feature
-@needs-keycloak @needs-otel-collector
+@needs-keycloak @needs-otel-collector @needs-apm-server @needs-apm-collector
 Feature: Keycloak Authentication Testing
   As a developer
   I want to test Keycloak authentication operations
@@ -1150,3 +1150,16 @@ Feature: Keycloak Authentication Testing
       | mode  |
       | sync  |
       | async |
+
+  Scenario Outline: Keycloak <mode> adapter spans reach Elastic APM Server <route>
+    Given adapter spans are exported to Elastic APM Server <route>
+    And a configured <mode> Keycloak adapter
+    When I create a realm named "span-realm" with display name "Span Realm" using <mode> adapter
+    Then Elastic APM Server should store a span of type "external" with subtype "http"
+
+    Examples:
+      | route                 | mode  |
+      | directly              | sync  |
+      | directly              | async |
+      | through the collector | sync  |
+      | through the collector | async |

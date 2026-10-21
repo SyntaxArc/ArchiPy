@@ -1,4 +1,4 @@
-@needs-mailpit @needs-mailpit-plain @needs-otel-collector
+@needs-mailpit @needs-mailpit-plain @needs-otel-collector @needs-apm-server @needs-apm-collector
 Feature: Email adapter
 
   Background:
@@ -203,6 +203,16 @@ Feature: Email adapter
     Given adapter spans are exported to the collector
     When I call the Mailpit API with httpx2
     Then the collector should have a span with attribute "http.url" containing "/api/v1/info"
+
+  Scenario Outline: httpx2 client spans reach Elastic APM Server <route>
+    Given adapter spans are exported to Elastic APM Server <route>
+    When I call the Mailpit API with httpx2
+    Then Elastic APM Server should store a span of type "external" with subtype "http"
+
+    Examples:
+      | route                 |
+      | directly              |
+      | through the collector |
 
   Scenario: Sending an email emits an SMTP client span with safe attributes
     Given adapter spans are exported to the collector

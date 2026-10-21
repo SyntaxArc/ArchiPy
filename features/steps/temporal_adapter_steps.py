@@ -28,6 +28,7 @@ from archipy.adapters.temporal.worker import TemporalWorkerManager, WorkerHandle
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import OtelMetricsExporter, TemporalConfig
 from archipy.models.errors import BaseError
+from features.steps.elastic_apm_steps import apm_endpoint, wait_for_apm_metric
 from features.test_helpers import get_current_scenario_context
 from features.test_helpers_otel import CollectorTelemetry
 from features.test_workflows.temporal_activities import (
@@ -1493,6 +1494,7 @@ def _enable_temporal_otel(
     enable_metrics: bool,
     protocol: str = "grpc",
     before_init: Callable[[], None] | None = None,
+    otlp_endpoint: str | None = None,
 ) -> None:
     """Point OpenTelemetry at the collector container and rebuild the Temporal adapter and worker manager.
 
@@ -1505,7 +1507,14 @@ def _enable_temporal_otel(
 
     scenario_context = get_current_scenario_context(context)
     collector = scenario_context.get("test_containers").get_container("otel-collector")
-    _setup_collector_otel(context, traces=True, metrics=True, protocol=protocol, before_init=before_init)
+    _setup_collector_otel(
+        context,
+        traces=True,
+        metrics=True,
+        protocol=protocol,
+        before_init=before_init,
+        otlp_endpoint=otlp_endpoint,
+    )
     collector.mark()
 
     endpoint = BaseConfig.global_config().OTEL.OTLP_ENDPOINT
@@ -1519,6 +1528,35 @@ def _enable_temporal_otel(
     scenario_context.temporal_adapter = TemporalAdapter(temporal_config)
     scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
     scenario_context.store("temporal_metrics_reader", CollectorTelemetry(collector, TEMPORAL_CORE_SERVICE_NAME))
+
+
+@given("Temporal traces are exported to Elastic APM Server {route}")
+def step_temporal_otel_apm_server(context, route) -> None:
+    """Enable OpenTelemetry traces towards Elastic APM Server, directly or through a forwarding collector."""
+    from features.steps.otel_steps import _setup_collector_otel
+
+    scenario_context = get_current_scenario_context(context)
+    _setup_collector_otel(context, traces=True, metrics=False, otlp_endpoint=apm_endpoint(scenario_context, route))
+    temporal_config = scenario_context.get("test_containers").get_container("temporal").config
+    scenario_context.temporal_adapter = TemporalAdapter(temporal_config)
+    scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
+
+
+@given("Temporal metrics and traces are exported to Elastic APM Server {route}")
+def step_temporal_metrics_apm_server(context, route) -> None:
+    """Enable OpenTelemetry and Temporal SDK metrics towards Elastic APM Server, directly or through the collector."""
+    scenario_context = get_current_scenario_context(context)
+    _enable_temporal_otel(context, enable_metrics=True, otlp_endpoint=apm_endpoint(scenario_context, route))
+
+
+@then('Elastic APM Server should store the Temporal metric "{name}" for task queue "{task_queue}"')
+def step_apm_server_temporal_metric(context, name, task_queue) -> None:
+    """Check Elasticsearch holds a Temporal SDK metric of the task queue; the SDK exports under its own service."""
+    apm_server = get_current_scenario_context(context).get("test_containers").get_container("apm-server")
+    found = wait_for_apm_metric(
+        lambda: name in apm_server.metric_names(TEMPORAL_CORE_SERVICE_NAME, {"task_queue": task_queue}),
+    )
+    assert found, f"Temporal metric {name!r} not stored for {task_queue!r}"
 
 
 def _temporal_metric_points(context, name: str, task_queue: str | None = None) -> list:
