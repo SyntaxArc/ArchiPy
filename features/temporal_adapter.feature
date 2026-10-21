@@ -326,6 +326,7 @@ Feature: Temporal Adapter Operations
       | StartActivity:greeting_activity |
       | RunActivity:greeting_activity   |
     And the exported Temporal spans should share one trace id
+    And the exported RunActivity span should carry messaging attributes for task queue "otel-trace-queue"
 
   Scenario: Temporal runtime manager reuses one runtime until it is reset
     Given Temporal metrics and traces are exported to the collector
