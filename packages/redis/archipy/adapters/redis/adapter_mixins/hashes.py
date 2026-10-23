@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Mapping
+from collections.abc import Awaitable, Mapping, Sequence
+from typing import TYPE_CHECKING
 
 from archipy.adapters.redis.adapter_mixins._shared import (
     AsyncRedisMixinBase,
     SyncRedisMixinBase,
 )
 from archipy.models.errors import InternalError
+
+if TYPE_CHECKING:
+    from redis.typing import EncodableT
 
 
 class RedisHashesMixin(SyncRedisMixinBase):
@@ -101,8 +105,8 @@ class RedisHashesMixin(SyncRedisMixinBase):
         name: str,
         key: str | bytes | None = None,
         value: str | bytes | None = None,
-        mapping: dict | None = None,
-        items: list | None = None,
+        mapping: Mapping[EncodableT, EncodableT] | None = None,
+        items: Sequence[EncodableT] | None = None,
     ) -> int:
         """Set fields in a hash.
 
@@ -122,7 +126,7 @@ class RedisHashesMixin(SyncRedisMixinBase):
         result = self.client.hset(name, str_key, str_value, mapping, items)
         return self._ensure_sync_int(result)
 
-    def hmget(self, name: str, keys: list, *args: str | bytes) -> list[bytes | str | None]:
+    def hmget(self, name: str, keys: list[str | bytes], *args: str | bytes) -> list[bytes | str | None]:
         """Get values of multiple fields in a hash.
 
         Args:
@@ -256,8 +260,8 @@ class AsyncRedisHashesMixin(AsyncRedisMixinBase):
         name: str,
         key: str | bytes | None = None,
         value: str | bytes | None = None,
-        mapping: dict | None = None,
-        items: list | None = None,
+        mapping: Mapping[EncodableT, EncodableT] | None = None,
+        items: Sequence[EncodableT] | None = None,
     ) -> int:
         """Set fields in hash asynchronously.
 
@@ -277,7 +281,7 @@ class AsyncRedisHashesMixin(AsyncRedisMixinBase):
         result = self.client.hset(name, str_key, str_value, mapping, items)
         return await self._ensure_async_int(result)
 
-    async def hmget(self, name: str, keys: list, *args: str | bytes) -> list[bytes | str | None]:
+    async def hmget(self, name: str, keys: list[str | bytes], *args: str | bytes) -> list[bytes | str | None]:
         """Get multiple field values from hash asynchronously.
 
         Args:

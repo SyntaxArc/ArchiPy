@@ -3,6 +3,12 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
+    from redis.typing import EncodableT
 
 
 class RedisHashesPort:
@@ -107,8 +113,8 @@ class RedisHashesPort:
         name: str,
         key: str | bytes | None = None,
         value: str | bytes | None = None,
-        mapping: dict | None = None,
-        items: list | None = None,
+        mapping: Mapping[EncodableT, EncodableT] | None = None,
+        items: Sequence[EncodableT] | None = None,
     ) -> int:
         """Sets one or more fields in a hash.
 
@@ -128,7 +134,7 @@ class RedisHashesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def hmget(self, name: str, keys: list, *args: str | bytes) -> list[bytes | str | None]:
+    def hmget(self, name: str, keys: list[str | bytes], *args: str | bytes) -> list[bytes | str | None]:
         """Gets the values of multiple fields in a hash.
 
         Args:
@@ -262,8 +268,8 @@ class AsyncRedisHashesPort:
         name: str,
         key: str | bytes | None = None,
         value: str | bytes | None = None,
-        mapping: dict | None = None,
-        items: list | None = None,
+        mapping: Mapping[EncodableT, EncodableT] | None = None,
+        items: Sequence[EncodableT] | None = None,
     ) -> int:
         """Sets one or more fields in a hash asynchronously.
 
@@ -283,7 +289,7 @@ class AsyncRedisHashesPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def hmget(self, name: str, keys: list, *args: str | bytes) -> list[bytes | str | None]:
+    async def hmget(self, name: str, keys: list[str | bytes], *args: str | bytes) -> list[bytes | str | None]:
         """Gets the values of multiple fields in a hash asynchronously.
 
         Args:
