@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from http import HTTPStatus
@@ -49,7 +49,7 @@ class InvalidStateError(BaseError):
         current_state: str | None = None,
         expected_state: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidStateError."""
         data = {}
@@ -81,7 +81,7 @@ class FailedPreconditionError(BaseError):
         self,
         precondition: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize FailedPreconditionError."""
         data = {}
@@ -109,7 +109,7 @@ class BusinessRuleViolationError(BaseError):
         self,
         rule: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize BusinessRuleViolationError."""
         data = {}
@@ -138,7 +138,7 @@ class InvalidOperationError(BaseError):
         operation: str | None = None,
         context: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidOperationError."""
         data = {}
@@ -198,7 +198,7 @@ class MaintenanceModeError(BaseError):
         self,
         estimated_duration: int | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize MaintenanceModeError."""
         data = {"estimated_duration": estimated_duration} if estimated_duration else {}

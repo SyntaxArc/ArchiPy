@@ -1,6 +1,6 @@
 """Validation error types."""
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from http import HTTPStatus
@@ -46,7 +46,7 @@ class InvalidArgumentError(BaseError):
         self,
         argument_name: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidArgumentError."""
         data = {"argument": argument_name} if argument_name else {}
@@ -79,7 +79,7 @@ class InvalidFormatError(BaseError):
         format_type: str | None = None,
         expected_format: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidFormatError."""
         data = {}
@@ -109,7 +109,7 @@ class InvalidEmailError(BaseError):
         self,
         email: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidEmailError."""
         data = {"email": email} if email else {}
@@ -141,7 +141,7 @@ class InvalidPhoneNumberError(BaseError):
         self,
         phone_number: str,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidPhoneNumberError."""
         data = {"phone_number": phone_number}
@@ -179,7 +179,7 @@ class InvalidLandlineNumberError(BaseError):
         self,
         landline_number: str,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidLandlineNumberError."""
         data = {"landline_number": landline_number}
@@ -217,7 +217,7 @@ class InvalidNationalCodeError(BaseError):
         self,
         national_code: str,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidNationalCodeError."""
         data = {"national_code": national_code}
@@ -255,7 +255,7 @@ class InvalidPasswordError(BaseError):
         self,
         requirements: list[str] | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidPasswordError."""
         data = {"requirements": requirements} if requirements else {}
@@ -282,7 +282,7 @@ class InvalidDateError(BaseError):
         date: str | None = None,
         expected_format: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidDateError."""
         data = {}
@@ -312,7 +312,7 @@ class InvalidUrlError(BaseError):
         self,
         url: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidUrlError."""
         data = {"url": url} if url else {}
@@ -344,7 +344,7 @@ class InvalidIpError(BaseError):
         self,
         ip: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidIpError."""
         data = {"ip": ip} if ip else {}
@@ -376,7 +376,7 @@ class InvalidJsonError(BaseError):
         self,
         json_data: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidJsonError."""
         data = {}
@@ -405,7 +405,7 @@ class InvalidTimestampError(BaseError):
         timestamp: str | None = None,
         expected_format: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidTimestampError."""
         data = {}
@@ -435,7 +435,7 @@ class OutOfRangeError(BaseError):
         self,
         field_name: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize OutOfRangeError."""
         data = {"field": field_name} if field_name else {}

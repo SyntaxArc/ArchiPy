@@ -1,6 +1,6 @@
 """Database-related error types."""
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from http import HTTPStatus
@@ -48,7 +48,7 @@ class DatabaseError(BaseError):
         self,
         database: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize DatabaseError."""
         data = {}
@@ -79,7 +79,7 @@ class DatabaseQueryError(DatabaseError):
         database: str | None = None,
         query: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize DatabaseQueryError."""
         data = {}
@@ -126,7 +126,7 @@ class DatabaseTransactionError(DatabaseError):
         database: str | None = None,
         transaction_id: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize DatabaseTransactionError."""
         data = {}
@@ -155,7 +155,7 @@ class DatabaseTimeoutError(DatabaseQueryError):
         database: str | None = None,
         timeout: int | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize DatabaseTimeoutError."""
         data = {}
@@ -184,7 +184,7 @@ class DatabaseConstraintError(DatabaseQueryError):
         database: str | None = None,
         constraint: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize DatabaseConstraintError."""
         data = {}
@@ -305,7 +305,7 @@ class CacheError(BaseError):
         self,
         cache_type: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize CacheError."""
         data = {}
@@ -333,7 +333,7 @@ class CacheMissError(BaseError):
         self,
         cache_key: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize CacheMissError."""
         data = {"cache_key": cache_key} if cache_key else {}

@@ -1,6 +1,6 @@
 """Resource-related error types."""
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from http import HTTPStatus
@@ -45,7 +45,7 @@ class NotFoundError(BaseError):
         self,
         resource_type: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize NotFoundError."""
         data = {"resource_type": resource_type} if resource_type else {}
@@ -77,7 +77,7 @@ class AlreadyExistsError(BaseError):
         self,
         resource_type: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize AlreadyExistsError."""
         data = {"resource_type": resource_type} if resource_type else {}
@@ -110,7 +110,7 @@ class ConflictError(BaseError):
         resource_type: str | None = None,
         resource_id: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize ConflictError."""
         data = {}
@@ -141,7 +141,7 @@ class ResourceLockedError(BaseError):
         resource_id: str | None = None,
         lock_owner: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize ResourceLockedError."""
         data = {}
@@ -172,7 +172,7 @@ class ResourceBusyError(BaseError):
         resource_id: str | None = None,
         busy_reason: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize ResourceBusyError."""
         data = {}
@@ -220,7 +220,7 @@ class InvalidEntityTypeError(BaseError):
         expected_type: str | None = None,
         actual_type: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidEntityTypeError."""
         data = {}
@@ -254,7 +254,7 @@ class FileTooLargeError(BaseError):
         file_size: int | None = None,
         max_size: int | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize FileTooLargeError."""
         data = {}
@@ -288,7 +288,7 @@ class InvalidFileTypeError(BaseError):
         file_type: str | None = None,
         allowed_types: list[str] | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidFileTypeError."""
         data = {}
@@ -322,7 +322,7 @@ class QuotaExceededError(BaseError):
         current_usage: int | None = None,
         quota_limit: int | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize QuotaExceededError."""
         data = {}
@@ -356,7 +356,7 @@ class ResourceExhaustedError(BaseError):
         self,
         resource_type: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize ResourceExhaustedError."""
         data = {"resource_type": resource_type} if resource_type else {}
@@ -384,7 +384,7 @@ class StorageError(BaseError):
         self,
         storage_type: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize StorageError."""
         data = {"storage_type": storage_type} if storage_type else {}

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from http import HTTPStatus
@@ -48,7 +48,7 @@ class NetworkError(BaseError):
         self,
         service: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize NetworkError."""
         data = {}
@@ -77,7 +77,7 @@ class ConnectionTimeoutError(BaseError):
         service: str | None = None,
         timeout: int | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize ConnectionTimeoutError."""
         data = {}
@@ -110,7 +110,7 @@ class ServiceUnavailableError(BaseError):
         service: str | None = None,
         retry_after: int | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize ServiceUnavailableError."""
         data = {}
@@ -141,7 +141,7 @@ class GatewayTimeoutError(BaseError):
         gateway: str | None = None,
         timeout: int | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize GatewayTimeoutError."""
         data = {}
@@ -171,7 +171,7 @@ class BadGatewayError(BaseError):
         self,
         gateway: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize BadGatewayError."""
         data = {}
@@ -202,7 +202,7 @@ class RateLimitExceededError(BaseError):
         rate_limit_type: str | None = None,
         retry_after: int | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize RateLimitExceededError."""
         data = {}

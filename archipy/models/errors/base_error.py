@@ -63,7 +63,7 @@ class BaseError(Exception):
         """
         return self.message_fa if self.lang == LanguageType.FA else self.message_en
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Converts the exception to a dictionary format for API responses.
 
         Returns:

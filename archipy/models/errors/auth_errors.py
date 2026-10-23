@@ -1,6 +1,6 @@
 """Authentication and authorization error types."""
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from http import HTTPStatus
@@ -67,7 +67,7 @@ class InvalidCredentialsError(BaseError):
         self,
         username: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidCredentialsError."""
         data = {"username": username} if username else {}
@@ -139,7 +139,7 @@ class SessionExpiredError(BaseError):
         self,
         session_id: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize SessionExpiredError."""
         data = {"session_id": session_id} if session_id else {}
@@ -198,7 +198,7 @@ class AccountLockedError(BaseError):
         username: str | None = None,
         lockout_duration: int | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize AccountLockedError."""
         data = {}
@@ -235,7 +235,7 @@ class AccountDisabledError(BaseError):
         username: str | None = None,
         reason: str | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize AccountDisabledError."""
         data = {}
@@ -272,7 +272,7 @@ class InvalidVerificationCodeError(BaseError):
         code: str | None = None,
         remaining_attempts: int | None = None,
         lang: LanguageType | None = None,
-        additional_data: dict | None = None,
+        additional_data: dict[str, Any] | None = None,
     ) -> None:
         """Initialize InvalidVerificationCodeError."""
         data = {}
