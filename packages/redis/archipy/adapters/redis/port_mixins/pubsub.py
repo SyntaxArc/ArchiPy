@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from redis.asyncio.client import PubSub as AsyncPubSub
+    from redis.client import PubSub
 
 
 class RedisPubSubPort:
@@ -43,7 +47,7 @@ class RedisPubSubPort:
         raise NotImplementedError
 
     @abstractmethod
-    def pubsub(self, **kwargs: Any) -> Any:
+    def pubsub(self, **kwargs: Any) -> PubSub:
         """Returns a pub/sub object for subscribing to channels.
 
         Args:
@@ -95,7 +99,7 @@ class AsyncRedisPubSubPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def pubsub(self, **kwargs: Any) -> Any:
+    async def pubsub(self, **kwargs: Any) -> AsyncPubSub:
         """Returns a pub/sub object for subscribing to channels asynchronously.
 
         Args:

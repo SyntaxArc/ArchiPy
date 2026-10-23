@@ -6,6 +6,10 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from redis.asyncio.client import Pipeline as AsyncPipeline
+    from redis.asyncio.cluster import ClusterPipeline as AsyncClusterPipeline
+    from redis.client import Pipeline
+
     from archipy.adapters.redis.search_ports import (
         AsyncRedisSearchHandlePort,
         RedisSearchHandlePort,
@@ -43,7 +47,7 @@ class RedisConnectionPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_pipeline(self, transaction: Any = True, shard_hint: Any = None) -> Any:
+    def get_pipeline(self, transaction: Any = True, shard_hint: Any = None) -> Pipeline:
         """Returns a pipeline object for batching commands.
 
         Args:
@@ -138,7 +142,11 @@ class AsyncRedisConnectionPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_pipeline(self, transaction: Any = True, shard_hint: Any = None) -> Any:
+    async def get_pipeline(
+        self,
+        transaction: Any = True,
+        shard_hint: Any = None,
+    ) -> AsyncPipeline | AsyncClusterPipeline:
         """Returns a pipeline object for batching commands asynchronously.
 
         Args:
