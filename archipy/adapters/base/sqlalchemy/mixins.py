@@ -119,9 +119,9 @@ class SQLAlchemyFilterMixin:
 
     @staticmethod
     def _validate_list_operation(
-        value: str | float | bool | Decimal | list | UUID | datetime | date | Enum | None,
+        value: str | float | bool | Decimal | list[Any] | UUID | datetime | date | Enum | None,
         operation: FilterOperationType,
-    ) -> list:
+    ) -> list[Any]:
         """Validate that value is a list for list operations."""
         if not isinstance(value, list):
             raise InvalidArgumentError(
@@ -138,7 +138,7 @@ class SQLAlchemyFilterMixin:
     def _apply_filter(
         query: Select | Update | Delete,
         field: InstrumentedAttribute,
-        value: str | float | bool | Decimal | list | UUID | datetime | date | Enum | None,
+        value: str | float | bool | Decimal | list[Any] | UUID | datetime | date | Enum | None,
         operation: FilterOperationType,
     ) -> Select | Update | Delete:
         """Apply a filter to a SQLAlchemy query based on the specified operation.

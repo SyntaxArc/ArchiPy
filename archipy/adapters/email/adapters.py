@@ -349,7 +349,7 @@ class EmailAdapter(EmailPort):
         attachments: list[str | EmailAttachmentDTO] | None = None,
         html: bool = False,
         template: str | None = None,
-        template_vars: dict | None = None,
+        template_vars: dict[str, Any] | None = None,
     ) -> None:
         """Send email with advanced features and connection pooling.
 
@@ -392,7 +392,7 @@ class EmailAdapter(EmailPort):
         attachments: list[str | EmailAttachmentDTO] | None = None,
         html: bool = False,
         template: str | None = None,
-        template_vars: dict | None = None,
+        template_vars: dict[str, Any] | None = None,
     ) -> None:
         """Send the email inside the ``email.send`` span (SMTP client span without any message content)."""
         _annotate_current_span(
@@ -453,7 +453,7 @@ class EmailAdapter(EmailPort):
         attachments: list[str | EmailAttachmentDTO] | None = None,
         html: bool = False,
         template: str | None = None,
-        template_vars: dict | None = None,
+        template_vars: dict[str, Any] | None = None,
     ) -> MIMEMultipart:
         msg = MIMEMultipart()
         msg["From"] = self.config.USERNAME or "no-reply@example.com"

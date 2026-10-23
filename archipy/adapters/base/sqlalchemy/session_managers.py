@@ -161,7 +161,7 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
                 database=self._get_database_name(),
             ) from e
 
-    def _get_connect_args(self) -> dict:
+    def _get_connect_args(self) -> dict[str, Any]:
         """Return additional connection arguments for the engine.
 
         Returns:
@@ -389,7 +389,7 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
                 database=self._get_database_name(),
             ) from e
 
-    def _get_connect_args(self) -> dict:
+    def _get_connect_args(self) -> dict[str, Any]:
         """Return additional connection arguments for the engine.
 
         Returns:

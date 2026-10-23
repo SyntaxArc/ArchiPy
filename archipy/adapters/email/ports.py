@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pydantic import EmailStr
@@ -60,7 +60,7 @@ class EmailPort:
         attachments: list[str | EmailAttachmentDTO] | None = None,
         html: bool = False,
         template: str | None = None,
-        template_vars: dict | None = None,
+        template_vars: dict[str, Any] | None = None,
     ) -> None:
         """Send an email with various options and features.
 

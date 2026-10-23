@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Any, override
 
 from sqlalchemy import URL
 from sqlalchemy.exc import SQLAlchemyError
@@ -153,7 +153,7 @@ class StarRocksSQlAlchemySessionManager(BaseSQLAlchemySessionManager[StarRocksSQ
         return "starrocks"
 
     @override
-    def _get_connect_args(self) -> dict:
+    def _get_connect_args(self) -> dict[str, Any]:
         """Return connection arguments for StarRocks to ensure proper transaction support.
 
         StarRocks (using MySQL protocol) requires autocommit to be explicitly disabled
@@ -283,7 +283,7 @@ class AsyncStarRocksSQlAlchemySessionManager(
             ) from e
 
     @override
-    def _get_connect_args(self) -> dict:
+    def _get_connect_args(self) -> dict[str, Any]:
         """Return connection arguments for async StarRocks to ensure proper transaction support.
 
         StarRocks (using MySQL protocol via asyncmy) requires autocommit to be explicitly
