@@ -6,7 +6,7 @@ import asyncio
 import inspect
 import logging
 from math import ceil
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from archipy.configs.base_config import BaseConfig
 from archipy.helpers.errors.grpc.abort import abort_grpc
@@ -128,7 +128,7 @@ class _GrpcRateLimitInterceptorMixin:
 
         return peer
 
-    def _windows_for(self, method: Callable, method_name_model: MethodName) -> tuple[RateLimitWindowDTO, ...]:
+    def _windows_for(self, method: Callable[..., Any], method_name_model: MethodName) -> tuple[RateLimitWindowDTO, ...]:
         """Return the rate-limit windows declared on ``method``, validated once per RPC method."""
         full_method = self._full_method_name(method_name_model)
         windows = self._windows_by_method.get(full_method)
@@ -262,7 +262,7 @@ class _GrpcRateLimitInterceptorMixin:
         await abort_grpc(UnavailableError(additional_data={"detail": detail}), context)
 
     @staticmethod
-    async def _invoke_maybe_async_handler(method: Callable, request: object, context: object) -> object:
+    async def _invoke_maybe_async_handler(method: Callable[..., Any], request: object, context: object) -> object:
         """Invoke a gRPC handler and await the result when it is awaitable."""
         result = method(request, context)
         if inspect.isawaitable(result):
@@ -349,7 +349,7 @@ class GrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseGrpcSer
 
     def intercept(
         self,
-        method: Callable,
+        method: Callable[..., Any],
         request: object,
         context: grpc.ServicerContext,
         method_name_model: MethodName,
@@ -488,7 +488,7 @@ class AsyncGrpcServerRateLimitInterceptor(_GrpcRateLimitInterceptorMixin, BaseAs
 
     async def intercept(
         self,
-        method: Callable,
+        method: Callable[..., Any],
         request: object,
         context: grpc.aio.ServicerContext,
         method_name_model: MethodName,

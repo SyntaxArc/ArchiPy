@@ -5,7 +5,7 @@ from __future__ import annotations
 import abc
 import functools
 import inspect
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import grpc
 
@@ -104,7 +104,7 @@ class BaseGrpcServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def intercept(
         self,
-        method: Callable,
+        method: Callable[..., Any],
         request: object,
         context: grpc.ServicerContext,
         method_name_model: MethodName,
@@ -175,7 +175,7 @@ class BaseAsyncGrpcServerInterceptor(grpc.aio.ServerInterceptor, metaclass=abc.A
     @abc.abstractmethod
     async def intercept(
         self,
-        method: Callable,
+        method: Callable[..., Any],
         request: object,
         context: grpc.aio.ServicerContext,
         method_name_model: MethodName,
@@ -195,7 +195,7 @@ class BaseAsyncGrpcServerInterceptor(grpc.aio.ServerInterceptor, metaclass=abc.A
 
     async def intercept_stream(
         self,
-        method: Callable,
+        method: Callable[..., Any],
         request: object,
         context: grpc.aio.ServicerContext,
         method_name_model: MethodName,

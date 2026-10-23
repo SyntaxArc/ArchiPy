@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self
 
 import grpc
 
@@ -87,7 +87,7 @@ class _SyncGrpcExceptionInterceptor(GrpcExceptionInterceptor, BaseGrpcServerInte
 
     def intercept(
         self,
-        method: Callable,
+        method: Callable[..., Any],
         request: object,
         context: grpc.ServicerContext,
         method_name_model: MethodName,  # noqa: ARG002 - part of the base interceptor signature
@@ -143,7 +143,7 @@ class _AioGrpcExceptionInterceptor(GrpcExceptionInterceptor, BaseAsyncGrpcServer
 
     async def intercept(
         self,
-        method: Callable,
+        method: Callable[..., Any],
         request: object,
         context: grpc.aio.ServicerContext,
         method_name_model: MethodName,  # noqa: ARG002 - part of the base interceptor signature
@@ -174,7 +174,7 @@ class _AioGrpcExceptionInterceptor(GrpcExceptionInterceptor, BaseAsyncGrpcServer
 
     async def intercept_stream(
         self,
-        method: Callable,
+        method: Callable[..., Any],
         request: object,
         context: grpc.aio.ServicerContext,
         method_name_model: MethodName,  # noqa: ARG002 - part of the base interceptor signature

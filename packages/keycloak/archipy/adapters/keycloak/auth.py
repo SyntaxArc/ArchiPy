@@ -227,10 +227,10 @@ async def _abort_async_failure(error: Exception, context: object, lang: Language
 
 
 def _wrap_sync_grpc_handler(
-    func: Callable,
+    func: Callable[..., Any],
     authorize: Callable[[object, object], None],
     lang: LanguageType,
-) -> Callable:
+) -> Callable[..., Any]:
     """Wrap a sync servicer method so ``authorize`` runs first and the auth context lives for the whole call.
 
     Generator handlers (response streams) keep the auth context set while the stream is consumed.
@@ -265,10 +265,10 @@ def _wrap_sync_grpc_handler(
 
 
 def _wrap_async_grpc_handler(
-    func: Callable,
+    func: Callable[..., Any],
     authorize: Callable[[object, object], Awaitable[None]],
     lang: LanguageType,
-) -> Callable:
+) -> Callable[..., Any]:
     """Wrap an async servicer method so ``authorize`` runs first and the auth context lives for the whole call.
 
     Async-generator handlers (response streams) are iterated, not awaited, and keep the auth context set.
@@ -586,7 +586,7 @@ def fastapi_auth(
     required_permissions: tuple[tuple[str, str], ...] | None = None,
     admin_roles: frozenset[str] | None = None,
     lang: LanguageType = DEFAULT_LANG,
-) -> Callable:
+) -> Callable[..., Any]:
     """FastAPI dependency for Keycloak authentication and resource-based authorization.
 
     The dependency is always asynchronous: FastAPI awaits it on the event loop, whether the endpoint is a ``def``
@@ -777,7 +777,7 @@ def grpc_auth(
         )
         AuthContextManager.set_auth_context(_build_auth_context(user_info, token_str, user_roles, token_info))
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         if inspect.iscoroutinefunction(func) or inspect.isasyncgenfunction(func):
             return _wrap_async_grpc_handler(func, authorize_async, lang)
         return _wrap_sync_grpc_handler(func, authorize_sync, lang)

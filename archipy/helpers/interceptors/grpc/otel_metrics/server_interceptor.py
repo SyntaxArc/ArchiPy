@@ -6,7 +6,7 @@ import asyncio
 import threading
 import time
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from archipy.helpers.interceptors.grpc.base.server_interceptor import (
     BaseAsyncGrpcServerInterceptor,
@@ -159,7 +159,7 @@ class GrpcServerOtelMetricsInterceptor(BaseGrpcServerInterceptor):
 
     def intercept(
         self,
-        method: Callable,
+        method: Callable[..., Any],
         request: object,
         context: grpc.ServicerContext,
         method_name_model: MethodName,
@@ -230,7 +230,7 @@ class AsyncGrpcServerOtelMetricsInterceptor(BaseAsyncGrpcServerInterceptor):
 
     async def intercept(
         self,
-        method: Callable,
+        method: Callable[..., Any],
         request: object,
         context: grpc.aio.ServicerContext,
         method_name_model: MethodName,
@@ -265,7 +265,7 @@ class AsyncGrpcServerOtelMetricsInterceptor(BaseAsyncGrpcServerInterceptor):
 
     async def intercept_stream(
         self,
-        method: Callable,
+        method: Callable[..., Any],
         request: object,
         context: grpc.aio.ServicerContext,
         method_name_model: MethodName,

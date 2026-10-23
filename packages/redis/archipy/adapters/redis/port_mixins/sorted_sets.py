@@ -6,7 +6,7 @@ from abc import abstractmethod
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
-RedisScoreCastType = type | Callable
+RedisScoreCastType = type | Callable[..., Any]
 
 
 class RedisSortedSetsPort:

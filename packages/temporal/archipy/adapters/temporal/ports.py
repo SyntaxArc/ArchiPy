@@ -32,7 +32,7 @@ class TemporalPort:
     @abstractmethod
     async def start_workflow(
         self,
-        workflow: str | Callable,
+        workflow: str | Callable[..., Any],
         arg: Any = None,
         workflow_id: str | None = None,
         task_queue: str | None = None,
@@ -73,7 +73,7 @@ class TemporalPort:
     @abstractmethod
     async def execute_workflow(
         self,
-        workflow: str | Callable,
+        workflow: str | Callable[..., Any],
         arg: Any = None,
         workflow_id: str | None = None,
         task_queue: str | None = None,
