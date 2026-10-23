@@ -258,7 +258,7 @@ class FastAPIUtils:
         return telemetry
 
 
-def _prepend_otel_grpc_metrics_interceptor(interceptors: list, *, async_mode: bool) -> None:
+def _prepend_otel_grpc_metrics_interceptor(interceptors: list[Any], *, async_mode: bool) -> None:
     """Prepend the ArchiPy gRPC metrics interceptor when a meter provider exists."""
     from archipy.helpers.utils.otel_utils import OtelUtils
 
@@ -281,7 +281,7 @@ def _prepend_otel_grpc_metrics_interceptor(interceptors: list, *, async_mode: bo
     interceptors.insert(0, GrpcServerOtelMetricsInterceptor())
 
 
-def _prepend_otel_grpc_traces_interceptor(interceptors: list, *, async_mode: bool) -> None:
+def _prepend_otel_grpc_traces_interceptor(interceptors: list[Any], *, async_mode: bool) -> None:
     """Prepend the contrib gRPC traces interceptor when a tracer provider exists."""
     from archipy.helpers.utils.otel_utils import OtelUtils
 
@@ -303,7 +303,7 @@ def _prepend_otel_grpc_traces_interceptor(interceptors: list, *, async_mode: boo
 
 def _install_otel_grpc_interceptor(
     config: BaseConfig,
-    interceptors: list,
+    interceptors: list[Any],
     *,
     async_mode: bool,
 ) -> None:
@@ -348,7 +348,7 @@ class AsyncGrpcAPIUtils:
     """async grpc api utilities."""
 
     @staticmethod
-    def setup_otel_interceptor(config: BaseConfig, interceptors: list) -> None:
+    def setup_otel_interceptor(config: BaseConfig, interceptors: list[Any]) -> None:
         """Configure OpenTelemetry server interceptor for an async gRPC server.
 
         Inserts the OTel interceptor at position 0 so it wraps later interceptors.
@@ -360,7 +360,7 @@ class AsyncGrpcAPIUtils:
         _install_otel_grpc_interceptor(config, interceptors, async_mode=True)
 
     @staticmethod
-    def setup_rate_limit_interceptor(config: BaseConfig, interceptors: list) -> None:
+    def setup_rate_limit_interceptor(config: BaseConfig, interceptors: list[Any]) -> None:
         """Configures rate-limit interceptor for async gRPC server when enabled.
 
         Args:
@@ -387,7 +387,7 @@ class GrpcAPIUtils:
     """grpc api utilities."""
 
     @staticmethod
-    def setup_otel_interceptor(config: BaseConfig, interceptors: list) -> None:
+    def setup_otel_interceptor(config: BaseConfig, interceptors: list[Any]) -> None:
         """Configure OpenTelemetry server interceptor for a sync gRPC server.
 
         Inserts the OTel interceptor at position 0 so it wraps later interceptors.
@@ -399,7 +399,7 @@ class GrpcAPIUtils:
         _install_otel_grpc_interceptor(config, interceptors, async_mode=False)
 
     @staticmethod
-    def setup_rate_limit_interceptor(config: BaseConfig, interceptors: list) -> None:
+    def setup_rate_limit_interceptor(config: BaseConfig, interceptors: list[Any]) -> None:
         """Configures rate-limit interceptor for gRPC server when enabled.
 
         Args:

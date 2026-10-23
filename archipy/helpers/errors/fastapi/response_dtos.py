@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from archipy.models.errors.base_error import BaseError
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class FastAPIErrorResponseDTO:
     """Standardized error response model for OpenAPI documentation."""
 
-    def __init__(self, exception: type[BaseError], additional_properties: dict | None = None) -> None:
+    def __init__(self, exception: type[BaseError], additional_properties: dict[str, Any] | None = None) -> None:
         """Initialize the error response model.
 
         Args:

@@ -198,7 +198,7 @@ class StringUtilsConstants:
 
     # ASCII ',', '?', ';', '%' and '_' also occur in numbers, URLs, e-mails and identifiers, so they are converted
     # to their Persian forms only next to Persian text.
-    ascii_punctuation_patterns: list = compile_patterns(
+    ascii_punctuation_patterns: list[tuple[re.Pattern[str], str]] = compile_patterns(
         [
             (
                 r"(?<=[\u0600-\u06ff\ufb50-\ufdff\ufe70-\ufeff]),|,(?=\s*[\u0600-\u06ff\ufb50-\ufdff\ufe70-\ufeff])",
@@ -217,7 +217,7 @@ class StringUtilsConstants:
     # replace '：' with ': '
     punctuation_translate_table13 = str.maketrans(dict.fromkeys("\uff1a", "\u003a"))
 
-    character_refinement_patterns: list = compile_patterns(
+    character_refinement_patterns: list[tuple[re.Pattern[str], str]] = compile_patterns(
         [
             (r" +", " "),  # remove extra spaces
             (r"\n\n+", "\n"),  # remove extra newlines
