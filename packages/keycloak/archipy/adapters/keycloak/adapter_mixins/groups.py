@@ -13,14 +13,14 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
 class KeycloakGroupsMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for group operations."""
 
-    def create_group(self, payload: dict, parent: str | None = None, skip_exists: bool = False) -> str | None:
+    def create_group(self, payload: dict[str, Any], parent: str | None = None, skip_exists: bool = False) -> str | None:
         """Create a new group."""
         return self._call_keycloak(
             "create_group",
             lambda: self.admin_adapter.create_group(payload=payload, parent=parent, skip_exists=skip_exists),
         )
 
-    def update_group(self, group_id: str, payload: dict) -> dict[str, Any]:
+    def update_group(self, group_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update a group."""
         return self._call_keycloak(
             "update_group",
@@ -34,7 +34,12 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.delete_group(group_id=group_id),
         )
 
-    def get_group(self, group_id: str, full_hierarchy: bool = False, query: dict | None = None) -> dict[str, Any]:
+    def get_group(
+        self,
+        group_id: str,
+        full_hierarchy: bool = False,
+        query: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Get group representation by ID."""
         return self._call_keycloak(
             "get_group",
@@ -51,7 +56,7 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
     def get_group_children(
         self,
         group_id: str,
-        query: dict | None = None,
+        query: dict[str, Any] | None = None,
         full_hierarchy: bool = False,
     ) -> list[dict[str, Any]]:
         """Get child groups of a group."""
@@ -64,21 +69,21 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def get_groups(self, query: dict | None = None, full_hierarchy: bool = False) -> list[dict[str, Any]]:
+    def get_groups(self, query: dict[str, Any] | None = None, full_hierarchy: bool = False) -> list[dict[str, Any]]:
         """Get all groups, optionally filtered by query."""
         return self._call_keycloak(
             "get_groups",
             lambda: self.admin_adapter.get_groups(query=query, full_hierarchy=full_hierarchy),
         )
 
-    def get_subgroups(self, group: dict, path: str) -> dict[str, Any] | None:
+    def get_subgroups(self, group: dict[str, Any], path: str) -> dict[str, Any] | None:
         """Get subgroups for a group at the given path."""
         return self._call_keycloak(
             "get_subgroups",
             lambda: self.admin_adapter.get_subgroups(group=group, path=path),
         )
 
-    def groups_count(self, query: dict | None = None) -> dict[str, Any]:
+    def groups_count(self, query: dict[str, Any] | None = None) -> dict[str, Any]:
         """Get the number of groups matching the query."""
         return self._call_keycloak(
             "groups_count",
@@ -106,7 +111,7 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.group_set_permissions(group_id=group_id, enabled=enabled),
         )
 
-    def get_group_members(self, group_id: str, query: dict | None = None) -> list[dict[str, Any]]:
+    def get_group_members(self, group_id: str, query: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         """Get members of a group."""
         return self._call_keycloak(
             "get_group_members",
@@ -130,28 +135,28 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def assign_group_client_roles(self, group_id: str, client_id: str, roles: str | list) -> dict[str, Any]:
+    def assign_group_client_roles(self, group_id: str, client_id: str, roles: str | list[str]) -> dict[str, Any]:
         """Assign client roles to a group."""
         return self._call_keycloak(
             "assign_group_client_roles",
             lambda: self.admin_adapter.assign_group_client_roles(group_id=group_id, client_id=client_id, roles=roles),
         )
 
-    def assign_group_realm_roles(self, group_id: str, roles: str | list) -> dict[str, Any]:
+    def assign_group_realm_roles(self, group_id: str, roles: str | list[str]) -> dict[str, Any]:
         """Assign realm roles to a group."""
         return self._call_keycloak(
             "assign_group_realm_roles",
             lambda: self.admin_adapter.assign_group_realm_roles(group_id=group_id, roles=roles),
         )
 
-    def delete_group_client_roles(self, group_id: str, client_id: str, roles: str | list) -> dict[str, Any]:
+    def delete_group_client_roles(self, group_id: str, client_id: str, roles: str | list[str]) -> dict[str, Any]:
         """Remove client roles from a group."""
         return self._call_keycloak(
             "delete_group_client_roles",
             lambda: self.admin_adapter.delete_group_client_roles(group_id=group_id, client_id=client_id, roles=roles),
         )
 
-    def delete_group_realm_roles(self, group_id: str, roles: str | list) -> dict[str, Any]:
+    def delete_group_realm_roles(self, group_id: str, roles: str | list[str]) -> dict[str, Any]:
         """Remove realm roles from a group."""
         return self._call_keycloak(
             "delete_group_realm_roles",
@@ -184,7 +189,7 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
     def get_realm_role_groups(
         self,
         role_name: str,
-        query: dict | None = None,
+        query: dict[str, Any] | None = None,
         brief_representation: bool = True,
     ) -> list[dict[str, Any]]:
         """Get groups that have a specific realm role."""
@@ -201,14 +206,19 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
 class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for group operations."""
 
-    async def create_group(self, payload: dict, parent: str | None = None, skip_exists: bool = False) -> str | None:
+    async def create_group(
+        self,
+        payload: dict[str, Any],
+        parent: str | None = None,
+        skip_exists: bool = False,
+    ) -> str | None:
         """Create a new group."""
         return await self._async_call_keycloak(
             "create_group",
             lambda: self.admin_adapter.a_create_group(payload=payload, parent=parent, skip_exists=skip_exists),
         )
 
-    async def update_group(self, group_id: str, payload: dict) -> dict[str, Any]:
+    async def update_group(self, group_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update a group."""
         return await self._async_call_keycloak(
             "update_group",
@@ -222,7 +232,12 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_delete_group(group_id=group_id),
         )
 
-    async def get_group(self, group_id: str, full_hierarchy: bool = False, query: dict | None = None) -> dict[str, Any]:
+    async def get_group(
+        self,
+        group_id: str,
+        full_hierarchy: bool = False,
+        query: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Get group representation by ID."""
         return await self._async_call_keycloak(
             "get_group",
@@ -239,7 +254,7 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
     async def get_group_children(
         self,
         group_id: str,
-        query: dict | None = None,
+        query: dict[str, Any] | None = None,
         full_hierarchy: bool = False,
     ) -> list[dict[str, Any]]:
         """Get child groups of a group."""
@@ -252,21 +267,25 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def get_groups(self, query: dict | None = None, full_hierarchy: bool = False) -> list[dict[str, Any]]:
+    async def get_groups(
+        self,
+        query: dict[str, Any] | None = None,
+        full_hierarchy: bool = False,
+    ) -> list[dict[str, Any]]:
         """Get all groups, optionally filtered by query."""
         return await self._async_call_keycloak(
             "get_groups",
             lambda: self.admin_adapter.a_get_groups(query=query, full_hierarchy=full_hierarchy),
         )
 
-    async def get_subgroups(self, group: dict, path: str) -> dict[str, Any] | None:
+    async def get_subgroups(self, group: dict[str, Any], path: str) -> dict[str, Any] | None:
         """Get subgroups for a group at the given path."""
         return await self._async_call_keycloak(
             "get_subgroups",
             lambda: self.admin_adapter.a_get_subgroups(group=group, path=path),
         )
 
-    async def groups_count(self, query: dict | None = None) -> dict[str, Any]:
+    async def groups_count(self, query: dict[str, Any] | None = None) -> dict[str, Any]:
         """Get the number of groups matching the query."""
         return await self._async_call_keycloak(
             "groups_count",
@@ -294,7 +313,7 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_group_set_permissions(group_id=group_id, enabled=enabled),
         )
 
-    async def get_group_members(self, group_id: str, query: dict | None = None) -> list[dict[str, Any]]:
+    async def get_group_members(self, group_id: str, query: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         """Get members of a group."""
         return await self._async_call_keycloak(
             "get_group_members",
@@ -318,7 +337,7 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def assign_group_client_roles(self, group_id: str, client_id: str, roles: str | list) -> dict[str, Any]:
+    async def assign_group_client_roles(self, group_id: str, client_id: str, roles: str | list[str]) -> dict[str, Any]:
         """Assign client roles to a group."""
         return await self._async_call_keycloak(
             "assign_group_client_roles",
@@ -329,14 +348,14 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def assign_group_realm_roles(self, group_id: str, roles: str | list) -> dict[str, Any]:
+    async def assign_group_realm_roles(self, group_id: str, roles: str | list[str]) -> dict[str, Any]:
         """Assign realm roles to a group."""
         return await self._async_call_keycloak(
             "assign_group_realm_roles",
             lambda: self.admin_adapter.a_assign_group_realm_roles(group_id=group_id, roles=roles),
         )
 
-    async def delete_group_client_roles(self, group_id: str, client_id: str, roles: str | list) -> dict[str, Any]:
+    async def delete_group_client_roles(self, group_id: str, client_id: str, roles: str | list[str]) -> dict[str, Any]:
         """Remove client roles from a group."""
         return await self._async_call_keycloak(
             "delete_group_client_roles",
@@ -347,7 +366,7 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def delete_group_realm_roles(self, group_id: str, roles: str | list) -> dict[str, Any]:
+    async def delete_group_realm_roles(self, group_id: str, roles: str | list[str]) -> dict[str, Any]:
         """Remove realm roles from a group."""
         return await self._async_call_keycloak(
             "delete_group_realm_roles",
@@ -380,7 +399,7 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
     async def get_realm_role_groups(
         self,
         role_name: str,
-        query: dict | None = None,
+        query: dict[str, Any] | None = None,
         brief_representation: bool = True,
     ) -> list[dict[str, Any]]:
         """Get groups that have a specific realm role."""

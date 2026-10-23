@@ -10,7 +10,12 @@ class KeycloakAuthzPort:
     """Sync Keycloak port interface for authorization service operations."""
 
     @abstractmethod
-    def create_client_authz_resource(self, client_id: str, payload: dict, skip_exists: bool = False) -> dict[str, Any]:
+    def create_client_authz_resource(
+        self,
+        client_id: str,
+        payload: dict[str, Any],
+        skip_exists: bool = False,
+    ) -> dict[str, Any]:
         """Create an authorization resource for a client."""
         raise NotImplementedError
 
@@ -25,7 +30,7 @@ class KeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    def update_client_authz_resource(self, client_id: str, resource_id: str, payload: dict) -> dict[str, Any]:
+    def update_client_authz_resource(self, client_id: str, resource_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update an authorization resource."""
         raise NotImplementedError
 
@@ -35,7 +40,7 @@ class KeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    def create_client_authz_scopes(self, client_id: str, payload: dict) -> dict[str, Any]:
+    def create_client_authz_scopes(self, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Create authorization scopes for a client."""
         raise NotImplementedError
 
@@ -48,19 +53,24 @@ class KeycloakAuthzPort:
     def create_client_authz_role_based_policy(
         self,
         client_id: str,
-        payload: dict,
+        payload: dict[str, Any],
         skip_exists: bool = False,
     ) -> dict[str, Any]:
         """Create a role-based authorization policy."""
         raise NotImplementedError
 
     @abstractmethod
-    def create_client_authz_client_policy(self, payload: dict, client_id: str) -> dict[str, Any]:
+    def create_client_authz_client_policy(self, payload: dict[str, Any], client_id: str) -> dict[str, Any]:
         """Create a client-based authorization policy."""
         raise NotImplementedError
 
     @abstractmethod
-    def create_client_authz_policy(self, client_id: str, payload: dict, skip_exists: bool = False) -> dict[str, Any]:
+    def create_client_authz_policy(
+        self,
+        client_id: str,
+        payload: dict[str, Any],
+        skip_exists: bool = False,
+    ) -> dict[str, Any]:
         """Create an authorization policy."""
         raise NotImplementedError
 
@@ -83,14 +93,14 @@ class KeycloakAuthzPort:
     def create_client_authz_resource_based_permission(
         self,
         client_id: str,
-        payload: dict,
+        payload: dict[str, Any],
         skip_exists: bool = False,
     ) -> dict[str, Any]:
         """Create a resource-based permission."""
         raise NotImplementedError
 
     @abstractmethod
-    def create_client_authz_scope_permission(self, payload: dict, client_id: str) -> dict[str, Any]:
+    def create_client_authz_scope_permission(self, payload: dict[str, Any], client_id: str) -> dict[str, Any]:
         """Create a scope-based permission."""
         raise NotImplementedError
 
@@ -105,12 +115,17 @@ class KeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    def update_client_authz_scope_permission(self, payload: dict, client_id: str, scope_id: str) -> bytes:
+    def update_client_authz_scope_permission(self, payload: dict[str, Any], client_id: str, scope_id: str) -> bytes:
         """Update a scope-based permission."""
         raise NotImplementedError
 
     @abstractmethod
-    def update_client_authz_resource_permission(self, payload: dict, client_id: str, resource_id: str) -> bytes:
+    def update_client_authz_resource_permission(
+        self,
+        payload: dict[str, Any],
+        client_id: str,
+        resource_id: str,
+    ) -> bytes:
         """Update a resource-based permission."""
         raise NotImplementedError
 
@@ -140,7 +155,7 @@ class KeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    def import_client_authz_config(self, client_id: str, payload: dict) -> dict[str, Any]:
+    def import_client_authz_config(self, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Import authorization configuration for a client."""
         raise NotImplementedError
 
@@ -152,7 +167,7 @@ class AsyncKeycloakAuthzPort:
     async def create_client_authz_resource(
         self,
         client_id: str,
-        payload: dict,
+        payload: dict[str, Any],
         skip_exists: bool = False,
     ) -> dict[str, Any]:
         """Create an authorization resource for a client."""
@@ -169,7 +184,12 @@ class AsyncKeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def update_client_authz_resource(self, client_id: str, resource_id: str, payload: dict) -> dict[str, Any]:
+    async def update_client_authz_resource(
+        self,
+        client_id: str,
+        resource_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
         """Update an authorization resource."""
         raise NotImplementedError
 
@@ -179,7 +199,7 @@ class AsyncKeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def create_client_authz_scopes(self, client_id: str, payload: dict) -> dict[str, Any]:
+    async def create_client_authz_scopes(self, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Create authorization scopes for a client."""
         raise NotImplementedError
 
@@ -192,14 +212,14 @@ class AsyncKeycloakAuthzPort:
     async def create_client_authz_role_based_policy(
         self,
         client_id: str,
-        payload: dict,
+        payload: dict[str, Any],
         skip_exists: bool = False,
     ) -> dict[str, Any]:
         """Create a role-based authorization policy."""
         raise NotImplementedError
 
     @abstractmethod
-    async def create_client_authz_client_policy(self, payload: dict, client_id: str) -> dict[str, Any]:
+    async def create_client_authz_client_policy(self, payload: dict[str, Any], client_id: str) -> dict[str, Any]:
         """Create a client-based authorization policy."""
         raise NotImplementedError
 
@@ -207,7 +227,7 @@ class AsyncKeycloakAuthzPort:
     async def create_client_authz_policy(
         self,
         client_id: str,
-        payload: dict,
+        payload: dict[str, Any],
         skip_exists: bool = False,
     ) -> dict[str, Any]:
         """Create an authorization policy."""
@@ -232,14 +252,14 @@ class AsyncKeycloakAuthzPort:
     async def create_client_authz_resource_based_permission(
         self,
         client_id: str,
-        payload: dict,
+        payload: dict[str, Any],
         skip_exists: bool = False,
     ) -> dict[str, Any]:
         """Create a resource-based permission."""
         raise NotImplementedError
 
     @abstractmethod
-    async def create_client_authz_scope_permission(self, payload: dict, client_id: str) -> dict[str, Any]:
+    async def create_client_authz_scope_permission(self, payload: dict[str, Any], client_id: str) -> dict[str, Any]:
         """Create a scope-based permission."""
         raise NotImplementedError
 
@@ -254,12 +274,22 @@ class AsyncKeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def update_client_authz_scope_permission(self, payload: dict, client_id: str, scope_id: str) -> bytes:
+    async def update_client_authz_scope_permission(
+        self,
+        payload: dict[str, Any],
+        client_id: str,
+        scope_id: str,
+    ) -> bytes:
         """Update a scope-based permission."""
         raise NotImplementedError
 
     @abstractmethod
-    async def update_client_authz_resource_permission(self, payload: dict, client_id: str, resource_id: str) -> bytes:
+    async def update_client_authz_resource_permission(
+        self,
+        payload: dict[str, Any],
+        client_id: str,
+        resource_id: str,
+    ) -> bytes:
         """Update a resource-based permission."""
         raise NotImplementedError
 
@@ -293,6 +323,6 @@ class AsyncKeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def import_client_authz_config(self, client_id: str, payload: dict) -> dict[str, Any]:
+    async def import_client_authz_config(self, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Import authorization configuration for a client."""
         raise NotImplementedError

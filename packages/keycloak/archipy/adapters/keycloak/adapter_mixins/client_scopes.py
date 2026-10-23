@@ -36,14 +36,14 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.get_client_scope_by_name(client_scope_name=client_scope_name),
         )
 
-    def create_client_scope(self, payload: dict, skip_exists: bool = False) -> str:
+    def create_client_scope(self, payload: dict[str, Any], skip_exists: bool = False) -> str:
         """Create a new client scope."""
         return self._call_keycloak(
             "create_client_scope",
             lambda: self.admin_adapter.create_client_scope(payload=payload, skip_exists=skip_exists),
         )
 
-    def update_client_scope(self, client_scope_id: str, payload: dict) -> dict[str, Any]:
+    def update_client_scope(self, client_scope_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update a client scope."""
         return self._call_keycloak(
             "update_client_scope",
@@ -57,7 +57,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.delete_client_scope(client_scope_id=client_scope_id),
         )
 
-    def add_mapper_to_client_scope(self, client_scope_id: str, payload: dict) -> bytes:
+    def add_mapper_to_client_scope(self, client_scope_id: str, payload: dict[str, Any]) -> bytes:
         """Add a protocol mapper to a client scope."""
         return self._call_keycloak(
             "add_mapper_to_client_scope",
@@ -75,7 +75,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
         self,
         client_scope_id: str,
         protocol_mapper_id: str,
-        payload: dict,
+        payload: dict[str, Any],
     ) -> dict[str, Any]:
         """Update a protocol mapper in a client scope."""
         return self._call_keycloak(
@@ -97,7 +97,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def add_mapper_to_client(self, client_id: str, payload: dict) -> bytes:
+    def add_mapper_to_client(self, client_id: str, payload: dict[str, Any]) -> bytes:
         """Add a protocol mapper to a client."""
         return self._call_keycloak(
             "add_mapper_to_client",
@@ -111,7 +111,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.get_mappers_from_client(client_id=client_id),
         )
 
-    def update_client_mapper(self, client_id: str, mapper_id: str, payload: dict) -> dict[str, Any]:
+    def update_client_mapper(self, client_id: str, mapper_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update a protocol mapper on a client."""
         return self._call_keycloak(
             "update_client_mapper",
@@ -132,7 +132,12 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.get_client_default_client_scopes(client_id=client_id),
         )
 
-    def add_client_default_client_scope(self, client_id: str, client_scope_id: str, payload: dict) -> dict[str, Any]:
+    def add_client_default_client_scope(
+        self,
+        client_id: str,
+        client_scope_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
         """Add a default client scope to a client."""
         return self._call_keycloak(
             "add_client_default_client_scope",
@@ -160,7 +165,12 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.get_client_optional_client_scopes(client_id=client_id),
         )
 
-    def add_client_optional_client_scope(self, client_id: str, client_scope_id: str, payload: dict) -> dict[str, Any]:
+    def add_client_optional_client_scope(
+        self,
+        client_id: str,
+        client_scope_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
         """Add an optional client scope to a client."""
         return self._call_keycloak(
             "add_client_optional_client_scope",
@@ -254,14 +264,14 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_get_client_scope_by_name(client_scope_name=client_scope_name),
         )
 
-    async def create_client_scope(self, payload: dict, skip_exists: bool = False) -> str:
+    async def create_client_scope(self, payload: dict[str, Any], skip_exists: bool = False) -> str:
         """Create a new client scope."""
         return await self._async_call_keycloak(
             "create_client_scope",
             lambda: self.admin_adapter.a_create_client_scope(payload=payload, skip_exists=skip_exists),
         )
 
-    async def update_client_scope(self, client_scope_id: str, payload: dict) -> dict[str, Any]:
+    async def update_client_scope(self, client_scope_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update a client scope."""
         return await self._async_call_keycloak(
             "update_client_scope",
@@ -275,7 +285,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_delete_client_scope(client_scope_id=client_scope_id),
         )
 
-    async def add_mapper_to_client_scope(self, client_scope_id: str, payload: dict) -> bytes:
+    async def add_mapper_to_client_scope(self, client_scope_id: str, payload: dict[str, Any]) -> bytes:
         """Add a protocol mapper to a client scope."""
         return await self._async_call_keycloak(
             "add_mapper_to_client_scope",
@@ -296,7 +306,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         self,
         client_scope_id: str,
         protocol_mapper_id: str,
-        payload: dict,
+        payload: dict[str, Any],
     ) -> dict[str, Any]:
         """Update a protocol mapper in a client scope."""
         return await self._async_call_keycloak(
@@ -318,7 +328,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def add_mapper_to_client(self, client_id: str, payload: dict) -> bytes:
+    async def add_mapper_to_client(self, client_id: str, payload: dict[str, Any]) -> bytes:
         """Add a protocol mapper to a client."""
         return await self._async_call_keycloak(
             "add_mapper_to_client",
@@ -332,7 +342,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_get_mappers_from_client(client_id=client_id),
         )
 
-    async def update_client_mapper(self, client_id: str, mapper_id: str, payload: dict) -> dict[str, Any]:
+    async def update_client_mapper(self, client_id: str, mapper_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update a protocol mapper on a client."""
         return await self._async_call_keycloak(
             "update_client_mapper",
@@ -364,7 +374,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         self,
         client_id: str,
         client_scope_id: str,
-        payload: dict,
+        payload: dict[str, Any],
     ) -> dict[str, Any]:
         """Add a default client scope to a client."""
         return await self._async_call_keycloak(
@@ -397,7 +407,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         self,
         client_id: str,
         client_scope_id: str,
-        payload: dict,
+        payload: dict[str, Any],
     ) -> dict[str, Any]:
         """Add an optional client scope to a client."""
         return await self._async_call_keycloak(

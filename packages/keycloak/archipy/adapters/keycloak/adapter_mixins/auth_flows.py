@@ -13,14 +13,14 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
 class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for authentication flow operations."""
 
-    def create_authentication_flow(self, payload: dict, skip_exists: bool = False) -> bytes:
+    def create_authentication_flow(self, payload: dict[str, Any], skip_exists: bool = False) -> bytes:
         """Create a new authentication flow."""
         return self._call_keycloak(
             "create_authentication_flow",
             lambda: self.admin_adapter.create_authentication_flow(payload=payload, skip_exists=skip_exists),
         )
 
-    def copy_authentication_flow(self, payload: dict, flow_alias: str) -> bytes:
+    def copy_authentication_flow(self, payload: dict[str, Any], flow_alias: str) -> bytes:
         """Copy an existing authentication flow."""
         return self._call_keycloak(
             "copy_authentication_flow",
@@ -64,21 +64,26 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.get_authentication_flow_execution(execution_id=execution_id),
         )
 
-    def create_authentication_flow_execution(self, payload: dict, flow_alias: str) -> bytes:
+    def create_authentication_flow_execution(self, payload: dict[str, Any], flow_alias: str) -> bytes:
         """Create an execution in an authentication flow."""
         return self._call_keycloak(
             "create_authentication_flow_execution",
             lambda: self.admin_adapter.create_authentication_flow_execution(payload=payload, flow_alias=flow_alias),
         )
 
-    def update_authentication_flow_executions(self, payload: dict, flow_alias: str) -> dict[str, Any]:
+    def update_authentication_flow_executions(self, payload: dict[str, Any], flow_alias: str) -> dict[str, Any]:
         """Update executions in an authentication flow."""
         return self._call_keycloak(
             "update_authentication_flow_executions",
             lambda: self.admin_adapter.update_authentication_flow_executions(payload=payload, flow_alias=flow_alias),
         )
 
-    def create_authentication_flow_subflow(self, payload: dict, flow_alias: str, skip_exists: bool = False) -> bytes:
+    def create_authentication_flow_subflow(
+        self,
+        payload: dict[str, Any],
+        flow_alias: str,
+        skip_exists: bool = False,
+    ) -> bytes:
         """Create a subflow in an authentication flow."""
         return self._call_keycloak(
             "create_authentication_flow_subflow",
@@ -103,7 +108,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.change_execution_priority(execution_id=execution_id, diff=diff),
         )
 
-    def update_authentication_flow(self, flow_id: str, payload: dict) -> dict[str, Any]:
+    def update_authentication_flow(self, flow_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update an authentication flow."""
         return self._call_keycloak(
             "update_authentication_flow",
@@ -133,7 +138,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.get_authenticator_config(config_id=config_id),
         )
 
-    def update_authenticator_config(self, payload: dict, config_id: str) -> dict[str, Any]:
+    def update_authenticator_config(self, payload: dict[str, Any], config_id: str) -> dict[str, Any]:
         """Update authenticator configuration."""
         return self._call_keycloak(
             "update_authenticator_config",
@@ -147,7 +152,7 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.delete_authenticator_config(config_id=config_id),
         )
 
-    def create_execution_config(self, execution_id: str, payload: dict) -> bytes:
+    def create_execution_config(self, execution_id: str, payload: dict[str, Any]) -> bytes:
         """Create configuration for an authentication flow execution."""
         return self._call_keycloak(
             "create_execution_config",
@@ -158,14 +163,14 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
 class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for authentication flow operations."""
 
-    async def create_authentication_flow(self, payload: dict, skip_exists: bool = False) -> bytes:
+    async def create_authentication_flow(self, payload: dict[str, Any], skip_exists: bool = False) -> bytes:
         """Create a new authentication flow."""
         return await self._async_call_keycloak(
             "create_authentication_flow",
             lambda: self.admin_adapter.a_create_authentication_flow(payload=payload, skip_exists=skip_exists),
         )
 
-    async def copy_authentication_flow(self, payload: dict, flow_alias: str) -> bytes:
+    async def copy_authentication_flow(self, payload: dict[str, Any], flow_alias: str) -> bytes:
         """Copy an existing authentication flow."""
         return await self._async_call_keycloak(
             "copy_authentication_flow",
@@ -209,7 +214,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_get_authentication_flow_execution(execution_id=execution_id),
         )
 
-    async def create_authentication_flow_execution(self, payload: dict, flow_alias: str) -> bytes:
+    async def create_authentication_flow_execution(self, payload: dict[str, Any], flow_alias: str) -> bytes:
         """Create an execution in an authentication flow."""
         return await self._async_call_keycloak(
             "create_authentication_flow_execution",
@@ -219,7 +224,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def update_authentication_flow_executions(self, payload: dict, flow_alias: str) -> dict[str, Any]:
+    async def update_authentication_flow_executions(self, payload: dict[str, Any], flow_alias: str) -> dict[str, Any]:
         """Update executions in an authentication flow."""
         return await self._async_call_keycloak(
             "update_authentication_flow_executions",
@@ -231,7 +236,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
 
     async def create_authentication_flow_subflow(
         self,
-        payload: dict,
+        payload: dict[str, Any],
         flow_alias: str,
         skip_exists: bool = False,
     ) -> bytes:
@@ -259,7 +264,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_change_execution_priority(execution_id=execution_id, diff=diff),
         )
 
-    async def update_authentication_flow(self, flow_id: str, payload: dict) -> dict[str, Any]:
+    async def update_authentication_flow(self, flow_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update an authentication flow."""
         return await self._async_call_keycloak(
             "update_authentication_flow",
@@ -289,7 +294,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_get_authenticator_config(config_id=config_id),
         )
 
-    async def update_authenticator_config(self, payload: dict, config_id: str) -> dict[str, Any]:
+    async def update_authenticator_config(self, payload: dict[str, Any], config_id: str) -> dict[str, Any]:
         """Update authenticator configuration."""
         return await self._async_call_keycloak(
             "update_authenticator_config",
@@ -303,7 +308,7 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_delete_authenticator_config(config_id=config_id),
         )
 
-    async def create_execution_config(self, execution_id: str, payload: dict) -> bytes:
+    async def create_execution_config(self, execution_id: str, payload: dict[str, Any]) -> bytes:
         """Create configuration for an authentication flow execution."""
         return await self._async_call_keycloak(
             "create_execution_config",

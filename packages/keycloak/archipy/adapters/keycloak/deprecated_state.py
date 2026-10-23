@@ -72,21 +72,21 @@ for _name in _SET_READS:
     setattr(_WarningSet, _name, _guard(set, _name))
 
 
-def deprecated_dict(value: dict, field: str, replacement: str) -> dict:
+def deprecated_dict[K, V](value: dict[K, V], field: str, replacement: str) -> dict[K, V]:
     """Return a copy of ``value`` that warns on reads."""
     result = _WarningDict(value)
     result.field, result.replacement = field, replacement
     return result
 
 
-def deprecated_list(value: list, field: str, replacement: str) -> list:
+def deprecated_list[T](value: list[T], field: str, replacement: str) -> list[T]:
     """Return a copy of ``value`` that warns on reads."""
     result = _WarningList(value)
     result.field, result.replacement = field, replacement
     return result
 
 
-def deprecated_set(value: set, field: str, replacement: str) -> set:
+def deprecated_set[T](value: set[T], field: str, replacement: str) -> set[T]:
     """Return a copy of ``value`` that warns on reads."""
     result = _WarningSet(value)
     result.field, result.replacement = field, replacement

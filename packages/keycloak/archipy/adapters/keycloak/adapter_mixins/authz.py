@@ -13,7 +13,12 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
 class KeycloakAuthzMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for authorization service operations."""
 
-    def create_client_authz_resource(self, client_id: str, payload: dict, skip_exists: bool = False) -> dict[str, Any]:
+    def create_client_authz_resource(
+        self,
+        client_id: str,
+        payload: dict[str, Any],
+        skip_exists: bool = False,
+    ) -> dict[str, Any]:
         """Create an authorization resource for a client."""
         return self._call_keycloak(
             "create_client_authz_resource",
@@ -38,7 +43,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.get_client_authz_resource(client_id=client_id, resource_id=resource_id),
         )
 
-    def update_client_authz_resource(self, client_id: str, resource_id: str, payload: dict) -> dict[str, Any]:
+    def update_client_authz_resource(self, client_id: str, resource_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update an authorization resource."""
         return self._call_keycloak(
             "update_client_authz_resource",
@@ -56,7 +61,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.delete_client_authz_resource(client_id=client_id, resource_id=resource_id),
         )
 
-    def create_client_authz_scopes(self, client_id: str, payload: dict) -> dict[str, Any]:
+    def create_client_authz_scopes(self, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Create authorization scopes for a client."""
         return self._call_keycloak(
             "create_client_authz_scopes",
@@ -73,7 +78,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
     def create_client_authz_role_based_policy(
         self,
         client_id: str,
-        payload: dict,
+        payload: dict[str, Any],
         skip_exists: bool = False,
     ) -> dict[str, Any]:
         """Create a role-based authorization policy."""
@@ -86,14 +91,19 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def create_client_authz_client_policy(self, payload: dict, client_id: str) -> dict[str, Any]:
+    def create_client_authz_client_policy(self, payload: dict[str, Any], client_id: str) -> dict[str, Any]:
         """Create a client-based authorization policy."""
         return self._call_keycloak(
             "create_client_authz_client_policy",
             lambda: self.admin_adapter.create_client_authz_client_policy(payload=payload, client_id=client_id),
         )
 
-    def create_client_authz_policy(self, client_id: str, payload: dict, skip_exists: bool = False) -> dict[str, Any]:
+    def create_client_authz_policy(
+        self,
+        client_id: str,
+        payload: dict[str, Any],
+        skip_exists: bool = False,
+    ) -> dict[str, Any]:
         """Create an authorization policy."""
         return self._call_keycloak(
             "create_client_authz_policy",
@@ -128,7 +138,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
     def create_client_authz_resource_based_permission(
         self,
         client_id: str,
-        payload: dict,
+        payload: dict[str, Any],
         skip_exists: bool = False,
     ) -> dict[str, Any]:
         """Create a resource-based permission."""
@@ -141,7 +151,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def create_client_authz_scope_permission(self, payload: dict, client_id: str) -> dict[str, Any]:
+    def create_client_authz_scope_permission(self, payload: dict[str, Any], client_id: str) -> dict[str, Any]:
         """Create a scope-based permission."""
         return self._call_keycloak(
             "create_client_authz_scope_permission",
@@ -162,7 +172,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.get_client_authz_scope_permission(client_id=client_id, scope_id=scope_id),
         )
 
-    def update_client_authz_scope_permission(self, payload: dict, client_id: str, scope_id: str) -> bytes:
+    def update_client_authz_scope_permission(self, payload: dict[str, Any], client_id: str, scope_id: str) -> bytes:
         """Update a scope-based permission."""
         return self._call_keycloak(
             "update_client_authz_scope_permission",
@@ -173,7 +183,12 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def update_client_authz_resource_permission(self, payload: dict, client_id: str, resource_id: str) -> bytes:
+    def update_client_authz_resource_permission(
+        self,
+        payload: dict[str, Any],
+        client_id: str,
+        resource_id: str,
+    ) -> bytes:
         """Update a resource-based permission."""
         return self._call_keycloak(
             "update_client_authz_resource_permission",
@@ -222,7 +237,7 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.get_client_authz_policy_scopes(client_id=client_id, policy_id=policy_id),
         )
 
-    def import_client_authz_config(self, client_id: str, payload: dict) -> dict[str, Any]:
+    def import_client_authz_config(self, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Import authorization configuration for a client."""
         return self._call_keycloak(
             "import_client_authz_config",
@@ -236,7 +251,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
     async def create_client_authz_resource(
         self,
         client_id: str,
-        payload: dict,
+        payload: dict[str, Any],
         skip_exists: bool = False,
     ) -> dict[str, Any]:
         """Create an authorization resource for a client."""
@@ -263,7 +278,12 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_get_client_authz_resource(client_id=client_id, resource_id=resource_id),
         )
 
-    async def update_client_authz_resource(self, client_id: str, resource_id: str, payload: dict) -> dict[str, Any]:
+    async def update_client_authz_resource(
+        self,
+        client_id: str,
+        resource_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
         """Update an authorization resource."""
         return await self._async_call_keycloak(
             "update_client_authz_resource",
@@ -281,7 +301,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_delete_client_authz_resource(client_id=client_id, resource_id=resource_id),
         )
 
-    async def create_client_authz_scopes(self, client_id: str, payload: dict) -> dict[str, Any]:
+    async def create_client_authz_scopes(self, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Create authorization scopes for a client."""
         return await self._async_call_keycloak(
             "create_client_authz_scopes",
@@ -298,7 +318,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
     async def create_client_authz_role_based_policy(
         self,
         client_id: str,
-        payload: dict,
+        payload: dict[str, Any],
         skip_exists: bool = False,
     ) -> dict[str, Any]:
         """Create a role-based authorization policy."""
@@ -311,7 +331,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def create_client_authz_client_policy(self, payload: dict, client_id: str) -> dict[str, Any]:
+    async def create_client_authz_client_policy(self, payload: dict[str, Any], client_id: str) -> dict[str, Any]:
         """Create a client-based authorization policy."""
         return await self._async_call_keycloak(
             "create_client_authz_client_policy",
@@ -321,7 +341,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
     async def create_client_authz_policy(
         self,
         client_id: str,
-        payload: dict,
+        payload: dict[str, Any],
         skip_exists: bool = False,
     ) -> dict[str, Any]:
         """Create an authorization policy."""
@@ -358,7 +378,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
     async def create_client_authz_resource_based_permission(
         self,
         client_id: str,
-        payload: dict,
+        payload: dict[str, Any],
         skip_exists: bool = False,
     ) -> dict[str, Any]:
         """Create a resource-based permission."""
@@ -371,7 +391,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def create_client_authz_scope_permission(self, payload: dict, client_id: str) -> dict[str, Any]:
+    async def create_client_authz_scope_permission(self, payload: dict[str, Any], client_id: str) -> dict[str, Any]:
         """Create a scope-based permission."""
         return await self._async_call_keycloak(
             "create_client_authz_scope_permission",
@@ -392,7 +412,12 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_get_client_authz_scope_permission(client_id=client_id, scope_id=scope_id),
         )
 
-    async def update_client_authz_scope_permission(self, payload: dict, client_id: str, scope_id: str) -> bytes:
+    async def update_client_authz_scope_permission(
+        self,
+        payload: dict[str, Any],
+        client_id: str,
+        scope_id: str,
+    ) -> bytes:
         """Update a scope-based permission."""
         return await self._async_call_keycloak(
             "update_client_authz_scope_permission",
@@ -403,7 +428,12 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def update_client_authz_resource_permission(self, payload: dict, client_id: str, resource_id: str) -> bytes:
+    async def update_client_authz_resource_permission(
+        self,
+        payload: dict[str, Any],
+        client_id: str,
+        resource_id: str,
+    ) -> bytes:
         """Update a resource-based permission."""
         return await self._async_call_keycloak(
             "update_client_authz_resource_permission",
@@ -459,7 +489,7 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_get_client_authz_policy_scopes(client_id=client_id, policy_id=policy_id),
         )
 
-    async def import_client_authz_config(self, client_id: str, payload: dict) -> dict[str, Any]:
+    async def import_client_authz_config(self, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Import authorization configuration for a client."""
         return await self._async_call_keycloak(
             "import_client_authz_config",

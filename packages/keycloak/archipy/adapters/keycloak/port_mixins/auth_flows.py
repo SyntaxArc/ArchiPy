@@ -10,12 +10,12 @@ class KeycloakAuthFlowsPort:
     """Sync Keycloak port interface for authentication flow operations."""
 
     @abstractmethod
-    def create_authentication_flow(self, payload: dict, skip_exists: bool = False) -> bytes:
+    def create_authentication_flow(self, payload: dict[str, Any], skip_exists: bool = False) -> bytes:
         """Create a new authentication flow."""
         raise NotImplementedError
 
     @abstractmethod
-    def copy_authentication_flow(self, payload: dict, flow_alias: str) -> bytes:
+    def copy_authentication_flow(self, payload: dict[str, Any], flow_alias: str) -> bytes:
         """Copy an existing authentication flow."""
         raise NotImplementedError
 
@@ -47,17 +47,22 @@ class KeycloakAuthFlowsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def create_authentication_flow_execution(self, payload: dict, flow_alias: str) -> bytes:
+    def create_authentication_flow_execution(self, payload: dict[str, Any], flow_alias: str) -> bytes:
         """Create an execution in an authentication flow."""
         raise NotImplementedError
 
     @abstractmethod
-    def update_authentication_flow_executions(self, payload: dict, flow_alias: str) -> dict[str, Any]:
+    def update_authentication_flow_executions(self, payload: dict[str, Any], flow_alias: str) -> dict[str, Any]:
         """Update executions in an authentication flow."""
         raise NotImplementedError
 
     @abstractmethod
-    def create_authentication_flow_subflow(self, payload: dict, flow_alias: str, skip_exists: bool = False) -> bytes:
+    def create_authentication_flow_subflow(
+        self,
+        payload: dict[str, Any],
+        flow_alias: str,
+        skip_exists: bool = False,
+    ) -> bytes:
         """Create a subflow in an authentication flow."""
         raise NotImplementedError
 
@@ -72,7 +77,7 @@ class KeycloakAuthFlowsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def update_authentication_flow(self, flow_id: str, payload: dict) -> dict[str, Any]:
+    def update_authentication_flow(self, flow_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update an authentication flow."""
         raise NotImplementedError
 
@@ -94,7 +99,7 @@ class KeycloakAuthFlowsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def update_authenticator_config(self, payload: dict, config_id: str) -> dict[str, Any]:
+    def update_authenticator_config(self, payload: dict[str, Any], config_id: str) -> dict[str, Any]:
         """Update authenticator configuration."""
         raise NotImplementedError
 
@@ -104,7 +109,7 @@ class KeycloakAuthFlowsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def create_execution_config(self, execution_id: str, payload: dict) -> bytes:
+    def create_execution_config(self, execution_id: str, payload: dict[str, Any]) -> bytes:
         """Create configuration for an authentication flow execution."""
         raise NotImplementedError
 
@@ -113,12 +118,12 @@ class AsyncKeycloakAuthFlowsPort:
     """Async Keycloak port interface for authentication flow operations."""
 
     @abstractmethod
-    async def create_authentication_flow(self, payload: dict, skip_exists: bool = False) -> bytes:
+    async def create_authentication_flow(self, payload: dict[str, Any], skip_exists: bool = False) -> bytes:
         """Create a new authentication flow."""
         raise NotImplementedError
 
     @abstractmethod
-    async def copy_authentication_flow(self, payload: dict, flow_alias: str) -> bytes:
+    async def copy_authentication_flow(self, payload: dict[str, Any], flow_alias: str) -> bytes:
         """Copy an existing authentication flow."""
         raise NotImplementedError
 
@@ -150,19 +155,19 @@ class AsyncKeycloakAuthFlowsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def create_authentication_flow_execution(self, payload: dict, flow_alias: str) -> bytes:
+    async def create_authentication_flow_execution(self, payload: dict[str, Any], flow_alias: str) -> bytes:
         """Create an execution in an authentication flow."""
         raise NotImplementedError
 
     @abstractmethod
-    async def update_authentication_flow_executions(self, payload: dict, flow_alias: str) -> dict[str, Any]:
+    async def update_authentication_flow_executions(self, payload: dict[str, Any], flow_alias: str) -> dict[str, Any]:
         """Update executions in an authentication flow."""
         raise NotImplementedError
 
     @abstractmethod
     async def create_authentication_flow_subflow(
         self,
-        payload: dict,
+        payload: dict[str, Any],
         flow_alias: str,
         skip_exists: bool = False,
     ) -> bytes:
@@ -180,7 +185,7 @@ class AsyncKeycloakAuthFlowsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def update_authentication_flow(self, flow_id: str, payload: dict) -> dict[str, Any]:
+    async def update_authentication_flow(self, flow_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update an authentication flow."""
         raise NotImplementedError
 
@@ -202,7 +207,7 @@ class AsyncKeycloakAuthFlowsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def update_authenticator_config(self, payload: dict, config_id: str) -> dict[str, Any]:
+    async def update_authenticator_config(self, payload: dict[str, Any], config_id: str) -> dict[str, Any]:
         """Update authenticator configuration."""
         raise NotImplementedError
 
@@ -212,6 +217,6 @@ class AsyncKeycloakAuthFlowsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def create_execution_config(self, execution_id: str, payload: dict) -> bytes:
+    async def create_execution_config(self, execution_id: str, payload: dict[str, Any]) -> bytes:
         """Create configuration for an authentication flow execution."""
         raise NotImplementedError

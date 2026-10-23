@@ -27,12 +27,12 @@ class KeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def create_client_scope(self, payload: dict, skip_exists: bool = False) -> str:
+    def create_client_scope(self, payload: dict[str, Any], skip_exists: bool = False) -> str:
         """Create a new client scope."""
         raise NotImplementedError
 
     @abstractmethod
-    def update_client_scope(self, client_scope_id: str, payload: dict) -> dict[str, Any]:
+    def update_client_scope(self, client_scope_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update a client scope."""
         raise NotImplementedError
 
@@ -42,7 +42,7 @@ class KeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def add_mapper_to_client_scope(self, client_scope_id: str, payload: dict) -> bytes:
+    def add_mapper_to_client_scope(self, client_scope_id: str, payload: dict[str, Any]) -> bytes:
         """Add a protocol mapper to a client scope."""
         raise NotImplementedError
 
@@ -56,7 +56,7 @@ class KeycloakClientScopesPort:
         self,
         client_scope_id: str,
         protocol_mapper_id: str,
-        payload: dict,
+        payload: dict[str, Any],
     ) -> dict[str, Any]:
         """Update a protocol mapper in a client scope."""
         raise NotImplementedError
@@ -67,7 +67,7 @@ class KeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def add_mapper_to_client(self, client_id: str, payload: dict) -> bytes:
+    def add_mapper_to_client(self, client_id: str, payload: dict[str, Any]) -> bytes:
         """Add a protocol mapper to a client."""
         raise NotImplementedError
 
@@ -77,7 +77,7 @@ class KeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def update_client_mapper(self, client_id: str, mapper_id: str, payload: dict) -> dict[str, Any]:
+    def update_client_mapper(self, client_id: str, mapper_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update a protocol mapper on a client."""
         raise NotImplementedError
 
@@ -92,7 +92,12 @@ class KeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def add_client_default_client_scope(self, client_id: str, client_scope_id: str, payload: dict) -> dict[str, Any]:
+    def add_client_default_client_scope(
+        self,
+        client_id: str,
+        client_scope_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
         """Add a default client scope to a client."""
         raise NotImplementedError
 
@@ -107,7 +112,12 @@ class KeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def add_client_optional_client_scope(self, client_id: str, client_scope_id: str, payload: dict) -> dict[str, Any]:
+    def add_client_optional_client_scope(
+        self,
+        client_id: str,
+        client_scope_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
         """Add an optional client scope to a client."""
         raise NotImplementedError
 
@@ -172,12 +182,12 @@ class AsyncKeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def create_client_scope(self, payload: dict, skip_exists: bool = False) -> str:
+    async def create_client_scope(self, payload: dict[str, Any], skip_exists: bool = False) -> str:
         """Create a new client scope."""
         raise NotImplementedError
 
     @abstractmethod
-    async def update_client_scope(self, client_scope_id: str, payload: dict) -> dict[str, Any]:
+    async def update_client_scope(self, client_scope_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update a client scope."""
         raise NotImplementedError
 
@@ -187,7 +197,7 @@ class AsyncKeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def add_mapper_to_client_scope(self, client_scope_id: str, payload: dict) -> bytes:
+    async def add_mapper_to_client_scope(self, client_scope_id: str, payload: dict[str, Any]) -> bytes:
         """Add a protocol mapper to a client scope."""
         raise NotImplementedError
 
@@ -201,7 +211,7 @@ class AsyncKeycloakClientScopesPort:
         self,
         client_scope_id: str,
         protocol_mapper_id: str,
-        payload: dict,
+        payload: dict[str, Any],
     ) -> dict[str, Any]:
         """Update a protocol mapper in a client scope."""
         raise NotImplementedError
@@ -212,7 +222,7 @@ class AsyncKeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def add_mapper_to_client(self, client_id: str, payload: dict) -> bytes:
+    async def add_mapper_to_client(self, client_id: str, payload: dict[str, Any]) -> bytes:
         """Add a protocol mapper to a client."""
         raise NotImplementedError
 
@@ -222,7 +232,7 @@ class AsyncKeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def update_client_mapper(self, client_id: str, mapper_id: str, payload: dict) -> dict[str, Any]:
+    async def update_client_mapper(self, client_id: str, mapper_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update a protocol mapper on a client."""
         raise NotImplementedError
 
@@ -241,7 +251,7 @@ class AsyncKeycloakClientScopesPort:
         self,
         client_id: str,
         client_scope_id: str,
-        payload: dict,
+        payload: dict[str, Any],
     ) -> dict[str, Any]:
         """Add a default client scope to a client."""
         raise NotImplementedError
@@ -261,7 +271,7 @@ class AsyncKeycloakClientScopesPort:
         self,
         client_id: str,
         client_scope_id: str,
-        payload: dict,
+        payload: dict[str, Any],
     ) -> dict[str, Any]:
         """Add an optional client scope to a client."""
         raise NotImplementedError
