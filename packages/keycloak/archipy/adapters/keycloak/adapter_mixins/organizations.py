@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
 )
 from archipy.helpers.utils.string_utils import StringUtils
+
+if TYPE_CHECKING:
+    from archipy.adapters.keycloak.port_mixins._shared import KeycloakOrganizationType
 
 
 def _organization_payload(name: str, alias: str, kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -29,7 +32,7 @@ def _organization_update_payload(kwargs: dict[str, Any]) -> dict[str, Any]:
 class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for organization operations."""
 
-    def get_organizations(self, query: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    def get_organizations(self, query: dict[str, Any] | None = None) -> list[KeycloakOrganizationType]:
         """Fetch all organizations, optionally filtered by query parameters.
 
         Args:
@@ -43,7 +46,7 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.get_organizations(query=query),
         )
 
-    def get_organization(self, organization_id: str) -> dict[str, Any]:
+    def get_organization(self, organization_id: str) -> KeycloakOrganizationType:
         """Get representation of the organization by ID.
 
         Args:
@@ -52,9 +55,12 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
         Returns:
             Organization representation.
         """
-        return self._call_keycloak(
-            "get_organization",
-            lambda: self.admin_adapter.get_organization(organization_id),
+        return cast(
+            "KeycloakOrganizationType",
+            self._call_keycloak(
+                "get_organization",
+                lambda: self.admin_adapter.get_organization(organization_id),
+            ),
         )
 
     def create_organization(self, name: str, alias: str, **kwargs: Any) -> str | None:
@@ -118,7 +124,7 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.get_organization_idps(organization_id=organization_id),
         )
 
-    def get_user_organizations(self, user_id: str) -> list[dict[str, Any]]:
+    def get_user_organizations(self, user_id: str) -> list[KeycloakOrganizationType]:
         """Get organizations by user id.
 
         Args:
@@ -199,7 +205,7 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
 class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for organization operations."""
 
-    async def get_organizations(self, query: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    async def get_organizations(self, query: dict[str, Any] | None = None) -> list[KeycloakOrganizationType]:
         """Fetch all organizations, optionally filtered by query parameters.
 
         Args:
@@ -213,7 +219,7 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_get_organizations(query=query),
         )
 
-    async def get_organization(self, organization_id: str) -> dict[str, Any]:
+    async def get_organization(self, organization_id: str) -> KeycloakOrganizationType:
         """Get representation of the organization by ID.
 
         Args:
@@ -222,9 +228,12 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
         Returns:
             Organization representation.
         """
-        return await self._async_call_keycloak(
-            "get_organization",
-            lambda: self.admin_adapter.a_get_organization(organization_id=organization_id),
+        return cast(
+            "KeycloakOrganizationType",
+            await self._async_call_keycloak(
+                "get_organization",
+                lambda: self.admin_adapter.a_get_organization(organization_id=organization_id),
+            ),
         )
 
     async def create_organization(self, name: str, alias: str, **kwargs: Any) -> str | None:
@@ -288,7 +297,7 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_get_organization_idps(organization_id=organization_id),
         )
 
-    async def get_user_organizations(self, user_id: str) -> list[dict[str, Any]]:
+    async def get_user_organizations(self, user_id: str) -> list[KeycloakOrganizationType]:
         """Get organizations by user id.
 
         Args:
