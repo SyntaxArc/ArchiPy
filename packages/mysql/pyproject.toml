@@ -14,7 +14,7 @@ dependencies = [
 
 [project.optional-dependencies]
 sync = ["pymysql>=1.2.3"]
-async = ["asyncmy2>=0.2.21"]
+async = ["asyncmy>=0.2.17"]
 
 [build-system]
 requires = ["hatchling"]

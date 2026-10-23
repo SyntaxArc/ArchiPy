@@ -9,7 +9,7 @@ version = "0.1.0" # This version is set on publish flow!
 requires-python = ">=3.14,<4"
 dependencies = [
     "archipy==0.1.0", # Pinned to core version on publish flow!
-    "boto3>=1.43.116",
+    "boto3>=1.43.118",
     "cachetools>=7.2.4",
     "async-lru>=2.4.0",
 ]

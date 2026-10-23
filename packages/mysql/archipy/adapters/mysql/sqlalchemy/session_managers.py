@@ -162,7 +162,7 @@ class AsyncMySQLSQlAlchemySessionManager(
         """Create an async MySQL connection URL.
 
         For async operations, MySQL uses the mysql+asyncmy driver which is provided
-        by the asyncmy2 package.
+        by the asyncmy package.
 
         Args:
             configs: MySQL configuration.

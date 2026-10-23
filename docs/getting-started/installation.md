@@ -65,7 +65,7 @@ ArchiPy supports modular features through optional extras — install only what 
 |---------------|---------------------------------|--------------------------------------------------------------------|
 | Database      | `archipy[postgres]`             | PostgreSQL adapter with SQLAlchemy integration                     |
 | Database      | `archipy[mysql]`                | MySQL adapter with SQLAlchemy integration                          |
-| Database      | `archipy[mysql-async]`          | MySQL async adapter (asyncmy2)                                     |
+| Database      | `archipy[mysql-async]`          | MySQL async adapter (asyncmy)                                      |
 | Database      | `archipy[aiosqlite]`            | SQLite async adapter with SQLAlchemy integration                   |
 | Database      | `archipy[starrocks]`            | StarRocks adapter with SQLAlchemy integration                      |
 | Database      | `archipy[starrocks-async]`      | StarRocks async adapter                                            |
