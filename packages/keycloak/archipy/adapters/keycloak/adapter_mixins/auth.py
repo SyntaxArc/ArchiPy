@@ -178,7 +178,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         return _normalize_userinfo(self._openid_adapter.userinfo(token))
 
     @ttl_cache(ttl_seconds=3600, maxsize=1)  # Cache for 1 hour
-    def get_well_known_config(self) -> dict[str, Any] | None:
+    def get_well_known_config(self) -> dict[str, Any]:
         """Get the well-known OpenID configuration.
 
         Returns:
@@ -193,7 +193,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "get_well_known_config")
 
     @ttl_cache(ttl_seconds=3600, maxsize=1)  # Cache for 1 hour
-    def get_certs(self) -> dict[str, Any] | None:
+    def get_certs(self) -> dict[str, Any]:
         """Get the JWT verification certificates.
 
         Returns:
@@ -512,7 +512,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         return _normalize_userinfo(await self.openid_adapter.a_userinfo(token))
 
     @alru_cache(ttl=3600, maxsize=1)  # Cache for 1 hour
-    async def get_well_known_config(self) -> dict[str, Any] | None:
+    async def get_well_known_config(self) -> dict[str, Any]:
         """Get the well-known OpenID configuration.
 
         Returns:
@@ -527,7 +527,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "get_well_known_config")
 
     @alru_cache(ttl=3600, maxsize=1)  # Cache for 1 hour
-    async def get_certs(self) -> dict[str, Any] | None:
+    async def get_certs(self) -> dict[str, Any]:
         """Get the JWT verification certificates.
 
         Returns:

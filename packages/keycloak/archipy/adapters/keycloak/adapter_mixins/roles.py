@@ -35,7 +35,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for role operations."""
 
     @ttl_cache(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
-    def get_user_roles(self, user_id: str) -> list[KeycloakRoleType] | None:
+    def get_user_roles(self, user_id: str) -> list[KeycloakRoleType]:
         """Get roles assigned to a user.
 
         Args:
@@ -256,7 +256,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "delete_realm_role")
 
     @ttl_cache(ttl_seconds=300, maxsize=1)  # Cache for 5 minutes
-    def get_realm_roles(self) -> list[dict[str, Any]] | None:
+    def get_realm_roles(self) -> list[dict[str, Any]]:
         """Get all realm roles.
 
         Returns:
@@ -271,7 +271,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "get_realm_roles")
 
     @ttl_cache(ttl_seconds=300, maxsize=1)  # Cache for 5 minutes
-    def get_realm_role(self, role_name: str) -> dict | None:
+    def get_realm_role(self, role_name: str) -> dict[str, Any]:
         """Get realm role.
 
         Args:
@@ -501,7 +501,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for role operations."""
 
     @alru_cache(ttl=300, maxsize=100)  # Cache for 5 minutes
-    async def get_user_roles(self, user_id: str) -> list[KeycloakRoleType] | None:
+    async def get_user_roles(self, user_id: str) -> list[KeycloakRoleType]:
         """Get roles assigned to a user.
 
         Args:
@@ -720,7 +720,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "delete_realm_role")
 
     @alru_cache(ttl=300, maxsize=1)  # Cache for 5 minutes
-    async def get_realm_roles(self) -> list[dict[str, Any]] | None:
+    async def get_realm_roles(self) -> list[dict[str, Any]]:
         """Get all realm roles.
 
         Returns:
@@ -735,7 +735,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "get_realm_roles")
 
     @alru_cache(ttl=300, maxsize=1)  # Cache for 5 minutes
-    async def get_realm_role(self, role_name: str) -> dict | None:
+    async def get_realm_role(self, role_name: str) -> dict[str, Any]:
         """Get realm role.
 
         Args:

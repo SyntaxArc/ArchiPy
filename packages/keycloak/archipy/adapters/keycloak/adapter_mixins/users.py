@@ -155,7 +155,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "reset_password")
 
     @ttl_cache(ttl_seconds=30, maxsize=50)  # Cache for 30 seconds with limited entries
-    def search_users(self, query: str, max_results: int = 100) -> list[KeycloakUserType] | None:
+    def search_users(self, query: str, max_results: int = 100) -> list[KeycloakUserType]:
         """Search for users by username, email, or name.
 
         Args:
@@ -361,7 +361,7 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "reset_password")
 
     @alru_cache(ttl=30, maxsize=50)  # Cache for 30 seconds with limited entries
-    async def search_users(self, query: str, max_results: int = 100) -> list[KeycloakUserType] | None:
+    async def search_users(self, query: str, max_results: int = 100) -> list[KeycloakUserType]:
         """Search for users by username, email, or name.
 
         Args:
