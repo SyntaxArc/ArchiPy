@@ -13,7 +13,12 @@ from typing import TYPE_CHECKING, Any, TypeVar
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from temporalio.client import ScheduleSpec
+    from temporalio.client import (
+        ScheduleSpec,
+        WorkflowExecution,
+        WorkflowExecutionDescription,
+        WorkflowHandle as TemporalWorkflowHandle,
+    )
 
 T = TypeVar("T")
 
@@ -41,7 +46,7 @@ class TemporalPort:
         task_timeout: int | None = None,
         memo: dict[str, Any] | None = None,
         search_attributes: dict[str, Any] | None = None,
-    ) -> Any:  # WorkflowHandle
+    ) -> TemporalWorkflowHandle[T, Any]:
         """Start a workflow execution asynchronously.
 
         Args:
@@ -106,7 +111,7 @@ class TemporalPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_workflow_handle(self, workflow_id: str, run_id: str | None = None) -> Any:  # WorkflowHandle
+    async def get_workflow_handle(self, workflow_id: str, run_id: str | None = None) -> TemporalWorkflowHandle[T, Any]:
         """Get a handle to an existing workflow execution.
 
         Args:
@@ -205,7 +210,7 @@ class TemporalPort:
         query: str | None = None,
         page_size: int | None = None,
         next_page_token: bytes | None = None,
-    ) -> WorkflowListResponse:
+    ) -> list[WorkflowExecution]:
         """List workflow executions matching the given criteria.
 
         Args:
@@ -217,7 +222,7 @@ class TemporalPort:
                 Defaults to None (first page).
 
         Returns:
-            WorkflowListResponse: List of workflow executions with pagination info.
+            list[WorkflowExecution]: The workflow executions matching the query.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -225,7 +230,7 @@ class TemporalPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def describe_workflow(self, workflow_id: str, run_id: str | None = None) -> WorkflowDescription:
+    async def describe_workflow(self, workflow_id: str, run_id: str | None = None) -> WorkflowExecutionDescription:
         """Get detailed information about a workflow execution.
 
         Args:
@@ -234,7 +239,7 @@ class TemporalPort:
                 If None, describes the latest run. Defaults to None.
 
         Returns:
-            WorkflowDescription: Detailed workflow execution information.
+            WorkflowExecutionDescription: Detailed workflow execution information.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.

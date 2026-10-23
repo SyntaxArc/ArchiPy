@@ -22,6 +22,8 @@ from temporalio.client import (
     SchedulePolicy,
     ScheduleSpec,
     TLSConfig,
+    WorkflowExecution,
+    WorkflowExecutionDescription,
     WorkflowHandle,
 )
 from temporalio.common import RetryPolicy
@@ -473,7 +475,7 @@ class TemporalAdapter(TemporalPort):
         query: str | None = None,
         page_size: int | None = None,
         next_page_token: bytes | None = None,
-    ) -> Any:
+    ) -> list[WorkflowExecution]:
         """List workflow executions matching the given criteria.
 
         Args:
@@ -485,7 +487,7 @@ class TemporalAdapter(TemporalPort):
                 Defaults to None (first page).
 
         Returns:
-            Any: List of workflow executions with pagination info.
+            list[WorkflowExecution]: The workflow executions matching the query.
         """
         client = await self.get_client()
         # list_workflows returns an async iterator, not awaitable
@@ -498,7 +500,7 @@ class TemporalAdapter(TemporalPort):
         return [workflow async for workflow in workflows_iter]
 
     @override
-    async def describe_workflow(self, workflow_id: str, run_id: str | None = None) -> Any:
+    async def describe_workflow(self, workflow_id: str, run_id: str | None = None) -> WorkflowExecutionDescription:
         """Get detailed information about a workflow execution.
 
         Args:
@@ -507,7 +509,7 @@ class TemporalAdapter(TemporalPort):
                 If None, describes the latest run. Defaults to None.
 
         Returns:
-            Any: Detailed workflow execution information.
+            WorkflowExecutionDescription: Detailed workflow execution information.
         """
         handle = await self.get_workflow_handle(workflow_id, run_id)
         return await handle.describe()
