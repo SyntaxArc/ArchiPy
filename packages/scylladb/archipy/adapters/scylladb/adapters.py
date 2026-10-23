@@ -20,7 +20,7 @@ from cassandra import (
     Unavailable,
 )
 from cassandra.auth import PlainTextAuthProvider
-from cassandra.cluster import Cluster, NoHostAvailable, ResultSet
+from cassandra.cluster import Cluster, NoHostAvailable, ResponseFuture, ResultSet, Session
 from cassandra.policies import (
     AddressTranslator,
     DCAwareRoundRobinPolicy,
@@ -231,7 +231,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             return ConsistencyLevel.ONE
         return consistency
 
-    def _create_cluster(self) -> Any:
+    def _create_cluster(self) -> Cluster:
         """Create and configure the Cluster instance.
 
         Returns:
@@ -299,15 +299,15 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         return cluster
 
     @override
-    def execute(self, query: str, params: dict[str, Any] | tuple | list | None = None) -> Any:
+    def execute(self, query: str, params: dict[str, Any] | tuple[Any, ...] | list[Any] | None = None) -> ResultSet:
         """Execute a CQL query.
 
         Args:
             query (str): The CQL query to execute.
-            params (dict[str, Any] | tuple | list | None): Query parameters for parameterized queries.
+            params (dict[str, Any] | tuple[Any, ...] | list[Any] | None): Query parameters for parameterized queries.
 
         Returns:
-            Any: The query result set.
+            ResultSet: The query result set.
         """
         session = self.get_session()
         try:
@@ -367,7 +367,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             self._prepare_cached = cached_prepare
 
     @override
-    def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> Any:
+    def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> ResultSet:
         """Execute a prepared statement.
 
         Args:
@@ -375,7 +375,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             params (dict[str, Any] | None): Parameters to bind to the statement.
 
         Returns:
-            Any: The query result set.
+            ResultSet: The query result set.
         """
         session = self.get_session()
         try:
@@ -623,11 +623,11 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     @override
-    def get_session(self) -> Any:
+    def get_session(self) -> Session:
         """Get the current session object.
 
         Returns:
-            Any: The active session object.
+            Session: The active session object.
         """
         return self._session
 
@@ -857,7 +857,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             return ConsistencyLevel.ONE
         return consistency
 
-    def _create_cluster(self) -> Any:
+    def _create_cluster(self) -> Cluster:
         """Create and configure the Cluster instance.
 
         Returns:
@@ -924,7 +924,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         return cluster
 
-    async def _await_future(self, future: Any) -> Any:
+    async def _await_future(self, future: ResponseFuture) -> ResultSet:
         """Convert ResponseFuture to awaitable without holding an executor thread.
 
         Bridges cassandra-driver's ResponseFuture (callback-based, fired from the
@@ -935,10 +935,10 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             future: The ResponseFuture from session.execute_async().
 
         Returns:
-            Any: The query result (typically a ResultSet).
+            ResultSet: The query result.
         """
         loop = asyncio.get_running_loop()
-        asyncio_future: asyncio.Future[Any] = loop.create_future()
+        asyncio_future: asyncio.Future[ResultSet] = loop.create_future()
 
         def _on_success(rows: Any) -> None:
             # add_callback passes raw _final_result (first page rows), not ResultSet;
@@ -955,15 +955,19 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         return await asyncio_future
 
     @override
-    async def execute(self, query: str, params: dict[str, Any] | tuple | list | None = None) -> Any:
+    async def execute(
+        self,
+        query: str,
+        params: dict[str, Any] | tuple[Any, ...] | list[Any] | None = None,
+    ) -> ResultSet:
         """Execute a CQL query asynchronously.
 
         Args:
             query (str): The CQL query to execute.
-            params (dict[str, Any] | tuple | list | None): Query parameters for parameterized queries.
+            params (dict[str, Any] | tuple[Any, ...] | list[Any] | None): Query parameters for parameterized queries.
 
         Returns:
-            Any: The query result set.
+            ResultSet: The query result set.
         """
         session = await self.get_session()
         try:
@@ -1024,7 +1028,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             self._prepare_cached = cached_prepare
 
     @override
-    async def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> Any:
+    async def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> ResultSet:
         """Execute a prepared statement asynchronously.
 
         Args:
@@ -1032,7 +1036,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             params (dict[str, Any] | None): Parameters to bind to the statement.
 
         Returns:
-            Any: The query result set.
+            ResultSet: The query result set.
         """
         session = await self.get_session()
         try:
@@ -1282,11 +1286,11 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     @override
-    async def get_session(self) -> Any:
+    async def get_session(self) -> Session:
         """Get the current session object asynchronously.
 
         Returns:
-            Any: The active session object.
+            Session: The active session object.
         """
         # Session is from cassandra.cluster, properly typed
         return self._session

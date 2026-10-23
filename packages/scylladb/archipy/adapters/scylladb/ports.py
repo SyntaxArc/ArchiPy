@@ -6,7 +6,11 @@ synchronous and asynchronous port definitions.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from cassandra.cluster import ResultSet, Session
+    from cassandra.query import PreparedStatement
 
 
 class ScyllaDBPort(ABC):
@@ -21,7 +25,7 @@ class ScyllaDBPort(ABC):
     """
 
     @abstractmethod
-    def execute(self, query: str, params: dict[str, Any] | None = None) -> Any:
+    def execute(self, query: str, params: dict[str, Any] | None = None) -> ResultSet:
         """Execute a CQL query.
 
         Args:
@@ -29,7 +33,7 @@ class ScyllaDBPort(ABC):
             params (dict[str, Any] | None): Query parameters for parameterized queries.
 
         Returns:
-            Any: The query result set.
+            ResultSet: The query result set.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -37,14 +41,14 @@ class ScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def prepare(self, query: str) -> Any:
+    def prepare(self, query: str) -> PreparedStatement:
         """Prepare a CQL statement for repeated execution.
 
         Args:
             query (str): The CQL query to prepare.
 
         Returns:
-            Any: The prepared statement object.
+            PreparedStatement: The prepared statement object.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -52,15 +56,15 @@ class ScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def execute_prepared(self, statement: Any, params: dict[str, Any] | None = None) -> Any:
+    def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> ResultSet:
         """Execute a prepared statement.
 
         Args:
-            statement (Any): The prepared statement object.
+            statement (PreparedStatement): The prepared statement object.
             params (dict[str, Any] | None): Parameters to bind to the statement.
 
         Returns:
-            Any: The query result set.
+            ResultSet: The query result set.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -219,11 +223,11 @@ class ScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_session(self) -> Any:
+    def get_session(self) -> Session:
         """Get the current session object.
 
         Returns:
-            Any: The active session object.
+            Session: The active session object.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -311,7 +315,7 @@ class AsyncScyllaDBPort(ABC):
     """
 
     @abstractmethod
-    async def execute(self, query: str, params: dict[str, Any] | None = None) -> Any:
+    async def execute(self, query: str, params: dict[str, Any] | None = None) -> ResultSet:
         """Execute a CQL query asynchronously.
 
         Args:
@@ -319,7 +323,7 @@ class AsyncScyllaDBPort(ABC):
             params (dict[str, Any] | None): Query parameters for parameterized queries.
 
         Returns:
-            Any: The query result set.
+            ResultSet: The query result set.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -327,14 +331,14 @@ class AsyncScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def prepare(self, query: str) -> Any:
+    async def prepare(self, query: str) -> PreparedStatement:
         """Prepare a CQL statement asynchronously.
 
         Args:
             query (str): The CQL query to prepare.
 
         Returns:
-            Any: The prepared statement object.
+            PreparedStatement: The prepared statement object.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -342,15 +346,15 @@ class AsyncScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def execute_prepared(self, statement: Any, params: dict[str, Any] | None = None) -> Any:
+    async def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> ResultSet:
         """Execute a prepared statement asynchronously.
 
         Args:
-            statement (Any): The prepared statement object.
+            statement (PreparedStatement): The prepared statement object.
             params (dict[str, Any] | None): Parameters to bind to the statement.
 
         Returns:
-            Any: The query result set.
+            ResultSet: The query result set.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -509,11 +513,11 @@ class AsyncScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_session(self) -> Any:
+    async def get_session(self) -> Session:
         """Get the current session object asynchronously.
 
         Returns:
-            Any: The active session object.
+            Session: The active session object.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
