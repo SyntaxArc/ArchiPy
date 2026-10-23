@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from archipy.adapters.keycloak.port_mixins._shared import KeycloakClientScopeType, KeycloakProtocolMapperType
 
 
 class KeycloakClientScopesPort:
@@ -12,17 +15,17 @@ class KeycloakClientScopesPort:
     @abstractmethod
     def get_client_scopes(
         self,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakClientScopeType]:
         """Get all client scopes."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_client_scope(self, client_scope_id: str) -> dict[str, Any]:
+    def get_client_scope(self, client_scope_id: str) -> KeycloakClientScopeType:
         """Get a client scope by ID."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_client_scope_by_name(self, client_scope_name: str) -> dict[str, Any] | None:
+    def get_client_scope_by_name(self, client_scope_name: str) -> KeycloakClientScopeType | None:
         """Get a client scope by name."""
         raise NotImplementedError
 
@@ -47,7 +50,7 @@ class KeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_mappers_from_client_scope(self, client_scope_id: str) -> list[dict[str, Any]]:
+    def get_mappers_from_client_scope(self, client_scope_id: str) -> list[KeycloakProtocolMapperType]:
         """Get protocol mappers for a client scope."""
         raise NotImplementedError
 
@@ -72,7 +75,7 @@ class KeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_mappers_from_client(self, client_id: str) -> list[dict[str, Any]]:
+    def get_mappers_from_client(self, client_id: str) -> list[KeycloakProtocolMapperType]:
         """Get protocol mappers for a client."""
         raise NotImplementedError
 
@@ -87,7 +90,7 @@ class KeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_client_default_client_scopes(self, client_id: str) -> list[dict[str, Any]]:
+    def get_client_default_client_scopes(self, client_id: str) -> list[KeycloakClientScopeType]:
         """Get default client scopes for a client."""
         raise NotImplementedError
 
@@ -107,7 +110,7 @@ class KeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_client_optional_client_scopes(self, client_id: str) -> list[dict[str, Any]]:
+    def get_client_optional_client_scopes(self, client_id: str) -> list[KeycloakClientScopeType]:
         """Get optional client scopes for a client."""
         raise NotImplementedError
 
@@ -167,17 +170,17 @@ class AsyncKeycloakClientScopesPort:
     @abstractmethod
     async def get_client_scopes(
         self,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakClientScopeType]:
         """Get all client scopes."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_client_scope(self, client_scope_id: str) -> dict[str, Any]:
+    async def get_client_scope(self, client_scope_id: str) -> KeycloakClientScopeType:
         """Get a client scope by ID."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_client_scope_by_name(self, client_scope_name: str) -> dict[str, Any] | None:
+    async def get_client_scope_by_name(self, client_scope_name: str) -> KeycloakClientScopeType | None:
         """Get a client scope by name."""
         raise NotImplementedError
 
@@ -202,7 +205,7 @@ class AsyncKeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_mappers_from_client_scope(self, client_scope_id: str) -> list[dict[str, Any]]:
+    async def get_mappers_from_client_scope(self, client_scope_id: str) -> list[KeycloakProtocolMapperType]:
         """Get protocol mappers for a client scope."""
         raise NotImplementedError
 
@@ -227,7 +230,7 @@ class AsyncKeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_mappers_from_client(self, client_id: str) -> list[dict[str, Any]]:
+    async def get_mappers_from_client(self, client_id: str) -> list[KeycloakProtocolMapperType]:
         """Get protocol mappers for a client."""
         raise NotImplementedError
 
@@ -242,7 +245,7 @@ class AsyncKeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_client_default_client_scopes(self, client_id: str) -> list[dict[str, Any]]:
+    async def get_client_default_client_scopes(self, client_id: str) -> list[KeycloakClientScopeType]:
         """Get default client scopes for a client."""
         raise NotImplementedError
 
@@ -262,7 +265,7 @@ class AsyncKeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_client_optional_client_scopes(self, client_id: str) -> list[dict[str, Any]]:
+    async def get_client_optional_client_scopes(self, client_id: str) -> list[KeycloakClientScopeType]:
         """Get optional client scopes for a client."""
         raise NotImplementedError
 

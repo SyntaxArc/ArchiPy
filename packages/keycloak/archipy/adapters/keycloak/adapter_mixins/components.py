@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
 )
+
+if TYPE_CHECKING:
+    from archipy.adapters.keycloak.port_mixins._shared import KeycloakComponentType
 
 
 class KeycloakComponentsMixin(SyncKeycloakMixinBase):
@@ -27,7 +30,7 @@ class KeycloakComponentsMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.create_component(payload=payload),
         )
 
-    def get_component(self, component_id: str) -> dict[str, Any]:
+    def get_component(self, component_id: str) -> KeycloakComponentType:
         """Get a component by ID.
 
         Args:
@@ -36,12 +39,15 @@ class KeycloakComponentsMixin(SyncKeycloakMixinBase):
         Returns:
             Component representation.
         """
-        return self._call_keycloak(
-            "get_component",
-            lambda: self.admin_adapter.get_component(component_id=component_id),
+        return cast(
+            "KeycloakComponentType",
+            self._call_keycloak(
+                "get_component",
+                lambda: self.admin_adapter.get_component(component_id=component_id),
+            ),
         )
 
-    def get_components(self, query: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    def get_components(self, query: dict[str, Any] | None = None) -> list[KeycloakComponentType]:
         """Get components, optionally filtered by query.
 
         Args:
@@ -102,7 +108,7 @@ class AsyncKeycloakComponentsMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_create_component(payload=payload),
         )
 
-    async def get_component(self, component_id: str) -> dict[str, Any]:
+    async def get_component(self, component_id: str) -> KeycloakComponentType:
         """Get a component by ID.
 
         Args:
@@ -111,12 +117,15 @@ class AsyncKeycloakComponentsMixin(AsyncKeycloakMixinBase):
         Returns:
             Component representation.
         """
-        return await self._async_call_keycloak(
-            "get_component",
-            lambda: self.admin_adapter.a_get_component(component_id=component_id),
+        return cast(
+            "KeycloakComponentType",
+            await self._async_call_keycloak(
+                "get_component",
+                lambda: self.admin_adapter.a_get_component(component_id=component_id),
+            ),
         )
 
-    async def get_components(self, query: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    async def get_components(self, query: dict[str, Any] | None = None) -> list[KeycloakComponentType]:
         """Get components, optionally filtered by query.
 
         Args:

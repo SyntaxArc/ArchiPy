@@ -1,8 +1,11 @@
 """Keycloak port mixins package."""
 
 from archipy.adapters.keycloak.port_mixins._shared import (
+    KeycloakClientScopeType,
+    KeycloakComponentType,
     KeycloakGroupType,
     KeycloakOrganizationType,
+    KeycloakProtocolMapperType,
     KeycloakResponseType,
     KeycloakRoleType,
     KeycloakTokenType,
@@ -41,13 +44,16 @@ __all__ = [
     "KeycloakAuthFlowsPort",
     "KeycloakAuthPort",
     "KeycloakAuthzPort",
+    "KeycloakClientScopeType",
     "KeycloakClientScopesPort",
     "KeycloakClientsPort",
+    "KeycloakComponentType",
     "KeycloakComponentsPort",
     "KeycloakGroupType",
     "KeycloakGroupsPort",
     "KeycloakOrganizationType",
     "KeycloakOrganizationsPort",
+    "KeycloakProtocolMapperType",
     "KeycloakRealmsPort",
     "KeycloakResponseType",
     "KeycloakRoleType",

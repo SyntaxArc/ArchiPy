@@ -50,6 +50,40 @@ class KeycloakOrganizationType(TypedDict, total=False):
     domains: list[dict[str, Any]]
 
 
+class KeycloakClientScopeType(TypedDict, total=False):
+    """Keycloak ``ClientScopeRepresentation`` as returned by the admin API."""
+
+    id: str
+    name: str
+    description: str
+    protocol: str
+    attributes: dict[str, str]
+    protocolMappers: list[KeycloakProtocolMapperType]
+
+
+class KeycloakProtocolMapperType(TypedDict, total=False):
+    """Keycloak ``ProtocolMapperRepresentation`` as returned by the admin API."""
+
+    id: str
+    name: str
+    protocol: str
+    protocolMapper: str
+    consentRequired: bool
+    config: dict[str, str]
+
+
+class KeycloakComponentType(TypedDict, total=False):
+    """Keycloak ``ComponentRepresentation`` as returned by the admin API."""
+
+    id: str
+    name: str
+    providerId: str
+    providerType: str
+    parentId: str
+    subType: str
+    config: dict[str, list[str]]
+
+
 # Define a type for the public key return type
 # Using Any for JWK.JWK object, since we don't want to depend on jwcrypto types
 PublicKeyType = Any

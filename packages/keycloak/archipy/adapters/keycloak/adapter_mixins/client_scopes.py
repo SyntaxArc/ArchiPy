@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
 )
+
+if TYPE_CHECKING:
+    from archipy.adapters.keycloak.port_mixins._shared import KeycloakClientScopeType, KeycloakProtocolMapperType
 
 
 class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
@@ -15,25 +18,31 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
 
     def get_client_scopes(
         self,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakClientScopeType]:
         """Get all client scopes."""
         return self._call_keycloak(
             "get_client_scopes",
             self.admin_adapter.get_client_scopes,
         )
 
-    def get_client_scope(self, client_scope_id: str) -> dict[str, Any]:
+    def get_client_scope(self, client_scope_id: str) -> KeycloakClientScopeType:
         """Get a client scope by ID."""
-        return self._call_keycloak(
-            "get_client_scope",
-            lambda: self.admin_adapter.get_client_scope(client_scope_id=client_scope_id),
+        return cast(
+            "KeycloakClientScopeType",
+            self._call_keycloak(
+                "get_client_scope",
+                lambda: self.admin_adapter.get_client_scope(client_scope_id=client_scope_id),
+            ),
         )
 
-    def get_client_scope_by_name(self, client_scope_name: str) -> dict[str, Any] | None:
+    def get_client_scope_by_name(self, client_scope_name: str) -> KeycloakClientScopeType | None:
         """Get a client scope by name."""
-        return self._call_keycloak(
-            "get_client_scope_by_name",
-            lambda: self.admin_adapter.get_client_scope_by_name(client_scope_name=client_scope_name),
+        return cast(
+            "KeycloakClientScopeType | None",
+            self._call_keycloak(
+                "get_client_scope_by_name",
+                lambda: self.admin_adapter.get_client_scope_by_name(client_scope_name=client_scope_name),
+            ),
         )
 
     def create_client_scope(self, payload: dict[str, Any], skip_exists: bool = False) -> str:
@@ -64,7 +73,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.add_mapper_to_client_scope(client_scope_id=client_scope_id, payload=payload),
         )
 
-    def get_mappers_from_client_scope(self, client_scope_id: str) -> list[dict[str, Any]]:
+    def get_mappers_from_client_scope(self, client_scope_id: str) -> list[KeycloakProtocolMapperType]:
         """Get protocol mappers for a client scope."""
         return self._call_keycloak(
             "get_mappers_from_client_scope",
@@ -104,7 +113,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.add_mapper_to_client(client_id=client_id, payload=payload),
         )
 
-    def get_mappers_from_client(self, client_id: str) -> list[dict[str, Any]]:
+    def get_mappers_from_client(self, client_id: str) -> list[KeycloakProtocolMapperType]:
         """Get protocol mappers for a client."""
         return self._call_keycloak(
             "get_mappers_from_client",
@@ -125,7 +134,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.remove_client_mapper(client_id=client_id, client_mapper_id=client_mapper_id),
         )
 
-    def get_client_default_client_scopes(self, client_id: str) -> list[dict[str, Any]]:
+    def get_client_default_client_scopes(self, client_id: str) -> list[KeycloakClientScopeType]:
         """Get default client scopes for a client."""
         return self._call_keycloak(
             "get_client_default_client_scopes",
@@ -158,7 +167,7 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def get_client_optional_client_scopes(self, client_id: str) -> list[dict[str, Any]]:
+    def get_client_optional_client_scopes(self, client_id: str) -> list[KeycloakClientScopeType]:
         """Get optional client scopes for a client."""
         return self._call_keycloak(
             "get_client_optional_client_scopes",
@@ -243,25 +252,31 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
 
     async def get_client_scopes(
         self,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakClientScopeType]:
         """Get all client scopes."""
         return await self._async_call_keycloak(
             "get_client_scopes",
             self.admin_adapter.a_get_client_scopes,
         )
 
-    async def get_client_scope(self, client_scope_id: str) -> dict[str, Any]:
+    async def get_client_scope(self, client_scope_id: str) -> KeycloakClientScopeType:
         """Get a client scope by ID."""
-        return await self._async_call_keycloak(
-            "get_client_scope",
-            lambda: self.admin_adapter.a_get_client_scope(client_scope_id=client_scope_id),
+        return cast(
+            "KeycloakClientScopeType",
+            await self._async_call_keycloak(
+                "get_client_scope",
+                lambda: self.admin_adapter.a_get_client_scope(client_scope_id=client_scope_id),
+            ),
         )
 
-    async def get_client_scope_by_name(self, client_scope_name: str) -> dict[str, Any] | None:
+    async def get_client_scope_by_name(self, client_scope_name: str) -> KeycloakClientScopeType | None:
         """Get a client scope by name."""
-        return await self._async_call_keycloak(
-            "get_client_scope_by_name",
-            lambda: self.admin_adapter.a_get_client_scope_by_name(client_scope_name=client_scope_name),
+        return cast(
+            "KeycloakClientScopeType | None",
+            await self._async_call_keycloak(
+                "get_client_scope_by_name",
+                lambda: self.admin_adapter.a_get_client_scope_by_name(client_scope_name=client_scope_name),
+            ),
         )
 
     async def create_client_scope(self, payload: dict[str, Any], skip_exists: bool = False) -> str:
@@ -295,7 +310,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def get_mappers_from_client_scope(self, client_scope_id: str) -> list[dict[str, Any]]:
+    async def get_mappers_from_client_scope(self, client_scope_id: str) -> list[KeycloakProtocolMapperType]:
         """Get protocol mappers for a client scope."""
         return await self._async_call_keycloak(
             "get_mappers_from_client_scope",
@@ -335,7 +350,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_add_mapper_to_client(client_id=client_id, payload=payload),
         )
 
-    async def get_mappers_from_client(self, client_id: str) -> list[dict[str, Any]]:
+    async def get_mappers_from_client(self, client_id: str) -> list[KeycloakProtocolMapperType]:
         """Get protocol mappers for a client."""
         return await self._async_call_keycloak(
             "get_mappers_from_client",
@@ -363,7 +378,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def get_client_default_client_scopes(self, client_id: str) -> list[dict[str, Any]]:
+    async def get_client_default_client_scopes(self, client_id: str) -> list[KeycloakClientScopeType]:
         """Get default client scopes for a client."""
         return await self._async_call_keycloak(
             "get_client_default_client_scopes",
@@ -396,7 +411,7 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def get_client_optional_client_scopes(self, client_id: str) -> list[dict[str, Any]]:
+    async def get_client_optional_client_scopes(self, client_id: str) -> list[KeycloakClientScopeType]:
         """Get optional client scopes for a client."""
         return await self._async_call_keycloak(
             "get_client_optional_client_scopes",

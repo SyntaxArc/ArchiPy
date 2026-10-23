@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from archipy.adapters.keycloak.port_mixins._shared import KeycloakComponentType
 
 
 class KeycloakComponentsPort:
@@ -22,7 +25,7 @@ class KeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_component(self, component_id: str) -> dict[str, Any]:
+    def get_component(self, component_id: str) -> KeycloakComponentType:
         """Get a component by ID.
 
         Args:
@@ -34,7 +37,7 @@ class KeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_components(self, query: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    def get_components(self, query: dict[str, Any] | None = None) -> list[KeycloakComponentType]:
         """Get components, optionally filtered by query.
 
         Args:
@@ -87,7 +90,7 @@ class AsyncKeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_component(self, component_id: str) -> dict[str, Any]:
+    async def get_component(self, component_id: str) -> KeycloakComponentType:
         """Get a component by ID.
 
         Args:
@@ -99,7 +102,7 @@ class AsyncKeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_components(self, query: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    async def get_components(self, query: dict[str, Any] | None = None) -> list[KeycloakComponentType]:
         """Get components, optionally filtered by query.
 
         Args:
