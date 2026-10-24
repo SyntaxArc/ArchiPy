@@ -97,6 +97,14 @@ from archipy.adapters.keycloak._resources.roles.port import (
     AsyncKeycloakRolesPort,
     KeycloakRolesPort,
 )
+from archipy.adapters.keycloak._resources.roles_by_id.adapter import (
+    AsyncKeycloakRolesByIdMixin,
+    KeycloakRolesByIdMixin,
+)
+from archipy.adapters.keycloak._resources.roles_by_id.port import (
+    AsyncKeycloakRolesByIdPort,
+    KeycloakRolesByIdPort,
+)
 from archipy.adapters.keycloak._resources.users.adapter import (
     AsyncKeycloakUsersMixin,
     KeycloakUsersMixin,
@@ -139,6 +147,8 @@ __all__ = [
     "AsyncKeycloakOrganizationsPort",
     "AsyncKeycloakRealmsMixin",
     "AsyncKeycloakRealmsPort",
+    "AsyncKeycloakRolesByIdMixin",
+    "AsyncKeycloakRolesByIdPort",
     "AsyncKeycloakRolesMixin",
     "AsyncKeycloakRolesPort",
     "AsyncKeycloakUmaMixin",
@@ -173,6 +183,8 @@ __all__ = [
     "KeycloakRealmsPort",
     "KeycloakResponseType",
     "KeycloakRoleType",
+    "KeycloakRolesByIdMixin",
+    "KeycloakRolesByIdPort",
     "KeycloakRolesMixin",
     "KeycloakRolesPort",
     "KeycloakTokenType",

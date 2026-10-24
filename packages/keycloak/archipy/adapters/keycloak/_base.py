@@ -290,7 +290,7 @@ class KeycloakExceptionHandlerMixin:
 
         cls._raise_for_keycloak_already_exists(exception, error_lower, additional_data)
 
-        if "not found" in error_lower:
+        if "not found" in error_lower or response_code == HTTP_NOT_FOUND:
             raise ResourceNotFoundError(additional_data=additional_data) from exception
 
         permission_phrases = ["forbidden", "access denied", "insufficient permissions", "insufficient scope"]

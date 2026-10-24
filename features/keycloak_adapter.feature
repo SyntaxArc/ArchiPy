@@ -426,6 +426,24 @@ Feature: Keycloak Authentication Testing
       | sync         | orggroupuser  | pass123  | grp-org  | grp-alias  | team       | team-sub   | test-realm | Test Realm         | test-client       |
       | async        | aorggroupuser | async123 | agrp-org | agrp-alias | ateam      | ateam-sub  | test-realm | Async Test Realm   | async-test-client |
 
+  @roles
+  Scenario Outline: Roles addressed by id with composites and management permissions
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    And I create a realm role named "<role>" with description "Parent" using <adapter_type> adapter
+    And I create a realm role named "<child>" with description "Child" using <adapter_type> adapter
+    When I update the role "<role>" by its id and add "<child>" as a composite using <adapter_type> adapter
+    Then the role "<role>" by id has description "updated" and lists "<child>" as composite using <adapter_type> adapter
+    And the management permissions of the role "<role>" by id are readable or report the disabled feature using <adapter_type> adapter
+    When I remove "<child>" from the composite "<role>" and delete the role "<role>" by its id using <adapter_type> adapter
+    Then the composite was removed and the role no longer exists by id using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | role         | child       | realm_name | realm_display_name | client_name       |
+      | sync         | parent-role  | child-role  | test-realm | Test Realm         | test-client       |
+      | async        | aparent-role | achild-role | test-realm | Async Test Realm   | async-test-client |
+
   @groups
   Scenario Outline: Group CRUD hierarchy membership and roles
     Given a configured <adapter_type> Keycloak adapter
