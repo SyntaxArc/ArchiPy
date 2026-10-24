@@ -15,6 +15,10 @@ if TYPE_CHECKING:
         KeycloakUpdateResultDTO,
     )
     from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupDTO, KeycloakGroupRequestDTO
+    from archipy.models.dtos.keycloak.management_permission_dtos import (
+        KeycloakManagementPermissionDTO,
+        KeycloakManagementPermissionRequestDTO,
+    )
     from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
     from archipy.models.dtos.keycloak.user_dtos import KeycloakUserDTO
 
@@ -179,6 +183,20 @@ class KeycloakGroupsPort:
         brief_representation: bool = True,
     ) -> list[KeycloakGroupDTO]:
         """Get groups that have a specific realm role."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_group_management_permissions(self, group_id: str) -> KeycloakManagementPermissionDTO:
+        """Get the fine-grained permission setup of a group."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_group_management_permissions(
+        self,
+        group_id: str,
+        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+    ) -> KeycloakManagementPermissionDTO:
+        """Enable or disable the fine-grained permissions of a group."""
         raise NotImplementedError
 
 
@@ -346,4 +364,18 @@ class AsyncKeycloakGroupsPort:
         brief_representation: bool = True,
     ) -> list[KeycloakGroupDTO]:
         """Get groups that have a specific realm role."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_group_management_permissions(self, group_id: str) -> KeycloakManagementPermissionDTO:
+        """Get the fine-grained permission setup of a group."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update_group_management_permissions(
+        self,
+        group_id: str,
+        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+    ) -> KeycloakManagementPermissionDTO:
+        """Enable or disable the fine-grained permissions of a group."""
         raise NotImplementedError

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import Any
 
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
     payload_value,
+    segment,
+    to_dto,
     to_dto_list,
     to_mutation_result,
     to_request_payload,
@@ -161,6 +164,152 @@ class KeycloakProtocolMappersMixin(SyncKeycloakMixinBase):
             ),
         )
 
+    def get_client_scope_protocol_mapper(self, client_scope_id: str, mapper_id: str) -> KeycloakProtocolMapperDTO:
+        """Get one protocol mapper of a client scope.
+
+        Args:
+            client_scope_id: Client scope identifier.
+            mapper_id: Mapper identifier.
+
+        Returns:
+            The mapper.
+        """
+        return to_dto(
+            KeycloakProtocolMapperDTO,
+            self._admin_request(
+                "get_client_scope_protocol_mapper",
+                "get",
+                f"/client-scopes/{segment(client_scope_id)}/protocol-mappers/models/{segment(mapper_id)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def add_client_scope_protocol_mappers(
+        self,
+        client_scope_id: str,
+        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+    ) -> KeycloakCreateResultDTO:
+        """Add several protocol mappers to a client scope in one call.
+
+        Args:
+            client_scope_id: Client scope identifier.
+            mappers: Mappers to add.
+
+        Returns:
+            The create result.
+        """
+        return to_mutation_result(
+            KeycloakCreateResultDTO,
+            self._admin_request(
+                "add_client_scope_protocol_mappers",
+                "post",
+                f"/client-scopes/{segment(client_scope_id)}/protocol-mappers/add-models",
+                body=[to_request_payload(mapper) for mapper in mappers],
+                expected=(
+                    HTTPStatus.CREATED,
+                    HTTPStatus.NO_CONTENT,
+                    HTTPStatus.OK,
+                ),
+            ),
+        )
+
+    def get_client_scope_protocol_mappers_by_protocol(
+        self,
+        client_scope_id: str,
+        protocol: str,
+    ) -> list[KeycloakProtocolMapperDTO]:
+        """List the protocol mappers of a client scope for one protocol.
+
+        Args:
+            client_scope_id: Client scope identifier.
+            protocol: ``openid-connect``, ``saml`` or ``docker-v2``.
+
+        Returns:
+            The mappers.
+        """
+        return to_dto_list(
+            KeycloakProtocolMapperDTO,
+            self._admin_request(
+                "get_client_scope_protocol_mappers_by_protocol",
+                "get",
+                f"/client-scopes/{segment(client_scope_id)}/protocol-mappers/protocol/{segment(protocol)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_client_protocol_mapper(self, client_uuid: str, mapper_id: str) -> KeycloakProtocolMapperDTO:
+        """Get one protocol mapper of a client.
+
+        Args:
+            client_uuid: Client UUID.
+            mapper_id: Mapper identifier.
+
+        Returns:
+            The mapper.
+        """
+        return to_dto(
+            KeycloakProtocolMapperDTO,
+            self._admin_request(
+                "get_client_protocol_mapper",
+                "get",
+                f"/clients/{segment(client_uuid)}/protocol-mappers/models/{segment(mapper_id)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def add_client_protocol_mappers(
+        self,
+        client_uuid: str,
+        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+    ) -> KeycloakCreateResultDTO:
+        """Add several protocol mappers to a client in one call.
+
+        Args:
+            client_uuid: Client UUID.
+            mappers: Mappers to add.
+
+        Returns:
+            The create result.
+        """
+        return to_mutation_result(
+            KeycloakCreateResultDTO,
+            self._admin_request(
+                "add_client_protocol_mappers",
+                "post",
+                f"/clients/{segment(client_uuid)}/protocol-mappers/add-models",
+                body=[to_request_payload(mapper) for mapper in mappers],
+                expected=(
+                    HTTPStatus.CREATED,
+                    HTTPStatus.NO_CONTENT,
+                    HTTPStatus.OK,
+                ),
+            ),
+        )
+
+    def get_client_protocol_mappers_by_protocol(
+        self,
+        client_uuid: str,
+        protocol: str,
+    ) -> list[KeycloakProtocolMapperDTO]:
+        """List the protocol mappers of a client for one protocol.
+
+        Args:
+            client_uuid: Client UUID.
+            protocol: ``openid-connect``, ``saml`` or ``docker-v2``.
+
+        Returns:
+            The mappers.
+        """
+        return to_dto_list(
+            KeycloakProtocolMapperDTO,
+            self._admin_request(
+                "get_client_protocol_mappers_by_protocol",
+                "get",
+                f"/clients/{segment(client_uuid)}/protocol-mappers/protocol/{segment(protocol)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
 
 class AsyncKeycloakProtocolMappersMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for protocol mapper operations."""
@@ -300,5 +449,151 @@ class AsyncKeycloakProtocolMappersMixin(AsyncKeycloakMixinBase):
                     client_id=client_id,
                     client_mapper_id=client_mapper_id,
                 ),
+            ),
+        )
+
+    async def get_client_scope_protocol_mapper(self, client_scope_id: str, mapper_id: str) -> KeycloakProtocolMapperDTO:
+        """Get one protocol mapper of a client scope.
+
+        Args:
+            client_scope_id: Client scope identifier.
+            mapper_id: Mapper identifier.
+
+        Returns:
+            The mapper.
+        """
+        return to_dto(
+            KeycloakProtocolMapperDTO,
+            await self._async_admin_request(
+                "get_client_scope_protocol_mapper",
+                "get",
+                f"/client-scopes/{segment(client_scope_id)}/protocol-mappers/models/{segment(mapper_id)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def add_client_scope_protocol_mappers(
+        self,
+        client_scope_id: str,
+        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+    ) -> KeycloakCreateResultDTO:
+        """Add several protocol mappers to a client scope in one call.
+
+        Args:
+            client_scope_id: Client scope identifier.
+            mappers: Mappers to add.
+
+        Returns:
+            The create result.
+        """
+        return to_mutation_result(
+            KeycloakCreateResultDTO,
+            await self._async_admin_request(
+                "add_client_scope_protocol_mappers",
+                "post",
+                f"/client-scopes/{segment(client_scope_id)}/protocol-mappers/add-models",
+                body=[to_request_payload(mapper) for mapper in mappers],
+                expected=(
+                    HTTPStatus.CREATED,
+                    HTTPStatus.NO_CONTENT,
+                    HTTPStatus.OK,
+                ),
+            ),
+        )
+
+    async def get_client_scope_protocol_mappers_by_protocol(
+        self,
+        client_scope_id: str,
+        protocol: str,
+    ) -> list[KeycloakProtocolMapperDTO]:
+        """List the protocol mappers of a client scope for one protocol.
+
+        Args:
+            client_scope_id: Client scope identifier.
+            protocol: ``openid-connect``, ``saml`` or ``docker-v2``.
+
+        Returns:
+            The mappers.
+        """
+        return to_dto_list(
+            KeycloakProtocolMapperDTO,
+            await self._async_admin_request(
+                "get_client_scope_protocol_mappers_by_protocol",
+                "get",
+                f"/client-scopes/{segment(client_scope_id)}/protocol-mappers/protocol/{segment(protocol)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_client_protocol_mapper(self, client_uuid: str, mapper_id: str) -> KeycloakProtocolMapperDTO:
+        """Get one protocol mapper of a client.
+
+        Args:
+            client_uuid: Client UUID.
+            mapper_id: Mapper identifier.
+
+        Returns:
+            The mapper.
+        """
+        return to_dto(
+            KeycloakProtocolMapperDTO,
+            await self._async_admin_request(
+                "get_client_protocol_mapper",
+                "get",
+                f"/clients/{segment(client_uuid)}/protocol-mappers/models/{segment(mapper_id)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def add_client_protocol_mappers(
+        self,
+        client_uuid: str,
+        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+    ) -> KeycloakCreateResultDTO:
+        """Add several protocol mappers to a client in one call.
+
+        Args:
+            client_uuid: Client UUID.
+            mappers: Mappers to add.
+
+        Returns:
+            The create result.
+        """
+        return to_mutation_result(
+            KeycloakCreateResultDTO,
+            await self._async_admin_request(
+                "add_client_protocol_mappers",
+                "post",
+                f"/clients/{segment(client_uuid)}/protocol-mappers/add-models",
+                body=[to_request_payload(mapper) for mapper in mappers],
+                expected=(
+                    HTTPStatus.CREATED,
+                    HTTPStatus.NO_CONTENT,
+                    HTTPStatus.OK,
+                ),
+            ),
+        )
+
+    async def get_client_protocol_mappers_by_protocol(
+        self,
+        client_uuid: str,
+        protocol: str,
+    ) -> list[KeycloakProtocolMapperDTO]:
+        """List the protocol mappers of a client for one protocol.
+
+        Args:
+            client_uuid: Client UUID.
+            protocol: ``openid-connect``, ``saml`` or ``docker-v2``.
+
+        Returns:
+            The mappers.
+        """
+        return to_dto_list(
+            KeycloakProtocolMapperDTO,
+            await self._async_admin_request(
+                "get_client_protocol_mappers_by_protocol",
+                "get",
+                f"/clients/{segment(client_uuid)}/protocol-mappers/protocol/{segment(protocol)}",
+                expected=(HTTPStatus.OK,),
             ),
         )

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import Any
 
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    segment,
     to_dto,
     to_dto_list,
     to_dto_or_none,
@@ -21,6 +23,10 @@ from archipy.models.dtos.keycloak.common_dtos import (
     KeycloakUpdateResultDTO,
 )
 from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupDTO, KeycloakGroupRequestDTO
+from archipy.models.dtos.keycloak.management_permission_dtos import (
+    KeycloakManagementPermissionDTO,
+    KeycloakManagementPermissionRequestDTO,
+)
 from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
 from archipy.models.dtos.keycloak.user_dtos import KeycloakUserDTO
 
@@ -316,6 +322,50 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
                     query=query,
                     brief_representation=brief_representation,
                 ),
+            ),
+        )
+
+    def get_group_management_permissions(self, group_id: str) -> KeycloakManagementPermissionDTO:
+        """Get the fine-grained permission setup of a group.
+
+        Args:
+            group_id: Group identifier.
+
+        Returns:
+            The management permission reference.
+        """
+        return to_dto(
+            KeycloakManagementPermissionDTO,
+            self._admin_request(
+                "get_group_management_permissions",
+                "get",
+                f"/groups/{segment(group_id)}/management/permissions",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def update_group_management_permissions(
+        self,
+        group_id: str,
+        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+    ) -> KeycloakManagementPermissionDTO:
+        """Enable or disable the fine-grained permissions of a group.
+
+        Args:
+            group_id: Group identifier.
+            payload: Management permission reference.
+
+        Returns:
+            The management permission reference.
+        """
+        return to_dto(
+            KeycloakManagementPermissionDTO,
+            self._admin_request(
+                "update_group_management_permissions",
+                "put",
+                f"/groups/{segment(group_id)}/management/permissions",
+                body=to_request_payload(payload),
+                expected=(HTTPStatus.OK,),
             ),
         )
 
@@ -615,5 +665,49 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
                     query=query,
                     brief_representation=brief_representation,
                 ),
+            ),
+        )
+
+    async def get_group_management_permissions(self, group_id: str) -> KeycloakManagementPermissionDTO:
+        """Get the fine-grained permission setup of a group.
+
+        Args:
+            group_id: Group identifier.
+
+        Returns:
+            The management permission reference.
+        """
+        return to_dto(
+            KeycloakManagementPermissionDTO,
+            await self._async_admin_request(
+                "get_group_management_permissions",
+                "get",
+                f"/groups/{segment(group_id)}/management/permissions",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def update_group_management_permissions(
+        self,
+        group_id: str,
+        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+    ) -> KeycloakManagementPermissionDTO:
+        """Enable or disable the fine-grained permissions of a group.
+
+        Args:
+            group_id: Group identifier.
+            payload: Management permission reference.
+
+        Returns:
+            The management permission reference.
+        """
+        return to_dto(
+            KeycloakManagementPermissionDTO,
+            await self._async_admin_request(
+                "update_group_management_permissions",
+                "put",
+                f"/groups/{segment(group_id)}/management/permissions",
+                body=to_request_payload(payload),
+                expected=(HTTPStatus.OK,),
             ),
         )

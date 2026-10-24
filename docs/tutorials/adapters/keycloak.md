@@ -606,7 +606,8 @@ async def lock_status(username: str):
 
 ### Token Exchange
 
-`token_exchange` takes a `KeycloakTokenExchangeRequestDTO` and returns a `KeycloakTokenDTO`. It covers the standard
+`token_exchange` takes a `KeycloakTokenExchangeRequestDTO` and returns a `KeycloakTokenExchangeResponseDTO` (the issued
+token in `access_token`, its type in `issued_token_type`). It covers the standard
 token exchange V2, the delegation preview (the issued token carries an `act` claim naming the actor), and the legacy
 fields of V1.
 
@@ -635,9 +636,18 @@ grant) and chaining across domains are two separate primitives: use `token_excha
 first domain, then `jwt_bearer_grant` to redeem it at the second.
 
 ```python
-assertion = keycloak.token_exchange(first_domain_request).access_token
-token = second_domain_keycloak.jwt_bearer_grant(assertion)
+assertion = keycloak.token_exchange(
+    KeycloakTokenExchangeRequestDTO(
+        subject_token=access_token,
+        audience="https://keycloak.example.com/realms/domainb",
+        scope="access-domainb",
+    ),
+).access_token
+token = second_domain_keycloak.jwt_bearer_grant(assertion, scope="profile")
 ```
+
+The token returned by the second realm has no refresh token. The client must be confidential and allowed to use the
+identity provider that represents the first realm.
 
 ### RPT Requests
 
@@ -658,10 +668,27 @@ rpt = keycloak.request_rpt(access_token, audience="my-resource-server")
 `authzen_evaluations` answers several in one call.
 
 ```python
+from archipy.models.dtos.keycloak.authzen_dtos import (
+    KeycloakAuthzenActionDTO,
+    KeycloakAuthzenEvaluationRequestDTO,
+    KeycloakAuthzenResourceDTO,
+    KeycloakAuthzenSubjectDTO,
+)
+
 config = keycloak.get_authzen_configuration()
-decision = keycloak.authzen_evaluation(evaluation_request)
-decisions = keycloak.authzen_evaluations(evaluations_request)
+decision = keycloak.authzen_evaluation(
+    client_access_token,  # a token issued to a client with authorization enabled
+    KeycloakAuthzenEvaluationRequestDTO(
+        subject=KeycloakAuthzenSubjectDTO(type="user", id="alice"),
+        resource=KeycloakAuthzenResourceDTO(type="document", id="quarterly-report"),
+        action=KeycloakAuthzenActionDTO(name="read"),
+    ),
+)
+print(decision.decision)
 ```
+
+`authzen_evaluations(token, KeycloakAuthzenEvaluationsRequestDTO(...))` takes the same token and a batch whose top-level
+`subject`, `resource`, `action` and `context` are defaults for each entry in `evaluations`.
 
 The request and response DTOs live in `archipy.models.dtos.keycloak.authzen_dtos`.
 

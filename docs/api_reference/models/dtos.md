@@ -259,3 +259,28 @@ heading_level: 4
 options:
 show_root_toc_entry: false
 heading_level: 4
+
+::: archipy.models.dtos.keycloak.authz_evaluation_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.authzen_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.protocol_mapper_config_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.required_action_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.token_exchange_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4

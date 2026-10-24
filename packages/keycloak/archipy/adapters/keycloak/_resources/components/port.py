@@ -9,7 +9,11 @@ from archipy.models.dtos.keycloak.common_dtos import KeycloakDeleteResultDTO, Ke
 
 if TYPE_CHECKING:
     from archipy.models.dtos.keycloak.common_dtos import KeycloakDeleteResultDTO, KeycloakUpdateResultDTO
-    from archipy.models.dtos.keycloak.component_dtos import KeycloakComponentDTO, KeycloakComponentRequestDTO
+    from archipy.models.dtos.keycloak.component_dtos import (
+        KeycloakComponentDTO,
+        KeycloakComponentRequestDTO,
+        KeycloakComponentTypeDTO,
+    )
 
 
 class KeycloakComponentsPort:
@@ -80,6 +84,11 @@ class KeycloakComponentsPort:
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def get_component_sub_types(self, component_id: str, component_type: str) -> list[KeycloakComponentTypeDTO]:
+        """List the sub-component types a component supports."""
+        raise NotImplementedError
+
 
 class AsyncKeycloakComponentsPort:
     """Async Keycloak port interface for component operations."""
@@ -147,4 +156,9 @@ class AsyncKeycloakComponentsPort:
         Returns:
             Deletion response payload.
         """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_component_sub_types(self, component_id: str, component_type: str) -> list[KeycloakComponentTypeDTO]:
+        """List the sub-component types a component supports."""
         raise NotImplementedError

@@ -10,6 +10,10 @@ from archipy.models.dtos.keycloak.common_dtos import (
     KeycloakDeleteResultDTO,
     KeycloakUpdateResultDTO,
 )
+from archipy.models.dtos.keycloak.protocol_mapper_dtos import (
+    KeycloakProtocolMapperDTO,
+    KeycloakProtocolMapperRequestDTO,
+)
 
 if TYPE_CHECKING:
     from archipy.models.dtos.keycloak.common_dtos import (
@@ -88,6 +92,52 @@ class KeycloakProtocolMappersPort:
         """Remove a protocol mapper from a client."""
         raise NotImplementedError
 
+    @abstractmethod
+    def get_client_scope_protocol_mapper(self, client_scope_id: str, mapper_id: str) -> KeycloakProtocolMapperDTO:
+        """Get one protocol mapper of a client scope."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def add_client_scope_protocol_mappers(
+        self,
+        client_scope_id: str,
+        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+    ) -> KeycloakCreateResultDTO:
+        """Add several protocol mappers to a client scope in one call."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_scope_protocol_mappers_by_protocol(
+        self,
+        client_scope_id: str,
+        protocol: str,
+    ) -> list[KeycloakProtocolMapperDTO]:
+        """List the protocol mappers of a client scope for one protocol."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_protocol_mapper(self, client_uuid: str, mapper_id: str) -> KeycloakProtocolMapperDTO:
+        """Get one protocol mapper of a client."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def add_client_protocol_mappers(
+        self,
+        client_uuid: str,
+        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+    ) -> KeycloakCreateResultDTO:
+        """Add several protocol mappers to a client in one call."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_protocol_mappers_by_protocol(
+        self,
+        client_uuid: str,
+        protocol: str,
+    ) -> list[KeycloakProtocolMapperDTO]:
+        """List the protocol mappers of a client for one protocol."""
+        raise NotImplementedError
+
 
 class AsyncKeycloakProtocolMappersPort:
     """Async Keycloak port interface for protocol mapper operations."""
@@ -152,4 +202,50 @@ class AsyncKeycloakProtocolMappersPort:
     @abstractmethod
     async def remove_client_mapper(self, client_id: str, client_mapper_id: str) -> KeycloakDeleteResultDTO:
         """Remove a protocol mapper from a client."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_scope_protocol_mapper(self, client_scope_id: str, mapper_id: str) -> KeycloakProtocolMapperDTO:
+        """Get one protocol mapper of a client scope."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def add_client_scope_protocol_mappers(
+        self,
+        client_scope_id: str,
+        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+    ) -> KeycloakCreateResultDTO:
+        """Add several protocol mappers to a client scope in one call."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_scope_protocol_mappers_by_protocol(
+        self,
+        client_scope_id: str,
+        protocol: str,
+    ) -> list[KeycloakProtocolMapperDTO]:
+        """List the protocol mappers of a client scope for one protocol."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_protocol_mapper(self, client_uuid: str, mapper_id: str) -> KeycloakProtocolMapperDTO:
+        """Get one protocol mapper of a client."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def add_client_protocol_mappers(
+        self,
+        client_uuid: str,
+        mappers: list[KeycloakProtocolMapperRequestDTO] | list[dict[str, Any]],
+    ) -> KeycloakCreateResultDTO:
+        """Add several protocol mappers to a client in one call."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_protocol_mappers_by_protocol(
+        self,
+        client_uuid: str,
+        protocol: str,
+    ) -> list[KeycloakProtocolMapperDTO]:
+        """List the protocol mappers of a client for one protocol."""
         raise NotImplementedError

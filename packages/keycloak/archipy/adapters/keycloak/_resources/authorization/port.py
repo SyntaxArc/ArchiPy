@@ -5,6 +5,13 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
+from archipy.models.dtos.keycloak.authz_dtos import (
+    KeycloakAuthzPolicyDTO,
+    KeycloakAuthzResourceDTO,
+    KeycloakAuthzScopeDTO,
+    KeycloakAuthzScopeRequestDTO,
+    KeycloakAuthzSettingsRequestDTO,
+)
 from archipy.models.dtos.keycloak.common_dtos import KeycloakDeleteResultDTO, KeycloakUpdateResultDTO
 
 if TYPE_CHECKING:
@@ -17,6 +24,11 @@ if TYPE_CHECKING:
         KeycloakAuthzScopeRequestDTO,
         KeycloakAuthzSettingsDTO,
         KeycloakAuthzSettingsRequestDTO,
+    )
+    from archipy.models.dtos.keycloak.authz_evaluation_dtos import (
+        KeycloakAuthzPolicyEvaluationRequestRequestDTO,
+        KeycloakAuthzPolicyEvaluationResponseDTO,
+        KeycloakAuthzPolicyProviderDTO,
     )
     from archipy.models.dtos.keycloak.authz_policy_dtos import (
         KeycloakAuthzClientPolicyDTO,
@@ -210,6 +222,144 @@ class KeycloakAuthzPort:
         """Import authorization configuration for a client."""
         raise NotImplementedError
 
+    @abstractmethod
+    def update_client_authz_settings(
+        self,
+        client_id: str,
+        settings: KeycloakAuthzSettingsRequestDTO | dict[str, Any],
+    ) -> KeycloakUpdateResultDTO:
+        """Update the resource server settings of a client."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_authz_resources_filtered(
+        self,
+        client_id: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakAuthzResourceDTO]:
+        """List the resources of a client, filtered by the admin API query parameters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def search_client_authz_resource(self, client_id: str, name: str) -> KeycloakAuthzResourceDTO:
+        """Find a resource by its exact name."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_authz_resource_attributes(self, client_id: str, resource_id: str) -> dict[str, list[str]]:
+        """Get the attributes of a resource."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_authz_resource_permissions(self, client_id: str, resource_id: str) -> list[KeycloakAuthzPolicyDTO]:
+        """List the permissions that apply to a resource."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_authz_resource_scopes(self, client_id: str, resource_id: str) -> list[KeycloakAuthzScopeDTO]:
+        """List the scopes of a resource."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_authz_scopes_filtered(
+        self,
+        client_id: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakAuthzScopeDTO]:
+        """List the scopes of a client, filtered by the admin API query parameters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def search_client_authz_scope(self, client_id: str, name: str) -> KeycloakAuthzScopeDTO:
+        """Find a scope by its exact name."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_authz_scope(self, client_id: str, scope_id: str) -> KeycloakAuthzScopeDTO:
+        """Get a scope by its id."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_client_authz_scope(
+        self,
+        client_id: str,
+        scope_id: str,
+        payload: KeycloakAuthzScopeRequestDTO | dict[str, Any],
+    ) -> KeycloakUpdateResultDTO:
+        """Update a scope."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete_client_authz_scope(self, client_id: str, scope_id: str) -> KeycloakDeleteResultDTO:
+        """Delete a scope."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_authz_scope_permissions(self, client_id: str, scope_id: str) -> list[KeycloakAuthzPolicyDTO]:
+        """List the permissions that apply to a scope."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_authz_scope_resources(self, client_id: str, scope_id: str) -> list[KeycloakAuthzResourceDTO]:
+        """List the resources that have a scope."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_authz_policies_filtered(
+        self,
+        client_id: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakAuthzPolicyDTO]:
+        """List the policies of a client, filtered by the admin API query parameters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def search_client_authz_policy(self, client_id: str, name: str) -> KeycloakAuthzPolicyDTO:
+        """Find a policy by its exact name."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_authz_policy_providers(self, client_id: str) -> list[KeycloakAuthzPolicyProviderDTO]:
+        """List the policy types the server offers."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_authz_permissions_filtered(
+        self,
+        client_id: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakAuthzPolicyDTO]:
+        """List the permissions of a client, filtered by the admin API query parameters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def search_client_authz_permission(self, client_id: str, name: str) -> KeycloakAuthzPolicyDTO:
+        """Find a permission by its exact name."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_authz_permission_providers(self, client_id: str) -> list[KeycloakAuthzPolicyProviderDTO]:
+        """List the permission types the server offers."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def evaluate_client_authz_policies(
+        self,
+        client_id: str,
+        request: KeycloakAuthzPolicyEvaluationRequestRequestDTO | dict[str, Any],
+    ) -> KeycloakAuthzPolicyEvaluationResponseDTO:
+        """Evaluate the policies for a user and resources, as the admin console's evaluation tool does."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def evaluate_client_authz_permissions(
+        self,
+        client_id: str,
+        request: KeycloakAuthzPolicyEvaluationRequestRequestDTO | dict[str, Any],
+    ) -> KeycloakAuthzPolicyEvaluationResponseDTO:
+        """Evaluate the permissions for a user and resources."""
+        raise NotImplementedError
+
 
 class AsyncKeycloakAuthzPort:
     """Async Keycloak port interface for authorization service operations."""
@@ -392,4 +542,146 @@ class AsyncKeycloakAuthzPort:
         payload: KeycloakAuthzSettingsRequestDTO | dict[str, Any],
     ) -> KeycloakUpdateResultDTO:
         """Import authorization configuration for a client."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update_client_authz_settings(
+        self,
+        client_id: str,
+        settings: KeycloakAuthzSettingsRequestDTO | dict[str, Any],
+    ) -> KeycloakUpdateResultDTO:
+        """Update the resource server settings of a client."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_authz_resources_filtered(
+        self,
+        client_id: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakAuthzResourceDTO]:
+        """List the resources of a client, filtered by the admin API query parameters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def search_client_authz_resource(self, client_id: str, name: str) -> KeycloakAuthzResourceDTO:
+        """Find a resource by its exact name."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_authz_resource_attributes(self, client_id: str, resource_id: str) -> dict[str, list[str]]:
+        """Get the attributes of a resource."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_authz_resource_permissions(
+        self,
+        client_id: str,
+        resource_id: str,
+    ) -> list[KeycloakAuthzPolicyDTO]:
+        """List the permissions that apply to a resource."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_authz_resource_scopes(self, client_id: str, resource_id: str) -> list[KeycloakAuthzScopeDTO]:
+        """List the scopes of a resource."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_authz_scopes_filtered(
+        self,
+        client_id: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakAuthzScopeDTO]:
+        """List the scopes of a client, filtered by the admin API query parameters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def search_client_authz_scope(self, client_id: str, name: str) -> KeycloakAuthzScopeDTO:
+        """Find a scope by its exact name."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_authz_scope(self, client_id: str, scope_id: str) -> KeycloakAuthzScopeDTO:
+        """Get a scope by its id."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update_client_authz_scope(
+        self,
+        client_id: str,
+        scope_id: str,
+        payload: KeycloakAuthzScopeRequestDTO | dict[str, Any],
+    ) -> KeycloakUpdateResultDTO:
+        """Update a scope."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete_client_authz_scope(self, client_id: str, scope_id: str) -> KeycloakDeleteResultDTO:
+        """Delete a scope."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_authz_scope_permissions(self, client_id: str, scope_id: str) -> list[KeycloakAuthzPolicyDTO]:
+        """List the permissions that apply to a scope."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_authz_scope_resources(self, client_id: str, scope_id: str) -> list[KeycloakAuthzResourceDTO]:
+        """List the resources that have a scope."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_authz_policies_filtered(
+        self,
+        client_id: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakAuthzPolicyDTO]:
+        """List the policies of a client, filtered by the admin API query parameters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def search_client_authz_policy(self, client_id: str, name: str) -> KeycloakAuthzPolicyDTO:
+        """Find a policy by its exact name."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_authz_policy_providers(self, client_id: str) -> list[KeycloakAuthzPolicyProviderDTO]:
+        """List the policy types the server offers."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_authz_permissions_filtered(
+        self,
+        client_id: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakAuthzPolicyDTO]:
+        """List the permissions of a client, filtered by the admin API query parameters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def search_client_authz_permission(self, client_id: str, name: str) -> KeycloakAuthzPolicyDTO:
+        """Find a permission by its exact name."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_authz_permission_providers(self, client_id: str) -> list[KeycloakAuthzPolicyProviderDTO]:
+        """List the permission types the server offers."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def evaluate_client_authz_policies(
+        self,
+        client_id: str,
+        request: KeycloakAuthzPolicyEvaluationRequestRequestDTO | dict[str, Any],
+    ) -> KeycloakAuthzPolicyEvaluationResponseDTO:
+        """Evaluate the policies for a user and resources, as the admin console's evaluation tool does."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def evaluate_client_authz_permissions(
+        self,
+        client_id: str,
+        request: KeycloakAuthzPolicyEvaluationRequestRequestDTO | dict[str, Any],
+    ) -> KeycloakAuthzPolicyEvaluationResponseDTO:
+        """Evaluate the permissions for a user and resources."""
         raise NotImplementedError

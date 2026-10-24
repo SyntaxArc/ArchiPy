@@ -835,6 +835,23 @@ Feature: Keycloak Authentication Testing
       | sync         | named-role  | named-crole  | test-realm | Test Realm         | named-client  |
       | async        | anamed-role | anamed-crole | test-realm | Async Test Realm   | anamed-client |
 
+  @authz
+  Scenario Outline: Authorization queries, evaluation, protocol mapper bulk calls and group and component settings
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    And I enable authorization services for client "<client_name>" using <adapter_type> adapter
+    And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
+    When I protect the resource "<resource>" with scope "read" for the realm role "offline_access" on client "<client_name>" using <adapter_type> adapter
+    Then the resource "<resource>" and scope "read" of client "<client_name>" are found, filtered, searched and described using <adapter_type> adapter
+    And the policies and permissions of client "<client_name>" are found, searched, listed by provider and evaluated for user "<username>" using <adapter_type> adapter
+    And the client scope "<scope>" lists, bulk-adds and reads protocol mappers by id and protocol, and the group "<group>" and a component report their settings using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | username     | password | resource | scope     | group     | realm_name | realm_display_name | client_name |
+      | sync         | azxuser      | pass123  | az-doc   | az-scope  | az-group  | test-realm | Test Realm         | az-client   |
+      | async        | asyncazxuser | async123 | aaz-doc  | aaz-scope | aaz-group | test-realm | Async Test Realm   | aaz-client  |
+
   @components
   Scenario Outline: Component listing
     Given a configured <adapter_type> Keycloak adapter
