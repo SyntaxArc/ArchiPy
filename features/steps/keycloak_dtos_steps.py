@@ -4,7 +4,7 @@ from behave import given, then, when
 from features.test_helpers import get_current_scenario_context
 from pydantic import ValidationError
 
-from archipy.adapters.keycloak.adapter_mixins._shared import to_mutation_result, to_request_payload
+from archipy.adapters.keycloak.adapter_mixins._shared import to_mutation_result, to_request_payload, with_created_id
 
 from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
 from archipy.models.dtos.keycloak import authz_dtos, common_dtos, client_scope_dtos, component_dtos, group_dtos, role_dtos, user_dtos
@@ -168,3 +168,33 @@ def step_result_is_subclass(context, result_dto):
     result = get_current_scenario_context(context).get("mutation_result")
     assert type(result) is _dto_class(result_dto)
     assert isinstance(result, KeycloakMutationResultDTO)
+
+
+@given("a Keycloak create result with message {message}")
+def step_create_result_with_message(context, message):
+    msg = None if message == "none" else message
+    get_current_scenario_context(context).store("create_result", common_dtos.KeycloakCreateResultDTO(msg=msg))
+
+
+@when('the id of the created resource is looked up as "{created_id}"')
+def step_lookup_created_id(context, created_id):
+    sc = get_current_scenario_context(context)
+    calls = []
+
+    def lookup():
+        calls.append(1)
+        return created_id
+
+    sc.store("create_result", with_created_id(sc.get("create_result"), lookup))
+    sc.store("lookup_calls", len(calls))
+
+
+@then("the create result id is {expected}")
+def step_create_result_id(context, expected):
+    result = get_current_scenario_context(context).get("create_result")
+    assert result.id == (None if expected == "none" else expected), result
+
+
+@then("the lookup ran {ran}")
+def step_lookup_ran(context, ran):
+    assert (get_current_scenario_context(context).get("lookup_calls") == 1) == (ran == "yes")

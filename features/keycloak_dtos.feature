@@ -89,3 +89,14 @@ Feature: Keycloak DTOs
       | KeycloakUpdateResultDTO |
       | KeycloakDeleteResultDTO |
       | KeycloakAssignResultDTO |
+
+  Scenario Outline: A create result gets the id of the new resource unless the create was skipped
+    Given a Keycloak create result with message <message>
+    When the id of the created resource is looked up as "new-id"
+    Then the create result id is <id>
+    And the lookup ran <ran>
+
+    Examples:
+      | message        | id     | ran |
+      | none           | new-id | yes |
+      | Already exists | none   | no  |

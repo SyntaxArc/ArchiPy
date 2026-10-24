@@ -2959,7 +2959,7 @@ async def step_create_coverage_auth_flow(context: Context, adapter_type: str) ->
     suffix = uuid.uuid4().hex[:8]
     flow_alias = f"coverage-flow-{suffix}"
     try:
-        await _adapter_call(
+        created = await _adapter_call(
             adapter,
             is_async,
             "create_authentication_flow",
@@ -2971,6 +2971,7 @@ async def step_create_coverage_auth_flow(context: Context, adapter_type: str) ->
             ),
             skip_exists=True,
         )
+        scenario_context.store("coverage_created_flow", created)
         flows = await _adapter_call(adapter, is_async, "get_authentication_flows")
         flow = next(item for item in flows if item.alias == flow_alias)
         scenario_context.store("coverage_flow_alias", flow_alias)
@@ -3049,6 +3050,7 @@ async def step_update_coverage_auth_flow(context: Context, adapter_type: str) ->
                 alias=flow_alias,
                 description="coverage-updated",
                 provider_id="basic-flow",
+                top_level=True,
             ),
         )
         scenario_context.store(_op_error_key("update_authentication_flow"), None)
@@ -3071,13 +3073,14 @@ async def step_copy_coverage_auth_flow(context: Context, adapter_type: str) -> N
     suffix = scenario_context.get("coverage_suffix")
     copy_alias = f"coverage-flow-copy-{suffix}"
     try:
-        await _adapter_call(
+        created = await _adapter_call(
             adapter,
             is_async,
             "copy_authentication_flow",
             KeycloakAuthenticationFlowCopyRequestDTO(new_name=copy_alias),
             flow_alias,
         )
+        scenario_context.store("coverage_created_copy", created)
         flows = await _adapter_call(adapter, is_async, "get_authentication_flows")
         copy_flow = next(item for item in flows if item.alias == copy_alias)
         scenario_context.store("coverage_copy_alias", copy_alias)
@@ -3102,7 +3105,7 @@ async def step_add_coverage_auth_subflow(context: Context, adapter_type: str) ->
     suffix = scenario_context.get("coverage_suffix")
     sub_alias = f"coverage-subflow-{suffix}"
     try:
-        await _adapter_call(
+        created = await _adapter_call(
             adapter,
             is_async,
             "create_authentication_flow_subflow",
@@ -3110,6 +3113,7 @@ async def step_add_coverage_auth_subflow(context: Context, adapter_type: str) ->
             flow_alias,
             skip_exists=True,
         )
+        scenario_context.store("coverage_created_subflow", created)
         scenario_context.store("coverage_sub_alias", sub_alias)
         scenario_context.store(_op_error_key("create_authentication_flow_subflow"), None)
     except Exception as exc:
@@ -3129,13 +3133,14 @@ async def step_add_coverage_auth_execution(context: Context, adapter_type: str) 
     adapter, is_async, scenario_context = _adapter_parts(context)
     flow_alias = scenario_context.get("coverage_flow_alias")
     try:
-        await _adapter_call(
+        created = await _adapter_call(
             adapter,
             is_async,
             "create_authentication_flow_execution",
             KeycloakAuthenticationFlowExecutionCreateRequestDTO(provider="auth-username-password-form"),
             flow_alias,
         )
+        scenario_context.store("coverage_created_execution", created)
         scenario_context.store(_op_error_key("create_authentication_flow_execution"), None)
     except Exception as exc:
         scenario_context.store(_op_error_key("create_authentication_flow_execution"), str(exc))
@@ -3287,7 +3292,8 @@ async def step_create_coverage_execution_config(context: Context, adapter_type: 
     scenario_context.store("execution_config_skipped", False)
     try:
         config_payload = KeycloakAuthenticatorConfigRequestDTO(alias=f"coverage-config-{suffix}", config={})
-        await _adapter_call(adapter, is_async, "create_execution_config", execution_id, config_payload)
+        created = await _adapter_call(adapter, is_async, "create_execution_config", execution_id, config_payload)
+        scenario_context.store("coverage_created_config", created)
         refreshed = await _adapter_call(adapter, is_async, "get_authentication_flow_executions", flow_alias)
         config_execution = next((item for item in refreshed if item.id == execution_id), None)
         config_id = config_execution.authentication_config if config_execution else None
@@ -3534,7 +3540,8 @@ async def step_add_mapper_to_coverage_client_scope(
     try:
         internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
         scenario_context.store("coverage_internal_client_id", internal_client_id)
-        await _adapter_call(adapter, is_async, "add_mapper_to_client_scope", scope_id, mapper_payload)
+        created = await _adapter_call(adapter, is_async, "add_mapper_to_client_scope", scope_id, mapper_payload)
+        scenario_context.store("coverage_created_scope mapper", created)
         mappers = await _adapter_call(adapter, is_async, "get_mappers_from_client_scope", scope_id)
         mapper = next(item for item in mappers if item.name == mapper_name)
         scenario_context.store("coverage_scope_mapper_id", mapper.id)
@@ -3639,7 +3646,8 @@ async def step_add_mapper_to_coverage_client(context: Context, client_name: str,
         if not internal_client_id:
             internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
             scenario_context.store("coverage_internal_client_id", internal_client_id)
-        await _adapter_call(adapter, is_async, "add_mapper_to_client", internal_client_id, mapper_payload)
+        created = await _adapter_call(adapter, is_async, "add_mapper_to_client", internal_client_id, mapper_payload)
+        scenario_context.store("coverage_created_client mapper", created)
         mappers = await _adapter_call(adapter, is_async, "get_mappers_from_client", internal_client_id)
         mapper = next(item for item in mappers if item.name == mapper_name)
         scenario_context.store("coverage_client_mapper_id", mapper.id)
@@ -4146,3 +4154,21 @@ def step_chain(context: Context, count: int) -> None:
 @then("the propagation headers carry the bearer token")
 def step_headers(context: Context) -> None:
     assert context.auth_context.propagation_headers() == {"Authorization": "Bearer tok-123"}
+
+
+@then("the coverage {kind} creation result has the id of the new resource")
+def step_coverage_creation_result_has_id(context: Context, kind: str) -> None:
+    """Verify a create call reports the id of the resource it created."""
+    scenario_context = get_current_scenario_context(context)
+    created = scenario_context.get(f"coverage_created_{kind}")
+    assert created is not None, f"No {kind} creation result in context"
+    assert created.id, f"{kind} creation result has no id: {created!r}"
+    expected = {
+        "flow": scenario_context.get("coverage_flow_id"),
+        "copy": scenario_context.get("coverage_copy_flow_id"),
+        "execution": scenario_context.get("coverage_execution_id"),
+        "scope mapper": scenario_context.get("coverage_scope_mapper_id"),
+        "client mapper": scenario_context.get("coverage_client_mapper_id"),
+    }.get(kind)
+    if expected:
+        assert created.id == expected, f"{kind} creation id {created.id} != looked-up id {expected}"
