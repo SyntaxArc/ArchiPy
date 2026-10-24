@@ -268,7 +268,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
                 subject_token,
                 audience=audience,
                 subject=requested_subject,
-                requested_token_type="urn:ietf:params:oauth:token-type:access_token",  # noqa: S106
+                requested_token_type="urn:ietf:params:oauth:token-type:access_token",  # noqa: S106 # nosec B106
                 scope=scope,
             )
         except KeycloakError as e:
@@ -606,7 +606,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
                 subject_token,
                 audience=audience,
                 subject=requested_subject,
-                requested_token_type="urn:ietf:params:oauth:token-type:access_token",  # noqa: S106
+                requested_token_type="urn:ietf:params:oauth:token-type:access_token",  # noqa: S106 # nosec B106
                 scope=scope,
             )
         except KeycloakError as e:

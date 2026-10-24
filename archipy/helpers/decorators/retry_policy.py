@@ -116,7 +116,7 @@ class _RetryPolicy:
 
     def next_delay(self, attempt: int) -> float:
         base = self.delay * (self.backoff ** (attempt - 1))
-        return base + random.uniform(0, base * self.jitter) if self.jitter else base  # noqa: S311  # not security
+        return base + random.uniform(0, base * self.jitter) if self.jitter else base  # noqa: S311 # nosec B311  # not security
 
     def exhausted(self, last_exception: Exception | None) -> ResourceExhaustedError:
         error = ResourceExhaustedError(resource_type=self.resource_type)

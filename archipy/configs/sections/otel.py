@@ -207,7 +207,7 @@ class OpentelemetryConfig(BaseModel):
         description="Unique metrics exporter when METRICS_ENABLED is true (otlp, pull, or pushgateway)",
     )
     METRICS_PULL_HOST: str = Field(
-        default="0.0.0.0",  # noqa: S104 — intentional scrape bind-all default; override via env
+        default="0.0.0.0",  # noqa: S104 # nosec B104  # intentional scrape bind-all default; override via env
         description="Bind host for the metrics pull scrape server when METRICS_EXPORTER=pull",
     )
     METRICS_PULL_PORT: int = Field(
