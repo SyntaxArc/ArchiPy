@@ -870,6 +870,18 @@ Feature: Keycloak Authentication Testing
       | sync         | typed-scope  | tier  | origin       | test-realm | Test Realm         | typed-client  | typed-audience  |
       | async        | atyped-scope | atier | aorigin      | test-realm | Async Test Realm   | atyped-client | atyped-audience |
 
+  @tokens
+  Scenario Outline: Chaining identity across two realms with token exchange and the JWT authorization grant
+    Given a configured <adapter_type> Keycloak adapter
+    When I set up domain A "<realm_a>" with client "<client_a>", user "<username>" and domain B "<realm_b>" as an audience using <adapter_type> adapter
+    And I set up domain B "<realm_b>" with client "<client_b>" trusting domain A through the identity provider "<alias>" using <adapter_type> adapter
+    Then a token from domain A is exchanged for a JWT assertion and redeemed in domain B using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | realm_a       | realm_b       | client_a | client_b | username   | alias    |
+      | sync         | chain-a-sync  | chain-b-sync  | clienta  | clientb  | chainuser  | domaina  |
+      | async        | chain-a-async | chain-b-async | aclienta | aclientb | achainuser | adomaina |
+
   @components
   Scenario Outline: Component listing
     Given a configured <adapter_type> Keycloak adapter
