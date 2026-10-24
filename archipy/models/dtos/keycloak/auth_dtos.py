@@ -1,10 +1,9 @@
 """Keycloak-related data transfer objects."""
 
-from typing import Any
-
 from pydantic import Field, SecretStr
 
 from archipy.models.dtos.base_dtos import BaseDTO
+from archipy.models.dtos.keycloak.token_dtos import KeycloakTokenClaimsDTO, KeycloakUserInfoDTO
 from archipy.models.types.actor_type import ActorType
 
 
@@ -23,9 +22,9 @@ class AuthenticatedUserDTO(BaseDTO):
     email: str
     roles: list[str]
     token: SecretStr
-    raw_user_info: dict[str, Any]
+    raw_user_info: KeycloakUserInfoDTO
     actor_chain: list[ActorDTO] = Field(default_factory=list)
-    token_info: dict[str, Any] = Field(default_factory=dict)
+    token_info: KeycloakTokenClaimsDTO = Field(default_factory=KeycloakTokenClaimsDTO)
 
     @property
     def is_impersonated(self) -> bool:

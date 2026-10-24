@@ -12,6 +12,7 @@ from features.test_helpers import get_current_scenario_context
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
 from archipy.adapters.keycloak.auth import _build_auth_context
 from archipy.configs.base_config import BaseConfig
+from archipy.models.dtos.keycloak.token_dtos import KeycloakTokenClaimsDTO, KeycloakUserInfoDTO
 from archipy.models.types.actor_type import ActorType
 
 
@@ -601,7 +602,7 @@ async def step_refresh_token(context: Context, adapter_type: str) -> None:
         raise ValueError("No previous token step found")
 
     username = prev_step.name.split('"')[1]
-    refresh_token = scenario_context.get(f"token_response_{username}")["refresh_token"]
+    refresh_token = scenario_context.get(f"token_response_{username}").refresh_token
 
     if is_async:
 
@@ -626,7 +627,7 @@ async def step_request_user_info(context: Context, adapter_type: str) -> None:
         raise ValueError("No previous token step found")
 
     username = prev_step.name.split('"')[1]
-    access_token = scenario_context.get(f"token_response_{username}")["access_token"]
+    access_token = scenario_context.get(f"token_response_{username}").access_token
 
     if is_async:
 
@@ -651,7 +652,7 @@ async def step_logout_user(context: Context, adapter_type: str) -> None:
         raise ValueError("No previous token step found")
 
     username = prev_step.name.split('"')[1]
-    refresh_token = scenario_context.get(f"token_response_{username}")["refresh_token"]
+    refresh_token = scenario_context.get(f"token_response_{username}").refresh_token
 
     if is_async:
 
@@ -676,7 +677,7 @@ async def step_validate_token(context: Context, adapter_type: str) -> None:
         raise ValueError("No previous token step found")
 
     username = prev_step.name.split('"')[1]
-    access_token = scenario_context.get(f"token_response_{username}")["access_token"]
+    access_token = scenario_context.get(f"token_response_{username}").access_token
 
     if is_async:
 
@@ -1017,7 +1018,7 @@ async def step_introspect_token(context: Context, adapter_type: str) -> None:
         raise ValueError("No previous token step found")
 
     username = prev_step.name.split('"')[1]
-    access_token = scenario_context.get(f"token_response_{username}")["access_token"]
+    access_token = scenario_context.get(f"token_response_{username}").access_token
 
     if is_async:
 
@@ -1042,7 +1043,7 @@ async def step_get_token_info(context: Context, adapter_type: str) -> None:
         raise ValueError("No previous token step found")
 
     username = prev_step.name.split('"')[1]
-    access_token = scenario_context.get(f"token_response_{username}")["access_token"]
+    access_token = scenario_context.get(f"token_response_{username}").access_token
 
     if is_async:
 
@@ -1067,7 +1068,7 @@ async def step_check_user_role(context: Context, role_name: str, adapter_type: s
         raise ValueError("No previous token step found")
 
     username = prev_step.name.split('"')[1]
-    access_token = scenario_context.get(f"token_response_{username}")["access_token"]
+    access_token = scenario_context.get(f"token_response_{username}").access_token
 
     if is_async:
 
@@ -1333,7 +1334,7 @@ def step_introspection_active(context: Context) -> None:
     """Verify that the introspection result indicates an active token."""
     scenario_context = get_current_scenario_context(context)
     result = scenario_context.get("introspection_result")
-    assert result.get("active", False), "Token is not active according to introspection"
+    assert result.active, "Token is not active according to introspection"
     context.logger.info("Verified token is active")
 
 
@@ -1464,7 +1465,7 @@ def step_token_expiration_check(context: Context) -> None:
     token_response = scenario_context.get("latest_token_response")
 
     if token_response and "expires_in" in token_response:
-        expires_in = token_response["expires_in"]
+        expires_in = token_response.expires_in
         assert expires_in > 0, "Token expires_in should be greater than 0"
         assert expires_in <= 3600, "Token expires_in should not exceed 1 hour for security"
         context.logger.info(f"Verified token expiration: {expires_in} seconds")
@@ -4093,7 +4094,12 @@ def step_nested_act(context: Context, sub: str, client: str) -> None:
 
 @when("the auth context is built")
 def step_build(context: Context) -> None:
-    context.auth_context = _build_auth_context(_USER_INFO, "tok-123", set(), context.token_info)
+    context.auth_context = _build_auth_context(
+        KeycloakUserInfoDTO.model_validate(_USER_INFO),
+        "tok-123",
+        set(),
+        KeycloakTokenClaimsDTO.model_validate(context.token_info),
+    )
 
 
 @then("the auth context is not impersonated")

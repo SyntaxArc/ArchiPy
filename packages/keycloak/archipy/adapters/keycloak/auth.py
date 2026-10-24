@@ -13,13 +13,14 @@ from functools import cache
 from typing import TYPE_CHECKING, Any, NoReturn
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+    from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping
 
 from fastapi import Depends, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
 from archipy.adapters.keycloak.deprecated_state import deprecated_dict, deprecated_list, deprecated_set
+from archipy.models.dtos.keycloak.token_dtos import KeycloakTokenClaimsDTO, KeycloakUserInfoDTO
 from archipy.models.dtos.keycloak_dtos import ActorDTO, AuthenticatedUserDTO
 from archipy.models.errors import (
     BaseError,
@@ -114,6 +115,25 @@ def _cached_sync_lookup[T](
     if value:
         _remote_cache_set(key, value, ttl)
     return value
+
+
+def _as_userinfo(raw: KeycloakUserInfoDTO | Mapping[str, Any] | None) -> KeycloakUserInfoDTO:
+    """Return UserInfo as a DTO; mappings (custom adapters, test doubles) are validated, ``None`` is empty."""
+    if isinstance(raw, KeycloakUserInfoDTO):
+        return raw
+    return KeycloakUserInfoDTO.model_validate(raw or {})
+
+
+def _as_claims(raw: KeycloakTokenClaimsDTO | Mapping[str, Any] | None) -> KeycloakTokenClaimsDTO:
+    """Return decoded token claims as a DTO; mappings are validated, ``None`` is empty."""
+    if isinstance(raw, KeycloakTokenClaimsDTO):
+        return raw
+    return KeycloakTokenClaimsDTO.model_validate(raw or {})
+
+
+async def _async_userinfo(userinfo: Awaitable[KeycloakUserInfoDTO | Mapping[str, Any] | None]) -> KeycloakUserInfoDTO:
+    """Await a UserInfo call and return it as a DTO."""
+    return _as_userinfo(await userinfo)
 
 
 async def _cached_async_lookup[T](
@@ -304,20 +324,20 @@ def _wrap_async_grpc_handler(
     return wrapper
 
 
-def _extract_roles(user_info: dict[str, Any], client_id: str | None) -> set[str]:
+def _extract_roles(user_info: KeycloakUserInfoDTO, client_id: str | None) -> set[str]:
     """Collect realm and client roles from a UserInfo response.
 
     Requires the Keycloak "realm roles" / "client roles" mappers to have "Add to userinfo" enabled,
     otherwise stock Keycloak omits ``realm_access`` and ``resource_access`` from UserInfo.
     """
-    roles: set[str] = set(user_info.get("realm_access", {}).get("roles", []) or [])
-    if client_id:
-        roles.update(user_info.get("resource_access", {}).get(client_id, {}).get("roles", []) or [])
+    roles: set[str] = set(user_info.realm_access.roles or []) if user_info.realm_access else set()
+    if client_id and user_info.resource_access and (client_access := user_info.resource_access.get(client_id)):
+        roles.update(client_access.roles or [])
     return roles
 
 
 def _check_resource_access(
-    user_info: dict[str, Any],
+    user_info: KeycloakUserInfoDTO,
     resource_uuid: str,
     user_roles: set[str],
     admin_roles: frozenset[str] | None,
@@ -325,7 +345,7 @@ def _check_resource_access(
     resource_type: str | None = None,
 ) -> None:
     """Verify the caller owns the resource or holds an admin role."""
-    sub = user_info.get("sub")
+    sub = user_info.sub
     is_owner = sub == resource_uuid
     is_admin = bool(admin_roles) and not user_roles.isdisjoint(admin_roles)
     if not (is_owner or is_admin):
@@ -345,7 +365,7 @@ def _authorize_sync(
     admin_roles: frozenset[str] | None,
     lang: LanguageType,
     resource_type: str | None = None,
-) -> tuple[dict[str, Any], dict[str, Any], set[str]]:
+) -> tuple[KeycloakUserInfoDTO, KeycloakTokenClaimsDTO, set[str]]:
     """Authenticate and authorize a request using local JWT verify and UserInfo.
 
     Args:
@@ -370,7 +390,7 @@ def _authorize_sync(
     if not keycloak.validate_token(token_str):
         raise TokenExpiredError(lang=lang)
 
-    token_info = keycloak.get_token_info(token_str)
+    token_info = _as_claims(keycloak.get_token_info(token_str))
     if not token_info:
         raise TokenExpiredError(lang=lang)
 
@@ -379,7 +399,7 @@ def _authorize_sync(
         "userinfo",
         token_str,
         None,
-        lambda: keycloak.get_userinfo(token_str),
+        lambda: _as_userinfo(keycloak.get_userinfo(token_str)),
     )
     if not user_info:
         raise UnauthenticatedError(lang=lang)
@@ -427,12 +447,12 @@ async def _authorize_async(
     admin_roles: frozenset[str] | None,
     lang: LanguageType,
     resource_type: str | None = None,
-) -> tuple[dict[str, Any], dict[str, Any], set[str]]:
+) -> tuple[KeycloakUserInfoDTO, KeycloakTokenClaimsDTO, set[str]]:
     """Async variant of :func:`_authorize_sync`."""
     if not await keycloak.validate_token(token_str):
         raise TokenExpiredError(lang=lang)
 
-    token_info = await keycloak.get_token_info(token_str)
+    token_info = _as_claims(await keycloak.get_token_info(token_str))
     if not token_info:
         raise TokenExpiredError(lang=lang)
 
@@ -441,7 +461,7 @@ async def _authorize_async(
         "userinfo",
         token_str,
         None,
-        lambda: keycloak.get_userinfo(token_str),
+        lambda: _async_userinfo(keycloak.get_userinfo(token_str)),
     )
     if not user_info:
         raise UnauthenticatedError(lang=lang)
@@ -479,34 +499,34 @@ async def _authorize_async(
     return user_info, token_info, user_roles
 
 
-def _parse_actor_chain(token_info: dict[str, Any] | None) -> list[ActorDTO]:
+def _parse_actor_chain(token_info: KeycloakTokenClaimsDTO | None) -> list[ActorDTO]:
     """Flatten the nested RFC 8693 ``act`` claim, outermost (current) actor first.
 
     Per RFC 8693 §4.1 only the outermost actor is the current acting party; inner
     entries are informational history of earlier delegations.
     """
     chain: list[ActorDTO] = []
-    act = (token_info or {}).get("act")
-    while isinstance(act, dict):
+    act = token_info.act if token_info else None
+    while act is not None:
         if len(chain) >= _MAX_ACTOR_DEPTH:
             logger.info("Actor chain truncated at %d entries", _MAX_ACTOR_DEPTH)
             break
-        if user_id := act.get("sub"):
-            chain.append(ActorDTO(id=user_id, type=ActorType.USER))
-        elif client_id := act.get("client_id") or act.get("azp"):
+        if act.sub:
+            chain.append(ActorDTO(id=act.sub, type=ActorType.USER))
+        elif client_id := act.client_id or act.azp:
             chain.append(ActorDTO(id=client_id, type=ActorType.CLIENT))
-        act = act.get("act")
+        act = act.act
     return chain
 
 
 def _build_auth_context(
-    user_info: dict[str, Any],
+    user_info: KeycloakUserInfoDTO,
     token_str: str,
     user_roles: set[str],
-    token_info: dict[str, Any] | None = None,
+    token_info: KeycloakTokenClaimsDTO | None = None,
 ) -> AuthenticatedUserDTO:
     """Build an :class:`AuthContext` from UserInfo and decoded token claims."""
-    user_id = user_info.get("sub")
+    user_id = user_info.sub
     if not user_id:
         raise UnauthenticatedError()
     actors = _parse_actor_chain(token_info)
@@ -518,13 +538,13 @@ def _build_auth_context(
         )
     return AuthenticatedUserDTO(
         user_id=user_id,
-        username=user_info.get("preferred_username", ""),
-        email=user_info.get("email", ""),
+        username=user_info.preferred_username or "",
+        email=user_info.email or "",
         roles=list(user_roles),
         token=token_str,
         raw_user_info=user_info,
         actor_chain=actors,
-        token_info=dict(token_info or {}),
+        token_info=token_info or KeycloakTokenClaimsDTO(),
     )
 
 
@@ -618,7 +638,7 @@ def fastapi_auth(
         request: Request,
         token: HTTPAuthorizationCredentials = Security(security),
         keycloak: AsyncKeycloakAdapter = Depends(_get_async_keycloak_adapter),
-    ) -> AsyncIterator[dict[str, Any]]:
+    ) -> AsyncIterator[KeycloakUserInfoDTO]:
         if token is None:
             raise UnauthenticatedError(lang=lang)
         token_str = token.credentials
@@ -643,8 +663,8 @@ def fastapi_auth(
 
         # Still filled for existing code, but each read warns: AuthContextManager carries the same data.
         context_access = "AuthContextManager.get_auth_context()"
-        request.state.user_info = deprecated_dict(user_info, "user_info", f"{context_access}.raw_user_info")
-        request.state.token_info = deprecated_dict(token_info or {}, "token_info", f"{context_access}.token_info")
+        request.state.user_info = deprecated_dict(user_info.to_dict(), "user_info", f"{context_access}.raw_user_info")
+        request.state.token_info = deprecated_dict(token_info.to_dict(), "token_info", f"{context_access}.token_info")
         request.state.actor_chain = deprecated_list(
             _parse_actor_chain(token_info),
             "actor_chain",
@@ -654,7 +674,7 @@ def fastapi_auth(
         # UserInfo without ``sub`` cannot name a caller; keep serving it, as before, without an auth context.
         auth_token = (
             AuthContextManager.set_auth_context(_build_auth_context(user_info, token_str, user_roles, token_info))
-            if user_info.get("sub")
+            if user_info.sub
             else None
         )
         try:

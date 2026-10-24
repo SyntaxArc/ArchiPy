@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from archipy.adapters.keycloak.port_mixins._shared import (
-        KeycloakTokenType,
-        KeycloakUserType,
         PublicKeyType,
+    )
+    from archipy.models.dtos.keycloak.token_dtos import (
+        KeycloakCertsDTO,
+        KeycloakTokenClaimsDTO,
+        KeycloakTokenDTO,
+        KeycloakUserInfoDTO,
+        KeycloakWellKnownDTO,
     )
 
 
@@ -17,12 +22,12 @@ class KeycloakAuthPort:
     """Sync Keycloak port interface for auth/token operations."""
 
     @abstractmethod
-    def get_token(self, username: str, password: str) -> KeycloakTokenType | None:
+    def get_token(self, username: str, password: str) -> KeycloakTokenDTO | None:
         """Get a user token by username and password."""
         raise NotImplementedError
 
     @abstractmethod
-    def refresh_token(self, refresh_token: str) -> KeycloakTokenType | None:
+    def refresh_token(self, refresh_token: str) -> KeycloakTokenDTO | None:
         """Refresh an existing token using a refresh token."""
         raise NotImplementedError
 
@@ -32,22 +37,22 @@ class KeycloakAuthPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_userinfo(self, token: str) -> KeycloakUserType | None:
+    def get_userinfo(self, token: str) -> KeycloakUserInfoDTO | None:
         """Get user information from a token."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_token_info(self, token: str) -> dict[str, Any] | None:
+    def get_token_info(self, token: str) -> KeycloakTokenClaimsDTO | None:
         """Decode token to get its claims."""
         raise NotImplementedError
 
     @abstractmethod
-    def introspect_token(self, token: str) -> dict[str, Any] | None:
+    def introspect_token(self, token: str) -> KeycloakTokenClaimsDTO | None:
         """Introspect token to get detailed information about it."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_client_credentials_token(self) -> KeycloakTokenType | None:
+    def get_client_credentials_token(self) -> KeycloakTokenDTO | None:
         """Get token using client credentials."""
         raise NotImplementedError
 
@@ -62,17 +67,17 @@ class KeycloakAuthPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_well_known_config(self) -> dict[str, Any]:
+    def get_well_known_config(self) -> KeycloakWellKnownDTO:
         """Get the well-known OpenID configuration."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_certs(self) -> dict[str, Any]:
+    def get_certs(self) -> KeycloakCertsDTO:
         """Get the JWT verification certificates."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenType | None:
+    def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenDTO | None:
         """Exchange authorization code for token."""
         raise NotImplementedError
 
@@ -83,7 +88,7 @@ class KeycloakAuthPort:
         requested_subject: str | None = None,
         audience: str | None = None,
         scope: str = "openid",
-    ) -> KeycloakTokenType | None:
+    ) -> KeycloakTokenDTO | None:
         """Exchange a token (RFC 8693); with ``requested_subject`` this impersonates that user.
 
         Keycloak 26.8+ adds the ``act`` claim to the issued token so downstream services can identify the impersonator.
@@ -109,12 +114,12 @@ class AsyncKeycloakAuthPort:
     """Async Keycloak port interface for auth/token operations."""
 
     @abstractmethod
-    async def get_token(self, username: str, password: str) -> KeycloakTokenType | None:
+    async def get_token(self, username: str, password: str) -> KeycloakTokenDTO | None:
         """Get a user token by username and password."""
         raise NotImplementedError
 
     @abstractmethod
-    async def refresh_token(self, refresh_token: str) -> KeycloakTokenType | None:
+    async def refresh_token(self, refresh_token: str) -> KeycloakTokenDTO | None:
         """Refresh an existing token using a refresh token."""
         raise NotImplementedError
 
@@ -124,22 +129,22 @@ class AsyncKeycloakAuthPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_userinfo(self, token: str) -> KeycloakUserType | None:
+    async def get_userinfo(self, token: str) -> KeycloakUserInfoDTO | None:
         """Get user information from a token."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_token_info(self, token: str) -> dict[str, Any] | None:
+    async def get_token_info(self, token: str) -> KeycloakTokenClaimsDTO | None:
         """Decode token to get its claims."""
         raise NotImplementedError
 
     @abstractmethod
-    async def introspect_token(self, token: str) -> dict[str, Any] | None:
+    async def introspect_token(self, token: str) -> KeycloakTokenClaimsDTO | None:
         """Introspect token to get detailed information about it."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_client_credentials_token(self) -> KeycloakTokenType | None:
+    async def get_client_credentials_token(self) -> KeycloakTokenDTO | None:
         """Get token using client credentials."""
         raise NotImplementedError
 
@@ -154,17 +159,17 @@ class AsyncKeycloakAuthPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_well_known_config(self) -> dict[str, Any]:
+    async def get_well_known_config(self) -> KeycloakWellKnownDTO:
         """Get the well-known OpenID configuration."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_certs(self) -> dict[str, Any]:
+    async def get_certs(self) -> KeycloakCertsDTO:
         """Get the JWT verification certificates."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenType | None:
+    async def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenDTO | None:
         """Exchange authorization code for token."""
         raise NotImplementedError
 
@@ -175,7 +180,7 @@ class AsyncKeycloakAuthPort:
         requested_subject: str | None = None,
         audience: str | None = None,
         scope: str = "openid",
-    ) -> KeycloakTokenType | None:
+    ) -> KeycloakTokenDTO | None:
         """Exchange a token (RFC 8693); with ``requested_subject`` this impersonates that user.
 
         Keycloak 26.8+ adds the ``act`` claim to the issued token so downstream services can identify the impersonator.

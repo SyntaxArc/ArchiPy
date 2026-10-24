@@ -15,15 +15,23 @@ from keycloak.exceptions import (
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    to_dto,
+    to_dto_or_none,
 )
 from archipy.helpers.decorators import ttl_cache
+from archipy.models.dtos.keycloak.token_dtos import (
+    KeycloakCertsDTO,
+    KeycloakTokenClaimsDTO,
+    KeycloakTokenDTO,
+    KeycloakUserInfoDTO,
+    KeycloakWellKnownDTO,
+)
 from archipy.models.errors import (
     InternalError,
 )
 
 if TYPE_CHECKING:
     from archipy.adapters.keycloak.ports import (
-        KeycloakTokenType,
         KeycloakUserType,
         PublicKeyType,
     )
@@ -72,7 +80,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         except Exception as e:  # soft-fail authz/role checks; JWT/Keycloak libs
             raise InternalError(additional_data={"operation": "get_public_key", "error": str(e)}) from e
 
-    def get_token(self, username: str, password: str) -> KeycloakTokenType | None:
+    def get_token(self, username: str, password: str) -> KeycloakTokenDTO | None:
         """Get a user token by username and password using the Resource Owner Password Credentials Grant.
 
         Warning:
@@ -94,11 +102,14 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             ServiceUnavailableError: If Keycloak service is unavailable
         """
         try:
-            return self._openid_adapter.token(grant_type="password", username=username, password=password)
+            return to_dto_or_none(
+                KeycloakTokenDTO,
+                self._openid_adapter.token(grant_type="password", username=username, password=password),
+            )
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token")
 
-    def refresh_token(self, refresh_token: str) -> KeycloakTokenType | None:
+    def refresh_token(self, refresh_token: str) -> KeycloakTokenDTO | None:
         """Refresh an existing token using a refresh token.
 
         Args:
@@ -112,7 +123,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             ServiceUnavailableError: If Keycloak service is unavailable
         """
         try:
-            return self._openid_adapter.refresh_token(refresh_token)
+            return to_dto_or_none(KeycloakTokenDTO, self._openid_adapter.refresh_token(refresh_token))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "refresh_token")
 
@@ -135,7 +146,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         else:
             return True
 
-    def get_userinfo(self, token: str) -> KeycloakUserType | None:
+    def get_userinfo(self, token: str) -> KeycloakUserInfoDTO | None:
         """Get user information from a token via the UserInfo endpoint.
 
         The UserInfo endpoint validates the token server-side, so no local
@@ -171,14 +182,14 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "get_userinfo")
             return None
         else:
-            return result
+            return to_dto(KeycloakUserInfoDTO, result)
 
     @ttl_cache(ttl_seconds=30, maxsize=200)  # Cache for 30 seconds
     def _get_userinfo_cached(self, token: str) -> KeycloakUserType:
         return _normalize_userinfo(self._openid_adapter.userinfo(token))
 
     @ttl_cache(ttl_seconds=3600, maxsize=1)  # Cache for 1 hour
-    def get_well_known_config(self) -> dict[str, Any]:
+    def get_well_known_config(self) -> KeycloakWellKnownDTO:
         """Get the well-known OpenID configuration.
 
         Returns:
@@ -188,12 +199,12 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             ValueError: If getting configuration fails
         """
         try:
-            return self._openid_adapter.well_known()
+            return to_dto(KeycloakWellKnownDTO, self._openid_adapter.well_known())
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_well_known_config")
 
     @ttl_cache(ttl_seconds=3600, maxsize=1)  # Cache for 1 hour
-    def get_certs(self) -> dict[str, Any]:
+    def get_certs(self) -> KeycloakCertsDTO:
         """Get the JWT verification certificates.
 
         Returns:
@@ -203,11 +214,11 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             ValueError: If getting certificates fails
         """
         try:
-            return self._openid_adapter.certs()
+            return to_dto(KeycloakCertsDTO, self._openid_adapter.certs())
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_certs")
 
-    def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenType | None:
+    def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenDTO | None:
         """Exchange authorization code for token.
 
         Args:
@@ -222,11 +233,14 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         """
         # Authorization codes can only be used once, don't cache
         try:
-            return self._openid_adapter.token(grant_type="authorization_code", code=code, redirect_uri=redirect_uri)
+            return to_dto_or_none(
+                KeycloakTokenDTO,
+                self._openid_adapter.token(grant_type="authorization_code", code=code, redirect_uri=redirect_uri),
+            )
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token_from_code")
 
-    def get_client_credentials_token(self) -> KeycloakTokenType | None:
+    def get_client_credentials_token(self) -> KeycloakTokenDTO | None:
         """Get token using client credentials.
 
         Returns:
@@ -237,7 +251,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         """
         # Tokens are time-sensitive, don't cache
         try:
-            return self._openid_adapter.token(grant_type="client_credentials")
+            return to_dto_or_none(KeycloakTokenDTO, self._openid_adapter.token(grant_type="client_credentials"))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_client_credentials_token")
 
@@ -247,7 +261,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         requested_subject: str | None = None,
         audience: str | None = None,
         scope: str = "openid",
-    ) -> KeycloakTokenType | None:
+    ) -> KeycloakTokenDTO | None:
         """Exchange a token per RFC 8693, optionally impersonating another user.
 
         Args:
@@ -264,12 +278,15 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             Various application errors mapped from the Keycloak response (e.g. when exchange is not permitted).
         """
         try:
-            return self._openid_adapter.exchange_token(
-                subject_token,
-                audience=audience,
-                subject=requested_subject,
-                requested_token_type="urn:ietf:params:oauth:token-type:access_token",  # noqa: S106 # nosec B106
-                scope=scope,
+            return to_dto_or_none(
+                KeycloakTokenDTO,
+                self._openid_adapter.exchange_token(
+                    subject_token,
+                    audience=audience,
+                    subject=requested_subject,
+                    requested_token_type="urn:ietf:params:oauth:token-type:access_token",  # noqa: S106 # nosec B106
+                    scope=scope,
+                ),
             )
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "exchange_token")
@@ -288,7 +305,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "logout")
 
-    def introspect_token(self, token: str) -> dict[str, Any] | None:
+    def introspect_token(self, token: str) -> KeycloakTokenClaimsDTO | None:
         """Introspect token to get detailed information about it.
 
         Args:
@@ -301,11 +318,11 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             ValueError: If token introspection fails
         """
         try:
-            return self._openid_adapter.introspect(token)
+            return to_dto_or_none(KeycloakTokenClaimsDTO, self._openid_adapter.introspect(token))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "introspect_token")
 
-    def get_token_info(self, token: str) -> dict[str, Any] | None:
+    def get_token_info(self, token: str) -> KeycloakTokenClaimsDTO | None:
         """Decode token to get its claims.
 
         Args:
@@ -319,7 +336,10 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         """
         try:
             # Let the underlying adapter handle key selection to align with expected types
-            return self._openid_adapter.decode_token(token, leeway=self.configs.TOKEN_LEEWAY_SECONDS)
+            return to_dto_or_none(
+                KeycloakTokenClaimsDTO,
+                self._openid_adapter.decode_token(token, leeway=self.configs.TOKEN_LEEWAY_SECONDS),
+            )
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token_info")
 
@@ -421,7 +441,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         except Exception as e:  # soft-fail authz/role checks; JWT/Keycloak libs
             raise InternalError(additional_data={"operation": "get_public_key", "error": str(e)}) from e
 
-    async def get_token(self, username: str, password: str) -> KeycloakTokenType | None:
+    async def get_token(self, username: str, password: str) -> KeycloakTokenDTO | None:
         """Get a user token by username and password using the Resource Owner Password Credentials Grant.
 
         Warning:
@@ -443,11 +463,14 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             ServiceUnavailableError: If Keycloak service is unavailable
         """
         try:
-            return await self.openid_adapter.a_token(grant_type="password", username=username, password=password)
+            return to_dto_or_none(
+                KeycloakTokenDTO,
+                await self.openid_adapter.a_token(grant_type="password", username=username, password=password),
+            )
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token")
 
-    async def refresh_token(self, refresh_token: str) -> KeycloakTokenType | None:
+    async def refresh_token(self, refresh_token: str) -> KeycloakTokenDTO | None:
         """Refresh an existing token using a refresh token.
 
         Args:
@@ -461,7 +484,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             ServiceUnavailableError: If Keycloak service is unavailable
         """
         try:
-            return await self.openid_adapter.a_refresh_token(refresh_token)
+            return to_dto_or_none(KeycloakTokenDTO, await self.openid_adapter.a_refresh_token(refresh_token))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "refresh_token")
 
@@ -487,7 +510,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         else:
             return True
 
-    async def get_userinfo(self, token: str) -> KeycloakUserType | None:
+    async def get_userinfo(self, token: str) -> KeycloakUserInfoDTO | None:
         """Get user information from a token via the UserInfo endpoint.
 
         The UserInfo endpoint validates the token server-side, so no local
@@ -503,7 +526,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             ValueError: If getting user info fails
         """
         try:
-            return await self._get_userinfo_cached(token)
+            return to_dto(KeycloakUserInfoDTO, await self._get_userinfo_cached(token))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_userinfo")
 
@@ -512,7 +535,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         return _normalize_userinfo(await self.openid_adapter.a_userinfo(token))
 
     @alru_cache(ttl=3600, maxsize=1)  # Cache for 1 hour
-    async def get_well_known_config(self) -> dict[str, Any]:
+    async def get_well_known_config(self) -> KeycloakWellKnownDTO:
         """Get the well-known OpenID configuration.
 
         Returns:
@@ -522,12 +545,12 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             ValueError: If getting configuration fails
         """
         try:
-            return await self.openid_adapter.a_well_known()
+            return to_dto(KeycloakWellKnownDTO, await self.openid_adapter.a_well_known())
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_well_known_config")
 
     @alru_cache(ttl=3600, maxsize=1)  # Cache for 1 hour
-    async def get_certs(self) -> dict[str, Any]:
+    async def get_certs(self) -> KeycloakCertsDTO:
         """Get the JWT verification certificates.
 
         Returns:
@@ -537,11 +560,11 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             ValueError: If getting certificates fails
         """
         try:
-            return await self.openid_adapter.a_certs()
+            return to_dto(KeycloakCertsDTO, await self.openid_adapter.a_certs())
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_certs")
 
-    async def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenType | None:
+    async def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenDTO | None:
         """Exchange authorization code for token.
 
         Args:
@@ -556,15 +579,18 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         """
         # Authorization codes can only be used once, don't cache
         try:
-            return await self.openid_adapter.a_token(
-                grant_type="authorization_code",
-                code=code,
-                redirect_uri=redirect_uri,
+            return to_dto_or_none(
+                KeycloakTokenDTO,
+                await self.openid_adapter.a_token(
+                    grant_type="authorization_code",
+                    code=code,
+                    redirect_uri=redirect_uri,
+                ),
             )
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token_from_code")
 
-    async def get_client_credentials_token(self) -> KeycloakTokenType | None:
+    async def get_client_credentials_token(self) -> KeycloakTokenDTO | None:
         """Get token using client credentials.
 
         Returns:
@@ -575,7 +601,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         """
         # Tokens are time-sensitive, don't cache
         try:
-            return await self.openid_adapter.a_token(grant_type="client_credentials")
+            return to_dto_or_none(KeycloakTokenDTO, await self.openid_adapter.a_token(grant_type="client_credentials"))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_client_credentials_token")
 
@@ -585,7 +611,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         requested_subject: str | None = None,
         audience: str | None = None,
         scope: str = "openid",
-    ) -> KeycloakTokenType | None:
+    ) -> KeycloakTokenDTO | None:
         """Exchange a token per RFC 8693, optionally impersonating another user.
 
         Args:
@@ -602,12 +628,15 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             Various application errors mapped from the Keycloak response (e.g. when exchange is not permitted).
         """
         try:
-            return await self.openid_adapter.a_exchange_token(
-                subject_token,
-                audience=audience,
-                subject=requested_subject,
-                requested_token_type="urn:ietf:params:oauth:token-type:access_token",  # noqa: S106 # nosec B106
-                scope=scope,
+            return to_dto_or_none(
+                KeycloakTokenDTO,
+                await self.openid_adapter.a_exchange_token(
+                    subject_token,
+                    audience=audience,
+                    subject=requested_subject,
+                    requested_token_type="urn:ietf:params:oauth:token-type:access_token",  # noqa: S106 # nosec B106
+                    scope=scope,
+                ),
             )
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "exchange_token")
@@ -626,7 +655,7 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "logout")
 
-    async def introspect_token(self, token: str) -> dict[str, Any] | None:
+    async def introspect_token(self, token: str) -> KeycloakTokenClaimsDTO | None:
         """Introspect token to get detailed information about it.
 
         Args:
@@ -639,11 +668,11 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             ValueError: If token introspection fails
         """
         try:
-            return await self.openid_adapter.a_introspect(token)
+            return to_dto_or_none(KeycloakTokenClaimsDTO, await self.openid_adapter.a_introspect(token))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "introspect_token")
 
-    async def get_token_info(self, token: str) -> dict[str, Any] | None:
+    async def get_token_info(self, token: str) -> KeycloakTokenClaimsDTO | None:
         """Decode token to get its claims.
 
         Args:
@@ -656,9 +685,12 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             ValueError: If token decoding fails
         """
         try:
-            return await self.openid_adapter.a_decode_token(
-                token,
-                key=await self.get_public_key(),
+            return to_dto_or_none(
+                KeycloakTokenClaimsDTO,
+                await self.openid_adapter.a_decode_token(
+                    token,
+                    key=await self.get_public_key(),
+                ),
             )
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token_info")

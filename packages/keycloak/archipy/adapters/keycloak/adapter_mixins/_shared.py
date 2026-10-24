@@ -15,6 +15,7 @@ from keycloak.exceptions import (
 
 from archipy.helpers._deprecation import warn_deprecated_name
 from archipy.models.dtos.keycloak.base import KeycloakBaseDTO, KeycloakResponseDTO
+from archipy.models.dtos.keycloak.token_dtos import KeycloakOidcResponseDTO, KeycloakUserInfoDTO
 from archipy.models.errors import (
     ClientAlreadyExistsError,
     InsufficientPermissionsError,
@@ -60,6 +61,15 @@ def to_request_payload(value: KeycloakBaseDTO | dict[str, Any]) -> dict[str, Any
         return value.to_payload()
     warn_deprecated_name("Passing a dict payload", "a Keycloak request DTO", stacklevel=4)
     return value
+
+
+def to_claims_dict(value: KeycloakOidcResponseDTO | Mapping[str, Any] | None) -> dict[str, Any]:
+    """Return OIDC claims as a plain dict, whether they arrive as a DTO, a mapping or ``None``."""
+    if value is None:
+        return {}
+    if isinstance(value, KeycloakOidcResponseDTO):
+        return value.to_dict()
+    return dict(value)
 
 
 def to_dto[M: KeycloakResponseDTO](model: type[M], raw: Mapping[str, Any]) -> M:
@@ -381,7 +391,7 @@ class SyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
         """Clear all cached values."""
         raise NotImplementedError
 
-    def get_userinfo(self, token: str) -> dict[str, Any] | None:
+    def get_userinfo(self, token: str) -> KeycloakUserInfoDTO | None:
         """Get user information from a token."""
         raise NotImplementedError
 
@@ -427,7 +437,7 @@ class AsyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
         """Clear all cached values."""
         raise NotImplementedError
 
-    async def get_userinfo(self, token: str) -> dict[str, Any] | None:
+    async def get_userinfo(self, token: str) -> KeycloakUserInfoDTO | None:
         """Get user information from a token."""
         raise NotImplementedError
 

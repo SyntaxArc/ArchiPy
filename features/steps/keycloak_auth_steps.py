@@ -17,6 +17,7 @@ from features.test_helpers import get_current_scenario_context
 from archipy.adapters.keycloak import auth as keycloak_auth
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter
 from archipy.adapters.keycloak.auth import AuthContextManager
+from archipy.models.dtos.keycloak.token_dtos import KeycloakUserInfoDTO
 from archipy.models.dtos.keycloak_dtos import AuthenticatedUserDTO
 from archipy.models.errors import BaseError
 
@@ -358,10 +359,10 @@ def step_keycloak_auth_state_read_warns(context, field, replacement):
 @then("the value the keycloak auth dependency returned does not warn when it is read")
 def step_keycloak_auth_returned_value_silent(context):
     result = _ctx(context).get("result")
-    assert type(result) is dict
+    assert isinstance(result, KeycloakUserInfoDTO)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        list(result.items())
+        result.to_dict()
     assert not [w for w in caught if issubclass(w.category, DeprecationWarning)]
 
 
@@ -372,11 +373,11 @@ def step_keycloak_auth_state_matches_context(context):
     during = sc.get("auth_context_during")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        assert dict(state.user_info) == during.raw_user_info
+        assert dict(state.user_info) == during.raw_user_info.to_dict()
         assert set(state.user_roles) == set(during.roles)
         assert list(state.actor_chain) == list(during.actor_chain)
-        assert dict(state.token_info) == during.token_info
-    assert during.token_info.get("sub") == during.user_id
+        assert dict(state.token_info) == during.token_info.to_dict()
+    assert during.token_info.sub == during.user_id
 
 
 @then("the keycloak auth context is cleared after the dependency ends")
@@ -656,9 +657,9 @@ def step_keycloak_auth_obtain_token(context, username, password):
     sc = _ctx(context)
     _expose_roles_in_userinfo(_real_sync_adapter(sc))
     token_response = _real_sync_adapter(sc).get_token(username, password)
-    assert token_response and token_response.get("access_token"), "Keycloak issued no access token"
+    assert token_response and token_response.access_token, "Keycloak issued no access token"
     tokens = sc.get("access_tokens") or {}
-    tokens[username] = token_response["access_token"]
+    tokens[username] = token_response.access_token
     sc.store("access_tokens", tokens)
 
 
@@ -766,11 +767,11 @@ def step_keycloak_auth_result_user(context, username):
     sc = _ctx(context)
     assert sc.get("error") is None, f"unexpected error {sc.get('error')!r}"
     info = sc.get("result")
-    assert info["sub"] == _user_id(sc, username)
-    assert info["preferred_username"] == username
-    assert info["email"] == f"{username}@test.com"
-    assert sc.get("request").state.user_info == info
-    assert sc.get("request").state.token_info["sub"] == info["sub"]
+    assert info.sub == _user_id(sc, username)
+    assert info.preferred_username == username
+    assert info.email == f"{username}@test.com"
+    assert sc.get("request").state.user_info == info.to_dict()
+    assert sc.get("request").state.token_info["sub"] == info.sub
 
 
 @then('the keycloak auth request state user roles include "{roles}"')

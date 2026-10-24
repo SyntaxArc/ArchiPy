@@ -13,6 +13,7 @@ from keycloak.exceptions import (
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    to_claims_dict,
 )
 from archipy.helpers.decorators import ttl_cache
 from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
@@ -321,7 +322,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         """
         # Not caching this result as token validation is time-sensitive
         try:
-            user_info = self.get_userinfo(token)
+            user_info = to_claims_dict(self.get_userinfo(token))
             if not user_info:
                 return False
 
@@ -354,7 +355,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             True if user has any of the roles, False otherwise
         """
         try:
-            user_info = self.get_userinfo(token)
+            user_info = to_claims_dict(self.get_userinfo(token))
             if not user_info:
                 return False
 
@@ -387,7 +388,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             True if user has all the roles, False otherwise
         """
         try:
-            user_info = self.get_userinfo(token)
+            user_info = to_claims_dict(self.get_userinfo(token))
             if not user_info:
                 return False
 
@@ -795,7 +796,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
         """
         # Not caching this result as token validation is time-sensitive
         try:
-            user_info = await self.get_userinfo(token)
+            user_info = to_claims_dict(await self.get_userinfo(token))
             if not user_info:
                 return False
 
@@ -828,7 +829,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             True if user has any of the roles, False otherwise
         """
         try:
-            user_info = await self.get_userinfo(token)
+            user_info = to_claims_dict(await self.get_userinfo(token))
             if not user_info:
                 return False
 
@@ -861,7 +862,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             True if user has all the roles, False otherwise
         """
         try:
-            user_info = await self.get_userinfo(token)
+            user_info = to_claims_dict(await self.get_userinfo(token))
             if not user_info:
                 return False
 
