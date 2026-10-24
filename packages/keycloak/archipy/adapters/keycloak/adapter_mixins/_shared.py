@@ -7,11 +7,18 @@ import logging
 from collections.abc import Mapping
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, NoReturn, TypeVar
+from urllib.parse import quote
 
+from keycloak import urls_patterns
 from keycloak.exceptions import (
     KeycloakAuthenticationError,
     KeycloakConnectionError,
+    KeycloakDeleteError,
     KeycloakError,
+    KeycloakGetError,
+    KeycloakPostError,
+    KeycloakPutError,
+    raise_error_from_response,
 )
 
 from archipy.helpers._deprecation import warn_deprecated_name
@@ -47,6 +54,28 @@ HTTP_BAD_REQUEST = 400
 HTTP_NOT_FOUND = 404
 
 T = TypeVar("T")
+
+_RAW_ERRORS: dict[str, type[KeycloakGetError | KeycloakPostError | KeycloakPutError | KeycloakDeleteError]] = {
+    "get": KeycloakGetError,
+    "post": KeycloakPostError,
+    "put": KeycloakPutError,
+    "delete": KeycloakDeleteError,
+}
+
+
+def admin_url(realm_name: str | None, suffix: str) -> str:
+    """Build the URL of an admin REST path below the realm, for endpoints python-keycloak has no method for."""
+    return urls_patterns.URL_ADMIN_REALM.format(**{"realm-name": realm_name or ""}) + suffix
+
+
+def segment(value: str) -> str:
+    """Percent-encode one path segment (an id, alias or name) for an admin REST path."""
+    return quote(value, safe="")
+
+
+def admin_body(body: object | None) -> str:
+    """Encode a JSON request body for the raw admin connection."""
+    return "" if body is None else json.dumps(body)
 
 
 def to_request_payload(value: KeycloakBaseDTO | dict[str, Any]) -> dict[str, Any]:
@@ -472,6 +501,45 @@ class SyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, operation)
 
+    def _admin_request(
+        self,
+        operation: str,
+        method: str,
+        suffix: str,
+        *,
+        body: object | None = None,
+        params: dict[str, Any] | None = None,
+        expected: tuple[int, ...] = (HTTPStatus.OK,),
+    ) -> Any:
+        """Call an admin REST endpoint python-keycloak has no method for, through its connection.
+
+        Args:
+            operation: Name of the adapter operation for error context.
+            method: ``get``, ``post``, ``put`` or ``delete``.
+            suffix: Path below ``admin/realms/{realm}``, starting with ``/``.
+            body: JSON request body for ``post`` and ``put``.
+            params: Query parameters.
+            expected: Status codes that mean success.
+
+        Returns:
+            The parsed JSON body, ``{}`` for ``204 No Content``, or the raw bytes of a non-JSON body.
+
+        Raises:
+            Mapped application errors from ``_handle_keycloak_exception``.
+        """
+
+        def call() -> Any:
+            connection = self.admin_adapter.connection
+            url = admin_url(connection.realm_name, suffix)
+            query = params or {}
+            if method in ("post", "put"):
+                response = getattr(connection, f"raw_{method}")(url, admin_body(body), **query)
+            else:
+                response = getattr(connection, f"raw_{method}")(url, **query)
+            return raise_error_from_response(response, _RAW_ERRORS[method], expected_codes=list(expected))
+
+        return self._call_keycloak(operation, call)
+
 
 class AsyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
     """Shared attribute declarations for async Keycloak adapter mixins."""
@@ -517,3 +585,27 @@ class AsyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
             return await fn()
         except KeycloakError as e:
             self._handle_keycloak_exception(e, operation)
+
+    async def _async_admin_request(
+        self,
+        operation: str,
+        method: str,
+        suffix: str,
+        *,
+        body: object | None = None,
+        params: dict[str, Any] | None = None,
+        expected: tuple[int, ...] = (HTTPStatus.OK,),
+    ) -> Any:
+        """Async variant of ``_admin_request``."""
+
+        async def call() -> Any:
+            connection = self.admin_adapter.connection
+            url = admin_url(connection.realm_name, suffix)
+            query = params or {}
+            if method in ("post", "put"):
+                response = await getattr(connection, f"a_raw_{method}")(url, admin_body(body), **query)
+            else:
+                response = await getattr(connection, f"a_raw_{method}")(url, **query)
+            return raise_error_from_response(response, _RAW_ERRORS[method], expected_codes=list(expected))
+
+        return await self._async_call_keycloak(operation, call)

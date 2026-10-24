@@ -1,7 +1,5 @@
 """Keycloak identity provider representation DTOs (generated from the Keycloak admin OpenAPI spec)."""
 
-from pydantic import JsonValue
-
 from archipy.models.dtos.keycloak.base import KeycloakRequestDTO, KeycloakResponseDTO
 
 
@@ -22,7 +20,7 @@ class KeycloakIdentityProviderDTO(KeycloakResponseDTO):
     hide_on_login: bool | None = None
     first_broker_login_flow_alias: str | None = None
     post_broker_login_flow_alias: str | None = None
-    organization_links: list[dict[str, JsonValue]] | None = None
+    organization_links: list[KeycloakOrganizationIdentityProviderLinkDTO] | None = None
     config: dict[str, str] | None = None
     types: list[str] | None = None
     update_profile_first_login: bool | None = None
@@ -46,8 +44,24 @@ class KeycloakIdentityProviderRequestDTO(KeycloakRequestDTO):
     hide_on_login: bool | None = None
     first_broker_login_flow_alias: str | None = None
     post_broker_login_flow_alias: str | None = None
-    organization_links: list[dict[str, JsonValue]] | None = None
+    organization_links: list[KeycloakOrganizationIdentityProviderLinkRequestDTO] | None = None
     config: dict[str, str] | None = None
     types: list[str] | None = None
     update_profile_first_login: bool | None = None
     organization_id: str | None = None
+
+
+class KeycloakOrganizationIdentityProviderLinkDTO(KeycloakResponseDTO):
+    """Keycloak ``OrganizationIdentityProviderLinkRepresentation`` as returned by the admin API."""
+
+    organization_id: str | None = None
+    auto_membership: bool | None = None
+    membership_type: str | None = None
+
+
+class KeycloakOrganizationIdentityProviderLinkRequestDTO(KeycloakRequestDTO):
+    """Keycloak ``OrganizationIdentityProviderLinkRepresentation`` payload sent to the admin API."""
+
+    organization_id: str | None = None
+    auto_membership: bool | None = None
+    membership_type: str | None = None

@@ -381,6 +381,30 @@ Feature: Keycloak Authentication Testing
       | sync         | orguser      | pass123  | test-org1  | test-alias1  | test-realm | Test Realm         | test-client       |
       | async        | asyncorguser | async123 | async-org1 | async-alias1 | test-realm | Async Test Realm   | async-test-client |
 
+  @organizations
+  Scenario Outline: Organization identity providers, counts, members and invitations
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I enable organization of realm named "<realm_name>"
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
+    And I create an organization with name "<org_name>" and alias "<org_alias>" using <adapter_type> adapter
+    When I create the identity provider "<idp_alias>" using <adapter_type> adapter
+    And I link the identity provider "<idp_alias>" to the organization using <adapter_type> adapter
+    Then the organization lists the identity provider "<idp_alias>" and returns it by alias using <adapter_type> adapter
+    When I enable auto membership for the identity provider "<idp_alias>" of the organization using <adapter_type> adapter
+    And I unlink the identity provider "<idp_alias>" from the organization using <adapter_type> adapter
+    Then the organization no longer lists the identity provider "<idp_alias>" using <adapter_type> adapter
+    And the organization count includes the organization and a search for it counts 1 using <adapter_type> adapter
+    When I add user "<username>" to the organization using <adapter_type> adapter
+    Then the organization returns member "<username>" by id and accepts a membership type change using <adapter_type> adapter
+    And the organization has no invitations and an unknown invitation is not found using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | username       | password | org_name   | org_alias    | idp_alias | realm_name | realm_display_name | client_name       |
+      | sync         | orgextrauser   | pass123  | extra-org  | extra-alias  | ext-idp   | test-realm | Test Realm         | test-client       |
+      | async        | asyncextrauser | async123 | aextra-org | aextra-alias | aext-idp  | test-realm | Async Test Realm   | async-test-client |
+
   @groups
   Scenario Outline: Group CRUD hierarchy membership and roles
     Given a configured <adapter_type> Keycloak adapter

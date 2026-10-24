@@ -5,15 +5,23 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
+from archipy.models.dtos.keycloak.identity_provider_dtos import (
+    KeycloakIdentityProviderDTO,
+)
+
 if TYPE_CHECKING:
     from archipy.models.dtos.keycloak.common_dtos import (
         KeycloakAssignResultDTO,
         KeycloakDeleteResultDTO,
         KeycloakUpdateResultDTO,
     )
-    from archipy.models.dtos.keycloak.identity_provider_dtos import KeycloakIdentityProviderDTO
+    from archipy.models.dtos.keycloak.identity_provider_dtos import (
+        KeycloakIdentityProviderDTO,
+        KeycloakOrganizationIdentityProviderLinkRequestDTO,
+    )
     from archipy.models.dtos.keycloak.organization_dtos import (
         KeycloakOrganizationDTO,
+        KeycloakOrganizationInvitationDTO,
         KeycloakOrganizationMemberDTO,
         KeycloakOrganizationRequestDTO,
     )
@@ -92,6 +100,79 @@ class KeycloakOrganizationsPort:
         """Remove a user from an organization."""
         raise NotImplementedError
 
+    @abstractmethod
+    def organization_idp_add(self, organization_id: str, idp_alias: str) -> KeycloakAssignResultDTO:
+        """Link an identity provider to an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def organization_idp_remove(self, organization_id: str, idp_alias: str) -> KeycloakDeleteResultDTO:
+        """Unlink an identity provider from an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_organization_idp(self, organization_id: str, idp_alias: str) -> KeycloakIdentityProviderDTO:
+        """Get an identity provider linked to an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_organization_idp(
+        self,
+        organization_id: str,
+        idp_alias: str,
+        link: KeycloakOrganizationIdentityProviderLinkRequestDTO | dict[str, Any],
+    ) -> KeycloakUpdateResultDTO:
+        """Update how an identity provider is linked to an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_organizations_count(self, query: dict[str, Any] | None = None) -> int:
+        """Count the organizations matching the query."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_organization_member(self, organization_id: str, member_id: str) -> KeycloakOrganizationMemberDTO:
+        """Get one member of an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_organization_member_membership_type(
+        self,
+        organization_id: str,
+        member_id: str,
+        membership_type: str,
+    ) -> KeycloakUpdateResultDTO:
+        """Set a member's membership type (``MANAGED`` or ``UNMANAGED``)."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_organization_invitations(
+        self,
+        organization_id: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakOrganizationInvitationDTO]:
+        """List the invitations of an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_organization_invitation(
+        self,
+        organization_id: str,
+        invitation_id: str,
+    ) -> KeycloakOrganizationInvitationDTO:
+        """Get one invitation of an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete_organization_invitation(self, organization_id: str, invitation_id: str) -> KeycloakDeleteResultDTO:
+        """Delete an invitation of an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def resend_organization_invitation(self, organization_id: str, invitation_id: str) -> KeycloakUpdateResultDTO:
+        """Resend an invitation of an organization."""
+        raise NotImplementedError
+
 
 class AsyncKeycloakOrganizationsPort:
     """Async Keycloak port interface for organization operations."""
@@ -164,4 +245,77 @@ class AsyncKeycloakOrganizationsPort:
     @abstractmethod
     async def organization_user_remove(self, user_id: str, organization_id: str) -> KeycloakDeleteResultDTO:
         """Remove a user from an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def organization_idp_add(self, organization_id: str, idp_alias: str) -> KeycloakAssignResultDTO:
+        """Link an identity provider to an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def organization_idp_remove(self, organization_id: str, idp_alias: str) -> KeycloakDeleteResultDTO:
+        """Unlink an identity provider from an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_organization_idp(self, organization_id: str, idp_alias: str) -> KeycloakIdentityProviderDTO:
+        """Get an identity provider linked to an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update_organization_idp(
+        self,
+        organization_id: str,
+        idp_alias: str,
+        link: KeycloakOrganizationIdentityProviderLinkRequestDTO | dict[str, Any],
+    ) -> KeycloakUpdateResultDTO:
+        """Update how an identity provider is linked to an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_organizations_count(self, query: dict[str, Any] | None = None) -> int:
+        """Count the organizations matching the query."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_organization_member(self, organization_id: str, member_id: str) -> KeycloakOrganizationMemberDTO:
+        """Get one member of an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update_organization_member_membership_type(
+        self,
+        organization_id: str,
+        member_id: str,
+        membership_type: str,
+    ) -> KeycloakUpdateResultDTO:
+        """Set a member's membership type (``MANAGED`` or ``UNMANAGED``)."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_organization_invitations(
+        self,
+        organization_id: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakOrganizationInvitationDTO]:
+        """List the invitations of an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_organization_invitation(
+        self,
+        organization_id: str,
+        invitation_id: str,
+    ) -> KeycloakOrganizationInvitationDTO:
+        """Get one invitation of an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete_organization_invitation(self, organization_id: str, invitation_id: str) -> KeycloakDeleteResultDTO:
+        """Delete an invitation of an organization."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def resend_organization_invitation(self, organization_id: str, invitation_id: str) -> KeycloakUpdateResultDTO:
+        """Resend an invitation of an organization."""
         raise NotImplementedError

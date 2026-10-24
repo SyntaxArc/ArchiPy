@@ -134,3 +134,31 @@ class KeycloakOrganizationRequestDTO(KeycloakRequestDTO):
     members: list[KeycloakOrganizationMemberRequestDTO] | None = None
     identity_providers: list[KeycloakIdentityProviderRequestDTO] | None = None
     groups: list[KeycloakGroupRequestDTO] | None = None
+
+
+class KeycloakOrganizationInvitationDTO(KeycloakResponseDTO):
+    """Keycloak ``OrganizationInvitationRepresentation`` as returned by the admin API."""
+
+    id: str | None = None
+    organization_id: str | None = None
+    email: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    sent_date: int | None = None
+    expires_at: int | None = None
+    status: str | None = None
+    invite_link: str | None = None
+
+
+class KeycloakOrganizationInvitationRequestDTO(KeycloakRequestDTO):
+    """Keycloak ``OrganizationInvitationRepresentation`` payload sent to the admin API."""
+
+    id: str | None = None
+    organization_id: str | None = None
+    email: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    sent_date: int | None = None
+    expires_at: int | None = None
+    status: str | None = None
+    invite_link: str | None = None

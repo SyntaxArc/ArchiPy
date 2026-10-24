@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import Any
 
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    segment,
     to_dto,
     to_dto_list,
     to_mutation_result,
+    to_request_payload,
 )
 from archipy.helpers.utils.string_utils import StringUtils
 from archipy.models.dtos.keycloak.common_dtos import (
@@ -17,9 +20,13 @@ from archipy.models.dtos.keycloak.common_dtos import (
     KeycloakDeleteResultDTO,
     KeycloakUpdateResultDTO,
 )
-from archipy.models.dtos.keycloak.identity_provider_dtos import KeycloakIdentityProviderDTO
+from archipy.models.dtos.keycloak.identity_provider_dtos import (
+    KeycloakIdentityProviderDTO,
+    KeycloakOrganizationIdentityProviderLinkRequestDTO,
+)
 from archipy.models.dtos.keycloak.organization_dtos import (
     KeycloakOrganizationDTO,
+    KeycloakOrganizationInvitationDTO,
     KeycloakOrganizationMemberDTO,
     KeycloakOrganizationRequestDTO,
 )
@@ -260,6 +267,247 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
             ),
         )
 
+    def organization_idp_add(self, organization_id: str, idp_alias: str) -> KeycloakAssignResultDTO:
+        """Link an identity provider to an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            idp_alias: Alias of the identity provider.
+
+        Returns:
+            The assign result.
+        """
+        return to_mutation_result(
+            KeycloakAssignResultDTO,
+            self._admin_request(
+                "organization_idp_add",
+                "post",
+                f"/organizations/{segment(organization_id)}/identity-providers",
+                body=idp_alias,
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    def organization_idp_remove(self, organization_id: str, idp_alias: str) -> KeycloakDeleteResultDTO:
+        """Unlink an identity provider from an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            idp_alias: Alias of the identity provider.
+
+        Returns:
+            The delete result.
+        """
+        return to_mutation_result(
+            KeycloakDeleteResultDTO,
+            self._admin_request(
+                "organization_idp_remove",
+                "delete",
+                f"/organizations/{segment(organization_id)}/identity-providers/{segment(idp_alias)}",
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    def get_organization_idp(self, organization_id: str, idp_alias: str) -> KeycloakIdentityProviderDTO:
+        """Get an identity provider linked to an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            idp_alias: Alias of the identity provider.
+
+        Returns:
+            The identity provider.
+        """
+        return to_dto(
+            KeycloakIdentityProviderDTO,
+            self._admin_request(
+                "get_organization_idp",
+                "get",
+                f"/organizations/{segment(organization_id)}/identity-providers/{segment(idp_alias)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def update_organization_idp(
+        self,
+        organization_id: str,
+        idp_alias: str,
+        link: KeycloakOrganizationIdentityProviderLinkRequestDTO | dict[str, Any],
+    ) -> KeycloakUpdateResultDTO:
+        """Update how an identity provider is linked to an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            idp_alias: Alias of the identity provider.
+            link: Link settings, such as auto membership.
+
+        Returns:
+            The update result.
+        """
+        return to_mutation_result(
+            KeycloakUpdateResultDTO,
+            self._admin_request(
+                "update_organization_idp",
+                "put",
+                f"/organizations/{segment(organization_id)}/identity-providers/{segment(idp_alias)}",
+                body=to_request_payload(link),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    def get_organizations_count(self, query: dict[str, Any] | None = None) -> int:
+        """Count the organizations matching the query.
+
+        Args:
+            query: Optional filters: ``search``, ``q``, ``exact`` and ``identityProvider``.
+
+        Returns:
+            The number of organizations.
+        """
+        return self._admin_request(
+            "get_organizations_count",
+            "get",
+            "/organizations/count",
+            params=query,
+            expected=(HTTPStatus.OK,),
+        )
+
+    def get_organization_member(self, organization_id: str, member_id: str) -> KeycloakOrganizationMemberDTO:
+        """Get one member of an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            member_id: User identifier.
+
+        Returns:
+            The member.
+        """
+        return to_dto(
+            KeycloakOrganizationMemberDTO,
+            self._admin_request(
+                "get_organization_member",
+                "get",
+                f"/organizations/{segment(organization_id)}/members/{segment(member_id)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def update_organization_member_membership_type(
+        self,
+        organization_id: str,
+        member_id: str,
+        membership_type: str,
+    ) -> KeycloakUpdateResultDTO:
+        """Set a member's membership type (``MANAGED`` or ``UNMANAGED``).
+
+        Args:
+            organization_id: Organization identifier.
+            member_id: User identifier.
+            membership_type: ``MANAGED`` or ``UNMANAGED``.
+
+        Returns:
+            The update result.
+        """
+        return to_mutation_result(
+            KeycloakUpdateResultDTO,
+            self._admin_request(
+                "update_organization_member_membership_type",
+                "put",
+                f"/organizations/{segment(organization_id)}/members/{segment(member_id)}/membership-type",
+                body=membership_type,
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    def get_organization_invitations(
+        self,
+        organization_id: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakOrganizationInvitationDTO]:
+        """List the invitations of an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            query: Optional filters: ``search``, ``email``, ``status``, ``first`` and ``max``.
+
+        Returns:
+            The invitations.
+        """
+        return to_dto_list(
+            KeycloakOrganizationInvitationDTO,
+            self._admin_request(
+                "get_organization_invitations",
+                "get",
+                f"/organizations/{segment(organization_id)}/invitations",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_organization_invitation(
+        self,
+        organization_id: str,
+        invitation_id: str,
+    ) -> KeycloakOrganizationInvitationDTO:
+        """Get one invitation of an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            invitation_id: Invitation identifier.
+
+        Returns:
+            The invitation.
+        """
+        return to_dto(
+            KeycloakOrganizationInvitationDTO,
+            self._admin_request(
+                "get_organization_invitation",
+                "get",
+                f"/organizations/{segment(organization_id)}/invitations/{segment(invitation_id)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def delete_organization_invitation(self, organization_id: str, invitation_id: str) -> KeycloakDeleteResultDTO:
+        """Delete an invitation of an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            invitation_id: Invitation identifier.
+
+        Returns:
+            The delete result.
+        """
+        return to_mutation_result(
+            KeycloakDeleteResultDTO,
+            self._admin_request(
+                "delete_organization_invitation",
+                "delete",
+                f"/organizations/{segment(organization_id)}/invitations/{segment(invitation_id)}",
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    def resend_organization_invitation(self, organization_id: str, invitation_id: str) -> KeycloakUpdateResultDTO:
+        """Resend an invitation of an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            invitation_id: Invitation identifier.
+
+        Returns:
+            The update result.
+        """
+        return to_mutation_result(
+            KeycloakUpdateResultDTO,
+            self._admin_request(
+                "resend_organization_invitation",
+                "post",
+                f"/organizations/{segment(organization_id)}/invitations/{segment(invitation_id)}/resend",
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
 
 class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for organization operations."""
@@ -467,5 +715,246 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
             await self._async_call_keycloak(
                 "organization_user_remove",
                 lambda: self.admin_adapter.a_organization_user_remove(user_id=user_id, organization_id=organization_id),
+            ),
+        )
+
+    async def organization_idp_add(self, organization_id: str, idp_alias: str) -> KeycloakAssignResultDTO:
+        """Link an identity provider to an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            idp_alias: Alias of the identity provider.
+
+        Returns:
+            The assign result.
+        """
+        return to_mutation_result(
+            KeycloakAssignResultDTO,
+            await self._async_admin_request(
+                "organization_idp_add",
+                "post",
+                f"/organizations/{segment(organization_id)}/identity-providers",
+                body=idp_alias,
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    async def organization_idp_remove(self, organization_id: str, idp_alias: str) -> KeycloakDeleteResultDTO:
+        """Unlink an identity provider from an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            idp_alias: Alias of the identity provider.
+
+        Returns:
+            The delete result.
+        """
+        return to_mutation_result(
+            KeycloakDeleteResultDTO,
+            await self._async_admin_request(
+                "organization_idp_remove",
+                "delete",
+                f"/organizations/{segment(organization_id)}/identity-providers/{segment(idp_alias)}",
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    async def get_organization_idp(self, organization_id: str, idp_alias: str) -> KeycloakIdentityProviderDTO:
+        """Get an identity provider linked to an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            idp_alias: Alias of the identity provider.
+
+        Returns:
+            The identity provider.
+        """
+        return to_dto(
+            KeycloakIdentityProviderDTO,
+            await self._async_admin_request(
+                "get_organization_idp",
+                "get",
+                f"/organizations/{segment(organization_id)}/identity-providers/{segment(idp_alias)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def update_organization_idp(
+        self,
+        organization_id: str,
+        idp_alias: str,
+        link: KeycloakOrganizationIdentityProviderLinkRequestDTO | dict[str, Any],
+    ) -> KeycloakUpdateResultDTO:
+        """Update how an identity provider is linked to an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            idp_alias: Alias of the identity provider.
+            link: Link settings, such as auto membership.
+
+        Returns:
+            The update result.
+        """
+        return to_mutation_result(
+            KeycloakUpdateResultDTO,
+            await self._async_admin_request(
+                "update_organization_idp",
+                "put",
+                f"/organizations/{segment(organization_id)}/identity-providers/{segment(idp_alias)}",
+                body=to_request_payload(link),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    async def get_organizations_count(self, query: dict[str, Any] | None = None) -> int:
+        """Count the organizations matching the query.
+
+        Args:
+            query: Optional filters: ``search``, ``q``, ``exact`` and ``identityProvider``.
+
+        Returns:
+            The number of organizations.
+        """
+        return await self._async_admin_request(
+            "get_organizations_count",
+            "get",
+            "/organizations/count",
+            params=query,
+            expected=(HTTPStatus.OK,),
+        )
+
+    async def get_organization_member(self, organization_id: str, member_id: str) -> KeycloakOrganizationMemberDTO:
+        """Get one member of an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            member_id: User identifier.
+
+        Returns:
+            The member.
+        """
+        return to_dto(
+            KeycloakOrganizationMemberDTO,
+            await self._async_admin_request(
+                "get_organization_member",
+                "get",
+                f"/organizations/{segment(organization_id)}/members/{segment(member_id)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def update_organization_member_membership_type(
+        self,
+        organization_id: str,
+        member_id: str,
+        membership_type: str,
+    ) -> KeycloakUpdateResultDTO:
+        """Set a member's membership type (``MANAGED`` or ``UNMANAGED``).
+
+        Args:
+            organization_id: Organization identifier.
+            member_id: User identifier.
+            membership_type: ``MANAGED`` or ``UNMANAGED``.
+
+        Returns:
+            The update result.
+        """
+        return to_mutation_result(
+            KeycloakUpdateResultDTO,
+            await self._async_admin_request(
+                "update_organization_member_membership_type",
+                "put",
+                f"/organizations/{segment(organization_id)}/members/{segment(member_id)}/membership-type",
+                body=membership_type,
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    async def get_organization_invitations(
+        self,
+        organization_id: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakOrganizationInvitationDTO]:
+        """List the invitations of an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            query: Optional filters: ``search``, ``email``, ``status``, ``first`` and ``max``.
+
+        Returns:
+            The invitations.
+        """
+        return to_dto_list(
+            KeycloakOrganizationInvitationDTO,
+            await self._async_admin_request(
+                "get_organization_invitations",
+                "get",
+                f"/organizations/{segment(organization_id)}/invitations",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_organization_invitation(
+        self,
+        organization_id: str,
+        invitation_id: str,
+    ) -> KeycloakOrganizationInvitationDTO:
+        """Get one invitation of an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            invitation_id: Invitation identifier.
+
+        Returns:
+            The invitation.
+        """
+        return to_dto(
+            KeycloakOrganizationInvitationDTO,
+            await self._async_admin_request(
+                "get_organization_invitation",
+                "get",
+                f"/organizations/{segment(organization_id)}/invitations/{segment(invitation_id)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def delete_organization_invitation(self, organization_id: str, invitation_id: str) -> KeycloakDeleteResultDTO:
+        """Delete an invitation of an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            invitation_id: Invitation identifier.
+
+        Returns:
+            The delete result.
+        """
+        return to_mutation_result(
+            KeycloakDeleteResultDTO,
+            await self._async_admin_request(
+                "delete_organization_invitation",
+                "delete",
+                f"/organizations/{segment(organization_id)}/invitations/{segment(invitation_id)}",
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    async def resend_organization_invitation(self, organization_id: str, invitation_id: str) -> KeycloakUpdateResultDTO:
+        """Resend an invitation of an organization.
+
+        Args:
+            organization_id: Organization identifier.
+            invitation_id: Invitation identifier.
+
+        Returns:
+            The update result.
+        """
+        return to_mutation_result(
+            KeycloakUpdateResultDTO,
+            await self._async_admin_request(
+                "resend_organization_invitation",
+                "post",
+                f"/organizations/{segment(organization_id)}/invitations/{segment(invitation_id)}/resend",
+                expected=(HTTPStatus.NO_CONTENT,),
             ),
         )
