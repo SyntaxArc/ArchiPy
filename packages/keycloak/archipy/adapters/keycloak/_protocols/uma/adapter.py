@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    segment,
     to_dto,
     to_dto_list,
     to_mutation_result,
@@ -20,11 +21,33 @@ from archipy.models.dtos.keycloak.uma_dtos import (
     KeycloakUmaResourceRequestDTO,
     KeycloakUmaTicketDTO,
 )
+from archipy.models.errors import InsufficientPermissionsError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from keycloak.uma_permissions import UMAPermission
+
+UMA_TICKET_GRANT = "urn:ietf:params:oauth:grant-type:uma-ticket"
+
+
+def _all_granted(wanted: list[UMAPermission], granted: object) -> bool:
+    """Return whether the granted permissions of a UMA ``permissions`` response cover every wanted permission."""
+    if not isinstance(granted, list):
+        return False
+    scopes_by_resource: dict[str, set[str]] = {}
+    for entry in granted:
+        if not isinstance(entry, dict):
+            continue
+        scopes = set(entry.get("scopes") or [])
+        for key in (entry.get("rsname"), entry.get("rsid")):
+            if key:
+                scopes_by_resource.setdefault(str(key), set()).update(scopes)
+    for permission in wanted:
+        scopes = scopes_by_resource.get(str(permission.resource))
+        if scopes is None or (permission.scope and permission.scope not in scopes):
+            return False
+    return True
 
 
 class KeycloakUmaMixin(SyncKeycloakMixinBase):
@@ -290,12 +313,29 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
             **extra_payload: Extra fields forwarded to the UMA endpoint.
 
         Returns:
-            True when all requested permissions are granted.
+            True only when every requested permission is granted.
         """
-        return self._call_keycloak(
-            "permissions_check",
-            lambda: self.uma_adapter.permissions_check(token=token, permissions=permissions, **extra_payload),
-        )
+        wanted = list(permissions)
+        if not wanted:
+            return True  # everyone has the empty set of permissions, which Keycloak cannot evaluate
+        form: dict[str, Any] = {
+            "grant_type": UMA_TICKET_GRANT,
+            "permission": [str(permission) for permission in wanted],  # one form field per permission
+            "response_mode": "permissions",  # "decision" is true when any single permission is granted
+            "audience": self.configs.CLIENT_ID,
+            **extra_payload,
+        }
+        try:
+            decision = self._bearer_request(
+                "permissions_check",
+                "post",
+                f"realms/{segment(self.configs.REALM_NAME)}/protocol/openid-connect/token",
+                token=token,
+                form=form,
+            )
+        except InsufficientPermissionsError:
+            return False
+        return _all_granted(wanted, decision)
 
 
 class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
@@ -562,9 +602,26 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
             **extra_payload: Extra fields forwarded to the UMA endpoint.
 
         Returns:
-            True when all requested permissions are granted.
+            True only when every requested permission is granted.
         """
-        return await self._async_call_keycloak(
-            "permissions_check",
-            lambda: self.uma_adapter.a_permissions_check(token=token, permissions=permissions, **extra_payload),
-        )
+        wanted = list(permissions)
+        if not wanted:
+            return True  # everyone has the empty set of permissions, which Keycloak cannot evaluate
+        form: dict[str, Any] = {
+            "grant_type": UMA_TICKET_GRANT,
+            "permission": [str(permission) for permission in wanted],  # one form field per permission
+            "response_mode": "permissions",  # "decision" is true when any single permission is granted
+            "audience": self.configs.CLIENT_ID,
+            **extra_payload,
+        }
+        try:
+            decision = await self._async_bearer_request(
+                "permissions_check",
+                "post",
+                f"realms/{segment(self.configs.REALM_NAME)}/protocol/openid-connect/token",
+                token=token,
+                form=form,
+            )
+        except InsufficientPermissionsError:
+            return False
+        return _all_granted(wanted, decision)

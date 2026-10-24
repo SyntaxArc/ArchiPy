@@ -52,6 +52,7 @@ from archipy.models.dtos.keycloak.partial_import_dtos import (
     KeycloakPartialImportResultDTO,
 )
 from archipy.models.dtos.keycloak.realm_dtos import KeycloakRealmDTO, KeycloakRealmRequestDTO
+from archipy.models.errors import RealmAlreadyExistsError
 
 logger = logging.getLogger(__name__)
 
@@ -102,23 +103,15 @@ class KeycloakRealmsMixin(SyncKeycloakMixinBase):
             payload = {**payload, **config.to_payload()}
 
         try:
-            self.admin_adapter.create_realm(payload=payload, skip_exists=skip_exists)
-        except KeycloakError as e:
-            logger.debug("Failed to create realm: %s", e)
-
-            # Handle realm already exists with skip_exists option
-            if skip_exists:
-                error_message = self._extract_error_message(e).lower()
-                if "already exists" in error_message and "realm" in error_message:
-                    return to_dto_or_none(
-                        KeycloakRealmDTO,
-                        {"realm": realm_name, "status": "already_exists", "config": payload},
-                    )
-
-            # Use the mixin to handle realm-specific errors
-            self._handle_realm_exception(e, "create_realm", realm_name)
-        else:
-            return to_dto_or_none(KeycloakRealmDTO, {"realm": realm_name, "status": "created", "config": payload})
+            self._admin_request("create_realm", "post", "", realm="", body=payload, expected=(HTTPStatus.CREATED,))
+        except RealmAlreadyExistsError:
+            if not skip_exists:
+                raise
+            return to_dto_or_none(
+                KeycloakRealmDTO,
+                {"realm": realm_name, "status": "already_exists", "config": payload},
+            )
+        return to_dto_or_none(KeycloakRealmDTO, {"realm": realm_name, "status": "created", "config": payload})
 
     def get_realm(self, realm_name: str) -> KeycloakRealmDTO | None:
         """Get realm details by realm name.
@@ -933,23 +926,22 @@ class AsyncKeycloakRealmsMixin(AsyncKeycloakMixinBase):
             payload = {**payload, **config.to_payload()}
 
         try:
-            await self.admin_adapter.a_create_realm(payload=payload, skip_exists=skip_exists)
-        except KeycloakError as e:
-            logger.debug("Failed to create realm: %s", e)
-
-            # Handle realm already exists with skip_exists option
-            if skip_exists:
-                error_message = self._extract_error_message(e).lower()
-                if "already exists" in error_message and "realm" in error_message:
-                    return to_dto_or_none(
-                        KeycloakRealmDTO,
-                        {"realm": realm_name, "status": "already_exists", "config": payload},
-                    )
-
-            # Use the mixin to handle realm-specific errors
-            self._handle_realm_exception(e, "create_realm", realm_name)
-        else:
-            return to_dto_or_none(KeycloakRealmDTO, {"realm": realm_name, "status": "created", "config": payload})
+            await self._async_admin_request(
+                "create_realm",
+                "post",
+                "",
+                realm="",
+                body=payload,
+                expected=(HTTPStatus.CREATED,),
+            )
+        except RealmAlreadyExistsError:
+            if not skip_exists:
+                raise
+            return to_dto_or_none(
+                KeycloakRealmDTO,
+                {"realm": realm_name, "status": "already_exists", "config": payload},
+            )
+        return to_dto_or_none(KeycloakRealmDTO, {"realm": realm_name, "status": "created", "config": payload})
 
     async def get_realm(self, realm_name: str) -> KeycloakRealmDTO | None:
         """Get realm details by realm name.

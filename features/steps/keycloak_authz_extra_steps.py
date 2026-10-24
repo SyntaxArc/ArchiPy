@@ -38,13 +38,14 @@ async def step_authz_queries(context: Context, resource: str, scope: str, client
     await _adapter_call(adapter, is_async, "delete_client_authz_scope", cid, extra.id)
     assert "disposable" not in [s.name for s in await _adapter_call(adapter, is_async, "get_client_authz_scopes", cid)]
     sc.store("authz_extra_client_uuid", cid)
+    sc.store("authz_extra_resource", resource)
 
 
 @then('the policies and permissions of client "{client}" are found, searched, listed by provider and evaluated for user "{username}" using {adapter_type} adapter')
 async def step_authz_policy_queries(context: Context, client: str, username: str, adapter_type: str) -> None:
     adapter, is_async, sc = _adapter_parts(context)
     cid = sc.get("authz_extra_client_uuid")
-    policy_name = "offline_access-policy"
+    policy_name = f"{sc.get('authz_extra_resource')}-offline_access-policy"
     policies = await _adapter_call(adapter, is_async, "get_client_authz_policies_filtered", cid, {"name": policy_name})
     assert [p.name for p in policies] == [policy_name], policies
     assert (await _adapter_call(adapter, is_async, "search_client_authz_policy", cid, policy_name)).name == policy_name

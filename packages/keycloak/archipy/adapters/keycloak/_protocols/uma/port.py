@@ -207,7 +207,7 @@ class KeycloakUmaPort:
             **extra_payload: Extra fields forwarded to the UMA endpoint.
 
         Returns:
-            True when all requested permissions are granted.
+            True only when every requested permission is granted.
         """
         raise NotImplementedError
 
@@ -402,6 +402,6 @@ class AsyncKeycloakUmaPort:
             **extra_payload: Extra fields forwarded to the UMA endpoint.
 
         Returns:
-            True when all requested permissions are granted.
+            True only when every requested permission is granted.
         """
         raise NotImplementedError

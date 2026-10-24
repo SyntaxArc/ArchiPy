@@ -882,6 +882,24 @@ Feature: Keycloak Authentication Testing
       | sync         | chain-a-sync  | chain-b-sync  | clienta  | clientb  | chainuser  | domaina  |
       | async        | chain-a-async | chain-b-async | aclienta | aclientb | achainuser | adomaina |
 
+  @authz
+  Scenario Outline: UMA permission checks with several permissions and creating an existing realm
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    And I enable authorization services for client "<client_name>" using <adapter_type> adapter
+    And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
+    When I protect the resource "<resource>" with scope "read" for the realm role "offline_access" on client "<client_name>" using <adapter_type> adapter
+    And I protect the resource "<resource2>" with scope "write" for the realm role "offline_access" on client "<client_name>" using <adapter_type> adapter
+    And I remember the user "<username>" with password "<password>" for the UMA checks using <adapter_type> adapter
+    Then UMA permissions_check answers true for "<resource>#read" and "<resource2>#write" together and false when "<resource>#write" is added using <adapter_type> adapter
+    And creating the realm "<realm_name>" again with skip_exists reports it as existing and without skip_exists fails using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | username     | password | resource | resource2 | realm_name | realm_display_name | client_name       |
+      | sync         | umauser      | pass123  | uma-doc  | uma-doc2  | test-realm | Test Realm         | uma-check-client  |
+      | async        | asyncumauser | async123 | auma-doc | auma-doc2 | test-realm | Async Test Realm   | auma-check-client |
+
   @components
   Scenario Outline: Component listing
     Given a configured <adapter_type> Keycloak adapter

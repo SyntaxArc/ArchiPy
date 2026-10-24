@@ -299,6 +299,9 @@ class KeycloakExceptionHandlerMixin:
         additional_data: dict[str, Any],
     ) -> None:
         """Map message-pattern Keycloak errors."""
+        if cls._is_uma_nothing_granted(exception):
+            raise InsufficientPermissionsError(additional_data=additional_data) from exception
+
         auth_phrases = ["invalid user credentials", "invalid credentials", "authentication failed", "unauthorized"]
         if isinstance(exception, KeycloakAuthenticationError) or any(phrase in error_lower for phrase in auth_phrases):
             raise InvalidCredentialsError(additional_data=additional_data) from exception

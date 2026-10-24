@@ -28,7 +28,7 @@ async def step_protect_resource(context: Context, resource: str, scope: str, rol
     policy = await _adapter_call(
         adapter, is_async, "create_client_authz_role_based_policy", cid,
         KeycloakAuthzRolePolicyRequestDTO(
-            name=f"{role}-policy", logic="POSITIVE", decision_strategy="UNANIMOUS",
+            name=f"{resource}-{role}-policy", logic="POSITIVE", decision_strategy="UNANIMOUS",
             roles=[KeycloakAuthzPolicyRoleDTO(id=realm_role.id, required=False)],
         ),
     )
@@ -83,3 +83,46 @@ async def step_authzen(context: Context, resource: str, username: str, scope: st
         ),
     )
     assert [e.decision for e in batch.evaluations or []] == [True, False], batch
+
+
+@then('UMA permissions_check answers true for "{first}" and "{second}" together and false when "{denied}" is added using {adapter_type} adapter')
+async def step_uma_permissions_check(
+    context: Context, first: str, second: str, denied: str, adapter_type: str,
+) -> None:
+    """With several permissions Keycloak needs one ``permission`` form field each, not a comma-joined value."""
+    from keycloak.uma_permissions import UMAPermission
+
+    adapter, is_async, sc = _adapter_parts(context)
+    username, password = sc.get("uma_check_user")
+    token = await _adapter_call(adapter, is_async, "get_token", username, password)
+
+    def permission(value: str) -> UMAPermission:
+        resource, scope = value.split("#")
+        return UMAPermission(resource=resource, scope=scope)
+
+    granted = await _adapter_call(adapter, is_async, "permissions_check", token.access_token, [permission(first), permission(second)])
+    assert granted is True, granted
+    refused = await _adapter_call(
+        adapter, is_async, "permissions_check", token.access_token, [permission(first), permission(second), permission(denied)],
+    )
+    assert refused is False, refused
+    assert await _adapter_call(adapter, is_async, "permissions_check", token.access_token, []) is True
+
+
+@when('I remember the user "{username}" with password "{password}" for the UMA checks using {adapter_type} adapter')
+async def step_remember_uma_user(context: Context, username: str, password: str, adapter_type: str) -> None:
+    _, _, sc = _adapter_parts(context)
+    sc.store("uma_check_user", (username, password))
+
+
+@then('creating the realm "{realm}" again with skip_exists reports it as existing and without skip_exists fails using {adapter_type} adapter')
+async def step_create_realm_twice(context: Context, realm: str, adapter_type: str) -> None:
+    adapter, is_async, _ = _adapter_parts(context)
+    again = await _adapter_call(adapter, is_async, "create_realm", realm, skip_exists=True)
+    assert again is not None and again.status == "already_exists", again
+    try:
+        await _adapter_call(adapter, is_async, "create_realm", realm, skip_exists=False)
+    except Exception as e:  # noqa: BLE001 - assert on the mapped error type
+        assert type(e).__name__ == "RealmAlreadyExistsError", repr(e)
+    else:
+        raise AssertionError("creating an existing realm without skip_exists succeeded")
