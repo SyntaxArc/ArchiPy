@@ -727,6 +727,22 @@ Feature: Keycloak Authentication Testing
       | sync         | test-realm | Test Realm         | extra-client       |
       | async        | test-realm | Async Test Realm   | async-extra-client |
 
+  @realms
+  Scenario Outline: Realm administration with events, policies, localization, import and deletion
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    Then the realm "<realm_name>" is listed and its event settings, client policies, profiles and types round-trip using <adapter_type> adapter
+    And the realm "<realm_name>" records and clears events and admin events using <adapter_type> adapter
+    And the realm "<realm_name>" manages default groups and localization texts using <adapter_type> adapter
+    And the realm "<realm_name>" exports, imports, logs everyone out and pushes revocation using <adapter_type> adapter
+    And the realm "<realm_name>" deletes a session, reports SMTP and permission settings and can be deleted using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | realm_name        | realm_display_name | client_name         |
+      | sync         | realm-admin-sync  | Realm Admin Sync   | realm-admin-client  |
+      | async        | realm-admin-async | Realm Admin Async  | realm-admin-aclient |
+
   @components
   Scenario Outline: Component listing
     Given a configured <adapter_type> Keycloak adapter

@@ -57,3 +57,12 @@ class KeycloakImpersonationDTO(KeycloakResponseDTO):
 
     same_realm: bool | None = None
     redirect: str | None = None
+
+
+class KeycloakClientSessionStatDTO(KeycloakResponseDTO):
+    """Session counts of one client, as listed by the realm's client session stats."""
+
+    id: str | None = None
+    client_id: str | None = None
+    active: str | None = None
+    offline: str | None = None

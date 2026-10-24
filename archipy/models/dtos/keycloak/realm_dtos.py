@@ -10,6 +10,12 @@ from archipy.models.dtos.keycloak.auth_flow_dtos import (
 )
 from archipy.models.dtos.keycloak.base import KeycloakRequestDTO, KeycloakResponseDTO
 from archipy.models.dtos.keycloak.client_dtos import KeycloakClientDTO, KeycloakClientRequestDTO
+from archipy.models.dtos.keycloak.client_policy_dtos import (
+    KeycloakClientPoliciesDTO,
+    KeycloakClientPoliciesRequestDTO,
+    KeycloakClientProfilesDTO,
+    KeycloakClientProfilesRequestDTO,
+)
 from archipy.models.dtos.keycloak.client_scope_dtos import KeycloakClientScopeDTO, KeycloakClientScopeRequestDTO
 from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupDTO, KeycloakGroupRequestDTO
 from archipy.models.dtos.keycloak.identity_provider_dtos import (
@@ -127,8 +133,8 @@ class KeycloakRealmDTO(KeycloakResponseDTO):
     web_authn_policy_passwordless_extra_origins: list[str] | None = None
     web_authn_policy_passwordless_passkeys_enabled: bool | None = None
     web_authn_policy_passwordless_mediation: str | None = None
-    client_profiles: dict[str, JsonValue] | None = None
-    client_policies: dict[str, JsonValue] | None = None
+    client_profiles: KeycloakClientProfilesDTO | None = None
+    client_policies: KeycloakClientPoliciesDTO | None = None
     users: list[KeycloakUserDTO] | None = None
     federated_users: list[KeycloakUserDTO] | None = None
     scope_mappings: list[dict[str, JsonValue]] | None = None
@@ -287,8 +293,8 @@ class KeycloakRealmRequestDTO(KeycloakRequestDTO):
     web_authn_policy_passwordless_extra_origins: list[str] | None = None
     web_authn_policy_passwordless_passkeys_enabled: bool | None = None
     web_authn_policy_passwordless_mediation: str | None = None
-    client_profiles: dict[str, JsonValue] | None = None
-    client_policies: dict[str, JsonValue] | None = None
+    client_profiles: KeycloakClientProfilesRequestDTO | None = None
+    client_policies: KeycloakClientPoliciesRequestDTO | None = None
     users: list[KeycloakUserRequestDTO] | None = None
     federated_users: list[KeycloakUserRequestDTO] | None = None
     scope_mappings: list[dict[str, JsonValue]] | None = None

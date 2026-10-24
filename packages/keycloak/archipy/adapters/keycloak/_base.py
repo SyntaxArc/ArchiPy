@@ -64,7 +64,12 @@ _RAW_ERRORS: dict[str, type[KeycloakGetError | KeycloakPostError | KeycloakPutEr
 
 
 def admin_url(realm_name: str | None, suffix: str) -> str:
-    """Build the URL of an admin REST path below the realm, for endpoints python-keycloak has no method for."""
+    """Build the URL of an admin REST path below the realm, for endpoints python-keycloak has no method for.
+
+    An empty ``realm_name`` addresses the realm collection itself (``admin/realms``).
+    """
+    if realm_name == "":
+        return "admin/realms" + suffix
     return urls_patterns.URL_ADMIN_REALM.format(**{"realm-name": realm_name or ""}) + suffix
 
 
@@ -518,6 +523,7 @@ class SyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
         *,
         body: object | None = None,
         params: dict[str, Any] | None = None,
+        realm: str | None = None,
         expected: tuple[int, ...] = (HTTPStatus.OK,),
     ) -> Any:
         """Call an admin REST endpoint python-keycloak has no method for, through its connection.
@@ -526,8 +532,10 @@ class SyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
             operation: Name of the adapter operation for error context.
             method: ``get``, ``post``, ``put`` or ``delete``.
             suffix: Path below ``admin/realms/{realm}``, starting with ``/``.
+            realm: Realm to address instead of the connection's realm; ``""`` addresses ``admin/realms``.
             body: JSON request body for ``post`` and ``put``.
             params: Query parameters.
+            realm: Realm to address instead of the connection's realm; ``""`` addresses ``admin/realms``.
             expected: Status codes that mean success.
 
         Returns:
@@ -539,7 +547,7 @@ class SyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
 
         def call() -> Any:
             connection = self.admin_adapter.connection
-            url = admin_url(connection.realm_name, suffix)
+            url = admin_url(connection.realm_name if realm is None else realm, suffix)
             query = params or {}
             if method in ("post", "put") or (method == "delete" and body is not None):
                 response = getattr(connection, f"raw_{method}")(url, admin_body(body), **query)
@@ -603,13 +611,14 @@ class AsyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
         *,
         body: object | None = None,
         params: dict[str, Any] | None = None,
+        realm: str | None = None,
         expected: tuple[int, ...] = (HTTPStatus.OK,),
     ) -> Any:
         """Async variant of ``_admin_request``."""
 
         async def call() -> Any:
             connection = self.admin_adapter.connection
-            url = admin_url(connection.realm_name, suffix)
+            url = admin_url(connection.realm_name if realm is None else realm, suffix)
             query = params or {}
             if method in ("post", "put") or (method == "delete" and body is not None):
                 response = await getattr(connection, f"a_raw_{method}")(url, admin_body(body), **query)
