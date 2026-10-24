@@ -12,6 +12,7 @@ if TYPE_CHECKING:
         KeycloakProtocolMapperDTO,
         KeycloakProtocolMapperRequestDTO,
     )
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
 
 
 class KeycloakClientScopesPort:
@@ -48,12 +49,12 @@ class KeycloakClientScopesPort:
         self,
         client_scope_id: str,
         payload: KeycloakClientScopeRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a client scope."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_client_scope(self, client_scope_id: str) -> dict[str, Any]:
+    def delete_client_scope(self, client_scope_id: str) -> KeycloakMutationResultDTO:
         """Delete a client scope."""
         raise NotImplementedError
 
@@ -62,7 +63,7 @@ class KeycloakClientScopesPort:
         self,
         client_scope_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Add a protocol mapper to a client scope."""
         raise NotImplementedError
 
@@ -77,17 +78,25 @@ class KeycloakClientScopesPort:
         client_scope_id: str,
         protocol_mapper_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a protocol mapper in a client scope."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_mapper_from_client_scope(self, client_scope_id: str, protocol_mapper_id: str) -> dict[str, Any]:
+    def delete_mapper_from_client_scope(
+        self,
+        client_scope_id: str,
+        protocol_mapper_id: str,
+    ) -> KeycloakMutationResultDTO:
         """Delete a protocol mapper from a client scope."""
         raise NotImplementedError
 
     @abstractmethod
-    def add_mapper_to_client(self, client_id: str, payload: KeycloakProtocolMapperRequestDTO | dict[str, Any]) -> bytes:
+    def add_mapper_to_client(
+        self,
+        client_id: str,
+        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+    ) -> KeycloakMutationResultDTO:
         """Add a protocol mapper to a client."""
         raise NotImplementedError
 
@@ -102,12 +111,12 @@ class KeycloakClientScopesPort:
         client_id: str,
         mapper_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a protocol mapper on a client."""
         raise NotImplementedError
 
     @abstractmethod
-    def remove_client_mapper(self, client_id: str, client_mapper_id: str) -> dict[str, Any]:
+    def remove_client_mapper(self, client_id: str, client_mapper_id: str) -> KeycloakMutationResultDTO:
         """Remove a protocol mapper from a client."""
         raise NotImplementedError
 
@@ -122,12 +131,12 @@ class KeycloakClientScopesPort:
         client_id: str,
         client_scope_id: str,
         payload: KeycloakClientScopeRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Add a default client scope to a client."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_client_default_client_scope(self, client_id: str, client_scope_id: str) -> dict[str, Any]:
+    def delete_client_default_client_scope(self, client_id: str, client_scope_id: str) -> KeycloakMutationResultDTO:
         """Remove a default client scope from a client."""
         raise NotImplementedError
 
@@ -142,12 +151,12 @@ class KeycloakClientScopesPort:
         client_id: str,
         client_scope_id: str,
         payload: KeycloakClientScopeRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Add an optional client scope to a client."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_client_optional_client_scope(self, client_id: str, client_scope_id: str) -> dict[str, Any]:
+    def delete_client_optional_client_scope(self, client_id: str, client_scope_id: str) -> KeycloakMutationResultDTO:
         """Remove an optional client scope from a client."""
         raise NotImplementedError
 
@@ -159,12 +168,12 @@ class KeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def add_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
+    def add_default_default_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Add a realm default client scope."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
+    def delete_default_default_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Remove a realm default client scope."""
         raise NotImplementedError
 
@@ -176,12 +185,12 @@ class KeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def add_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:
+    def add_default_optional_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Add a realm optional default client scope."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:
+    def delete_default_optional_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Remove a realm optional default client scope."""
         raise NotImplementedError
 
@@ -220,12 +229,12 @@ class AsyncKeycloakClientScopesPort:
         self,
         client_scope_id: str,
         payload: KeycloakClientScopeRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a client scope."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_client_scope(self, client_scope_id: str) -> dict[str, Any]:
+    async def delete_client_scope(self, client_scope_id: str) -> KeycloakMutationResultDTO:
         """Delete a client scope."""
         raise NotImplementedError
 
@@ -234,7 +243,7 @@ class AsyncKeycloakClientScopesPort:
         self,
         client_scope_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Add a protocol mapper to a client scope."""
         raise NotImplementedError
 
@@ -249,12 +258,16 @@ class AsyncKeycloakClientScopesPort:
         client_scope_id: str,
         protocol_mapper_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a protocol mapper in a client scope."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_mapper_from_client_scope(self, client_scope_id: str, protocol_mapper_id: str) -> dict[str, Any]:
+    async def delete_mapper_from_client_scope(
+        self,
+        client_scope_id: str,
+        protocol_mapper_id: str,
+    ) -> KeycloakMutationResultDTO:
         """Delete a protocol mapper from a client scope."""
         raise NotImplementedError
 
@@ -263,7 +276,7 @@ class AsyncKeycloakClientScopesPort:
         self,
         client_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Add a protocol mapper to a client."""
         raise NotImplementedError
 
@@ -278,12 +291,12 @@ class AsyncKeycloakClientScopesPort:
         client_id: str,
         mapper_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a protocol mapper on a client."""
         raise NotImplementedError
 
     @abstractmethod
-    async def remove_client_mapper(self, client_id: str, client_mapper_id: str) -> dict[str, Any]:
+    async def remove_client_mapper(self, client_id: str, client_mapper_id: str) -> KeycloakMutationResultDTO:
         """Remove a protocol mapper from a client."""
         raise NotImplementedError
 
@@ -298,12 +311,16 @@ class AsyncKeycloakClientScopesPort:
         client_id: str,
         client_scope_id: str,
         payload: KeycloakClientScopeRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Add a default client scope to a client."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_client_default_client_scope(self, client_id: str, client_scope_id: str) -> dict[str, Any]:
+    async def delete_client_default_client_scope(
+        self,
+        client_id: str,
+        client_scope_id: str,
+    ) -> KeycloakMutationResultDTO:
         """Remove a default client scope from a client."""
         raise NotImplementedError
 
@@ -318,12 +335,16 @@ class AsyncKeycloakClientScopesPort:
         client_id: str,
         client_scope_id: str,
         payload: KeycloakClientScopeRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Add an optional client scope to a client."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_client_optional_client_scope(self, client_id: str, client_scope_id: str) -> dict[str, Any]:
+    async def delete_client_optional_client_scope(
+        self,
+        client_id: str,
+        client_scope_id: str,
+    ) -> KeycloakMutationResultDTO:
         """Remove an optional client scope from a client."""
         raise NotImplementedError
 
@@ -335,12 +356,12 @@ class AsyncKeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def add_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
+    async def add_default_default_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Add a realm default client scope."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
+    async def delete_default_default_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Remove a realm default client scope."""
         raise NotImplementedError
 
@@ -352,11 +373,11 @@ class AsyncKeycloakClientScopesPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def add_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:
+    async def add_default_optional_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Add a realm optional default client scope."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:
+    async def delete_default_optional_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Remove a realm optional default client scope."""
         raise NotImplementedError

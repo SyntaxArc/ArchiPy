@@ -9,6 +9,7 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     SyncKeycloakMixinBase,
     to_dto,
     to_dto_list,
+    to_mutation_result,
     to_request_payload,
 )
 from archipy.models.dtos.keycloak.uma_dtos import (
@@ -23,6 +24,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from keycloak.uma_permissions import UMAPermission
+
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
 
 
 class KeycloakUmaMixin(SyncKeycloakMixinBase):
@@ -66,7 +69,7 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         self,
         resource_id: str,
         payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a UMA resource set.
 
         Args:
@@ -76,15 +79,17 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         Returns:
             Updated resource set representation.
         """
-        return self._call_keycloak(
-            "resource_set_update",
-            lambda: self.uma_adapter.resource_set_update(
-                resource_id=resource_id,
-                payload=to_request_payload(to_request_payload(payload)),
+        return to_mutation_result(
+            self._call_keycloak(
+                "resource_set_update",
+                lambda: self.uma_adapter.resource_set_update(
+                    resource_id=resource_id,
+                    payload=to_request_payload(to_request_payload(payload)),
+                ),
             ),
         )
 
-    def resource_set_delete(self, resource_id: str) -> dict[str, Any]:
+    def resource_set_delete(self, resource_id: str) -> KeycloakMutationResultDTO:
         """Delete a UMA resource set.
 
         Args:
@@ -93,9 +98,11 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         Returns:
             Deletion response payload.
         """
-        return self._call_keycloak(
-            "resource_set_delete",
-            lambda: self.uma_adapter.resource_set_delete(resource_id=resource_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "resource_set_delete",
+                lambda: self.uma_adapter.resource_set_delete(resource_id=resource_id),
+            ),
         )
 
     def resource_set_list(self) -> list[KeycloakUmaResourceDTO]:
@@ -123,7 +130,7 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         matchingUri: bool = False,
         first: int = 0,
         maximum: int = -1,
-    ) -> list[dict[str, Any]]:
+    ) -> list[str]:
         """List UMA resource set IDs with optional filters.
 
         Args:
@@ -180,7 +187,11 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def policy_update(self, policy_id: str, payload: KeycloakUmaPolicyRequestDTO | dict[str, Any]) -> bytes:
+    def policy_update(
+        self,
+        policy_id: str,
+        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+    ) -> KeycloakMutationResultDTO:
         """Update a UMA policy.
 
         Args:
@@ -190,15 +201,17 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         Returns:
             Raw update response bytes.
         """
-        return self._call_keycloak(
-            "policy_update",
-            lambda: self.uma_adapter.policy_update(
-                policy_id=policy_id,
-                payload=to_request_payload(to_request_payload(payload)),
+        return to_mutation_result(
+            self._call_keycloak(
+                "policy_update",
+                lambda: self.uma_adapter.policy_update(
+                    policy_id=policy_id,
+                    payload=to_request_payload(to_request_payload(payload)),
+                ),
             ),
         )
 
-    def policy_delete(self, policy_id: str) -> dict[str, Any]:
+    def policy_delete(self, policy_id: str) -> KeycloakMutationResultDTO:
         """Delete a UMA policy.
 
         Args:
@@ -207,9 +220,11 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         Returns:
             Deletion response payload.
         """
-        return self._call_keycloak(
-            "policy_delete",
-            lambda: self.uma_adapter.policy_delete(policy_id=policy_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "policy_delete",
+                lambda: self.uma_adapter.policy_delete(policy_id=policy_id),
+            ),
         )
 
     def policy_query(
@@ -324,7 +339,7 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         self,
         resource_id: str,
         payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a UMA resource set.
 
         Args:
@@ -334,15 +349,17 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         Returns:
             Updated resource set representation.
         """
-        return await self._async_call_keycloak(
-            "resource_set_update",
-            lambda: self.uma_adapter.a_resource_set_update(
-                resource_id=resource_id,
-                payload=to_request_payload(to_request_payload(payload)),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "resource_set_update",
+                lambda: self.uma_adapter.a_resource_set_update(
+                    resource_id=resource_id,
+                    payload=to_request_payload(to_request_payload(payload)),
+                ),
             ),
         )
 
-    async def resource_set_delete(self, resource_id: str) -> dict[str, Any]:
+    async def resource_set_delete(self, resource_id: str) -> KeycloakMutationResultDTO:
         """Delete a UMA resource set.
 
         Args:
@@ -351,9 +368,11 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         Returns:
             Deletion response payload.
         """
-        return await self._async_call_keycloak(
-            "resource_set_delete",
-            lambda: self.uma_adapter.a_resource_set_delete(resource_id=resource_id),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "resource_set_delete",
+                lambda: self.uma_adapter.a_resource_set_delete(resource_id=resource_id),
+            ),
         )
 
     async def resource_set_list(self) -> list[KeycloakUmaResourceDTO]:
@@ -379,7 +398,7 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         matchingUri: bool = False,
         first: int = 0,
         maximum: int = -1,
-    ) -> list[dict[str, Any]]:
+    ) -> list[str]:
         """List UMA resource set IDs with optional filters.
 
         Args:
@@ -436,7 +455,11 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def policy_update(self, policy_id: str, payload: KeycloakUmaPolicyRequestDTO | dict[str, Any]) -> bytes:
+    async def policy_update(
+        self,
+        policy_id: str,
+        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+    ) -> KeycloakMutationResultDTO:
         """Update a UMA policy.
 
         Args:
@@ -446,15 +469,17 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         Returns:
             Raw update response bytes.
         """
-        return await self._async_call_keycloak(
-            "policy_update",
-            lambda: self.uma_adapter.a_policy_update(
-                policy_id=policy_id,
-                payload=to_request_payload(to_request_payload(payload)),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "policy_update",
+                lambda: self.uma_adapter.a_policy_update(
+                    policy_id=policy_id,
+                    payload=to_request_payload(to_request_payload(payload)),
+                ),
             ),
         )
 
-    async def policy_delete(self, policy_id: str) -> dict[str, Any]:
+    async def policy_delete(self, policy_id: str) -> KeycloakMutationResultDTO:
         """Delete a UMA policy.
 
         Args:
@@ -463,9 +488,11 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         Returns:
             Deletion response payload.
         """
-        return await self._async_call_keycloak(
-            "policy_delete",
-            lambda: self.uma_adapter.a_policy_delete(policy_id=policy_id),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "policy_delete",
+                lambda: self.uma_adapter.a_policy_delete(policy_id=policy_id),
+            ),
         )
 
     async def policy_query(

@@ -22,6 +22,7 @@ if TYPE_CHECKING:
         KeycloakAuthenticationSubflowCreateRequestDTO,
         KeycloakAuthenticatorProviderDTO,
     )
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
 
 
 class KeycloakAuthFlowsPort:
@@ -32,7 +33,7 @@ class KeycloakAuthFlowsPort:
         self,
         payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
         skip_exists: bool = False,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create a new authentication flow."""
         raise NotImplementedError
 
@@ -41,7 +42,7 @@ class KeycloakAuthFlowsPort:
         self,
         payload: KeycloakAuthenticationFlowCopyRequestDTO | dict[str, Any],
         flow_alias: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Copy an existing authentication flow."""
         raise NotImplementedError
 
@@ -58,7 +59,7 @@ class KeycloakAuthFlowsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def delete_authentication_flow(self, flow_id: str) -> dict[str, Any]:
+    def delete_authentication_flow(self, flow_id: str) -> KeycloakMutationResultDTO:
         """Delete an authentication flow."""
         raise NotImplementedError
 
@@ -77,7 +78,7 @@ class KeycloakAuthFlowsPort:
         self,
         payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO | dict[str, Any],
         flow_alias: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create an execution in an authentication flow."""
         raise NotImplementedError
 
@@ -86,7 +87,7 @@ class KeycloakAuthFlowsPort:
         self,
         payload: KeycloakAuthenticationExecutionInfoRequestDTO | dict[str, Any],
         flow_alias: str,
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update executions in an authentication flow."""
         raise NotImplementedError
 
@@ -96,12 +97,12 @@ class KeycloakAuthFlowsPort:
         payload: KeycloakAuthenticationSubflowCreateRequestDTO | dict[str, Any],
         flow_alias: str,
         skip_exists: bool = False,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create a subflow in an authentication flow."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_authentication_flow_execution(self, execution_id: str) -> dict[str, Any]:
+    def delete_authentication_flow_execution(self, execution_id: str) -> KeycloakMutationResultDTO:
         """Delete an authentication flow execution."""
         raise NotImplementedError
 
@@ -115,7 +116,7 @@ class KeycloakAuthFlowsPort:
         self,
         flow_id: str,
         payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update an authentication flow."""
         raise NotImplementedError
 
@@ -141,12 +142,12 @@ class KeycloakAuthFlowsPort:
         self,
         payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
         config_id: str,
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update authenticator configuration."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_authenticator_config(self, config_id: str) -> dict[str, Any]:
+    def delete_authenticator_config(self, config_id: str) -> KeycloakMutationResultDTO:
         """Delete authenticator configuration."""
         raise NotImplementedError
 
@@ -155,7 +156,7 @@ class KeycloakAuthFlowsPort:
         self,
         execution_id: str,
         payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create configuration for an authentication flow execution."""
         raise NotImplementedError
 
@@ -168,7 +169,7 @@ class AsyncKeycloakAuthFlowsPort:
         self,
         payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
         skip_exists: bool = False,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create a new authentication flow."""
         raise NotImplementedError
 
@@ -177,7 +178,7 @@ class AsyncKeycloakAuthFlowsPort:
         self,
         payload: KeycloakAuthenticationFlowCopyRequestDTO | dict[str, Any],
         flow_alias: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Copy an existing authentication flow."""
         raise NotImplementedError
 
@@ -194,7 +195,7 @@ class AsyncKeycloakAuthFlowsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_authentication_flow(self, flow_id: str) -> dict[str, Any]:
+    async def delete_authentication_flow(self, flow_id: str) -> KeycloakMutationResultDTO:
         """Delete an authentication flow."""
         raise NotImplementedError
 
@@ -213,7 +214,7 @@ class AsyncKeycloakAuthFlowsPort:
         self,
         payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO | dict[str, Any],
         flow_alias: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create an execution in an authentication flow."""
         raise NotImplementedError
 
@@ -222,7 +223,7 @@ class AsyncKeycloakAuthFlowsPort:
         self,
         payload: KeycloakAuthenticationExecutionInfoRequestDTO | dict[str, Any],
         flow_alias: str,
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update executions in an authentication flow."""
         raise NotImplementedError
 
@@ -232,12 +233,12 @@ class AsyncKeycloakAuthFlowsPort:
         payload: KeycloakAuthenticationSubflowCreateRequestDTO | dict[str, Any],
         flow_alias: str,
         skip_exists: bool = False,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create a subflow in an authentication flow."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_authentication_flow_execution(self, execution_id: str) -> dict[str, Any]:
+    async def delete_authentication_flow_execution(self, execution_id: str) -> KeycloakMutationResultDTO:
         """Delete an authentication flow execution."""
         raise NotImplementedError
 
@@ -251,7 +252,7 @@ class AsyncKeycloakAuthFlowsPort:
         self,
         flow_id: str,
         payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update an authentication flow."""
         raise NotImplementedError
 
@@ -280,12 +281,12 @@ class AsyncKeycloakAuthFlowsPort:
         self,
         payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
         config_id: str,
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update authenticator configuration."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_authenticator_config(self, config_id: str) -> dict[str, Any]:
+    async def delete_authenticator_config(self, config_id: str) -> KeycloakMutationResultDTO:
         """Delete authenticator configuration."""
         raise NotImplementedError
 
@@ -294,6 +295,6 @@ class AsyncKeycloakAuthFlowsPort:
         self,
         execution_id: str,
         payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create configuration for an authentication flow execution."""
         raise NotImplementedError

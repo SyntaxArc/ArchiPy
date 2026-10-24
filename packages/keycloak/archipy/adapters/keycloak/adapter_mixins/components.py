@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
     to_dto,
     to_dto_list,
+    to_mutation_result,
     to_request_payload,
 )
 from archipy.models.dtos.keycloak.component_dtos import KeycloakComponentDTO, KeycloakComponentRequestDTO
+
+if TYPE_CHECKING:
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
 
 
 class KeycloakComponentsMixin(SyncKeycloakMixinBase):
@@ -69,7 +73,7 @@ class KeycloakComponentsMixin(SyncKeycloakMixinBase):
         self,
         component_id: str,
         payload: KeycloakComponentRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a component.
 
         Args:
@@ -79,12 +83,17 @@ class KeycloakComponentsMixin(SyncKeycloakMixinBase):
         Returns:
             Update response payload.
         """
-        return self._call_keycloak(
-            "update_component",
-            lambda: self.admin_adapter.update_component(component_id=component_id, payload=to_request_payload(payload)),
+        return to_mutation_result(
+            self._call_keycloak(
+                "update_component",
+                lambda: self.admin_adapter.update_component(
+                    component_id=component_id,
+                    payload=to_request_payload(payload),
+                ),
+            ),
         )
 
-    def delete_component(self, component_id: str) -> dict[str, Any]:
+    def delete_component(self, component_id: str) -> KeycloakMutationResultDTO:
         """Delete a component.
 
         Args:
@@ -93,9 +102,11 @@ class KeycloakComponentsMixin(SyncKeycloakMixinBase):
         Returns:
             Deletion response payload.
         """
-        return self._call_keycloak(
-            "delete_component",
-            lambda: self.admin_adapter.delete_component(component_id=component_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "delete_component",
+                lambda: self.admin_adapter.delete_component(component_id=component_id),
+            ),
         )
 
 
@@ -154,7 +165,7 @@ class AsyncKeycloakComponentsMixin(AsyncKeycloakMixinBase):
         self,
         component_id: str,
         payload: KeycloakComponentRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a component.
 
         Args:
@@ -164,15 +175,17 @@ class AsyncKeycloakComponentsMixin(AsyncKeycloakMixinBase):
         Returns:
             Update response payload.
         """
-        return await self._async_call_keycloak(
-            "update_component",
-            lambda: self.admin_adapter.a_update_component(
-                component_id=component_id,
-                payload=to_request_payload(payload),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "update_component",
+                lambda: self.admin_adapter.a_update_component(
+                    component_id=component_id,
+                    payload=to_request_payload(payload),
+                ),
             ),
         )
 
-    async def delete_component(self, component_id: str) -> dict[str, Any]:
+    async def delete_component(self, component_id: str) -> KeycloakMutationResultDTO:
         """Delete a component.
 
         Args:
@@ -181,7 +194,9 @@ class AsyncKeycloakComponentsMixin(AsyncKeycloakMixinBase):
         Returns:
             Deletion response payload.
         """
-        return await self._async_call_keycloak(
-            "delete_component",
-            lambda: self.admin_adapter.a_delete_component(component_id=component_id),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "delete_component",
+                lambda: self.admin_adapter.a_delete_component(component_id=component_id),
+            ),
         )

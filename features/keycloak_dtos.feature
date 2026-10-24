@@ -64,3 +64,16 @@ Feature: Keycloak DTOs
       | kind | warned |
       | DTO  | absent |
       | dict | raised |
+
+  Scenario Outline: Mutation responses become a typed result
+    When the Keycloak mutation body <body> is converted
+    Then the mutation result message is <message>
+    And the mutation result extra fields are <extra>
+
+    Examples:
+      | body                    | message        | extra       |
+      | an empty dict           | none           | none        |
+      | empty bytes             | none           | none        |
+      | a skip-exists dict      | Already exists | none        |
+      | JSON bytes with a field | none           | futureField |
+      | non-JSON bytes          | none           | none        |

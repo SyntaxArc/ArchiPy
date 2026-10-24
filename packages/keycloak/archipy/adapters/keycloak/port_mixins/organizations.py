@@ -6,6 +6,8 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
+    from archipy.models.dtos.keycloak.identity_provider_dtos import KeycloakIdentityProviderDTO
     from archipy.models.dtos.keycloak.organization_dtos import (
         KeycloakOrganizationDTO,
         KeycloakOrganizationMemberDTO,
@@ -43,17 +45,17 @@ class KeycloakOrganizationsPort:
         organization_id: str,
         config: KeycloakOrganizationRequestDTO | None = None,
         **kwargs: Any,
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update an existing organization. Kwargs are organization attributes (e.g. name, alias)."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_organization(self, organization_id: str) -> dict[str, Any]:
+    def delete_organization(self, organization_id: str) -> KeycloakMutationResultDTO:
         """Delete an organization."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_organization_idps(self, organization_id: str) -> list[dict[str, Any]]:
+    def get_organization_idps(self, organization_id: str) -> list[KeycloakIdentityProviderDTO]:
         """Get IDPs by organization id."""
         raise NotImplementedError
 
@@ -77,12 +79,12 @@ class KeycloakOrganizationsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def organization_user_add(self, user_id: str, organization_id: str) -> bytes:
+    def organization_user_add(self, user_id: str, organization_id: str) -> KeycloakMutationResultDTO:
         """Add a user to an organization."""
         raise NotImplementedError
 
     @abstractmethod
-    def organization_user_remove(self, user_id: str, organization_id: str) -> dict[str, Any]:
+    def organization_user_remove(self, user_id: str, organization_id: str) -> KeycloakMutationResultDTO:
         """Remove a user from an organization."""
         raise NotImplementedError
 
@@ -117,17 +119,17 @@ class AsyncKeycloakOrganizationsPort:
         organization_id: str,
         config: KeycloakOrganizationRequestDTO | None = None,
         **kwargs: Any,
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update an existing organization. Kwargs are organization attributes (e.g. name, alias)."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_organization(self, organization_id: str) -> dict[str, Any]:
+    async def delete_organization(self, organization_id: str) -> KeycloakMutationResultDTO:
         """Delete an organization."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_organization_idps(self, organization_id: str) -> list[dict[str, Any]]:
+    async def get_organization_idps(self, organization_id: str) -> list[KeycloakIdentityProviderDTO]:
         """Get IDPs by organization id."""
         raise NotImplementedError
 
@@ -151,11 +153,11 @@ class AsyncKeycloakOrganizationsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def organization_user_add(self, user_id: str, organization_id: str) -> bytes:
+    async def organization_user_add(self, user_id: str, organization_id: str) -> KeycloakMutationResultDTO:
         """Add a user to an organization."""
         raise NotImplementedError
 
     @abstractmethod
-    async def organization_user_remove(self, user_id: str, organization_id: str) -> dict[str, Any]:
+    async def organization_user_remove(self, user_id: str, organization_id: str) -> KeycloakMutationResultDTO:
         """Remove a user from an organization."""
         raise NotImplementedError

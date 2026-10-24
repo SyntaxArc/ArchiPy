@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
 
 if TYPE_CHECKING:
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakGroupsCountDTO, KeycloakMutationResultDTO
     from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupDTO, KeycloakGroupRequestDTO
     from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
     from archipy.models.dtos.keycloak.user_dtos import KeycloakUserDTO
@@ -29,12 +30,16 @@ class KeycloakGroupsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def update_group(self, group_id: str, payload: KeycloakGroupRequestDTO | dict[str, Any]) -> dict[str, Any]:
+    def update_group(
+        self,
+        group_id: str,
+        payload: KeycloakGroupRequestDTO | dict[str, Any],
+    ) -> KeycloakMutationResultDTO:
         """Update a group."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_group(self, group_id: str) -> dict[str, Any]:
+    def delete_group(self, group_id: str) -> KeycloakMutationResultDTO:
         """Delete a group."""
         raise NotImplementedError
 
@@ -74,22 +79,22 @@ class KeycloakGroupsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def groups_count(self, query: dict[str, Any] | None = None) -> dict[str, Any]:
+    def groups_count(self, query: dict[str, Any] | None = None) -> KeycloakGroupsCountDTO:
         """Get the number of groups matching the query."""
         raise NotImplementedError
 
     @abstractmethod
-    def group_user_add(self, user_id: str, group_id: str) -> dict[str, Any]:
+    def group_user_add(self, user_id: str, group_id: str) -> KeycloakMutationResultDTO:
         """Add a user to a group."""
         raise NotImplementedError
 
     @abstractmethod
-    def group_user_remove(self, user_id: str, group_id: str) -> dict[str, Any]:
+    def group_user_remove(self, user_id: str, group_id: str) -> KeycloakMutationResultDTO:
         """Remove a user from a group."""
         raise NotImplementedError
 
     @abstractmethod
-    def group_set_permissions(self, group_id: str, enabled: bool = True) -> dict[str, Any]:
+    def group_set_permissions(self, group_id: str, enabled: bool = True) -> KeycloakMutationResultDTO:
         """Enable or disable fine-grained permissions for a group."""
         raise NotImplementedError
 
@@ -114,7 +119,7 @@ class KeycloakGroupsPort:
         group_id: str,
         client_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Assign client roles to a group."""
         raise NotImplementedError
 
@@ -123,7 +128,7 @@ class KeycloakGroupsPort:
         self,
         group_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Assign realm roles to a group."""
         raise NotImplementedError
 
@@ -133,7 +138,7 @@ class KeycloakGroupsPort:
         group_id: str,
         client_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Remove client roles from a group."""
         raise NotImplementedError
 
@@ -142,7 +147,7 @@ class KeycloakGroupsPort:
         self,
         group_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Remove realm roles from a group."""
         raise NotImplementedError
 
@@ -188,12 +193,16 @@ class AsyncKeycloakGroupsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def update_group(self, group_id: str, payload: KeycloakGroupRequestDTO | dict[str, Any]) -> dict[str, Any]:
+    async def update_group(
+        self,
+        group_id: str,
+        payload: KeycloakGroupRequestDTO | dict[str, Any],
+    ) -> KeycloakMutationResultDTO:
         """Update a group."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_group(self, group_id: str) -> dict[str, Any]:
+    async def delete_group(self, group_id: str) -> KeycloakMutationResultDTO:
         """Delete a group."""
         raise NotImplementedError
 
@@ -237,22 +246,22 @@ class AsyncKeycloakGroupsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def groups_count(self, query: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def groups_count(self, query: dict[str, Any] | None = None) -> KeycloakGroupsCountDTO:
         """Get the number of groups matching the query."""
         raise NotImplementedError
 
     @abstractmethod
-    async def group_user_add(self, user_id: str, group_id: str) -> dict[str, Any]:
+    async def group_user_add(self, user_id: str, group_id: str) -> KeycloakMutationResultDTO:
         """Add a user to a group."""
         raise NotImplementedError
 
     @abstractmethod
-    async def group_user_remove(self, user_id: str, group_id: str) -> dict[str, Any]:
+    async def group_user_remove(self, user_id: str, group_id: str) -> KeycloakMutationResultDTO:
         """Remove a user from a group."""
         raise NotImplementedError
 
     @abstractmethod
-    async def group_set_permissions(self, group_id: str, enabled: bool = True) -> dict[str, Any]:
+    async def group_set_permissions(self, group_id: str, enabled: bool = True) -> KeycloakMutationResultDTO:
         """Enable or disable fine-grained permissions for a group."""
         raise NotImplementedError
 
@@ -277,7 +286,7 @@ class AsyncKeycloakGroupsPort:
         group_id: str,
         client_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Assign client roles to a group."""
         raise NotImplementedError
 
@@ -286,7 +295,7 @@ class AsyncKeycloakGroupsPort:
         self,
         group_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Assign realm roles to a group."""
         raise NotImplementedError
 
@@ -296,7 +305,7 @@ class AsyncKeycloakGroupsPort:
         group_id: str,
         client_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Remove client roles from a group."""
         raise NotImplementedError
 
@@ -305,7 +314,7 @@ class AsyncKeycloakGroupsPort:
         self,
         group_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Remove realm roles from a group."""
         raise NotImplementedError
 

@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         KeycloakAuthzSettingsDTO,
         KeycloakAuthzSettingsRequestDTO,
     )
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
 
 
 class KeycloakAuthzPort:
@@ -47,12 +48,12 @@ class KeycloakAuthzPort:
         client_id: str,
         resource_id: str,
         payload: KeycloakAuthzResourceRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update an authorization resource."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_client_authz_resource(self, client_id: str, resource_id: str) -> dict[str, Any]:
+    def delete_client_authz_resource(self, client_id: str, resource_id: str) -> KeycloakMutationResultDTO:
         """Delete an authorization resource."""
         raise NotImplementedError
 
@@ -110,7 +111,7 @@ class KeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    def delete_client_authz_policy(self, client_id: str, policy_id: str) -> dict[str, Any]:
+    def delete_client_authz_policy(self, client_id: str, policy_id: str) -> KeycloakMutationResultDTO:
         """Delete an authorization policy."""
         raise NotImplementedError
 
@@ -149,7 +150,7 @@ class KeycloakAuthzPort:
         payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
         client_id: str,
         scope_id: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Update a scope-based permission."""
         raise NotImplementedError
 
@@ -159,7 +160,7 @@ class KeycloakAuthzPort:
         payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
         client_id: str,
         resource_id: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Update a resource-based permission."""
         raise NotImplementedError
 
@@ -197,7 +198,7 @@ class KeycloakAuthzPort:
         self,
         client_id: str,
         payload: KeycloakAuthzSettingsRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Import authorization configuration for a client."""
         raise NotImplementedError
 
@@ -231,12 +232,12 @@ class AsyncKeycloakAuthzPort:
         client_id: str,
         resource_id: str,
         payload: KeycloakAuthzResourceRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update an authorization resource."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_client_authz_resource(self, client_id: str, resource_id: str) -> dict[str, Any]:
+    async def delete_client_authz_resource(self, client_id: str, resource_id: str) -> KeycloakMutationResultDTO:
         """Delete an authorization resource."""
         raise NotImplementedError
 
@@ -294,7 +295,7 @@ class AsyncKeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_client_authz_policy(self, client_id: str, policy_id: str) -> dict[str, Any]:
+    async def delete_client_authz_policy(self, client_id: str, policy_id: str) -> KeycloakMutationResultDTO:
         """Delete an authorization policy."""
         raise NotImplementedError
 
@@ -333,7 +334,7 @@ class AsyncKeycloakAuthzPort:
         payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
         client_id: str,
         scope_id: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Update a scope-based permission."""
         raise NotImplementedError
 
@@ -343,7 +344,7 @@ class AsyncKeycloakAuthzPort:
         payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
         client_id: str,
         resource_id: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Update a resource-based permission."""
         raise NotImplementedError
 
@@ -381,6 +382,6 @@ class AsyncKeycloakAuthzPort:
         self,
         client_id: str,
         payload: KeycloakAuthzSettingsRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Import authorization configuration for a client."""
         raise NotImplementedError

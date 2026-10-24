@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
     to_dto,
     to_dto_list,
+    to_mutation_result,
     to_request_payload,
 )
 from archipy.models.dtos.keycloak.authz_dtos import (
@@ -21,6 +22,9 @@ from archipy.models.dtos.keycloak.authz_dtos import (
     KeycloakAuthzSettingsDTO,
     KeycloakAuthzSettingsRequestDTO,
 )
+
+if TYPE_CHECKING:
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
 
 
 class KeycloakAuthzMixin(SyncKeycloakMixinBase):
@@ -70,22 +74,26 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
         client_id: str,
         resource_id: str,
         payload: KeycloakAuthzResourceRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update an authorization resource."""
-        return self._call_keycloak(
-            "update_client_authz_resource",
-            lambda: self.admin_adapter.update_client_authz_resource(
-                client_id=client_id,
-                resource_id=resource_id,
-                payload=to_request_payload(to_request_payload(payload)),
+        return to_mutation_result(
+            self._call_keycloak(
+                "update_client_authz_resource",
+                lambda: self.admin_adapter.update_client_authz_resource(
+                    client_id=client_id,
+                    resource_id=resource_id,
+                    payload=to_request_payload(to_request_payload(payload)),
+                ),
             ),
         )
 
-    def delete_client_authz_resource(self, client_id: str, resource_id: str) -> dict[str, Any]:
+    def delete_client_authz_resource(self, client_id: str, resource_id: str) -> KeycloakMutationResultDTO:
         """Delete an authorization resource."""
-        return self._call_keycloak(
-            "delete_client_authz_resource",
-            lambda: self.admin_adapter.delete_client_authz_resource(client_id=client_id, resource_id=resource_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "delete_client_authz_resource",
+                lambda: self.admin_adapter.delete_client_authz_resource(client_id=client_id, resource_id=resource_id),
+            ),
         )
 
     def create_client_authz_scopes(
@@ -190,11 +198,13 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def delete_client_authz_policy(self, client_id: str, policy_id: str) -> dict[str, Any]:
+    def delete_client_authz_policy(self, client_id: str, policy_id: str) -> KeycloakMutationResultDTO:
         """Delete an authorization policy."""
-        return self._call_keycloak(
-            "delete_client_authz_policy",
-            lambda: self.admin_adapter.delete_client_authz_policy(client_id=client_id, policy_id=policy_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "delete_client_authz_policy",
+                lambda: self.admin_adapter.delete_client_authz_policy(client_id=client_id, policy_id=policy_id),
+            ),
         )
 
     def create_client_authz_resource_based_permission(
@@ -258,14 +268,16 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
         payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
         client_id: str,
         scope_id: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Update a scope-based permission."""
-        return self._call_keycloak(
-            "update_client_authz_scope_permission",
-            lambda: self.admin_adapter.update_client_authz_scope_permission(
-                payload=to_request_payload(to_request_payload(payload)),
-                client_id=client_id,
-                scope_id=scope_id,
+        return to_mutation_result(
+            self._call_keycloak(
+                "update_client_authz_scope_permission",
+                lambda: self.admin_adapter.update_client_authz_scope_permission(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    client_id=client_id,
+                    scope_id=scope_id,
+                ),
             ),
         )
 
@@ -274,14 +286,16 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
         payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
         client_id: str,
         resource_id: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Update a resource-based permission."""
-        return self._call_keycloak(
-            "update_client_authz_resource_permission",
-            lambda: self.admin_adapter.update_client_authz_resource_permission(
-                payload=to_request_payload(to_request_payload(payload)),
-                client_id=client_id,
-                resource_id=resource_id,
+        return to_mutation_result(
+            self._call_keycloak(
+                "update_client_authz_resource_permission",
+                lambda: self.admin_adapter.update_client_authz_resource_permission(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    client_id=client_id,
+                    resource_id=resource_id,
+                ),
             ),
         )
 
@@ -346,13 +360,15 @@ class KeycloakAuthzMixin(SyncKeycloakMixinBase):
         self,
         client_id: str,
         payload: KeycloakAuthzSettingsRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Import authorization configuration for a client."""
-        return self._call_keycloak(
-            "import_client_authz_config",
-            lambda: self.admin_adapter.import_client_authz_config(
-                client_id=client_id,
-                payload=to_request_payload(to_request_payload(payload)),
+        return to_mutation_result(
+            self._call_keycloak(
+                "import_client_authz_config",
+                lambda: self.admin_adapter.import_client_authz_config(
+                    client_id=client_id,
+                    payload=to_request_payload(to_request_payload(payload)),
+                ),
             ),
         )
 
@@ -404,22 +420,26 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
         client_id: str,
         resource_id: str,
         payload: KeycloakAuthzResourceRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update an authorization resource."""
-        return await self._async_call_keycloak(
-            "update_client_authz_resource",
-            lambda: self.admin_adapter.a_update_client_authz_resource(
-                client_id=client_id,
-                resource_id=resource_id,
-                payload=to_request_payload(to_request_payload(payload)),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "update_client_authz_resource",
+                lambda: self.admin_adapter.a_update_client_authz_resource(
+                    client_id=client_id,
+                    resource_id=resource_id,
+                    payload=to_request_payload(to_request_payload(payload)),
+                ),
             ),
         )
 
-    async def delete_client_authz_resource(self, client_id: str, resource_id: str) -> dict[str, Any]:
+    async def delete_client_authz_resource(self, client_id: str, resource_id: str) -> KeycloakMutationResultDTO:
         """Delete an authorization resource."""
-        return await self._async_call_keycloak(
-            "delete_client_authz_resource",
-            lambda: self.admin_adapter.a_delete_client_authz_resource(client_id=client_id, resource_id=resource_id),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "delete_client_authz_resource",
+                lambda: self.admin_adapter.a_delete_client_authz_resource(client_id=client_id, resource_id=resource_id),
+            ),
         )
 
     async def create_client_authz_scopes(
@@ -524,11 +544,13 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def delete_client_authz_policy(self, client_id: str, policy_id: str) -> dict[str, Any]:
+    async def delete_client_authz_policy(self, client_id: str, policy_id: str) -> KeycloakMutationResultDTO:
         """Delete an authorization policy."""
-        return await self._async_call_keycloak(
-            "delete_client_authz_policy",
-            lambda: self.admin_adapter.a_delete_client_authz_policy(client_id=client_id, policy_id=policy_id),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "delete_client_authz_policy",
+                lambda: self.admin_adapter.a_delete_client_authz_policy(client_id=client_id, policy_id=policy_id),
+            ),
         )
 
     async def create_client_authz_resource_based_permission(
@@ -592,14 +614,16 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
         payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
         client_id: str,
         scope_id: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Update a scope-based permission."""
-        return await self._async_call_keycloak(
-            "update_client_authz_scope_permission",
-            lambda: self.admin_adapter.a_update_client_authz_scope_permission(
-                payload=to_request_payload(to_request_payload(payload)),
-                client_id=client_id,
-                scope_id=scope_id,
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "update_client_authz_scope_permission",
+                lambda: self.admin_adapter.a_update_client_authz_scope_permission(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    client_id=client_id,
+                    scope_id=scope_id,
+                ),
             ),
         )
 
@@ -608,14 +632,16 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
         payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
         client_id: str,
         resource_id: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Update a resource-based permission."""
-        return await self._async_call_keycloak(
-            "update_client_authz_resource_permission",
-            lambda: self.admin_adapter.a_update_client_authz_resource_permission(
-                payload=to_request_payload(to_request_payload(payload)),
-                client_id=client_id,
-                resource_id=resource_id,
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "update_client_authz_resource_permission",
+                lambda: self.admin_adapter.a_update_client_authz_resource_permission(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    client_id=client_id,
+                    resource_id=resource_id,
+                ),
             ),
         )
 
@@ -683,12 +709,14 @@ class AsyncKeycloakAuthzMixin(AsyncKeycloakMixinBase):
         self,
         client_id: str,
         payload: KeycloakAuthzSettingsRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Import authorization configuration for a client."""
-        return await self._async_call_keycloak(
-            "import_client_authz_config",
-            lambda: self.admin_adapter.a_import_client_authz_config(
-                client_id=client_id,
-                payload=to_request_payload(to_request_payload(payload)),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "import_client_authz_config",
+                lambda: self.admin_adapter.a_import_client_authz_config(
+                    client_id=client_id,
+                    payload=to_request_payload(to_request_payload(payload)),
+                ),
             ),
         )

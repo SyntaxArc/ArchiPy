@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
@@ -10,6 +10,7 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     to_dto,
     to_dto_list,
     to_dto_or_none,
+    to_mutation_result,
     to_request_payload,
 )
 from archipy.models.dtos.keycloak.client_scope_dtos import (
@@ -18,6 +19,9 @@ from archipy.models.dtos.keycloak.client_scope_dtos import (
     KeycloakProtocolMapperDTO,
     KeycloakProtocolMapperRequestDTO,
 )
+
+if TYPE_CHECKING:
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
 
 
 class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
@@ -73,34 +77,40 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
         self,
         client_scope_id: str,
         payload: KeycloakClientScopeRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a client scope."""
-        return self._call_keycloak(
-            "update_client_scope",
-            lambda: self.admin_adapter.update_client_scope(
-                client_scope_id=client_scope_id,
-                payload=to_request_payload(payload),
+        return to_mutation_result(
+            self._call_keycloak(
+                "update_client_scope",
+                lambda: self.admin_adapter.update_client_scope(
+                    client_scope_id=client_scope_id,
+                    payload=to_request_payload(payload),
+                ),
             ),
         )
 
-    def delete_client_scope(self, client_scope_id: str) -> dict[str, Any]:
+    def delete_client_scope(self, client_scope_id: str) -> KeycloakMutationResultDTO:
         """Delete a client scope."""
-        return self._call_keycloak(
-            "delete_client_scope",
-            lambda: self.admin_adapter.delete_client_scope(client_scope_id=client_scope_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "delete_client_scope",
+                lambda: self.admin_adapter.delete_client_scope(client_scope_id=client_scope_id),
+            ),
         )
 
     def add_mapper_to_client_scope(
         self,
         client_scope_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Add a protocol mapper to a client scope."""
-        return self._call_keycloak(
-            "add_mapper_to_client_scope",
-            lambda: self.admin_adapter.add_mapper_to_client_scope(
-                client_scope_id=client_scope_id,
-                payload=to_request_payload(payload),
+        return to_mutation_result(
+            self._call_keycloak(
+                "add_mapper_to_client_scope",
+                lambda: self.admin_adapter.add_mapper_to_client_scope(
+                    client_scope_id=client_scope_id,
+                    payload=to_request_payload(payload),
+                ),
             ),
         )
 
@@ -119,32 +129,49 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
         client_scope_id: str,
         protocol_mapper_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a protocol mapper in a client scope."""
-        return self._call_keycloak(
-            "update_mapper_in_client_scope",
-            lambda: self.admin_adapter.update_mapper_in_client_scope(
-                client_scope_id=client_scope_id,
-                protocol_mapper_id=protocol_mapper_id,
-                payload=to_request_payload(payload),
+        return to_mutation_result(
+            self._call_keycloak(
+                "update_mapper_in_client_scope",
+                lambda: self.admin_adapter.update_mapper_in_client_scope(
+                    client_scope_id=client_scope_id,
+                    protocol_mapper_id=protocol_mapper_id,
+                    payload=to_request_payload(payload),
+                ),
             ),
         )
 
-    def delete_mapper_from_client_scope(self, client_scope_id: str, protocol_mapper_id: str) -> dict[str, Any]:
+    def delete_mapper_from_client_scope(
+        self,
+        client_scope_id: str,
+        protocol_mapper_id: str,
+    ) -> KeycloakMutationResultDTO:
         """Delete a protocol mapper from a client scope."""
-        return self._call_keycloak(
-            "delete_mapper_from_client_scope",
-            lambda: self.admin_adapter.delete_mapper_from_client_scope(
-                client_scope_id=client_scope_id,
-                protocol_mapper_id=protocol_mapper_id,
+        return to_mutation_result(
+            self._call_keycloak(
+                "delete_mapper_from_client_scope",
+                lambda: self.admin_adapter.delete_mapper_from_client_scope(
+                    client_scope_id=client_scope_id,
+                    protocol_mapper_id=protocol_mapper_id,
+                ),
             ),
         )
 
-    def add_mapper_to_client(self, client_id: str, payload: KeycloakProtocolMapperRequestDTO | dict[str, Any]) -> bytes:
+    def add_mapper_to_client(
+        self,
+        client_id: str,
+        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
+    ) -> KeycloakMutationResultDTO:
         """Add a protocol mapper to a client."""
-        return self._call_keycloak(
-            "add_mapper_to_client",
-            lambda: self.admin_adapter.add_mapper_to_client(client_id=client_id, payload=to_request_payload(payload)),
+        return to_mutation_result(
+            self._call_keycloak(
+                "add_mapper_to_client",
+                lambda: self.admin_adapter.add_mapper_to_client(
+                    client_id=client_id,
+                    payload=to_request_payload(payload),
+                ),
+            ),
         )
 
     def get_mappers_from_client(self, client_id: str) -> list[KeycloakProtocolMapperDTO]:
@@ -162,22 +189,26 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
         client_id: str,
         mapper_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a protocol mapper on a client."""
-        return self._call_keycloak(
-            "update_client_mapper",
-            lambda: self.admin_adapter.update_client_mapper(
-                client_id=client_id,
-                mapper_id=mapper_id,
-                payload=to_request_payload(payload),
+        return to_mutation_result(
+            self._call_keycloak(
+                "update_client_mapper",
+                lambda: self.admin_adapter.update_client_mapper(
+                    client_id=client_id,
+                    mapper_id=mapper_id,
+                    payload=to_request_payload(payload),
+                ),
             ),
         )
 
-    def remove_client_mapper(self, client_id: str, client_mapper_id: str) -> dict[str, Any]:
+    def remove_client_mapper(self, client_id: str, client_mapper_id: str) -> KeycloakMutationResultDTO:
         """Remove a protocol mapper from a client."""
-        return self._call_keycloak(
-            "remove_client_mapper",
-            lambda: self.admin_adapter.remove_client_mapper(client_id=client_id, client_mapper_id=client_mapper_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "remove_client_mapper",
+                lambda: self.admin_adapter.remove_client_mapper(client_id=client_id, client_mapper_id=client_mapper_id),
+            ),
         )
 
     def get_client_default_client_scopes(self, client_id: str) -> list[KeycloakClientScopeDTO]:
@@ -195,24 +226,28 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
         client_id: str,
         client_scope_id: str,
         payload: KeycloakClientScopeRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Add a default client scope to a client."""
-        return self._call_keycloak(
-            "add_client_default_client_scope",
-            lambda: self.admin_adapter.add_client_default_client_scope(
-                client_id=client_id,
-                client_scope_id=client_scope_id,
-                payload=to_request_payload(payload),
+        return to_mutation_result(
+            self._call_keycloak(
+                "add_client_default_client_scope",
+                lambda: self.admin_adapter.add_client_default_client_scope(
+                    client_id=client_id,
+                    client_scope_id=client_scope_id,
+                    payload=to_request_payload(payload),
+                ),
             ),
         )
 
-    def delete_client_default_client_scope(self, client_id: str, client_scope_id: str) -> dict[str, Any]:
+    def delete_client_default_client_scope(self, client_id: str, client_scope_id: str) -> KeycloakMutationResultDTO:
         """Remove a default client scope from a client."""
-        return self._call_keycloak(
-            "delete_client_default_client_scope",
-            lambda: self.admin_adapter.delete_client_default_client_scope(
-                client_id=client_id,
-                client_scope_id=client_scope_id,
+        return to_mutation_result(
+            self._call_keycloak(
+                "delete_client_default_client_scope",
+                lambda: self.admin_adapter.delete_client_default_client_scope(
+                    client_id=client_id,
+                    client_scope_id=client_scope_id,
+                ),
             ),
         )
 
@@ -231,24 +266,28 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
         client_id: str,
         client_scope_id: str,
         payload: KeycloakClientScopeRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Add an optional client scope to a client."""
-        return self._call_keycloak(
-            "add_client_optional_client_scope",
-            lambda: self.admin_adapter.add_client_optional_client_scope(
-                client_id=client_id,
-                client_scope_id=client_scope_id,
-                payload=to_request_payload(payload),
+        return to_mutation_result(
+            self._call_keycloak(
+                "add_client_optional_client_scope",
+                lambda: self.admin_adapter.add_client_optional_client_scope(
+                    client_id=client_id,
+                    client_scope_id=client_scope_id,
+                    payload=to_request_payload(payload),
+                ),
             ),
         )
 
-    def delete_client_optional_client_scope(self, client_id: str, client_scope_id: str) -> dict[str, Any]:
+    def delete_client_optional_client_scope(self, client_id: str, client_scope_id: str) -> KeycloakMutationResultDTO:
         """Remove an optional client scope from a client."""
-        return self._call_keycloak(
-            "delete_client_optional_client_scope",
-            lambda: self.admin_adapter.delete_client_optional_client_scope(
-                client_id=client_id,
-                client_scope_id=client_scope_id,
+        return to_mutation_result(
+            self._call_keycloak(
+                "delete_client_optional_client_scope",
+                lambda: self.admin_adapter.delete_client_optional_client_scope(
+                    client_id=client_id,
+                    client_scope_id=client_scope_id,
+                ),
             ),
         )
 
@@ -264,18 +303,22 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def add_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
+    def add_default_default_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Add a realm default client scope."""
-        return self._call_keycloak(
-            "add_default_default_client_scope",
-            lambda: self.admin_adapter.add_default_default_client_scope(scope_id=scope_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "add_default_default_client_scope",
+                lambda: self.admin_adapter.add_default_default_client_scope(scope_id=scope_id),
+            ),
         )
 
-    def delete_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
+    def delete_default_default_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Remove a realm default client scope."""
-        return self._call_keycloak(
-            "delete_default_default_client_scope",
-            lambda: self.admin_adapter.delete_default_default_client_scope(scope_id=scope_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "delete_default_default_client_scope",
+                lambda: self.admin_adapter.delete_default_default_client_scope(scope_id=scope_id),
+            ),
         )
 
     def get_default_optional_client_scopes(
@@ -290,18 +333,22 @@ class KeycloakClientScopesMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def add_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:
+    def add_default_optional_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Add a realm optional default client scope."""
-        return self._call_keycloak(
-            "add_default_optional_client_scope",
-            lambda: self.admin_adapter.add_default_optional_client_scope(scope_id=scope_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "add_default_optional_client_scope",
+                lambda: self.admin_adapter.add_default_optional_client_scope(scope_id=scope_id),
+            ),
         )
 
-    def delete_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:
+    def delete_default_optional_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Remove a realm optional default client scope."""
-        return self._call_keycloak(
-            "delete_default_optional_client_scope",
-            lambda: self.admin_adapter.delete_default_optional_client_scope(scope_id=scope_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "delete_default_optional_client_scope",
+                lambda: self.admin_adapter.delete_default_optional_client_scope(scope_id=scope_id),
+            ),
         )
 
 
@@ -358,34 +405,40 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         self,
         client_scope_id: str,
         payload: KeycloakClientScopeRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a client scope."""
-        return await self._async_call_keycloak(
-            "update_client_scope",
-            lambda: self.admin_adapter.a_update_client_scope(
-                client_scope_id=client_scope_id,
-                payload=to_request_payload(payload),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "update_client_scope",
+                lambda: self.admin_adapter.a_update_client_scope(
+                    client_scope_id=client_scope_id,
+                    payload=to_request_payload(payload),
+                ),
             ),
         )
 
-    async def delete_client_scope(self, client_scope_id: str) -> dict[str, Any]:
+    async def delete_client_scope(self, client_scope_id: str) -> KeycloakMutationResultDTO:
         """Delete a client scope."""
-        return await self._async_call_keycloak(
-            "delete_client_scope",
-            lambda: self.admin_adapter.a_delete_client_scope(client_scope_id=client_scope_id),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "delete_client_scope",
+                lambda: self.admin_adapter.a_delete_client_scope(client_scope_id=client_scope_id),
+            ),
         )
 
     async def add_mapper_to_client_scope(
         self,
         client_scope_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Add a protocol mapper to a client scope."""
-        return await self._async_call_keycloak(
-            "add_mapper_to_client_scope",
-            lambda: self.admin_adapter.a_add_mapper_to_client_scope(
-                client_scope_id=client_scope_id,
-                payload=to_request_payload(payload),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "add_mapper_to_client_scope",
+                lambda: self.admin_adapter.a_add_mapper_to_client_scope(
+                    client_scope_id=client_scope_id,
+                    payload=to_request_payload(payload),
+                ),
             ),
         )
 
@@ -404,24 +457,32 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         client_scope_id: str,
         protocol_mapper_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a protocol mapper in a client scope."""
-        return await self._async_call_keycloak(
-            "update_mapper_in_client_scope",
-            lambda: self.admin_adapter.a_update_mapper_in_client_scope(
-                client_scope_id=client_scope_id,
-                protocol_mapper_id=protocol_mapper_id,
-                payload=to_request_payload(payload),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "update_mapper_in_client_scope",
+                lambda: self.admin_adapter.a_update_mapper_in_client_scope(
+                    client_scope_id=client_scope_id,
+                    protocol_mapper_id=protocol_mapper_id,
+                    payload=to_request_payload(payload),
+                ),
             ),
         )
 
-    async def delete_mapper_from_client_scope(self, client_scope_id: str, protocol_mapper_id: str) -> dict[str, Any]:
+    async def delete_mapper_from_client_scope(
+        self,
+        client_scope_id: str,
+        protocol_mapper_id: str,
+    ) -> KeycloakMutationResultDTO:
         """Delete a protocol mapper from a client scope."""
-        return await self._async_call_keycloak(
-            "delete_mapper_from_client_scope",
-            lambda: self.admin_adapter.a_delete_mapper_from_client_scope(
-                client_scope_id=client_scope_id,
-                protocol_mapper_id=protocol_mapper_id,
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "delete_mapper_from_client_scope",
+                lambda: self.admin_adapter.a_delete_mapper_from_client_scope(
+                    client_scope_id=client_scope_id,
+                    protocol_mapper_id=protocol_mapper_id,
+                ),
             ),
         )
 
@@ -429,11 +490,16 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         self,
         client_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Add a protocol mapper to a client."""
-        return await self._async_call_keycloak(
-            "add_mapper_to_client",
-            lambda: self.admin_adapter.a_add_mapper_to_client(client_id=client_id, payload=to_request_payload(payload)),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "add_mapper_to_client",
+                lambda: self.admin_adapter.a_add_mapper_to_client(
+                    client_id=client_id,
+                    payload=to_request_payload(payload),
+                ),
+            ),
         )
 
     async def get_mappers_from_client(self, client_id: str) -> list[KeycloakProtocolMapperDTO]:
@@ -451,24 +517,28 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         client_id: str,
         mapper_id: str,
         payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a protocol mapper on a client."""
-        return await self._async_call_keycloak(
-            "update_client_mapper",
-            lambda: self.admin_adapter.a_update_client_mapper(
-                client_id=client_id,
-                mapper_id=mapper_id,
-                payload=to_request_payload(payload),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "update_client_mapper",
+                lambda: self.admin_adapter.a_update_client_mapper(
+                    client_id=client_id,
+                    mapper_id=mapper_id,
+                    payload=to_request_payload(payload),
+                ),
             ),
         )
 
-    async def remove_client_mapper(self, client_id: str, client_mapper_id: str) -> dict[str, Any]:
+    async def remove_client_mapper(self, client_id: str, client_mapper_id: str) -> KeycloakMutationResultDTO:
         """Remove a protocol mapper from a client."""
-        return await self._async_call_keycloak(
-            "remove_client_mapper",
-            lambda: self.admin_adapter.a_remove_client_mapper(
-                client_id=client_id,
-                client_mapper_id=client_mapper_id,
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "remove_client_mapper",
+                lambda: self.admin_adapter.a_remove_client_mapper(
+                    client_id=client_id,
+                    client_mapper_id=client_mapper_id,
+                ),
             ),
         )
 
@@ -487,24 +557,32 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         client_id: str,
         client_scope_id: str,
         payload: KeycloakClientScopeRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Add a default client scope to a client."""
-        return await self._async_call_keycloak(
-            "add_client_default_client_scope",
-            lambda: self.admin_adapter.a_add_client_default_client_scope(
-                client_id=client_id,
-                client_scope_id=client_scope_id,
-                payload=to_request_payload(payload),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "add_client_default_client_scope",
+                lambda: self.admin_adapter.a_add_client_default_client_scope(
+                    client_id=client_id,
+                    client_scope_id=client_scope_id,
+                    payload=to_request_payload(payload),
+                ),
             ),
         )
 
-    async def delete_client_default_client_scope(self, client_id: str, client_scope_id: str) -> dict[str, Any]:
+    async def delete_client_default_client_scope(
+        self,
+        client_id: str,
+        client_scope_id: str,
+    ) -> KeycloakMutationResultDTO:
         """Remove a default client scope from a client."""
-        return await self._async_call_keycloak(
-            "delete_client_default_client_scope",
-            lambda: self.admin_adapter.a_delete_client_default_client_scope(
-                client_id=client_id,
-                client_scope_id=client_scope_id,
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "delete_client_default_client_scope",
+                lambda: self.admin_adapter.a_delete_client_default_client_scope(
+                    client_id=client_id,
+                    client_scope_id=client_scope_id,
+                ),
             ),
         )
 
@@ -523,24 +601,32 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
         client_id: str,
         client_scope_id: str,
         payload: KeycloakClientScopeRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Add an optional client scope to a client."""
-        return await self._async_call_keycloak(
-            "add_client_optional_client_scope",
-            lambda: self.admin_adapter.a_add_client_optional_client_scope(
-                client_id=client_id,
-                client_scope_id=client_scope_id,
-                payload=to_request_payload(payload),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "add_client_optional_client_scope",
+                lambda: self.admin_adapter.a_add_client_optional_client_scope(
+                    client_id=client_id,
+                    client_scope_id=client_scope_id,
+                    payload=to_request_payload(payload),
+                ),
             ),
         )
 
-    async def delete_client_optional_client_scope(self, client_id: str, client_scope_id: str) -> dict[str, Any]:
+    async def delete_client_optional_client_scope(
+        self,
+        client_id: str,
+        client_scope_id: str,
+    ) -> KeycloakMutationResultDTO:
         """Remove an optional client scope from a client."""
-        return await self._async_call_keycloak(
-            "delete_client_optional_client_scope",
-            lambda: self.admin_adapter.a_delete_client_optional_client_scope(
-                client_id=client_id,
-                client_scope_id=client_scope_id,
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "delete_client_optional_client_scope",
+                lambda: self.admin_adapter.a_delete_client_optional_client_scope(
+                    client_id=client_id,
+                    client_scope_id=client_scope_id,
+                ),
             ),
         )
 
@@ -556,18 +642,22 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def add_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
+    async def add_default_default_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Add a realm default client scope."""
-        return await self._async_call_keycloak(
-            "add_default_default_client_scope",
-            lambda: self.admin_adapter.a_add_default_default_client_scope(scope_id=scope_id),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "add_default_default_client_scope",
+                lambda: self.admin_adapter.a_add_default_default_client_scope(scope_id=scope_id),
+            ),
         )
 
-    async def delete_default_default_client_scope(self, scope_id: str) -> dict[str, Any]:
+    async def delete_default_default_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Remove a realm default client scope."""
-        return await self._async_call_keycloak(
-            "delete_default_default_client_scope",
-            lambda: self.admin_adapter.a_delete_default_default_client_scope(scope_id=scope_id),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "delete_default_default_client_scope",
+                lambda: self.admin_adapter.a_delete_default_default_client_scope(scope_id=scope_id),
+            ),
         )
 
     async def get_default_optional_client_scopes(
@@ -582,16 +672,20 @@ class AsyncKeycloakClientScopesMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def add_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:
+    async def add_default_optional_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Add a realm optional default client scope."""
-        return await self._async_call_keycloak(
-            "add_default_optional_client_scope",
-            lambda: self.admin_adapter.a_add_default_optional_client_scope(scope_id=scope_id),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "add_default_optional_client_scope",
+                lambda: self.admin_adapter.a_add_default_optional_client_scope(scope_id=scope_id),
+            ),
         )
 
-    async def delete_default_optional_client_scope(self, scope_id: str) -> dict[str, Any]:
+    async def delete_default_optional_client_scope(self, scope_id: str) -> KeycloakMutationResultDTO:
         """Remove a realm optional default client scope."""
-        return await self._async_call_keycloak(
-            "delete_default_optional_client_scope",
-            lambda: self.admin_adapter.a_delete_default_optional_client_scope(scope_id=scope_id),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "delete_default_optional_client_scope",
+                lambda: self.admin_adapter.a_delete_default_optional_client_scope(scope_id=scope_id),
+            ),
         )

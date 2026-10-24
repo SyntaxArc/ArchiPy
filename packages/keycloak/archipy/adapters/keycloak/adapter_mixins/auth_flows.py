@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
     to_dto,
     to_dto_list,
+    to_mutation_result,
     to_request_payload,
 )
 from archipy.models.dtos.keycloak.auth_flow_dtos import (
@@ -28,6 +29,9 @@ from archipy.models.dtos.keycloak.authenticator_dtos import (
     KeycloakAuthenticatorProviderDTO,
 )
 
+if TYPE_CHECKING:
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
+
 
 class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for authentication flow operations."""
@@ -36,13 +40,15 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
         self,
         payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
         skip_exists: bool = False,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create a new authentication flow."""
-        return self._call_keycloak(
-            "create_authentication_flow",
-            lambda: self.admin_adapter.create_authentication_flow(
-                payload=to_request_payload(to_request_payload(payload)),
-                skip_exists=skip_exists,
+        return to_mutation_result(
+            self._call_keycloak(
+                "create_authentication_flow",
+                lambda: self.admin_adapter.create_authentication_flow(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    skip_exists=skip_exists,
+                ),
             ),
         )
 
@@ -50,13 +56,15 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
         self,
         payload: KeycloakAuthenticationFlowCopyRequestDTO | dict[str, Any],
         flow_alias: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Copy an existing authentication flow."""
-        return self._call_keycloak(
-            "copy_authentication_flow",
-            lambda: self.admin_adapter.copy_authentication_flow(
-                payload=to_request_payload(to_request_payload(payload)),
-                flow_alias=flow_alias,
+        return to_mutation_result(
+            self._call_keycloak(
+                "copy_authentication_flow",
+                lambda: self.admin_adapter.copy_authentication_flow(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    flow_alias=flow_alias,
+                ),
             ),
         )
 
@@ -82,11 +90,13 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def delete_authentication_flow(self, flow_id: str) -> dict[str, Any]:
+    def delete_authentication_flow(self, flow_id: str) -> KeycloakMutationResultDTO:
         """Delete an authentication flow."""
-        return self._call_keycloak(
-            "delete_authentication_flow",
-            lambda: self.admin_adapter.delete_authentication_flow(flow_id=flow_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "delete_authentication_flow",
+                lambda: self.admin_adapter.delete_authentication_flow(flow_id=flow_id),
+            ),
         )
 
     def get_authentication_flow_executions(self, flow_alias: str) -> list[KeycloakAuthenticationExecutionInfoDTO]:
@@ -113,13 +123,15 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
         self,
         payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO | dict[str, Any],
         flow_alias: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create an execution in an authentication flow."""
-        return self._call_keycloak(
-            "create_authentication_flow_execution",
-            lambda: self.admin_adapter.create_authentication_flow_execution(
-                payload=to_request_payload(to_request_payload(payload)),
-                flow_alias=flow_alias,
+        return to_mutation_result(
+            self._call_keycloak(
+                "create_authentication_flow_execution",
+                lambda: self.admin_adapter.create_authentication_flow_execution(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    flow_alias=flow_alias,
+                ),
             ),
         )
 
@@ -127,13 +139,15 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
         self,
         payload: KeycloakAuthenticationExecutionInfoRequestDTO | dict[str, Any],
         flow_alias: str,
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update executions in an authentication flow."""
-        return self._call_keycloak(
-            "update_authentication_flow_executions",
-            lambda: self.admin_adapter.update_authentication_flow_executions(
-                payload=to_request_payload(to_request_payload(payload)),
-                flow_alias=flow_alias,
+        return to_mutation_result(
+            self._call_keycloak(
+                "update_authentication_flow_executions",
+                lambda: self.admin_adapter.update_authentication_flow_executions(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    flow_alias=flow_alias,
+                ),
             ),
         )
 
@@ -142,22 +156,26 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
         payload: KeycloakAuthenticationSubflowCreateRequestDTO | dict[str, Any],
         flow_alias: str,
         skip_exists: bool = False,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create a subflow in an authentication flow."""
-        return self._call_keycloak(
-            "create_authentication_flow_subflow",
-            lambda: self.admin_adapter.create_authentication_flow_subflow(
-                payload=to_request_payload(to_request_payload(payload)),
-                flow_alias=flow_alias,
-                skip_exists=skip_exists,
+        return to_mutation_result(
+            self._call_keycloak(
+                "create_authentication_flow_subflow",
+                lambda: self.admin_adapter.create_authentication_flow_subflow(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    flow_alias=flow_alias,
+                    skip_exists=skip_exists,
+                ),
             ),
         )
 
-    def delete_authentication_flow_execution(self, execution_id: str) -> dict[str, Any]:
+    def delete_authentication_flow_execution(self, execution_id: str) -> KeycloakMutationResultDTO:
         """Delete an authentication flow execution."""
-        return self._call_keycloak(
-            "delete_authentication_flow_execution",
-            lambda: self.admin_adapter.delete_authentication_flow_execution(execution_id=execution_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "delete_authentication_flow_execution",
+                lambda: self.admin_adapter.delete_authentication_flow_execution(execution_id=execution_id),
+            ),
         )
 
     def change_execution_priority(self, execution_id: str, diff: int) -> None:
@@ -171,13 +189,15 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
         self,
         flow_id: str,
         payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update an authentication flow."""
-        return self._call_keycloak(
-            "update_authentication_flow",
-            lambda: self.admin_adapter.update_authentication_flow(
-                flow_id=flow_id,
-                payload=to_request_payload(to_request_payload(payload)),
+        return to_mutation_result(
+            self._call_keycloak(
+                "update_authentication_flow",
+                lambda: self.admin_adapter.update_authentication_flow(
+                    flow_id=flow_id,
+                    payload=to_request_payload(to_request_payload(payload)),
+                ),
             ),
         )
 
@@ -217,34 +237,40 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
         self,
         payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
         config_id: str,
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update authenticator configuration."""
-        return self._call_keycloak(
-            "update_authenticator_config",
-            lambda: self.admin_adapter.update_authenticator_config(
-                payload=to_request_payload(to_request_payload(payload)),
-                config_id=config_id,
+        return to_mutation_result(
+            self._call_keycloak(
+                "update_authenticator_config",
+                lambda: self.admin_adapter.update_authenticator_config(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    config_id=config_id,
+                ),
             ),
         )
 
-    def delete_authenticator_config(self, config_id: str) -> dict[str, Any]:
+    def delete_authenticator_config(self, config_id: str) -> KeycloakMutationResultDTO:
         """Delete authenticator configuration."""
-        return self._call_keycloak(
-            "delete_authenticator_config",
-            lambda: self.admin_adapter.delete_authenticator_config(config_id=config_id),
+        return to_mutation_result(
+            self._call_keycloak(
+                "delete_authenticator_config",
+                lambda: self.admin_adapter.delete_authenticator_config(config_id=config_id),
+            ),
         )
 
     def create_execution_config(
         self,
         execution_id: str,
         payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create configuration for an authentication flow execution."""
-        return self._call_keycloak(
-            "create_execution_config",
-            lambda: self.admin_adapter.create_execution_config(
-                execution_id=execution_id,
-                payload=to_request_payload(to_request_payload(payload)),
+        return to_mutation_result(
+            self._call_keycloak(
+                "create_execution_config",
+                lambda: self.admin_adapter.create_execution_config(
+                    execution_id=execution_id,
+                    payload=to_request_payload(to_request_payload(payload)),
+                ),
             ),
         )
 
@@ -256,13 +282,15 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
         self,
         payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
         skip_exists: bool = False,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create a new authentication flow."""
-        return await self._async_call_keycloak(
-            "create_authentication_flow",
-            lambda: self.admin_adapter.a_create_authentication_flow(
-                payload=to_request_payload(to_request_payload(payload)),
-                skip_exists=skip_exists,
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "create_authentication_flow",
+                lambda: self.admin_adapter.a_create_authentication_flow(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    skip_exists=skip_exists,
+                ),
             ),
         )
 
@@ -270,13 +298,15 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
         self,
         payload: KeycloakAuthenticationFlowCopyRequestDTO | dict[str, Any],
         flow_alias: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Copy an existing authentication flow."""
-        return await self._async_call_keycloak(
-            "copy_authentication_flow",
-            lambda: self.admin_adapter.a_copy_authentication_flow(
-                payload=to_request_payload(to_request_payload(payload)),
-                flow_alias=flow_alias,
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "copy_authentication_flow",
+                lambda: self.admin_adapter.a_copy_authentication_flow(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    flow_alias=flow_alias,
+                ),
             ),
         )
 
@@ -302,11 +332,13 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def delete_authentication_flow(self, flow_id: str) -> dict[str, Any]:
+    async def delete_authentication_flow(self, flow_id: str) -> KeycloakMutationResultDTO:
         """Delete an authentication flow."""
-        return await self._async_call_keycloak(
-            "delete_authentication_flow",
-            lambda: self.admin_adapter.a_delete_authentication_flow(flow_id=flow_id),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "delete_authentication_flow",
+                lambda: self.admin_adapter.a_delete_authentication_flow(flow_id=flow_id),
+            ),
         )
 
     async def get_authentication_flow_executions(self, flow_alias: str) -> list[KeycloakAuthenticationExecutionInfoDTO]:
@@ -333,13 +365,15 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
         self,
         payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO | dict[str, Any],
         flow_alias: str,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create an execution in an authentication flow."""
-        return await self._async_call_keycloak(
-            "create_authentication_flow_execution",
-            lambda: self.admin_adapter.a_create_authentication_flow_execution(
-                payload=to_request_payload(to_request_payload(payload)),
-                flow_alias=flow_alias,
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "create_authentication_flow_execution",
+                lambda: self.admin_adapter.a_create_authentication_flow_execution(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    flow_alias=flow_alias,
+                ),
             ),
         )
 
@@ -347,13 +381,15 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
         self,
         payload: KeycloakAuthenticationExecutionInfoRequestDTO | dict[str, Any],
         flow_alias: str,
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update executions in an authentication flow."""
-        return await self._async_call_keycloak(
-            "update_authentication_flow_executions",
-            lambda: self.admin_adapter.a_update_authentication_flow_executions(
-                payload=to_request_payload(to_request_payload(payload)),
-                flow_alias=flow_alias,
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "update_authentication_flow_executions",
+                lambda: self.admin_adapter.a_update_authentication_flow_executions(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    flow_alias=flow_alias,
+                ),
             ),
         )
 
@@ -362,22 +398,26 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
         payload: KeycloakAuthenticationSubflowCreateRequestDTO | dict[str, Any],
         flow_alias: str,
         skip_exists: bool = False,
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create a subflow in an authentication flow."""
-        return await self._async_call_keycloak(
-            "create_authentication_flow_subflow",
-            lambda: self.admin_adapter.a_create_authentication_flow_subflow(
-                payload=to_request_payload(to_request_payload(payload)),
-                flow_alias=flow_alias,
-                skip_exists=skip_exists,
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "create_authentication_flow_subflow",
+                lambda: self.admin_adapter.a_create_authentication_flow_subflow(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    flow_alias=flow_alias,
+                    skip_exists=skip_exists,
+                ),
             ),
         )
 
-    async def delete_authentication_flow_execution(self, execution_id: str) -> dict[str, Any]:
+    async def delete_authentication_flow_execution(self, execution_id: str) -> KeycloakMutationResultDTO:
         """Delete an authentication flow execution."""
-        return await self._async_call_keycloak(
-            "delete_authentication_flow_execution",
-            lambda: self.admin_adapter.a_delete_authentication_flow_execution(execution_id=execution_id),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "delete_authentication_flow_execution",
+                lambda: self.admin_adapter.a_delete_authentication_flow_execution(execution_id=execution_id),
+            ),
         )
 
     async def change_execution_priority(self, execution_id: str, diff: int) -> None:
@@ -391,13 +431,15 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
         self,
         flow_id: str,
         payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update an authentication flow."""
-        return await self._async_call_keycloak(
-            "update_authentication_flow",
-            lambda: self.admin_adapter.a_update_authentication_flow(
-                flow_id=flow_id,
-                payload=to_request_payload(to_request_payload(payload)),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "update_authentication_flow",
+                lambda: self.admin_adapter.a_update_authentication_flow(
+                    flow_id=flow_id,
+                    payload=to_request_payload(to_request_payload(payload)),
+                ),
             ),
         )
 
@@ -440,33 +482,39 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
         self,
         payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
         config_id: str,
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update authenticator configuration."""
-        return await self._async_call_keycloak(
-            "update_authenticator_config",
-            lambda: self.admin_adapter.a_update_authenticator_config(
-                payload=to_request_payload(to_request_payload(payload)),
-                config_id=config_id,
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "update_authenticator_config",
+                lambda: self.admin_adapter.a_update_authenticator_config(
+                    payload=to_request_payload(to_request_payload(payload)),
+                    config_id=config_id,
+                ),
             ),
         )
 
-    async def delete_authenticator_config(self, config_id: str) -> dict[str, Any]:
+    async def delete_authenticator_config(self, config_id: str) -> KeycloakMutationResultDTO:
         """Delete authenticator configuration."""
-        return await self._async_call_keycloak(
-            "delete_authenticator_config",
-            lambda: self.admin_adapter.a_delete_authenticator_config(config_id=config_id),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "delete_authenticator_config",
+                lambda: self.admin_adapter.a_delete_authenticator_config(config_id=config_id),
+            ),
         )
 
     async def create_execution_config(
         self,
         execution_id: str,
         payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
-    ) -> bytes:
+    ) -> KeycloakMutationResultDTO:
         """Create configuration for an authentication flow execution."""
-        return await self._async_call_keycloak(
-            "create_execution_config",
-            lambda: self.admin_adapter.a_create_execution_config(
-                execution_id=execution_id,
-                payload=to_request_payload(to_request_payload(payload)),
+        return to_mutation_result(
+            await self._async_call_keycloak(
+                "create_execution_config",
+                lambda: self.admin_adapter.a_create_execution_config(
+                    execution_id=execution_id,
+                    payload=to_request_payload(to_request_payload(payload)),
+                ),
             ),
         )

@@ -17,6 +17,10 @@ from archipy.models.dtos.keycloak.client_scope_dtos import (
     KeycloakProtocolMapperRequestDTO,
 )
 from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupDTO, KeycloakGroupRequestDTO
+from archipy.models.dtos.keycloak.identity_provider_dtos import (
+    KeycloakIdentityProviderDTO,
+    KeycloakIdentityProviderRequestDTO,
+)
 from archipy.models.dtos.keycloak.organization_dtos import KeycloakOrganizationDTO, KeycloakOrganizationRequestDTO
 from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO, KeycloakRoleRequestDTO
 from archipy.models.dtos.keycloak.user_dtos import KeycloakUserDTO, KeycloakUserRequestDTO
@@ -148,7 +152,7 @@ class KeycloakRealmDTO(KeycloakResponseDTO):
     enabled_event_types: list[str] | None = None
     admin_events_enabled: bool | None = None
     admin_events_details_enabled: bool | None = None
-    identity_providers: list[dict[str, JsonValue]] | None = None
+    identity_providers: list[KeycloakIdentityProviderDTO] | None = None
     identity_provider_mappers: list[dict[str, JsonValue]] | None = None
     protocol_mappers: list[KeycloakProtocolMapperDTO] | None = None
     components: dict[str, JsonValue] | None = None
@@ -308,7 +312,7 @@ class KeycloakRealmRequestDTO(KeycloakRequestDTO):
     enabled_event_types: list[str] | None = None
     admin_events_enabled: bool | None = None
     admin_events_details_enabled: bool | None = None
-    identity_providers: list[dict[str, JsonValue]] | None = None
+    identity_providers: list[KeycloakIdentityProviderRequestDTO] | None = None
     identity_provider_mappers: list[dict[str, JsonValue]] | None = None
     protocol_mappers: list[KeycloakProtocolMapperRequestDTO] | None = None
     components: dict[str, JsonValue] | None = None

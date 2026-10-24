@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
     from keycloak.uma_permissions import UMAPermission
 
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
     from archipy.models.dtos.keycloak.uma_dtos import (
         KeycloakUmaPolicyDTO,
         KeycloakUmaPolicyRequestDTO,
@@ -51,7 +52,7 @@ class KeycloakUmaPort:
         self,
         resource_id: str,
         payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a UMA resource set.
 
         Args:
@@ -64,7 +65,7 @@ class KeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    def resource_set_delete(self, resource_id: str) -> dict[str, Any]:
+    def resource_set_delete(self, resource_id: str) -> KeycloakMutationResultDTO:
         """Delete a UMA resource set.
 
         Args:
@@ -96,7 +97,7 @@ class KeycloakUmaPort:
         matchingUri: bool = False,
         first: int = 0,
         maximum: int = -1,
-    ) -> list[dict[str, Any]]:
+    ) -> list[str]:
         """List UMA resource set IDs with optional filters.
 
         Args:
@@ -133,7 +134,11 @@ class KeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    def policy_update(self, policy_id: str, payload: KeycloakUmaPolicyRequestDTO | dict[str, Any]) -> bytes:
+    def policy_update(
+        self,
+        policy_id: str,
+        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+    ) -> KeycloakMutationResultDTO:
         """Update a UMA policy.
 
         Args:
@@ -146,7 +151,7 @@ class KeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    def policy_delete(self, policy_id: str) -> dict[str, Any]:
+    def policy_delete(self, policy_id: str) -> KeycloakMutationResultDTO:
         """Delete a UMA policy.
 
         Args:
@@ -242,7 +247,7 @@ class AsyncKeycloakUmaPort:
         self,
         resource_id: str,
         payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a UMA resource set.
 
         Args:
@@ -255,7 +260,7 @@ class AsyncKeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def resource_set_delete(self, resource_id: str) -> dict[str, Any]:
+    async def resource_set_delete(self, resource_id: str) -> KeycloakMutationResultDTO:
         """Delete a UMA resource set.
 
         Args:
@@ -287,7 +292,7 @@ class AsyncKeycloakUmaPort:
         matchingUri: bool = False,
         first: int = 0,
         maximum: int = -1,
-    ) -> list[dict[str, Any]]:
+    ) -> list[str]:
         """List UMA resource set IDs with optional filters.
 
         Args:
@@ -324,7 +329,11 @@ class AsyncKeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def policy_update(self, policy_id: str, payload: KeycloakUmaPolicyRequestDTO | dict[str, Any]) -> bytes:
+    async def policy_update(
+        self,
+        policy_id: str,
+        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+    ) -> KeycloakMutationResultDTO:
         """Update a UMA policy.
 
         Args:
@@ -337,7 +346,7 @@ class AsyncKeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def policy_delete(self, policy_id: str) -> dict[str, Any]:
+    async def policy_delete(self, policy_id: str) -> KeycloakMutationResultDTO:
         """Delete a UMA policy.
 
         Args:

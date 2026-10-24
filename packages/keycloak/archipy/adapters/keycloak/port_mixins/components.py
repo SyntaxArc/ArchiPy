@@ -6,6 +6,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
     from archipy.models.dtos.keycloak.component_dtos import KeycloakComponentDTO, KeycloakComponentRequestDTO
 
 
@@ -53,7 +54,7 @@ class KeycloakComponentsPort:
         self,
         component_id: str,
         payload: KeycloakComponentRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a component.
 
         Args:
@@ -66,7 +67,7 @@ class KeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def delete_component(self, component_id: str) -> dict[str, Any]:
+    def delete_component(self, component_id: str) -> KeycloakMutationResultDTO:
         """Delete a component.
 
         Args:
@@ -122,7 +123,7 @@ class AsyncKeycloakComponentsPort:
         self,
         component_id: str,
         payload: KeycloakComponentRequestDTO | dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> KeycloakMutationResultDTO:
         """Update a component.
 
         Args:
@@ -135,7 +136,7 @@ class AsyncKeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_component(self, component_id: str) -> dict[str, Any]:
+    async def delete_component(self, component_id: str) -> KeycloakMutationResultDTO:
         """Delete a component.
 
         Args:

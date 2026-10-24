@@ -4,7 +4,7 @@ from behave import given, then, when
 from features.test_helpers import get_current_scenario_context
 from pydantic import ValidationError
 
-from archipy.adapters.keycloak.adapter_mixins._shared import to_request_payload
+from archipy.adapters.keycloak.adapter_mixins._shared import to_mutation_result, to_request_payload
 
 from archipy.models.dtos.keycloak import authz_dtos, client_scope_dtos, component_dtos, group_dtos, role_dtos, user_dtos
 from archipy.models.dtos.keycloak import organization_dtos, token_dtos
@@ -124,3 +124,30 @@ def step_adapter_payload(context):
 def step_dict_deprecation_state(context, state):
     caught = get_current_scenario_context(context).get("warnings")
     assert bool(caught) == (state == "raised"), caught
+
+
+_MUTATION_BODIES = {
+    "an empty dict": {},
+    "empty bytes": b"",
+    "a skip-exists dict": {"msg": "Already exists"},
+    "JSON bytes with a field": b'{"futureField": 1}',
+    "non-JSON bytes": b"<html>created</html>",
+}
+
+
+@when("the Keycloak mutation body {body} is converted")
+def step_convert_mutation_body(context, body):
+    get_current_scenario_context(context).store("mutation_result", to_mutation_result(_MUTATION_BODIES[body]))
+
+
+@then("the mutation result message is {message}")
+def step_mutation_message(context, message):
+    result = get_current_scenario_context(context).get("mutation_result")
+    assert result.msg == (None if message == "none" else message), result
+
+
+@then("the mutation result extra fields are {extra}")
+def step_mutation_extra(context, extra):
+    result = get_current_scenario_context(context).get("mutation_result")
+    expected = {} if extra == "none" else {extra: 1}
+    assert (result.model_extra or {}) == expected, result.model_extra

@@ -15,6 +15,7 @@ from keycloak.exceptions import (
 
 from archipy.helpers._deprecation import warn_deprecated_name
 from archipy.models.dtos.keycloak.base import KeycloakBaseDTO, KeycloakResponseDTO
+from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
 from archipy.models.dtos.keycloak.token_dtos import KeycloakOidcResponseDTO, KeycloakUserInfoDTO
 from archipy.models.errors import (
     ClientAlreadyExistsError,
@@ -70,6 +71,24 @@ def to_claims_dict(value: KeycloakOidcResponseDTO | Mapping[str, Any] | None) ->
     if isinstance(value, KeycloakOidcResponseDTO):
         return value.to_dict()
     return dict(value)
+
+
+def to_mutation_result(raw: Mapping[str, Any] | bytes | None) -> KeycloakMutationResultDTO:
+    """Validate the body python-keycloak returns for a create, update, delete or assign call.
+
+    Args:
+        raw: A parsed JSON object, the raw response bytes, or ``None``. Empty and non-JSON bodies are empty results.
+
+    Returns:
+        The mutation result.
+    """
+    if isinstance(raw, bytes | bytearray):
+        try:
+            parsed = json.loads(raw) if raw else {}
+        except ValueError:
+            parsed = {}
+        raw = parsed if isinstance(parsed, dict) else {}
+    return KeycloakMutationResultDTO.model_validate(raw or {})
 
 
 def to_dto[M: KeycloakResponseDTO](model: type[M], raw: Mapping[str, Any]) -> M:

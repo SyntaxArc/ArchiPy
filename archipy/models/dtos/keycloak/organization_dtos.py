@@ -4,6 +4,10 @@ from pydantic import Field, JsonValue
 
 from archipy.models.dtos.keycloak.base import KeycloakRequestDTO, KeycloakResponseDTO
 from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupDTO, KeycloakGroupRequestDTO
+from archipy.models.dtos.keycloak.identity_provider_dtos import (
+    KeycloakIdentityProviderDTO,
+    KeycloakIdentityProviderRequestDTO,
+)
 from archipy.models.dtos.keycloak.user_dtos import (
     KeycloakCredentialDTO,
     KeycloakCredentialRequestDTO,
@@ -112,7 +116,7 @@ class KeycloakOrganizationDTO(KeycloakResponseDTO):
     attributes: dict[str, list[str]] | None = None
     domains: list[KeycloakOrganizationDomainDTO] | None = None
     members: list[KeycloakOrganizationMemberDTO] | None = None
-    identity_providers: list[dict[str, JsonValue]] | None = None
+    identity_providers: list[KeycloakIdentityProviderDTO] | None = None
     groups: list[KeycloakGroupDTO] | None = None
 
 
@@ -128,5 +132,5 @@ class KeycloakOrganizationRequestDTO(KeycloakRequestDTO):
     attributes: dict[str, list[str]] | None = None
     domains: list[KeycloakOrganizationDomainRequestDTO] | None = None
     members: list[KeycloakOrganizationMemberRequestDTO] | None = None
-    identity_providers: list[dict[str, JsonValue]] | None = None
+    identity_providers: list[KeycloakIdentityProviderRequestDTO] | None = None
     groups: list[KeycloakGroupRequestDTO] | None = None
