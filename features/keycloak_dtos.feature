@@ -28,6 +28,8 @@ Feature: Keycloak DTOs
       | KeycloakClientScopeRequestDTO   |
       | KeycloakComponentRequestDTO     |
       | KeycloakAuthzResourceRequestDTO |
+      | KeycloakUmaResourceRequestDTO   |
+      | KeycloakUmaPolicyRequestDTO     |
 
   Scenario Outline: Request DTOs serialize to the wire names Keycloak expects
     Given a Keycloak request DTO <dto> with <attribute> set to "<value>"

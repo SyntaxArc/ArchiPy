@@ -6,7 +6,7 @@ fields are kept in both directions because Keycloak accepts extra UMA attributes
 
 from pydantic import ConfigDict, Field, JsonValue
 
-from archipy.models.dtos.keycloak.base import KeycloakBaseDTO, KeycloakResponseDTO
+from archipy.models.dtos.keycloak.base import KeycloakRequestDTO, KeycloakResponseDTO
 
 
 class KeycloakUmaScopeDTO(KeycloakResponseDTO):
@@ -44,15 +44,17 @@ class KeycloakUmaResourceDTO(KeycloakResponseDTO):
     attributes: dict[str, list[str]] | None = None
 
 
-class KeycloakUmaResourceRequestDTO(KeycloakBaseDTO):
-    """UMA resource set payload for create and update."""
+class KeycloakUmaResourceRequestDTO(KeycloakRequestDTO):
+    """UMA resource set payload for create and update. Keycloak rejects unknown fields, so does this DTO."""
 
-    model_config = ConfigDict(alias_generator=None, extra="allow")
+    model_config = ConfigDict(alias_generator=None)
 
     name: str | None = None
     type: str | None = None
+    uri: str | None = None
     uris: list[str] | None = None
     scopes: list[JsonValue] | None = None
+    resource_scopes: list[JsonValue] | None = None
     icon_uri: str | None = None
     owner: JsonValue | None = None
     owner_managed_access: bool | None = Field(default=None, alias="ownerManagedAccess")
@@ -78,13 +80,13 @@ class KeycloakUmaPolicyDTO(KeycloakResponseDTO):
     condition: str | None = None
 
 
-class KeycloakUmaPolicyRequestDTO(KeycloakBaseDTO):
-    """UMA permission policy payload for create and update."""
-
-    model_config = ConfigDict(extra="allow")
+class KeycloakUmaPolicyRequestDTO(KeycloakRequestDTO):
+    """UMA permission policy payload for create and update. Keycloak rejects unknown fields, so does this DTO."""
 
     name: str | None = None
     description: str | None = None
+    type: str | None = None
+    owner: str | None = None
     scopes: list[str] | None = None
     roles: list[str] | None = None
     groups: list[str] | None = None

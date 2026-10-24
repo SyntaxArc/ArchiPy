@@ -8,7 +8,7 @@ from archipy.adapters.keycloak.adapter_mixins._shared import to_mutation_result,
 
 from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
 from archipy.models.dtos.keycloak import authz_dtos, common_dtos, client_scope_dtos, component_dtos, group_dtos, role_dtos, user_dtos
-from archipy.models.dtos.keycloak import organization_dtos, token_dtos
+from archipy.models.dtos.keycloak import organization_dtos, token_dtos, uma_dtos
 
 _MODULES = (
     common_dtos,
@@ -19,6 +19,7 @@ _MODULES = (
     organization_dtos,
     role_dtos,
     token_dtos,
+    uma_dtos,
     user_dtos,
 )
 

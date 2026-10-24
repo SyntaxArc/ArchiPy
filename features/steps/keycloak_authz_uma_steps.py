@@ -1,6 +1,9 @@
+import warnings
+
 from behave import then, when
 from behave.runner import Context
 from features.steps.keycloak_adapter_steps import _adapter_call, _adapter_parts
+from features.test_helpers import get_current_scenario_context
 from keycloak.uma_permissions import UMAPermission
 
 from archipy.models.dtos.keycloak.authz_dtos import (
@@ -271,3 +274,33 @@ async def step_uma_deleted(context: Context, name: str, adapter_type: str) -> No
     adapter, is_async, sc = _adapter_parts(context)
     ids = await _adapter_call(adapter, is_async, "resource_set_list_ids")
     assert sc.get(f"uma_resource_{name}").internal_id not in ids, ids
+
+
+# --- unknown request fields ---
+
+
+@when('I send a {kind} payload with the unknown field "{field}" to Keycloak using {adapter_type} adapter')
+async def step_send_unknown_field(context: Context, kind: str, field: str, adapter_type: str) -> None:
+    adapter, is_async, sc = _adapter_parts(context)
+    calls = {
+        "group": ("create_group", ({"name": "typo-group", field: "x"},)),
+        "user": ("create_user", ({"username": "typo-user", field: "x"},)),
+        "realm": ("update_realm", ("test-realm",)),
+    }
+    method, args = calls[kind]
+    kwargs = {field: "x"} if kind == "realm" else {}
+    sc.store("unknown_field_error", None)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        try:
+            await _adapter_call(adapter, is_async, method, *args, **kwargs)
+        except Exception as e:  # noqa: BLE001 - the scenario asserts on whichever error Keycloak's rejection maps to
+            sc.store("unknown_field_error", e)
+
+
+@then('Keycloak rejects the payload as invalid and names the field "{field}"')
+def step_keycloak_rejects_unknown_field(context: Context, field: str) -> None:
+    error = get_current_scenario_context(context).get("unknown_field_error")
+    assert error is not None, "Keycloak accepted a payload with an unknown field"
+    assert type(error).__name__ == "ValidationError", repr(error)
+    assert field in str(error.additional_data), error.additional_data

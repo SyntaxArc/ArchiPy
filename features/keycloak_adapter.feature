@@ -612,6 +612,20 @@ Feature: Keycloak Authentication Testing
       | sync         | test-realm       | Test Realm         | test-client       |
       | async        | async-test-realm | Async Test Realm   | async-test-client |
 
+  @realms
+  Scenario Outline: Keycloak rejects unknown fields in <kind> payloads
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "test-realm" with display name "Test Realm" using <adapter_type> adapter
+    When I send a <kind> payload with the unknown field "typoField" to Keycloak using <adapter_type> adapter
+    Then Keycloak rejects the payload as invalid and names the field "typoField"
+
+    Examples:
+      | adapter_type | kind  |
+      | sync         | group |
+      | sync         | user  |
+      | sync         | realm |
+      | async        | group |
+
   @components
   Scenario Outline: Component listing
     Given a configured <adapter_type> Keycloak adapter
