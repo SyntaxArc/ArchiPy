@@ -25,7 +25,7 @@ dependency-injection = ["dependency-injector>=4.49.1"]
 elasticsearch = ["archipy-elasticsearch==0.1.0"]  # Pinned to core version on publish flow!
 elasticsearch-async = ["archipy-elasticsearch==0.1.0", "elasticsearch[async]>=9.5.1"]  # Pinned to core version on publish flow!
 fakeredis = ["fakeredis>=2.40.0"]
-fastapi = ["fastapi[all]>=0.161.1"]
+fastapi = ["fastapi[all]>=0.162.0"]
 grpc = ["grpcio>=1.84.1", "grpcio-health-checking>=1.84.1", "protobuf>=7.36.2"]
 jwt = ["pyjwt>=2.15.1"]
 kafka = ["archipy-kafka==0.1.0"]  # Pinned to core version on publish flow!
