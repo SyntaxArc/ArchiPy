@@ -62,10 +62,11 @@ import logging
 
 from archipy.adapters.keycloak.adapters import KeycloakAdapter
 from archipy.configs.config_template import KeycloakConfig
+from archipy.models.dtos.keycloak.user_dtos import KeycloakCredentialRequestDTO, KeycloakUserRequestDTO
 from archipy.models.errors import (
     InternalError,
     InvalidCredentialsError,
-    NotFoundError,
+    ResourceNotFoundError,
     PermissionDeniedError,
     UnauthenticatedError,
 )
@@ -146,7 +147,7 @@ else:
 try:
     # Get user by ID
     user = keycloak.get_user_by_id("user-uuid")
-except NotFoundError as e:
+except ResourceNotFoundError as e:
     logger.error(f"User not found: {e}")
     raise
 except PermissionDeniedError as e:
@@ -158,7 +159,7 @@ else:
 try:
     # Get user by username
     user = keycloak.get_user_by_username("johndoe")
-except NotFoundError as e:
+except ResourceNotFoundError as e:
     logger.error(f"User not found: {e}")
     raise
 else:
@@ -167,7 +168,7 @@ else:
 try:
     # Get user by email
     user = keycloak.get_user_by_email("john@example.com")
-except NotFoundError as e:
+except ResourceNotFoundError as e:
     logger.error(f"User not found by email: {e}")
     raise
 else:
@@ -175,18 +176,16 @@ else:
 
 try:
     # Create a new user
-    user_data = {
-        "username": "newuser",
-        "email": "newuser@example.com",
-        "enabled": True,
-        "firstName": "New",
-        "lastName": "User",
-        "credentials": [{
-            "type": "password",
-            "value": "initial-password",
-            "temporary": True
-        }]
-    }
+    user_data = KeycloakUserRequestDTO(
+        username="newuser",
+        email="newuser@example.com",
+        enabled=True,
+        first_name="New",
+        last_name="User",
+        credentials=[
+            KeycloakCredentialRequestDTO(type="password", value="initial-password", temporary=True),
+        ],
+    )
     user_id = keycloak.create_user(user_data)
 except PermissionDeniedError as e:
     logger.error(f"Permission denied to create user: {e}")
@@ -199,9 +198,8 @@ else:
 
 try:
     # Update a user
-    update_data = {"firstName": "Updated", "email": "updated@example.com"}
-    keycloak.update_user(user_id, update_data)
-except (NotFoundError, PermissionDeniedError, InternalError) as e:
+    keycloak.update_user(user_id, KeycloakUserRequestDTO(first_name="Updated", email="updated@example.com"))
+except (ResourceNotFoundError, PermissionDeniedError, InternalError) as e:
     logger.error(f"Failed to update user: {e}")
     raise
 else:
@@ -210,7 +208,7 @@ else:
 try:
     # Reset password
     keycloak.reset_password(user_id, "new-password", temporary=True)
-except (NotFoundError, PermissionDeniedError, InternalError) as e:
+except (ResourceNotFoundError, PermissionDeniedError, InternalError) as e:
     logger.error(f"Failed to reset password: {e}")
     raise
 else:
@@ -228,7 +226,7 @@ else:
 try:
     # Clear all user sessions
     keycloak.clear_user_sessions(user_id)
-except (NotFoundError, InternalError) as e:
+except (ResourceNotFoundError, InternalError) as e:
     logger.error(f"Failed to clear sessions: {e}")
     raise
 else:
@@ -237,7 +235,7 @@ else:
 try:
     # Delete a user
     keycloak.delete_user(user_id)
-except (NotFoundError, PermissionDeniedError, InternalError) as e:
+except (ResourceNotFoundError, PermissionDeniedError, InternalError) as e:
     logger.error(f"Failed to delete user: {e}")
     raise
 else:
@@ -247,7 +245,7 @@ else:
 try:
     # Get user roles
     roles = keycloak.get_user_roles(user_id)
-except (NotFoundError, PermissionDeniedError, InternalError) as e:
+except (ResourceNotFoundError, PermissionDeniedError, InternalError) as e:
     logger.error(f"Failed to get user roles: {e}")
     raise
 else:
@@ -290,7 +288,7 @@ try:
 
     # Delete a realm role
     keycloak.delete_realm_role("new-role")
-except (NotFoundError, PermissionDeniedError, InternalError) as e:
+except (ResourceNotFoundError, PermissionDeniedError, InternalError) as e:
     logger.error(f"Keycloak role operation failed: {e}")
     raise
 
@@ -304,7 +302,7 @@ try:
 
     # Get service account ID
     service_account_id = keycloak.get_service_account_id()
-except (NotFoundError, InternalError) as e:
+except (ResourceNotFoundError, InternalError) as e:
     logger.error(f"Keycloak client operation failed: {e}")
     raise
 
@@ -343,10 +341,11 @@ import asyncio
 import logging
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter
+from archipy.models.dtos.keycloak.user_dtos import KeycloakUserRequestDTO
 from archipy.models.errors import (
     InternalError,
     InvalidCredentialsError,
-    NotFoundError,
+    ResourceNotFoundError,
     PermissionDeniedError,
     UnauthenticatedError,
 )
@@ -386,18 +385,14 @@ async def main() -> None:
         logger.info(f"Found {len(users)} users matching 'john'")
 
         # Create a new user
-        user_data = {
-            "username": "async_user",
-            "email": "async@example.com",
-            "enabled": True,
-        }
+        user_data = KeycloakUserRequestDTO(username="async_user", email="async@example.com", enabled=True)
         user_id = await keycloak.create_user(user_data)
         logger.info(f"Created user with ID: {user_id}")
 
         # Delete the user
         await keycloak.delete_user(user_id)
         logger.info(f"Deleted user: {user_id}")
-    except (NotFoundError, PermissionDeniedError, InternalError) as e:
+    except (ResourceNotFoundError, PermissionDeniedError, InternalError) as e:
         logger.error(f"User management operation failed: {e}")
         raise
 
@@ -541,7 +536,174 @@ logger.info("Group %s at %s", group.name, group.path)
 
 !!! warning "Deprecated: dicts"
     Passing a `dict` payload and reading results with `result["key"]` or `result.get("key")` still work but emit a
-    `DeprecationWarning`. Both are removed in 6.0.0.
+    `DeprecationWarning`. Both are removed in 6.0.0. See [Create Results and Ids](#create-results-and-ids).
+
+### Resources Overview
+
+Both adapters expose one method group per Keycloak resource area. Every method exists on `KeycloakAdapter` and, as a
+coroutine, on `AsyncKeycloakAdapter`.
+
+| Area                       | Example methods                                                                                            |
+|----------------------------|------------------------------------------------------------------------------------------------------------|
+| Realms                     | `create_realm`, `get_realm`, `get_realm_events`, `partial_export_realm`, `partial_import_realm`            |
+| Users                      | `create_user`, `get_users`, `get_user_credentials`, `get_user_sessions`, `impersonate_user`                |
+| Groups                     | `create_group`, `get_group_by_path`, `get_group_members`, `assign_group_realm_roles`                       |
+| Roles                      | `create_realm_role`, `create_client_role`, `add_realm_roles_to_composite`, `has_role`                      |
+| Roles by id                | `get_role_by_id`, `update_role_by_id`, `get_role_composites_by_id`                                         |
+| Role mappings              | `get_user_role_mappings`, `add_user_realm_role_mappings`, `get_group_role_mappings`                        |
+| Scope mappings             | `get_client_scope_mappings`, `add_client_realm_scope_mappings`, `get_client_scope_scope_mappings`          |
+| Clients                    | `create_client`, `regenerate_client_secret`, `get_client_example_access_token`, `get_client_user_sessions` |
+| Client scopes              | `create_client_scope`, `add_client_default_client_scope`, `get_default_optional_client_scopes`             |
+| Protocol mappers           | `add_mapper_to_client`, `get_mappers_from_client_scope`, `update_client_mapper`                            |
+| Organizations              | `create_organization`, `organization_user_add`, `organization_idp_add`, `get_organization_invitations`     |
+| Organization groups        | `create_organization_group`, `create_organization_subgroup`, `assign_organization_group_realm_roles`       |
+| Identity providers         | `create_identity_provider`, `create_identity_provider_mapper`, `export_identity_provider`                  |
+| Authentication flows       | `copy_authentication_flow`, `get_authentication_flow_executions`, `create_execution_config`                |
+| Required actions           | register, enable and reorder required actions of the realm                                                 |
+| Authorization services     | `create_client_authz_resource`, `create_client_authz_policy`, `get_client_authz_settings`                  |
+| UMA                        | `resource_set_create`, `policy_query`, `permission_ticket_create`, `permissions_check`                     |
+| Components                 | `create_component`, `get_components`, `update_component`                                                   |
+| Keys                       | `get_realm_keys`                                                                                           |
+| Attack detection           | `get_user_brute_force_status`, `clear_user_brute_force`, `clear_all_brute_force`                           |
+| Client initial access      | `create_client_initial_access`, `get_client_initial_access_tokens`, `delete_client_initial_access`         |
+| Client certificates        | `get_client_certificate`, `generate_client_certificate`, `download_client_keystore`                        |
+| Client registration policy | `get_client_registration_policy_providers`                                                                 |
+
+```python
+import logging
+
+from archipy.adapters.keycloak.adapters import KeycloakAdapter
+from archipy.models.dtos.keycloak.client_initial_access_dtos import KeycloakClientInitialAccessCreateRequestDTO
+
+logger = logging.getLogger(__name__)
+keycloak = KeycloakAdapter()
+
+keys = keycloak.get_realm_keys()
+user = keycloak.get_user_by_username("johndoe")
+status = keycloak.get_user_brute_force_status(user.id)
+initial_access = keycloak.create_client_initial_access(
+    KeycloakClientInitialAccessCreateRequestDTO(expiration=3600, count=5),
+)
+logger.info("Realm keys: %s; brute force status: %s; token: %s", keys, status, initial_access.token)
+```
+
+The same calls work asynchronously:
+
+```python
+from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter
+
+
+async def lock_status(username: str):
+    keycloak = AsyncKeycloakAdapter()
+    user = await keycloak.get_user_by_username(username)
+    return await keycloak.get_user_brute_force_status(user.id)
+```
+
+!!! note "Exact signatures"
+    Method names and signatures live in the port classes of
+    [`archipy.adapters.keycloak.ports`](../../api_reference/adapters/keycloak.md). Many of these calls go through the
+    admin connection because `python-keycloak` has no helper for them.
+
+### Token Exchange
+
+`token_exchange` takes a `KeycloakTokenExchangeRequestDTO` and returns a `KeycloakTokenDTO`. It covers the standard
+token exchange V2, the delegation preview (the issued token carries an `act` claim naming the actor), and the legacy
+fields of V1.
+
+```python
+from archipy.adapters.keycloak.adapters import KeycloakAdapter
+from archipy.models.dtos.keycloak.token_exchange_dtos import KeycloakTokenExchangeRequestDTO
+
+keycloak = KeycloakAdapter()
+
+exchanged = keycloak.token_exchange(
+    KeycloakTokenExchangeRequestDTO(subject_token=access_token, audience="downstream-service"),
+)
+```
+
+The older `exchange_token(subject_token, requested_subject=..., audience=..., scope=...)` stays available for simple
+impersonation.
+
+!!! warning "Server features"
+    Delegation is a Keycloak preview feature, and the legacy fields need the legacy exchange feature on the server.
+    Enable them in Keycloak before relying on them.
+
+### JWT Bearer Grant
+
+`jwt_bearer_grant` sends an assertion JWT to the token endpoint (RFC 7523). ID-JAG (identity assertion authorization
+grant) and chaining across domains are two separate primitives: use `token_exchange` to obtain the assertion at the
+first domain, then `jwt_bearer_grant` to redeem it at the second.
+
+```python
+assertion = keycloak.token_exchange(first_domain_request).access_token
+token = second_domain_keycloak.jwt_bearer_grant(assertion)
+```
+
+### RPT Requests
+
+`request_rpt` asks the token endpoint for a requesting party token (RPT) that carries the permissions the policies
+grant to the given access token.
+
+```python
+rpt = keycloak.request_rpt(access_token, audience="my-resource-server")
+```
+
+### AuthZEN
+
+!!! warning "Experimental"
+    AuthZEN needs the server `authzen` feature enabled. Keycloak requires the resource `type` in practice, so always
+    set it.
+
+`get_authzen_configuration` reads the discovery document. `authzen_evaluation` answers one access question and
+`authzen_evaluations` answers several in one call.
+
+```python
+config = keycloak.get_authzen_configuration()
+decision = keycloak.authzen_evaluation(evaluation_request)
+decisions = keycloak.authzen_evaluations(evaluations_request)
+```
+
+The request and response DTOs live in `archipy.models.dtos.keycloak.authzen_dtos`.
+
+### Create Results and Ids
+
+Keycloak answers creates with an empty body. Calls that return `KeycloakCreateResultDTO` look the new resource up, so
+`result.id` is set when the adapter can find it. With `skip_exists=True` an existing resource gives
+`msg == "Already exists"` and `id is None`. Updates, deletes and assignments return `KeycloakUpdateResultDTO`,
+`KeycloakDeleteResultDTO` and `KeycloakAssignResultDTO`. All four live in `archipy.models.dtos.keycloak.common_dtos`.
+
+```python
+result = keycloak.create_identity_provider(identity_provider_request)
+if result.id is None:
+    logger.info("Provider skipped: %s", result.msg)
+```
+
+!!! warning "Deprecated: dicts"
+    Dict payloads and dict-style reads (`result["id"]`, `result.get("id")`) still work but emit a `DeprecationWarning`.
+    They are removed in 6.0.0. Use the request DTOs and the attributes of the response DTOs.
+
+### Error Mapping
+
+The adapter maps Keycloak failures to ArchiPy errors, chained with `from`. A `404` raises `ResourceNotFoundError`,
+bad credentials raise `InvalidCredentialsError`, and a forbidden call raises `InsufficientPermissionsError`.
+
+```python
+from archipy.models.errors import ResourceNotFoundError
+
+try:
+    keycloak.get_organization("missing-id")
+except ResourceNotFoundError:
+    logger.warning("Organization does not exist")
+```
+
+### Not Supported
+
+The adapter does not wrap these Keycloak endpoints:
+
+- Workflows: the server answers with YAML.
+- Endpoints with `text/plain`, multipart or form-encoded bodies: credential label, localization of a single text, the
+  client description converter, certificate upload, and the organization `invite-user` and `invite-existing-user`
+  calls.
 
 ### Caching
 

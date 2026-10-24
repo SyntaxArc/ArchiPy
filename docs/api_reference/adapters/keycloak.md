@@ -8,6 +8,12 @@ description: API reference for the Keycloak adapter ports and adapters.
 The `keycloak` adapter provides integration with Keycloak for identity and access management, including token
 validation, user management, and role-based access control.
 
+!!! note "Private layout"
+    Only `ports`, `adapters` and `auth` are public API. The per-resource mixins in `_resources/`, the protocol mixins
+    in `_protocols/`, and the modules `_base`, `_connection` and `_type_aliases` are private and may change without
+    notice. Every method they define is reachable through `KeycloakPort`, `AsyncKeycloakPort`, `KeycloakAdapter` and
+    `AsyncKeycloakAdapter`.
+
 ## Ports
 
 Abstract port interface defining the Keycloak adapter contract.

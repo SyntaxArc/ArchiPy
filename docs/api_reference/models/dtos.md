@@ -109,3 +109,153 @@ DTOs keep unknown fields; request DTOs reject them.
 options:
 show_root_toc_entry: false
 heading_level: 3
+
+::: archipy.models.dtos.keycloak.base
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.auth_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.token_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.user_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.group_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.role_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.client_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.client_scope_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.protocol_mapper_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.organization_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.identity_provider_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.realm_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.authz_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.authz_policy_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.auth_flow_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.authenticator_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.uma_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.event_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.key_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.certificate_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.client_policy_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.client_initial_access_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.attack_detection_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.partial_import_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.session_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.user_profile_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.management_permission_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.client_evaluation_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.component_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
+
+::: archipy.models.dtos.keycloak.common_dtos
+options:
+show_root_toc_entry: false
+heading_level: 4
