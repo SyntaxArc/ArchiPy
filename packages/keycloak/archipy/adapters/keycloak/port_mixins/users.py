@@ -6,36 +6,34 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from archipy.adapters.keycloak.port_mixins._shared import (
-        KeycloakUserType,
-    )
+    from archipy.models.dtos.keycloak.user_dtos import KeycloakUserDTO, KeycloakUserRequestDTO
 
 
 class KeycloakUsersPort:
     """Sync Keycloak port interface for user operations."""
 
     @abstractmethod
-    def get_user_by_id(self, user_id: str) -> KeycloakUserType | None:
+    def get_user_by_id(self, user_id: str) -> KeycloakUserDTO | None:
         """Get user details by user ID."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_user_by_username(self, username: str) -> KeycloakUserType | None:
+    def get_user_by_username(self, username: str) -> KeycloakUserDTO | None:
         """Get user details by username."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_user_by_email(self, email: str) -> KeycloakUserType | None:
+    def get_user_by_email(self, email: str) -> KeycloakUserDTO | None:
         """Get user details by email."""
         raise NotImplementedError
 
     @abstractmethod
-    def create_user(self, user_data: dict[str, Any]) -> str | None:
+    def create_user(self, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> str | None:
         """Create a new user in Keycloak."""
         raise NotImplementedError
 
     @abstractmethod
-    def update_user(self, user_id: str, user_data: dict[str, Any]) -> None:
+    def update_user(self, user_id: str, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> None:
         """Update user details."""
         raise NotImplementedError
 
@@ -45,7 +43,7 @@ class KeycloakUsersPort:
         raise NotImplementedError
 
     @abstractmethod
-    def search_users(self, query: str, max_results: int = 100) -> list[KeycloakUserType]:
+    def search_users(self, query: str, max_results: int = 100) -> list[KeycloakUserDTO]:
         """Search for users by username, email, or name."""
         raise NotImplementedError
 
@@ -64,27 +62,27 @@ class AsyncKeycloakUsersPort:
     """Async Keycloak port interface for user operations."""
 
     @abstractmethod
-    async def get_user_by_id(self, user_id: str) -> KeycloakUserType | None:
+    async def get_user_by_id(self, user_id: str) -> KeycloakUserDTO | None:
         """Get user details by user ID."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_user_by_username(self, username: str) -> KeycloakUserType | None:
+    async def get_user_by_username(self, username: str) -> KeycloakUserDTO | None:
         """Get user details by username."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_user_by_email(self, email: str) -> KeycloakUserType | None:
+    async def get_user_by_email(self, email: str) -> KeycloakUserDTO | None:
         """Get user details by email."""
         raise NotImplementedError
 
     @abstractmethod
-    async def create_user(self, user_data: dict[str, Any]) -> str | None:
+    async def create_user(self, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> str | None:
         """Create a new user in Keycloak."""
         raise NotImplementedError
 
     @abstractmethod
-    async def update_user(self, user_id: str, user_data: dict[str, Any]) -> None:
+    async def update_user(self, user_id: str, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> None:
         """Update user details."""
         raise NotImplementedError
 
@@ -94,7 +92,7 @@ class AsyncKeycloakUsersPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def search_users(self, query: str, max_results: int = 100) -> list[KeycloakUserType]:
+    async def search_users(self, query: str, max_results: int = 100) -> list[KeycloakUserDTO]:
         """Search for users by username, email, or name."""
         raise NotImplementedError
 

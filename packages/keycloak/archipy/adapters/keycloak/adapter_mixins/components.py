@@ -2,21 +2,22 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any
 
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    to_dto,
+    to_dto_list,
+    to_request_payload,
 )
-
-if TYPE_CHECKING:
-    from archipy.adapters.keycloak.port_mixins._shared import KeycloakComponentType
+from archipy.models.dtos.keycloak.component_dtos import KeycloakComponentDTO, KeycloakComponentRequestDTO
 
 
 class KeycloakComponentsMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for component operations."""
 
-    def create_component(self, payload: dict[str, Any]) -> str:
+    def create_component(self, payload: KeycloakComponentRequestDTO | dict[str, Any]) -> str:
         """Create a Keycloak component.
 
         Args:
@@ -27,10 +28,10 @@ class KeycloakComponentsMixin(SyncKeycloakMixinBase):
         """
         return self._call_keycloak(
             "create_component",
-            lambda: self.admin_adapter.create_component(payload=payload),
+            lambda: self.admin_adapter.create_component(payload=to_request_payload(payload)),
         )
 
-    def get_component(self, component_id: str) -> KeycloakComponentType:
+    def get_component(self, component_id: str) -> KeycloakComponentDTO:
         """Get a component by ID.
 
         Args:
@@ -39,15 +40,15 @@ class KeycloakComponentsMixin(SyncKeycloakMixinBase):
         Returns:
             Component representation.
         """
-        return cast(
-            "KeycloakComponentType",
+        return to_dto(
+            KeycloakComponentDTO,
             self._call_keycloak(
                 "get_component",
                 lambda: self.admin_adapter.get_component(component_id=component_id),
             ),
         )
 
-    def get_components(self, query: dict[str, Any] | None = None) -> list[KeycloakComponentType]:
+    def get_components(self, query: dict[str, Any] | None = None) -> list[KeycloakComponentDTO]:
         """Get components, optionally filtered by query.
 
         Args:
@@ -56,12 +57,19 @@ class KeycloakComponentsMixin(SyncKeycloakMixinBase):
         Returns:
             Matching component representations.
         """
-        return self._call_keycloak(
-            "get_components",
-            lambda: self.admin_adapter.get_components(query=query),
+        return to_dto_list(
+            KeycloakComponentDTO,
+            self._call_keycloak(
+                "get_components",
+                lambda: self.admin_adapter.get_components(query=query),
+            ),
         )
 
-    def update_component(self, component_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def update_component(
+        self,
+        component_id: str,
+        payload: KeycloakComponentRequestDTO | dict[str, Any],
+    ) -> dict[str, Any]:
         """Update a component.
 
         Args:
@@ -73,7 +81,7 @@ class KeycloakComponentsMixin(SyncKeycloakMixinBase):
         """
         return self._call_keycloak(
             "update_component",
-            lambda: self.admin_adapter.update_component(component_id=component_id, payload=payload),
+            lambda: self.admin_adapter.update_component(component_id=component_id, payload=to_request_payload(payload)),
         )
 
     def delete_component(self, component_id: str) -> dict[str, Any]:
@@ -94,7 +102,7 @@ class KeycloakComponentsMixin(SyncKeycloakMixinBase):
 class AsyncKeycloakComponentsMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for component operations."""
 
-    async def create_component(self, payload: dict[str, Any]) -> str:
+    async def create_component(self, payload: KeycloakComponentRequestDTO | dict[str, Any]) -> str:
         """Create a Keycloak component.
 
         Args:
@@ -105,10 +113,10 @@ class AsyncKeycloakComponentsMixin(AsyncKeycloakMixinBase):
         """
         return await self._async_call_keycloak(
             "create_component",
-            lambda: self.admin_adapter.a_create_component(payload=payload),
+            lambda: self.admin_adapter.a_create_component(payload=to_request_payload(payload)),
         )
 
-    async def get_component(self, component_id: str) -> KeycloakComponentType:
+    async def get_component(self, component_id: str) -> KeycloakComponentDTO:
         """Get a component by ID.
 
         Args:
@@ -117,15 +125,15 @@ class AsyncKeycloakComponentsMixin(AsyncKeycloakMixinBase):
         Returns:
             Component representation.
         """
-        return cast(
-            "KeycloakComponentType",
+        return to_dto(
+            KeycloakComponentDTO,
             await self._async_call_keycloak(
                 "get_component",
                 lambda: self.admin_adapter.a_get_component(component_id=component_id),
             ),
         )
 
-    async def get_components(self, query: dict[str, Any] | None = None) -> list[KeycloakComponentType]:
+    async def get_components(self, query: dict[str, Any] | None = None) -> list[KeycloakComponentDTO]:
         """Get components, optionally filtered by query.
 
         Args:
@@ -134,12 +142,19 @@ class AsyncKeycloakComponentsMixin(AsyncKeycloakMixinBase):
         Returns:
             Matching component representations.
         """
-        return await self._async_call_keycloak(
-            "get_components",
-            lambda: self.admin_adapter.a_get_components(query=query),
+        return to_dto_list(
+            KeycloakComponentDTO,
+            await self._async_call_keycloak(
+                "get_components",
+                lambda: self.admin_adapter.a_get_components(query=query),
+            ),
         )
 
-    async def update_component(self, component_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def update_component(
+        self,
+        component_id: str,
+        payload: KeycloakComponentRequestDTO | dict[str, Any],
+    ) -> dict[str, Any]:
         """Update a component.
 
         Args:
@@ -151,7 +166,10 @@ class AsyncKeycloakComponentsMixin(AsyncKeycloakMixinBase):
         """
         return await self._async_call_keycloak(
             "update_component",
-            lambda: self.admin_adapter.a_update_component(component_id=component_id, payload=payload),
+            lambda: self.admin_adapter.a_update_component(
+                component_id=component_id,
+                payload=to_request_payload(payload),
+            ),
         )
 
     async def delete_component(self, component_id: str) -> dict[str, Any]:

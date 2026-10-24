@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from archipy.models.dtos.keycloak.client_dtos import KeycloakClientDTO
 
 
 class KeycloakClientsPort:
@@ -31,7 +34,7 @@ class KeycloakClientsPort:
         realm: str | None = None,
         skip_exists: bool = True,
         **kwargs: Any,
-    ) -> dict[str, Any] | None:
+    ) -> KeycloakClientDTO | None:
         """Create a new client in the specified realm."""
         raise NotImplementedError
 
@@ -61,6 +64,6 @@ class AsyncKeycloakClientsPort:
         realm: str | None = None,
         skip_exists: bool = True,
         **kwargs: Any,
-    ) -> dict[str, Any] | None:
+    ) -> KeycloakClientDTO | None:
         """Create a new client in the specified realm."""
         raise NotImplementedError

@@ -13,7 +13,8 @@ from keycloak.exceptions import (
     KeycloakError,
 )
 
-from archipy.models.dtos.keycloak.base import KeycloakBaseDTO
+from archipy.helpers._deprecation import warn_deprecated_name
+from archipy.models.dtos.keycloak.base import KeycloakBaseDTO, KeycloakResponseDTO
 from archipy.models.errors import (
     ClientAlreadyExistsError,
     InsufficientPermissionsError,
@@ -30,7 +31,7 @@ from archipy.models.errors import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable, Callable, Iterable, Mapping
 
     from keycloak import KeycloakAdmin, KeycloakOpenID, KeycloakUMA
 
@@ -42,6 +43,38 @@ HTTP_BAD_REQUEST = 400
 HTTP_NOT_FOUND = 404
 
 T = TypeVar("T")
+
+
+def to_request_payload(value: KeycloakBaseDTO | dict[str, Any]) -> dict[str, Any]:
+    """Return the camelCase payload python-keycloak expects for a request body.
+
+    Plain dicts are still accepted but deprecated; they are passed through unchanged.
+
+    Args:
+        value: A Keycloak DTO or a raw payload dict.
+
+    Returns:
+        The payload dict.
+    """
+    if isinstance(value, KeycloakBaseDTO):
+        return value.to_payload()
+    warn_deprecated_name("Passing a dict payload", "a Keycloak request DTO", stacklevel=4)
+    return value
+
+
+def to_dto[M: KeycloakResponseDTO](model: type[M], raw: Mapping[str, Any]) -> M:
+    """Validate one python-keycloak representation into a response DTO."""
+    return model.model_validate(raw)
+
+
+def to_dto_or_none[M: KeycloakResponseDTO](model: type[M], raw: Mapping[str, Any] | None) -> M | None:
+    """Validate an optional python-keycloak representation into a response DTO."""
+    return None if raw is None else model.model_validate(raw)
+
+
+def to_dto_list[M: KeycloakResponseDTO](model: type[M], raw: Iterable[Mapping[str, Any]] | None) -> list[M]:
+    """Validate a list of python-keycloak representations into response DTOs."""
+    return [model.model_validate(item) for item in raw or []]
 
 
 def to_wire_roles(roles: str | KeycloakBaseDTO | list[Any]) -> str | list[Any]:

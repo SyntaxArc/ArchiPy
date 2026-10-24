@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from async_lru import alru_cache
 from keycloak.exceptions import (
@@ -14,16 +14,15 @@ from keycloak.exceptions import (
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    to_dto_list,
+    to_dto_or_none,
+    to_request_payload,
 )
 from archipy.helpers.decorators import ttl_cache
+from archipy.models.dtos.keycloak.user_dtos import KeycloakUserDTO, KeycloakUserRequestDTO
 from archipy.models.errors import (
     InternalError,
 )
-
-if TYPE_CHECKING:
-    from archipy.adapters.keycloak.ports import (
-        KeycloakUserType,
-    )
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +33,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for user operations."""
 
     @ttl_cache(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
-    def get_user_by_id(self, user_id: str) -> KeycloakUserType | None:
+    def get_user_by_id(self, user_id: str) -> KeycloakUserDTO | None:
         """Get user details by user ID.
 
         Args:
@@ -47,7 +46,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
             ValueError: If getting user fails
         """
         try:
-            return self.admin_adapter.get_user(user_id)
+            return to_dto_or_none(KeycloakUserDTO, self.admin_adapter.get_user(user_id))
         except KeycloakGetError as e:
             if e.response_code == HTTP_NOT_FOUND:
                 return None
@@ -56,7 +55,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "get_user_by_id")
 
     @ttl_cache(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
-    def get_user_by_username(self, username: str) -> KeycloakUserType | None:
+    def get_user_by_username(self, username: str) -> KeycloakUserDTO | None:
         """Get user details by username.
 
         Args:
@@ -70,12 +69,12 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
         """
         try:
             users = self.admin_adapter.get_users({"username": username})
-            return users[0] if users else None
+            return to_dto_or_none(KeycloakUserDTO, users[0] if users else None)
         except KeycloakError as e:
             raise InternalError() from e
 
     @ttl_cache(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
-    def get_user_by_email(self, email: str) -> KeycloakUserType | None:
+    def get_user_by_email(self, email: str) -> KeycloakUserDTO | None:
         """Get user details by email.
 
         Args:
@@ -89,11 +88,11 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
         """
         try:
             users = self.admin_adapter.get_users({"email": email})
-            return users[0] if users else None
+            return to_dto_or_none(KeycloakUserDTO, users[0] if users else None)
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_user_by_email")
 
-    def create_user(self, user_data: dict[str, Any]) -> str | None:
+    def create_user(self, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> str | None:
         """Create a new user in Keycloak.
 
         Args:
@@ -107,17 +106,17 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
         """
         # This is a write operation, no caching needed
         try:
-            user_id = self.admin_adapter.create_user(user_data)
+            user_id = self.admin_adapter.create_user(to_request_payload(user_data))
 
             # Clear related caches
             self.clear_all_caches()
 
         except KeycloakError as e:
-            self._handle_user_exception(e, "create_user", user_data)
+            self._handle_user_exception(e, "create_user", to_request_payload(user_data))
         else:
             return user_id
 
-    def update_user(self, user_id: str, user_data: dict[str, Any]) -> None:
+    def update_user(self, user_id: str, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> None:
         """Update user details.
 
         Args:
@@ -129,7 +128,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
         """
         # This is a write operation, no caching needed
         try:
-            self.admin_adapter.update_user(user_id, user_data)
+            self.admin_adapter.update_user(user_id, to_request_payload(user_data))
 
             # Clear user-related caches
             self.clear_all_caches()
@@ -155,7 +154,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "reset_password")
 
     @ttl_cache(ttl_seconds=30, maxsize=50)  # Cache for 30 seconds with limited entries
-    def search_users(self, query: str, max_results: int = 100) -> list[KeycloakUserType]:
+    def search_users(self, query: str, max_results: int = 100) -> list[KeycloakUserDTO]:
         """Search for users by username, email, or name.
 
         Args:
@@ -199,7 +198,7 @@ class KeycloakUsersMixin(SyncKeycloakMixinBase):
                 user_ids = {user["id"] for user in users}
                 users.extend([user for user in last_name_users if user["id"] not in user_ids])
 
-            return users[:max_results]
+            return to_dto_list(KeycloakUserDTO, users[:max_results])
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "search_users")
 
@@ -241,7 +240,7 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for user operations."""
 
     @alru_cache(ttl=300, maxsize=100)  # Cache for 5 minutes
-    async def get_user_by_id(self, user_id: str) -> KeycloakUserType | None:
+    async def get_user_by_id(self, user_id: str) -> KeycloakUserDTO | None:
         """Get user details by user ID.
 
         Args:
@@ -254,7 +253,7 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
             ValueError: If getting user fails
         """
         try:
-            return await self.admin_adapter.a_get_user(user_id)
+            return to_dto_or_none(KeycloakUserDTO, await self.admin_adapter.a_get_user(user_id))
         except KeycloakGetError as e:
             if e.response_code == HTTP_NOT_FOUND:
                 return None
@@ -263,7 +262,7 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "get_user_by_id")
 
     @alru_cache(ttl=300, maxsize=100)  # Cache for 5 minutes
-    async def get_user_by_username(self, username: str) -> KeycloakUserType | None:
+    async def get_user_by_username(self, username: str) -> KeycloakUserDTO | None:
         """Get user details by username.
 
         Args:
@@ -277,12 +276,12 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
         """
         try:
             users = await self.admin_adapter.a_get_users({"username": username})
-            return users[0] if users else None
+            return to_dto_or_none(KeycloakUserDTO, users[0] if users else None)
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_user_by_username")
 
     @alru_cache(ttl=300, maxsize=100)  # Cache for 5 minutes
-    async def get_user_by_email(self, email: str) -> KeycloakUserType | None:
+    async def get_user_by_email(self, email: str) -> KeycloakUserDTO | None:
         """Get user details by email.
 
         Args:
@@ -296,11 +295,11 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
         """
         try:
             users = await self.admin_adapter.a_get_users({"email": email})
-            return users[0] if users else None
+            return to_dto_or_none(KeycloakUserDTO, users[0] if users else None)
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_user_by_email")
 
-    async def create_user(self, user_data: dict[str, Any]) -> str | None:
+    async def create_user(self, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> str | None:
         """Create a new user in Keycloak.
 
         Args:
@@ -314,16 +313,16 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
         """
         # This is a write operation, no caching needed
         try:
-            user_id = await self.admin_adapter.a_create_user(user_data)
+            user_id = await self.admin_adapter.a_create_user(to_request_payload(user_data))
 
             # Clear related caches
             self.clear_all_caches()
         except KeycloakError as e:
-            self._handle_user_exception(e, "create_user", user_data)
+            self._handle_user_exception(e, "create_user", to_request_payload(user_data))
         else:
             return user_id
 
-    async def update_user(self, user_id: str, user_data: dict[str, Any]) -> None:
+    async def update_user(self, user_id: str, user_data: KeycloakUserRequestDTO | dict[str, Any]) -> None:
         """Update user details.
 
         Args:
@@ -335,7 +334,7 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
         """
         # This is a write operation, no caching needed
         try:
-            await self.admin_adapter.a_update_user(user_id, user_data)
+            await self.admin_adapter.a_update_user(user_id, to_request_payload(user_data))
 
             # Clear user-related caches
             self.clear_all_caches()
@@ -361,7 +360,7 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "reset_password")
 
     @alru_cache(ttl=30, maxsize=50)  # Cache for 30 seconds with limited entries
-    async def search_users(self, query: str, max_results: int = 100) -> list[KeycloakUserType]:
+    async def search_users(self, query: str, max_results: int = 100) -> list[KeycloakUserDTO]:
         """Search for users by username, email, or name.
 
         Args:
@@ -405,7 +404,7 @@ class AsyncKeycloakUsersMixin(AsyncKeycloakMixinBase):
                 user_ids = {user["id"] for user in users}
                 users.extend([user for user in last_name_users if user["id"] not in user_ids])
 
-            return users[:max_results]
+            return to_dto_list(KeycloakUserDTO, users[:max_results])
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "search_users")
 

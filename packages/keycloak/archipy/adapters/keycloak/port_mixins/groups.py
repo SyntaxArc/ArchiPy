@@ -5,8 +5,12 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
+from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
+
 if TYPE_CHECKING:
+    from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupDTO, KeycloakGroupRequestDTO
     from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
+    from archipy.models.dtos.keycloak.user_dtos import KeycloakUserDTO
 
 
 class KeycloakGroupsPort:
@@ -15,12 +19,17 @@ class KeycloakGroupsPort:
     @abstractmethod
     # Group Operations
     @abstractmethod
-    def create_group(self, payload: dict[str, Any], parent: str | None = None, skip_exists: bool = False) -> str | None:
+    def create_group(
+        self,
+        payload: KeycloakGroupRequestDTO | dict[str, Any],
+        parent: str | None = None,
+        skip_exists: bool = False,
+    ) -> str | None:
         """Create a new group."""
         raise NotImplementedError
 
     @abstractmethod
-    def update_group(self, group_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def update_group(self, group_id: str, payload: KeycloakGroupRequestDTO | dict[str, Any]) -> dict[str, Any]:
         """Update a group."""
         raise NotImplementedError
 
@@ -35,12 +44,12 @@ class KeycloakGroupsPort:
         group_id: str,
         full_hierarchy: bool = False,
         query: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    ) -> KeycloakGroupDTO:
         """Get group representation by ID."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_group_by_path(self, path: str) -> dict[str, Any]:
+    def get_group_by_path(self, path: str) -> KeycloakGroupDTO:
         """Get group representation by path."""
         raise NotImplementedError
 
@@ -50,17 +59,17 @@ class KeycloakGroupsPort:
         group_id: str,
         query: dict[str, Any] | None = None,
         full_hierarchy: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakGroupDTO]:
         """Get child groups of a group."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_groups(self, query: dict[str, Any] | None = None, full_hierarchy: bool = False) -> list[dict[str, Any]]:
+    def get_groups(self, query: dict[str, Any] | None = None, full_hierarchy: bool = False) -> list[KeycloakGroupDTO]:
         """Get all groups, optionally filtered by query."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_subgroups(self, group: dict[str, Any], path: str) -> dict[str, Any] | None:
+    def get_subgroups(self, group: KeycloakGroupDTO | dict[str, Any], path: str) -> KeycloakGroupDTO | None:
         """Get subgroups for a group at the given path."""
         raise NotImplementedError
 
@@ -85,17 +94,17 @@ class KeycloakGroupsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_group_members(self, group_id: str, query: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    def get_group_members(self, group_id: str, query: dict[str, Any] | None = None) -> list[KeycloakUserDTO]:
         """Get members of a group."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_group_client_roles(self, group_id: str, client_id: str) -> list[dict[str, Any]]:
+    def get_group_client_roles(self, group_id: str, client_id: str) -> list[KeycloakRoleDTO]:
         """Get client roles assigned to a group."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_group_realm_roles(self, group_id: str, brief_representation: bool = True) -> list[dict[str, Any]]:
+    def get_group_realm_roles(self, group_id: str, brief_representation: bool = True) -> list[KeycloakRoleDTO]:
         """Get realm roles assigned to a group."""
         raise NotImplementedError
 
@@ -143,12 +152,12 @@ class KeycloakGroupsPort:
         client_id: str,
         group_id: str,
         brief_representation: bool = True,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakRoleDTO]:
         """Get composite client roles of a group."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_client_role_groups(self, client_id: str, role_name: str, query: Any) -> list[dict[str, Any]]:
+    def get_client_role_groups(self, client_id: str, role_name: str, query: Any) -> list[KeycloakGroupDTO]:
         """Get groups that have a specific client role."""
         raise NotImplementedError
 
@@ -158,7 +167,7 @@ class KeycloakGroupsPort:
         role_name: str,
         query: dict[str, Any] | None = None,
         brief_representation: bool = True,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakGroupDTO]:
         """Get groups that have a specific realm role."""
         raise NotImplementedError
 
@@ -171,7 +180,7 @@ class AsyncKeycloakGroupsPort:
     @abstractmethod
     async def create_group(
         self,
-        payload: dict[str, Any],
+        payload: KeycloakGroupRequestDTO | dict[str, Any],
         parent: str | None = None,
         skip_exists: bool = False,
     ) -> str | None:
@@ -179,7 +188,7 @@ class AsyncKeycloakGroupsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def update_group(self, group_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def update_group(self, group_id: str, payload: KeycloakGroupRequestDTO | dict[str, Any]) -> dict[str, Any]:
         """Update a group."""
         raise NotImplementedError
 
@@ -194,12 +203,12 @@ class AsyncKeycloakGroupsPort:
         group_id: str,
         full_hierarchy: bool = False,
         query: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    ) -> KeycloakGroupDTO:
         """Get group representation by ID."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_group_by_path(self, path: str) -> dict[str, Any]:
+    async def get_group_by_path(self, path: str) -> KeycloakGroupDTO:
         """Get group representation by path."""
         raise NotImplementedError
 
@@ -209,7 +218,7 @@ class AsyncKeycloakGroupsPort:
         group_id: str,
         query: dict[str, Any] | None = None,
         full_hierarchy: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakGroupDTO]:
         """Get child groups of a group."""
         raise NotImplementedError
 
@@ -218,12 +227,12 @@ class AsyncKeycloakGroupsPort:
         self,
         query: dict[str, Any] | None = None,
         full_hierarchy: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakGroupDTO]:
         """Get all groups, optionally filtered by query."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_subgroups(self, group: dict[str, Any], path: str) -> dict[str, Any] | None:
+    async def get_subgroups(self, group: KeycloakGroupDTO | dict[str, Any], path: str) -> KeycloakGroupDTO | None:
         """Get subgroups for a group at the given path."""
         raise NotImplementedError
 
@@ -248,17 +257,17 @@ class AsyncKeycloakGroupsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_group_members(self, group_id: str, query: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    async def get_group_members(self, group_id: str, query: dict[str, Any] | None = None) -> list[KeycloakUserDTO]:
         """Get members of a group."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_group_client_roles(self, group_id: str, client_id: str) -> list[dict[str, Any]]:
+    async def get_group_client_roles(self, group_id: str, client_id: str) -> list[KeycloakRoleDTO]:
         """Get client roles assigned to a group."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_group_realm_roles(self, group_id: str, brief_representation: bool = True) -> list[dict[str, Any]]:
+    async def get_group_realm_roles(self, group_id: str, brief_representation: bool = True) -> list[KeycloakRoleDTO]:
         """Get realm roles assigned to a group."""
         raise NotImplementedError
 
@@ -306,12 +315,12 @@ class AsyncKeycloakGroupsPort:
         client_id: str,
         group_id: str,
         brief_representation: bool = True,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakRoleDTO]:
         """Get composite client roles of a group."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_client_role_groups(self, client_id: str, role_name: str, query: Any) -> list[dict[str, Any]]:
+    async def get_client_role_groups(self, client_id: str, role_name: str, query: Any) -> list[KeycloakGroupDTO]:
         """Get groups that have a specific client role."""
         raise NotImplementedError
 
@@ -321,6 +330,6 @@ class AsyncKeycloakGroupsPort:
         role_name: str,
         query: dict[str, Any] | None = None,
         brief_representation: bool = True,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakGroupDTO]:
         """Get groups that have a specific realm role."""
         raise NotImplementedError

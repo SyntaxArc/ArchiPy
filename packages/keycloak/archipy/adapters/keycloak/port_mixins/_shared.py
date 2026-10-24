@@ -2,81 +2,27 @@
 
 from __future__ import annotations
 
-from typing import Any, TypedDict
+from typing import Any
 
+from archipy.models.dtos.keycloak.client_scope_dtos import KeycloakClientScopeDTO, KeycloakProtocolMapperDTO
+from archipy.models.dtos.keycloak.component_dtos import KeycloakComponentDTO
+from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupDTO
+from archipy.models.dtos.keycloak.organization_dtos import KeycloakOrganizationDTO
 from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
 
 # Define type aliases for better type hinting
 KeycloakResponseType = dict[str, Any]
-KeycloakUserType = dict[str, Any]
 KeycloakTokenType = dict[str, Any]
 
+KeycloakUserType = dict[str, Any]
 
+# Deprecated aliases of the pydantic DTOs that replaced the TypedDicts; removed in 6.0.0.
 KeycloakRoleType = KeycloakRoleDTO
-"""Deprecated alias of :class:`KeycloakRoleDTO`; removed in 6.0.0."""
-
-
-class KeycloakGroupType(TypedDict, total=False):
-    """Keycloak ``GroupRepresentation`` as returned by the admin API."""
-
-    id: str
-    name: str
-    path: str
-    parentId: str
-    subGroupCount: int
-    subGroups: list[KeycloakGroupType]
-    attributes: dict[str, list[str]]
-    realmRoles: list[str]
-    clientRoles: dict[str, list[str]]
-    access: dict[str, bool]
-
-
-class KeycloakOrganizationType(TypedDict, total=False):
-    """Keycloak ``OrganizationRepresentation`` as returned by the admin API."""
-
-    id: str
-    name: str
-    alias: str
-    enabled: bool
-    description: str
-    redirectUrl: str
-    attributes: dict[str, list[str]]
-    domains: list[dict[str, Any]]
-
-
-class KeycloakClientScopeType(TypedDict, total=False):
-    """Keycloak ``ClientScopeRepresentation`` as returned by the admin API."""
-
-    id: str
-    name: str
-    description: str
-    protocol: str
-    attributes: dict[str, str]
-    protocolMappers: list[KeycloakProtocolMapperType]
-
-
-class KeycloakProtocolMapperType(TypedDict, total=False):
-    """Keycloak ``ProtocolMapperRepresentation`` as returned by the admin API."""
-
-    id: str
-    name: str
-    protocol: str
-    protocolMapper: str
-    consentRequired: bool
-    config: dict[str, str]
-
-
-class KeycloakComponentType(TypedDict, total=False):
-    """Keycloak ``ComponentRepresentation`` as returned by the admin API."""
-
-    id: str
-    name: str
-    providerId: str
-    providerType: str
-    parentId: str
-    subType: str
-    config: dict[str, list[str]]
-
+KeycloakGroupType = KeycloakGroupDTO
+KeycloakOrganizationType = KeycloakOrganizationDTO
+KeycloakClientScopeType = KeycloakClientScopeDTO
+KeycloakProtocolMapperType = KeycloakProtocolMapperDTO
+KeycloakComponentType = KeycloakComponentDTO
 
 # Define a type for the public key return type
 # Using Any for JWK.JWK object, since we don't want to depend on jwcrypto types

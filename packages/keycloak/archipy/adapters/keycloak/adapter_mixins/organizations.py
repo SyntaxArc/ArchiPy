@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any
 
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    to_dto,
+    to_dto_list,
 )
 from archipy.helpers.utils.string_utils import StringUtils
-
-if TYPE_CHECKING:
-    from archipy.adapters.keycloak.port_mixins._shared import KeycloakOrganizationType
+from archipy.models.dtos.keycloak.organization_dtos import KeycloakOrganizationDTO, KeycloakOrganizationMemberDTO
 
 
 def _organization_payload(name: str, alias: str, kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -32,7 +32,7 @@ def _organization_update_payload(kwargs: dict[str, Any]) -> dict[str, Any]:
 class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for organization operations."""
 
-    def get_organizations(self, query: dict[str, Any] | None = None) -> list[KeycloakOrganizationType]:
+    def get_organizations(self, query: dict[str, Any] | None = None) -> list[KeycloakOrganizationDTO]:
         """Fetch all organizations, optionally filtered by query parameters.
 
         Args:
@@ -41,12 +41,15 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
         Returns:
             List of organization representations.
         """
-        return self._call_keycloak(
-            "get_organizations",
-            lambda: self.admin_adapter.get_organizations(query=query),
+        return to_dto_list(
+            KeycloakOrganizationDTO,
+            self._call_keycloak(
+                "get_organizations",
+                lambda: self.admin_adapter.get_organizations(query=query),
+            ),
         )
 
-    def get_organization(self, organization_id: str) -> KeycloakOrganizationType:
+    def get_organization(self, organization_id: str) -> KeycloakOrganizationDTO:
         """Get representation of the organization by ID.
 
         Args:
@@ -55,8 +58,8 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
         Returns:
             Organization representation.
         """
-        return cast(
-            "KeycloakOrganizationType",
+        return to_dto(
+            KeycloakOrganizationDTO,
             self._call_keycloak(
                 "get_organization",
                 lambda: self.admin_adapter.get_organization(organization_id),
@@ -124,7 +127,7 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.get_organization_idps(organization_id=organization_id),
         )
 
-    def get_user_organizations(self, user_id: str) -> list[KeycloakOrganizationType]:
+    def get_user_organizations(self, user_id: str) -> list[KeycloakOrganizationDTO]:
         """Get organizations by user id.
 
         Args:
@@ -133,16 +136,19 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
         Returns:
             Organizations the user belongs to.
         """
-        return self._call_keycloak(
-            "get_user_organizations",
-            lambda: self.admin_adapter.get_user_organizations(user_id=user_id),
+        return to_dto_list(
+            KeycloakOrganizationDTO,
+            self._call_keycloak(
+                "get_user_organizations",
+                lambda: self.admin_adapter.get_user_organizations(user_id=user_id),
+            ),
         )
 
     def get_organization_members(
         self,
         organization_id: str,
         query: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakOrganizationMemberDTO]:
         """Get members by organization id, optionally filtered by query parameters.
 
         Args:
@@ -152,9 +158,12 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
         Returns:
             Member representations.
         """
-        return self._call_keycloak(
-            "get_organization_members",
-            lambda: self.admin_adapter.get_organization_members(organization_id=organization_id, query=query),
+        return to_dto_list(
+            KeycloakOrganizationMemberDTO,
+            self._call_keycloak(
+                "get_organization_members",
+                lambda: self.admin_adapter.get_organization_members(organization_id=organization_id, query=query),
+            ),
         )
 
     def get_organization_members_count(self, organization_id: str) -> int:
@@ -205,7 +214,7 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
 class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for organization operations."""
 
-    async def get_organizations(self, query: dict[str, Any] | None = None) -> list[KeycloakOrganizationType]:
+    async def get_organizations(self, query: dict[str, Any] | None = None) -> list[KeycloakOrganizationDTO]:
         """Fetch all organizations, optionally filtered by query parameters.
 
         Args:
@@ -214,12 +223,15 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
         Returns:
             List of organization representations.
         """
-        return await self._async_call_keycloak(
-            "get_organizations",
-            lambda: self.admin_adapter.a_get_organizations(query=query),
+        return to_dto_list(
+            KeycloakOrganizationDTO,
+            await self._async_call_keycloak(
+                "get_organizations",
+                lambda: self.admin_adapter.a_get_organizations(query=query),
+            ),
         )
 
-    async def get_organization(self, organization_id: str) -> KeycloakOrganizationType:
+    async def get_organization(self, organization_id: str) -> KeycloakOrganizationDTO:
         """Get representation of the organization by ID.
 
         Args:
@@ -228,8 +240,8 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
         Returns:
             Organization representation.
         """
-        return cast(
-            "KeycloakOrganizationType",
+        return to_dto(
+            KeycloakOrganizationDTO,
             await self._async_call_keycloak(
                 "get_organization",
                 lambda: self.admin_adapter.a_get_organization(organization_id=organization_id),
@@ -297,7 +309,7 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_get_organization_idps(organization_id=organization_id),
         )
 
-    async def get_user_organizations(self, user_id: str) -> list[KeycloakOrganizationType]:
+    async def get_user_organizations(self, user_id: str) -> list[KeycloakOrganizationDTO]:
         """Get organizations by user id.
 
         Args:
@@ -306,16 +318,19 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
         Returns:
             Organizations the user belongs to.
         """
-        return await self._async_call_keycloak(
-            "get_user_organizations",
-            lambda: self.admin_adapter.a_get_user_organizations(user_id=user_id),
+        return to_dto_list(
+            KeycloakOrganizationDTO,
+            await self._async_call_keycloak(
+                "get_user_organizations",
+                lambda: self.admin_adapter.a_get_user_organizations(user_id=user_id),
+            ),
         )
 
     async def get_organization_members(
         self,
         organization_id: str,
         query: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakOrganizationMemberDTO]:
         """Get members by organization id, optionally filtered by query parameters.
 
         Args:
@@ -325,9 +340,12 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
         Returns:
             Member representations.
         """
-        return await self._async_call_keycloak(
-            "get_organization_members",
-            lambda: self.admin_adapter.a_get_organization_members(organization_id=organization_id, query=query),
+        return to_dto_list(
+            KeycloakOrganizationMemberDTO,
+            await self._async_call_keycloak(
+                "get_organization_members",
+                lambda: self.admin_adapter.a_get_organization_members(organization_id=organization_id, query=query),
+            ),
         )
 
     async def get_organization_members_count(self, organization_id: str) -> int:

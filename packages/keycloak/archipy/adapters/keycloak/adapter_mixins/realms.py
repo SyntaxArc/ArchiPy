@@ -12,8 +12,10 @@ from keycloak.exceptions import (
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    to_dto_or_none,
 )
 from archipy.helpers.utils.string_utils import StringUtils
+from archipy.models.dtos.keycloak.realm_dtos import KeycloakRealmDTO
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ logger = logging.getLogger(__name__)
 class KeycloakRealmsMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for realm operations."""
 
-    def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs: Any) -> dict[str, Any] | None:
+    def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs: Any) -> KeycloakRealmDTO | None:
         """Create a Keycloak realm with minimum required fields and optional additional config.
 
         Args:
@@ -57,14 +59,17 @@ class KeycloakRealmsMixin(SyncKeycloakMixinBase):
             if skip_exists:
                 error_message = self._extract_error_message(e).lower()
                 if "already exists" in error_message and "realm" in error_message:
-                    return {"realm": realm_name, "status": "already_exists", "config": payload}
+                    return to_dto_or_none(
+                        KeycloakRealmDTO,
+                        {"realm": realm_name, "status": "already_exists", "config": payload},
+                    )
 
             # Use the mixin to handle realm-specific errors
             self._handle_realm_exception(e, "create_realm", realm_name)
         else:
-            return {"realm": realm_name, "status": "created", "config": payload}
+            return to_dto_or_none(KeycloakRealmDTO, {"realm": realm_name, "status": "created", "config": payload})
 
-    def get_realm(self, realm_name: str) -> dict[str, Any] | None:
+    def get_realm(self, realm_name: str) -> KeycloakRealmDTO | None:
         """Get realm details by realm name.
 
         Args:
@@ -74,11 +79,11 @@ class KeycloakRealmsMixin(SyncKeycloakMixinBase):
             Realm details
         """
         try:
-            return self.admin_adapter.get_realm(realm_name)
+            return to_dto_or_none(KeycloakRealmDTO, self.admin_adapter.get_realm(realm_name))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_realm")
 
-    def update_realm(self, realm_name: str, **kwargs: Any) -> dict[str, Any] | None:
+    def update_realm(self, realm_name: str, **kwargs: Any) -> KeycloakRealmDTO | None:
         """Update a realm. Kwargs are RealmRepresentation.
 
         Args:
@@ -89,7 +94,7 @@ class KeycloakRealmsMixin(SyncKeycloakMixinBase):
             Response from Keycloak, or None on error (handled via exception).
         """
         try:
-            return self.admin_adapter.update_realm(realm_name, dict(kwargs))
+            return to_dto_or_none(KeycloakRealmDTO, self.admin_adapter.update_realm(realm_name, dict(kwargs)))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "update_realm")
 
@@ -97,7 +102,7 @@ class KeycloakRealmsMixin(SyncKeycloakMixinBase):
 class AsyncKeycloakRealmsMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for realm operations."""
 
-    async def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs: Any) -> dict[str, Any] | None:
+    async def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs: Any) -> KeycloakRealmDTO | None:
         """Create a Keycloak realm with minimum required fields and optional additional config.
 
         Args:
@@ -136,14 +141,17 @@ class AsyncKeycloakRealmsMixin(AsyncKeycloakMixinBase):
             if skip_exists:
                 error_message = self._extract_error_message(e).lower()
                 if "already exists" in error_message and "realm" in error_message:
-                    return {"realm": realm_name, "status": "already_exists", "config": payload}
+                    return to_dto_or_none(
+                        KeycloakRealmDTO,
+                        {"realm": realm_name, "status": "already_exists", "config": payload},
+                    )
 
             # Use the mixin to handle realm-specific errors
             self._handle_realm_exception(e, "create_realm", realm_name)
         else:
-            return {"realm": realm_name, "status": "created", "config": payload}
+            return to_dto_or_none(KeycloakRealmDTO, {"realm": realm_name, "status": "created", "config": payload})
 
-    async def get_realm(self, realm_name: str) -> dict[str, Any] | None:
+    async def get_realm(self, realm_name: str) -> KeycloakRealmDTO | None:
         """Get realm details by realm name.
 
         Args:
@@ -156,11 +164,11 @@ class AsyncKeycloakRealmsMixin(AsyncKeycloakMixinBase):
             InternalError: If getting realm fails
         """
         try:
-            return await self.admin_adapter.a_get_realm(realm_name)
+            return to_dto_or_none(KeycloakRealmDTO, await self.admin_adapter.a_get_realm(realm_name))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_realm")
 
-    async def update_realm(self, realm_name: str, **kwargs: Any) -> dict[str, Any] | None:
+    async def update_realm(self, realm_name: str, **kwargs: Any) -> KeycloakRealmDTO | None:
         """Update a realm. Kwargs are RealmRepresentation top-level attributes (e.g. displayName, organizationsEnabled).
 
         Args:
@@ -171,6 +179,6 @@ class AsyncKeycloakRealmsMixin(AsyncKeycloakMixinBase):
             Response from Keycloak, or None on error (handled via exception).
         """
         try:
-            return await self.admin_adapter.a_update_realm(realm_name, dict(kwargs))
+            return to_dto_or_none(KeycloakRealmDTO, await self.admin_adapter.a_update_realm(realm_name, dict(kwargs)))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "update_realm")

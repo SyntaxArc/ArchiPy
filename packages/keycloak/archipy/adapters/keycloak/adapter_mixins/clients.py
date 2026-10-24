@@ -13,9 +13,11 @@ from keycloak.exceptions import (
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    to_dto_or_none,
 )
 from archipy.helpers.decorators import ttl_cache
 from archipy.helpers.utils.string_utils import StringUtils
+from archipy.models.dtos.keycloak.client_dtos import KeycloakClientDTO
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +84,7 @@ class KeycloakClientsMixin(SyncKeycloakMixinBase):
         realm: str | None = None,
         skip_exists: bool = True,
         **kwargs: Any,
-    ) -> dict[str, Any] | None:
+    ) -> KeycloakClientDTO | None:
         """Create a Keycloak client with minimum required fields and optional additional config.
 
         Args:
@@ -135,22 +137,28 @@ class KeycloakClientsMixin(SyncKeycloakMixinBase):
                 if skip_exists:
                     error_message = self._extract_error_message(e).lower()
                     if "already exists" in error_message and "client" in error_message:
-                        return {
-                            "client_id": client_id,
-                            "status": "already_exists",
-                            "realm": self.admin_adapter.connection.realm_name,
-                        }
+                        return to_dto_or_none(
+                            KeycloakClientDTO,
+                            {
+                                "client_id": client_id,
+                                "status": "already_exists",
+                                "realm": self.admin_adapter.connection.realm_name,
+                            },
+                        )
 
                 # Use the mixin to handle client-specific errors
                 client_data = {"clientId": client_id, "name": kwargs.get("name", client_id)}
                 self._handle_client_exception(e, "create_client", client_data)
 
-            return {
-                "client_id": client_id,
-                "internal_client_id": internal_client_id,
-                "realm": self.admin_adapter.connection.realm_name,
-                "status": "created",
-            }
+            return to_dto_or_none(
+                KeycloakClientDTO,
+                {
+                    "client_id": client_id,
+                    "internal_client_id": internal_client_id,
+                    "realm": self.admin_adapter.connection.realm_name,
+                    "status": "created",
+                },
+            )
 
         finally:
             # Always restore the original realm
@@ -223,7 +231,7 @@ class AsyncKeycloakClientsMixin(AsyncKeycloakMixinBase):
         realm: str | None = None,
         skip_exists: bool = True,
         **kwargs: Any,
-    ) -> dict[str, Any] | None:
+    ) -> KeycloakClientDTO | None:
         """Create a Keycloak client with minimum required fields and optional additional config.
 
         Args:
@@ -279,22 +287,28 @@ class AsyncKeycloakClientsMixin(AsyncKeycloakMixinBase):
                 if skip_exists:
                     error_message = self._extract_error_message(e).lower()
                     if "already exists" in error_message and "client" in error_message:
-                        return {
-                            "client_id": client_id,
-                            "status": "already_exists",
-                            "realm": self.admin_adapter.connection.realm_name,
-                        }
+                        return to_dto_or_none(
+                            KeycloakClientDTO,
+                            {
+                                "client_id": client_id,
+                                "status": "already_exists",
+                                "realm": self.admin_adapter.connection.realm_name,
+                            },
+                        )
 
                 # Use the mixin to handle client-specific errors
                 client_data = {"clientId": client_id, "name": kwargs.get("name", client_id)}
                 self._handle_client_exception(e, "create_client", client_data)
 
-            return {
-                "client_id": client_id,
-                "internal_client_id": internal_client_id,
-                "realm": self.admin_adapter.connection.realm_name,
-                "status": "created",
-            }
+            return to_dto_or_none(
+                KeycloakClientDTO,
+                {
+                    "client_id": client_id,
+                    "internal_client_id": internal_client_id,
+                    "realm": self.admin_adapter.connection.realm_name,
+                    "status": "created",
+                },
+            )
 
         finally:
             # Always restore the original realm

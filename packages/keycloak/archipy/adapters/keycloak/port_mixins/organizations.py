@@ -6,21 +6,19 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from archipy.adapters.keycloak.port_mixins._shared import (
-        KeycloakOrganizationType,
-    )
+    from archipy.models.dtos.keycloak.organization_dtos import KeycloakOrganizationDTO, KeycloakOrganizationMemberDTO
 
 
 class KeycloakOrganizationsPort:
     """Sync Keycloak port interface for organization operations."""
 
     @abstractmethod
-    def get_organizations(self, query: dict[str, Any] | None = None) -> list[KeycloakOrganizationType]:
+    def get_organizations(self, query: dict[str, Any] | None = None) -> list[KeycloakOrganizationDTO]:
         """Fetch all organizations. Returns list of OrganizationRepresentation, filtered by query."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_organization(self, organization_id: str) -> KeycloakOrganizationType:
+    def get_organization(self, organization_id: str) -> KeycloakOrganizationDTO:
         """Get representation of the organization by ID."""
         raise NotImplementedError
 
@@ -45,7 +43,7 @@ class KeycloakOrganizationsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_user_organizations(self, user_id: str) -> list[KeycloakOrganizationType]:
+    def get_user_organizations(self, user_id: str) -> list[KeycloakOrganizationDTO]:
         """Get organizations by user id. Returns list of organizations the user is member of."""
         raise NotImplementedError
 
@@ -54,7 +52,7 @@ class KeycloakOrganizationsPort:
         self,
         organization_id: str,
         query: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakOrganizationMemberDTO]:
         """Get members by organization id, optionally filtered by query parameters."""
         raise NotImplementedError
 
@@ -78,12 +76,12 @@ class AsyncKeycloakOrganizationsPort:
     """Async Keycloak port interface for organization operations."""
 
     @abstractmethod
-    async def get_organizations(self, query: dict[str, Any] | None = None) -> list[KeycloakOrganizationType]:
+    async def get_organizations(self, query: dict[str, Any] | None = None) -> list[KeycloakOrganizationDTO]:
         """Fetch all organizations. Returns list of OrganizationRepresentation, filtered by query."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_organization(self, organization_id: str) -> KeycloakOrganizationType:
+    async def get_organization(self, organization_id: str) -> KeycloakOrganizationDTO:
         """Get representation of the organization by ID."""
         raise NotImplementedError
 
@@ -108,7 +106,7 @@ class AsyncKeycloakOrganizationsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_user_organizations(self, user_id: str) -> list[KeycloakOrganizationType]:
+    async def get_user_organizations(self, user_id: str) -> list[KeycloakOrganizationDTO]:
         """Get organizations by user id. Returns list of organizations the user is member of."""
         raise NotImplementedError
 
@@ -117,7 +115,7 @@ class AsyncKeycloakOrganizationsPort:
         self,
         organization_id: str,
         query: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakOrganizationMemberDTO]:
         """Get members by organization id, optionally filtered by query parameters."""
         raise NotImplementedError
 

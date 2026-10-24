@@ -6,14 +6,14 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from archipy.adapters.keycloak.port_mixins._shared import KeycloakComponentType
+    from archipy.models.dtos.keycloak.component_dtos import KeycloakComponentDTO, KeycloakComponentRequestDTO
 
 
 class KeycloakComponentsPort:
     """Sync Keycloak port interface for component operations."""
 
     @abstractmethod
-    def create_component(self, payload: dict[str, Any]) -> str:
+    def create_component(self, payload: KeycloakComponentRequestDTO | dict[str, Any]) -> str:
         """Create a Keycloak component.
 
         Args:
@@ -25,7 +25,7 @@ class KeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_component(self, component_id: str) -> KeycloakComponentType:
+    def get_component(self, component_id: str) -> KeycloakComponentDTO:
         """Get a component by ID.
 
         Args:
@@ -37,7 +37,7 @@ class KeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_components(self, query: dict[str, Any] | None = None) -> list[KeycloakComponentType]:
+    def get_components(self, query: dict[str, Any] | None = None) -> list[KeycloakComponentDTO]:
         """Get components, optionally filtered by query.
 
         Args:
@@ -49,7 +49,11 @@ class KeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def update_component(self, component_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def update_component(
+        self,
+        component_id: str,
+        payload: KeycloakComponentRequestDTO | dict[str, Any],
+    ) -> dict[str, Any]:
         """Update a component.
 
         Args:
@@ -78,7 +82,7 @@ class AsyncKeycloakComponentsPort:
     """Async Keycloak port interface for component operations."""
 
     @abstractmethod
-    async def create_component(self, payload: dict[str, Any]) -> str:
+    async def create_component(self, payload: KeycloakComponentRequestDTO | dict[str, Any]) -> str:
         """Create a Keycloak component.
 
         Args:
@@ -90,7 +94,7 @@ class AsyncKeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_component(self, component_id: str) -> KeycloakComponentType:
+    async def get_component(self, component_id: str) -> KeycloakComponentDTO:
         """Get a component by ID.
 
         Args:
@@ -102,7 +106,7 @@ class AsyncKeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_components(self, query: dict[str, Any] | None = None) -> list[KeycloakComponentType]:
+    async def get_components(self, query: dict[str, Any] | None = None) -> list[KeycloakComponentDTO]:
         """Get components, optionally filtered by query.
 
         Args:
@@ -114,7 +118,11 @@ class AsyncKeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def update_component(self, component_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def update_component(
+        self,
+        component_id: str,
+        payload: KeycloakComponentRequestDTO | dict[str, Any],
+    ) -> dict[str, Any]:
         """Update a component.
 
         Args:

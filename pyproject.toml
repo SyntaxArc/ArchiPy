@@ -308,6 +308,9 @@ runtime-evaluated-base-classes = [
     "pydantic_settings.BaseSettings",
     "sqlalchemy.orm.DeclarativeBase",
     "archipy.models.dtos.base_dtos.BaseDTO",
+    "archipy.models.dtos.keycloak.base.KeycloakBaseDTO",
+    "archipy.models.dtos.keycloak.base.KeycloakRequestDTO",
+    "archipy.models.dtos.keycloak.base.KeycloakResponseDTO",
 ]
 runtime-evaluated-decorators = [
     "pydantic.validator",

@@ -1949,9 +1949,7 @@ async def step_update_organization_name(context: Context, name: str, adapter_typ
             current = await adapter.get_organization(organization_id=org_id)
         else:
             current = adapter.get_organization(organization_id=org_id)
-        update_kwargs: dict[str, str] = (
-            {"name": name, "alias": current.get("alias", "")} if isinstance(current, dict) else {"name": name}
-        )
+        update_kwargs: dict[str, str] = {"name": name, "alias": current.alias or ""}
     except Exception:
         update_kwargs = {"name": name}
 
