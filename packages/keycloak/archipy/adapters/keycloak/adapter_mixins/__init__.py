@@ -12,6 +12,10 @@ from archipy.adapters.keycloak.adapter_mixins.clients import AsyncKeycloakClient
 from archipy.adapters.keycloak.adapter_mixins.components import AsyncKeycloakComponentsMixin, KeycloakComponentsMixin
 from archipy.adapters.keycloak.adapter_mixins.connection import AsyncKeycloakConnectionMixin, KeycloakConnectionMixin
 from archipy.adapters.keycloak.adapter_mixins.groups import AsyncKeycloakGroupsMixin, KeycloakGroupsMixin
+from archipy.adapters.keycloak.adapter_mixins.organization_groups import (
+    AsyncKeycloakOrganizationGroupsMixin,
+    KeycloakOrganizationGroupsMixin,
+)
 from archipy.adapters.keycloak.adapter_mixins.organizations import (
     AsyncKeycloakOrganizationsMixin,
     KeycloakOrganizationsMixin,
@@ -30,6 +34,7 @@ __all__ = [
     "AsyncKeycloakComponentsMixin",
     "AsyncKeycloakConnectionMixin",
     "AsyncKeycloakGroupsMixin",
+    "AsyncKeycloakOrganizationGroupsMixin",
     "AsyncKeycloakOrganizationsMixin",
     "AsyncKeycloakRealmsMixin",
     "AsyncKeycloakRolesMixin",
@@ -44,6 +49,7 @@ __all__ = [
     "KeycloakConnectionMixin",
     "KeycloakExceptionHandlerMixin",
     "KeycloakGroupsMixin",
+    "KeycloakOrganizationGroupsMixin",
     "KeycloakOrganizationsMixin",
     "KeycloakRealmsMixin",
     "KeycloakRolesMixin",

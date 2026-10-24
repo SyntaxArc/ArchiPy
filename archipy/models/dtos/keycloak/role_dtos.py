@@ -45,3 +45,33 @@ class KeycloakRoleRequestDTO(KeycloakRequestDTO):
     client_role: bool | None = None
     container_id: str | None = None
     attributes: dict[str, list[str]] | None = None
+
+
+class KeycloakClientRoleMappingsDTO(KeycloakResponseDTO):
+    """Keycloak ``ClientMappingsRepresentation`` as returned by the admin API."""
+
+    id: str | None = None
+    client: str | None = None
+    mappings: list[KeycloakRoleDTO] | None = None
+
+
+class KeycloakClientRoleMappingsRequestDTO(KeycloakRequestDTO):
+    """Keycloak ``ClientMappingsRepresentation`` payload sent to the admin API."""
+
+    id: str | None = None
+    client: str | None = None
+    mappings: list[KeycloakRoleRequestDTO] | None = None
+
+
+class KeycloakRoleMappingsDTO(KeycloakResponseDTO):
+    """Keycloak ``MappingsRepresentation`` as returned by the admin API."""
+
+    realm_mappings: list[KeycloakRoleDTO] | None = None
+    client_mappings: dict[str, KeycloakClientRoleMappingsDTO] | None = None
+
+
+class KeycloakRoleMappingsRequestDTO(KeycloakRequestDTO):
+    """Keycloak ``MappingsRepresentation`` payload sent to the admin API."""
+
+    realm_mappings: list[KeycloakRoleRequestDTO] | None = None
+    client_mappings: dict[str, KeycloakClientRoleMappingsRequestDTO] | None = None

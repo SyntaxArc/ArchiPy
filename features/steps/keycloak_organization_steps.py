@@ -3,6 +3,7 @@ from behave.runner import Context
 from features.steps.keycloak_adapter_steps import _adapter_call, _adapter_parts
 from features.test_helpers import get_current_scenario_context
 
+from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupRequestDTO
 from archipy.models.dtos.keycloak.identity_provider_dtos import (
     KeycloakIdentityProviderDTO,
     KeycloakOrganizationIdentityProviderLinkRequestDTO,
@@ -111,3 +112,94 @@ async def step_organization_invitations(context: Context, adapter_type: str) -> 
             assert type(e).__name__ == "ResourceNotFoundError", f"{operation}: {e!r}"
         else:
             raise AssertionError(f"{operation} accepted an unknown invitation id")
+
+
+# --- organization groups ---
+
+
+@when('I create the organization group "{name}" and the subgroup "{child}" using {adapter_type} adapter')
+async def step_create_organization_groups(context: Context, name: str, child: str, adapter_type: str) -> None:
+    adapter, is_async, sc = _adapter_parts(context)
+    org_id = _org_id(context)
+    group = await _adapter_call(adapter, is_async, "create_organization_group", org_id, KeycloakGroupRequestDTO(name=name))
+    sc.store("org_group_create", group)
+    sc.store("org_group_id", group.id)
+    sub = await _adapter_call(
+        adapter, is_async, "create_organization_subgroup", org_id, group.id, KeycloakGroupRequestDTO(name=child),
+    )
+    sc.store("org_subgroup_create", sub)
+
+
+@then('the organization groups report their ids and are found by path, list and children using {adapter_type} adapter')
+async def step_organization_groups_found(context: Context, adapter_type: str) -> None:
+    adapter, is_async, sc = _adapter_parts(context)
+    org_id = _org_id(context)
+    group_id = sc.get("org_group_id")
+    assert sc.get("org_group_create").id == group_id and group_id, sc.get("org_group_create")
+    assert sc.get("org_subgroup_create").id, sc.get("org_subgroup_create")
+    groups = await _adapter_call(adapter, is_async, "get_organization_groups", org_id)
+    assert group_id in [g.id for g in groups], groups
+    fetched = await _adapter_call(adapter, is_async, "get_organization_group", org_id, group_id)
+    by_path = await _adapter_call(adapter, is_async, "get_organization_group_by_path", org_id, f"/{fetched.name}")
+    assert by_path.id == group_id
+    children = await _adapter_call(adapter, is_async, "get_organization_group_children", org_id, group_id)
+    assert [c.id for c in children] == [sc.get("org_subgroup_create").id], children
+
+
+@when('I add user "{username}" to the organization group and assign realm role "{role}" using {adapter_type} adapter')
+async def step_organization_group_membership_and_roles(
+    context: Context, username: str, role: str, adapter_type: str,
+) -> None:
+    adapter, is_async, sc = _adapter_parts(context)
+    org_id, group_id = _org_id(context), sc.get("org_group_id")
+    user_id = sc.get(f"user_id_{username}")
+    await _adapter_call(adapter, is_async, "add_user_to_organization_group", org_id, group_id, user_id)
+    realm_role = await _adapter_call(adapter, is_async, "get_realm_role", role)
+    sc.store("org_group_role", realm_role)
+    result = await _adapter_call(adapter, is_async, "assign_organization_group_realm_roles", org_id, group_id, [realm_role])
+    sc.store("org_group_assign_result", result)
+
+
+@then('the organization group lists member "{username}" and role "{role}" in every role view using {adapter_type} adapter')
+async def step_organization_group_listings(context: Context, username: str, role: str, adapter_type: str) -> None:
+    adapter, is_async, sc = _adapter_parts(context)
+    org_id, group_id = _org_id(context), sc.get("org_group_id")
+    user_id = sc.get(f"user_id_{username}")
+    members = await _adapter_call(adapter, is_async, "get_organization_group_members", org_id, group_id)
+    assert username in [m.username for m in members], members
+    member_groups = await _adapter_call(adapter, is_async, "get_organization_member_groups", org_id, user_id)
+    assert group_id in [g.id for g in member_groups], member_groups
+    realm_roles = await _adapter_call(adapter, is_async, "get_organization_group_realm_roles", org_id, group_id)
+    assert role in [r.name for r in realm_roles], realm_roles
+    mappings = await _adapter_call(adapter, is_async, "get_organization_group_role_mappings", org_id, group_id)
+    assert role in [r.name for r in mappings.realm_mappings or []], mappings
+    composite = await _adapter_call(adapter, is_async, "get_organization_group_realm_roles_composite", org_id, group_id)
+    assert role in [r.name for r in composite], composite
+    available = await _adapter_call(adapter, is_async, "get_organization_group_realm_roles_available", org_id, group_id)
+    assert role not in [r.name for r in available], available
+
+
+@when("I remove the role and the member, then update and delete the organization group using {adapter_type} adapter")
+async def step_organization_group_cleanup(context: Context, adapter_type: str) -> None:
+    adapter, is_async, sc = _adapter_parts(context)
+    org_id, group_id = _org_id(context), sc.get("org_group_id")
+    await _adapter_call(
+        adapter, is_async, "delete_organization_group_realm_roles", org_id, group_id, [sc.get("org_group_role")],
+    )
+    members = await _adapter_call(adapter, is_async, "get_organization_group_members", org_id, group_id)
+    for member in members:
+        await _adapter_call(adapter, is_async, "remove_user_from_organization_group", org_id, group_id, member.id)
+    await _adapter_call(
+        adapter, is_async, "update_organization_group", org_id, group_id, KeycloakGroupRequestDTO(name="renamed-group"),
+    )
+    sc.store("org_group_renamed", await _adapter_call(adapter, is_async, "get_organization_group", org_id, group_id))
+    await _adapter_call(adapter, is_async, "delete_organization_group", org_id, group_id)
+
+
+@then("the organization group was renamed, emptied and no longer exists using {adapter_type} adapter")
+async def step_organization_group_gone(context: Context, adapter_type: str) -> None:
+    adapter, is_async, sc = _adapter_parts(context)
+    org_id, group_id = _org_id(context), sc.get("org_group_id")
+    assert sc.get("org_group_renamed").name == "renamed-group"
+    groups = await _adapter_call(adapter, is_async, "get_organization_groups", org_id)
+    assert group_id not in [g.id for g in groups], groups

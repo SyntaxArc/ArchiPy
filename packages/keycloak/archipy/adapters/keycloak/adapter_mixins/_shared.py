@@ -532,7 +532,7 @@ class SyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
             connection = self.admin_adapter.connection
             url = admin_url(connection.realm_name, suffix)
             query = params or {}
-            if method in ("post", "put"):
+            if method in ("post", "put") or (method == "delete" and body is not None):
                 response = getattr(connection, f"raw_{method}")(url, admin_body(body), **query)
             else:
                 response = getattr(connection, f"raw_{method}")(url, **query)
@@ -602,7 +602,7 @@ class AsyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
             connection = self.admin_adapter.connection
             url = admin_url(connection.realm_name, suffix)
             query = params or {}
-            if method in ("post", "put"):
+            if method in ("post", "put") or (method == "delete" and body is not None):
                 response = await getattr(connection, f"a_raw_{method}")(url, admin_body(body), **query)
             else:
                 response = await getattr(connection, f"a_raw_{method}")(url, **query)

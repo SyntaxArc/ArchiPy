@@ -19,6 +19,10 @@ from archipy.adapters.keycloak.port_mixins.client_scopes import AsyncKeycloakCli
 from archipy.adapters.keycloak.port_mixins.clients import AsyncKeycloakClientsPort, KeycloakClientsPort
 from archipy.adapters.keycloak.port_mixins.components import AsyncKeycloakComponentsPort, KeycloakComponentsPort
 from archipy.adapters.keycloak.port_mixins.groups import AsyncKeycloakGroupsPort, KeycloakGroupsPort
+from archipy.adapters.keycloak.port_mixins.organization_groups import (
+    AsyncKeycloakOrganizationGroupsPort,
+    KeycloakOrganizationGroupsPort,
+)
 from archipy.adapters.keycloak.port_mixins.organizations import (
     AsyncKeycloakOrganizationsPort,
     KeycloakOrganizationsPort,
@@ -36,6 +40,7 @@ __all__ = [
     "AsyncKeycloakClientsPort",
     "AsyncKeycloakComponentsPort",
     "AsyncKeycloakGroupsPort",
+    "AsyncKeycloakOrganizationGroupsPort",
     "AsyncKeycloakOrganizationsPort",
     "AsyncKeycloakRealmsPort",
     "AsyncKeycloakRolesPort",
@@ -51,6 +56,7 @@ __all__ = [
     "KeycloakComponentsPort",
     "KeycloakGroupType",
     "KeycloakGroupsPort",
+    "KeycloakOrganizationGroupsPort",
     "KeycloakOrganizationType",
     "KeycloakOrganizationsPort",
     "KeycloakProtocolMapperType",

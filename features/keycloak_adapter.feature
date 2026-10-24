@@ -405,6 +405,27 @@ Feature: Keycloak Authentication Testing
       | sync         | orgextrauser   | pass123  | extra-org  | extra-alias  | ext-idp   | test-realm | Test Realm         | test-client       |
       | async        | asyncextrauser | async123 | aextra-org | aextra-alias | aext-idp  | test-realm | Async Test Realm   | async-test-client |
 
+  @organizations
+  Scenario Outline: Organization groups, group members and role mappings
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I enable organization of realm named "<realm_name>"
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
+    And I create an organization with name "<org_name>" and alias "<org_alias>" using <adapter_type> adapter
+    When I create the organization group "<group_name>" and the subgroup "<child_name>" using <adapter_type> adapter
+    Then the organization groups report their ids and are found by path, list and children using <adapter_type> adapter
+    When I add user "<username>" to the organization using <adapter_type> adapter
+    And I add user "<username>" to the organization group and assign realm role "offline_access" using <adapter_type> adapter
+    Then the organization group lists member "<username>" and role "offline_access" in every role view using <adapter_type> adapter
+    When I remove the role and the member, then update and delete the organization group using <adapter_type> adapter
+    Then the organization group was renamed, emptied and no longer exists using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | username      | password | org_name | org_alias  | group_name | child_name | realm_name | realm_display_name | client_name       |
+      | sync         | orggroupuser  | pass123  | grp-org  | grp-alias  | team       | team-sub   | test-realm | Test Realm         | test-client       |
+      | async        | aorggroupuser | async123 | agrp-org | agrp-alias | ateam      | ateam-sub  | test-realm | Async Test Realm   | async-test-client |
+
   @groups
   Scenario Outline: Group CRUD hierarchy membership and roles
     Given a configured <adapter_type> Keycloak adapter
