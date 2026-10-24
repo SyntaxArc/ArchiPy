@@ -5,7 +5,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Any
 
-from archipy.adapters.keycloak.adapter_mixins._shared import (
+from archipy.adapters.keycloak.base import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
     segment,

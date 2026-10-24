@@ -1,10 +1,11 @@
+import importlib
 import warnings
 
 from behave import given, then, when
 from features.test_helpers import get_current_scenario_context
 from pydantic import ValidationError
 
-from archipy.adapters.keycloak.adapter_mixins._shared import to_mutation_result, to_request_payload, with_created_id
+from archipy.adapters.keycloak.base import to_mutation_result, to_request_payload, with_created_id
 
 from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
 from archipy.models.dtos.keycloak import authz_dtos, common_dtos, client_scope_dtos, component_dtos, group_dtos, role_dtos, user_dtos
@@ -199,3 +200,24 @@ def step_create_result_id(context, expected):
 @then("the lookup ran {ran}")
 def step_lookup_ran(context, ran):
     assert (get_current_scenario_context(context).get("lookup_calls") == 1) == (ran == "yes")
+
+
+@when('the deprecated module "{old_module}" is read for "{name}"')
+def step_read_deprecated_module(context, old_module, name):
+    sc = get_current_scenario_context(context)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        sc.store("old_object", getattr(importlib.import_module(old_module), name))
+    sc.store("warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+
+
+@then('it is the same object as "{new_module}" "{name}"')
+def step_same_object(context, new_module, name):
+    old = get_current_scenario_context(context).get("old_object")
+    assert old is getattr(importlib.import_module(new_module), name)
+
+
+@then('a deprecation warning names "{old_module}"')
+def step_warning_names_module(context, old_module):
+    caught = get_current_scenario_context(context).get("warnings")
+    assert any(old_module in str(w.message) and "6.0.0" in str(w.message) for w in caught), caught

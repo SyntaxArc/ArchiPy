@@ -14,7 +14,7 @@ from keycloak.exceptions import (
 )
 from keycloak.openid_connection import KeycloakOpenIDConnection
 
-from archipy.adapters.keycloak.adapter_mixins._shared import (
+from archipy.adapters.keycloak.base import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
 )

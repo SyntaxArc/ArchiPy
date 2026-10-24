@@ -6,7 +6,7 @@ from http import HTTPStatus
 from typing import Any
 from urllib.parse import quote
 
-from archipy.adapters.keycloak.adapter_mixins._shared import (
+from archipy.adapters.keycloak.base import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
     payload_value,

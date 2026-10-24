@@ -6,7 +6,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from archipy.adapters.keycloak.port_mixins._shared import (
+    from archipy.adapters.keycloak.type_aliases import (
         PublicKeyType,
     )
     from archipy.models.dtos.keycloak.token_dtos import (

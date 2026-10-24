@@ -1,58 +1,30 @@
-"""Keycloak adapter mixins package."""
+"""Deprecated import path; the Keycloak mixins now live in ``archipy.adapters.keycloak.resources``.
 
-from archipy.adapters.keycloak.adapter_mixins._shared import KeycloakExceptionHandlerMixin
-from archipy.adapters.keycloak.adapter_mixins.auth import AsyncKeycloakAuthMixin, KeycloakAuthMixin
-from archipy.adapters.keycloak.adapter_mixins.auth_flows import AsyncKeycloakAuthFlowsMixin, KeycloakAuthFlowsMixin
-from archipy.adapters.keycloak.adapter_mixins.authz import AsyncKeycloakAuthzMixin, KeycloakAuthzMixin
-from archipy.adapters.keycloak.adapter_mixins.client_scopes import (
-    AsyncKeycloakClientScopesMixin,
-    KeycloakClientScopesMixin,
-)
-from archipy.adapters.keycloak.adapter_mixins.clients import AsyncKeycloakClientsMixin, KeycloakClientsMixin
-from archipy.adapters.keycloak.adapter_mixins.components import AsyncKeycloakComponentsMixin, KeycloakComponentsMixin
-from archipy.adapters.keycloak.adapter_mixins.connection import AsyncKeycloakConnectionMixin, KeycloakConnectionMixin
-from archipy.adapters.keycloak.adapter_mixins.groups import AsyncKeycloakGroupsMixin, KeycloakGroupsMixin
-from archipy.adapters.keycloak.adapter_mixins.organization_groups import (
-    AsyncKeycloakOrganizationGroupsMixin,
-    KeycloakOrganizationGroupsMixin,
-)
-from archipy.adapters.keycloak.adapter_mixins.organizations import (
-    AsyncKeycloakOrganizationsMixin,
-    KeycloakOrganizationsMixin,
-)
-from archipy.adapters.keycloak.adapter_mixins.realms import AsyncKeycloakRealmsMixin, KeycloakRealmsMixin
-from archipy.adapters.keycloak.adapter_mixins.roles import AsyncKeycloakRolesMixin, KeycloakRolesMixin
-from archipy.adapters.keycloak.adapter_mixins.uma import AsyncKeycloakUmaMixin, KeycloakUmaMixin
-from archipy.adapters.keycloak.adapter_mixins.users import AsyncKeycloakUsersMixin, KeycloakUsersMixin
+Names exported here and the old module paths (for example ``adapter_mixins.roles``) still resolve.
+Reading an attribute of an old module path emits a ``DeprecationWarning``. Both are removed in 6.0.0.
+"""
 
-__all__ = [
-    "AsyncKeycloakAuthFlowsMixin",
-    "AsyncKeycloakAuthMixin",
-    "AsyncKeycloakAuthzMixin",
-    "AsyncKeycloakClientScopesMixin",
-    "AsyncKeycloakClientsMixin",
-    "AsyncKeycloakComponentsMixin",
-    "AsyncKeycloakConnectionMixin",
-    "AsyncKeycloakGroupsMixin",
-    "AsyncKeycloakOrganizationGroupsMixin",
-    "AsyncKeycloakOrganizationsMixin",
-    "AsyncKeycloakRealmsMixin",
-    "AsyncKeycloakRolesMixin",
-    "AsyncKeycloakUmaMixin",
-    "AsyncKeycloakUsersMixin",
-    "KeycloakAuthFlowsMixin",
-    "KeycloakAuthMixin",
-    "KeycloakAuthzMixin",
-    "KeycloakClientScopesMixin",
-    "KeycloakClientsMixin",
-    "KeycloakComponentsMixin",
-    "KeycloakConnectionMixin",
-    "KeycloakExceptionHandlerMixin",
-    "KeycloakGroupsMixin",
-    "KeycloakOrganizationGroupsMixin",
-    "KeycloakOrganizationsMixin",
-    "KeycloakRealmsMixin",
-    "KeycloakRolesMixin",
-    "KeycloakUmaMixin",
-    "KeycloakUsersMixin",
-]
+from archipy.adapters.keycloak._compat import install_module_aliases
+from archipy.adapters.keycloak.resources import *  # noqa: F403
+from archipy.adapters.keycloak.resources import __all__  # noqa: F401
+
+install_module_aliases(
+    __name__,
+    {
+        "_shared": "archipy.adapters.keycloak.base",
+        "auth": "archipy.adapters.keycloak.protocols.oidc.adapter",
+        "auth_flows": "archipy.adapters.keycloak.resources.authentication.adapter",
+        "authz": "archipy.adapters.keycloak.resources.authorization.adapter",
+        "client_scopes": "archipy.adapters.keycloak.resources.client_scopes.adapter",
+        "clients": "archipy.adapters.keycloak.resources.clients.adapter",
+        "components": "archipy.adapters.keycloak.resources.components.adapter",
+        "connection": "archipy.adapters.keycloak.connection",
+        "groups": "archipy.adapters.keycloak.resources.groups.adapter",
+        "organization_groups": "archipy.adapters.keycloak.resources.organizations.group_adapter",
+        "organizations": "archipy.adapters.keycloak.resources.organizations.adapter",
+        "realms": "archipy.adapters.keycloak.resources.realms.adapter",
+        "roles": "archipy.adapters.keycloak.resources.roles.adapter",
+        "uma": "archipy.adapters.keycloak.protocols.uma.adapter",
+        "users": "archipy.adapters.keycloak.resources.users.adapter",
+    },
+)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from archipy.adapters.keycloak.port_mixins import (
+from archipy.adapters.keycloak.resources import (
     AsyncKeycloakAuthFlowsPort,
     AsyncKeycloakAuthPort,
     AsyncKeycloakAuthzPort,

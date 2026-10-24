@@ -10,7 +10,7 @@ from keycloak.exceptions import (
     KeycloakGetError,
 )
 
-from archipy.adapters.keycloak.adapter_mixins._shared import (
+from archipy.adapters.keycloak.base import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
     to_claims_dict,
