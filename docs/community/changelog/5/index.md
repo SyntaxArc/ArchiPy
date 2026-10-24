@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.20.1](5.20.1.md) | 2026-10-24 | `asyncmy` replaces deprecated `asyncmy2` in the MySQL and StarRocks async extras; bare generics typed across adapters and helpers; lower bounds match `uv.lock` |
 | [5.20.0](5.20.0.md) | 2026-10-21 | Temporal workflow, signal, query, update and start-side spans carry messaging attributes; **behavior:** their Elastic APM `transaction.type` is `messaging` instead of `unknown` |
 | [5.19.1](5.19.1.md) | 2026-10-21 | Tests and test infrastructure only: Elastic APM Server scenarios for every adapter, shared telemetry containers for parallel runs, `make pull-test-images` |
 | [5.19.0](5.19.0.md) | 2026-10-21 | Temporal activity spans carry messaging attributes via `MessagingOpenTelemetryPlugin`, replay-safe tracer and meter providers; **behavior:** Temporal tracing is skipped when a plain tracer provider was registered first |
