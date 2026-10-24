@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from archipy.models.dtos.keycloak.client_scope_dtos import KeycloakClientScopeDTO, KeycloakProtocolMapperDTO
+from archipy.models.dtos.keycloak.client_scope_dtos import KeycloakClientScopeDTO
 from archipy.models.dtos.keycloak.component_dtos import KeycloakComponentDTO
 from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupDTO
 from archipy.models.dtos.keycloak.organization_dtos import KeycloakOrganizationDTO
+from archipy.models.dtos.keycloak.protocol_mapper_dtos import KeycloakProtocolMapperDTO
 from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
 
 # Define type aliases for better type hinting

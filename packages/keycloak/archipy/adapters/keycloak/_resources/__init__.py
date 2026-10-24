@@ -81,6 +81,14 @@ from archipy.adapters.keycloak._resources.organizations.port import (
     AsyncKeycloakOrganizationsPort,
     KeycloakOrganizationsPort,
 )
+from archipy.adapters.keycloak._resources.protocol_mappers.adapter import (
+    AsyncKeycloakProtocolMappersMixin,
+    KeycloakProtocolMappersMixin,
+)
+from archipy.adapters.keycloak._resources.protocol_mappers.port import (
+    AsyncKeycloakProtocolMappersPort,
+    KeycloakProtocolMappersPort,
+)
 from archipy.adapters.keycloak._resources.realms.adapter import (
     AsyncKeycloakRealmsMixin,
     KeycloakRealmsMixin,
@@ -145,6 +153,8 @@ __all__ = [
     "AsyncKeycloakOrganizationGroupsPort",
     "AsyncKeycloakOrganizationsMixin",
     "AsyncKeycloakOrganizationsPort",
+    "AsyncKeycloakProtocolMappersMixin",
+    "AsyncKeycloakProtocolMappersPort",
     "AsyncKeycloakRealmsMixin",
     "AsyncKeycloakRealmsPort",
     "AsyncKeycloakRolesByIdMixin",
@@ -179,6 +189,8 @@ __all__ = [
     "KeycloakOrganizationsMixin",
     "KeycloakOrganizationsPort",
     "KeycloakProtocolMapperType",
+    "KeycloakProtocolMappersMixin",
+    "KeycloakProtocolMappersPort",
     "KeycloakRealmsMixin",
     "KeycloakRealmsPort",
     "KeycloakResponseType",

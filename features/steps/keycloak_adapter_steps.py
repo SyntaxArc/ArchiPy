@@ -18,7 +18,8 @@ from archipy.models.dtos.keycloak.authenticator_dtos import (
     KeycloakAuthenticationFlowExecutionCreateRequestDTO,
     KeycloakAuthenticationSubflowCreateRequestDTO,
 )
-from archipy.models.dtos.keycloak.client_scope_dtos import KeycloakClientScopeRequestDTO, KeycloakProtocolMapperRequestDTO
+from archipy.models.dtos.keycloak.client_scope_dtos import KeycloakClientScopeRequestDTO
+from archipy.models.dtos.keycloak.protocol_mapper_dtos import KeycloakProtocolMapperRequestDTO
 from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupRequestDTO
 from archipy.models.dtos.keycloak.organization_dtos import KeycloakOrganizationRequestDTO
 from archipy.models.dtos.keycloak.realm_dtos import KeycloakRealmRequestDTO

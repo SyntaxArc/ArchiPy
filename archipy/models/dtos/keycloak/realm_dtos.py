@@ -10,18 +10,17 @@ from archipy.models.dtos.keycloak.auth_flow_dtos import (
 )
 from archipy.models.dtos.keycloak.base import KeycloakRequestDTO, KeycloakResponseDTO
 from archipy.models.dtos.keycloak.client_dtos import KeycloakClientDTO, KeycloakClientRequestDTO
-from archipy.models.dtos.keycloak.client_scope_dtos import (
-    KeycloakClientScopeDTO,
-    KeycloakClientScopeRequestDTO,
-    KeycloakProtocolMapperDTO,
-    KeycloakProtocolMapperRequestDTO,
-)
+from archipy.models.dtos.keycloak.client_scope_dtos import KeycloakClientScopeDTO, KeycloakClientScopeRequestDTO
 from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupDTO, KeycloakGroupRequestDTO
 from archipy.models.dtos.keycloak.identity_provider_dtos import (
     KeycloakIdentityProviderDTO,
     KeycloakIdentityProviderRequestDTO,
 )
 from archipy.models.dtos.keycloak.organization_dtos import KeycloakOrganizationDTO, KeycloakOrganizationRequestDTO
+from archipy.models.dtos.keycloak.protocol_mapper_dtos import (
+    KeycloakProtocolMapperDTO,
+    KeycloakProtocolMapperRequestDTO,
+)
 from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO, KeycloakRoleRequestDTO
 from archipy.models.dtos.keycloak.user_dtos import KeycloakUserDTO, KeycloakUserRequestDTO
 

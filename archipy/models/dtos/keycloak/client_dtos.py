@@ -2,7 +2,10 @@
 
 from archipy.models.dtos.keycloak.authz_dtos import KeycloakAuthzSettingsDTO, KeycloakAuthzSettingsRequestDTO
 from archipy.models.dtos.keycloak.base import KeycloakRequestDTO, KeycloakResponseDTO
-from archipy.models.dtos.keycloak.client_scope_dtos import KeycloakProtocolMapperDTO, KeycloakProtocolMapperRequestDTO
+from archipy.models.dtos.keycloak.protocol_mapper_dtos import (
+    KeycloakProtocolMapperDTO,
+    KeycloakProtocolMapperRequestDTO,
+)
 
 
 class KeycloakClientDTO(KeycloakResponseDTO):

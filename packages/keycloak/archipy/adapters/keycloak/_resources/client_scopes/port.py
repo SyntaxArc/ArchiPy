@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 
 from archipy.models.dtos.keycloak.common_dtos import (
     KeycloakAssignResultDTO,
-    KeycloakCreateResultDTO,
     KeycloakDeleteResultDTO,
     KeycloakUpdateResultDTO,
 )
@@ -16,12 +15,9 @@ if TYPE_CHECKING:
     from archipy.models.dtos.keycloak.client_scope_dtos import (
         KeycloakClientScopeDTO,
         KeycloakClientScopeRequestDTO,
-        KeycloakProtocolMapperDTO,
-        KeycloakProtocolMapperRequestDTO,
     )
     from archipy.models.dtos.keycloak.common_dtos import (
         KeycloakAssignResultDTO,
-        KeycloakCreateResultDTO,
         KeycloakDeleteResultDTO,
         KeycloakUpdateResultDTO,
     )
@@ -68,68 +64,6 @@ class KeycloakClientScopesPort:
     @abstractmethod
     def delete_client_scope(self, client_scope_id: str) -> KeycloakDeleteResultDTO:
         """Delete a client scope."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def add_mapper_to_client_scope(
-        self,
-        client_scope_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> KeycloakCreateResultDTO:
-        """Add a protocol mapper to a client scope."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_mappers_from_client_scope(self, client_scope_id: str) -> list[KeycloakProtocolMapperDTO]:
-        """Get protocol mappers for a client scope."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def update_mapper_in_client_scope(
-        self,
-        client_scope_id: str,
-        protocol_mapper_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> KeycloakUpdateResultDTO:
-        """Update a protocol mapper in a client scope."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def delete_mapper_from_client_scope(
-        self,
-        client_scope_id: str,
-        protocol_mapper_id: str,
-    ) -> KeycloakDeleteResultDTO:
-        """Delete a protocol mapper from a client scope."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def add_mapper_to_client(
-        self,
-        client_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> KeycloakCreateResultDTO:
-        """Add a protocol mapper to a client."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_mappers_from_client(self, client_id: str) -> list[KeycloakProtocolMapperDTO]:
-        """Get protocol mappers for a client."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def update_client_mapper(
-        self,
-        client_id: str,
-        mapper_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> KeycloakUpdateResultDTO:
-        """Update a protocol mapper on a client."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def remove_client_mapper(self, client_id: str, client_mapper_id: str) -> KeycloakDeleteResultDTO:
-        """Remove a protocol mapper from a client."""
         raise NotImplementedError
 
     @abstractmethod
@@ -248,68 +182,6 @@ class AsyncKeycloakClientScopesPort:
     @abstractmethod
     async def delete_client_scope(self, client_scope_id: str) -> KeycloakDeleteResultDTO:
         """Delete a client scope."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def add_mapper_to_client_scope(
-        self,
-        client_scope_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> KeycloakCreateResultDTO:
-        """Add a protocol mapper to a client scope."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_mappers_from_client_scope(self, client_scope_id: str) -> list[KeycloakProtocolMapperDTO]:
-        """Get protocol mappers for a client scope."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def update_mapper_in_client_scope(
-        self,
-        client_scope_id: str,
-        protocol_mapper_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> KeycloakUpdateResultDTO:
-        """Update a protocol mapper in a client scope."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def delete_mapper_from_client_scope(
-        self,
-        client_scope_id: str,
-        protocol_mapper_id: str,
-    ) -> KeycloakDeleteResultDTO:
-        """Delete a protocol mapper from a client scope."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def add_mapper_to_client(
-        self,
-        client_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> KeycloakCreateResultDTO:
-        """Add a protocol mapper to a client."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_mappers_from_client(self, client_id: str) -> list[KeycloakProtocolMapperDTO]:
-        """Get protocol mappers for a client."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def update_client_mapper(
-        self,
-        client_id: str,
-        mapper_id: str,
-        payload: KeycloakProtocolMapperRequestDTO | dict[str, Any],
-    ) -> KeycloakUpdateResultDTO:
-        """Update a protocol mapper on a client."""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def remove_client_mapper(self, client_id: str, client_mapper_id: str) -> KeycloakDeleteResultDTO:
-        """Remove a protocol mapper from a client."""
         raise NotImplementedError
 
     @abstractmethod
