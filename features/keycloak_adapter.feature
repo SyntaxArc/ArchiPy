@@ -5,6 +5,7 @@ Feature: Keycloak Authentication Testing
   I want to test Keycloak authentication operations
   So that I can ensure secure authentication and management operations
 
+  @realms
   Scenario Outline: Basic realm and client operations
     Given a configured <adapter_type> Keycloak adapter
     When I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -17,6 +18,7 @@ Feature: Keycloak Authentication Testing
       | sync         | test-realm       | Test Realm         | test-client       |
       | async        | async-test-realm | Async Test Realm   | async-test-client |
 
+  @realms
   Scenario Outline: Realm update
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -29,6 +31,7 @@ Feature: Keycloak Authentication Testing
       | sync         | update-realm       | Original           | Updated Display    |
       | async        | async-update-realm | Async Original     | Async Updated Name |
 
+  @tokens
   Scenario Outline: User authentication flow
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -44,6 +47,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
+  @tokens
   Scenario Outline: Token operations
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -59,6 +63,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
+  @users
   Scenario Outline: User information operations
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -74,6 +79,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
+  @tokens
   Scenario Outline: Token validation
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -88,6 +94,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
+  @users
   Scenario Outline: User retrieval operations
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -102,6 +109,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
+  @users
   Scenario Outline: Email-based user retrieval
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -116,6 +124,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | test@example.com  | pass123  | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async@example.com | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
+  @roles
   Scenario Outline: Realm role management
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -132,6 +141,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm | Async Test Realm   | async-test-client |
 
+  @roles
   Scenario Outline: Client role management
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -148,6 +158,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | client-role       | Client Role             | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | async-client-role | Async Client Role       | async-test-realm | Async Test Realm   | async-test-client |
 
+  @users
   Scenario Outline: User search operations
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -163,6 +174,7 @@ Feature: Keycloak Authentication Testing
       | sync         | searchuser1    | searchuser2    | searchuser    | pass123  | test-realm       | Test Realm         | test-client       |
       | async        | asynctestuser4 | asynctestuser5 | asynctestuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
+  @users
   Scenario Outline: User update operations
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -177,6 +189,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | John       | Doe       | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | Async      | User      | async-test-realm | Async Test Realm   | async-test-client |
 
+  @users
   Scenario Outline: Password reset operations
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -191,6 +204,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | newpass456   | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | newasync456  | async-test-realm | Async Test Realm   | async-test-client |
 
+  @users
   Scenario Outline: Session management
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -205,6 +219,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
+  @tokens
   Scenario Outline: Logout operations
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -219,6 +234,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
+  @tokens
   Scenario Outline: Client credentials token
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -232,6 +248,7 @@ Feature: Keycloak Authentication Testing
       | sync         | test-realm       | Test Realm         | test-client       |
       | async        | async-test-realm | Async Test Realm   | async-test-client |
 
+  @tokens
   Scenario Outline: Token introspection
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -247,6 +264,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
+  @tokens
   Scenario Outline: Token info retrieval
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -262,6 +280,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
 
+  @roles
   Scenario Outline: Role permission checking
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -279,6 +298,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm | Async Test Realm   | async-test-client |
 
+  @roles
   Scenario Outline: Role removal operations
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -295,6 +315,7 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm       | Test Realm         | test-client       |
       | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm | Async Test Realm   | async-test-client |
 
+  @users
   Scenario Outline: User deletion operations
     Given a configured <adapter_type> Keycloak adapter
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
@@ -589,6 +610,7 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth context holds user "authuser" while the dependency is active
     And the keycloak auth context is cleared after the dependency ends
 
+  @auth-guards
   Scenario Outline: Reading <field> from the request state warns and points to the auth context
     Given a configured sync Keycloak adapter
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
@@ -780,6 +802,7 @@ Feature: Keycloak Authentication Testing
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth call fails with error code "INVALID_ARGUMENT"
 
+  @auth-guards
   Scenario Outline: Auth gRPC handler runs with the auth context for a valid token
     Given a configured sync Keycloak adapter
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
@@ -799,6 +822,7 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  @auth-guards
   Scenario Outline: Auth gRPC handler accepts a raw token without the bearer prefix
     Given a configured sync Keycloak adapter
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
@@ -815,6 +839,7 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  @auth-guards
   Scenario Outline: Auth gRPC handler allows the owner of a resource
     Given a configured sync Keycloak adapter
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
@@ -833,6 +858,7 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  @auth-guards
   Scenario Outline: Auth gRPC handler aborts the servicer context when the token is missing
     Given a configured sync Keycloak adapter
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
@@ -847,6 +873,7 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  @auth-guards
   Scenario Outline: Auth gRPC handler aborts the servicer context when the token is invalid
     Given a configured sync Keycloak adapter
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
@@ -860,6 +887,7 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  @auth-guards
   Scenario Outline: Auth gRPC handler aborts the servicer context when the role is insufficient
     Given a configured sync Keycloak adapter
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
@@ -879,6 +907,7 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  @auth-guards
   Scenario Outline: Auth gRPC handler aborts when the request lacks the resource attribute
     Given a configured sync Keycloak adapter
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
@@ -896,6 +925,7 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  @auth-guards
   Scenario Outline: Auth gRPC handler raises the typed error when the context is not a servicer context
     Given a configured sync Keycloak adapter
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
@@ -954,6 +984,7 @@ Feature: Keycloak Authentication Testing
     Given no keycloak auth context is set
     Then the keycloak auth context is cleared
 
+  @auth-guards
   Scenario Outline: A guarded FastAPI route keeps the auth context on the <path> route
     Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
     And a FastAPI app whose routes are guarded by the keycloak fastapi auth
@@ -981,6 +1012,7 @@ Feature: Keycloak Authentication Testing
     Then the app response reports no caller
 
   # --- Keycloak auth gRPC decorators and caching against the real Keycloak container ---
+  @auth-guards
   Scenario Outline: Auth gRPC response-stream handler keeps the auth context while streaming
     Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
     And the keycloak grpc auth requires any of roles "auth-reader"
@@ -995,6 +1027,7 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  @auth-guards
   Scenario Outline: Auth gRPC response-stream handler rejects a missing token
     Given a keycloak auth realm with a client
     And the keycloak auth grpc handler is a response stream
@@ -1007,6 +1040,7 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  @auth-guards
   Scenario Outline: Auth gRPC handler abort is not rewritten as an internal error
     Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
     And the keycloak grpc auth requires any of roles "auth-reader"
@@ -1089,6 +1123,7 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth call fails with error code "PERMISSION_DENIED"
 
+  @auth-guards
   Scenario Outline: Auth gRPC handler reads the bearer scheme case-insensitively
     Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
     And the keycloak grpc auth requires any of roles "auth-reader"
@@ -1100,6 +1135,7 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  @auth-guards
   Scenario Outline: Auth gRPC handler rejects an empty bearer credential
     Given a keycloak auth realm with a client
     And the keycloak grpc auth requires any of roles "auth-reader"
@@ -1112,6 +1148,7 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  @auth-guards
   Scenario Outline: Auth gRPC handler rejects conflicting authorization headers
     Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
     And the keycloak grpc auth requires any of roles "auth-reader"
@@ -1140,6 +1177,7 @@ Feature: Keycloak Authentication Testing
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth call fails with error code "TOKEN_EXPIRED"
 
+  @tracing
   Scenario Outline: Keycloak <mode> adapter requests emit HTTP spans
     Given adapter spans are exported to the collector
     And a configured <mode> Keycloak adapter
@@ -1151,6 +1189,7 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  @tracing
   Scenario Outline: Keycloak <mode> adapter spans reach Elastic APM Server <route>
     Given adapter spans are exported to Elastic APM Server <route>
     And a configured <mode> Keycloak adapter
