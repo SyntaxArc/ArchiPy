@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from http import HTTPStatus
+from typing import Any
 
 from async_lru import alru_cache
 from keycloak.exceptions import (
@@ -13,10 +15,27 @@ from keycloak.exceptions import (
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    segment,
     to_claims_dict,
+    to_dto,
+    to_dto_list,
+    to_mutation_result,
+    to_request_payload,
+    to_wire_roles,
 )
 from archipy.helpers.decorators import ttl_cache
-from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
+from archipy.models.dtos.keycloak.common_dtos import (
+    KeycloakAssignResultDTO,
+    KeycloakDeleteResultDTO,
+    KeycloakUpdateResultDTO,
+)
+from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupDTO
+from archipy.models.dtos.keycloak.management_permission_dtos import (
+    KeycloakManagementPermissionDTO,
+    KeycloakManagementPermissionRequestDTO,
+)
+from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO, KeycloakRoleRequestDTO
+from archipy.models.dtos.keycloak.user_dtos import KeycloakUserDTO
 from archipy.models.errors import (
     InternalError,
     NotFoundError,
@@ -498,6 +517,558 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_composite_realm_roles")
 
+    def get_realm_roles_filtered(self, query: dict[str, Any] | None = None) -> list[KeycloakRoleDTO]:
+        """List realm roles, filtered by the admin API query parameters.
+
+        Args:
+            query: Optional query parameters: ``search``, ``first``, ``max`` and ``briefRepresentation``.
+
+        Returns:
+            The roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            self._admin_request(
+                "get_realm_roles_filtered",
+                "get",
+                "/roles",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def update_realm_role(
+        self,
+        role_name: str,
+        payload: KeycloakRoleRequestDTO | dict[str, Any],
+    ) -> KeycloakUpdateResultDTO:
+        """Update a realm role.
+
+        Args:
+            role_name: Realm role name.
+            payload: Role representation.
+
+        Returns:
+            The update result.
+        """
+        return to_mutation_result(
+            KeycloakUpdateResultDTO,
+            self._admin_request(
+                "update_realm_role",
+                "put",
+                f"/roles/{segment(role_name)}",
+                body=to_request_payload(payload),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    def get_users_with_realm_role(self, role_name: str, query: dict[str, Any] | None = None) -> list[KeycloakUserDTO]:
+        """List the users that have a realm role.
+
+        Args:
+            role_name: Realm role name.
+            query: Optional query parameters: ``first``, ``max`` and ``briefRepresentation``.
+
+        Returns:
+            The users.
+        """
+        return to_dto_list(
+            KeycloakUserDTO,
+            self._admin_request(
+                "get_users_with_realm_role",
+                "get",
+                f"/roles/{segment(role_name)}/users",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_groups_with_realm_role(self, role_name: str, query: dict[str, Any] | None = None) -> list[KeycloakGroupDTO]:
+        """List the groups that have a realm role.
+
+        Args:
+            role_name: Realm role name.
+            query: Optional query parameters: ``first``, ``max`` and ``briefRepresentation``.
+
+        Returns:
+            The groups.
+        """
+        return to_dto_list(
+            KeycloakGroupDTO,
+            self._admin_request(
+                "get_groups_with_realm_role",
+                "get",
+                f"/roles/{segment(role_name)}/groups",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_realm_role_composites(self, role_name: str) -> list[KeycloakRoleDTO]:
+        """List the composite children of a realm role.
+
+        Args:
+            role_name: Realm role name.
+
+        Returns:
+            The child roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            self._admin_request(
+                "get_realm_role_composites",
+                "get",
+                f"/roles/{segment(role_name)}/composites",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_realm_role_realm_composites(self, role_name: str) -> list[KeycloakRoleDTO]:
+        """List the realm roles that are composite children of a realm role.
+
+        Args:
+            role_name: Realm role name.
+
+        Returns:
+            The child roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            self._admin_request(
+                "get_realm_role_realm_composites",
+                "get",
+                f"/roles/{segment(role_name)}/composites/realm",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_realm_role_client_composites(self, role_name: str, target_client_uuid: str) -> list[KeycloakRoleDTO]:
+        """List the composite children of a realm role that belong to a client.
+
+        Args:
+            role_name: Realm role name.
+            target_client_uuid: UUID of the client that owns the children.
+
+        Returns:
+            The child roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            self._admin_request(
+                "get_realm_role_client_composites",
+                "get",
+                f"/roles/{segment(role_name)}/composites/clients/{segment(target_client_uuid)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def add_realm_role_composites(
+        self,
+        role_name: str,
+        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+    ) -> KeycloakAssignResultDTO:
+        """Add child roles to a composite realm role.
+
+        Args:
+            role_name: Realm role name.
+            roles: Roles to add.
+
+        Returns:
+            The assign result.
+        """
+        return to_mutation_result(
+            KeycloakAssignResultDTO,
+            self._admin_request(
+                "add_realm_role_composites",
+                "post",
+                f"/roles/{segment(role_name)}/composites",
+                body=to_wire_roles(roles),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    def delete_realm_role_composites(
+        self,
+        role_name: str,
+        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+    ) -> KeycloakDeleteResultDTO:
+        """Remove child roles from a composite realm role.
+
+        Args:
+            role_name: Realm role name.
+            roles: Roles to remove.
+
+        Returns:
+            The delete result.
+        """
+        return to_mutation_result(
+            KeycloakDeleteResultDTO,
+            self._admin_request(
+                "delete_realm_role_composites",
+                "delete",
+                f"/roles/{segment(role_name)}/composites",
+                body=to_wire_roles(roles),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    def get_realm_role_management_permissions(self, role_name: str) -> KeycloakManagementPermissionDTO:
+        """Get the fine-grained permission setup of a realm role.
+
+        Args:
+            role_name: Realm role name.
+
+        Returns:
+            The management permission reference.
+        """
+        return to_dto(
+            KeycloakManagementPermissionDTO,
+            self._admin_request(
+                "get_realm_role_management_permissions",
+                "get",
+                f"/roles/{segment(role_name)}/management/permissions",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def update_realm_role_management_permissions(
+        self,
+        role_name: str,
+        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+    ) -> KeycloakManagementPermissionDTO:
+        """Enable or disable the fine-grained permissions of a realm role.
+
+        Args:
+            role_name: Realm role name.
+            payload: Management permission reference.
+
+        Returns:
+            The management permission reference.
+        """
+        return to_dto(
+            KeycloakManagementPermissionDTO,
+            self._admin_request(
+                "update_realm_role_management_permissions",
+                "put",
+                f"/roles/{segment(role_name)}/management/permissions",
+                body=to_request_payload(payload),
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_client_roles_filtered(self, client_uuid: str, query: dict[str, Any] | None = None) -> list[KeycloakRoleDTO]:
+        """List client roles, filtered by the admin API query parameters.
+
+        Args:
+            client_uuid: Client UUID.
+            query: Optional query parameters: ``search``, ``first``, ``max`` and ``briefRepresentation``.
+
+        Returns:
+            The roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            self._admin_request(
+                "get_client_roles_filtered",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def update_client_role(
+        self,
+        client_uuid: str,
+        role_name: str,
+        payload: KeycloakRoleRequestDTO | dict[str, Any],
+    ) -> KeycloakUpdateResultDTO:
+        """Update a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            payload: Role representation.
+
+        Returns:
+            The update result.
+        """
+        return to_mutation_result(
+            KeycloakUpdateResultDTO,
+            self._admin_request(
+                "update_client_role",
+                "put",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}",
+                body=to_request_payload(payload),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    def get_client_role_by_name(self, client_uuid: str, role_name: str) -> KeycloakRoleDTO:
+        """Get a client role by its name.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+
+        Returns:
+            The role.
+        """
+        return to_dto(
+            KeycloakRoleDTO,
+            self._admin_request(
+                "get_client_role_by_name",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def delete_client_role(self, client_uuid: str, role_name: str) -> KeycloakDeleteResultDTO:
+        """Delete a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+
+        Returns:
+            The delete result.
+        """
+        return to_mutation_result(
+            KeycloakDeleteResultDTO,
+            self._admin_request(
+                "delete_client_role",
+                "delete",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}",
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    def get_users_with_client_role(
+        self,
+        client_uuid: str,
+        role_name: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakUserDTO]:
+        """List the users that have a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            query: Optional query parameters: ``first``, ``max`` and ``briefRepresentation``.
+
+        Returns:
+            The users.
+        """
+        return to_dto_list(
+            KeycloakUserDTO,
+            self._admin_request(
+                "get_users_with_client_role",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/users",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_groups_with_client_role(
+        self,
+        client_uuid: str,
+        role_name: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakGroupDTO]:
+        """List the groups that have a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            query: Optional query parameters: ``first``, ``max`` and ``briefRepresentation``.
+
+        Returns:
+            The groups.
+        """
+        return to_dto_list(
+            KeycloakGroupDTO,
+            self._admin_request(
+                "get_groups_with_client_role",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/groups",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_client_role_composites(self, client_uuid: str, role_name: str) -> list[KeycloakRoleDTO]:
+        """List the composite children of a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+
+        Returns:
+            The child roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            self._admin_request(
+                "get_client_role_composites",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/composites",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_client_role_realm_composites(self, client_uuid: str, role_name: str) -> list[KeycloakRoleDTO]:
+        """List the realm roles that are composite children of a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+
+        Returns:
+            The child roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            self._admin_request(
+                "get_client_role_realm_composites",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/composites/realm",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_client_role_client_composites(
+        self,
+        client_uuid: str,
+        role_name: str,
+        target_client_uuid: str,
+    ) -> list[KeycloakRoleDTO]:
+        """List the composite children of a client role that belong to a client.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            target_client_uuid: UUID of the client that owns the children.
+
+        Returns:
+            The child roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            self._admin_request(
+                "get_client_role_client_composites",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/composites/clients/{segment(target_client_uuid)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def add_client_role_composites(
+        self,
+        client_uuid: str,
+        role_name: str,
+        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+    ) -> KeycloakAssignResultDTO:
+        """Add child roles to a composite client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            roles: Roles to add.
+
+        Returns:
+            The assign result.
+        """
+        return to_mutation_result(
+            KeycloakAssignResultDTO,
+            self._admin_request(
+                "add_client_role_composites",
+                "post",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/composites",
+                body=to_wire_roles(roles),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    def delete_client_role_composites(
+        self,
+        client_uuid: str,
+        role_name: str,
+        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+    ) -> KeycloakDeleteResultDTO:
+        """Remove child roles from a composite client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            roles: Roles to remove.
+
+        Returns:
+            The delete result.
+        """
+        return to_mutation_result(
+            KeycloakDeleteResultDTO,
+            self._admin_request(
+                "delete_client_role_composites",
+                "delete",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/composites",
+                body=to_wire_roles(roles),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    def get_client_role_management_permissions(
+        self,
+        client_uuid: str,
+        role_name: str,
+    ) -> KeycloakManagementPermissionDTO:
+        """Get the fine-grained permission setup of a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+
+        Returns:
+            The management permission reference.
+        """
+        return to_dto(
+            KeycloakManagementPermissionDTO,
+            self._admin_request(
+                "get_client_role_management_permissions",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/management/permissions",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def update_client_role_management_permissions(
+        self,
+        client_uuid: str,
+        role_name: str,
+        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+    ) -> KeycloakManagementPermissionDTO:
+        """Enable or disable the fine-grained permissions of a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            payload: Management permission reference.
+
+        Returns:
+            The management permission reference.
+        """
+        return to_dto(
+            KeycloakManagementPermissionDTO,
+            self._admin_request(
+                "update_client_role_management_permissions",
+                "put",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/management/permissions",
+                body=to_request_payload(payload),
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
 
 class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for role operations."""
@@ -974,3 +1545,567 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             ]
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_composite_realm_roles")
+
+    async def get_realm_roles_filtered(self, query: dict[str, Any] | None = None) -> list[KeycloakRoleDTO]:
+        """List realm roles, filtered by the admin API query parameters.
+
+        Args:
+            query: Optional query parameters: ``search``, ``first``, ``max`` and ``briefRepresentation``.
+
+        Returns:
+            The roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            await self._async_admin_request(
+                "get_realm_roles_filtered",
+                "get",
+                "/roles",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def update_realm_role(
+        self,
+        role_name: str,
+        payload: KeycloakRoleRequestDTO | dict[str, Any],
+    ) -> KeycloakUpdateResultDTO:
+        """Update a realm role.
+
+        Args:
+            role_name: Realm role name.
+            payload: Role representation.
+
+        Returns:
+            The update result.
+        """
+        return to_mutation_result(
+            KeycloakUpdateResultDTO,
+            await self._async_admin_request(
+                "update_realm_role",
+                "put",
+                f"/roles/{segment(role_name)}",
+                body=to_request_payload(payload),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    async def get_users_with_realm_role(
+        self,
+        role_name: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakUserDTO]:
+        """List the users that have a realm role.
+
+        Args:
+            role_name: Realm role name.
+            query: Optional query parameters: ``first``, ``max`` and ``briefRepresentation``.
+
+        Returns:
+            The users.
+        """
+        return to_dto_list(
+            KeycloakUserDTO,
+            await self._async_admin_request(
+                "get_users_with_realm_role",
+                "get",
+                f"/roles/{segment(role_name)}/users",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_groups_with_realm_role(
+        self,
+        role_name: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakGroupDTO]:
+        """List the groups that have a realm role.
+
+        Args:
+            role_name: Realm role name.
+            query: Optional query parameters: ``first``, ``max`` and ``briefRepresentation``.
+
+        Returns:
+            The groups.
+        """
+        return to_dto_list(
+            KeycloakGroupDTO,
+            await self._async_admin_request(
+                "get_groups_with_realm_role",
+                "get",
+                f"/roles/{segment(role_name)}/groups",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_realm_role_composites(self, role_name: str) -> list[KeycloakRoleDTO]:
+        """List the composite children of a realm role.
+
+        Args:
+            role_name: Realm role name.
+
+        Returns:
+            The child roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            await self._async_admin_request(
+                "get_realm_role_composites",
+                "get",
+                f"/roles/{segment(role_name)}/composites",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_realm_role_realm_composites(self, role_name: str) -> list[KeycloakRoleDTO]:
+        """List the realm roles that are composite children of a realm role.
+
+        Args:
+            role_name: Realm role name.
+
+        Returns:
+            The child roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            await self._async_admin_request(
+                "get_realm_role_realm_composites",
+                "get",
+                f"/roles/{segment(role_name)}/composites/realm",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_realm_role_client_composites(self, role_name: str, target_client_uuid: str) -> list[KeycloakRoleDTO]:
+        """List the composite children of a realm role that belong to a client.
+
+        Args:
+            role_name: Realm role name.
+            target_client_uuid: UUID of the client that owns the children.
+
+        Returns:
+            The child roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            await self._async_admin_request(
+                "get_realm_role_client_composites",
+                "get",
+                f"/roles/{segment(role_name)}/composites/clients/{segment(target_client_uuid)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def add_realm_role_composites(
+        self,
+        role_name: str,
+        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+    ) -> KeycloakAssignResultDTO:
+        """Add child roles to a composite realm role.
+
+        Args:
+            role_name: Realm role name.
+            roles: Roles to add.
+
+        Returns:
+            The assign result.
+        """
+        return to_mutation_result(
+            KeycloakAssignResultDTO,
+            await self._async_admin_request(
+                "add_realm_role_composites",
+                "post",
+                f"/roles/{segment(role_name)}/composites",
+                body=to_wire_roles(roles),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    async def delete_realm_role_composites(
+        self,
+        role_name: str,
+        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+    ) -> KeycloakDeleteResultDTO:
+        """Remove child roles from a composite realm role.
+
+        Args:
+            role_name: Realm role name.
+            roles: Roles to remove.
+
+        Returns:
+            The delete result.
+        """
+        return to_mutation_result(
+            KeycloakDeleteResultDTO,
+            await self._async_admin_request(
+                "delete_realm_role_composites",
+                "delete",
+                f"/roles/{segment(role_name)}/composites",
+                body=to_wire_roles(roles),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    async def get_realm_role_management_permissions(self, role_name: str) -> KeycloakManagementPermissionDTO:
+        """Get the fine-grained permission setup of a realm role.
+
+        Args:
+            role_name: Realm role name.
+
+        Returns:
+            The management permission reference.
+        """
+        return to_dto(
+            KeycloakManagementPermissionDTO,
+            await self._async_admin_request(
+                "get_realm_role_management_permissions",
+                "get",
+                f"/roles/{segment(role_name)}/management/permissions",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def update_realm_role_management_permissions(
+        self,
+        role_name: str,
+        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+    ) -> KeycloakManagementPermissionDTO:
+        """Enable or disable the fine-grained permissions of a realm role.
+
+        Args:
+            role_name: Realm role name.
+            payload: Management permission reference.
+
+        Returns:
+            The management permission reference.
+        """
+        return to_dto(
+            KeycloakManagementPermissionDTO,
+            await self._async_admin_request(
+                "update_realm_role_management_permissions",
+                "put",
+                f"/roles/{segment(role_name)}/management/permissions",
+                body=to_request_payload(payload),
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_client_roles_filtered(
+        self,
+        client_uuid: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakRoleDTO]:
+        """List client roles, filtered by the admin API query parameters.
+
+        Args:
+            client_uuid: Client UUID.
+            query: Optional query parameters: ``search``, ``first``, ``max`` and ``briefRepresentation``.
+
+        Returns:
+            The roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            await self._async_admin_request(
+                "get_client_roles_filtered",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def update_client_role(
+        self,
+        client_uuid: str,
+        role_name: str,
+        payload: KeycloakRoleRequestDTO | dict[str, Any],
+    ) -> KeycloakUpdateResultDTO:
+        """Update a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            payload: Role representation.
+
+        Returns:
+            The update result.
+        """
+        return to_mutation_result(
+            KeycloakUpdateResultDTO,
+            await self._async_admin_request(
+                "update_client_role",
+                "put",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}",
+                body=to_request_payload(payload),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    async def get_client_role_by_name(self, client_uuid: str, role_name: str) -> KeycloakRoleDTO:
+        """Get a client role by its name.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+
+        Returns:
+            The role.
+        """
+        return to_dto(
+            KeycloakRoleDTO,
+            await self._async_admin_request(
+                "get_client_role_by_name",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def delete_client_role(self, client_uuid: str, role_name: str) -> KeycloakDeleteResultDTO:
+        """Delete a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+
+        Returns:
+            The delete result.
+        """
+        return to_mutation_result(
+            KeycloakDeleteResultDTO,
+            await self._async_admin_request(
+                "delete_client_role",
+                "delete",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}",
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    async def get_users_with_client_role(
+        self,
+        client_uuid: str,
+        role_name: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakUserDTO]:
+        """List the users that have a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            query: Optional query parameters: ``first``, ``max`` and ``briefRepresentation``.
+
+        Returns:
+            The users.
+        """
+        return to_dto_list(
+            KeycloakUserDTO,
+            await self._async_admin_request(
+                "get_users_with_client_role",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/users",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_groups_with_client_role(
+        self,
+        client_uuid: str,
+        role_name: str,
+        query: dict[str, Any] | None = None,
+    ) -> list[KeycloakGroupDTO]:
+        """List the groups that have a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            query: Optional query parameters: ``first``, ``max`` and ``briefRepresentation``.
+
+        Returns:
+            The groups.
+        """
+        return to_dto_list(
+            KeycloakGroupDTO,
+            await self._async_admin_request(
+                "get_groups_with_client_role",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/groups",
+                params=query,
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_client_role_composites(self, client_uuid: str, role_name: str) -> list[KeycloakRoleDTO]:
+        """List the composite children of a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+
+        Returns:
+            The child roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            await self._async_admin_request(
+                "get_client_role_composites",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/composites",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_client_role_realm_composites(self, client_uuid: str, role_name: str) -> list[KeycloakRoleDTO]:
+        """List the realm roles that are composite children of a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+
+        Returns:
+            The child roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            await self._async_admin_request(
+                "get_client_role_realm_composites",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/composites/realm",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_client_role_client_composites(
+        self,
+        client_uuid: str,
+        role_name: str,
+        target_client_uuid: str,
+    ) -> list[KeycloakRoleDTO]:
+        """List the composite children of a client role that belong to a client.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            target_client_uuid: UUID of the client that owns the children.
+
+        Returns:
+            The child roles.
+        """
+        return to_dto_list(
+            KeycloakRoleDTO,
+            await self._async_admin_request(
+                "get_client_role_client_composites",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/composites/clients/{segment(target_client_uuid)}",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def add_client_role_composites(
+        self,
+        client_uuid: str,
+        role_name: str,
+        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+    ) -> KeycloakAssignResultDTO:
+        """Add child roles to a composite client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            roles: Roles to add.
+
+        Returns:
+            The assign result.
+        """
+        return to_mutation_result(
+            KeycloakAssignResultDTO,
+            await self._async_admin_request(
+                "add_client_role_composites",
+                "post",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/composites",
+                body=to_wire_roles(roles),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    async def delete_client_role_composites(
+        self,
+        client_uuid: str,
+        role_name: str,
+        roles: list[KeycloakRoleDTO] | list[dict[str, Any]],
+    ) -> KeycloakDeleteResultDTO:
+        """Remove child roles from a composite client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            roles: Roles to remove.
+
+        Returns:
+            The delete result.
+        """
+        return to_mutation_result(
+            KeycloakDeleteResultDTO,
+            await self._async_admin_request(
+                "delete_client_role_composites",
+                "delete",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/composites",
+                body=to_wire_roles(roles),
+                expected=(HTTPStatus.NO_CONTENT,),
+            ),
+        )
+
+    async def get_client_role_management_permissions(
+        self,
+        client_uuid: str,
+        role_name: str,
+    ) -> KeycloakManagementPermissionDTO:
+        """Get the fine-grained permission setup of a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+
+        Returns:
+            The management permission reference.
+        """
+        return to_dto(
+            KeycloakManagementPermissionDTO,
+            await self._async_admin_request(
+                "get_client_role_management_permissions",
+                "get",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/management/permissions",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def update_client_role_management_permissions(
+        self,
+        client_uuid: str,
+        role_name: str,
+        payload: KeycloakManagementPermissionRequestDTO | dict[str, Any],
+    ) -> KeycloakManagementPermissionDTO:
+        """Enable or disable the fine-grained permissions of a client role.
+
+        Args:
+            client_uuid: Client UUID.
+            role_name: Client role name.
+            payload: Management permission reference.
+
+        Returns:
+            The management permission reference.
+        """
+        return to_dto(
+            KeycloakManagementPermissionDTO,
+            await self._async_admin_request(
+                "update_client_role_management_permissions",
+                "put",
+                f"/clients/{segment(client_uuid)}/roles/{segment(role_name)}/management/permissions",
+                body=to_request_payload(payload),
+                expected=(HTTPStatus.OK,),
+            ),
+        )

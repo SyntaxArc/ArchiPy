@@ -820,6 +820,21 @@ Feature: Keycloak Authentication Testing
       | sync         | rptuser      | pass123  | rpt-doc  | read  | test-realm | Test Realm         | rpt-client  |
       | async        | asyncrptuser | async123 | arpt-doc | read  | test-realm | Async Test Realm   | arpt-client |
 
+  @roles
+  Scenario Outline: Required actions, authentication providers and roles by name
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    Then the authenticator, form and client authenticator providers are listed using <adapter_type> adapter
+    And the required actions are listed, updated and reordered, and their settings are described using <adapter_type> adapter
+    When I manage the realm role "<role>" and the client role "<client_role>" of client "<client_name>" by name using <adapter_type> adapter
+    Then the roles "<role>" and "<client_role>" are listed with composites, users and groups using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | role        | client_role  | realm_name | realm_display_name | client_name   |
+      | sync         | named-role  | named-crole  | test-realm | Test Realm         | named-client  |
+      | async        | anamed-role | anamed-crole | test-realm | Async Test Realm   | anamed-client |
+
   @components
   Scenario Outline: Component listing
     Given a configured <adapter_type> Keycloak adapter

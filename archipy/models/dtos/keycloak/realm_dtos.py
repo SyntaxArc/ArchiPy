@@ -29,6 +29,10 @@ from archipy.models.dtos.keycloak.protocol_mapper_dtos import (
     KeycloakProtocolMapperDTO,
     KeycloakProtocolMapperRequestDTO,
 )
+from archipy.models.dtos.keycloak.required_action_dtos import (
+    KeycloakRequiredActionProviderDTO,
+    KeycloakRequiredActionProviderRequestDTO,
+)
 from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO, KeycloakRoleRequestDTO
 from archipy.models.dtos.keycloak.user_dtos import KeycloakUserDTO, KeycloakUserRequestDTO
 
@@ -168,7 +172,7 @@ class KeycloakRealmDTO(KeycloakResponseDTO):
     default_locale: str | None = None
     authentication_flows: list[KeycloakAuthenticationFlowDTO] | None = None
     authenticator_config: list[KeycloakAuthenticatorConfigDTO] | None = None
-    required_actions: list[dict[str, JsonValue]] | None = None
+    required_actions: list[KeycloakRequiredActionProviderDTO] | None = None
     browser_flow: str | None = None
     registration_flow: str | None = None
     direct_grant_flow: str | None = None
@@ -328,7 +332,7 @@ class KeycloakRealmRequestDTO(KeycloakRequestDTO):
     default_locale: str | None = None
     authentication_flows: list[KeycloakAuthenticationFlowRequestDTO] | None = None
     authenticator_config: list[KeycloakAuthenticatorConfigRequestDTO] | None = None
-    required_actions: list[dict[str, JsonValue]] | None = None
+    required_actions: list[KeycloakRequiredActionProviderRequestDTO] | None = None
     browser_flow: str | None = None
     registration_flow: str | None = None
     direct_grant_flow: str | None = None

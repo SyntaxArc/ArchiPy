@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import Any
 
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
     payload_value,
+    segment,
     to_dto,
     to_dto_list,
     to_mutation_result,
@@ -19,6 +21,7 @@ from archipy.models.dtos.keycloak.auth_flow_dtos import (
     KeycloakAuthenticationExecutionDTO,
     KeycloakAuthenticationExecutionInfoDTO,
     KeycloakAuthenticationExecutionInfoRequestDTO,
+    KeycloakAuthenticationExecutionRequestDTO,
     KeycloakAuthenticationFlowDTO,
     KeycloakAuthenticationFlowRequestDTO,
     KeycloakAuthenticatorConfigDTO,
@@ -36,6 +39,7 @@ from archipy.models.dtos.keycloak.common_dtos import (
     KeycloakDeleteResultDTO,
     KeycloakUpdateResultDTO,
 )
+from archipy.models.dtos.keycloak.component_dtos import KeycloakConfigPropertyDTO
 
 
 class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
@@ -321,6 +325,129 @@ class KeycloakAuthFlowsMixin(SyncKeycloakMixinBase):
                 ),
             ),
             lambda: self._find_execution_config_id(execution_id),
+        )
+
+    def get_client_authenticator_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
+        """List the client authenticator providers.
+
+        Args:
+            (none)
+
+        Returns:
+            The providers.
+        """
+        return to_dto_list(
+            KeycloakAuthenticatorProviderDTO,
+            self._admin_request(
+                "get_client_authenticator_providers",
+                "get",
+                "/authentication/client-authenticator-providers",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_form_action_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
+        """List the form action providers.
+
+        Args:
+            (none)
+
+        Returns:
+            The providers.
+        """
+        return to_dto_list(
+            KeycloakAuthenticatorProviderDTO,
+            self._admin_request(
+                "get_form_action_providers",
+                "get",
+                "/authentication/form-action-providers",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_form_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
+        """List the form providers.
+
+        Args:
+            (none)
+
+        Returns:
+            The providers.
+        """
+        return to_dto_list(
+            KeycloakAuthenticatorProviderDTO,
+            self._admin_request(
+                "get_form_providers",
+                "get",
+                "/authentication/form-providers",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    def get_per_client_config_description(self) -> dict[str, list[KeycloakConfigPropertyDTO]]:
+        """Describe the settings of every client authenticator.
+
+        Args:
+            (none)
+
+        Returns:
+            The settings by authenticator id.
+        """
+        return {
+            key: to_dto_list(KeycloakConfigPropertyDTO, value)
+            for key, value in self._admin_request(
+                "get_per_client_config_description",
+                "get",
+                "/authentication/per-client-config-description",
+                expected=(HTTPStatus.OK,),
+            ).items()
+        }
+
+    def create_execution(
+        self,
+        payload: KeycloakAuthenticationExecutionRequestDTO | dict[str, Any],
+    ) -> KeycloakCreateResultDTO:
+        """Add an execution to a flow by its representation.
+
+        Args:
+            payload: Execution representation, with the parent flow id.
+
+        Returns:
+            The create result.
+        """
+        return to_mutation_result(
+            KeycloakCreateResultDTO,
+            self._admin_request(
+                "create_execution",
+                "post",
+                "/authentication/executions",
+                body=to_request_payload(payload),
+                expected=(
+                    HTTPStatus.CREATED,
+                    HTTPStatus.NO_CONTENT,
+                    HTTPStatus.OK,
+                ),
+            ),
+        )
+
+    def get_execution_config(self, execution_id: str, config_id: str) -> KeycloakAuthenticatorConfigDTO:
+        """Get the config of an execution.
+
+        Args:
+            execution_id: Execution identifier.
+            config_id: Config identifier.
+
+        Returns:
+            The config.
+        """
+        return to_dto(
+            KeycloakAuthenticatorConfigDTO,
+            self._admin_request(
+                "get_execution_config",
+                "get",
+                f"/authentication/executions/{segment(execution_id)}/config/{segment(config_id)}",
+                expected=(HTTPStatus.OK,),
+            ),
         )
 
 
@@ -612,4 +739,125 @@ class AsyncKeycloakAuthFlowsMixin(AsyncKeycloakMixinBase):
                 ),
             ),
             lambda: self._find_execution_config_id(execution_id),
+        )
+
+    async def get_client_authenticator_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
+        """List the client authenticator providers.
+
+        Args:
+            (none)
+
+        Returns:
+            The providers.
+        """
+        return to_dto_list(
+            KeycloakAuthenticatorProviderDTO,
+            await self._async_admin_request(
+                "get_client_authenticator_providers",
+                "get",
+                "/authentication/client-authenticator-providers",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_form_action_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
+        """List the form action providers.
+
+        Args:
+            (none)
+
+        Returns:
+            The providers.
+        """
+        return to_dto_list(
+            KeycloakAuthenticatorProviderDTO,
+            await self._async_admin_request(
+                "get_form_action_providers",
+                "get",
+                "/authentication/form-action-providers",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_form_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
+        """List the form providers.
+
+        Args:
+            (none)
+
+        Returns:
+            The providers.
+        """
+        return to_dto_list(
+            KeycloakAuthenticatorProviderDTO,
+            await self._async_admin_request(
+                "get_form_providers",
+                "get",
+                "/authentication/form-providers",
+                expected=(HTTPStatus.OK,),
+            ),
+        )
+
+    async def get_per_client_config_description(self) -> dict[str, list[KeycloakConfigPropertyDTO]]:
+        """Describe the settings of every client authenticator.
+
+        Args:
+            (none)
+
+        Returns:
+            The settings by authenticator id.
+        """
+        raw = await self._async_admin_request(
+            "get_per_client_config_description",
+            "get",
+            "/authentication/per-client-config-description",
+            expected=(HTTPStatus.OK,),
+        )
+        return {key: to_dto_list(KeycloakConfigPropertyDTO, value) for key, value in raw.items()}
+
+    async def create_execution(
+        self,
+        payload: KeycloakAuthenticationExecutionRequestDTO | dict[str, Any],
+    ) -> KeycloakCreateResultDTO:
+        """Add an execution to a flow by its representation.
+
+        Args:
+            payload: Execution representation, with the parent flow id.
+
+        Returns:
+            The create result.
+        """
+        return to_mutation_result(
+            KeycloakCreateResultDTO,
+            await self._async_admin_request(
+                "create_execution",
+                "post",
+                "/authentication/executions",
+                body=to_request_payload(payload),
+                expected=(
+                    HTTPStatus.CREATED,
+                    HTTPStatus.NO_CONTENT,
+                    HTTPStatus.OK,
+                ),
+            ),
+        )
+
+    async def get_execution_config(self, execution_id: str, config_id: str) -> KeycloakAuthenticatorConfigDTO:
+        """Get the config of an execution.
+
+        Args:
+            execution_id: Execution identifier.
+            config_id: Config identifier.
+
+        Returns:
+            The config.
+        """
+        return to_dto(
+            KeycloakAuthenticatorConfigDTO,
+            await self._async_admin_request(
+                "get_execution_config",
+                "get",
+                f"/authentication/executions/{segment(execution_id)}/config/{segment(config_id)}",
+                expected=(HTTPStatus.OK,),
+            ),
         )

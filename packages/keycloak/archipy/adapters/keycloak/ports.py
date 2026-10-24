@@ -21,6 +21,7 @@ from archipy.adapters.keycloak._resources import (
     AsyncKeycloakOrganizationsPort,
     AsyncKeycloakProtocolMappersPort,
     AsyncKeycloakRealmsPort,
+    AsyncKeycloakRequiredActionsPort,
     AsyncKeycloakRoleMappingsPort,
     AsyncKeycloakRolesByIdPort,
     AsyncKeycloakRolesPort,
@@ -50,6 +51,7 @@ from archipy.adapters.keycloak._resources import (
     KeycloakProtocolMappersPort,
     KeycloakProtocolMapperType,
     KeycloakRealmsPort,
+    KeycloakRequiredActionsPort,
     KeycloakResponseType,
     KeycloakRoleMappingsPort,
     KeycloakRolesByIdPort,
@@ -104,6 +106,7 @@ class KeycloakPort(
     KeycloakClientCertificatesPort,
     KeycloakIdentityProvidersPort,
     KeycloakAuthzenPort,
+    KeycloakRequiredActionsPort,
 ):
     """Interface for Keycloak operations providing a standardized access pattern.
 
@@ -138,6 +141,7 @@ class AsyncKeycloakPort(
     AsyncKeycloakClientCertificatesPort,
     AsyncKeycloakIdentityProvidersPort,
     AsyncKeycloakAuthzenPort,
+    AsyncKeycloakRequiredActionsPort,
 ):
     """Asynchronous interface for Keycloak operations providing a standardized access pattern.
 

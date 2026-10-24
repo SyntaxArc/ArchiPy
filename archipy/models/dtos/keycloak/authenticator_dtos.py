@@ -30,3 +30,10 @@ class KeycloakAuthenticationSubflowCreateRequestDTO(KeycloakRequestDTO):
     type: str | None = None
     provider: str | None = None
     description: str | None = None
+
+
+class KeycloakUnregisteredRequiredActionDTO(KeycloakResponseDTO):
+    """A required action provider that exists on the server but is not registered in the realm."""
+
+    name: str | None = None
+    provider_id: str | None = None

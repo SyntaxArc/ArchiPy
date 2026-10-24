@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         KeycloakAuthenticationExecutionDTO,
         KeycloakAuthenticationExecutionInfoDTO,
         KeycloakAuthenticationExecutionInfoRequestDTO,
+        KeycloakAuthenticationExecutionRequestDTO,
         KeycloakAuthenticationFlowDTO,
         KeycloakAuthenticationFlowRequestDTO,
         KeycloakAuthenticatorConfigDTO,
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
         KeycloakDeleteResultDTO,
         KeycloakUpdateResultDTO,
     )
+    from archipy.models.dtos.keycloak.component_dtos import KeycloakConfigPropertyDTO
 
 
 class KeycloakAuthFlowsPort:
@@ -168,6 +170,39 @@ class KeycloakAuthFlowsPort:
         payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
     ) -> KeycloakCreateResultDTO:
         """Create configuration for an authentication flow execution."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_authenticator_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
+        """List the client authenticator providers."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_form_action_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
+        """List the form action providers."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_form_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
+        """List the form providers."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_per_client_config_description(self) -> dict[str, list[KeycloakConfigPropertyDTO]]:
+        """Describe the settings of every client authenticator."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_execution(
+        self,
+        payload: KeycloakAuthenticationExecutionRequestDTO | dict[str, Any],
+    ) -> KeycloakCreateResultDTO:
+        """Add an execution to a flow by its representation."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_execution_config(self, execution_id: str, config_id: str) -> KeycloakAuthenticatorConfigDTO:
+        """Get the config of an execution."""
         raise NotImplementedError
 
 
@@ -307,4 +342,37 @@ class AsyncKeycloakAuthFlowsPort:
         payload: KeycloakAuthenticatorConfigRequestDTO | dict[str, Any],
     ) -> KeycloakCreateResultDTO:
         """Create configuration for an authentication flow execution."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_authenticator_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
+        """List the client authenticator providers."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_form_action_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
+        """List the form action providers."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_form_providers(self) -> list[KeycloakAuthenticatorProviderDTO]:
+        """List the form providers."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_per_client_config_description(self) -> dict[str, list[KeycloakConfigPropertyDTO]]:
+        """Describe the settings of every client authenticator."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def create_execution(
+        self,
+        payload: KeycloakAuthenticationExecutionRequestDTO | dict[str, Any],
+    ) -> KeycloakCreateResultDTO:
+        """Add an execution to a flow by its representation."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_execution_config(self, execution_id: str, config_id: str) -> KeycloakAuthenticatorConfigDTO:
+        """Get the config of an execution."""
         raise NotImplementedError
