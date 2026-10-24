@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 from archipy.adapters.keycloak._resources import (
+    AsyncKeycloakAttackDetectionPort,
     AsyncKeycloakAuthFlowsPort,
     AsyncKeycloakAuthPort,
     AsyncKeycloakAuthzPort,
+    AsyncKeycloakClientCertificatesPort,
+    AsyncKeycloakClientInitialAccessPort,
+    AsyncKeycloakClientRegistrationPolicyPort,
     AsyncKeycloakClientScopesPort,
     AsyncKeycloakClientsPort,
     AsyncKeycloakComponentsPort,
     AsyncKeycloakGroupsPort,
+    AsyncKeycloakIdentityProvidersPort,
+    AsyncKeycloakKeysPort,
     AsyncKeycloakOrganizationGroupsPort,
     AsyncKeycloakOrganizationsPort,
     AsyncKeycloakProtocolMappersPort,
@@ -20,9 +26,13 @@ from archipy.adapters.keycloak._resources import (
     AsyncKeycloakScopeMappingsPort,
     AsyncKeycloakUmaPort,
     AsyncKeycloakUsersPort,
+    KeycloakAttackDetectionPort,
     KeycloakAuthFlowsPort,
     KeycloakAuthPort,
     KeycloakAuthzPort,
+    KeycloakClientCertificatesPort,
+    KeycloakClientInitialAccessPort,
+    KeycloakClientRegistrationPolicyPort,
     KeycloakClientScopesPort,
     KeycloakClientScopeType,
     KeycloakClientsPort,
@@ -30,6 +40,8 @@ from archipy.adapters.keycloak._resources import (
     KeycloakComponentType,
     KeycloakGroupsPort,
     KeycloakGroupType,
+    KeycloakIdentityProvidersPort,
+    KeycloakKeysPort,
     KeycloakOrganizationGroupsPort,
     KeycloakOrganizationsPort,
     KeycloakOrganizationType,
@@ -83,6 +95,12 @@ class KeycloakPort(
     KeycloakAuthzPort,
     KeycloakUmaPort,
     KeycloakComponentsPort,
+    KeycloakAttackDetectionPort,
+    KeycloakClientInitialAccessPort,
+    KeycloakClientRegistrationPolicyPort,
+    KeycloakKeysPort,
+    KeycloakClientCertificatesPort,
+    KeycloakIdentityProvidersPort,
 ):
     """Interface for Keycloak operations providing a standardized access pattern.
 
@@ -110,6 +128,12 @@ class AsyncKeycloakPort(
     AsyncKeycloakAuthzPort,
     AsyncKeycloakUmaPort,
     AsyncKeycloakComponentsPort,
+    AsyncKeycloakAttackDetectionPort,
+    AsyncKeycloakClientInitialAccessPort,
+    AsyncKeycloakClientRegistrationPolicyPort,
+    AsyncKeycloakKeysPort,
+    AsyncKeycloakClientCertificatesPort,
+    AsyncKeycloakIdentityProvidersPort,
 ):
     """Asynchronous interface for Keycloak operations providing a standardized access pattern.
 

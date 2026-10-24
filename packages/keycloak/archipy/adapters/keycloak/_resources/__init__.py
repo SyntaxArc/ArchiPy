@@ -17,6 +17,14 @@ from archipy.adapters.keycloak._protocols.uma.port import (
     AsyncKeycloakUmaPort,
     KeycloakUmaPort,
 )
+from archipy.adapters.keycloak._resources.attack_detection.adapter import (
+    AsyncKeycloakAttackDetectionMixin,
+    KeycloakAttackDetectionMixin,
+)
+from archipy.adapters.keycloak._resources.attack_detection.port import (
+    AsyncKeycloakAttackDetectionPort,
+    KeycloakAttackDetectionPort,
+)
 from archipy.adapters.keycloak._resources.authentication.adapter import (
     AsyncKeycloakAuthFlowsMixin,
     KeycloakAuthFlowsMixin,
@@ -32,6 +40,30 @@ from archipy.adapters.keycloak._resources.authorization.adapter import (
 from archipy.adapters.keycloak._resources.authorization.port import (
     AsyncKeycloakAuthzPort,
     KeycloakAuthzPort,
+)
+from archipy.adapters.keycloak._resources.client_certificates.adapter import (
+    AsyncKeycloakClientCertificatesMixin,
+    KeycloakClientCertificatesMixin,
+)
+from archipy.adapters.keycloak._resources.client_certificates.port import (
+    AsyncKeycloakClientCertificatesPort,
+    KeycloakClientCertificatesPort,
+)
+from archipy.adapters.keycloak._resources.client_initial_access.adapter import (
+    AsyncKeycloakClientInitialAccessMixin,
+    KeycloakClientInitialAccessMixin,
+)
+from archipy.adapters.keycloak._resources.client_initial_access.port import (
+    AsyncKeycloakClientInitialAccessPort,
+    KeycloakClientInitialAccessPort,
+)
+from archipy.adapters.keycloak._resources.client_registration_policy.adapter import (
+    AsyncKeycloakClientRegistrationPolicyMixin,
+    KeycloakClientRegistrationPolicyMixin,
+)
+from archipy.adapters.keycloak._resources.client_registration_policy.port import (
+    AsyncKeycloakClientRegistrationPolicyPort,
+    KeycloakClientRegistrationPolicyPort,
 )
 from archipy.adapters.keycloak._resources.client_scopes.adapter import (
     AsyncKeycloakClientScopesMixin,
@@ -64,6 +96,22 @@ from archipy.adapters.keycloak._resources.groups.adapter import (
 from archipy.adapters.keycloak._resources.groups.port import (
     AsyncKeycloakGroupsPort,
     KeycloakGroupsPort,
+)
+from archipy.adapters.keycloak._resources.identity_providers.adapter import (
+    AsyncKeycloakIdentityProvidersMixin,
+    KeycloakIdentityProvidersMixin,
+)
+from archipy.adapters.keycloak._resources.identity_providers.port import (
+    AsyncKeycloakIdentityProvidersPort,
+    KeycloakIdentityProvidersPort,
+)
+from archipy.adapters.keycloak._resources.keys.adapter import (
+    AsyncKeycloakKeysMixin,
+    KeycloakKeysMixin,
+)
+from archipy.adapters.keycloak._resources.keys.port import (
+    AsyncKeycloakKeysPort,
+    KeycloakKeysPort,
 )
 from archipy.adapters.keycloak._resources.organizations.adapter import (
     AsyncKeycloakOrganizationsMixin,
@@ -151,12 +199,20 @@ from archipy.adapters.keycloak._type_aliases import (
 )
 
 __all__ = [
+    "AsyncKeycloakAttackDetectionMixin",
+    "AsyncKeycloakAttackDetectionPort",
     "AsyncKeycloakAuthFlowsMixin",
     "AsyncKeycloakAuthFlowsPort",
     "AsyncKeycloakAuthMixin",
     "AsyncKeycloakAuthPort",
     "AsyncKeycloakAuthzMixin",
     "AsyncKeycloakAuthzPort",
+    "AsyncKeycloakClientCertificatesMixin",
+    "AsyncKeycloakClientCertificatesPort",
+    "AsyncKeycloakClientInitialAccessMixin",
+    "AsyncKeycloakClientInitialAccessPort",
+    "AsyncKeycloakClientRegistrationPolicyMixin",
+    "AsyncKeycloakClientRegistrationPolicyPort",
     "AsyncKeycloakClientScopesMixin",
     "AsyncKeycloakClientScopesPort",
     "AsyncKeycloakClientsMixin",
@@ -165,6 +221,10 @@ __all__ = [
     "AsyncKeycloakComponentsPort",
     "AsyncKeycloakGroupsMixin",
     "AsyncKeycloakGroupsPort",
+    "AsyncKeycloakIdentityProvidersMixin",
+    "AsyncKeycloakIdentityProvidersPort",
+    "AsyncKeycloakKeysMixin",
+    "AsyncKeycloakKeysPort",
     "AsyncKeycloakOrganizationGroupsMixin",
     "AsyncKeycloakOrganizationGroupsPort",
     "AsyncKeycloakOrganizationsMixin",
@@ -185,12 +245,20 @@ __all__ = [
     "AsyncKeycloakUmaPort",
     "AsyncKeycloakUsersMixin",
     "AsyncKeycloakUsersPort",
+    "KeycloakAttackDetectionMixin",
+    "KeycloakAttackDetectionPort",
     "KeycloakAuthFlowsMixin",
     "KeycloakAuthFlowsPort",
     "KeycloakAuthMixin",
     "KeycloakAuthPort",
     "KeycloakAuthzMixin",
     "KeycloakAuthzPort",
+    "KeycloakClientCertificatesMixin",
+    "KeycloakClientCertificatesPort",
+    "KeycloakClientInitialAccessMixin",
+    "KeycloakClientInitialAccessPort",
+    "KeycloakClientRegistrationPolicyMixin",
+    "KeycloakClientRegistrationPolicyPort",
     "KeycloakClientScopeType",
     "KeycloakClientScopesMixin",
     "KeycloakClientScopesPort",
@@ -203,6 +271,10 @@ __all__ = [
     "KeycloakGroupType",
     "KeycloakGroupsMixin",
     "KeycloakGroupsPort",
+    "KeycloakIdentityProvidersMixin",
+    "KeycloakIdentityProvidersPort",
+    "KeycloakKeysMixin",
+    "KeycloakKeysPort",
     "KeycloakOrganizationGroupsMixin",
     "KeycloakOrganizationGroupsPort",
     "KeycloakOrganizationType",

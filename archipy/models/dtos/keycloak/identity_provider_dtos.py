@@ -3,6 +3,26 @@
 from archipy.models.dtos.keycloak.base import KeycloakRequestDTO, KeycloakResponseDTO
 
 
+class KeycloakIdentityProviderMapperDTO(KeycloakResponseDTO):
+    """Keycloak ``IdentityProviderMapperRepresentation`` as returned by the admin API."""
+
+    id: str | None = None
+    name: str | None = None
+    identity_provider_alias: str | None = None
+    identity_provider_mapper: str | None = None
+    config: dict[str, str] | None = None
+
+
+class KeycloakIdentityProviderMapperRequestDTO(KeycloakRequestDTO):
+    """Keycloak ``IdentityProviderMapperRepresentation`` payload sent to the admin API."""
+
+    id: str | None = None
+    name: str | None = None
+    identity_provider_alias: str | None = None
+    identity_provider_mapper: str | None = None
+    config: dict[str, str] | None = None
+
+
 class KeycloakIdentityProviderDTO(KeycloakResponseDTO):
     """Keycloak ``IdentityProviderRepresentation`` as returned by the admin API."""
 

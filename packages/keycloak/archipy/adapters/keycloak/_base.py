@@ -171,7 +171,7 @@ def to_text(raw: object) -> str:
         return bytes(raw).decode("utf-8", errors="replace")
     if isinstance(raw, str):
         return raw
-    return json.dumps(raw)
+    return json.dumps(raw) if raw else ""
 
 
 def to_dto[M: KeycloakResponseDTO](model: type[M], raw: Mapping[str, Any]) -> M:

@@ -3,6 +3,7 @@
 from pydantic import JsonValue
 
 from archipy.models.dtos.keycloak.base import KeycloakRequestDTO, KeycloakResponseDTO
+from archipy.models.dtos.keycloak.component_dtos import KeycloakConfigPropertyDTO, KeycloakConfigPropertyRequestDTO
 
 
 class KeycloakAuthenticationFlowDTO(KeycloakResponseDTO):
@@ -117,7 +118,7 @@ class KeycloakAuthenticatorConfigInfoDTO(KeycloakResponseDTO):
     name: str | None = None
     provider_id: str | None = None
     help_text: str | None = None
-    properties: list[dict[str, JsonValue]] | None = None
+    properties: list[KeycloakConfigPropertyDTO] | None = None
 
 
 class KeycloakAuthenticatorConfigInfoRequestDTO(KeycloakRequestDTO):
@@ -126,4 +127,4 @@ class KeycloakAuthenticatorConfigInfoRequestDTO(KeycloakRequestDTO):
     name: str | None = None
     provider_id: str | None = None
     help_text: str | None = None
-    properties: list[dict[str, JsonValue]] | None = None
+    properties: list[KeycloakConfigPropertyRequestDTO] | None = None

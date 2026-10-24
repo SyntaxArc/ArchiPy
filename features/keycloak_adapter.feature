@@ -759,6 +759,35 @@ Feature: Keycloak Authentication Testing
       | sync         | realm-admin-sync  | Realm Admin Sync   | realm-admin-client  |
       | async        | realm-admin-async | Realm Admin Async  | realm-admin-aclient |
 
+  @realms
+  Scenario Outline: Realm keys, attack detection, initial access tokens and client certificates
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
+    Then the realm keys and the client registration policy providers are listed using <adapter_type> adapter
+    And the brute force status of user "<username>" is read and cleared using <adapter_type> adapter
+    And a client initial access token is created, listed and deleted using <adapter_type> adapter
+    And the client "<client_name>" generates and downloads a certificate using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | username      | password | realm_name | realm_display_name | client_name  |
+      | sync         | miscuser      | pass123  | test-realm | Test Realm         | misc-client  |
+      | async        | asyncmiscuser | async123 | test-realm | Async Test Realm   | amisc-client |
+
+  @realms
+  Scenario Outline: Identity providers with mappers
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    When I create the identity provider "<idp_alias>" with a mapper "<mapper>" using <adapter_type> adapter
+    Then the identity provider "<idp_alias>" and its mapper "<mapper>" are listed, read, updated and deleted using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | idp_alias | mapper     | realm_name | realm_display_name | client_name |
+      | sync         | idp-main  | role-sync  | test-realm | Test Realm         | idp-client  |
+      | async        | aidp-main | arole-sync | test-realm | Async Test Realm   | aidp-client |
+
   @components
   Scenario Outline: Component listing
     Given a configured <adapter_type> Keycloak adapter
