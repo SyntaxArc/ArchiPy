@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
@@ -12,15 +12,17 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     to_mutation_result,
 )
 from archipy.helpers.utils.string_utils import StringUtils
+from archipy.models.dtos.keycloak.common_dtos import (
+    KeycloakAssignResultDTO,
+    KeycloakDeleteResultDTO,
+    KeycloakUpdateResultDTO,
+)
 from archipy.models.dtos.keycloak.identity_provider_dtos import KeycloakIdentityProviderDTO
 from archipy.models.dtos.keycloak.organization_dtos import (
     KeycloakOrganizationDTO,
     KeycloakOrganizationMemberDTO,
     KeycloakOrganizationRequestDTO,
 )
-
-if TYPE_CHECKING:
-    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
 
 
 def _organization_payload(
@@ -115,7 +117,7 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
         organization_id: str,
         config: KeycloakOrganizationRequestDTO | None = None,
         **kwargs: Any,
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Update an existing organization.
 
         Args:
@@ -128,13 +130,14 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
         """
         payload = _organization_update_payload(kwargs, config)
         return to_mutation_result(
+            KeycloakUpdateResultDTO,
             self._call_keycloak(
                 "update_organization",
                 lambda: self.admin_adapter.update_organization(organization_id=organization_id, payload=payload),
             ),
         )
 
-    def delete_organization(self, organization_id: str) -> KeycloakMutationResultDTO:
+    def delete_organization(self, organization_id: str) -> KeycloakDeleteResultDTO:
         """Delete an organization.
 
         Args:
@@ -144,6 +147,7 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
             Deletion response payload.
         """
         return to_mutation_result(
+            KeycloakDeleteResultDTO,
             self._call_keycloak(
                 "delete_organization",
                 lambda: self.admin_adapter.delete_organization(organization_id=organization_id),
@@ -220,7 +224,7 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
             lambda: self.admin_adapter.get_organization_members_count(organization_id=organization_id),
         )
 
-    def organization_user_add(self, user_id: str, organization_id: str) -> KeycloakMutationResultDTO:
+    def organization_user_add(self, user_id: str, organization_id: str) -> KeycloakAssignResultDTO:
         """Add a user to an organization.
 
         Args:
@@ -231,13 +235,14 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
             Raw response bytes.
         """
         return to_mutation_result(
+            KeycloakAssignResultDTO,
             self._call_keycloak(
                 "organization_user_add",
                 lambda: self.admin_adapter.organization_user_add(user_id=user_id, organization_id=organization_id),
             ),
         )
 
-    def organization_user_remove(self, user_id: str, organization_id: str) -> KeycloakMutationResultDTO:
+    def organization_user_remove(self, user_id: str, organization_id: str) -> KeycloakDeleteResultDTO:
         """Remove a user from an organization.
 
         Args:
@@ -248,6 +253,7 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
             Removal response payload.
         """
         return to_mutation_result(
+            KeycloakDeleteResultDTO,
             self._call_keycloak(
                 "organization_user_remove",
                 lambda: self.admin_adapter.organization_user_remove(user_id=user_id, organization_id=organization_id),
@@ -321,7 +327,7 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
         organization_id: str,
         config: KeycloakOrganizationRequestDTO | None = None,
         **kwargs: Any,
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Update an existing organization.
 
         Args:
@@ -334,13 +340,14 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
         """
         payload = _organization_update_payload(kwargs, config)
         return to_mutation_result(
+            KeycloakUpdateResultDTO,
             await self._async_call_keycloak(
                 "update_organization",
                 lambda: self.admin_adapter.a_update_organization(organization_id=organization_id, payload=payload),
             ),
         )
 
-    async def delete_organization(self, organization_id: str) -> KeycloakMutationResultDTO:
+    async def delete_organization(self, organization_id: str) -> KeycloakDeleteResultDTO:
         """Delete an organization.
 
         Args:
@@ -350,6 +357,7 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
             Deletion response payload.
         """
         return to_mutation_result(
+            KeycloakDeleteResultDTO,
             await self._async_call_keycloak(
                 "delete_organization",
                 lambda: self.admin_adapter.a_delete_organization(organization_id=organization_id),
@@ -426,7 +434,7 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
             lambda: self.admin_adapter.a_get_organization_members_count(organization_id=organization_id),
         )
 
-    async def organization_user_add(self, user_id: str, organization_id: str) -> KeycloakMutationResultDTO:
+    async def organization_user_add(self, user_id: str, organization_id: str) -> KeycloakAssignResultDTO:
         """Add a user to an organization.
 
         Args:
@@ -437,13 +445,14 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
             Raw response bytes.
         """
         return to_mutation_result(
+            KeycloakAssignResultDTO,
             await self._async_call_keycloak(
                 "organization_user_add",
                 lambda: self.admin_adapter.a_organization_user_add(user_id=user_id, organization_id=organization_id),
             ),
         )
 
-    async def organization_user_remove(self, user_id: str, organization_id: str) -> KeycloakMutationResultDTO:
+    async def organization_user_remove(self, user_id: str, organization_id: str) -> KeycloakDeleteResultDTO:
         """Remove a user from an organization.
 
         Args:
@@ -454,6 +463,7 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
             Removal response payload.
         """
         return to_mutation_result(
+            KeycloakDeleteResultDTO,
             await self._async_call_keycloak(
                 "organization_user_remove",
                 lambda: self.admin_adapter.a_organization_user_remove(user_id=user_id, organization_id=organization_id),

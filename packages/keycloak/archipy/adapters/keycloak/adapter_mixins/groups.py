@@ -14,7 +14,12 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     to_request_payload,
     to_wire_roles,
 )
-from archipy.models.dtos.keycloak.common_dtos import KeycloakGroupsCountDTO, KeycloakMutationResultDTO
+from archipy.models.dtos.keycloak.common_dtos import (
+    KeycloakAssignResultDTO,
+    KeycloakDeleteResultDTO,
+    KeycloakGroupsCountDTO,
+    KeycloakUpdateResultDTO,
+)
 from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupDTO, KeycloakGroupRequestDTO
 from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
 from archipy.models.dtos.keycloak.user_dtos import KeycloakUserDTO
@@ -43,18 +48,20 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
         self,
         group_id: str,
         payload: KeycloakGroupRequestDTO | dict[str, Any],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Update a group."""
         return to_mutation_result(
+            KeycloakUpdateResultDTO,
             self._call_keycloak(
                 "update_group",
                 lambda: self.admin_adapter.update_group(group_id=group_id, payload=to_request_payload(payload)),
             ),
         )
 
-    def delete_group(self, group_id: str) -> KeycloakMutationResultDTO:
+    def delete_group(self, group_id: str) -> KeycloakDeleteResultDTO:
         """Delete a group."""
         return to_mutation_result(
+            KeycloakDeleteResultDTO,
             self._call_keycloak(
                 "delete_group",
                 lambda: self.admin_adapter.delete_group(group_id=group_id),
@@ -135,27 +142,30 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def group_user_add(self, user_id: str, group_id: str) -> KeycloakMutationResultDTO:
+    def group_user_add(self, user_id: str, group_id: str) -> KeycloakAssignResultDTO:
         """Add a user to a group."""
         return to_mutation_result(
+            KeycloakAssignResultDTO,
             self._call_keycloak(
                 "group_user_add",
                 lambda: self.admin_adapter.group_user_add(user_id=user_id, group_id=group_id),
             ),
         )
 
-    def group_user_remove(self, user_id: str, group_id: str) -> KeycloakMutationResultDTO:
+    def group_user_remove(self, user_id: str, group_id: str) -> KeycloakDeleteResultDTO:
         """Remove a user from a group."""
         return to_mutation_result(
+            KeycloakDeleteResultDTO,
             self._call_keycloak(
                 "group_user_remove",
                 lambda: self.admin_adapter.group_user_remove(user_id=user_id, group_id=group_id),
             ),
         )
 
-    def group_set_permissions(self, group_id: str, enabled: bool = True) -> KeycloakMutationResultDTO:
+    def group_set_permissions(self, group_id: str, enabled: bool = True) -> KeycloakUpdateResultDTO:
         """Enable or disable fine-grained permissions for a group."""
         return to_mutation_result(
+            KeycloakUpdateResultDTO,
             self._call_keycloak(
                 "group_set_permissions",
                 lambda: self.admin_adapter.group_set_permissions(group_id=group_id, enabled=enabled),
@@ -200,9 +210,10 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
         group_id: str,
         client_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakAssignResultDTO:
         """Assign client roles to a group."""
         return to_mutation_result(
+            KeycloakAssignResultDTO,
             self._call_keycloak(
                 "assign_group_client_roles",
                 lambda: self.admin_adapter.assign_group_client_roles(
@@ -217,9 +228,10 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
         self,
         group_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakAssignResultDTO:
         """Assign realm roles to a group."""
         return to_mutation_result(
+            KeycloakAssignResultDTO,
             self._call_keycloak(
                 "assign_group_realm_roles",
                 lambda: self.admin_adapter.assign_group_realm_roles(group_id=group_id, roles=to_wire_roles(roles)),
@@ -231,9 +243,10 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
         group_id: str,
         client_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakDeleteResultDTO:
         """Remove client roles from a group."""
         return to_mutation_result(
+            KeycloakDeleteResultDTO,
             self._call_keycloak(
                 "delete_group_client_roles",
                 lambda: self.admin_adapter.delete_group_client_roles(
@@ -248,9 +261,10 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
         self,
         group_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from a group."""
         return to_mutation_result(
+            KeycloakDeleteResultDTO,
             self._call_keycloak(
                 "delete_group_realm_roles",
                 lambda: self.admin_adapter.delete_group_realm_roles(group_id=group_id, roles=to_wire_roles(roles)),
@@ -329,18 +343,20 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
         self,
         group_id: str,
         payload: KeycloakGroupRequestDTO | dict[str, Any],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Update a group."""
         return to_mutation_result(
+            KeycloakUpdateResultDTO,
             await self._async_call_keycloak(
                 "update_group",
                 lambda: self.admin_adapter.a_update_group(group_id=group_id, payload=to_request_payload(payload)),
             ),
         )
 
-    async def delete_group(self, group_id: str) -> KeycloakMutationResultDTO:
+    async def delete_group(self, group_id: str) -> KeycloakDeleteResultDTO:
         """Delete a group."""
         return to_mutation_result(
+            KeycloakDeleteResultDTO,
             await self._async_call_keycloak(
                 "delete_group",
                 lambda: self.admin_adapter.a_delete_group(group_id=group_id),
@@ -425,27 +441,30 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def group_user_add(self, user_id: str, group_id: str) -> KeycloakMutationResultDTO:
+    async def group_user_add(self, user_id: str, group_id: str) -> KeycloakAssignResultDTO:
         """Add a user to a group."""
         return to_mutation_result(
+            KeycloakAssignResultDTO,
             await self._async_call_keycloak(
                 "group_user_add",
                 lambda: self.admin_adapter.a_group_user_add(user_id=user_id, group_id=group_id),
             ),
         )
 
-    async def group_user_remove(self, user_id: str, group_id: str) -> KeycloakMutationResultDTO:
+    async def group_user_remove(self, user_id: str, group_id: str) -> KeycloakDeleteResultDTO:
         """Remove a user from a group."""
         return to_mutation_result(
+            KeycloakDeleteResultDTO,
             await self._async_call_keycloak(
                 "group_user_remove",
                 lambda: self.admin_adapter.a_group_user_remove(user_id=user_id, group_id=group_id),
             ),
         )
 
-    async def group_set_permissions(self, group_id: str, enabled: bool = True) -> KeycloakMutationResultDTO:
+    async def group_set_permissions(self, group_id: str, enabled: bool = True) -> KeycloakUpdateResultDTO:
         """Enable or disable fine-grained permissions for a group."""
         return to_mutation_result(
+            KeycloakUpdateResultDTO,
             await self._async_call_keycloak(
                 "group_set_permissions",
                 lambda: self.admin_adapter.a_group_set_permissions(group_id=group_id, enabled=enabled),
@@ -490,9 +509,10 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
         group_id: str,
         client_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakAssignResultDTO:
         """Assign client roles to a group."""
         return to_mutation_result(
+            KeycloakAssignResultDTO,
             await self._async_call_keycloak(
                 "assign_group_client_roles",
                 lambda: self.admin_adapter.a_assign_group_client_roles(
@@ -507,9 +527,10 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
         self,
         group_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakAssignResultDTO:
         """Assign realm roles to a group."""
         return to_mutation_result(
+            KeycloakAssignResultDTO,
             await self._async_call_keycloak(
                 "assign_group_realm_roles",
                 lambda: self.admin_adapter.a_assign_group_realm_roles(group_id=group_id, roles=to_wire_roles(roles)),
@@ -521,9 +542,10 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
         group_id: str,
         client_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakDeleteResultDTO:
         """Remove client roles from a group."""
         return to_mutation_result(
+            KeycloakDeleteResultDTO,
             await self._async_call_keycloak(
                 "delete_group_client_roles",
                 lambda: self.admin_adapter.a_delete_group_client_roles(
@@ -538,9 +560,10 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
         self,
         group_id: str,
         roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakDeleteResultDTO:
         """Remove realm roles from a group."""
         return to_mutation_result(
+            KeycloakDeleteResultDTO,
             await self._async_call_keycloak(
                 "delete_group_realm_roles",
                 lambda: self.admin_adapter.a_delete_group_realm_roles(group_id=group_id, roles=to_wire_roles(roles)),

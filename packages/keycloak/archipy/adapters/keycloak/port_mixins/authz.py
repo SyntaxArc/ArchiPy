@@ -5,6 +5,8 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
+from archipy.models.dtos.keycloak.common_dtos import KeycloakDeleteResultDTO, KeycloakUpdateResultDTO
+
 if TYPE_CHECKING:
     from archipy.models.dtos.keycloak.authz_dtos import (
         KeycloakAuthzPolicyDTO,
@@ -16,7 +18,7 @@ if TYPE_CHECKING:
         KeycloakAuthzSettingsDTO,
         KeycloakAuthzSettingsRequestDTO,
     )
-    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakDeleteResultDTO, KeycloakUpdateResultDTO
 
 
 class KeycloakAuthzPort:
@@ -48,12 +50,12 @@ class KeycloakAuthzPort:
         client_id: str,
         resource_id: str,
         payload: KeycloakAuthzResourceRequestDTO | dict[str, Any],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Update an authorization resource."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_client_authz_resource(self, client_id: str, resource_id: str) -> KeycloakMutationResultDTO:
+    def delete_client_authz_resource(self, client_id: str, resource_id: str) -> KeycloakDeleteResultDTO:
         """Delete an authorization resource."""
         raise NotImplementedError
 
@@ -111,7 +113,7 @@ class KeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    def delete_client_authz_policy(self, client_id: str, policy_id: str) -> KeycloakMutationResultDTO:
+    def delete_client_authz_policy(self, client_id: str, policy_id: str) -> KeycloakDeleteResultDTO:
         """Delete an authorization policy."""
         raise NotImplementedError
 
@@ -150,7 +152,7 @@ class KeycloakAuthzPort:
         payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
         client_id: str,
         scope_id: str,
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Update a scope-based permission."""
         raise NotImplementedError
 
@@ -160,7 +162,7 @@ class KeycloakAuthzPort:
         payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
         client_id: str,
         resource_id: str,
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Update a resource-based permission."""
         raise NotImplementedError
 
@@ -198,7 +200,7 @@ class KeycloakAuthzPort:
         self,
         client_id: str,
         payload: KeycloakAuthzSettingsRequestDTO | dict[str, Any],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Import authorization configuration for a client."""
         raise NotImplementedError
 
@@ -232,12 +234,12 @@ class AsyncKeycloakAuthzPort:
         client_id: str,
         resource_id: str,
         payload: KeycloakAuthzResourceRequestDTO | dict[str, Any],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Update an authorization resource."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_client_authz_resource(self, client_id: str, resource_id: str) -> KeycloakMutationResultDTO:
+    async def delete_client_authz_resource(self, client_id: str, resource_id: str) -> KeycloakDeleteResultDTO:
         """Delete an authorization resource."""
         raise NotImplementedError
 
@@ -295,7 +297,7 @@ class AsyncKeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_client_authz_policy(self, client_id: str, policy_id: str) -> KeycloakMutationResultDTO:
+    async def delete_client_authz_policy(self, client_id: str, policy_id: str) -> KeycloakDeleteResultDTO:
         """Delete an authorization policy."""
         raise NotImplementedError
 
@@ -334,7 +336,7 @@ class AsyncKeycloakAuthzPort:
         payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
         client_id: str,
         scope_id: str,
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Update a scope-based permission."""
         raise NotImplementedError
 
@@ -344,7 +346,7 @@ class AsyncKeycloakAuthzPort:
         payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
         client_id: str,
         resource_id: str,
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Update a resource-based permission."""
         raise NotImplementedError
 
@@ -382,6 +384,6 @@ class AsyncKeycloakAuthzPort:
         self,
         client_id: str,
         payload: KeycloakAuthzSettingsRequestDTO | dict[str, Any],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Import authorization configuration for a client."""
         raise NotImplementedError

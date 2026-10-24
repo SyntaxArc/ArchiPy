@@ -77,3 +77,15 @@ Feature: Keycloak DTOs
       | a skip-exists dict      | Already exists | none        |
       | JSON bytes with a field | none           | futureField |
       | non-JSON bytes          | none           | none        |
+
+  Scenario Outline: Each kind of mutation has its own result DTO
+    When the Keycloak mutation body a skip-exists dict is converted to <result_dto>
+    Then the result is a <result_dto> and a KeycloakMutationResultDTO
+    And the mutation result message is Already exists
+
+    Examples:
+      | result_dto              |
+      | KeycloakCreateResultDTO |
+      | KeycloakUpdateResultDTO |
+      | KeycloakDeleteResultDTO |
+      | KeycloakAssignResultDTO |

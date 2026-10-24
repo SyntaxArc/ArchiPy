@@ -5,8 +5,10 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
+from archipy.models.dtos.keycloak.common_dtos import KeycloakDeleteResultDTO, KeycloakUpdateResultDTO
+
 if TYPE_CHECKING:
-    from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
+    from archipy.models.dtos.keycloak.common_dtos import KeycloakDeleteResultDTO, KeycloakUpdateResultDTO
     from archipy.models.dtos.keycloak.component_dtos import KeycloakComponentDTO, KeycloakComponentRequestDTO
 
 
@@ -54,7 +56,7 @@ class KeycloakComponentsPort:
         self,
         component_id: str,
         payload: KeycloakComponentRequestDTO | dict[str, Any],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Update a component.
 
         Args:
@@ -67,7 +69,7 @@ class KeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def delete_component(self, component_id: str) -> KeycloakMutationResultDTO:
+    def delete_component(self, component_id: str) -> KeycloakDeleteResultDTO:
         """Delete a component.
 
         Args:
@@ -123,7 +125,7 @@ class AsyncKeycloakComponentsPort:
         self,
         component_id: str,
         payload: KeycloakComponentRequestDTO | dict[str, Any],
-    ) -> KeycloakMutationResultDTO:
+    ) -> KeycloakUpdateResultDTO:
         """Update a component.
 
         Args:
@@ -136,7 +138,7 @@ class AsyncKeycloakComponentsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_component(self, component_id: str) -> KeycloakMutationResultDTO:
+    async def delete_component(self, component_id: str) -> KeycloakDeleteResultDTO:
         """Delete a component.
 
         Args:

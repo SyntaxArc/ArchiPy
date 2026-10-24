@@ -73,14 +73,15 @@ def to_claims_dict(value: KeycloakOidcResponseDTO | Mapping[str, Any] | None) ->
     return dict(value)
 
 
-def to_mutation_result(raw: Mapping[str, Any] | bytes | None) -> KeycloakMutationResultDTO:
+def to_mutation_result[R: KeycloakMutationResultDTO](model: type[R], raw: Mapping[str, Any] | bytes | None) -> R:
     """Validate the body python-keycloak returns for a create, update, delete or assign call.
 
     Args:
+        model: The result DTO for the operation.
         raw: A parsed JSON object, the raw response bytes, or ``None``. Empty and non-JSON bodies are empty results.
 
     Returns:
-        The mutation result.
+        The result as ``model``.
     """
     if isinstance(raw, bytes | bytearray):
         try:
@@ -88,7 +89,7 @@ def to_mutation_result(raw: Mapping[str, Any] | bytes | None) -> KeycloakMutatio
         except ValueError:
             parsed = {}
         raw = parsed if isinstance(parsed, dict) else {}
-    return KeycloakMutationResultDTO.model_validate(raw or {})
+    return model.model_validate(raw or {})
 
 
 def to_dto[M: KeycloakResponseDTO](model: type[M], raw: Mapping[str, Any]) -> M:

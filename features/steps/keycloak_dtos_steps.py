@@ -6,10 +6,12 @@ from pydantic import ValidationError
 
 from archipy.adapters.keycloak.adapter_mixins._shared import to_mutation_result, to_request_payload
 
-from archipy.models.dtos.keycloak import authz_dtos, client_scope_dtos, component_dtos, group_dtos, role_dtos, user_dtos
+from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
+from archipy.models.dtos.keycloak import authz_dtos, common_dtos, client_scope_dtos, component_dtos, group_dtos, role_dtos, user_dtos
 from archipy.models.dtos.keycloak import organization_dtos, token_dtos
 
 _MODULES = (
+    common_dtos,
     authz_dtos,
     client_scope_dtos,
     component_dtos,
@@ -137,7 +139,7 @@ _MUTATION_BODIES = {
 
 @when("the Keycloak mutation body {body} is converted")
 def step_convert_mutation_body(context, body):
-    get_current_scenario_context(context).store("mutation_result", to_mutation_result(_MUTATION_BODIES[body]))
+    get_current_scenario_context(context).store("mutation_result", to_mutation_result(KeycloakMutationResultDTO, _MUTATION_BODIES[body]))
 
 
 @then("the mutation result message is {message}")
@@ -151,3 +153,18 @@ def step_mutation_extra(context, extra):
     result = get_current_scenario_context(context).get("mutation_result")
     expected = {} if extra == "none" else {extra: 1}
     assert (result.model_extra or {}) == expected, result.model_extra
+
+
+@when("the Keycloak mutation body {body} is converted to {result_dto}")
+def step_convert_mutation_body_to(context, body, result_dto):
+    get_current_scenario_context(context).store(
+        "mutation_result",
+        to_mutation_result(_dto_class(result_dto), _MUTATION_BODIES[body]),
+    )
+
+
+@then("the result is a {result_dto} and a KeycloakMutationResultDTO")
+def step_result_is_subclass(context, result_dto):
+    result = get_current_scenario_context(context).get("mutation_result")
+    assert type(result) is _dto_class(result_dto)
+    assert isinstance(result, KeycloakMutationResultDTO)
