@@ -1,7 +1,6 @@
 """Keycloak client representation DTOs (generated from the Keycloak admin OpenAPI spec)."""
 
-from pydantic import JsonValue
-
+from archipy.models.dtos.keycloak.authz_dtos import KeycloakAuthzSettingsDTO, KeycloakAuthzSettingsRequestDTO
 from archipy.models.dtos.keycloak.base import KeycloakRequestDTO, KeycloakResponseDTO
 from archipy.models.dtos.keycloak.client_scope_dtos import KeycloakProtocolMapperDTO, KeycloakProtocolMapperRequestDTO
 
@@ -50,7 +49,7 @@ class KeycloakClientDTO(KeycloakResponseDTO):
     use_template_mappers: bool | None = None
     default_client_scopes: list[str] | None = None
     optional_client_scopes: list[str] | None = None
-    authorization_settings: dict[str, JsonValue] | None = None
+    authorization_settings: KeycloakAuthzSettingsDTO | None = None
     access: dict[str, bool] | None = None
     origin: str | None = None
 
@@ -99,6 +98,6 @@ class KeycloakClientRequestDTO(KeycloakRequestDTO):
     use_template_mappers: bool | None = None
     default_client_scopes: list[str] | None = None
     optional_client_scopes: list[str] | None = None
-    authorization_settings: dict[str, JsonValue] | None = None
+    authorization_settings: KeycloakAuthzSettingsRequestDTO | None = None
     access: dict[str, bool] | None = None
     origin: str | None = None

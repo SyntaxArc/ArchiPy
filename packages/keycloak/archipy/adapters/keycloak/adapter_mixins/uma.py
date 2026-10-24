@@ -7,6 +7,16 @@ from typing import TYPE_CHECKING, Any
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    to_dto,
+    to_dto_list,
+    to_request_payload,
+)
+from archipy.models.dtos.keycloak.uma_dtos import (
+    KeycloakUmaPolicyDTO,
+    KeycloakUmaPolicyRequestDTO,
+    KeycloakUmaResourceDTO,
+    KeycloakUmaResourceRequestDTO,
+    KeycloakUmaTicketDTO,
 )
 
 if TYPE_CHECKING:
@@ -18,7 +28,7 @@ if TYPE_CHECKING:
 class KeycloakUmaMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for UMA operations."""
 
-    def resource_set_create(self, payload: dict[str, Any]) -> dict[str, Any]:
+    def resource_set_create(self, payload: KeycloakUmaResourceRequestDTO | dict[str, Any]) -> KeycloakUmaResourceDTO:
         """Create a UMA resource set.
 
         Args:
@@ -27,12 +37,15 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         Returns:
             Created resource set representation.
         """
-        return self._call_keycloak(
-            "resource_set_create",
-            lambda: self.uma_adapter.resource_set_create(payload=payload),
+        return to_dto(
+            KeycloakUmaResourceDTO,
+            self._call_keycloak(
+                "resource_set_create",
+                lambda: self.uma_adapter.resource_set_create(payload=to_request_payload(payload)),
+            ),
         )
 
-    def resource_set_read(self, resource_id: str) -> dict[str, Any]:
+    def resource_set_read(self, resource_id: str) -> KeycloakUmaResourceDTO:
         """Read a UMA resource set.
 
         Args:
@@ -41,12 +54,19 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         Returns:
             Resource set representation.
         """
-        return self._call_keycloak(
-            "resource_set_read",
-            lambda: self.uma_adapter.resource_set_read(resource_id=resource_id),
+        return to_dto(
+            KeycloakUmaResourceDTO,
+            self._call_keycloak(
+                "resource_set_read",
+                lambda: self.uma_adapter.resource_set_read(resource_id=resource_id),
+            ),
         )
 
-    def resource_set_update(self, resource_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def resource_set_update(
+        self,
+        resource_id: str,
+        payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
+    ) -> dict[str, Any]:
         """Update a UMA resource set.
 
         Args:
@@ -58,7 +78,10 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         """
         return self._call_keycloak(
             "resource_set_update",
-            lambda: self.uma_adapter.resource_set_update(resource_id=resource_id, payload=payload),
+            lambda: self.uma_adapter.resource_set_update(
+                resource_id=resource_id,
+                payload=to_request_payload(to_request_payload(payload)),
+            ),
         )
 
     def resource_set_delete(self, resource_id: str) -> dict[str, Any]:
@@ -75,15 +98,18 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
             lambda: self.uma_adapter.resource_set_delete(resource_id=resource_id),
         )
 
-    def resource_set_list(self) -> list[dict[str, Any]]:
+    def resource_set_list(self) -> list[KeycloakUmaResourceDTO]:
         """List all UMA resource sets.
 
         Returns:
             List of resource set representations.
         """
-        return self._call_keycloak(
-            "resource_set_list",
-            lambda: list(self.uma_adapter.resource_set_list()),
+        return to_dto_list(
+            KeycloakUmaResourceDTO,
+            self._call_keycloak(
+                "resource_set_list",
+                lambda: list(self.uma_adapter.resource_set_list()),
+            ),
         )
 
     def resource_set_list_ids(
@@ -129,7 +155,11 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def policy_resource_create(self, resource_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def policy_resource_create(
+        self,
+        resource_id: str,
+        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+    ) -> KeycloakUmaPolicyDTO:
         """Create a UMA policy for a resource.
 
         Args:
@@ -139,12 +169,18 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         Returns:
             Created policy representation.
         """
-        return self._call_keycloak(
-            "policy_resource_create",
-            lambda: self.uma_adapter.policy_resource_create(resource_id=resource_id, payload=payload),
+        return to_dto(
+            KeycloakUmaPolicyDTO,
+            self._call_keycloak(
+                "policy_resource_create",
+                lambda: self.uma_adapter.policy_resource_create(
+                    resource_id=resource_id,
+                    payload=to_request_payload(payload),
+                ),
+            ),
         )
 
-    def policy_update(self, policy_id: str, payload: dict[str, Any]) -> bytes:
+    def policy_update(self, policy_id: str, payload: KeycloakUmaPolicyRequestDTO | dict[str, Any]) -> bytes:
         """Update a UMA policy.
 
         Args:
@@ -156,7 +192,10 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         """
         return self._call_keycloak(
             "policy_update",
-            lambda: self.uma_adapter.policy_update(policy_id=policy_id, payload=payload),
+            lambda: self.uma_adapter.policy_update(
+                policy_id=policy_id,
+                payload=to_request_payload(to_request_payload(payload)),
+            ),
         )
 
     def policy_delete(self, policy_id: str) -> dict[str, Any]:
@@ -180,7 +219,7 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         scope: str = "",
         first: int = 0,
         maximum: int = -1,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakUmaPolicyDTO]:
         """Query UMA policies.
 
         Args:
@@ -193,18 +232,21 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         Returns:
             Matching policy representations.
         """
-        return self._call_keycloak(
-            "policy_query",
-            lambda: self.uma_adapter.policy_query(
-                resource=resource,
-                name=name,
-                scope=scope,
-                first=first,
-                maximum=maximum,
+        return to_dto_list(
+            KeycloakUmaPolicyDTO,
+            self._call_keycloak(
+                "policy_query",
+                lambda: self.uma_adapter.policy_query(
+                    resource=resource,
+                    name=name,
+                    scope=scope,
+                    first=first,
+                    maximum=maximum,
+                ),
             ),
         )
 
-    def permission_ticket_create(self, permissions: Iterable[UMAPermission]) -> dict[str, Any]:
+    def permission_ticket_create(self, permissions: Iterable[UMAPermission]) -> KeycloakUmaTicketDTO:
         """Create a UMA permission ticket.
 
         Args:
@@ -213,9 +255,12 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
         Returns:
             Permission ticket representation.
         """
-        return self._call_keycloak(
-            "permission_ticket_create",
-            lambda: self.uma_adapter.permission_ticket_create(permissions=permissions),
+        return to_dto(
+            KeycloakUmaTicketDTO,
+            self._call_keycloak(
+                "permission_ticket_create",
+                lambda: self.uma_adapter.permission_ticket_create(permissions=permissions),
+            ),
         )
 
     def permissions_check(self, token: str, permissions: Iterable[UMAPermission], **extra_payload: Any) -> bool:
@@ -238,7 +283,10 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
 class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for UMA operations."""
 
-    async def resource_set_create(self, payload: dict[str, Any]) -> dict[str, Any]:
+    async def resource_set_create(
+        self,
+        payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
+    ) -> KeycloakUmaResourceDTO:
         """Create a UMA resource set.
 
         Args:
@@ -247,12 +295,15 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         Returns:
             Created resource set representation.
         """
-        return await self._async_call_keycloak(
-            "resource_set_create",
-            lambda: self.uma_adapter.a_resource_set_create(payload=payload),
+        return to_dto(
+            KeycloakUmaResourceDTO,
+            await self._async_call_keycloak(
+                "resource_set_create",
+                lambda: self.uma_adapter.a_resource_set_create(payload=to_request_payload(payload)),
+            ),
         )
 
-    async def resource_set_read(self, resource_id: str) -> dict[str, Any]:
+    async def resource_set_read(self, resource_id: str) -> KeycloakUmaResourceDTO:
         """Read a UMA resource set.
 
         Args:
@@ -261,12 +312,19 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         Returns:
             Resource set representation.
         """
-        return await self._async_call_keycloak(
-            "resource_set_read",
-            lambda: self.uma_adapter.a_resource_set_read(resource_id=resource_id),
+        return to_dto(
+            KeycloakUmaResourceDTO,
+            await self._async_call_keycloak(
+                "resource_set_read",
+                lambda: self.uma_adapter.a_resource_set_read(resource_id=resource_id),
+            ),
         )
 
-    async def resource_set_update(self, resource_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def resource_set_update(
+        self,
+        resource_id: str,
+        payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
+    ) -> dict[str, Any]:
         """Update a UMA resource set.
 
         Args:
@@ -278,7 +336,10 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         """
         return await self._async_call_keycloak(
             "resource_set_update",
-            lambda: self.uma_adapter.a_resource_set_update(resource_id=resource_id, payload=payload),
+            lambda: self.uma_adapter.a_resource_set_update(
+                resource_id=resource_id,
+                payload=to_request_payload(to_request_payload(payload)),
+            ),
         )
 
     async def resource_set_delete(self, resource_id: str) -> dict[str, Any]:
@@ -295,7 +356,7 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
             lambda: self.uma_adapter.a_resource_set_delete(resource_id=resource_id),
         )
 
-    async def resource_set_list(self) -> list[dict[str, Any]]:
+    async def resource_set_list(self) -> list[KeycloakUmaResourceDTO]:
         """List all UMA resource sets.
 
         Returns:
@@ -305,7 +366,7 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         async def _list() -> list[dict[str, Any]]:
             return [item async for item in self.uma_adapter.a_resource_set_list()]
 
-        return await self._async_call_keycloak("resource_set_list", _list)
+        return to_dto_list(KeycloakUmaResourceDTO, await self._async_call_keycloak("resource_set_list", _list))
 
     async def resource_set_list_ids(
         self,
@@ -350,7 +411,11 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def policy_resource_create(self, resource_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def policy_resource_create(
+        self,
+        resource_id: str,
+        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+    ) -> KeycloakUmaPolicyDTO:
         """Create a UMA policy for a resource.
 
         Args:
@@ -360,12 +425,18 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         Returns:
             Created policy representation.
         """
-        return await self._async_call_keycloak(
-            "policy_resource_create",
-            lambda: self.uma_adapter.a_policy_resource_create(resource_id=resource_id, payload=payload),
+        return to_dto(
+            KeycloakUmaPolicyDTO,
+            await self._async_call_keycloak(
+                "policy_resource_create",
+                lambda: self.uma_adapter.a_policy_resource_create(
+                    resource_id=resource_id,
+                    payload=to_request_payload(payload),
+                ),
+            ),
         )
 
-    async def policy_update(self, policy_id: str, payload: dict[str, Any]) -> bytes:
+    async def policy_update(self, policy_id: str, payload: KeycloakUmaPolicyRequestDTO | dict[str, Any]) -> bytes:
         """Update a UMA policy.
 
         Args:
@@ -377,7 +448,10 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         """
         return await self._async_call_keycloak(
             "policy_update",
-            lambda: self.uma_adapter.a_policy_update(policy_id=policy_id, payload=payload),
+            lambda: self.uma_adapter.a_policy_update(
+                policy_id=policy_id,
+                payload=to_request_payload(to_request_payload(payload)),
+            ),
         )
 
     async def policy_delete(self, policy_id: str) -> dict[str, Any]:
@@ -401,7 +475,7 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         scope: str = "",
         first: int = 0,
         maximum: int = -1,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakUmaPolicyDTO]:
         """Query UMA policies.
 
         Args:
@@ -414,18 +488,21 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         Returns:
             Matching policy representations.
         """
-        return await self._async_call_keycloak(
-            "policy_query",
-            lambda: self.uma_adapter.a_policy_query(
-                resource=resource,
-                name=name,
-                scope=scope,
-                first=first,
-                maximum=maximum,
+        return to_dto_list(
+            KeycloakUmaPolicyDTO,
+            await self._async_call_keycloak(
+                "policy_query",
+                lambda: self.uma_adapter.a_policy_query(
+                    resource=resource,
+                    name=name,
+                    scope=scope,
+                    first=first,
+                    maximum=maximum,
+                ),
             ),
         )
 
-    async def permission_ticket_create(self, permissions: Iterable[UMAPermission]) -> dict[str, Any]:
+    async def permission_ticket_create(self, permissions: Iterable[UMAPermission]) -> KeycloakUmaTicketDTO:
         """Create a UMA permission ticket.
 
         Args:
@@ -434,9 +511,12 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
         Returns:
             Permission ticket representation.
         """
-        return await self._async_call_keycloak(
-            "permission_ticket_create",
-            lambda: self.uma_adapter.a_permission_ticket_create(permissions=permissions),
+        return to_dto(
+            KeycloakUmaTicketDTO,
+            await self._async_call_keycloak(
+                "permission_ticket_create",
+                lambda: self.uma_adapter.a_permission_ticket_create(permissions=permissions),
+            ),
         )
 
     async def permissions_check(self, token: str, permissions: Iterable[UMAPermission], **extra_payload: Any) -> bool:

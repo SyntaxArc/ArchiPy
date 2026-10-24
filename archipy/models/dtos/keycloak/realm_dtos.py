@@ -2,6 +2,12 @@
 
 from pydantic import JsonValue
 
+from archipy.models.dtos.keycloak.auth_flow_dtos import (
+    KeycloakAuthenticationFlowDTO,
+    KeycloakAuthenticationFlowRequestDTO,
+    KeycloakAuthenticatorConfigDTO,
+    KeycloakAuthenticatorConfigRequestDTO,
+)
 from archipy.models.dtos.keycloak.base import KeycloakRequestDTO, KeycloakResponseDTO
 from archipy.models.dtos.keycloak.client_dtos import KeycloakClientDTO, KeycloakClientRequestDTO
 from archipy.models.dtos.keycloak.client_scope_dtos import (
@@ -149,8 +155,8 @@ class KeycloakRealmDTO(KeycloakResponseDTO):
     internationalization_enabled: bool | None = None
     supported_locales: list[str] | None = None
     default_locale: str | None = None
-    authentication_flows: list[dict[str, JsonValue]] | None = None
-    authenticator_config: list[dict[str, JsonValue]] | None = None
+    authentication_flows: list[KeycloakAuthenticationFlowDTO] | None = None
+    authenticator_config: list[KeycloakAuthenticatorConfigDTO] | None = None
     required_actions: list[dict[str, JsonValue]] | None = None
     browser_flow: str | None = None
     registration_flow: str | None = None
@@ -309,8 +315,8 @@ class KeycloakRealmRequestDTO(KeycloakRequestDTO):
     internationalization_enabled: bool | None = None
     supported_locales: list[str] | None = None
     default_locale: str | None = None
-    authentication_flows: list[dict[str, JsonValue]] | None = None
-    authenticator_config: list[dict[str, JsonValue]] | None = None
+    authentication_flows: list[KeycloakAuthenticationFlowRequestDTO] | None = None
+    authenticator_config: list[KeycloakAuthenticatorConfigRequestDTO] | None = None
     required_actions: list[dict[str, JsonValue]] | None = None
     browser_flow: str | None = None
     registration_flow: str | None = None

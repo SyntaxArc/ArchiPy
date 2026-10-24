@@ -10,12 +10,20 @@ if TYPE_CHECKING:
 
     from keycloak.uma_permissions import UMAPermission
 
+    from archipy.models.dtos.keycloak.uma_dtos import (
+        KeycloakUmaPolicyDTO,
+        KeycloakUmaPolicyRequestDTO,
+        KeycloakUmaResourceDTO,
+        KeycloakUmaResourceRequestDTO,
+        KeycloakUmaTicketDTO,
+    )
+
 
 class KeycloakUmaPort:
     """Sync Keycloak port interface for UMA operations."""
 
     @abstractmethod
-    def resource_set_create(self, payload: dict[str, Any]) -> dict[str, Any]:
+    def resource_set_create(self, payload: KeycloakUmaResourceRequestDTO | dict[str, Any]) -> KeycloakUmaResourceDTO:
         """Create a UMA resource set.
 
         Args:
@@ -27,7 +35,7 @@ class KeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    def resource_set_read(self, resource_id: str) -> dict[str, Any]:
+    def resource_set_read(self, resource_id: str) -> KeycloakUmaResourceDTO:
         """Read a UMA resource set.
 
         Args:
@@ -39,7 +47,11 @@ class KeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    def resource_set_update(self, resource_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def resource_set_update(
+        self,
+        resource_id: str,
+        payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
+    ) -> dict[str, Any]:
         """Update a UMA resource set.
 
         Args:
@@ -64,7 +76,7 @@ class KeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    def resource_set_list(self) -> list[dict[str, Any]]:
+    def resource_set_list(self) -> list[KeycloakUmaResourceDTO]:
         """List all UMA resource sets.
 
         Returns:
@@ -104,7 +116,11 @@ class KeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    def policy_resource_create(self, resource_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def policy_resource_create(
+        self,
+        resource_id: str,
+        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+    ) -> KeycloakUmaPolicyDTO:
         """Create a UMA policy for a resource.
 
         Args:
@@ -117,7 +133,7 @@ class KeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    def policy_update(self, policy_id: str, payload: dict[str, Any]) -> bytes:
+    def policy_update(self, policy_id: str, payload: KeycloakUmaPolicyRequestDTO | dict[str, Any]) -> bytes:
         """Update a UMA policy.
 
         Args:
@@ -149,7 +165,7 @@ class KeycloakUmaPort:
         scope: str = "",
         first: int = 0,
         maximum: int = -1,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakUmaPolicyDTO]:
         """Query UMA policies.
 
         Args:
@@ -165,7 +181,7 @@ class KeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    def permission_ticket_create(self, permissions: Iterable[UMAPermission]) -> dict[str, Any]:
+    def permission_ticket_create(self, permissions: Iterable[UMAPermission]) -> KeycloakUmaTicketDTO:
         """Create a UMA permission ticket.
 
         Args:
@@ -195,7 +211,10 @@ class AsyncKeycloakUmaPort:
     """Async Keycloak port interface for UMA operations."""
 
     @abstractmethod
-    async def resource_set_create(self, payload: dict[str, Any]) -> dict[str, Any]:
+    async def resource_set_create(
+        self,
+        payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
+    ) -> KeycloakUmaResourceDTO:
         """Create a UMA resource set.
 
         Args:
@@ -207,7 +226,7 @@ class AsyncKeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def resource_set_read(self, resource_id: str) -> dict[str, Any]:
+    async def resource_set_read(self, resource_id: str) -> KeycloakUmaResourceDTO:
         """Read a UMA resource set.
 
         Args:
@@ -219,7 +238,11 @@ class AsyncKeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def resource_set_update(self, resource_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def resource_set_update(
+        self,
+        resource_id: str,
+        payload: KeycloakUmaResourceRequestDTO | dict[str, Any],
+    ) -> dict[str, Any]:
         """Update a UMA resource set.
 
         Args:
@@ -244,7 +267,7 @@ class AsyncKeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def resource_set_list(self) -> list[dict[str, Any]]:
+    async def resource_set_list(self) -> list[KeycloakUmaResourceDTO]:
         """List all UMA resource sets.
 
         Returns:
@@ -284,7 +307,11 @@ class AsyncKeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def policy_resource_create(self, resource_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def policy_resource_create(
+        self,
+        resource_id: str,
+        payload: KeycloakUmaPolicyRequestDTO | dict[str, Any],
+    ) -> KeycloakUmaPolicyDTO:
         """Create a UMA policy for a resource.
 
         Args:
@@ -297,7 +324,7 @@ class AsyncKeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def policy_update(self, policy_id: str, payload: dict[str, Any]) -> bytes:
+    async def policy_update(self, policy_id: str, payload: KeycloakUmaPolicyRequestDTO | dict[str, Any]) -> bytes:
         """Update a UMA policy.
 
         Args:
@@ -329,7 +356,7 @@ class AsyncKeycloakUmaPort:
         scope: str = "",
         first: int = 0,
         maximum: int = -1,
-    ) -> list[dict[str, Any]]:
+    ) -> list[KeycloakUmaPolicyDTO]:
         """Query UMA policies.
 
         Args:
@@ -345,7 +372,7 @@ class AsyncKeycloakUmaPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def permission_ticket_create(self, permissions: Iterable[UMAPermission]) -> dict[str, Any]:
+    async def permission_ticket_create(self, permissions: Iterable[UMAPermission]) -> KeycloakUmaTicketDTO:
         """Create a UMA permission ticket.
 
         Args:
