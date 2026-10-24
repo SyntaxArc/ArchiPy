@@ -21,6 +21,9 @@ if TYPE_CHECKING:
         KeycloakDeleteResultDTO,
         KeycloakUpdateResultDTO,
     )
+    from archipy.models.dtos.keycloak.protocol_mapper_config_dtos import (
+        KeycloakProtocolMapperConfigDTO,
+    )
     from archipy.models.dtos.keycloak.protocol_mapper_dtos import (
         KeycloakProtocolMapperDTO,
         KeycloakProtocolMapperRequestDTO,
@@ -138,6 +141,62 @@ class KeycloakProtocolMappersPort:
         """List the protocol mappers of a client for one protocol."""
         raise NotImplementedError
 
+    @abstractmethod
+    def add_client_scope_mapper_with_config(
+        self,
+        client_scope_id: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakCreateResultDTO:
+        """Add a protocol mapper to a client scope from a typed mapper config."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_client_scope_mapper_config(
+        self,
+        client_scope_id: str,
+        mapper_id: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakUpdateResultDTO:
+        """Replace a protocol mapper of a client scope with a typed mapper config."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_scope_mapper_config(
+        self,
+        client_scope_id: str,
+        mapper_id: str,
+    ) -> KeycloakProtocolMapperConfigDTO | None:
+        """Read a protocol mapper of a client scope as its typed config, or ``None`` for an unknown mapper type."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def add_client_mapper_with_config(
+        self,
+        client_uuid: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakCreateResultDTO:
+        """Add a protocol mapper to a client from a typed mapper config."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_client_mapper_config(
+        self,
+        client_uuid: str,
+        mapper_id: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakUpdateResultDTO:
+        """Replace a protocol mapper of a client with a typed mapper config."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_mapper_config(self, client_uuid: str, mapper_id: str) -> KeycloakProtocolMapperConfigDTO | None:
+        """Read a protocol mapper of a client as its typed config, or ``None`` for an unknown mapper type."""
+        raise NotImplementedError
+
 
 class AsyncKeycloakProtocolMappersPort:
     """Async Keycloak port interface for protocol mapper operations."""
@@ -248,4 +307,64 @@ class AsyncKeycloakProtocolMappersPort:
         protocol: str,
     ) -> list[KeycloakProtocolMapperDTO]:
         """List the protocol mappers of a client for one protocol."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def add_client_scope_mapper_with_config(
+        self,
+        client_scope_id: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakCreateResultDTO:
+        """Add a protocol mapper to a client scope from a typed mapper config."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update_client_scope_mapper_config(
+        self,
+        client_scope_id: str,
+        mapper_id: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakUpdateResultDTO:
+        """Replace a protocol mapper of a client scope with a typed mapper config."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_scope_mapper_config(
+        self,
+        client_scope_id: str,
+        mapper_id: str,
+    ) -> KeycloakProtocolMapperConfigDTO | None:
+        """Read a protocol mapper of a client scope as its typed config, or ``None`` for an unknown mapper type."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def add_client_mapper_with_config(
+        self,
+        client_uuid: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakCreateResultDTO:
+        """Add a protocol mapper to a client from a typed mapper config."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update_client_mapper_config(
+        self,
+        client_uuid: str,
+        mapper_id: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakUpdateResultDTO:
+        """Replace a protocol mapper of a client with a typed mapper config."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_mapper_config(
+        self,
+        client_uuid: str,
+        mapper_id: str,
+    ) -> KeycloakProtocolMapperConfigDTO | None:
+        """Read a protocol mapper of a client as its typed config, or ``None`` for an unknown mapper type."""
         raise NotImplementedError

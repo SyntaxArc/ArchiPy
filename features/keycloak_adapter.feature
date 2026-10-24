@@ -852,6 +852,24 @@ Feature: Keycloak Authentication Testing
       | sync         | azxuser      | pass123  | az-doc   | az-scope  | az-group  | test-realm | Test Realm         | az-client   |
       | async        | asyncazxuser | async123 | aaz-doc  | aaz-scope | aaz-group | test-realm | Async Test Realm   | aaz-client  |
 
+  @clientscopes
+  Scenario Outline: Typed protocol mapper configs change the tokens
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    And I create a client named "<audience_client>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    When I add a typed hardcoded claim mapper "typed-claim-mapper" with claim "<claim>" and value "gold" to the client scope "<scope>" assigned to client "<client_name>" using <adapter_type> adapter
+    Then the typed mapper config is read back and the example token of client "<client_name>" carries claim "<claim>" as "gold" using <adapter_type> adapter
+    When I change the typed mapper to value "platinum" using <adapter_type> adapter
+    Then the typed mapper config is read back and the example token of client "<client_name>" carries claim "<claim>" as "platinum" using <adapter_type> adapter
+    When I add a typed audience mapper for client "<audience_client>" and a typed claim mapper "typed-client-claim" with claim "<client_claim>" and value "direct" to client "<client_name>" using <adapter_type> adapter
+    Then the typed client mappers are read back, updated and the example token of client "<client_name>" shows claim "<client_claim>" as "direct" and audience "<audience_client>" using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | scope        | claim | client_claim | realm_name | realm_display_name | client_name   | audience_client |
+      | sync         | typed-scope  | tier  | origin       | test-realm | Test Realm         | typed-client  | typed-audience  |
+      | async        | atyped-scope | atier | aorigin      | test-realm | Async Test Realm   | atyped-client | atyped-audience |
+
   @components
   Scenario Outline: Component listing
     Given a configured <adapter_type> Keycloak adapter

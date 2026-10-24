@@ -22,6 +22,10 @@ from archipy.models.dtos.keycloak.common_dtos import (
     KeycloakDeleteResultDTO,
     KeycloakUpdateResultDTO,
 )
+from archipy.models.dtos.keycloak.protocol_mapper_config_dtos import (
+    KeycloakProtocolMapperConfigDTO,
+    parse_protocol_mapper_config,
+)
 from archipy.models.dtos.keycloak.protocol_mapper_dtos import (
     KeycloakProtocolMapperDTO,
     KeycloakProtocolMapperRequestDTO,
@@ -310,6 +314,114 @@ class KeycloakProtocolMappersMixin(SyncKeycloakMixinBase):
             ),
         )
 
+    def add_client_scope_mapper_with_config(
+        self,
+        client_scope_id: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakCreateResultDTO:
+        """Add a protocol mapper to a client scope from a typed mapper config.
+
+        Args:
+            client_scope_id: Client scope identifier.
+            name: Name of the mapper.
+            config: Typed config of one mapper type, such as ``KeycloakOidcAudienceMapperConfigDTO``.
+
+        Returns:
+            The create result with the id of the new mapper.
+        """
+        return self.add_mapper_to_client_scope(client_scope_id, config.to_mapper(name))
+
+    def update_client_scope_mapper_config(
+        self,
+        client_scope_id: str,
+        mapper_id: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakUpdateResultDTO:
+        """Replace a protocol mapper of a client scope with a typed mapper config.
+
+        Args:
+            client_scope_id: Client scope identifier.
+            mapper_id: Mapper identifier.
+            name: Name of the mapper.
+            config: Typed config of one mapper type.
+
+        Returns:
+            The update result.
+        """
+        payload = config.to_mapper(name).model_copy(update={"id": mapper_id})
+        return self.update_mapper_in_client_scope(client_scope_id, mapper_id, payload)
+
+    def get_client_scope_mapper_config(
+        self,
+        client_scope_id: str,
+        mapper_id: str,
+    ) -> KeycloakProtocolMapperConfigDTO | None:
+        """Read a protocol mapper of a client scope as its typed config.
+
+        Args:
+            client_scope_id: Client scope identifier.
+            mapper_id: Mapper identifier.
+
+        Returns:
+            The typed config, or ``None`` when the mapper type has no typed config.
+        """
+        mapper = self.get_client_scope_protocol_mapper(client_scope_id, mapper_id)
+        return parse_protocol_mapper_config(mapper.protocol_mapper or "", mapper.config or {})
+
+    def add_client_mapper_with_config(
+        self,
+        client_uuid: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakCreateResultDTO:
+        """Add a protocol mapper to a client from a typed mapper config.
+
+        Args:
+            client_uuid: Client UUID.
+            name: Name of the mapper.
+            config: Typed config of one mapper type, such as ``KeycloakOidcAudienceMapperConfigDTO``.
+
+        Returns:
+            The create result with the id of the new mapper.
+        """
+        return self.add_mapper_to_client(client_uuid, config.to_mapper(name))
+
+    def update_client_mapper_config(
+        self,
+        client_uuid: str,
+        mapper_id: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakUpdateResultDTO:
+        """Replace a protocol mapper of a client with a typed mapper config.
+
+        Args:
+            client_uuid: Client UUID.
+            mapper_id: Mapper identifier.
+            name: Name of the mapper.
+            config: Typed config of one mapper type.
+
+        Returns:
+            The update result.
+        """
+        payload = config.to_mapper(name).model_copy(update={"id": mapper_id})
+        return self.update_client_mapper(client_uuid, mapper_id, payload)
+
+    def get_client_mapper_config(self, client_uuid: str, mapper_id: str) -> KeycloakProtocolMapperConfigDTO | None:
+        """Read a protocol mapper of a client as its typed config.
+
+        Args:
+            client_uuid: Client UUID.
+            mapper_id: Mapper identifier.
+
+        Returns:
+            The typed config, or ``None`` when the mapper type has no typed config.
+        """
+        mapper = self.get_client_protocol_mapper(client_uuid, mapper_id)
+        return parse_protocol_mapper_config(mapper.protocol_mapper or "", mapper.config or {})
+
 
 class AsyncKeycloakProtocolMappersMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for protocol mapper operations."""
@@ -597,3 +709,115 @@ class AsyncKeycloakProtocolMappersMixin(AsyncKeycloakMixinBase):
                 expected=(HTTPStatus.OK,),
             ),
         )
+
+    async def add_client_scope_mapper_with_config(
+        self,
+        client_scope_id: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakCreateResultDTO:
+        """Add a protocol mapper to a client scope from a typed mapper config.
+
+        Args:
+            client_scope_id: Client scope identifier.
+            name: Name of the mapper.
+            config: Typed config of one mapper type, such as ``KeycloakOidcAudienceMapperConfigDTO``.
+
+        Returns:
+            The create result with the id of the new mapper.
+        """
+        return await self.add_mapper_to_client_scope(client_scope_id, config.to_mapper(name))
+
+    async def update_client_scope_mapper_config(
+        self,
+        client_scope_id: str,
+        mapper_id: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakUpdateResultDTO:
+        """Replace a protocol mapper of a client scope with a typed mapper config.
+
+        Args:
+            client_scope_id: Client scope identifier.
+            mapper_id: Mapper identifier.
+            name: Name of the mapper.
+            config: Typed config of one mapper type.
+
+        Returns:
+            The update result.
+        """
+        payload = config.to_mapper(name).model_copy(update={"id": mapper_id})
+        return await self.update_mapper_in_client_scope(client_scope_id, mapper_id, payload)
+
+    async def get_client_scope_mapper_config(
+        self,
+        client_scope_id: str,
+        mapper_id: str,
+    ) -> KeycloakProtocolMapperConfigDTO | None:
+        """Read a protocol mapper of a client scope as its typed config.
+
+        Args:
+            client_scope_id: Client scope identifier.
+            mapper_id: Mapper identifier.
+
+        Returns:
+            The typed config, or ``None`` when the mapper type has no typed config.
+        """
+        mapper = await self.get_client_scope_protocol_mapper(client_scope_id, mapper_id)
+        return parse_protocol_mapper_config(mapper.protocol_mapper or "", mapper.config or {})
+
+    async def add_client_mapper_with_config(
+        self,
+        client_uuid: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakCreateResultDTO:
+        """Add a protocol mapper to a client from a typed mapper config.
+
+        Args:
+            client_uuid: Client UUID.
+            name: Name of the mapper.
+            config: Typed config of one mapper type, such as ``KeycloakOidcAudienceMapperConfigDTO``.
+
+        Returns:
+            The create result with the id of the new mapper.
+        """
+        return await self.add_mapper_to_client(client_uuid, config.to_mapper(name))
+
+    async def update_client_mapper_config(
+        self,
+        client_uuid: str,
+        mapper_id: str,
+        name: str,
+        config: KeycloakProtocolMapperConfigDTO,
+    ) -> KeycloakUpdateResultDTO:
+        """Replace a protocol mapper of a client with a typed mapper config.
+
+        Args:
+            client_uuid: Client UUID.
+            mapper_id: Mapper identifier.
+            name: Name of the mapper.
+            config: Typed config of one mapper type.
+
+        Returns:
+            The update result.
+        """
+        payload = config.to_mapper(name).model_copy(update={"id": mapper_id})
+        return await self.update_client_mapper(client_uuid, mapper_id, payload)
+
+    async def get_client_mapper_config(
+        self,
+        client_uuid: str,
+        mapper_id: str,
+    ) -> KeycloakProtocolMapperConfigDTO | None:
+        """Read a protocol mapper of a client as its typed config.
+
+        Args:
+            client_uuid: Client UUID.
+            mapper_id: Mapper identifier.
+
+        Returns:
+            The typed config, or ``None`` when the mapper type has no typed config.
+        """
+        mapper = await self.get_client_protocol_mapper(client_uuid, mapper_id)
+        return parse_protocol_mapper_config(mapper.protocol_mapper or "", mapper.config or {})
