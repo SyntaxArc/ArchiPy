@@ -16,7 +16,13 @@ class KeycloakMutationResultDTO(KeycloakResponseDTO):
 
 
 class KeycloakCreateResultDTO(KeycloakMutationResultDTO):
-    """Result of a create or copy call; ``msg`` is ``"Already exists"`` when ``skip_exists`` skipped it."""
+    """Result of a create or copy call.
+
+    Keycloak answers with an empty body, so the adapter looks the new resource up and sets ``id``. ``msg`` is
+    ``"Already exists"`` and ``id`` stays ``None`` when ``skip_exists`` skipped the create.
+    """
+
+    id: str | None = None
 
 
 class KeycloakUpdateResultDTO(KeycloakMutationResultDTO):

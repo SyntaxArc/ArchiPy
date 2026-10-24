@@ -84,7 +84,7 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
                 "resource_set_update",
                 lambda: self.uma_adapter.resource_set_update(
                     resource_id=resource_id,
-                    payload=to_request_payload(to_request_payload(payload)),
+                    payload=to_request_payload(payload),
                 ),
             ),
         )
@@ -208,7 +208,7 @@ class KeycloakUmaMixin(SyncKeycloakMixinBase):
                 "policy_update",
                 lambda: self.uma_adapter.policy_update(
                     policy_id=policy_id,
-                    payload=to_request_payload(to_request_payload(payload)),
+                    payload=to_request_payload(payload),
                 ),
             ),
         )
@@ -358,7 +358,7 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
                 "resource_set_update",
                 lambda: self.uma_adapter.a_resource_set_update(
                     resource_id=resource_id,
-                    payload=to_request_payload(to_request_payload(payload)),
+                    payload=to_request_payload(payload),
                 ),
             ),
         )
@@ -480,7 +480,7 @@ class AsyncKeycloakUmaMixin(AsyncKeycloakMixinBase):
                 "policy_update",
                 lambda: self.uma_adapter.a_policy_update(
                     policy_id=policy_id,
-                    payload=to_request_payload(to_request_payload(payload)),
+                    payload=to_request_payload(payload),
                 ),
             ),
         )

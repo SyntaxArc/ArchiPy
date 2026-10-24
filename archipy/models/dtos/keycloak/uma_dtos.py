@@ -9,6 +9,23 @@ from pydantic import ConfigDict, Field, JsonValue
 from archipy.models.dtos.keycloak.base import KeycloakBaseDTO, KeycloakResponseDTO
 
 
+class KeycloakUmaScopeDTO(KeycloakResponseDTO):
+    """A scope of a UMA resource set."""
+
+    model_config = ConfigDict(alias_generator=None)
+
+    id: str | None = None
+    name: str | None = None
+    icon_uri: str | None = None
+
+
+class KeycloakUmaOwnerDTO(KeycloakResponseDTO):
+    """The owner of a UMA resource set."""
+
+    id: str | None = None
+    name: str | None = None
+
+
 class KeycloakUmaResourceDTO(KeycloakResponseDTO):
     """UMA resource set returned by the resource registration endpoint."""
 
@@ -18,9 +35,10 @@ class KeycloakUmaResourceDTO(KeycloakResponseDTO):
     name: str | None = None
     type: str | None = None
     uris: list[str] | None = None
-    scopes: list[JsonValue] | None = None
+    scopes: list[KeycloakUmaScopeDTO] | None = None
+    resource_scopes: list[KeycloakUmaScopeDTO] | None = None
     icon_uri: str | None = None
-    owner: JsonValue | None = None
+    owner: KeycloakUmaOwnerDTO | None = None
     owner_managed_access: bool | None = Field(default=None, alias="ownerManagedAccess")
     display_name: str | None = Field(default=None, alias="displayName")
     attributes: dict[str, list[str]] | None = None

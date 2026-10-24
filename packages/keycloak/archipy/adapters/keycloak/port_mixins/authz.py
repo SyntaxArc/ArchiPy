@@ -18,6 +18,12 @@ if TYPE_CHECKING:
         KeycloakAuthzSettingsDTO,
         KeycloakAuthzSettingsRequestDTO,
     )
+    from archipy.models.dtos.keycloak.authz_policy_dtos import (
+        KeycloakAuthzClientPolicyDTO,
+        KeycloakAuthzClientPolicyRequestDTO,
+        KeycloakAuthzRolePolicyDTO,
+        KeycloakAuthzRolePolicyRequestDTO,
+    )
     from archipy.models.dtos.keycloak.common_dtos import KeycloakDeleteResultDTO, KeycloakUpdateResultDTO
 
 
@@ -77,18 +83,18 @@ class KeycloakAuthzPort:
     def create_client_authz_role_based_policy(
         self,
         client_id: str,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzRolePolicyRequestDTO | dict[str, Any],
         skip_exists: bool = False,
-    ) -> KeycloakAuthzPolicyDTO:
+    ) -> KeycloakAuthzRolePolicyDTO:
         """Create a role-based authorization policy."""
         raise NotImplementedError
 
     @abstractmethod
     def create_client_authz_client_policy(
         self,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzClientPolicyRequestDTO | dict[str, Any],
         client_id: str,
-    ) -> KeycloakAuthzPolicyDTO:
+    ) -> KeycloakAuthzClientPolicyDTO:
         """Create a client-based authorization policy."""
         raise NotImplementedError
 
@@ -181,7 +187,7 @@ class KeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_client_authz_client_policies(self, client_id: str) -> list[KeycloakAuthzPolicyDTO]:
+    def get_client_authz_client_policies(self, client_id: str) -> list[KeycloakAuthzClientPolicyDTO]:
         """Get client policies for authorization."""
         raise NotImplementedError
 
@@ -261,18 +267,18 @@ class AsyncKeycloakAuthzPort:
     async def create_client_authz_role_based_policy(
         self,
         client_id: str,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzRolePolicyRequestDTO | dict[str, Any],
         skip_exists: bool = False,
-    ) -> KeycloakAuthzPolicyDTO:
+    ) -> KeycloakAuthzRolePolicyDTO:
         """Create a role-based authorization policy."""
         raise NotImplementedError
 
     @abstractmethod
     async def create_client_authz_client_policy(
         self,
-        payload: KeycloakAuthzPolicyRequestDTO | dict[str, Any],
+        payload: KeycloakAuthzClientPolicyRequestDTO | dict[str, Any],
         client_id: str,
-    ) -> KeycloakAuthzPolicyDTO:
+    ) -> KeycloakAuthzClientPolicyDTO:
         """Create a client-based authorization policy."""
         raise NotImplementedError
 
@@ -365,7 +371,7 @@ class AsyncKeycloakAuthzPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_client_authz_client_policies(self, client_id: str) -> list[KeycloakAuthzPolicyDTO]:
+    async def get_client_authz_client_policies(self, client_id: str) -> list[KeycloakAuthzClientPolicyDTO]:
         """Get client policies for authorization."""
         raise NotImplementedError
 

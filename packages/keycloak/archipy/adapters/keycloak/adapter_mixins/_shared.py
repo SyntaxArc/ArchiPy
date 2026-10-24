@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Mapping
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, NoReturn, TypeVar
 
@@ -15,9 +16,10 @@ from keycloak.exceptions import (
 
 from archipy.helpers._deprecation import warn_deprecated_name
 from archipy.models.dtos.keycloak.base import KeycloakBaseDTO, KeycloakResponseDTO
-from archipy.models.dtos.keycloak.common_dtos import KeycloakMutationResultDTO
+from archipy.models.dtos.keycloak.common_dtos import KeycloakCreateResultDTO, KeycloakMutationResultDTO
 from archipy.models.dtos.keycloak.token_dtos import KeycloakOidcResponseDTO, KeycloakUserInfoDTO
 from archipy.models.errors import (
+    BaseError,
     ClientAlreadyExistsError,
     InsufficientPermissionsError,
     InternalError,
@@ -33,7 +35,7 @@ from archipy.models.errors import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Iterable, Mapping
+    from collections.abc import Awaitable, Callable, Iterable
 
     from keycloak import KeycloakAdmin, KeycloakOpenID, KeycloakUMA
 
@@ -90,6 +92,43 @@ def to_mutation_result[R: KeycloakMutationResultDTO](model: type[R], raw: Mappin
             parsed = {}
         raw = parsed if isinstance(parsed, dict) else {}
     return model.model_validate(raw or {})
+
+
+def payload_value(payload: KeycloakBaseDTO | Mapping[str, Any], attribute: str, key: str) -> str | None:
+    """Read one string field from a request payload given as a DTO (``attribute``) or a dict (``key``)."""
+    value = payload.get(key) if isinstance(payload, Mapping) else getattr(payload, attribute, None)
+    return value if isinstance(value, str) else None
+
+
+def with_created_id(result: KeycloakCreateResultDTO, lookup: Callable[[], str | None]) -> KeycloakCreateResultDTO:
+    """Set ``id`` on a create result by looking the new resource up.
+
+    The lookup is skipped when the create was skipped (``skip_exists``). A failed lookup leaves ``id`` unset: the
+    resource was created, so the call must not fail.
+    """
+    if result.msg:
+        return result
+    try:
+        created_id = lookup()
+    except BaseError as e:
+        logger.debug("Could not look up the id of the created Keycloak resource: %s", e)
+        return result
+    return result.model_copy(update={"id": created_id})
+
+
+async def with_created_id_async(
+    result: KeycloakCreateResultDTO,
+    lookup: Callable[[], Awaitable[str | None]],
+) -> KeycloakCreateResultDTO:
+    """Async variant of :func:`with_created_id`."""
+    if result.msg:
+        return result
+    try:
+        created_id = await lookup()
+    except BaseError as e:
+        logger.debug("Could not look up the id of the created Keycloak resource: %s", e)
+        return result
+    return result.model_copy(update={"id": created_id})
 
 
 def to_dto[M: KeycloakResponseDTO](model: type[M], raw: Mapping[str, Any]) -> M:
