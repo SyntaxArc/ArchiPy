@@ -690,6 +690,25 @@ Feature: Keycloak Authentication Testing
       | sync         | realm |
       | async        | group |
 
+  @users
+  Scenario Outline: User counts, credentials, groups, federated identities, sessions and profile
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
+    Then the users are counted and filtered, and the user "<username>" has credentials, no consents and no unmanaged attributes using <adapter_type> adapter
+    When I add user "<username>" to a new group "<group>" using <adapter_type> adapter
+    Then the user "<username>" lists and counts the group "<group>" using <adapter_type> adapter
+    When I link user "<username>" to the identity provider "<idp_alias>" as "<external>" using <adapter_type> adapter
+    Then the user "<username>" lists the link to "<idp_alias>" and removes it using <adapter_type> adapter
+    And the user "<username>" with password "<password>" has a session, can be impersonated and the user profile is readable using <adapter_type> adapter
+    And the email actions for user "<username>" reach Keycloak and report the missing SMTP setup using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | username      | password | group      | idp_alias | external | realm_name | realm_display_name | client_name       |
+      | sync         | usrextra      | pass123  | extra-grp  | usr-idp   | usrext   | test-realm | Test Realm         | test-client       |
+      | async        | asyncusrextra | async123 | aextra-grp | ausr-idp  | ausrext  | test-realm | Async Test Realm   | async-test-client |
+
   @components
   Scenario Outline: Component listing
     Given a configured <adapter_type> Keycloak adapter

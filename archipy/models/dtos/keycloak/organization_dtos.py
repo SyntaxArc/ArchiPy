@@ -13,6 +13,12 @@ from archipy.models.dtos.keycloak.user_dtos import (
     KeycloakCredentialRequestDTO,
     KeycloakFederatedIdentityDTO,
     KeycloakFederatedIdentityRequestDTO,
+    KeycloakUserConsentDTO,
+    KeycloakUserConsentRequestDTO,
+)
+from archipy.models.dtos.keycloak.user_profile_dtos import (
+    KeycloakUserProfileMetadataDTO,
+    KeycloakUserProfileMetadataRequestDTO,
 )
 
 
@@ -44,7 +50,7 @@ class KeycloakOrganizationMemberDTO(KeycloakResponseDTO):
     email: str | None = None
     email_verified: bool | None = None
     attributes: dict[str, list[str]] | None = None
-    user_profile_metadata: dict[str, JsonValue] | None = None
+    user_profile_metadata: KeycloakUserProfileMetadataDTO | None = None
     enabled: bool | None = None
     self_link: str | None = Field(default=None, alias="self")
     origin: str | None = None
@@ -58,7 +64,7 @@ class KeycloakOrganizationMemberDTO(KeycloakResponseDTO):
     federated_identities: list[KeycloakFederatedIdentityDTO] | None = None
     realm_roles: list[str] | None = None
     client_roles: dict[str, list[str]] | None = None
-    client_consents: list[dict[str, JsonValue]] | None = None
+    client_consents: list[KeycloakUserConsentDTO] | None = None
     not_before: int | None = None
     verifiable_credentials: list[dict[str, JsonValue]] | None = None
     issued_verifiable_credentials: list[dict[str, JsonValue]] | None = None
@@ -79,7 +85,7 @@ class KeycloakOrganizationMemberRequestDTO(KeycloakRequestDTO):
     email: str | None = None
     email_verified: bool | None = None
     attributes: dict[str, list[str]] | None = None
-    user_profile_metadata: dict[str, JsonValue] | None = None
+    user_profile_metadata: KeycloakUserProfileMetadataRequestDTO | None = None
     enabled: bool | None = None
     self_link: str | None = Field(default=None, alias="self")
     origin: str | None = None
@@ -93,7 +99,7 @@ class KeycloakOrganizationMemberRequestDTO(KeycloakRequestDTO):
     federated_identities: list[KeycloakFederatedIdentityRequestDTO] | None = None
     realm_roles: list[str] | None = None
     client_roles: dict[str, list[str]] | None = None
-    client_consents: list[dict[str, JsonValue]] | None = None
+    client_consents: list[KeycloakUserConsentRequestDTO] | None = None
     not_before: int | None = None
     verifiable_credentials: list[dict[str, JsonValue]] | None = None
     issued_verifiable_credentials: list[dict[str, JsonValue]] | None = None

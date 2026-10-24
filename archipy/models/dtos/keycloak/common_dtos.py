@@ -41,3 +41,15 @@ class KeycloakGroupsCountDTO(KeycloakResponseDTO):
     """Response of the group count endpoint."""
 
     count: int | None = None
+
+
+class KeycloakImpersonationDTO(KeycloakResponseDTO):
+    """Response of a user impersonation request.
+
+    Attributes:
+        same_realm: Whether the impersonated user belongs to the admin's realm.
+        redirect: URL to open to continue as the impersonated user.
+    """
+
+    same_realm: bool | None = None
+    redirect: str | None = None

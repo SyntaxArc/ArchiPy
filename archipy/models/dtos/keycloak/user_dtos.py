@@ -3,6 +3,10 @@
 from pydantic import Field, JsonValue
 
 from archipy.models.dtos.keycloak.base import KeycloakRequestDTO, KeycloakResponseDTO
+from archipy.models.dtos.keycloak.user_profile_dtos import (
+    KeycloakUserProfileMetadataDTO,
+    KeycloakUserProfileMetadataRequestDTO,
+)
 
 
 class KeycloakCredentialDTO(KeycloakResponseDTO):
@@ -79,7 +83,7 @@ class KeycloakUserDTO(KeycloakResponseDTO):
     email: str | None = None
     email_verified: bool | None = None
     attributes: dict[str, list[str]] | None = None
-    user_profile_metadata: dict[str, JsonValue] | None = None
+    user_profile_metadata: KeycloakUserProfileMetadataDTO | None = None
     enabled: bool | None = None
     self_link: str | None = Field(default=None, alias="self")
     origin: str | None = None
@@ -93,7 +97,7 @@ class KeycloakUserDTO(KeycloakResponseDTO):
     federated_identities: list[KeycloakFederatedIdentityDTO] | None = None
     realm_roles: list[str] | None = None
     client_roles: dict[str, list[str]] | None = None
-    client_consents: list[dict[str, JsonValue]] | None = None
+    client_consents: list[KeycloakUserConsentDTO] | None = None
     not_before: int | None = None
     verifiable_credentials: list[dict[str, JsonValue]] | None = None
     issued_verifiable_credentials: list[dict[str, JsonValue]] | None = None
@@ -113,7 +117,7 @@ class KeycloakUserRequestDTO(KeycloakRequestDTO):
     email: str | None = None
     email_verified: bool | None = None
     attributes: dict[str, list[str]] | None = None
-    user_profile_metadata: dict[str, JsonValue] | None = None
+    user_profile_metadata: KeycloakUserProfileMetadataRequestDTO | None = None
     enabled: bool | None = None
     self_link: str | None = Field(default=None, alias="self")
     origin: str | None = None
@@ -127,7 +131,7 @@ class KeycloakUserRequestDTO(KeycloakRequestDTO):
     federated_identities: list[KeycloakFederatedIdentityRequestDTO] | None = None
     realm_roles: list[str] | None = None
     client_roles: dict[str, list[str]] | None = None
-    client_consents: list[dict[str, JsonValue]] | None = None
+    client_consents: list[KeycloakUserConsentRequestDTO] | None = None
     not_before: int | None = None
     verifiable_credentials: list[dict[str, JsonValue]] | None = None
     issued_verifiable_credentials: list[dict[str, JsonValue]] | None = None
@@ -135,3 +139,23 @@ class KeycloakUserRequestDTO(KeycloakRequestDTO):
     social_links: list[dict[str, JsonValue]] | None = None
     groups: list[str] | None = None
     access: dict[str, bool] | None = None
+
+
+class KeycloakUserConsentDTO(KeycloakResponseDTO):
+    """Keycloak ``UserConsentRepresentation`` as returned by the admin API."""
+
+    client_id: str | None = None
+    granted_client_scopes: list[str] | None = None
+    created_date: int | None = None
+    last_updated_date: int | None = None
+    granted_realm_roles: list[str] | None = None
+
+
+class KeycloakUserConsentRequestDTO(KeycloakRequestDTO):
+    """Keycloak ``UserConsentRepresentation`` payload sent to the admin API."""
+
+    client_id: str | None = None
+    granted_client_scopes: list[str] | None = None
+    created_date: int | None = None
+    last_updated_date: int | None = None
+    granted_realm_roles: list[str] | None = None
