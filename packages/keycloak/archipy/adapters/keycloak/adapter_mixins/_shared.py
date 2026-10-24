@@ -13,6 +13,7 @@ from keycloak.exceptions import (
     KeycloakError,
 )
 
+from archipy.models.dtos.keycloak.base import KeycloakBaseDTO
 from archipy.models.errors import (
     ClientAlreadyExistsError,
     InsufficientPermissionsError,
@@ -41,6 +42,21 @@ HTTP_BAD_REQUEST = 400
 HTTP_NOT_FOUND = 404
 
 T = TypeVar("T")
+
+
+def to_wire_roles(roles: str | KeycloakBaseDTO | list[Any]) -> str | list[Any]:
+    """Convert role arguments to what python-keycloak expects: a name or a list of names/role payloads.
+
+    Args:
+        roles: A role name, a role DTO, or a list of names, DTOs or raw role dicts.
+
+    Returns:
+        The role name unchanged, or a list in which every DTO is replaced by its camelCase payload.
+    """
+    if isinstance(roles, str):
+        return roles
+    items = roles if isinstance(roles, list) else [roles]
+    return [item.to_payload() if isinstance(item, KeycloakBaseDTO) else item for item in items]
 
 
 class KeycloakExceptionHandlerMixin:

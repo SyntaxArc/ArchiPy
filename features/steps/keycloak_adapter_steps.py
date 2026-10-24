@@ -1155,12 +1155,12 @@ async def step_user_has_realm_role(context: Context, username: str, role_name: s
     if is_async:
 
         roles = await adapter.get_user_roles(user_id)
-        role_names = [role["name"] for role in roles]
+        role_names = [role.name for role in roles]
         assert role_name in role_names, f"User {username} does not have realm role {role_name}"
 
     else:
         roles = adapter.get_user_roles(user_id)
-        role_names = [role["name"] for role in roles]
+        role_names = [role.name for role in roles]
         assert role_name in role_names, f"User {username} does not have realm role {role_name}"
     context.logger.info(f"Verified user {username} has realm role {role_name}")
 
@@ -1178,13 +1178,13 @@ async def step_user_has_client_role(context: Context, username: str, role_name: 
 
         client_id = await adapter.get_client_id(client_name)
         roles = await adapter.get_client_roles_for_user(user_id, client_id)
-        role_names = [role["name"] for role in roles]
+        role_names = [role.name for role in roles]
         assert role_name in role_names, f"User {username} does not have client role {role_name} for client {client_id}"
 
     else:
         client_id = adapter.get_client_id(client_name)
         roles = adapter.get_client_roles_for_user(user_id, client_id)
-        role_names = [role["name"] for role in roles]
+        role_names = [role.name for role in roles]
         assert role_name in role_names, f"User {username} does not have client role {role_name} for client {client_id}"
     context.logger.info(f"Verified user {username} has client role {role_name} for client {client_id}")
 
@@ -1201,12 +1201,12 @@ async def step_user_not_have_realm_role(context: Context, username: str, role_na
     if is_async:
 
         roles = await adapter.get_user_roles(user_id)
-        role_names = [role["name"] for role in roles]
+        role_names = [role.name for role in roles]
         assert role_name not in role_names, f"User {username} still has realm role {role_name}"
 
     else:
         roles = adapter.get_user_roles(user_id)
-        role_names = [role["name"] for role in roles]
+        role_names = [role.name for role in roles]
         assert role_name not in role_names, f"User {username} still has realm role {role_name}"
     context.logger.info(f"Verified user {username} does not have realm role {role_name}")
 

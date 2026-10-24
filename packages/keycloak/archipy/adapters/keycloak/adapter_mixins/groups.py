@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from archipy.adapters.keycloak.adapter_mixins._shared import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    to_wire_roles,
 )
+
+if TYPE_CHECKING:
+    from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
 
 
 class KeycloakGroupsMixin(SyncKeycloakMixinBase):
@@ -135,32 +139,58 @@ class KeycloakGroupsMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def assign_group_client_roles(self, group_id: str, client_id: str, roles: str | list[str]) -> dict[str, Any]:
+    def assign_group_client_roles(
+        self,
+        group_id: str,
+        client_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Assign client roles to a group."""
         return self._call_keycloak(
             "assign_group_client_roles",
-            lambda: self.admin_adapter.assign_group_client_roles(group_id=group_id, client_id=client_id, roles=roles),
+            lambda: self.admin_adapter.assign_group_client_roles(
+                group_id=group_id,
+                client_id=client_id,
+                roles=to_wire_roles(roles),
+            ),
         )
 
-    def assign_group_realm_roles(self, group_id: str, roles: str | list[str]) -> dict[str, Any]:
+    def assign_group_realm_roles(
+        self,
+        group_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Assign realm roles to a group."""
         return self._call_keycloak(
             "assign_group_realm_roles",
-            lambda: self.admin_adapter.assign_group_realm_roles(group_id=group_id, roles=roles),
+            lambda: self.admin_adapter.assign_group_realm_roles(group_id=group_id, roles=to_wire_roles(roles)),
         )
 
-    def delete_group_client_roles(self, group_id: str, client_id: str, roles: str | list[str]) -> dict[str, Any]:
+    def delete_group_client_roles(
+        self,
+        group_id: str,
+        client_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Remove client roles from a group."""
         return self._call_keycloak(
             "delete_group_client_roles",
-            lambda: self.admin_adapter.delete_group_client_roles(group_id=group_id, client_id=client_id, roles=roles),
+            lambda: self.admin_adapter.delete_group_client_roles(
+                group_id=group_id,
+                client_id=client_id,
+                roles=to_wire_roles(roles),
+            ),
         )
 
-    def delete_group_realm_roles(self, group_id: str, roles: str | list[str]) -> dict[str, Any]:
+    def delete_group_realm_roles(
+        self,
+        group_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Remove realm roles from a group."""
         return self._call_keycloak(
             "delete_group_realm_roles",
-            lambda: self.admin_adapter.delete_group_realm_roles(group_id=group_id, roles=roles),
+            lambda: self.admin_adapter.delete_group_realm_roles(group_id=group_id, roles=to_wire_roles(roles)),
         )
 
     def get_composite_client_roles_of_group(
@@ -337,40 +367,58 @@ class AsyncKeycloakGroupsMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def assign_group_client_roles(self, group_id: str, client_id: str, roles: str | list[str]) -> dict[str, Any]:
+    async def assign_group_client_roles(
+        self,
+        group_id: str,
+        client_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Assign client roles to a group."""
         return await self._async_call_keycloak(
             "assign_group_client_roles",
             lambda: self.admin_adapter.a_assign_group_client_roles(
                 group_id=group_id,
                 client_id=client_id,
-                roles=roles,
+                roles=to_wire_roles(roles),
             ),
         )
 
-    async def assign_group_realm_roles(self, group_id: str, roles: str | list[str]) -> dict[str, Any]:
+    async def assign_group_realm_roles(
+        self,
+        group_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Assign realm roles to a group."""
         return await self._async_call_keycloak(
             "assign_group_realm_roles",
-            lambda: self.admin_adapter.a_assign_group_realm_roles(group_id=group_id, roles=roles),
+            lambda: self.admin_adapter.a_assign_group_realm_roles(group_id=group_id, roles=to_wire_roles(roles)),
         )
 
-    async def delete_group_client_roles(self, group_id: str, client_id: str, roles: str | list[str]) -> dict[str, Any]:
+    async def delete_group_client_roles(
+        self,
+        group_id: str,
+        client_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Remove client roles from a group."""
         return await self._async_call_keycloak(
             "delete_group_client_roles",
             lambda: self.admin_adapter.a_delete_group_client_roles(
                 group_id=group_id,
                 client_id=client_id,
-                roles=roles,
+                roles=to_wire_roles(roles),
             ),
         )
 
-    async def delete_group_realm_roles(self, group_id: str, roles: str | list[str]) -> dict[str, Any]:
+    async def delete_group_realm_roles(
+        self,
+        group_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Remove realm roles from a group."""
         return await self._async_call_keycloak(
             "delete_group_realm_roles",
-            lambda: self.admin_adapter.a_delete_group_realm_roles(group_id=group_id, roles=roles),
+            lambda: self.admin_adapter.a_delete_group_realm_roles(group_id=group_id, roles=to_wire_roles(roles)),
         )
 
     async def get_composite_client_roles_of_group(

@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
 
 
 class KeycloakGroupsPort:
@@ -97,22 +100,40 @@ class KeycloakGroupsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def assign_group_client_roles(self, group_id: str, client_id: str, roles: str | list[str]) -> dict[str, Any]:
+    def assign_group_client_roles(
+        self,
+        group_id: str,
+        client_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Assign client roles to a group."""
         raise NotImplementedError
 
     @abstractmethod
-    def assign_group_realm_roles(self, group_id: str, roles: str | list[str]) -> dict[str, Any]:
+    def assign_group_realm_roles(
+        self,
+        group_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Assign realm roles to a group."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_group_client_roles(self, group_id: str, client_id: str, roles: str | list[str]) -> dict[str, Any]:
+    def delete_group_client_roles(
+        self,
+        group_id: str,
+        client_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Remove client roles from a group."""
         raise NotImplementedError
 
     @abstractmethod
-    def delete_group_realm_roles(self, group_id: str, roles: str | list[str]) -> dict[str, Any]:
+    def delete_group_realm_roles(
+        self,
+        group_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Remove realm roles from a group."""
         raise NotImplementedError
 
@@ -242,22 +263,40 @@ class AsyncKeycloakGroupsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def assign_group_client_roles(self, group_id: str, client_id: str, roles: str | list[str]) -> dict[str, Any]:
+    async def assign_group_client_roles(
+        self,
+        group_id: str,
+        client_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Assign client roles to a group."""
         raise NotImplementedError
 
     @abstractmethod
-    async def assign_group_realm_roles(self, group_id: str, roles: str | list[str]) -> dict[str, Any]:
+    async def assign_group_realm_roles(
+        self,
+        group_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Assign realm roles to a group."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_group_client_roles(self, group_id: str, client_id: str, roles: str | list[str]) -> dict[str, Any]:
+    async def delete_group_client_roles(
+        self,
+        group_id: str,
+        client_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Remove client roles from a group."""
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_group_realm_roles(self, group_id: str, roles: str | list[str]) -> dict[str, Any]:
+    async def delete_group_realm_roles(
+        self,
+        group_id: str,
+        roles: str | KeycloakRoleDTO | list[str] | list[KeycloakRoleDTO],
+    ) -> dict[str, Any]:
         """Remove realm roles from a group."""
         raise NotImplementedError
 

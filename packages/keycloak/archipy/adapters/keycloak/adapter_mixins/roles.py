@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
 
 from async_lru import alru_cache
 from keycloak.exceptions import (
@@ -16,15 +15,11 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     SyncKeycloakMixinBase,
 )
 from archipy.helpers.decorators import ttl_cache
+from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
 from archipy.models.errors import (
     InternalError,
     NotFoundError,
 )
-
-if TYPE_CHECKING:
-    from archipy.adapters.keycloak.ports import (
-        KeycloakRoleType,
-    )
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +30,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for role operations."""
 
     @ttl_cache(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
-    def get_user_roles(self, user_id: str) -> list[KeycloakRoleType]:
+    def get_user_roles(self, user_id: str) -> list[KeycloakRoleDTO]:
         """Get roles assigned to a user.
 
         Args:
@@ -48,12 +43,12 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             ValueError: If getting roles fails
         """
         try:
-            return self.admin_adapter.get_realm_roles_of_user(user_id)
+            return [KeycloakRoleDTO.model_validate(r) for r in self.admin_adapter.get_realm_roles_of_user(user_id)]
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_user_roles")
 
     @ttl_cache(ttl_seconds=300, maxsize=100)  # Cache for 5 minutes
-    def get_client_roles_for_user(self, user_id: str, client_id: str) -> list[KeycloakRoleType]:
+    def get_client_roles_for_user(self, user_id: str, client_id: str) -> list[KeycloakRoleDTO]:
         """Get client-specific roles assigned to a user.
 
         Args:
@@ -67,7 +62,10 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             ValueError: If getting roles fails
         """
         try:
-            return self.admin_adapter.get_client_roles_of_user(user_id, client_id)
+            return [
+                KeycloakRoleDTO.model_validate(r)
+                for r in self.admin_adapter.get_client_roles_of_user(user_id, client_id)
+            ]
         except KeycloakError as e:
             raise InternalError() from e
 
@@ -154,7 +152,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         role_name: str,
         description: str | None = None,
         skip_exists: bool = True,
-    ) -> dict[str, Any] | None:
+    ) -> KeycloakRoleDTO | None:
         """Create a new realm role.
 
         Args:
@@ -180,7 +178,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             if hasattr(self.get_realm_roles, "clear_cache"):
                 self.get_realm_roles.clear_cache()
 
-            return self.admin_adapter.get_realm_role(role_name)
+            return KeycloakRoleDTO.model_validate(self.admin_adapter.get_realm_role(role_name))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "create_realm_role")
 
@@ -190,7 +188,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         role_name: str,
         description: str | None = None,
         skip_exists: bool = True,
-    ) -> dict[str, Any] | None:
+    ) -> KeycloakRoleDTO | None:
         """Create a new client role.
 
         Args:
@@ -227,7 +225,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
                 self.get_client_roles_for_user.clear_cache()
 
             # Return created role
-            return self.admin_adapter.get_client_role(resolved_client_id, role_name)
+            return KeycloakRoleDTO.model_validate(self.admin_adapter.get_client_role(resolved_client_id, role_name))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "create_client_role")
 
@@ -256,7 +254,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "delete_realm_role")
 
     @ttl_cache(ttl_seconds=300, maxsize=1)  # Cache for 5 minutes
-    def get_realm_roles(self) -> list[dict[str, Any]]:
+    def get_realm_roles(self) -> list[KeycloakRoleDTO]:
         """Get all realm roles.
 
         Returns:
@@ -266,12 +264,12 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             ValueError: If getting roles fails
         """
         try:
-            return self.admin_adapter.get_realm_roles()
+            return [KeycloakRoleDTO.model_validate(r) for r in self.admin_adapter.get_realm_roles()]
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_realm_roles")
 
     @ttl_cache(ttl_seconds=300, maxsize=1)  # Cache for 5 minutes
-    def get_realm_role(self, role_name: str) -> dict[str, Any]:
+    def get_realm_role(self, role_name: str) -> KeycloakRoleDTO:
         """Get realm role.
 
         Args:
@@ -283,7 +281,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             ValueError: If getting role fails
         """
         try:
-            return self.admin_adapter.get_realm_role(role_name)
+            return KeycloakRoleDTO.model_validate(self.admin_adapter.get_realm_role(role_name))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_realm_role")
 
@@ -482,7 +480,7 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "add_client_roles_to_composite")
 
-    def get_composite_realm_roles(self, role_name: str) -> list[dict[str, Any]] | None:
+    def get_composite_realm_roles(self, role_name: str) -> list[KeycloakRoleDTO] | None:
         """Get composite roles for a realm role.
 
         Args:
@@ -492,7 +490,10 @@ class KeycloakRolesMixin(SyncKeycloakMixinBase):
             List of composite roles
         """
         try:
-            return self.admin_adapter.get_composite_realm_roles_of_role(role_name)
+            return [
+                KeycloakRoleDTO.model_validate(r)
+                for r in self.admin_adapter.get_composite_realm_roles_of_role(role_name)
+            ]
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_composite_realm_roles")
 
@@ -501,7 +502,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for role operations."""
 
     @alru_cache(ttl=300, maxsize=100)  # Cache for 5 minutes
-    async def get_user_roles(self, user_id: str) -> list[KeycloakRoleType]:
+    async def get_user_roles(self, user_id: str) -> list[KeycloakRoleDTO]:
         """Get roles assigned to a user.
 
         Args:
@@ -514,12 +515,14 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             ValueError: If getting roles fails
         """
         try:
-            return await self.admin_adapter.a_get_realm_roles_of_user(user_id)
+            return [
+                KeycloakRoleDTO.model_validate(r) for r in await self.admin_adapter.a_get_realm_roles_of_user(user_id)
+            ]
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_user_roles")
 
     @alru_cache(ttl=300, maxsize=100)  # Cache for 5 minutes
-    async def get_client_roles_for_user(self, user_id: str, client_id: str) -> list[KeycloakRoleType]:
+    async def get_client_roles_for_user(self, user_id: str, client_id: str) -> list[KeycloakRoleDTO]:
         """Get client-specific roles assigned to a user.
 
         Args:
@@ -533,7 +536,10 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             ValueError: If getting roles fails
         """
         try:
-            return await self.admin_adapter.a_get_client_roles_of_user(user_id, client_id)
+            return [
+                KeycloakRoleDTO.model_validate(r)
+                for r in await self.admin_adapter.a_get_client_roles_of_user(user_id, client_id)
+            ]
         except KeycloakError as e:
             raise InternalError() from e
 
@@ -620,7 +626,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
         role_name: str,
         description: str | None = None,
         skip_exists: bool = True,
-    ) -> dict[str, Any] | None:
+    ) -> KeycloakRoleDTO | None:
         """Create a new realm role.
 
         Args:
@@ -646,7 +652,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             if hasattr(self.get_realm_roles, "cache_clear"):
                 self.get_realm_roles.cache_clear()
 
-            return await self.admin_adapter.a_get_realm_role(role_name)
+            return KeycloakRoleDTO.model_validate(await self.admin_adapter.a_get_realm_role(role_name))
 
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "create_realm_role")
@@ -657,7 +663,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
         role_name: str,
         description: str | None = None,
         skip_exists: bool = True,
-    ) -> dict[str, Any] | None:
+    ) -> KeycloakRoleDTO | None:
         """Create a new client role.
 
         Args:
@@ -691,7 +697,9 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
                 self.get_client_roles_for_user.cache_clear()
 
             # Return created role
-            return await self.admin_adapter.a_get_client_role(resolved_client_id, role_name)
+            return KeycloakRoleDTO.model_validate(
+                await self.admin_adapter.a_get_client_role(resolved_client_id, role_name),
+            )
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "create_client_role")
 
@@ -720,7 +728,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             self._handle_keycloak_exception(e, "delete_realm_role")
 
     @alru_cache(ttl=300, maxsize=1)  # Cache for 5 minutes
-    async def get_realm_roles(self) -> list[dict[str, Any]]:
+    async def get_realm_roles(self) -> list[KeycloakRoleDTO]:
         """Get all realm roles.
 
         Returns:
@@ -730,12 +738,12 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             ValueError: If getting roles fails
         """
         try:
-            return await self.admin_adapter.a_get_realm_roles()
+            return [KeycloakRoleDTO.model_validate(r) for r in await self.admin_adapter.a_get_realm_roles()]
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_realm_roles")
 
     @alru_cache(ttl=300, maxsize=1)  # Cache for 5 minutes
-    async def get_realm_role(self, role_name: str) -> dict[str, Any]:
+    async def get_realm_role(self, role_name: str) -> KeycloakRoleDTO:
         """Get realm role.
 
         Args:
@@ -747,7 +755,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             ValueError: If getting role fails
         """
         try:
-            return await self.admin_adapter.a_get_realm_role(role_name)
+            return KeycloakRoleDTO.model_validate(await self.admin_adapter.a_get_realm_role(role_name))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_realm_role")
 
@@ -949,7 +957,7 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "add_client_roles_to_composite")
 
-    async def get_composite_realm_roles(self, role_name: str) -> list[dict[str, Any]] | None:
+    async def get_composite_realm_roles(self, role_name: str) -> list[KeycloakRoleDTO] | None:
         """Get composite roles for a realm role.
 
         Args:
@@ -959,6 +967,9 @@ class AsyncKeycloakRolesMixin(AsyncKeycloakMixinBase):
             List of composite roles
         """
         try:
-            return await self.admin_adapter.a_get_composite_realm_roles_of_role(role_name)
+            return [
+                KeycloakRoleDTO.model_validate(r)
+                for r in await self.admin_adapter.a_get_composite_realm_roles_of_role(role_name)
+            ]
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_composite_realm_roles")

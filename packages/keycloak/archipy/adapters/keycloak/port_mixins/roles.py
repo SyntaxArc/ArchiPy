@@ -3,24 +3,22 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from archipy.adapters.keycloak.port_mixins._shared import (
-        KeycloakRoleType,
-    )
+    from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
 
 
 class KeycloakRolesPort:
     """Sync Keycloak port interface for role operations."""
 
     @abstractmethod
-    def get_user_roles(self, user_id: str) -> list[KeycloakRoleType]:
+    def get_user_roles(self, user_id: str) -> list[KeycloakRoleDTO]:
         """Get roles assigned to a user."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_client_roles_for_user(self, user_id: str, client_id: str) -> list[KeycloakRoleType]:
+    def get_client_roles_for_user(self, user_id: str, client_id: str) -> list[KeycloakRoleDTO]:
         """Get client-specific roles assigned to a user."""
         raise NotImplementedError
 
@@ -60,12 +58,12 @@ class KeycloakRolesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_realm_role(self, role_name: str) -> dict[str, Any]:
+    def get_realm_role(self, role_name: str) -> KeycloakRoleDTO:
         """Get realm role."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_realm_roles(self) -> list[dict[str, Any]]:
+    def get_realm_roles(self) -> list[KeycloakRoleDTO]:
         """Get all realm roles."""
         raise NotImplementedError
 
@@ -75,7 +73,7 @@ class KeycloakRolesPort:
         role_name: str,
         description: str | None = None,
         skip_exists: bool = True,
-    ) -> dict[str, Any] | None:
+    ) -> KeycloakRoleDTO | None:
         """Create a new realm role."""
         raise NotImplementedError
 
@@ -91,7 +89,7 @@ class KeycloakRolesPort:
         role_name: str,
         description: str | None = None,
         skip_exists: bool = True,
-    ) -> dict[str, Any] | None:
+    ) -> KeycloakRoleDTO | None:
         """Create a new client role."""
         raise NotImplementedError
 
@@ -111,7 +109,7 @@ class KeycloakRolesPort:
         raise NotImplementedError
 
     @abstractmethod
-    def get_composite_realm_roles(self, role_name: str) -> list[dict[str, Any]] | None:
+    def get_composite_realm_roles(self, role_name: str) -> list[KeycloakRoleDTO] | None:
         """Get composite roles for a realm role."""
         raise NotImplementedError
 
@@ -120,12 +118,12 @@ class AsyncKeycloakRolesPort:
     """Async Keycloak port interface for role operations."""
 
     @abstractmethod
-    async def get_user_roles(self, user_id: str) -> list[KeycloakRoleType]:
+    async def get_user_roles(self, user_id: str) -> list[KeycloakRoleDTO]:
         """Get roles assigned to a user."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_client_roles_for_user(self, user_id: str, client_id: str) -> list[KeycloakRoleType]:
+    async def get_client_roles_for_user(self, user_id: str, client_id: str) -> list[KeycloakRoleDTO]:
         """Get client-specific roles assigned to a user."""
         raise NotImplementedError
 
@@ -165,12 +163,12 @@ class AsyncKeycloakRolesPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_realm_role(self, role_name: str) -> dict[str, Any]:
+    async def get_realm_role(self, role_name: str) -> KeycloakRoleDTO:
         """Get realm role."""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_realm_roles(self) -> list[dict[str, Any]]:
+    async def get_realm_roles(self) -> list[KeycloakRoleDTO]:
         """Get all realm roles."""
         raise NotImplementedError
 
@@ -180,7 +178,7 @@ class AsyncKeycloakRolesPort:
         role_name: str,
         description: str | None = None,
         skip_exists: bool = True,
-    ) -> dict[str, Any] | None:
+    ) -> KeycloakRoleDTO | None:
         """Create a new realm role."""
         raise NotImplementedError
 
@@ -196,7 +194,7 @@ class AsyncKeycloakRolesPort:
         role_name: str,
         description: str | None = None,
         skip_exists: bool = True,
-    ) -> dict[str, Any] | None:
+    ) -> KeycloakRoleDTO | None:
         """Create a new client role."""
         raise NotImplementedError
 
@@ -216,6 +214,6 @@ class AsyncKeycloakRolesPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_composite_realm_roles(self, role_name: str) -> list[dict[str, Any]] | None:
+    async def get_composite_realm_roles(self, role_name: str) -> list[KeycloakRoleDTO] | None:
         """Get composite roles for a realm role."""
         raise NotImplementedError

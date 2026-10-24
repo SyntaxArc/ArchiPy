@@ -4,22 +4,16 @@ from __future__ import annotations
 
 from typing import Any, TypedDict
 
+from archipy.models.dtos.keycloak.role_dtos import KeycloakRoleDTO
+
 # Define type aliases for better type hinting
 KeycloakResponseType = dict[str, Any]
 KeycloakUserType = dict[str, Any]
 KeycloakTokenType = dict[str, Any]
 
 
-class KeycloakRoleType(TypedDict, total=False):
-    """Keycloak ``RoleRepresentation`` as returned by the admin API."""
-
-    id: str
-    name: str
-    description: str
-    composite: bool
-    clientRole: bool
-    containerId: str
-    attributes: dict[str, list[str]]
+KeycloakRoleType = KeycloakRoleDTO
+"""Deprecated alias of :class:`KeycloakRoleDTO`; removed in 6.0.0."""
 
 
 class KeycloakGroupType(TypedDict, total=False):
