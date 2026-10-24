@@ -17,7 +17,7 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
 )
 from archipy.helpers.decorators import ttl_cache
 from archipy.helpers.utils.string_utils import StringUtils
-from archipy.models.dtos.keycloak.client_dtos import KeycloakClientDTO
+from archipy.models.dtos.keycloak.client_dtos import KeycloakClientDTO, KeycloakClientRequestDTO
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +83,7 @@ class KeycloakClientsMixin(SyncKeycloakMixinBase):
         client_id: str,
         realm: str | None = None,
         skip_exists: bool = True,
+        config: KeycloakClientRequestDTO | None = None,
         **kwargs: Any,
     ) -> KeycloakClientDTO | None:
         """Create a Keycloak client with minimum required fields and optional additional config.
@@ -91,6 +92,7 @@ class KeycloakClientsMixin(SyncKeycloakMixinBase):
             client_id: The client identifier (required)
             realm: Target realm name (uses the current realm in KeycloakAdmin if not specified)
             skip_exists: Skip creation if client already exists
+            config: Optional request DTO; keyword arguments override its values.
             kwargs: Additional optional configurations for the client
 
         Returns:
@@ -126,6 +128,9 @@ class KeycloakClientsMixin(SyncKeycloakMixinBase):
                 # Convert snake_case to camelCase
                 camel_key = StringUtils.snake_to_camel_case(key)
                 payload[camel_key] = value
+
+            if config is not None:
+                payload = {**payload, **config.to_payload()}
 
             internal_client_id = None
             try:
@@ -230,6 +235,7 @@ class AsyncKeycloakClientsMixin(AsyncKeycloakMixinBase):
         client_id: str,
         realm: str | None = None,
         skip_exists: bool = True,
+        config: KeycloakClientRequestDTO | None = None,
         **kwargs: Any,
     ) -> KeycloakClientDTO | None:
         """Create a Keycloak client with minimum required fields and optional additional config.
@@ -238,6 +244,7 @@ class AsyncKeycloakClientsMixin(AsyncKeycloakMixinBase):
             client_id: The client identifier (required)
             realm: Target realm name (uses the current realm in KeycloakAdmin if not specified)
             skip_exists: Skip creation if client already exists
+            config: Optional request DTO; keyword arguments override its values.
             kwargs: Additional optional configurations for the client
 
         Returns:
@@ -276,6 +283,9 @@ class AsyncKeycloakClientsMixin(AsyncKeycloakMixinBase):
                 # Convert snake_case to camelCase
                 camel_key = StringUtils.snake_to_camel_case(key)
                 payload[camel_key] = value
+
+            if config is not None:
+                payload = {**payload, **config.to_payload()}
 
             internal_client_id = None
             try:

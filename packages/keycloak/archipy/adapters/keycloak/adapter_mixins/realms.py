@@ -15,20 +15,32 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     to_dto_or_none,
 )
 from archipy.helpers.utils.string_utils import StringUtils
-from archipy.models.dtos.keycloak.realm_dtos import KeycloakRealmDTO
+from archipy.models.dtos.keycloak.realm_dtos import KeycloakRealmDTO, KeycloakRealmRequestDTO
 
 logger = logging.getLogger(__name__)
+
+
+def _realm_update_payload(config: KeycloakRealmRequestDTO | None, kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Merge an optional realm DTO with keyword overrides into a RealmRepresentation payload."""
+    return {**(config.to_payload() if config is not None else {}), **kwargs}
 
 
 class KeycloakRealmsMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for realm operations."""
 
-    def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs: Any) -> KeycloakRealmDTO | None:
+    def create_realm(
+        self,
+        realm_name: str,
+        skip_exists: bool = True,
+        config: KeycloakRealmRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> KeycloakRealmDTO | None:
         """Create a Keycloak realm with minimum required fields and optional additional config.
 
         Args:
             realm_name: The realm identifier (required)
             skip_exists: Skip creation if realm already exists
+            config: Optional request DTO; keyword arguments override its values.
             kwargs: Additional optional configurations for the realm
 
         Returns:
@@ -49,6 +61,9 @@ class KeycloakRealmsMixin(SyncKeycloakMixinBase):
             # Convert Python snake_case to Keycloak camelCase
             camel_key = StringUtils.snake_to_camel_case(key)
             payload[camel_key] = value
+
+        if config is not None:
+            payload = {**payload, **config.to_payload()}
 
         try:
             self.admin_adapter.create_realm(payload=payload, skip_exists=skip_exists)
@@ -83,18 +98,27 @@ class KeycloakRealmsMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_realm")
 
-    def update_realm(self, realm_name: str, **kwargs: Any) -> KeycloakRealmDTO | None:
+    def update_realm(
+        self,
+        realm_name: str,
+        config: KeycloakRealmRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> KeycloakRealmDTO | None:
         """Update a realm. Kwargs are RealmRepresentation.
 
         Args:
             realm_name: Realm name (not the realm id).
+            config: Optional request DTO; keyword arguments override its values.
             **kwargs: RealmRepresentation attributes to update (e.g. displayName).
 
         Returns:
             Response from Keycloak, or None on error (handled via exception).
         """
         try:
-            return to_dto_or_none(KeycloakRealmDTO, self.admin_adapter.update_realm(realm_name, dict(kwargs)))
+            return to_dto_or_none(
+                KeycloakRealmDTO,
+                self.admin_adapter.update_realm(realm_name, _realm_update_payload(config, kwargs)),
+            )
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "update_realm")
 
@@ -102,12 +126,19 @@ class KeycloakRealmsMixin(SyncKeycloakMixinBase):
 class AsyncKeycloakRealmsMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for realm operations."""
 
-    async def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs: Any) -> KeycloakRealmDTO | None:
+    async def create_realm(
+        self,
+        realm_name: str,
+        skip_exists: bool = True,
+        config: KeycloakRealmRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> KeycloakRealmDTO | None:
         """Create a Keycloak realm with minimum required fields and optional additional config.
 
         Args:
             realm_name: The realm identifier (required)
             skip_exists: Skip creation if realm already exists
+            config: Optional request DTO; keyword arguments override its values.
             kwargs: Additional optional configurations for the realm
 
         Returns:
@@ -131,6 +162,9 @@ class AsyncKeycloakRealmsMixin(AsyncKeycloakMixinBase):
             # Convert Python snake_case to Keycloak camelCase
             camel_key = StringUtils.snake_to_camel_case(key)
             payload[camel_key] = value
+
+        if config is not None:
+            payload = {**payload, **config.to_payload()}
 
         try:
             await self.admin_adapter.a_create_realm(payload=payload, skip_exists=skip_exists)
@@ -168,17 +202,26 @@ class AsyncKeycloakRealmsMixin(AsyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_realm")
 
-    async def update_realm(self, realm_name: str, **kwargs: Any) -> KeycloakRealmDTO | None:
+    async def update_realm(
+        self,
+        realm_name: str,
+        config: KeycloakRealmRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> KeycloakRealmDTO | None:
         """Update a realm. Kwargs are RealmRepresentation top-level attributes (e.g. displayName, organizationsEnabled).
 
         Args:
             realm_name: Realm name (not the realm id).
+            config: Optional request DTO; keyword arguments override its values.
             **kwargs: RealmRepresentation attributes to update (e.g. displayName, organizationsEnabled).
 
         Returns:
             Response from Keycloak, or None on error (handled via exception).
         """
         try:
-            return to_dto_or_none(KeycloakRealmDTO, await self.admin_adapter.a_update_realm(realm_name, dict(kwargs)))
+            return to_dto_or_none(
+                KeycloakRealmDTO,
+                await self.admin_adapter.a_update_realm(realm_name, _realm_update_payload(config, kwargs)),
+            )
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "update_realm")

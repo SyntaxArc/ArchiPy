@@ -98,3 +98,14 @@ DTOs for RediSearch index schemas, document upserts, queries, aggregations, and 
 options:
 show_root_toc_entry: false
 heading_level: 3
+
+## Keycloak DTOs
+
+Pydantic DTOs for the Keycloak adapter: admin API representations (users, groups, roles, clients, organizations,
+authorization, authentication flows), UMA payloads, and OpenID Connect token, userinfo and claims responses. Response
+DTOs keep unknown fields; request DTOs reject them.
+
+::: archipy.models.dtos.keycloak
+options:
+show_root_toc_entry: false
+heading_level: 3

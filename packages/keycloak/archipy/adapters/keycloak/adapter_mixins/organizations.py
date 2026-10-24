@@ -11,12 +11,21 @@ from archipy.adapters.keycloak.adapter_mixins._shared import (
     to_dto_list,
 )
 from archipy.helpers.utils.string_utils import StringUtils
-from archipy.models.dtos.keycloak.organization_dtos import KeycloakOrganizationDTO, KeycloakOrganizationMemberDTO
+from archipy.models.dtos.keycloak.organization_dtos import (
+    KeycloakOrganizationDTO,
+    KeycloakOrganizationMemberDTO,
+    KeycloakOrganizationRequestDTO,
+)
 
 
-def _organization_payload(name: str, alias: str, kwargs: dict[str, Any]) -> dict[str, Any]:
+def _organization_payload(
+    name: str,
+    alias: str,
+    kwargs: dict[str, Any],
+    config: KeycloakOrganizationRequestDTO | None = None,
+) -> dict[str, Any]:
     """Build organization create payload with snake_case kwargs mapped to camelCase."""
-    payload: dict[str, Any] = {"name": name, "alias": alias}
+    payload: dict[str, Any] = {**(config.to_payload() if config is not None else {}), "name": name, "alias": alias}
     for key, value in kwargs.items():
         if key in {"name", "alias"}:
             continue
@@ -24,9 +33,15 @@ def _organization_payload(name: str, alias: str, kwargs: dict[str, Any]) -> dict
     return payload
 
 
-def _organization_update_payload(kwargs: dict[str, Any]) -> dict[str, Any]:
+def _organization_update_payload(
+    kwargs: dict[str, Any],
+    config: KeycloakOrganizationRequestDTO | None = None,
+) -> dict[str, Any]:
     """Build organization update payload with snake_case kwargs mapped to camelCase."""
-    return {StringUtils.snake_to_camel_case(key): value for key, value in kwargs.items()}
+    return {
+        **(config.to_payload() if config is not None else {}),
+        **{StringUtils.snake_to_camel_case(key): value for key, value in kwargs.items()},
+    }
 
 
 class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
@@ -66,34 +81,47 @@ class KeycloakOrganizationsMixin(SyncKeycloakMixinBase):
             ),
         )
 
-    def create_organization(self, name: str, alias: str, **kwargs: Any) -> str | None:
+    def create_organization(
+        self,
+        name: str,
+        alias: str,
+        config: KeycloakOrganizationRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> str | None:
         """Create a new organization. Name and alias must be unique.
 
         Args:
             name: Organization name.
             alias: Organization alias.
+            config: Optional request DTO; keyword arguments override its values.
             **kwargs: Additional organization attributes (snake_case mapped to camelCase).
 
         Returns:
             Created organization ID, or None.
         """
-        payload = _organization_payload(name, alias, kwargs)
+        payload = _organization_payload(name, alias, kwargs, config)
         return self._call_keycloak(
             "create_organization",
             lambda: self.admin_adapter.create_organization(payload=payload),
         )
 
-    def update_organization(self, organization_id: str, **kwargs: Any) -> dict[str, Any]:
+    def update_organization(
+        self,
+        organization_id: str,
+        config: KeycloakOrganizationRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Update an existing organization.
 
         Args:
             organization_id: Organization identifier.
+            config: Optional request DTO; keyword arguments override its values.
             **kwargs: Organization attributes to update (snake_case mapped to camelCase).
 
         Returns:
             Update response payload.
         """
-        payload = _organization_update_payload(kwargs)
+        payload = _organization_update_payload(kwargs, config)
         return self._call_keycloak(
             "update_organization",
             lambda: self.admin_adapter.update_organization(organization_id=organization_id, payload=payload),
@@ -248,34 +276,47 @@ class AsyncKeycloakOrganizationsMixin(AsyncKeycloakMixinBase):
             ),
         )
 
-    async def create_organization(self, name: str, alias: str, **kwargs: Any) -> str | None:
+    async def create_organization(
+        self,
+        name: str,
+        alias: str,
+        config: KeycloakOrganizationRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> str | None:
         """Create a new organization. Name and alias must be unique.
 
         Args:
             name: Organization name.
             alias: Organization alias.
+            config: Optional request DTO; keyword arguments override its values.
             **kwargs: Additional organization attributes (snake_case mapped to camelCase).
 
         Returns:
             Created organization ID, or None.
         """
-        payload = _organization_payload(name, alias, kwargs)
+        payload = _organization_payload(name, alias, kwargs, config)
         return await self._async_call_keycloak(
             "create_organization",
             lambda: self.admin_adapter.a_create_organization(payload=payload),
         )
 
-    async def update_organization(self, organization_id: str, **kwargs: Any) -> dict[str, Any]:
+    async def update_organization(
+        self,
+        organization_id: str,
+        config: KeycloakOrganizationRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Update an existing organization.
 
         Args:
             organization_id: Organization identifier.
+            config: Optional request DTO; keyword arguments override its values.
             **kwargs: Organization attributes to update (snake_case mapped to camelCase).
 
         Returns:
             Update response payload.
         """
-        payload = _organization_update_payload(kwargs)
+        payload = _organization_update_payload(kwargs, config)
         return await self._async_call_keycloak(
             "update_organization",
             lambda: self.admin_adapter.a_update_organization(organization_id=organization_id, payload=payload),

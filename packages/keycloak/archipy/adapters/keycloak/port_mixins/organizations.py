@@ -6,7 +6,11 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from archipy.models.dtos.keycloak.organization_dtos import KeycloakOrganizationDTO, KeycloakOrganizationMemberDTO
+    from archipy.models.dtos.keycloak.organization_dtos import (
+        KeycloakOrganizationDTO,
+        KeycloakOrganizationMemberDTO,
+        KeycloakOrganizationRequestDTO,
+    )
 
 
 class KeycloakOrganizationsPort:
@@ -23,12 +27,23 @@ class KeycloakOrganizationsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def create_organization(self, name: str, alias: str, **kwargs: Any) -> str | None:
+    def create_organization(
+        self,
+        name: str,
+        alias: str,
+        config: KeycloakOrganizationRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> str | None:
         """Create a new organization. Name and alias must be unique. Returns org_id."""
         raise NotImplementedError
 
     @abstractmethod
-    def update_organization(self, organization_id: str, **kwargs: Any) -> dict[str, Any]:
+    def update_organization(
+        self,
+        organization_id: str,
+        config: KeycloakOrganizationRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Update an existing organization. Kwargs are organization attributes (e.g. name, alias)."""
         raise NotImplementedError
 
@@ -86,12 +101,23 @@ class AsyncKeycloakOrganizationsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def create_organization(self, name: str, alias: str, **kwargs: Any) -> str | None:
+    async def create_organization(
+        self,
+        name: str,
+        alias: str,
+        config: KeycloakOrganizationRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> str | None:
         """Create a new organization. Name and alias must be unique. Returns org_id."""
         raise NotImplementedError
 
     @abstractmethod
-    async def update_organization(self, organization_id: str, **kwargs: Any) -> dict[str, Any]:
+    async def update_organization(
+        self,
+        organization_id: str,
+        config: KeycloakOrganizationRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Update an existing organization. Kwargs are organization attributes (e.g. name, alias)."""
         raise NotImplementedError
 

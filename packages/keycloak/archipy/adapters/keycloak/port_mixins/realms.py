@@ -6,14 +6,20 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from archipy.models.dtos.keycloak.realm_dtos import KeycloakRealmDTO
+    from archipy.models.dtos.keycloak.realm_dtos import KeycloakRealmDTO, KeycloakRealmRequestDTO
 
 
 class KeycloakRealmsPort:
     """Sync Keycloak port interface for realm operations."""
 
     @abstractmethod
-    def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs: Any) -> KeycloakRealmDTO | None:
+    def create_realm(
+        self,
+        realm_name: str,
+        skip_exists: bool = True,
+        config: KeycloakRealmRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> KeycloakRealmDTO | None:
         """Create a new Keycloak realm."""
         raise NotImplementedError
 
@@ -23,7 +29,12 @@ class KeycloakRealmsPort:
         raise NotImplementedError
 
     @abstractmethod
-    def update_realm(self, realm_name: str, **kwargs: Any) -> KeycloakRealmDTO | None:
+    def update_realm(
+        self,
+        realm_name: str,
+        config: KeycloakRealmRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> KeycloakRealmDTO | None:
         """Update a realm.
 
         Kwargs are RealmRepresentation top-level attributes (e.g. displayName, organizationsEnabled).
@@ -35,7 +46,13 @@ class AsyncKeycloakRealmsPort:
     """Async Keycloak port interface for realm operations."""
 
     @abstractmethod
-    async def create_realm(self, realm_name: str, skip_exists: bool = True, **kwargs: Any) -> KeycloakRealmDTO | None:
+    async def create_realm(
+        self,
+        realm_name: str,
+        skip_exists: bool = True,
+        config: KeycloakRealmRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> KeycloakRealmDTO | None:
         """Create a new Keycloak realm."""
         raise NotImplementedError
 
@@ -45,7 +62,12 @@ class AsyncKeycloakRealmsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def update_realm(self, realm_name: str, **kwargs: Any) -> KeycloakRealmDTO | None:
+    async def update_realm(
+        self,
+        realm_name: str,
+        config: KeycloakRealmRequestDTO | None = None,
+        **kwargs: Any,
+    ) -> KeycloakRealmDTO | None:
         """Update a realm.
 
         Kwargs are RealmRepresentation top-level attributes (e.g. displayName, organizationsEnabled).

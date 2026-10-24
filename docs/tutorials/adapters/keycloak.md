@@ -93,8 +93,8 @@ except InvalidCredentialsError as e:
     logger.error(f"Authentication failed: {e}")
     raise
 else:
-    access_token = token["access_token"]
-    refresh_token = token["refresh_token"]
+    access_token = token.access_token
+    refresh_token = token.refresh_token
     logger.info("Authentication successful")
 
 try:
@@ -122,7 +122,7 @@ except (UnauthenticatedError, InternalError) as e:
     logger.error(f"Failed to get user info: {e}")
     raise
 else:
-    logger.info(f"User info retrieved: {user_info.get('preferred_username')}")
+    logger.info(f"User info retrieved: {user_info.preferred_username}")
 
 try:
     # Get token using client credentials
@@ -153,7 +153,7 @@ except PermissionDeniedError as e:
     logger.error(f"Permission denied: {e}")
     raise
 else:
-    logger.info(f"User retrieved: {user.get('username')}")
+    logger.info(f"User retrieved: {user.username}")
 
 try:
     # Get user by username
@@ -162,7 +162,7 @@ except NotFoundError as e:
     logger.error(f"User not found: {e}")
     raise
 else:
-    logger.info(f"User retrieved by username: {user.get('username')}")
+    logger.info(f"User retrieved by username: {user.username}")
 
 try:
     # Get user by email
@@ -171,7 +171,7 @@ except NotFoundError as e:
     logger.error(f"User not found by email: {e}")
     raise
 else:
-    logger.info(f"User retrieved by email: {user.get('username')}")
+    logger.info(f"User retrieved by email: {user.username}")
 
 try:
     # Create a new user
@@ -361,7 +361,7 @@ async def main() -> None:
     try:
         # Get token
         token = await keycloak.get_token("username", "password")
-        access_token = token["access_token"]
+        access_token = token.access_token
     except InvalidCredentialsError as e:
         logger.error(f"Authentication failed: {e}")
         raise
@@ -371,7 +371,7 @@ async def main() -> None:
     try:
         # Get user info
         user_info = await keycloak.get_userinfo(access_token)
-        logger.info(f"Logged in as: {user_info.get('preferred_username')}")
+        logger.info(f"Logged in as: {user_info.preferred_username}")
 
         # Check if user has role
         if await keycloak.has_role(access_token, "admin"):
@@ -414,11 +414,12 @@ asyncio.run(main())
 import logging
 
 from archipy.adapters.keycloak.adapters import KeycloakAdapter
+from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupRequestDTO
 
 logger = logging.getLogger(__name__)
 keycloak = KeycloakAdapter()
 
-group_id = keycloak.create_group(payload={"name": "engineering"}, skip_exists=True)
+group_id = keycloak.create_group(payload=KeycloakGroupRequestDTO(name="engineering"), skip_exists=True)
 groups = keycloak.get_groups()
 logger.info("Group %s created; realm has %d groups", group_id, len(groups))
 ```
@@ -434,8 +435,8 @@ logger = logging.getLogger(__name__)
 keycloak = KeycloakAdapter()
 
 flows = keycloak.get_authentication_flows()
-browser_flow = next(flow for flow in flows if flow.get("alias") == "browser")
-logger.info("Browser flow id: %s", browser_flow.get("id"))
+browser_flow = next(flow for flow in flows if flow.alias == "browser")
+logger.info("Browser flow id: %s", browser_flow.id)
 ```
 
 ### Client Scopes
@@ -444,13 +445,14 @@ logger.info("Browser flow id: %s", browser_flow.get("id"))
 import logging
 
 from archipy.adapters.keycloak.adapters import KeycloakAdapter
+from archipy.models.dtos.keycloak.client_scope_dtos import KeycloakClientScopeRequestDTO
 
 logger = logging.getLogger(__name__)
 keycloak = KeycloakAdapter()
 
 scopes = keycloak.get_client_scopes()
 scope_id = keycloak.create_client_scope(
-    payload={"name": "custom-audience", "protocol": "openid-connect"},
+    payload=KeycloakClientScopeRequestDTO(name="custom-audience", protocol="openid-connect"),
     skip_exists=True,
 )
 default_scopes = keycloak.get_default_default_client_scopes()
@@ -463,6 +465,7 @@ logger.info("Created scope %s; realm has %d default scopes", scope_id, len(defau
 import logging
 
 from archipy.adapters.keycloak.adapters import KeycloakAdapter
+from archipy.models.dtos.keycloak.authz_dtos import KeycloakAuthzResourceRequestDTO
 
 logger = logging.getLogger(__name__)
 keycloak = KeycloakAdapter()
@@ -471,11 +474,11 @@ client_id = keycloak.get_client_id("my-client")
 settings = keycloak.get_client_authz_settings(client_id=client_id)
 resource = keycloak.create_client_authz_resource(
     client_id=client_id,
-    payload={"name": "Account", "displayName": "Account", "uris": ["/account/*"]},
+    payload=KeycloakAuthzResourceRequestDTO(name="Account", display_name="Account", uris=["/account/*"]),
     skip_exists=True,
 )
 policies = keycloak.get_client_authz_policies(client_id=client_id)
-logger.info("Authz enabled=%s; created resource %s", settings.get("allowRemoteResourceManagement"), resource.get("id"))
+logger.info("Authz enabled=%s; created resource %s", settings.allow_remote_resource_management, resource.id)
 ```
 
 ### UMA Resource Sets
@@ -484,15 +487,16 @@ logger.info("Authz enabled=%s; created resource %s", settings.get("allowRemoteRe
 import logging
 
 from archipy.adapters.keycloak.adapters import KeycloakAdapter
+from archipy.models.dtos.keycloak.uma_dtos import KeycloakUmaResourceRequestDTO
 
 logger = logging.getLogger(__name__)
 keycloak = KeycloakAdapter()
 
 resource = keycloak.resource_set_create(
-    payload={"name": "Protected API", "resource_scopes": ["read", "write"], "type": "api"},
+    payload=KeycloakUmaResourceRequestDTO(name="Protected API", scopes=["read", "write"], type="api"),
 )
 resource_sets = keycloak.resource_set_list()
-logger.info("UMA resource %s; total sets=%d", resource.get("_id"), len(resource_sets))
+logger.info("UMA resource %s; total sets=%d", resource.internal_id, len(resource_sets))
 ```
 
 ### Components
@@ -501,16 +505,43 @@ logger.info("UMA resource %s; total sets=%d", resource.get("_id"), len(resource_
 import logging
 
 from archipy.adapters.keycloak.adapters import KeycloakAdapter
+from archipy.models.dtos.keycloak.component_dtos import KeycloakComponentRequestDTO
 
 logger = logging.getLogger(__name__)
 keycloak = KeycloakAdapter()
 
 components = keycloak.get_components(query={"type": "org.keycloak.storage.UserStorageProvider"})
 component_id = keycloak.create_component(
-    payload={"name": "ldap", "providerId": "ldap", "providerType": "org.keycloak.storage.UserStorageProvider"},
+    payload=KeycloakComponentRequestDTO(
+        name="ldap",
+        provider_id="ldap",
+        provider_type="org.keycloak.storage.UserStorageProvider",
+    ),
 )
 logger.info("Listed %d components; created component %s", len(components), component_id)
 ```
+
+### DTOs
+
+Every Keycloak adapter method takes and returns pydantic DTOs from `archipy.models.dtos.keycloak`:
+
+- **Responses** (`KeycloakUserDTO`, `KeycloakRoleDTO`, `KeycloakTokenDTO`, ...) use snake_case attributes and keep
+  fields unknown to ArchiPy in `model_extra`, so a newer Keycloak never breaks parsing.
+- **Requests** (`KeycloakUserRequestDTO`, `KeycloakGroupRequestDTO`, ...) reject unknown fields, so a typo fails before
+  the call instead of as a Keycloak `400`.
+- `to_payload()` returns the camelCase JSON Keycloak receives.
+
+```python
+from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupRequestDTO
+
+group_id = keycloak.create_group(payload=KeycloakGroupRequestDTO(name="engineering"))
+group = keycloak.get_group(group_id)
+logger.info("Group %s at %s", group.name, group.path)
+```
+
+!!! warning "Deprecated: dicts"
+    Passing a `dict` payload and reading results with `result["key"]` or `result.get("key")` still work but emit a
+    `DeprecationWarning`. Both are removed in 6.0.0.
 
 ### Caching
 

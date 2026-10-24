@@ -6,7 +6,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from archipy.models.dtos.keycloak.client_dtos import KeycloakClientDTO
+    from archipy.models.dtos.keycloak.client_dtos import KeycloakClientDTO, KeycloakClientRequestDTO
 
 
 class KeycloakClientsPort:
@@ -33,6 +33,7 @@ class KeycloakClientsPort:
         client_id: str,
         realm: str | None = None,
         skip_exists: bool = True,
+        config: KeycloakClientRequestDTO | None = None,
         **kwargs: Any,
     ) -> KeycloakClientDTO | None:
         """Create a new client in the specified realm."""
@@ -63,6 +64,7 @@ class AsyncKeycloakClientsPort:
         client_id: str,
         realm: str | None = None,
         skip_exists: bool = True,
+        config: KeycloakClientRequestDTO | None = None,
         **kwargs: Any,
     ) -> KeycloakClientDTO | None:
         """Create a new client in the specified realm."""
