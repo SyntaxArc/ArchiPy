@@ -37,10 +37,14 @@ class KeycloakAssignResultDTO(KeycloakMutationResultDTO):
     """Result of a call that adds or assigns one resource to another, such as a role to a group."""
 
 
-class KeycloakGroupsCountDTO(KeycloakResponseDTO):
-    """Response of the group count endpoint."""
+class KeycloakCountDTO(KeycloakResponseDTO):
+    """Response of a count endpoint."""
 
     count: int | None = None
+
+
+class KeycloakGroupsCountDTO(KeycloakCountDTO):
+    """Response of the group count endpoint."""
 
 
 class KeycloakImpersonationDTO(KeycloakResponseDTO):

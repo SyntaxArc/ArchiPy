@@ -709,6 +709,24 @@ Feature: Keycloak Authentication Testing
       | sync         | usrextra      | pass123  | extra-grp  | usr-idp   | usrext   | test-realm | Test Realm         | test-client       |
       | async        | asyncusrextra | async123 | aextra-grp | ausr-idp  | ausrext  | test-realm | Async Test Realm   | async-test-client |
 
+  @clients
+  Scenario Outline: Clients by UUID with secrets, evaluation, sessions and nodes
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    When I list, read and update the client "<client_name>" by its UUID using <adapter_type> adapter
+    Then the client "<client_name>" is found by client id and carries the new description using <adapter_type> adapter
+    And the client "<client_name>" has a secret that can be regenerated and rotated using <adapter_type> adapter
+    And the client "<client_name>" evaluates example tokens, mappers, scope roles and installation config using <adapter_type> adapter
+    And the client "<client_name>" counts sessions, registers a node and reports management permissions using <adapter_type> adapter
+    When I delete the client "<client_name>" by its UUID using <adapter_type> adapter
+    Then the deleted client is no longer found using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | realm_name | realm_display_name | client_name        |
+      | sync         | test-realm | Test Realm         | extra-client       |
+      | async        | test-realm | Async Test Realm   | async-extra-client |
+
   @components
   Scenario Outline: Component listing
     Given a configured <adapter_type> Keycloak adapter

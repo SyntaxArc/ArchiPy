@@ -160,6 +160,15 @@ async def with_created_id_async(
     return result.model_copy(update={"id": created_id})
 
 
+def to_text(raw: object) -> str:
+    """Return a raw admin response body as text: bytes are decoded and parsed JSON is serialized again."""
+    if isinstance(raw, bytes | bytearray):
+        return bytes(raw).decode("utf-8", errors="replace")
+    if isinstance(raw, str):
+        return raw
+    return json.dumps(raw)
+
+
 def to_dto[M: KeycloakResponseDTO](model: type[M], raw: Mapping[str, Any]) -> M:
     """Validate one python-keycloak representation into a response DTO."""
     return model.model_validate(raw)
