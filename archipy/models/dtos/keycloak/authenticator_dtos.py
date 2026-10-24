@@ -15,3 +15,18 @@ class KeycloakAuthenticationFlowCopyRequestDTO(KeycloakRequestDTO):
     """Payload of ``POST authentication/flows/{alias}/copy``."""
 
     new_name: str
+
+
+class KeycloakAuthenticationFlowExecutionCreateRequestDTO(KeycloakRequestDTO):
+    """Payload of ``POST authentication/flows/{alias}/executions/execution``."""
+
+    provider: str
+
+
+class KeycloakAuthenticationSubflowCreateRequestDTO(KeycloakRequestDTO):
+    """Payload of ``POST authentication/flows/{alias}/executions/flow``."""
+
+    alias: str
+    type: str | None = None
+    provider: str | None = None
+    description: str | None = None

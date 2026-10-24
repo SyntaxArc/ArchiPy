@@ -12,6 +12,17 @@ from features.test_helpers import get_current_scenario_context
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
 from archipy.adapters.keycloak.auth import _build_auth_context
 from archipy.configs.base_config import BaseConfig
+from archipy.models.dtos.keycloak.auth_flow_dtos import KeycloakAuthenticationFlowRequestDTO, KeycloakAuthenticatorConfigRequestDTO
+from archipy.models.dtos.keycloak.authenticator_dtos import (
+    KeycloakAuthenticationFlowCopyRequestDTO,
+    KeycloakAuthenticationFlowExecutionCreateRequestDTO,
+    KeycloakAuthenticationSubflowCreateRequestDTO,
+)
+from archipy.models.dtos.keycloak.client_scope_dtos import KeycloakClientScopeRequestDTO, KeycloakProtocolMapperRequestDTO
+from archipy.models.dtos.keycloak.group_dtos import KeycloakGroupRequestDTO
+from archipy.models.dtos.keycloak.organization_dtos import KeycloakOrganizationRequestDTO
+from archipy.models.dtos.keycloak.realm_dtos import KeycloakRealmRequestDTO
+from archipy.models.dtos.keycloak.user_dtos import KeycloakCredentialRequestDTO, KeycloakUserRequestDTO
 from archipy.models.dtos.keycloak.token_dtos import KeycloakTokenClaimsDTO, KeycloakUserInfoDTO
 from archipy.models.types.actor_type import ActorType
 
@@ -110,13 +121,12 @@ async def step_enable_realm_organizations(
             realm = await adapter.get_realm(realm_name)
         else:
             realm = adapter.get_realm(realm_name)
-        if realm is not None and not realm.get("organizationsEnabled"):
-            realm = dict(realm)
-            realm["organizationsEnabled"] = True
+        if realm is not None and not realm.organizations_enabled:
+            config = KeycloakRealmRequestDTO(organizations_enabled=True)
             if is_async:
-                await adapter.update_realm(realm_name, **realm)
+                await adapter.update_realm(realm_name, config=config)
             else:
-                adapter.update_realm(realm_name, **realm)
+                adapter.update_realm(realm_name, config=config)
             context.logger.info(f"Enabled organizations for realm {realm_name}")
         else:
             context.logger.info(f"Realm {realm_name} already has organizations enabled")
@@ -456,24 +466,24 @@ async def step_create_user_basic(context: Context, username: str, password: str,
     scenario_context = get_current_scenario_context(context)
     is_async = "async" in context.scenario.tags
 
-    user_data = {
-        "username": username,
-        "enabled": True,
-        "emailVerified": True,
-        "firstName": username,
-        "lastName": "Test",
-        "email": f"{username}@test.com",
-        "credentials": [{"type": "password", "value": password, "temporary": False}],
-        "requiredActions": [],
-        "attributes": {"locale": ["en"]},
-    }
+    user_data = KeycloakUserRequestDTO(
+        username=username,
+        enabled=True,
+        email_verified=True,
+        first_name=username,
+        last_name="Test",
+        email=f"{username}@test.com",
+        credentials=[KeycloakCredentialRequestDTO(type="password", value=password, temporary=False)],
+        required_actions=[],
+        attributes={"locale": ["en"]},
+    )
 
     try:
         if is_async:
 
             existing_user = await adapter.get_user_by_username(username)
             if existing_user:
-                await adapter.delete_user(existing_user["id"])
+                await adapter.delete_user(existing_user.id)
 
             user_id = await adapter.create_user(user_data)
             scenario_context.store(f"user_id_{username}", user_id)
@@ -483,7 +493,7 @@ async def step_create_user_basic(context: Context, username: str, password: str,
             # Check if user exists and delete if needed
             existing_user = adapter.get_user_by_username(username)
             if existing_user:
-                adapter.delete_user(existing_user["id"])
+                adapter.delete_user(existing_user.id)
 
             user_id = adapter.create_user(user_data)
             scenario_context.store(f"user_id_{username}", user_id)
@@ -512,19 +522,19 @@ async def step_create_user_with_email(
     scenario_context = get_current_scenario_context(context)
     is_async = "async" in context.scenario.tags
 
-    user_data = {
-        "username": username,
-        "email": email,
-        "enabled": True,
-        "credentials": [{"type": "password", "value": password, "temporary": False}],
-    }
+    user_data = KeycloakUserRequestDTO(
+        username=username,
+        email=email,
+        enabled=True,
+        credentials=[KeycloakCredentialRequestDTO(type="password", value=password, temporary=False)],
+    )
 
     try:
         if is_async:
 
             existing_user = await adapter.get_user_by_username(username)
             if existing_user:
-                await adapter.delete_user(existing_user["id"])
+                await adapter.delete_user(existing_user.id)
 
             user_id = await adapter.create_user(user_data)
             scenario_context.store(f"user_id_{username}", user_id)
@@ -537,7 +547,7 @@ async def step_create_user_with_email(
             # Check if user exists and delete if needed
             existing_user = adapter.get_user_by_username(username)
             if existing_user:
-                adapter.delete_user(existing_user["id"])
+                adapter.delete_user(existing_user.id)
 
             user_id = adapter.create_user(user_data)
             scenario_context.store(f"user_id_{username}", user_id)
@@ -902,7 +912,7 @@ async def step_update_user(context: Context, username: str, first_name: str, las
     is_async = "async" in context.scenario.tags
 
     user_id = scenario_context.get(f"user_id_{username}")
-    update_data = {"firstName": first_name, "lastName": last_name}
+    update_data = KeycloakUserRequestDTO(first_name=first_name, last_name=last_name)
 
     try:
         if is_async:
@@ -1087,7 +1097,7 @@ def step_user_has_username(context: Context, username: str) -> None:
     """Verify that the user has the specified username."""
     scenario_context = get_current_scenario_context(context)
     user = scenario_context.get("latest_user_retrieval")
-    assert user["username"] == username, f"Expected username {username}, got {user.get('username')}"
+    assert user.username == username, f"Expected username {username}, got {user.username}"
     context.logger.info(f"Verified user has username {username}")
 
 
@@ -1096,7 +1106,7 @@ def step_user_has_email(context: Context, email: str) -> None:
     """Verify that the user has the specified email."""
     scenario_context = get_current_scenario_context(context)
     user = scenario_context.get("latest_user_retrieval")
-    assert user["email"] == email, f"Expected email {email}, got {user.get('email')}"
+    assert user.email == email, f"Expected email {email}, got {user.email}"
     context.logger.info(f"Verified user has email {email}")
 
 
@@ -1253,13 +1263,13 @@ async def step_user_has_names(context: Context, username: str, first_name: str, 
     if is_async:
 
         user = await adapter.get_user_by_id(user_id)
-        assert user["firstName"] == first_name, f"Expected first name {first_name}, got {user.get('firstName')}"
-        assert user["lastName"] == last_name, f"Expected last name {last_name}, got {user.get('lastName')}"
+        assert user.first_name == first_name, f"Expected first name {first_name}, got {user.first_name}"
+        assert user.last_name == last_name, f"Expected last name {last_name}, got {user.last_name}"
 
     else:
         user = adapter.get_user_by_id(user_id)
-        assert user["firstName"] == first_name, f"Expected first name {first_name}, got {user.get('firstName')}"
-        assert user["lastName"] == last_name, f"Expected last name {last_name}, got {user.get('lastName')}"
+        assert user.first_name == first_name, f"Expected first name {first_name}, got {user.first_name}"
+        assert user.last_name == last_name, f"Expected last name {last_name}, got {user.last_name}"
     context.logger.info(f"Verified user {username} has names {first_name} {last_name}")
 
 
@@ -1601,12 +1611,11 @@ async def step_update_realm_display_name(
     else:
         realm = adapter.get_realm(realm_name)
     assert realm is not None, f"Realm {realm_name!r} not found"
-    payload = dict(realm)
-    payload["displayName"] = new_display_name
+    config = KeycloakRealmRequestDTO(display_name=new_display_name)
     if is_async:
-        await adapter.update_realm(realm_name, **payload)
+        await adapter.update_realm(realm_name, config=config)
     else:
-        adapter.update_realm(realm_name, **payload)
+        adapter.update_realm(realm_name, config=config)
     context.logger.info(f"Updated realm {realm_name} display name to {new_display_name!r}")
 
 
@@ -1623,7 +1632,7 @@ async def step_realm_has_display_name_by_name(
     else:
         realm = adapter.get_realm(realm_name)
     assert realm is not None, f"Realm {realm_name!r} not found"
-    actual = realm.get("displayName")
+    actual = realm.display_name
     assert actual == display_name, f"Expected displayName {display_name!r}, got {actual!r}"
     context.logger.info(f"Realm {realm_name} has display name {display_name!r}")
 
@@ -1950,15 +1959,15 @@ async def step_update_organization_name(context: Context, name: str, adapter_typ
             current = await adapter.get_organization(organization_id=org_id)
         else:
             current = adapter.get_organization(organization_id=org_id)
-        update_kwargs: dict[str, str] = {"name": name, "alias": current.alias or ""}
+        update_config = KeycloakOrganizationRequestDTO(name=name, alias=current.alias)
     except Exception:
-        update_kwargs = {"name": name}
+        update_config = KeycloakOrganizationRequestDTO(name=name)
 
     try:
         if is_async:
-            await adapter.update_organization(org_id, **update_kwargs)
+            await adapter.update_organization(org_id, config=update_config)
         else:
-            adapter.update_organization(org_id, **update_kwargs)
+            adapter.update_organization(org_id, config=update_config)
         scenario_context.store("latest_organization_update", {"name": name})
         context.logger.info(f"Updated organization name to {name}")
     except Exception as e:
@@ -2115,7 +2124,7 @@ async def step_organization_exists(context: Context, org_name: str) -> None:
         org = adapter.get_organization(organization_id=org_id)
     scenario_context.store("latest_organization_result", org)
     assert org is not None, "Organization not found"
-    assert org.get("name") == org_name, f"Organization name mismatch: expected {org_name}, got {org.get('name')}"
+    assert org.name == org_name, f"Organization name mismatch: expected {org_name}, got {org.name}"
     context.logger.info(f"Organization {org_name} exists")
 
 
@@ -2125,7 +2134,7 @@ def step_organization_has_alias(context: Context, org_alias: str) -> None:
     scenario_context = get_current_scenario_context(context)
     org = scenario_context.get("latest_organization_result")
     assert org is not None, "No organization result in context"
-    assert org.get("alias") == org_alias, f"Expected alias {org_alias}, got {org.get('alias')}"
+    assert org.alias == org_alias, f"Expected alias {org_alias}, got {org.alias}"
     context.logger.info(f"Organization has alias {org_alias}")
 
 
@@ -2174,7 +2183,7 @@ def step_organizations_list_contain_org(context: Context, org_name: str) -> None
     scenario_context = get_current_scenario_context(context)
     orgs = scenario_context.get("organizations_list")
     assert orgs is not None, "No organizations_list in context (call get all organizations or get with search first)"
-    names = [o.get("name") for o in orgs if o.get("name")]
+    names = [o.name for o in orgs if o.name]
     assert org_name in names, f"Organization {org_name} not in organizations list: {names}"
     context.logger.info(f"Organizations list contains {org_name}")
 
@@ -2203,7 +2212,7 @@ async def step_organization_has_name(context: Context, name: str) -> None:
     else:
         org = adapter.get_organization(organization_id=org_id)
     assert org is not None, "Organization not found"
-    actual = org.get("name")
+    actual = org.name
     assert actual == name, f"Expected organization name {name!r}, got {actual!r}"
     context.logger.info(f"Organization has name {name}")
 
@@ -2265,7 +2274,7 @@ def step_user_organizations_contain_org(context: Context, org_name: str) -> None
     scenario_context = get_current_scenario_context(context)
     orgs = scenario_context.get("user_organizations")
     assert orgs is not None, "No user_organizations in context"
-    names = [o.get("name") for o in orgs if o.get("name")]
+    names = [o.name for o in orgs if o.name]
     assert org_name in names, f"Organization {org_name} not in user organizations: {names}"
     context.logger.info(f"User organizations list contains {org_name}")
 
@@ -2276,7 +2285,7 @@ def step_user_organizations_not_contain_org(context: Context, org_name: str) -> 
     scenario_context = get_current_scenario_context(context)
     orgs = scenario_context.get("user_organizations")
     assert orgs is not None, "No user_organizations in context"
-    names = [o.get("name") for o in orgs if o.get("name")]
+    names = [o.name for o in orgs if o.name]
     assert org_name not in names, f"Organization {org_name} should not be in user organizations: {names}"
     context.logger.info(f"User organizations list does not contain {org_name}")
 
@@ -2290,7 +2299,7 @@ async def step_create_group(context: Context, group_name: str, adapter_type: str
     is_async = "async" in context.scenario.tags
 
     try:
-        payload = {"name": group_name}
+        payload = KeycloakGroupRequestDTO(name=group_name)
         if is_async:
             group_id = await adapter.create_group(payload=payload, skip_exists=True)
         else:
@@ -2340,8 +2349,8 @@ async def step_group_user_add(context: Context, username: str, group_name: str, 
             group = adapter.get_group_by_path(f"/{group_name}")
         assert user is not None, f"User {username} not found"
         assert group is not None, f"Group {group_name} not found"
-        user_id = user["id"]
-        group_id = group["id"]
+        user_id = user.id
+        group_id = group.id
         if is_async:
             await adapter.group_user_add(user_id=user_id, group_id=group_id)
         else:
@@ -2370,7 +2379,7 @@ def step_groups_list_contains_group(context: Context, group_name: str) -> None:
     scenario_context = get_current_scenario_context(context)
     groups = scenario_context.get("groups_list")
     assert groups is not None, "No groups_list in context"
-    names = [group.get("name") for group in groups if group.get("name")]
+    names = [group.name for group in groups if group.name]
     assert group_name in names, f"Group {group_name} not in groups list: {names}"
 
 
@@ -2487,7 +2496,7 @@ async def step_update_group(context: Context, group_name: str, adapter_type: str
     adapter, is_async, scenario_context = _adapter_parts(context)
     group_id = scenario_context.get("latest_group_id")
     try:
-        await _adapter_call(adapter, is_async, "update_group", group_id, {"id": group_id, "name": group_name})
+        await _adapter_call(adapter, is_async, "update_group", group_id, KeycloakGroupRequestDTO(id=group_id, name=group_name))
         scenario_context.store(_op_error_key("update_group"), None)
     except Exception as exc:
         scenario_context.store(_op_error_key("update_group"), str(exc))
@@ -2512,7 +2521,7 @@ async def step_create_child_group(context: Context, group_name: str, adapter_typ
             adapter,
             is_async,
             "create_group",
-            {"name": child_name},
+            KeycloakGroupRequestDTO(name=child_name),
             parent=group_id,
             skip_exists=True,
         )
@@ -2859,7 +2868,7 @@ async def step_group_user_remove(context: Context, username: str, group_name: st
     group_id = scenario_context.get("latest_group_id")
     try:
         user = await _adapter_call(adapter, is_async, "get_user_by_username", username)
-        await _adapter_call(adapter, is_async, "group_user_remove", user["id"], group_id)
+        await _adapter_call(adapter, is_async, "group_user_remove", user.id, group_id)
         scenario_context.store(_op_error_key("group_user_remove"), None)
     except Exception as exc:
         scenario_context.store(_op_error_key("group_user_remove"), str(exc))
@@ -2954,13 +2963,18 @@ async def step_create_coverage_auth_flow(context: Context, adapter_type: str) ->
             adapter,
             is_async,
             "create_authentication_flow",
-            {"alias": flow_alias, "description": "coverage", "providerId": "basic-flow", "topLevel": True},
+            KeycloakAuthenticationFlowRequestDTO(
+                alias=flow_alias,
+                description="coverage",
+                provider_id="basic-flow",
+                top_level=True,
+            ),
             skip_exists=True,
         )
         flows = await _adapter_call(adapter, is_async, "get_authentication_flows")
-        flow = next(item for item in flows if item.get("alias") == flow_alias)
+        flow = next(item for item in flows if item.alias == flow_alias)
         scenario_context.store("coverage_flow_alias", flow_alias)
-        scenario_context.store("coverage_flow_id", flow["id"])
+        scenario_context.store("coverage_flow_id", flow.id)
         scenario_context.store("coverage_suffix", suffix)
         scenario_context.store(_op_error_key("create_authentication_flow"), None)
     except Exception as exc:
@@ -2995,7 +3009,7 @@ def step_auth_flows_include_coverage(context: Context) -> None:
     assert not error, f"get_authentication_flows failed: {error}"
     flow_alias = scenario_context.get("coverage_flow_alias")
     flows = scenario_context.get("authentication_flows") or []
-    aliases = [item.get("alias") for item in flows]
+    aliases = [item.alias for item in flows]
     assert flow_alias in aliases, f"Coverage flow {flow_alias} not in {aliases}"
 
 
@@ -3030,7 +3044,12 @@ async def step_update_coverage_auth_flow(context: Context, adapter_type: str) ->
             is_async,
             "update_authentication_flow",
             flow_id,
-            {"id": flow_id, "alias": flow_alias, "description": "coverage-updated", "providerId": "basic-flow"},
+            KeycloakAuthenticationFlowRequestDTO(
+                id=flow_id,
+                alias=flow_alias,
+                description="coverage-updated",
+                provider_id="basic-flow",
+            ),
         )
         scenario_context.store(_op_error_key("update_authentication_flow"), None)
     except Exception as exc:
@@ -3056,13 +3075,13 @@ async def step_copy_coverage_auth_flow(context: Context, adapter_type: str) -> N
             adapter,
             is_async,
             "copy_authentication_flow",
-            {"alias": copy_alias, "description": "coverage copy", "providerId": "basic-flow", "topLevel": True},
+            KeycloakAuthenticationFlowCopyRequestDTO(new_name=copy_alias),
             flow_alias,
         )
         flows = await _adapter_call(adapter, is_async, "get_authentication_flows")
-        copy_flow = next(item for item in flows if item.get("alias") == copy_alias)
+        copy_flow = next(item for item in flows if item.alias == copy_alias)
         scenario_context.store("coverage_copy_alias", copy_alias)
-        scenario_context.store("coverage_copy_flow_id", copy_flow["id"])
+        scenario_context.store("coverage_copy_flow_id", copy_flow.id)
         scenario_context.store(_op_error_key("copy_authentication_flow"), None)
     except Exception as exc:
         scenario_context.store(_op_error_key("copy_authentication_flow"), str(exc))
@@ -3087,7 +3106,7 @@ async def step_add_coverage_auth_subflow(context: Context, adapter_type: str) ->
             adapter,
             is_async,
             "create_authentication_flow_subflow",
-            {"alias": sub_alias, "type": "basic-flow", "description": "coverage subflow"},
+            KeycloakAuthenticationSubflowCreateRequestDTO(alias=sub_alias, type="basic-flow", description="coverage subflow"),
             flow_alias,
             skip_exists=True,
         )
@@ -3114,7 +3133,7 @@ async def step_add_coverage_auth_execution(context: Context, adapter_type: str) 
             adapter,
             is_async,
             "create_authentication_flow_execution",
-            {"provider": "auth-username-password-form", "type": "execution"},
+            KeycloakAuthenticationFlowExecutionCreateRequestDTO(provider="auth-username-password-form"),
             flow_alias,
         )
         scenario_context.store(_op_error_key("create_authentication_flow_execution"), None)
@@ -3137,11 +3156,11 @@ async def step_list_coverage_flow_executions(context: Context, adapter_type: str
     try:
         executions = await _adapter_call(adapter, is_async, "get_authentication_flow_executions", flow_alias)
         execution = next(
-            (item for item in executions if item.get("providerId") == "auth-username-password-form"),
+            (item for item in executions if item.provider_id == "auth-username-password-form"),
             executions[0],
         )
         scenario_context.store("coverage_execution", execution)
-        scenario_context.store("coverage_execution_id", execution["id"])
+        scenario_context.store("coverage_execution_id", execution.id)
         scenario_context.store(_op_error_key("get_authentication_flow_executions"), None)
     except Exception as exc:
         scenario_context.store(_op_error_key("get_authentication_flow_executions"), str(exc))
@@ -3267,18 +3286,18 @@ async def step_create_coverage_execution_config(context: Context, adapter_type: 
     suffix = scenario_context.get("coverage_suffix")
     scenario_context.store("execution_config_skipped", False)
     try:
-        config_payload = {"alias": f"coverage-config-{suffix}", "config": {}}
+        config_payload = KeycloakAuthenticatorConfigRequestDTO(alias=f"coverage-config-{suffix}", config={})
         await _adapter_call(adapter, is_async, "create_execution_config", execution_id, config_payload)
         refreshed = await _adapter_call(adapter, is_async, "get_authentication_flow_executions", flow_alias)
-        config_execution = next((item for item in refreshed if item.get("id") == execution_id), None)
-        config_id = config_execution.get("authenticationConfig") if config_execution else None
+        config_execution = next((item for item in refreshed if item.id == execution_id), None)
+        config_id = config_execution.authentication_config if config_execution else None
         if config_id:
             await _adapter_call(adapter, is_async, "get_authenticator_config", config_id)
             await _adapter_call(
                 adapter,
                 is_async,
                 "update_authenticator_config",
-                {"alias": f"coverage-config-{suffix}", "config": {}},
+                KeycloakAuthenticatorConfigRequestDTO(alias=f"coverage-config-{suffix}", config={}),
                 config_id,
             )
             await _adapter_call(adapter, is_async, "delete_authenticator_config", config_id)
@@ -3286,7 +3305,7 @@ async def step_create_coverage_execution_config(context: Context, adapter_type: 
     except Exception:
         browser_executions = await _adapter_call(adapter, is_async, "get_authentication_flow_executions", "browser")
         config_id = next(
-            (item.get("authenticationConfig") for item in browser_executions if item.get("authenticationConfig")),
+            (item.authentication_config for item in browser_executions if item.authentication_config),
             None,
         )
         if config_id:
@@ -3295,7 +3314,7 @@ async def step_create_coverage_execution_config(context: Context, adapter_type: 
                 adapter,
                 is_async,
                 "update_authenticator_config",
-                {"alias": "browser-config-readonly", "config": {}},
+                KeycloakAuthenticatorConfigRequestDTO(alias="browser-config-readonly", config={}),
                 config_id,
             )
             scenario_context.store("execution_config_skipped", True)
@@ -3386,7 +3405,7 @@ async def step_create_coverage_client_scope(context: Context, adapter_type: str)
             adapter,
             is_async,
             "create_client_scope",
-            {"name": scope_name, "protocol": "openid-connect", "description": "coverage"},
+            KeycloakClientScopeRequestDTO(name=scope_name, protocol="openid-connect", description="coverage"),
             skip_exists=True,
         )
         scenario_context.store("coverage_scope_id", scope_id)
@@ -3477,7 +3496,7 @@ async def step_update_coverage_client_scope(context: Context, adapter_type: str)
             is_async,
             "update_client_scope",
             scope_id,
-            {"id": scope_id, "name": scope_name, "protocol": "openid-connect", "description": "updated"},
+            KeycloakClientScopeRequestDTO(id=scope_id, name=scope_name, protocol="openid-connect", description="updated"),
         )
         scenario_context.store(_op_error_key("update_client_scope"), None)
     except Exception as exc:
@@ -3502,23 +3521,23 @@ async def step_add_mapper_to_coverage_client_scope(
     scope_id = scenario_context.get("coverage_scope_id")
     suffix = scenario_context.get("coverage_scope_suffix")
     mapper_name = f"coverage-scope-mapper-{suffix}"
-    mapper_payload = {
-        "name": mapper_name,
-        "protocol": "openid-connect",
-        "protocolMapper": "oidc-audience-mapper",
-        "config": {
+    mapper_payload = KeycloakProtocolMapperRequestDTO(
+        name=mapper_name,
+        protocol="openid-connect",
+        protocol_mapper="oidc-audience-mapper",
+        config={
             "included.client.audience": client_name,
             "id.token.claim": "false",
             "access.token.claim": "true",
         },
-    }
+    )
     try:
         internal_client_id = await _adapter_call(adapter, is_async, "get_client_id", client_name)
         scenario_context.store("coverage_internal_client_id", internal_client_id)
         await _adapter_call(adapter, is_async, "add_mapper_to_client_scope", scope_id, mapper_payload)
         mappers = await _adapter_call(adapter, is_async, "get_mappers_from_client_scope", scope_id)
-        mapper = next(item for item in mappers if item.get("name") == mapper_name)
-        scenario_context.store("coverage_scope_mapper_id", mapper["id"])
+        mapper = next(item for item in mappers if item.name == mapper_name)
+        scenario_context.store("coverage_scope_mapper_id", mapper.id)
         scenario_context.store(_op_error_key("add_mapper_to_client_scope"), None)
     except Exception as exc:
         scenario_context.store(_op_error_key("add_mapper_to_client_scope"), str(exc))
@@ -3562,8 +3581,10 @@ async def step_update_coverage_client_scope_mapper(context: Context, adapter_typ
     suffix = scenario_context.get("coverage_scope_suffix")
     try:
         mappers = await _adapter_call(adapter, is_async, "get_mappers_from_client_scope", scope_id)
-        mapper = next(item for item in mappers if item.get("id") == mapper_id)
-        payload = {**mapper, "name": f"coverage-scope-mapper-updated-{suffix}"}
+        mapper = next(item for item in mappers if item.id == mapper_id)
+        payload = KeycloakProtocolMapperRequestDTO.model_validate(
+            {**mapper.to_payload(), "name": f"coverage-scope-mapper-updated-{suffix}"},
+        )
         await _adapter_call(adapter, is_async, "update_mapper_in_client_scope", scope_id, mapper_id, payload)
         scenario_context.store(_op_error_key("update_mapper_in_client_scope"), None)
     except Exception as exc:
@@ -3603,16 +3624,16 @@ async def step_add_mapper_to_coverage_client(context: Context, client_name: str,
     adapter, is_async, scenario_context = _adapter_parts(context)
     suffix = scenario_context.get("coverage_scope_suffix")
     mapper_name = f"coverage-client-mapper-{suffix}"
-    mapper_payload = {
-        "name": mapper_name,
-        "protocol": "openid-connect",
-        "protocolMapper": "oidc-audience-mapper",
-        "config": {
+    mapper_payload = KeycloakProtocolMapperRequestDTO(
+        name=mapper_name,
+        protocol="openid-connect",
+        protocol_mapper="oidc-audience-mapper",
+        config={
             "included.client.audience": client_name,
             "id.token.claim": "false",
             "access.token.claim": "true",
         },
-    }
+    )
     try:
         internal_client_id = scenario_context.get("coverage_internal_client_id")
         if not internal_client_id:
@@ -3620,8 +3641,8 @@ async def step_add_mapper_to_coverage_client(context: Context, client_name: str,
             scenario_context.store("coverage_internal_client_id", internal_client_id)
         await _adapter_call(adapter, is_async, "add_mapper_to_client", internal_client_id, mapper_payload)
         mappers = await _adapter_call(adapter, is_async, "get_mappers_from_client", internal_client_id)
-        mapper = next(item for item in mappers if item.get("name") == mapper_name)
-        scenario_context.store("coverage_client_mapper_id", mapper["id"])
+        mapper = next(item for item in mappers if item.name == mapper_name)
+        scenario_context.store("coverage_client_mapper_id", mapper.id)
         scenario_context.store(_op_error_key("add_mapper_to_client"), None)
     except Exception as exc:
         scenario_context.store(_op_error_key("add_mapper_to_client"), str(exc))
@@ -3668,8 +3689,10 @@ async def step_update_coverage_client_mapper(context: Context, adapter_type: str
     suffix = scenario_context.get("coverage_scope_suffix")
     try:
         mappers = await _adapter_call(adapter, is_async, "get_mappers_from_client", internal_client_id)
-        mapper = next(item for item in mappers if item.get("id") == mapper_id)
-        payload = {**mapper, "name": f"coverage-client-mapper-updated-{suffix}"}
+        mapper = next(item for item in mappers if item.id == mapper_id)
+        payload = KeycloakProtocolMapperRequestDTO.model_validate(
+            {**mapper.to_payload(), "name": f"coverage-client-mapper-updated-{suffix}"},
+        )
         await _adapter_call(adapter, is_async, "update_client_mapper", internal_client_id, mapper_id, payload)
         scenario_context.store(_op_error_key("update_client_mapper"), None)
     except Exception as exc:

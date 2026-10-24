@@ -10,7 +10,6 @@ if TYPE_CHECKING:
         KeycloakAuthenticationExecutionDTO,
         KeycloakAuthenticationExecutionInfoDTO,
         KeycloakAuthenticationExecutionInfoRequestDTO,
-        KeycloakAuthenticationExecutionRequestDTO,
         KeycloakAuthenticationFlowDTO,
         KeycloakAuthenticationFlowRequestDTO,
         KeycloakAuthenticatorConfigDTO,
@@ -19,6 +18,8 @@ if TYPE_CHECKING:
     )
     from archipy.models.dtos.keycloak.authenticator_dtos import (
         KeycloakAuthenticationFlowCopyRequestDTO,
+        KeycloakAuthenticationFlowExecutionCreateRequestDTO,
+        KeycloakAuthenticationSubflowCreateRequestDTO,
         KeycloakAuthenticatorProviderDTO,
     )
 
@@ -74,7 +75,7 @@ class KeycloakAuthFlowsPort:
     @abstractmethod
     def create_authentication_flow_execution(
         self,
-        payload: KeycloakAuthenticationExecutionRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO | dict[str, Any],
         flow_alias: str,
     ) -> bytes:
         """Create an execution in an authentication flow."""
@@ -92,7 +93,7 @@ class KeycloakAuthFlowsPort:
     @abstractmethod
     def create_authentication_flow_subflow(
         self,
-        payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationSubflowCreateRequestDTO | dict[str, Any],
         flow_alias: str,
         skip_exists: bool = False,
     ) -> bytes:
@@ -210,7 +211,7 @@ class AsyncKeycloakAuthFlowsPort:
     @abstractmethod
     async def create_authentication_flow_execution(
         self,
-        payload: KeycloakAuthenticationExecutionRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationFlowExecutionCreateRequestDTO | dict[str, Any],
         flow_alias: str,
     ) -> bytes:
         """Create an execution in an authentication flow."""
@@ -228,7 +229,7 @@ class AsyncKeycloakAuthFlowsPort:
     @abstractmethod
     async def create_authentication_flow_subflow(
         self,
-        payload: KeycloakAuthenticationFlowRequestDTO | dict[str, Any],
+        payload: KeycloakAuthenticationSubflowCreateRequestDTO | dict[str, Any],
         flow_alias: str,
         skip_exists: bool = False,
     ) -> bytes:
