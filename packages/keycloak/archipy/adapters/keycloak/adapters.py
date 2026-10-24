@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from archipy.adapters.keycloak.connection import AsyncKeycloakConnectionMixin, KeycloakConnectionMixin
-from archipy.adapters.keycloak.ports import AsyncKeycloakPort, KeycloakPort
-from archipy.adapters.keycloak.resources import (
+from archipy.adapters.keycloak._connection import AsyncKeycloakConnectionMixin, KeycloakConnectionMixin
+from archipy.adapters.keycloak._resources import (
     AsyncKeycloakAuthFlowsMixin,
     AsyncKeycloakAuthMixin,
     AsyncKeycloakAuthzMixin,
@@ -32,6 +31,7 @@ from archipy.adapters.keycloak.resources import (
     KeycloakUmaMixin,
     KeycloakUsersMixin,
 )
+from archipy.adapters.keycloak.ports import AsyncKeycloakPort, KeycloakPort
 
 __all__ = [
     "AsyncKeycloakAdapter",

@@ -1,0 +1,202 @@
+"""Keycloak port mixins for auth/token operations."""
+
+from __future__ import annotations
+
+from abc import abstractmethod
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from archipy.adapters.keycloak._type_aliases import (
+        PublicKeyType,
+    )
+    from archipy.models.dtos.keycloak.token_dtos import (
+        KeycloakCertsDTO,
+        KeycloakTokenClaimsDTO,
+        KeycloakTokenDTO,
+        KeycloakUserInfoDTO,
+        KeycloakWellKnownDTO,
+    )
+
+
+class KeycloakAuthPort:
+    """Sync Keycloak port interface for auth/token operations."""
+
+    @abstractmethod
+    def get_token(self, username: str, password: str) -> KeycloakTokenDTO | None:
+        """Get a user token by username and password."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def refresh_token(self, refresh_token: str) -> KeycloakTokenDTO | None:
+        """Refresh an existing token using a refresh token."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def validate_token(self, token: str) -> bool:
+        """Validate if a token is still valid."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_userinfo(self, token: str) -> KeycloakUserInfoDTO | None:
+        """Get user information from a token."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_token_info(self, token: str) -> KeycloakTokenClaimsDTO | None:
+        """Decode token to get its claims."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def introspect_token(self, token: str) -> KeycloakTokenClaimsDTO | None:
+        """Introspect token to get detailed information about it."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_client_credentials_token(self) -> KeycloakTokenDTO | None:
+        """Get token using client credentials."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def logout(self, refresh_token: str) -> None:
+        """Logout user by invalidating their refresh token."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_public_key(self) -> PublicKeyType:
+        """Get the public key used to verify tokens."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_well_known_config(self) -> KeycloakWellKnownDTO:
+        """Get the well-known OpenID configuration."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_certs(self) -> KeycloakCertsDTO:
+        """Get the JWT verification certificates."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenDTO | None:
+        """Exchange authorization code for token."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def exchange_token(
+        self,
+        subject_token: str,
+        requested_subject: str | None = None,
+        audience: str | None = None,
+        scope: str = "openid",
+    ) -> KeycloakTokenDTO | None:
+        """Exchange a token (RFC 8693); with ``requested_subject`` this impersonates that user.
+
+        Keycloak 26.8+ adds the ``act`` claim to the issued token so downstream services can identify the impersonator.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def check_permissions(self, token: str, resource: str, scope: str) -> bool:
+        """Check if a user has permission to access a resource with the specified scope."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def check_permissions_batch(
+        self,
+        token: str,
+        permissions: tuple[tuple[str, str], ...],
+    ) -> frozenset[tuple[str, str]]:
+        """Return the subset of (resource, scope) pairs the token is authorized for in one UMA call."""
+        raise NotImplementedError
+
+
+class AsyncKeycloakAuthPort:
+    """Async Keycloak port interface for auth/token operations."""
+
+    @abstractmethod
+    async def get_token(self, username: str, password: str) -> KeycloakTokenDTO | None:
+        """Get a user token by username and password."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def refresh_token(self, refresh_token: str) -> KeycloakTokenDTO | None:
+        """Refresh an existing token using a refresh token."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def validate_token(self, token: str) -> bool:
+        """Validate if a token is still valid."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_userinfo(self, token: str) -> KeycloakUserInfoDTO | None:
+        """Get user information from a token."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_token_info(self, token: str) -> KeycloakTokenClaimsDTO | None:
+        """Decode token to get its claims."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def introspect_token(self, token: str) -> KeycloakTokenClaimsDTO | None:
+        """Introspect token to get detailed information about it."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_client_credentials_token(self) -> KeycloakTokenDTO | None:
+        """Get token using client credentials."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def logout(self, refresh_token: str) -> None:
+        """Logout user by invalidating their refresh token."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_public_key(self) -> PublicKeyType:
+        """Get the public key used to verify tokens."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_well_known_config(self) -> KeycloakWellKnownDTO:
+        """Get the well-known OpenID configuration."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_certs(self) -> KeycloakCertsDTO:
+        """Get the JWT verification certificates."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_token_from_code(self, code: str, redirect_uri: str) -> KeycloakTokenDTO | None:
+        """Exchange authorization code for token."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def exchange_token(
+        self,
+        subject_token: str,
+        requested_subject: str | None = None,
+        audience: str | None = None,
+        scope: str = "openid",
+    ) -> KeycloakTokenDTO | None:
+        """Exchange a token (RFC 8693); with ``requested_subject`` this impersonates that user.
+
+        Keycloak 26.8+ adds the ``act`` claim to the issued token so downstream services can identify the impersonator.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def check_permissions(self, token: str, resource: str, scope: str) -> bool:
+        """Check if a user has permission to access a resource with the specified scope."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def check_permissions_batch(
+        self,
+        token: str,
+        permissions: tuple[tuple[str, str], ...],
+    ) -> frozenset[tuple[str, str]]:
+        """Return the subset of (resource, scope) pairs the token is authorized for in one UMA call."""
+        raise NotImplementedError

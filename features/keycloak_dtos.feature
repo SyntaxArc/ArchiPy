@@ -102,15 +102,3 @@ Feature: Keycloak DTOs
       | message        | id     | ran |
       | none           | new-id | yes |
       | Already exists | none   | no  |
-
-  Scenario Outline: Old mixin module paths still resolve to the resource packages
-    When the deprecated module "<old_module>" is read for "<name>"
-    Then it is the same object as "<new_module>" "<name>"
-    And a deprecation warning names "<old_module>"
-
-    Examples:
-      | old_module                                          | new_module                                        | name                    |
-      | archipy.adapters.keycloak.adapter_mixins.roles      | archipy.adapters.keycloak.resources.roles.adapter | KeycloakRolesMixin      |
-      | archipy.adapters.keycloak.port_mixins.groups        | archipy.adapters.keycloak.resources.groups.port   | KeycloakGroupsPort      |
-      | archipy.adapters.keycloak.adapter_mixins.auth       | archipy.adapters.keycloak.protocols.oidc.adapter  | KeycloakAuthMixin       |
-      | archipy.adapters.keycloak.adapter_mixins.connection | archipy.adapters.keycloak.connection              | KeycloakConnectionMixin |
