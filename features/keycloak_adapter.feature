@@ -444,6 +444,22 @@ Feature: Keycloak Authentication Testing
       | sync         | parent-role  | child-role  | test-realm | Test Realm         | test-client       |
       | async        | aparent-role | achild-role | test-realm | Async Test Realm   | async-test-client |
 
+  @roles
+  Scenario Outline: Role mappings of users and groups and scope mappings of clients and client scopes
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
+    When I create the realm role "<realm_role>" and the client role "<client_role>" of client "<client_name>" using <adapter_type> adapter
+    Then the user "<username>" gets, lists and loses the realm and client roles through role mappings using <adapter_type> adapter
+    And the group "<group>" lists the role mappings it lacked before using <adapter_type> adapter
+    And the client scope "<scope>" and the client map scopes to the realm and client roles using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | username     | password | realm_role | client_role | group      | scope      | realm_name | realm_display_name | client_name |
+      | sync         | mapuser      | pass123  | map-rrole  | map-crole   | map-group  | map-scope  | test-realm | Test Realm         | map-client  |
+      | async        | asyncmapuser | async123 | amap-rrole | amap-crole  | amap-group | amap-scope | test-realm | Async Test Realm   | amap-client |
+
   @groups
   Scenario Outline: Group CRUD hierarchy membership and roles
     Given a configured <adapter_type> Keycloak adapter

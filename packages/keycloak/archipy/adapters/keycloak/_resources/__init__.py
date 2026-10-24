@@ -97,6 +97,14 @@ from archipy.adapters.keycloak._resources.realms.port import (
     AsyncKeycloakRealmsPort,
     KeycloakRealmsPort,
 )
+from archipy.adapters.keycloak._resources.role_mappings.adapter import (
+    AsyncKeycloakRoleMappingsMixin,
+    KeycloakRoleMappingsMixin,
+)
+from archipy.adapters.keycloak._resources.role_mappings.port import (
+    AsyncKeycloakRoleMappingsPort,
+    KeycloakRoleMappingsPort,
+)
 from archipy.adapters.keycloak._resources.roles.adapter import (
     AsyncKeycloakRolesMixin,
     KeycloakRolesMixin,
@@ -112,6 +120,14 @@ from archipy.adapters.keycloak._resources.roles_by_id.adapter import (
 from archipy.adapters.keycloak._resources.roles_by_id.port import (
     AsyncKeycloakRolesByIdPort,
     KeycloakRolesByIdPort,
+)
+from archipy.adapters.keycloak._resources.scope_mappings.adapter import (
+    AsyncKeycloakScopeMappingsMixin,
+    KeycloakScopeMappingsMixin,
+)
+from archipy.adapters.keycloak._resources.scope_mappings.port import (
+    AsyncKeycloakScopeMappingsPort,
+    KeycloakScopeMappingsPort,
 )
 from archipy.adapters.keycloak._resources.users.adapter import (
     AsyncKeycloakUsersMixin,
@@ -157,10 +173,14 @@ __all__ = [
     "AsyncKeycloakProtocolMappersPort",
     "AsyncKeycloakRealmsMixin",
     "AsyncKeycloakRealmsPort",
+    "AsyncKeycloakRoleMappingsMixin",
+    "AsyncKeycloakRoleMappingsPort",
     "AsyncKeycloakRolesByIdMixin",
     "AsyncKeycloakRolesByIdPort",
     "AsyncKeycloakRolesMixin",
     "AsyncKeycloakRolesPort",
+    "AsyncKeycloakScopeMappingsMixin",
+    "AsyncKeycloakScopeMappingsPort",
     "AsyncKeycloakUmaMixin",
     "AsyncKeycloakUmaPort",
     "AsyncKeycloakUsersMixin",
@@ -194,11 +214,15 @@ __all__ = [
     "KeycloakRealmsMixin",
     "KeycloakRealmsPort",
     "KeycloakResponseType",
+    "KeycloakRoleMappingsMixin",
+    "KeycloakRoleMappingsPort",
     "KeycloakRoleType",
     "KeycloakRolesByIdMixin",
     "KeycloakRolesByIdPort",
     "KeycloakRolesMixin",
     "KeycloakRolesPort",
+    "KeycloakScopeMappingsMixin",
+    "KeycloakScopeMappingsPort",
     "KeycloakTokenType",
     "KeycloakUmaMixin",
     "KeycloakUmaPort",
