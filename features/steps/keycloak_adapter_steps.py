@@ -3297,6 +3297,7 @@ async def step_create_coverage_execution_config(context: Context, adapter_type: 
         refreshed = await _adapter_call(adapter, is_async, "get_authentication_flow_executions", flow_alias)
         config_execution = next((item for item in refreshed if item.id == execution_id), None)
         config_id = config_execution.authentication_config if config_execution else None
+        scenario_context.store("coverage_config_id", config_id)
         if config_id:
             await _adapter_call(adapter, is_async, "get_authenticator_config", config_id)
             await _adapter_call(
@@ -4169,6 +4170,9 @@ def step_coverage_creation_result_has_id(context: Context, kind: str) -> None:
         "execution": scenario_context.get("coverage_execution_id"),
         "scope mapper": scenario_context.get("coverage_scope_mapper_id"),
         "client mapper": scenario_context.get("coverage_client_mapper_id"),
+        "config": scenario_context.get("coverage_config_id"),
     }.get(kind)
+    if kind == "config":
+        assert expected, "the execution has no config after the config create call"
     if expected:
         assert created.id == expected, f"{kind} creation id {created.id} != looked-up id {expected}"

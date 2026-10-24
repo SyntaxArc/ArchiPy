@@ -479,6 +479,7 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> authenticator config description get should succeed
     When I create execution config for the coverage flow execution using <adapter_type> adapter
     Then the <adapter_type> execution config step should succeed or be skipped
+    And the coverage config creation result has the id of the new resource
     When I delete the coverage flow execution using <adapter_type> adapter
     Then the <adapter_type> authentication execution deletion should succeed
     When I delete the copied coverage authentication flow using <adapter_type> adapter
