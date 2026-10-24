@@ -1,6 +1,14 @@
 """Keycloak resource packages: one port and one adapter mixin per Keycloak admin REST resource."""
 
 from archipy.adapters.keycloak._base import KeycloakExceptionHandlerMixin
+from archipy.adapters.keycloak._protocols.authzen.adapter import (
+    AsyncKeycloakAuthzenMixin,
+    KeycloakAuthzenMixin,
+)
+from archipy.adapters.keycloak._protocols.authzen.port import (
+    AsyncKeycloakAuthzenPort,
+    KeycloakAuthzenPort,
+)
 from archipy.adapters.keycloak._protocols.oidc.adapter import (
     AsyncKeycloakAuthMixin,
     KeycloakAuthMixin,
@@ -207,6 +215,8 @@ __all__ = [
     "AsyncKeycloakAuthPort",
     "AsyncKeycloakAuthzMixin",
     "AsyncKeycloakAuthzPort",
+    "AsyncKeycloakAuthzenMixin",
+    "AsyncKeycloakAuthzenPort",
     "AsyncKeycloakClientCertificatesMixin",
     "AsyncKeycloakClientCertificatesPort",
     "AsyncKeycloakClientInitialAccessMixin",
@@ -253,6 +263,8 @@ __all__ = [
     "KeycloakAuthPort",
     "KeycloakAuthzMixin",
     "KeycloakAuthzPort",
+    "KeycloakAuthzenMixin",
+    "KeycloakAuthzenPort",
     "KeycloakClientCertificatesMixin",
     "KeycloakClientCertificatesPort",
     "KeycloakClientInitialAccessMixin",

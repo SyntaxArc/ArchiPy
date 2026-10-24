@@ -63,6 +63,10 @@ POSTGRES_LOW_MEMORY_COMMAND: str = (
 )
 # Keycloak otherwise sizes its heap at 70% of the container limit.
 KEYCLOAK_HEAP_OPTS: str = "-Xms64m -Xmx256m"
+
+# ``KeycloakContainer`` replaces any ``with_command`` call with its ``cmd`` argument, so features go here:
+# Organizations (Keycloak 25+) and the experimental AuthZEN evaluation endpoints.
+KEYCLOAK_COMMAND: str = "start-dev --features=organization,authzen"
 # kafka-server-start.sh defaults to a fixed 1 GiB heap when this is unset.
 KAFKA_HEAP_OPTS: str = "-Xms512m -Xmx512m"
 # The image ships an 8 GiB FE heap and lets the BE claim 90% of the memory it can see.
@@ -594,9 +598,8 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
             image=self.image,
             username=username,
             password=password,
+            cmd=KEYCLOAK_COMMAND,
         )
-        # enable Organizations feature for Keycloak 25+
-        self._container.with_command("start-dev --features organization")
         self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["keycloak"])
         self._container.with_env("JAVA_OPTS_KC_HEAP", KEYCLOAK_HEAP_OPTS)
 
@@ -614,9 +617,8 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
                 image=self.image,
                 username=username,
                 password=password,
+                cmd=KEYCLOAK_COMMAND,
             )
-            # enable Organizations feature for Keycloak 25+
-            self._container.with_command("start-dev --features organization")
             self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["keycloak"])
             self._container.with_env("JAVA_OPTS_KC_HEAP", KEYCLOAK_HEAP_OPTS)
 

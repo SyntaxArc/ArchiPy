@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, NoReturn, TypeVar
 from urllib.parse import quote
 
 from keycloak import urls_patterns
+from keycloak.connection import ConnectionManager
 from keycloak.exceptions import (
     KeycloakAuthenticationError,
     KeycloakConnectionError,
@@ -557,6 +558,56 @@ class SyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
 
         return self._call_keycloak(operation, call)
 
+    def _bearer_request(
+        self,
+        operation: str,
+        method: str,
+        path: str,
+        *,
+        token: str | None = None,
+        json_body: object | None = None,
+        form: dict[str, Any] | None = None,
+        expected: tuple[int, ...] = (HTTPStatus.OK,),
+    ) -> Any:
+        """Call a realm endpoint with the caller's own bearer token instead of the admin session.
+
+        AuthZEN evaluations and RPT requests must come from the end user's or the resource server's token, so they
+        use a separate connection with that token in its headers.
+
+        Args:
+            operation: Name of the adapter operation for error context.
+            method: ``get`` or ``post``.
+            path: Path relative to the server URL, such as ``realms/{realm}/authzen/access/v1/evaluation``.
+            token: Bearer token to send, if any.
+            json_body: JSON request body.
+            form: Form-encoded request body.
+            expected: Status codes that mean success.
+
+        Returns:
+            The parsed JSON body, ``{}`` for ``204 No Content``, or the raw bytes of a non-JSON body.
+
+        Raises:
+            Mapped application errors from ``_handle_keycloak_exception``.
+        """
+
+        def call() -> Any:
+            headers = {"Authorization": f"Bearer {token}"} if token else {}
+            if json_body is not None:
+                headers["Content-Type"] = "application/json"
+            connection = ConnectionManager(
+                base_url=self.configs.SERVER_URL or "",
+                headers=headers,
+                timeout=self.configs.TIMEOUT,
+                verify=self.configs.VERIFY_SSL,
+            )
+            if method == "post":
+                response = connection.raw_post(path, admin_body(json_body) if json_body is not None else (form or {}))
+            else:
+                response = connection.raw_get(path)
+            return raise_error_from_response(response, _RAW_ERRORS[method], expected_codes=list(expected))
+
+        return self._call_keycloak(operation, call)
+
 
 class AsyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
     """Shared attribute declarations for async Keycloak adapter mixins."""
@@ -625,5 +676,42 @@ class AsyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
             else:
                 response = await getattr(connection, f"a_raw_{method}")(url, **query)
             return raise_error_from_response(response, _RAW_ERRORS[method], expected_codes=list(expected))
+
+        return await self._async_call_keycloak(operation, call)
+
+    async def _async_bearer_request(
+        self,
+        operation: str,
+        method: str,
+        path: str,
+        *,
+        token: str | None = None,
+        json_body: object | None = None,
+        form: dict[str, Any] | None = None,
+        expected: tuple[int, ...] = (HTTPStatus.OK,),
+    ) -> Any:
+        """Async variant of ``_bearer_request``."""
+
+        async def call() -> Any:
+            headers = {"Authorization": f"Bearer {token}"} if token else {}
+            if json_body is not None:
+                headers["Content-Type"] = "application/json"
+            connection = ConnectionManager(
+                base_url=self.configs.SERVER_URL or "",
+                headers=headers,
+                timeout=self.configs.TIMEOUT,
+                verify=self.configs.VERIFY_SSL,
+            )
+            try:
+                if method == "post":
+                    response = await connection.a_raw_post(
+                        path,
+                        admin_body(json_body) if json_body is not None else (form or {}),
+                    )
+                else:
+                    response = await connection.a_raw_get(path)
+                return raise_error_from_response(response, _RAW_ERRORS[method], expected_codes=list(expected))
+            finally:
+                await connection.aclose()
 
         return await self._async_call_keycloak(operation, call)

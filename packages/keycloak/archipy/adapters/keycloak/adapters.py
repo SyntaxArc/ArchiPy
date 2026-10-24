@@ -7,6 +7,7 @@ from archipy.adapters.keycloak._resources import (
     AsyncKeycloakAttackDetectionMixin,
     AsyncKeycloakAuthFlowsMixin,
     AsyncKeycloakAuthMixin,
+    AsyncKeycloakAuthzenMixin,
     AsyncKeycloakAuthzMixin,
     AsyncKeycloakClientCertificatesMixin,
     AsyncKeycloakClientInitialAccessMixin,
@@ -30,6 +31,7 @@ from archipy.adapters.keycloak._resources import (
     KeycloakAttackDetectionMixin,
     KeycloakAuthFlowsMixin,
     KeycloakAuthMixin,
+    KeycloakAuthzenMixin,
     KeycloakAuthzMixin,
     KeycloakClientCertificatesMixin,
     KeycloakClientInitialAccessMixin,
@@ -84,6 +86,7 @@ class KeycloakAdapter(
     KeycloakKeysMixin,
     KeycloakClientCertificatesMixin,
     KeycloakIdentityProvidersMixin,
+    KeycloakAuthzenMixin,
     KeycloakPort,
 ):
     """Concrete implementation of the KeycloakPort interface using python-keycloak library.
@@ -118,6 +121,7 @@ class AsyncKeycloakAdapter(
     AsyncKeycloakKeysMixin,
     AsyncKeycloakClientCertificatesMixin,
     AsyncKeycloakIdentityProvidersMixin,
+    AsyncKeycloakAuthzenMixin,
     AsyncKeycloakPort,
 ):
     """Async concrete implementation of the AsyncKeycloakPort interface using python-keycloak library.

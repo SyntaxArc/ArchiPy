@@ -16,6 +16,10 @@ if TYPE_CHECKING:
         KeycloakUserInfoDTO,
         KeycloakWellKnownDTO,
     )
+    from archipy.models.dtos.keycloak.token_exchange_dtos import (
+        KeycloakTokenExchangeRequestDTO,
+        KeycloakTokenExchangeResponseDTO,
+    )
 
 
 class KeycloakAuthPort:
@@ -109,6 +113,21 @@ class KeycloakAuthPort:
         """Return the subset of (resource, scope) pairs the token is authorized for in one UMA call."""
         raise NotImplementedError
 
+    @abstractmethod
+    def token_exchange(self, request: KeycloakTokenExchangeRequestDTO) -> KeycloakTokenExchangeResponseDTO:
+        """Exchange a token (RFC 8693) with full control of the request parameters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def jwt_bearer_grant(self, assertion: str, scope: str | None = None) -> KeycloakTokenDTO:
+        """Trade a signed JWT assertion for an access token (RFC 7523 JWT authorization grant)."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def request_rpt(self, token: str, audience: str, permissions: list[str] | None = None) -> KeycloakTokenDTO:
+        """Exchange a user's access token for a requesting party token (RPT) carrying their permissions."""
+        raise NotImplementedError
+
 
 class AsyncKeycloakAuthPort:
     """Async Keycloak port interface for auth/token operations."""
@@ -199,4 +218,19 @@ class AsyncKeycloakAuthPort:
         permissions: tuple[tuple[str, str], ...],
     ) -> frozenset[tuple[str, str]]:
         """Return the subset of (resource, scope) pairs the token is authorized for in one UMA call."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def token_exchange(self, request: KeycloakTokenExchangeRequestDTO) -> KeycloakTokenExchangeResponseDTO:
+        """Exchange a token (RFC 8693) with full control of the request parameters."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def jwt_bearer_grant(self, assertion: str, scope: str | None = None) -> KeycloakTokenDTO:
+        """Trade a signed JWT assertion for an access token (RFC 7523 JWT authorization grant)."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def request_rpt(self, token: str, audience: str, permissions: list[str] | None = None) -> KeycloakTokenDTO:
+        """Exchange a user's access token for a requesting party token (RPT) carrying their permissions."""
         raise NotImplementedError

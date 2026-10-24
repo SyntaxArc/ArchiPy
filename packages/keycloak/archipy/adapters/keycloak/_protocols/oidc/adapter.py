@@ -15,6 +15,7 @@ from keycloak.exceptions import (
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    segment,
     to_dto,
     to_dto_or_none,
 )
@@ -25,6 +26,10 @@ from archipy.models.dtos.keycloak.token_dtos import (
     KeycloakTokenDTO,
     KeycloakUserInfoDTO,
     KeycloakWellKnownDTO,
+)
+from archipy.models.dtos.keycloak.token_exchange_dtos import (
+    KeycloakTokenExchangeRequestDTO,
+    KeycloakTokenExchangeResponseDTO,
 )
 from archipy.models.errors import (
     InternalError,
@@ -37,6 +42,10 @@ if TYPE_CHECKING:
     )
 
 logger = logging.getLogger(__name__)
+
+TOKEN_EXCHANGE_GRANT = "urn:ietf:params:oauth:grant-type:token-exchange"  # noqa: S105 # nosec B105
+JWT_BEARER_GRANT = "urn:ietf:params:oauth:grant-type:jwt-bearer"
+UMA_TICKET_GRANT = "urn:ietf:params:oauth:grant-type:uma-ticket"
 
 
 def _normalize_userinfo(raw: dict[str, Any] | bytes) -> KeycloakUserType:
@@ -417,6 +426,88 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         else:
             return False
 
+    def token_exchange(self, request: KeycloakTokenExchangeRequestDTO) -> KeycloakTokenExchangeResponseDTO:
+        """Exchange a token (RFC 8693) with full control of the request parameters.
+
+        Covers standard token exchange (V2), the delegation preview (``actor_token``), legacy exchange (V1) and
+        exchanging a token for a JWT assertion in order to chain across domains.
+
+        Args:
+            request: The exchange parameters.
+
+        Returns:
+            The issued token and its type.
+
+        Raises:
+            Mapped application errors when the exchange is not permitted or the request is invalid.
+        """
+        return to_dto(
+            KeycloakTokenExchangeResponseDTO,
+            self._call_keycloak(
+                "token_exchange",
+                lambda: self._openid_adapter.token(grant_type=TOKEN_EXCHANGE_GRANT, **request.to_form()),
+            ),
+        )
+
+    def jwt_bearer_grant(self, assertion: str, scope: str | None = None) -> KeycloakTokenDTO:
+        """Trade a signed JWT assertion for an access token (RFC 7523 JWT authorization grant).
+
+        The assertion is issued by an identity provider the client is allowed to use. The same call serves the
+        identity assertion JWT authorization grant (ID-JAG) and the second step of chaining across domains.
+
+        Args:
+            assertion: The signed JWT.
+            scope: Requested scope; defaults to ``openid``.
+
+        Returns:
+            The access token. Keycloak issues no refresh token for this grant.
+
+        Raises:
+            Mapped application errors when the assertion or the client setup is rejected.
+        """
+        return to_dto(
+            KeycloakTokenDTO,
+            self._call_keycloak(
+                "jwt_bearer_grant",
+                lambda: self._openid_adapter.token(
+                    grant_type=JWT_BEARER_GRANT,
+                    scope=scope or "openid",
+                    assertion=assertion,
+                ),
+            ),
+        )
+
+    def request_rpt(self, token: str, audience: str, permissions: list[str] | None = None) -> KeycloakTokenDTO:
+        """Exchange a user's access token for a requesting party token (RPT) carrying their permissions.
+
+        This is the UMA ticket grant that the authz-client library performs: the user's access token goes in the
+        ``Authorization`` header and the resource server client is the ``audience``.
+
+        Args:
+            token: The user's access token.
+            audience: Client ID of the resource server whose permissions are requested.
+            permissions: Permissions as ``resource`` or ``resource#scope``; all granted permissions when omitted.
+
+        Returns:
+            The RPT in ``access_token``.
+
+        Raises:
+            Mapped application errors; ``InsufficientPermissionsError`` when no requested permission is granted.
+        """
+        form: dict[str, Any] = {"grant_type": UMA_TICKET_GRANT, "audience": audience}
+        if permissions:
+            form["permission"] = permissions
+        return to_dto(
+            KeycloakTokenDTO,
+            self._bearer_request(
+                "request_rpt",
+                "post",
+                f"realms/{segment(self.configs.REALM_NAME)}/protocol/openid-connect/token",
+                token=token,
+                form=form,
+            ),
+        )
+
 
 class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for auth/token operations."""
@@ -768,3 +859,85 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             return False
         else:
             return False
+
+    async def token_exchange(self, request: KeycloakTokenExchangeRequestDTO) -> KeycloakTokenExchangeResponseDTO:
+        """Exchange a token (RFC 8693) with full control of the request parameters.
+
+        Covers standard token exchange (V2), the delegation preview (``actor_token``), legacy exchange (V1) and
+        exchanging a token for a JWT assertion in order to chain across domains.
+
+        Args:
+            request: The exchange parameters.
+
+        Returns:
+            The issued token and its type.
+
+        Raises:
+            Mapped application errors when the exchange is not permitted or the request is invalid.
+        """
+        return to_dto(
+            KeycloakTokenExchangeResponseDTO,
+            await self._async_call_keycloak(
+                "token_exchange",
+                lambda: self.openid_adapter.a_token(grant_type=TOKEN_EXCHANGE_GRANT, **request.to_form()),
+            ),
+        )
+
+    async def jwt_bearer_grant(self, assertion: str, scope: str | None = None) -> KeycloakTokenDTO:
+        """Trade a signed JWT assertion for an access token (RFC 7523 JWT authorization grant).
+
+        The assertion is issued by an identity provider the client is allowed to use. The same call serves the
+        identity assertion JWT authorization grant (ID-JAG) and the second step of chaining across domains.
+
+        Args:
+            assertion: The signed JWT.
+            scope: Requested scope; defaults to ``openid``.
+
+        Returns:
+            The access token. Keycloak issues no refresh token for this grant.
+
+        Raises:
+            Mapped application errors when the assertion or the client setup is rejected.
+        """
+        return to_dto(
+            KeycloakTokenDTO,
+            await self._async_call_keycloak(
+                "jwt_bearer_grant",
+                lambda: self.openid_adapter.a_token(
+                    grant_type=JWT_BEARER_GRANT,
+                    scope=scope or "openid",
+                    assertion=assertion,
+                ),
+            ),
+        )
+
+    async def request_rpt(self, token: str, audience: str, permissions: list[str] | None = None) -> KeycloakTokenDTO:
+        """Exchange a user's access token for a requesting party token (RPT) carrying their permissions.
+
+        This is the UMA ticket grant that the authz-client library performs: the user's access token goes in the
+        ``Authorization`` header and the resource server client is the ``audience``.
+
+        Args:
+            token: The user's access token.
+            audience: Client ID of the resource server whose permissions are requested.
+            permissions: Permissions as ``resource`` or ``resource#scope``; all granted permissions when omitted.
+
+        Returns:
+            The RPT in ``access_token``.
+
+        Raises:
+            Mapped application errors; ``InsufficientPermissionsError`` when no requested permission is granted.
+        """
+        form: dict[str, Any] = {"grant_type": UMA_TICKET_GRANT, "audience": audience}
+        if permissions:
+            form["permission"] = permissions
+        return to_dto(
+            KeycloakTokenDTO,
+            await self._async_bearer_request(
+                "request_rpt",
+                "post",
+                f"realms/{segment(self.configs.REALM_NAME)}/protocol/openid-connect/token",
+                token=token,
+                form=form,
+            ),
+        )

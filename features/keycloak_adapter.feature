@@ -788,6 +788,38 @@ Feature: Keycloak Authentication Testing
       | sync         | idp-main  | role-sync  | test-realm | Test Realm         | idp-client  |
       | async        | aidp-main | arole-sync | test-realm | Async Test Realm   | aidp-client |
 
+  @tokens
+  Scenario Outline: Token exchange and the JWT authorization grant
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
+    When I enable standard token exchange on the client "<client_name>" using <adapter_type> adapter
+    Then the access token of "<username>" with password "<password>" is exchanged for another access token and an ID token using <adapter_type> adapter
+    When I trust an external issuer for the client "<client_name>" and link user "<username>" as "<external>" using <adapter_type> adapter
+    Then a JWT signed by the external issuer is traded for an access token using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | username      | password | external | realm_name | realm_display_name | client_name      |
+      | sync         | exchuser      | pass123  | exchext  | test-realm | Test Realm         | exchange-client  |
+      | async        | asyncexchuser | async123 | aexchext | test-realm | Async Test Realm   | aexchange-client |
+
+  @authz
+  Scenario Outline: Requesting party tokens and AuthZEN decisions
+    Given a configured <adapter_type> Keycloak adapter
+    And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
+    And I enable authorization services for client "<client_name>" using <adapter_type> adapter
+    And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
+    When I protect the resource "<resource>" with scope "<scope>" for the realm role "offline_access" on client "<client_name>" using <adapter_type> adapter
+    Then the user "<username>" with password "<password>" gets a requesting party token for "<resource>#<scope>" using <adapter_type> adapter
+    And AuthZEN decides access to "<resource>" for "<username>" as granted for "<scope>" and denied for "write" using <adapter_type> adapter
+
+    Examples:
+      | adapter_type | username     | password | resource | scope | realm_name | realm_display_name | client_name |
+      | sync         | rptuser      | pass123  | rpt-doc  | read  | test-realm | Test Realm         | rpt-client  |
+      | async        | asyncrptuser | async123 | arpt-doc | read  | test-realm | Async Test Realm   | arpt-client |
+
   @components
   Scenario Outline: Component listing
     Given a configured <adapter_type> Keycloak adapter
