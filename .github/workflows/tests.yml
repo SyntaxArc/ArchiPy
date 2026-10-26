@@ -30,11 +30,17 @@ jobs:
       uses: dorny/paths-filter@v3
       with:
         filters: |
-          keycloak:
+          keycloak_adapter:
             - 'packages/keycloak/**'
             - 'features/keycloak_adapter.feature'
+          keycloak_management:
+            - 'packages/keycloak/**'
+            - 'features/keycloak_adapter_management.feature'
             - 'features/keycloak_dtos.feature'
             - 'features/keycloak_protocol_mapper_configs.feature'
+          keycloak_auth_guards:
+            - 'packages/keycloak/**'
+            - 'features/keycloak_auth_guards.feature'
           kafka:
             - 'packages/kafka/**'
             - 'features/kafka_adapters.feature'
@@ -183,6 +189,8 @@ jobs:
             - '!features/grpc_rate_limit.feature'
             - '!features/kafka_adapters.feature'
             - '!features/keycloak_adapter.feature'
+            - '!features/keycloak_adapter_management.feature'
+            - '!features/keycloak_auth_guards.feature'
             - '!features/keycloak_dtos.feature'
             - '!features/keycloak_protocol_mapper_configs.feature'
             - '!features/minio_adapter.feature'
@@ -232,12 +240,20 @@ jobs:
         # The core group runs every feature that no other group lists, so a new feature file is picked up without
         # touching this list.
         group:
-        - id: keycloak
-          name: Keycloak
+        - id: keycloak_adapter
+          name: Keycloak (realms, tokens and users)
           features: >-
             features/keycloak_adapter.feature
+        - id: keycloak_management
+          name: Keycloak (management)
+          features: >-
+            features/keycloak_adapter_management.feature
             features/keycloak_dtos.feature
             features/keycloak_protocol_mapper_configs.feature
+        - id: keycloak_auth_guards
+          name: Keycloak (auth guards)
+          features: >-
+            features/keycloak_auth_guards.feature
         - id: kafka
           name: Kafka
           features: >-
@@ -317,6 +333,8 @@ jobs:
             features/grpc_rate_limit.feature
             features/kafka_adapters.feature
             features/keycloak_adapter.feature
+            features/keycloak_adapter_management.feature
+            features/keycloak_auth_guards.feature
             features/keycloak_dtos.feature
             features/keycloak_protocol_mapper_configs.feature
             features/minio_adapter.feature
