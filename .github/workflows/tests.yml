@@ -100,18 +100,20 @@ jobs:
             - 'packages/minio/**'
             - 'packages/scylladb/**'
             - 'packages/elasticsearch/**'
-            - 'packages/postgres/**'
-            - 'packages/mysql/**'
-            - 'packages/sqlite/**'
-            - 'packages/starrocks/**'
             - 'archipy/adapters/email/**'
-            - 'archipy/adapters/base/sqlalchemy/**'
             - 'archipy/helpers/utils/_otel/**'
             - 'features/vault_adapter_apm.feature'
             - 'features/minio_adapter_apm.feature'
             - 'features/scylladb_adapter_apm.feature'
             - 'features/email_adapter_apm.feature'
             - 'features/elastic_adapter_apm.feature'
+          apm_sql:
+            - 'packages/postgres/**'
+            - 'packages/mysql/**'
+            - 'packages/sqlite/**'
+            - 'packages/starrocks/**'
+            - 'archipy/adapters/base/sqlalchemy/**'
+            - 'archipy/helpers/utils/_otel/**'
             - 'features/atomic_transactions_apm.feature'
           apm_messaging:
             - 'packages/kafka/**'
@@ -349,6 +351,9 @@ jobs:
             features/scylladb_adapter_apm.feature
             features/email_adapter_apm.feature
             features/elastic_adapter_apm.feature
+        - id: apm_sql
+          name: Elastic APM (SQL databases)
+          features: >-
             features/atomic_transactions_apm.feature
         - id: apm_messaging
           name: Elastic APM (messaging and auth)
