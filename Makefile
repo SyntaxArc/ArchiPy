@@ -105,9 +105,9 @@ BEHAVE_JOBS ?= 8
 BEHAVE_HEAVY_JOBS ?= 3
 
 .PHONY: behave
-behave: ## Run all features in parallel, one behave process per feature (BEHAVE_JOBS=N, FEATURE=features/x.feature)
+behave: ## Run all features in parallel, one behave process per feature (BEHAVE_JOBS=N, FEATURE=features/x.feature, EXCLUDE="features/y.feature ...")
 	@echo "${BLUE}Running tests in parallel...${NC}"
-	$(UV) run --extra behave python scripts/behave_parallel.py --jobs $(BEHAVE_JOBS) --heavy-jobs $(BEHAVE_HEAVY_JOBS) $(FEATURE) $(if $(BEHAVE_ARGS),-- $(BEHAVE_ARGS))
+	$(UV) run --extra behave python scripts/behave_parallel.py --jobs $(BEHAVE_JOBS) --heavy-jobs $(BEHAVE_HEAVY_JOBS) $(foreach f,$(EXCLUDE),--exclude $(f)) $(FEATURE) $(if $(BEHAVE_ARGS),-- $(BEHAVE_ARGS))
 
 .PHONY: pull-test-images
 pull-test-images: ## Pull every Docker image the tests use (from .env.test), 4 at a time

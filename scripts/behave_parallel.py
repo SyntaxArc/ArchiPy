@@ -19,7 +19,7 @@ Coverage:
     process its own data file) and combines the data files at the end.
 
 Usage:
-    python scripts/behave_parallel.py [-j N] [--heavy-jobs N] [--coverage] [FEATURE ...] [-- BEHAVE_ARGS ...]
+    python scripts/behave_parallel.py [-j N] [--heavy-jobs N] [--coverage] [--exclude FEATURE ...] [FEATURE ...] [-- BEHAVE_ARGS ...]
 """
 
 from __future__ import annotations
@@ -116,9 +116,11 @@ def _save_durations(runs: list[FeatureRun], previous: dict[str, float]) -> None:
     DURATIONS_FILE.write_text(json.dumps(durations, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def _discover(paths: list[str]) -> list[FeatureRun]:
-    """Build the runs: the given feature files, or every feature file of ``features/``."""
+def _discover(paths: list[str], exclude: list[str]) -> list[FeatureRun]:
+    """Build the runs: the given feature files, or every feature file of ``features/``, minus the excluded ones."""
     files = [Path(p).resolve() for p in paths] if paths else sorted(FEATURES_DIR.glob("*.feature"))
+    excluded = {Path(p).resolve() for p in exclude}
+    files = [path for path in files if path not in excluded]
     durations = _load_durations()
     runs = [
         FeatureRun(
@@ -340,6 +342,13 @@ def _parse_arguments(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
         default=int(os.environ.get("BEHAVE_HEAVY_JOBS", 3)),
         help="of those, features with a heavy container to run at the same time (default: BEHAVE_HEAVY_JOBS or 3)",
     )
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        metavar="FEATURE",
+        help="feature file to leave out; repeat for several (used to run the rest of the features in another job)",
+    )
     parser.add_argument("--timeout", type=float, default=None, help="seconds a single feature may run")
     parser.add_argument("--coverage", action="store_true", help="run under coverage and combine the data files")
     return parser.parse_args(own), behave_args
@@ -393,7 +402,7 @@ def _stop_shared_telemetry_stack(stack: subprocess.Popen | None) -> None:
 def main(argv: list[str]) -> int:
     """Run the features and return the exit code: 0 when every feature passed."""
     arguments, behave_args = _parse_arguments(argv)
-    runs = _discover(arguments.features)
+    runs = _discover(arguments.features, arguments.exclude)
     if not runs:
         print("No feature files found", file=sys.stderr)
         return 2
