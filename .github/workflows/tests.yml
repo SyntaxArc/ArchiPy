@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ '*' ]
 
+# A new push to a pull request or to master replaces the run of the same ref that is still going: every run starts
+# about 30 jobs and the runner limit queues the rest, so stale runs only delay the current one.
+concurrency:
+  group: behave-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   PYTHON_VERSION: "3.14"
 
