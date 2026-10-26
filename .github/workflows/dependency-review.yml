@@ -1,0 +1,23 @@
+name: Dependency review
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'packages/**/pyproject.toml'
+      - '.github/workflows/dependency-review.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
