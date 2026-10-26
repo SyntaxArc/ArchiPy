@@ -27,6 +27,13 @@ Canonical owner for day-to-day git collaboration. Changelog format: `changelog.m
 - Update the description when behavior changes during review.
 - Do not include secrets, large generated artifacts, or unrelated lockfile churn unless the change requires it.
 
+## Findings workflow (bugs / issues / improvements)
+
+1. Create a GitHub issue per finding **before** fixing (`gh issue create`).
+2. Fix on a focused branch.
+3. Open a PR that closes the issue (`Closes #N`).
+4. Merge the PR once checks pass (`gh pr merge`).
+
 ## Required checks before ask-to-merge
 
 Prefer locally:
