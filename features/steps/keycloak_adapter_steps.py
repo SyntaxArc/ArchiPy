@@ -7,6 +7,7 @@ from typing import Any
 from behave import given, step, then, when
 from behave.runner import Context
 from features.scenario_context import ScenarioContext
+from features.test_containers import ContainerManager
 from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
@@ -59,12 +60,10 @@ def get_keycloak_adapter(context: Context) -> AsyncKeycloakAdapter | KeycloakAda
 
     if is_async:
         if not hasattr(scenario_context, "async_adapter") or scenario_context.async_adapter is None:
-            test_config = BaseConfig.global_config()
-            scenario_context.async_adapter = AsyncKeycloakAdapter(test_config.KEYCLOAK)
+            scenario_context.async_adapter = AsyncKeycloakAdapter(BaseConfig.global_config().KEYCLOAK)
         return scenario_context.async_adapter
     if not hasattr(scenario_context, "adapter") or scenario_context.adapter is None:
-        test_config = BaseConfig.global_config()
-        scenario_context.adapter = KeycloakAdapter(test_config.KEYCLOAK)
+        scenario_context.adapter = KeycloakAdapter(BaseConfig.global_config().KEYCLOAK)
     return scenario_context.adapter
 
 
@@ -75,9 +74,24 @@ def _adapter_parts(context: Context) -> tuple[AsyncKeycloakAdapter | KeycloakAda
 # Configuration steps
 @given("a configured {adapter_type} Keycloak adapter")
 def step_configured_adapter(context: Context, adapter_type: str) -> None:
-    """Configure a Keycloak adapter of the specified type."""
-    get_keycloak_adapter(context)
-    context.logger.info(f"{adapter_type.capitalize()} Keycloak adapter configured")
+    """Configure a Keycloak adapter of the specified type, talking to Keycloak directly."""
+    step_configured_adapter_via(context, adapter_type, "direct")
+
+
+@given("a configured {adapter_type} Keycloak adapter via {via}")
+def step_configured_adapter_via(context: Context, adapter_type: str, via: str) -> None:
+    """Configure a Keycloak adapter that talks to Keycloak directly or through the Envoy pass-through listener."""
+    assert via in ("direct", "envoy"), via
+    if via == "envoy":
+        # The steps mutate the shared Keycloak config, so override the URL there and restore it after the scenario.
+        config = BaseConfig.global_config().KEYCLOAK
+        direct_url = config.SERVER_URL
+        config.SERVER_URL = ContainerManager.get_container("envoy").passthrough_url
+        context.add_cleanup(setattr, config, "SERVER_URL", direct_url)
+    adapter = get_keycloak_adapter(context)
+    # Client ids are cached by name for an hour, so rows that reuse a client name in another realm would see stale ids.
+    adapter.clear_all_caches()
+    context.logger.info(f"{adapter_type.capitalize()} Keycloak adapter configured via {via}")
 
 
 # Realm management steps
@@ -359,7 +373,6 @@ async def step_create_client_and_update_adapter(
                         raise
 
             # Create new configuration
-            from archipy.configs.config_template import KeycloakConfig
 
             new_config = KeycloakConfig()
             new_config.SERVER_URL = adapter.configs.SERVER_URL
