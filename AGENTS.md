@@ -44,6 +44,10 @@ Canonical policies live in `.cursor/rules/`. Start with `rules-index.mdc` for ow
 | Tooling                    | `tooling-workflow.mdc`                                     |
 | Docs / changelog / release | `documentation.mdc`, `changelog.mdc`, `github-release.mdc` |
 
+## Findings Workflow
+
+Bugs/issues/improvements found: create GitHub issue first, fix, open PR (`Closes #N`), merge. Details: `contributing.mdc`.
+
 ## Linting Exclusions
 
 `features/` and `scripts/` are excluded from Ruff linting.
