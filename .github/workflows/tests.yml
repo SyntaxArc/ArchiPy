@@ -36,11 +36,19 @@ jobs:
           keycloak_management:
             - 'packages/keycloak/**'
             - 'features/keycloak_adapter_management.feature'
-            - 'features/keycloak_dtos.feature'
-            - 'features/keycloak_protocol_mapper_configs.feature'
+          keycloak_clients_tokens:
+            - 'packages/keycloak/**'
+            - 'features/keycloak_adapter_clients_tokens.feature'
           keycloak_auth_guards:
             - 'packages/keycloak/**'
             - 'features/keycloak_auth_guards.feature'
+          keycloak_auth_guards_grpc:
+            - 'packages/keycloak/**'
+            - 'features/keycloak_auth_guards_grpc.feature'
+          keycloak_configs:
+            - 'packages/keycloak/**'
+            - 'features/keycloak_dtos.feature'
+            - 'features/keycloak_protocol_mapper_configs.feature'
           kafka_a:
             - 'packages/kafka/**'
             - 'features/kafka_adapters.feature'
@@ -213,7 +221,9 @@ jobs:
             - '!features/kafka_clients_spans.feature'
             - '!features/keycloak_adapter.feature'
             - '!features/keycloak_adapter_management.feature'
+            - '!features/keycloak_adapter_clients_tokens.feature'
             - '!features/keycloak_auth_guards.feature'
+            - '!features/keycloak_auth_guards_grpc.feature'
             - '!features/keycloak_dtos.feature'
             - '!features/keycloak_protocol_mapper_configs.feature'
             - '!features/minio_adapter.feature'
@@ -269,15 +279,26 @@ jobs:
           features: >-
             features/keycloak_adapter.feature
         - id: keycloak_management
-          name: Keycloak (management)
+          name: Keycloak (groups, scopes and authorization)
           features: >-
             features/keycloak_adapter_management.feature
-            features/keycloak_dtos.feature
-            features/keycloak_protocol_mapper_configs.feature
+        - id: keycloak_clients_tokens
+          name: Keycloak (clients, keys and tokens)
+          features: >-
+            features/keycloak_adapter_clients_tokens.feature
         - id: keycloak_auth_guards
-          name: Keycloak (auth guards)
+          name: Keycloak (FastAPI auth guards)
           features: >-
             features/keycloak_auth_guards.feature
+        - id: keycloak_auth_guards_grpc
+          name: Keycloak (gRPC, Envoy and caching guards)
+          features: >-
+            features/keycloak_auth_guards_grpc.feature
+        - id: keycloak_configs
+          name: Keycloak (DTOs and mapper configs)
+          features: >-
+            features/keycloak_dtos.feature
+            features/keycloak_protocol_mapper_configs.feature
         - id: kafka_a
           name: Kafka (admin, producers and consumers)
           features: >-
@@ -389,7 +410,9 @@ jobs:
             features/kafka_clients_spans.feature
             features/keycloak_adapter.feature
             features/keycloak_adapter_management.feature
+            features/keycloak_adapter_clients_tokens.feature
             features/keycloak_auth_guards.feature
+            features/keycloak_auth_guards_grpc.feature
             features/keycloak_dtos.feature
             features/keycloak_protocol_mapper_configs.feature
             features/minio_adapter.feature
