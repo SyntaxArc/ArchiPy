@@ -24,8 +24,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Groups are balanced by the durations in .behave_durations.json. "Core, utils and payment adapters" runs every feature that is in no
-        # other group, so a new feature file is picked up without touching this list.
+        # Groups are balanced by the durations in .behave_durations.json. The last group runs every feature that is
+        # in no other group, so a new feature file is picked up without touching this list.
         group:
         - name: Keycloak
           features: >-
