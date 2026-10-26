@@ -22,7 +22,7 @@ Canonical owner for day-to-day git collaboration. Changelog format: `changelog.m
 
 ## Pull / Merge Requests
 
-- Small, reviewable diffs with a clear purpose.
+- Small, reviewable diffs with a clear purpose: one PR moves one small chunk of change, never a whole plan.
 - Description: what changed, why, how to test; link issues.
 - Update the description when behavior changes during review.
 - Do not include secrets, large generated artifacts, or unrelated lockfile churn unless the change requires it.
@@ -33,6 +33,11 @@ Canonical owner for day-to-day git collaboration. Changelog format: `changelog.m
 2. Fix on a focused branch.
 3. Open a PR that closes the issue (`Closes #N`).
 4. Merge the PR once checks pass (`gh pr merge`).
+
+Large findings: split the work into small PRs.
+
+- Several PRs may reference one issue. Use `Part of #N` in each PR and `Closes #N` only in the last one; list the chunks as a checklist in the issue.
+- Or split the finding into several issues, one per chunk, each closed by its own PR.
 
 Exception: changelog-only PRs need no issue.
 
