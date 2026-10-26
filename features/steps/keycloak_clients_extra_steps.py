@@ -82,10 +82,12 @@ async def step_client_sessions_nodes(context: Context, client: str, adapter_type
         assert isinstance(counted.count, int), counted
     for operation in ("get_client_user_sessions", "get_client_offline_sessions"):
         assert isinstance(await _adapter_call(adapter, is_async, operation, uuid), list)
-    await _adapter_call(adapter, is_async, "register_client_node", uuid, "node1.example.com")
+    node_host = "node1.example.com"
+    await _adapter_call(adapter, is_async, "register_client_node", uuid, node_host)
     registered = await _adapter_call(adapter, is_async, "get_client", uuid)
-    assert "node1.example.com" in (registered.registered_nodes or {}), registered.registered_nodes
-    await _adapter_call(adapter, is_async, "unregister_client_node", uuid, "node1.example.com")
+    # Compare whole registered hosts instead of a substring check on a host name.
+    assert any(registered_host == node_host for registered_host in registered.registered_nodes or {}), registered.registered_nodes
+    await _adapter_call(adapter, is_async, "unregister_client_node", uuid, node_host)
     for operation in ("push_client_revocation", "test_client_nodes_available"):
         try:
             await _adapter_call(adapter, is_async, operation, uuid)
