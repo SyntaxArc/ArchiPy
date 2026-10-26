@@ -34,6 +34,15 @@ uv run --extra behave behave features/file_name.feature:42
 
 No mutable globals across scenarios — `get_current_scenario_context(context)` / `ScenarioContext` only.
 
+## Behave in CI
+
+`.github/workflows/tests.yml` runs the features as a matrix of groups (one GitHub job each) and only the groups a PR can affect (`dorny/paths-filter`; a change to shared code, the steps or the dependencies runs every group, and a push to master runs all). The `core` group runs every feature that no other group lists, so a new feature file needs no workflow edit.
+
+- To give a feature its own group, add a filter (package path and feature file), a matrix entry, and list the feature in the `shared` negations and the `core` exclude list.
+- Put the scenarios that export to Elastic APM in `<feature>_apm.feature` (tagged `@needs-apm-server @needs-apm-collector`); an adapter feature without those tags does not start the shared telemetry stack (about 50s).
+- Tag a feature only with the containers it needs (split a feature per database or per area when it starts several), and keep each group under about 2 minutes. Jobs start in matrix order and only about 16 run at once, so list the slowest groups first.
+- Do not run `make install-dev` in CI; the Behave jobs use `uv sync --locked --all-extras`.
+
 ## What a good scenario is
 
 Reads like a capability: store/retrieve, remove, hash field round-trip. Uses the seam only. Expected values are **independent literals** (or Examples tables), never recomputed the same way as production code.
