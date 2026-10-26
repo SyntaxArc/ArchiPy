@@ -10,9 +10,10 @@ from pathlib import Path
 
 import httpx2
 from opentelemetry.instrumentation.utils import suppress_instrumentation
+import requests
 from testcontainers.community.mysql import MySqlContainer
 from testcontainers.core.container import DockerContainer
-from testcontainers.core.waiting_utils import wait_for_logs
+from testcontainers.core.waiting_utils import wait_container_is_ready, wait_for_logs
 from testcontainers.elasticsearch import ElasticSearchContainer
 from testcontainers.keycloak import KeycloakContainer
 from testcontainers.community.vault import VaultContainer
@@ -579,6 +580,18 @@ class MySQLTestContainer(metaclass=Singleton, thread_safe=True):
         logger.info("MySQL container stopped")
 
 
+class _PatientKeycloakContainer(KeycloakContainer):
+    """``KeycloakContainer`` that keeps probing while the health endpoint answers an HTTP error.
+
+    The upstream probe retries a refused connection and a read timeout only. A Keycloak that has opened its management
+    port but does not serve ``/health/ready`` yet answers 404, which failed ``before_feature`` in CI.
+    """
+
+    @wait_container_is_ready(requests.exceptions.HTTPError)
+    def _readiness_probe(self) -> None:
+        super()._readiness_probe()
+
+
 @ContainerManager.register("keycloak")
 class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
     def __init__(self, config: KeycloakConfig | None = None, image: str | None = None) -> None:
@@ -599,7 +612,7 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
         password = self.admin_password or "admin"
 
         # Set up the container
-        self._container = KeycloakContainer(
+        self._container = _PatientKeycloakContainer(
             image=self.image,
             username=username,
             password=password,
@@ -636,7 +649,7 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
             username = self.admin_username or "admin"
             password = self.admin_password or "admin"
 
-            self._container = KeycloakContainer(
+            self._container = _PatientKeycloakContainer(
                 image=self.image,
                 username=username,
                 password=password,
