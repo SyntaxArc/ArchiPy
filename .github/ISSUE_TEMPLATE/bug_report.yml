@@ -1,0 +1,68 @@
+name: Bug report
+description: Report something that is broken or behaves unexpectedly
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      description: What is wrong? Include error messages and tracebacks.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Minimal code or steps that reproduce the problem.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Adapter (database / cache / messaging / storage / auth)
+        - Config
+        - Helpers (utils / decorators / interceptors)
+        - Models / errors
+        - Testing / BDD
+        - Docs / tooling
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: archipy-version
+    attributes:
+      label: ArchiPy version
+      placeholder: e.g. 5.21.2
+    validations:
+      required: true
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      placeholder: e.g. 3.14.2
+    validations:
+      required: true
+  - type: input
+    id: extras
+    attributes:
+      label: Installed extras
+      placeholder: e.g. archipy[postgres,redis]
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: e.g. Ubuntu 24.04
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Suspected cause, possible fix, workarounds tried.

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://syntaxarc.github.io/ArchiPy/
+    about: Check the docs before opening an issue.
+  - name: Report a security vulnerability
+    url: https://github.com/SyntaxArc/ArchiPy/security/advisories/new
+    about: Report security issues privately. Do not open a public issue.

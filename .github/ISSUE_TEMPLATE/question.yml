@@ -1,0 +1,15 @@
+name: Question
+description: Ask a usage question or start a discussion
+labels: ["question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      description: Include code and links to docs you already read.
