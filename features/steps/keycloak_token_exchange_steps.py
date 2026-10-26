@@ -4,6 +4,7 @@ import uuid
 from behave import then, when
 from behave.runner import Context
 from features.steps.keycloak_adapter_steps import _adapter_call, _adapter_parts
+from features.test_helpers import realm_issuer
 from jwcrypto import jwk, jwt
 
 from archipy.models.dtos.keycloak.client_dtos import KeycloakClientRequestDTO
@@ -95,8 +96,8 @@ async def step_trust_external_issuer(context: Context, client: str, username: st
 async def step_jwt_bearer_grant(context: Context, adapter_type: str) -> None:
     adapter, is_async, sc = _adapter_parts(context)
     now = int(time.time())
-    realm_issuer = f"{adapter.configs.SERVER_URL.rstrip('/')}/realms/{adapter.configs.REALM_NAME}"
-    claims = {"iss": sc.get("external_issuer"), "sub": sc.get("external_subject"), "aud": realm_issuer, "exp": now + 120, "iat": now, "jti": uuid.uuid4().hex}
+    realm_issuer_url = realm_issuer(adapter.configs.SERVER_URL, adapter.configs.REALM_NAME)
+    claims = {"iss": sc.get("external_issuer"), "sub": sc.get("external_subject"), "aud": realm_issuer_url, "exp": now + 120, "iat": now, "jti": uuid.uuid4().hex}
     assertion = jwt.JWT(header={"alg": "RS256", "kid": "external-key"}, claims=claims)
     assertion.make_signed_token(sc.get("external_key"))
     token = await _adapter_call(adapter, is_async, "jwt_bearer_grant", assertion.serialize(), "openid")

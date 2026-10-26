@@ -1,6 +1,7 @@
 from behave import then, when
 from behave.runner import Context
 from features.steps.keycloak_adapter_steps import _adapter_call, _adapter_parts
+from features.test_helpers import realm_issuer
 
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
 from archipy.configs.config_template import KeycloakConfig
@@ -25,7 +26,7 @@ def _switch_realm(adapter, realm: str) -> None:
 
 
 def _issuer(adapter, realm: str) -> str:
-    return f"{adapter.configs.SERVER_URL.rstrip('/')}/realms/{realm}"
+    return realm_issuer(adapter.configs.SERVER_URL, realm)
 
 
 def _client_adapter(adapter, is_async: bool, realm: str, client: str, secret: str):
