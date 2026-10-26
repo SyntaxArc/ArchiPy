@@ -1,39 +1,27 @@
-## Description
+## Summary
 
-Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
+<!-- What changed and why. PR title: conventional commit, e.g. `fix(redis): ...` -->
 
-Fixes # (issue)
+Closes #
 
 ## Type of change
 
-Please delete options that are not relevant.
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Refactor (no behavior change)
+- [ ] Docs / tooling / chore
+- [ ] Breaking change (avoid: deprecate with `DeprecationWarning` and keep the old path)
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] This change requires a documentation update
-- [ ] Refactoring (no functional changes, no API changes)
-- [ ] Documentation update
+## How was it tested?
 
-## How Has This Been Tested?
+<!-- Behave feature / scenario names, or commands run. -->
 
-Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce. Please also list any relevant details for your test configuration.
+## Checklist
 
-- [ ] Test A
-- [ ] Test B
-
-## Checklist:
-
-- [ ] My code follows the style guidelines of this project
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
-- [ ] Any dependent changes have been merged and published in downstream modules
-- [ ] I have checked my code and corrected any misspellings
-
-## Additional context
-
-Add any other context or screenshots about the pull request here.
+- [ ] `make format` and `make lint` pass
+- [ ] `make behave` (or the affected feature files) pass
+- [ ] `make security` run if touching adapters, auth, crypto, or network code
+- [ ] Import direction respected: `models ← configs ← helpers ← adapters`
+- [ ] BDD scenarios added or updated for new behavior
+- [ ] Docs updated if user-facing behavior changed
+- [ ] No secrets, large generated files, or unrelated lockfile changes

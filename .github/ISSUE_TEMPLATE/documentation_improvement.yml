@@ -1,0 +1,29 @@
+name: Documentation improvement
+description: Report missing, unclear, or incorrect documentation
+labels: ["documentation"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Page or section
+      description: Link to the docs page or file path.
+      placeholder: https://syntaxarc.github.io/ArchiPy/...
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested change
+      description: Draft text if you have it.
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I can submit a pull request for this
