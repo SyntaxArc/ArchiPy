@@ -41,9 +41,12 @@ jobs:
           keycloak_auth_guards:
             - 'packages/keycloak/**'
             - 'features/keycloak_auth_guards.feature'
-          kafka:
+          kafka_a:
             - 'packages/kafka/**'
             - 'features/kafka_adapters.feature'
+          kafka_b:
+            - 'packages/kafka/**'
+            - 'features/kafka_clients_spans.feature'
           redis:
             - 'packages/redis/**'
             - 'features/redis_adapter.feature'
@@ -55,9 +58,12 @@ jobs:
           scylladb:
             - 'packages/scylladb/**'
             - 'features/scylladb_adapter.feature'
-          temporal:
+          temporal_a:
             - 'packages/temporal/**'
             - 'features/temporal_adapter.feature'
+          temporal_b:
+            - 'packages/temporal/**'
+            - 'features/temporal_schedules_errors.feature'
           minio:
             - 'packages/minio/**'
             - 'features/minio_adapter.feature'
@@ -202,6 +208,7 @@ jobs:
             - '!features/fastapi_minio_upload.feature'
             - '!features/grpc_rate_limit.feature'
             - '!features/kafka_adapters.feature'
+            - '!features/kafka_clients_spans.feature'
             - '!features/keycloak_adapter.feature'
             - '!features/keycloak_adapter_management.feature'
             - '!features/keycloak_auth_guards.feature'
@@ -216,6 +223,7 @@ jobs:
             - '!features/scylladb_adapter.feature'
             - '!features/sqlalchemy_multiple_databases.feature'
             - '!features/temporal_adapter.feature'
+            - '!features/temporal_schedules_errors.feature'
             - '!features/vault_adapter.feature'
             - '!features/app_utils.feature'
             - '!features/base_config.feature'
@@ -268,10 +276,14 @@ jobs:
           name: Keycloak (auth guards)
           features: >-
             features/keycloak_auth_guards.feature
-        - id: kafka
-          name: Kafka
+        - id: kafka_a
+          name: Kafka (admin, producers and consumers)
           features: >-
             features/kafka_adapters.feature
+        - id: kafka_b
+          name: Kafka (clients and spans)
+          features: >-
+            features/kafka_clients_spans.feature
         - id: redis
           name: Redis
           features: >-
@@ -286,10 +298,14 @@ jobs:
           name: ScyllaDB
           features: >-
             features/scylladb_adapter.feature
-        - id: temporal
-          name: Temporal
+        - id: temporal_a
+          name: Temporal (workflows and workers)
           features: >-
             features/temporal_adapter.feature
+        - id: temporal_b
+          name: Temporal (schedules, timeouts and errors)
+          features: >-
+            features/temporal_schedules_errors.feature
         - id: minio
           name: MinIO
           features: >-
@@ -365,6 +381,7 @@ jobs:
             features/fastapi_minio_upload.feature
             features/grpc_rate_limit.feature
             features/kafka_adapters.feature
+            features/kafka_clients_spans.feature
             features/keycloak_adapter.feature
             features/keycloak_adapter_management.feature
             features/keycloak_auth_guards.feature
@@ -378,6 +395,7 @@ jobs:
             features/saman_ipg_adapter.feature
             features/scylladb_adapter.feature
             features/temporal_adapter.feature
+            features/temporal_schedules_errors.feature
             features/vault_adapter.feature
             features/vault_adapter_apm.feature
             features/minio_adapter_apm.feature
