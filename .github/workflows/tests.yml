@@ -10,31 +10,173 @@ env:
   PYTHON_VERSION: "3.14"
 
 jobs:
-  # Picks the feature groups a change can affect (scripts/behave_matrix.py). Pushes to master run every group.
+  # Finds which feature groups a pull request can affect. A push to master runs every group.
   changes:
     name: select behave groups
     permissions:
       contents: read
+      pull-requests: read
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      matrix: ${{ steps.select.outputs.matrix }}
-      has_groups: ${{ steps.select.outputs.has_groups }}
+      groups: ${{ steps.groups.outputs.changes }}
+      shared: ${{ steps.shared.outputs.shared }}
     steps:
     - uses: actions/checkout@v6
-      with:
-        fetch-depth: 0
 
-    - name: Select groups
-      id: select
-      env:
-        BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
-      run: python3 scripts/behave_matrix.py ${BASE_SHA:+--base "$BASE_SHA"}
+    # Files owned by one group: the package it tests and its feature files.
+    - name: Changed groups
+      id: groups
+      uses: dorny/paths-filter@v3
+      with:
+        filters: |
+          keycloak:
+            - 'packages/keycloak/**'
+            - 'features/keycloak_adapter.feature'
+            - 'features/keycloak_dtos.feature'
+            - 'features/keycloak_protocol_mapper_configs.feature'
+          kafka:
+            - 'packages/kafka/**'
+            - 'features/kafka_adapters.feature'
+          redis:
+            - 'packages/redis/**'
+            - 'features/redis_adapter.feature'
+            - 'features/grpc_rate_limit.feature'
+          elasticsearch:
+            - 'packages/elasticsearch/**'
+            - 'features/elastic_adapter.feature'
+            - 'features/elastic_apm_telemetry.feature'
+          scylladb:
+            - 'packages/scylladb/**'
+            - 'features/scylladb_adapter.feature'
+          temporal:
+            - 'packages/temporal/**'
+            - 'features/temporal_adapter.feature'
+          minio:
+            - 'packages/minio/**'
+            - 'features/minio_adapter.feature'
+            - 'features/fastapi_minio_upload.feature'
+          vault:
+            - 'packages/vault/**'
+            - 'features/vault_adapter.feature'
+          sql:
+            - 'packages/postgres/**'
+            - 'packages/mysql/**'
+            - 'packages/sqlite/**'
+            - 'packages/starrocks/**'
+            - 'archipy/adapters/base/sqlalchemy/**'
+            - 'features/atomic_transactions.feature'
+            - 'features/sqlalchemy_multiple_databases.feature'
+            - 'features/database_error_classification.feature'
+          email:
+            - 'archipy/adapters/email/**'
+            - 'features/email_adapter.feature'
+          payment:
+            - 'packages/parsian-ipg/**'
+            - 'packages/saman-ipg/**'
+            - 'features/parsian_ipg_adapter.feature'
+            - 'features/saman_ipg_adapter.feature'
+          telemetry:
+            - 'archipy/helpers/utils/_otel/**'
+            - 'features/otel.feature'
+            - 'features/otel_configuration.feature'
+          core:
+            - 'features/app_utils.feature'
+            - 'features/base_config.feature'
+            - 'features/base_utils.feature'
+            - 'features/cache_decorator.feature'
+            - 'features/datetime_utils.feature'
+            - 'features/decorators.feature'
+            - 'features/error_handling.feature'
+            - 'features/file_utils.feature'
+            - 'features/grpc_helpers.feature'
+            - 'features/jwt_utils.feature'
+            - 'features/optional_dependencies.feature'
+            - 'features/password_utils.feature'
+            - 'features/range_dtos.feature'
+            - 'features/singleton_metaclass.feature'
+            - 'features/string_utils.feature'
+            - 'features/totp_utils.feature'
+
+    # Any other changed file (shared code under archipy/, the steps, the dependencies, ...) can affect every group.
+    # Documentation and the other workflows cannot affect a test.
+    - name: Changed shared files
+      id: shared
+      uses: dorny/paths-filter@v3
+      with:
+        predicate-quantifier: every
+        filters: |
+          shared:
+            - '**'
+            - '!docs/**'
+            - '!**/*.md'
+            - '!**/*.mdc'
+            - '!.cursor/**'
+            - '!.agents/**'
+            - '!.claude/**'
+            - '!.idea/**'
+            - '!LICENSE'
+            - '!mkdocs.yml'
+            - '!.github/ISSUE_TEMPLATE/**'
+            - '!.github/workflows/{bandit,close-stale-issues,deploy-docs,docs-check,instrumentor-compat,publish,ruff-lint,ty-lint}.yml'
+            - '!packages/keycloak/**'
+            - '!packages/kafka/**'
+            - '!packages/redis/**'
+            - '!packages/elasticsearch/**'
+            - '!packages/scylladb/**'
+            - '!packages/temporal/**'
+            - '!packages/minio/**'
+            - '!packages/vault/**'
+            - '!packages/postgres/**'
+            - '!packages/mysql/**'
+            - '!packages/sqlite/**'
+            - '!packages/starrocks/**'
+            - '!archipy/adapters/base/sqlalchemy/**'
+            - '!archipy/adapters/email/**'
+            - '!packages/parsian-ipg/**'
+            - '!packages/saman-ipg/**'
+            - '!archipy/helpers/utils/_otel/**'
+            - '!features/atomic_transactions.feature'
+            - '!features/database_error_classification.feature'
+            - '!features/elastic_adapter.feature'
+            - '!features/elastic_apm_telemetry.feature'
+            - '!features/email_adapter.feature'
+            - '!features/fastapi_minio_upload.feature'
+            - '!features/grpc_rate_limit.feature'
+            - '!features/kafka_adapters.feature'
+            - '!features/keycloak_adapter.feature'
+            - '!features/keycloak_dtos.feature'
+            - '!features/keycloak_protocol_mapper_configs.feature'
+            - '!features/minio_adapter.feature'
+            - '!features/otel.feature'
+            - '!features/otel_configuration.feature'
+            - '!features/parsian_ipg_adapter.feature'
+            - '!features/redis_adapter.feature'
+            - '!features/saman_ipg_adapter.feature'
+            - '!features/scylladb_adapter.feature'
+            - '!features/sqlalchemy_multiple_databases.feature'
+            - '!features/temporal_adapter.feature'
+            - '!features/vault_adapter.feature'
+            - '!features/app_utils.feature'
+            - '!features/base_config.feature'
+            - '!features/base_utils.feature'
+            - '!features/cache_decorator.feature'
+            - '!features/datetime_utils.feature'
+            - '!features/decorators.feature'
+            - '!features/error_handling.feature'
+            - '!features/file_utils.feature'
+            - '!features/grpc_helpers.feature'
+            - '!features/jwt_utils.feature'
+            - '!features/optional_dependencies.feature'
+            - '!features/password_utils.feature'
+            - '!features/range_dtos.feature'
+            - '!features/singleton_metaclass.feature'
+            - '!features/string_utils.feature'
+            - '!features/totp_utils.feature'
 
   behave:
     name: behave (${{ matrix.group.name }})
     needs: changes
-    if: needs.changes.outputs.has_groups == 'true'
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -44,14 +186,102 @@ jobs:
       # container (Kafka, Keycloak, Elasticsearch, StarRocks, ...). Raise both on a larger runner.
       BEHAVE_JOBS: 4
       BEHAVE_HEAVY_JOBS: 2
+      # Every step is skipped, and the job passes at once, for a group the change cannot affect.
+      RUN: ${{ github.event_name == 'push' || needs.changes.outputs.shared == 'true' || contains(fromJSON(needs.changes.outputs.groups), matrix.group.id) }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
+      matrix:
+        # The core group runs every feature that no other group lists, so a new feature file is picked up without
+        # touching this list.
+        group:
+        - id: keycloak
+          name: Keycloak
+          features: >-
+            features/keycloak_adapter.feature
+            features/keycloak_dtos.feature
+            features/keycloak_protocol_mapper_configs.feature
+        - id: kafka
+          name: Kafka
+          features: >-
+            features/kafka_adapters.feature
+        - id: redis
+          name: Redis
+          features: >-
+            features/redis_adapter.feature
+            features/grpc_rate_limit.feature
+        - id: elasticsearch
+          name: Elasticsearch
+          features: >-
+            features/elastic_adapter.feature
+            features/elastic_apm_telemetry.feature
+        - id: scylladb
+          name: ScyllaDB
+          features: >-
+            features/scylladb_adapter.feature
+        - id: temporal
+          name: Temporal
+          features: >-
+            features/temporal_adapter.feature
+        - id: minio
+          name: MinIO
+          features: >-
+            features/minio_adapter.feature
+            features/fastapi_minio_upload.feature
+        - id: vault
+          name: Vault
+          features: >-
+            features/vault_adapter.feature
+        - id: sql
+          name: SQL databases
+          features: >-
+            features/atomic_transactions.feature
+            features/sqlalchemy_multiple_databases.feature
+            features/database_error_classification.feature
+        - id: email
+          name: Email
+          features: >-
+            features/email_adapter.feature
+        - id: payment
+          name: Payment gateways
+          features: >-
+            features/parsian_ipg_adapter.feature
+            features/saman_ipg_adapter.feature
+        - id: telemetry
+          name: Telemetry
+          features: >-
+            features/otel.feature
+            features/otel_configuration.feature
+        - id: core
+          name: Core and utilities
+          exclude: >-
+            features/atomic_transactions.feature
+            features/database_error_classification.feature
+            features/elastic_adapter.feature
+            features/elastic_apm_telemetry.feature
+            features/email_adapter.feature
+            features/fastapi_minio_upload.feature
+            features/grpc_rate_limit.feature
+            features/kafka_adapters.feature
+            features/keycloak_adapter.feature
+            features/keycloak_dtos.feature
+            features/keycloak_protocol_mapper_configs.feature
+            features/minio_adapter.feature
+            features/otel.feature
+            features/otel_configuration.feature
+            features/parsian_ipg_adapter.feature
+            features/redis_adapter.feature
+            features/saman_ipg_adapter.feature
+            features/scylladb_adapter.feature
+            features/sqlalchemy_multiple_databases.feature
+            features/temporal_adapter.feature
+            features/vault_adapter.feature
 
     steps:
     - uses: actions/checkout@v6
+      if: env.RUN == 'true'
 
     - name: Set up Python ${{ env.PYTHON_VERSION }}
+      if: env.RUN == 'true'
       uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
@@ -59,6 +289,7 @@ jobs:
     # The wheels are downloaded once and shared by every group: restoring the uv cache leaves `uv sync` only the
     # linking of the packages. Only the first job to finish saves it; the others find the key taken.
     - name: Install UV
+      if: env.RUN == 'true'
       uses: astral-sh/setup-uv@v7
       with:
         enable-cache: true
@@ -66,13 +297,15 @@ jobs:
         cache-suffix: ${{ env.PYTHON_VERSION }}
 
     - name: Install dependencies
+      if: env.RUN == 'true'
       run: make install-dev
 
     - name: Run Behave features in parallel
+      if: env.RUN == 'true'
       run: make behave FEATURE="${{ matrix.group.features }}" EXCLUDE="${{ matrix.group.exclude }}"
 
     - name: Upload feature logs
-      if: failure()
+      if: failure() && env.RUN == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: behave-logs-${{ matrix.group.name }}
@@ -80,7 +313,7 @@ jobs:
         include-hidden-files: true
         retention-days: 7
 
-  # One stable check for the whole matrix. A skipped matrix (nothing to test) passes.
+  # One stable check for the whole matrix.
   behave-tests:
     name: behave-tests
     if: always()
@@ -90,11 +323,7 @@ jobs:
     steps:
     - name: Fail when a group failed
       run: |
-        if [ "${{ needs.changes.result }}" != "success" ]; then
-          echo "Group selection: ${{ needs.changes.result }}"
+        if [ "${{ needs.changes.result }}" != "success" ] || [ "${{ needs.behave.result }}" != "success" ]; then
+          echo "Group selection: ${{ needs.changes.result }}, behave groups: ${{ needs.behave.result }}"
           exit 1
         fi
-        case "${{ needs.behave.result }}" in
-          success|skipped) ;;
-          *) echo "Behave groups: ${{ needs.behave.result }}"; exit 1 ;;
-        esac
