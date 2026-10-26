@@ -46,7 +46,7 @@ Canonical policies live in `.cursor/rules/`. Start with `rules-index.mdc` for ow
 
 ## Findings Workflow
 
-Bugs/issues/improvements found: create GitHub issue first, fix, open PR (`Closes #N`), merge. One PR = one small chunk: split big work into several issues, or several PRs with `Part of #N` (only the last `Closes #N`). Changelog-only PRs need no issue. Details: `contributing.mdc`.
+Bugs/issues/improvements found: create GitHub issue first, fix, open PR (`Closes #N`), merge. One PR = one small chunk: split big work into several issues, or several PRs with `Part of #N` (only the last `Closes #N`). After each merged PR, update its issue (checklist, results). Changelog-only PRs need no issue. Details: `contributing.mdc`.
 
 ## Linting Exclusions
 
