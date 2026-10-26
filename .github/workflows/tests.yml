@@ -80,6 +80,34 @@ jobs:
             - 'archipy/helpers/utils/_otel/**'
             - 'features/otel.feature'
             - 'features/otel_configuration.feature'
+          apm_services:
+            - 'packages/vault/**'
+            - 'packages/minio/**'
+            - 'packages/scylladb/**'
+            - 'packages/elasticsearch/**'
+            - 'packages/postgres/**'
+            - 'packages/mysql/**'
+            - 'packages/sqlite/**'
+            - 'packages/starrocks/**'
+            - 'archipy/adapters/email/**'
+            - 'archipy/adapters/base/sqlalchemy/**'
+            - 'archipy/helpers/utils/_otel/**'
+            - 'features/vault_adapter_apm.feature'
+            - 'features/minio_adapter_apm.feature'
+            - 'features/scylladb_adapter_apm.feature'
+            - 'features/email_adapter_apm.feature'
+            - 'features/elastic_adapter_apm.feature'
+            - 'features/atomic_transactions_apm.feature'
+          apm_messaging:
+            - 'packages/kafka/**'
+            - 'packages/redis/**'
+            - 'packages/keycloak/**'
+            - 'packages/temporal/**'
+            - 'archipy/helpers/utils/_otel/**'
+            - 'features/kafka_adapters_apm.feature'
+            - 'features/redis_adapter_apm.feature'
+            - 'features/keycloak_adapter_apm.feature'
+            - 'features/temporal_adapter_apm.feature'
           core:
             - 'features/app_utils.feature'
             - 'features/base_config.feature'
@@ -136,6 +164,16 @@ jobs:
             - '!packages/parsian-ipg/**'
             - '!packages/saman-ipg/**'
             - '!archipy/helpers/utils/_otel/**'
+            - '!features/vault_adapter_apm.feature'
+            - '!features/minio_adapter_apm.feature'
+            - '!features/scylladb_adapter_apm.feature'
+            - '!features/email_adapter_apm.feature'
+            - '!features/elastic_adapter_apm.feature'
+            - '!features/atomic_transactions_apm.feature'
+            - '!features/kafka_adapters_apm.feature'
+            - '!features/redis_adapter_apm.feature'
+            - '!features/keycloak_adapter_apm.feature'
+            - '!features/temporal_adapter_apm.feature'
             - '!features/atomic_transactions.feature'
             - '!features/database_error_classification.feature'
             - '!features/elastic_adapter.feature'
@@ -251,6 +289,22 @@ jobs:
           features: >-
             features/otel.feature
             features/otel_configuration.feature
+        - id: apm_services
+          name: Elastic APM (services)
+          features: >-
+            features/vault_adapter_apm.feature
+            features/minio_adapter_apm.feature
+            features/scylladb_adapter_apm.feature
+            features/email_adapter_apm.feature
+            features/elastic_adapter_apm.feature
+            features/atomic_transactions_apm.feature
+        - id: apm_messaging
+          name: Elastic APM (messaging and auth)
+          features: >-
+            features/kafka_adapters_apm.feature
+            features/redis_adapter_apm.feature
+            features/keycloak_adapter_apm.feature
+            features/temporal_adapter_apm.feature
         - id: core
           name: Core and utilities
           exclude: >-
@@ -275,6 +329,16 @@ jobs:
             features/sqlalchemy_multiple_databases.feature
             features/temporal_adapter.feature
             features/vault_adapter.feature
+            features/vault_adapter_apm.feature
+            features/minio_adapter_apm.feature
+            features/scylladb_adapter_apm.feature
+            features/email_adapter_apm.feature
+            features/elastic_adapter_apm.feature
+            features/atomic_transactions_apm.feature
+            features/kafka_adapters_apm.feature
+            features/redis_adapter_apm.feature
+            features/keycloak_adapter_apm.feature
+            features/temporal_adapter_apm.feature
 
     steps:
     - uses: actions/checkout@v6

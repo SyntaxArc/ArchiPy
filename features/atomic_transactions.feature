@@ -1,4 +1,4 @@
-@needs-postgres @needs-mysql @needs-starrocks @needs-apm-server @needs-apm-collector
+@needs-postgres @needs-mysql @needs-starrocks
 Feature: SQLAlchemy Atomic Transactions
 
   Scenario Outline: Create and retrieve entity in atomic transaction
@@ -343,22 +343,6 @@ Feature: SQLAlchemy Atomic Transactions
       | mysql     | mysql      |
       | starrocks | starrocks  |
       | sqlite    | sqlite     |
-
-  Scenario Outline: SQLAlchemy adapter spans reach Elastic APM Server <route>
-    Given adapter spans are exported to Elastic APM Server <route>
-    When I run a query through the <db_type> SQLAlchemy adapter
-    Then Elastic APM Server should store a span of type "db" with subtype "<system>"
-
-    Examples:
-      | route                 | db_type   | system     |
-      | directly              | postgres  | postgresql |
-      | directly              | mysql     | mysql      |
-      | directly              | starrocks | starrocks  |
-      | directly              | sqlite    | sqlite     |
-      | through the collector | postgres  | postgresql |
-      | through the collector | mysql     | mysql      |
-      | through the collector | starrocks | starrocks  |
-      | through the collector | sqlite    | sqlite     |
 
   @async @needs-otel-collector
   Scenario Outline: Async SQLAlchemy queries emit database spans

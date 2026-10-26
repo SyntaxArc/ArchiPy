@@ -1,4 +1,4 @@
-@needs-vault @needs-apm-server @needs-apm-collector
+@needs-vault
 Feature: Vault Adapter
   As a developer
   I want to use the Vault adapter for secret and transit operations
@@ -80,13 +80,3 @@ Feature: Vault Adapter
     Given adapter spans are exported to the collector
     When I call the Vault API with requests
     Then the collector should have a span with attribute "http.url" containing "/v1/sys/health"
-
-  Scenario Outline: Vault client spans reach Elastic APM Server <route>
-    Given adapter spans are exported to Elastic APM Server <route>
-    When I call the Vault API with requests
-    Then Elastic APM Server should store a span of type "external" with subtype "http"
-
-    Examples:
-      | route                 |
-      | directly              |
-      | through the collector |
