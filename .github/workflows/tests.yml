@@ -54,10 +54,6 @@ jobs:
           keycloak_auth_guards_cache_envoy:
             - 'packages/keycloak/**'
             - 'features/keycloak_auth_guards_cache_envoy.feature'
-          keycloak_configs:
-            - 'packages/keycloak/**'
-            - 'features/keycloak_dtos.feature'
-            - 'features/keycloak_protocol_mapper_configs.feature'
           kafka_a:
             - 'packages/kafka/**'
             - 'features/kafka_adapters.feature'
@@ -72,42 +68,43 @@ jobs:
             - 'packages/elasticsearch/**'
             - 'features/elastic_adapter.feature'
             - 'features/elastic_apm_telemetry.feature'
-          scylladb:
+          scylla_temporal:
             - 'packages/scylladb/**'
             - 'features/scylladb_adapter.feature'
-          temporal_a:
             - 'packages/temporal/**'
             - 'features/temporal_adapter.feature'
           temporal_b:
             - 'packages/temporal/**'
             - 'features/temporal_schedules_errors.feature'
-          minio:
+          light_adapters:
             - 'packages/minio/**'
             - 'features/minio_adapter.feature'
             - 'features/fastapi_minio_upload.feature'
-          vault:
             - 'packages/vault/**'
             - 'features/vault_adapter.feature'
-          sql_postgres:
+            - 'archipy/adapters/email/**'
+            - 'features/email_adapter.feature'
+          sql_postgres_mysql:
             - 'packages/postgres/**'
             - 'archipy/adapters/base/sqlalchemy/**'
             - 'features/atomic_transactions_postgres.feature'
-          sql_mysql:
             - 'packages/mysql/**'
-            - 'archipy/adapters/base/sqlalchemy/**'
             - 'features/atomic_transactions_mysql.feature'
           sql_starrocks:
             - 'packages/starrocks/**'
             - 'archipy/adapters/base/sqlalchemy/**'
             - 'features/atomic_transactions_starrocks.feature'
-          email:
-            - 'archipy/adapters/email/**'
-            - 'features/email_adapter.feature'
-          payment:
+          unit:
             - 'packages/parsian-ipg/**'
             - 'packages/saman-ipg/**'
             - 'features/parsian_ipg_adapter.feature'
             - 'features/saman_ipg_adapter.feature'
+            - 'archipy/adapters/base/sqlalchemy/**'
+            - 'features/sqlalchemy_multiple_databases.feature'
+            - 'features/database_error_classification.feature'
+            - 'packages/keycloak/**'
+            - 'features/keycloak_dtos.feature'
+            - 'features/keycloak_protocol_mapper_configs.feature'
           telemetry:
             - 'archipy/helpers/utils/_otel/**'
             - 'features/otel.feature'
@@ -126,17 +123,14 @@ jobs:
             - 'archipy/helpers/utils/_otel/**'
             - 'features/scylladb_adapter_apm.feature'
             - 'features/elastic_adapter_apm.feature'
-          apm_sql_postgres:
+          apm_sql_postgres_mysql:
             - 'packages/postgres/**'
             - 'packages/sqlite/**'
             - 'archipy/adapters/base/sqlalchemy/**'
             - 'archipy/helpers/utils/_otel/**'
             - 'features/atomic_transactions_apm_postgres.feature'
             - 'features/atomic_transactions_apm_sqlite.feature'
-          apm_sql_mysql:
             - 'packages/mysql/**'
-            - 'archipy/adapters/base/sqlalchemy/**'
-            - 'archipy/helpers/utils/_otel/**'
             - 'features/atomic_transactions_apm_mysql.feature'
           apm_sql_starrocks:
             - 'packages/starrocks/**'
@@ -155,10 +149,6 @@ jobs:
             - 'archipy/helpers/utils/_otel/**'
             - 'features/temporal_adapter_apm.feature'
             - 'features/keycloak_adapter_apm.feature'
-          sql_core:
-            - 'archipy/adapters/base/sqlalchemy/**'
-            - 'features/sqlalchemy_multiple_databases.feature'
-            - 'features/database_error_classification.feature'
           sqlite:
             - 'packages/sqlite/**'
             - 'archipy/adapters/base/sqlalchemy/**'
@@ -334,11 +324,6 @@ jobs:
           name: Keycloak (caching, headers and Envoy guards)
           features: >-
             features/keycloak_auth_guards_cache_envoy.feature
-        - id: keycloak_configs
-          name: Keycloak (DTOs and mapper configs)
-          features: >-
-            features/keycloak_dtos.feature
-            features/keycloak_protocol_mapper_configs.feature
         - id: kafka_a
           name: Kafka (admin, producers and consumers)
           features: >-
@@ -357,48 +342,40 @@ jobs:
           features: >-
             features/elastic_adapter.feature
             features/elastic_apm_telemetry.feature
-        - id: scylladb
-          name: ScyllaDB
+        - id: scylla_temporal
+          name: ScyllaDB and Temporal (workflows and workers)
           features: >-
             features/scylladb_adapter.feature
-        - id: temporal_a
-          name: Temporal (workflows and workers)
-          features: >-
             features/temporal_adapter.feature
         - id: temporal_b
           name: Temporal (schedules, timeouts and errors)
           features: >-
             features/temporal_schedules_errors.feature
-        - id: minio
-          name: MinIO
+        - id: light_adapters
+          name: MinIO, Vault and email
           features: >-
             features/minio_adapter.feature
             features/fastapi_minio_upload.feature
-        - id: vault
-          name: Vault
-          features: >-
             features/vault_adapter.feature
-        - id: sql_postgres
-          name: SQL (PostgreSQL)
+            features/email_adapter.feature
+        - id: sql_postgres_mysql
+          name: SQL (PostgreSQL and MySQL)
           features: >-
             features/atomic_transactions_postgres.feature
-        - id: sql_mysql
-          name: SQL (MySQL)
-          features: >-
             features/atomic_transactions_mysql.feature
         - id: sql_starrocks
           name: SQL (StarRocks)
           features: >-
             features/atomic_transactions_starrocks.feature
-        - id: email
-          name: Email
-          features: >-
-            features/email_adapter.feature
-        - id: payment
-          name: Payment gateways
+        - id: unit
+          name: Unit tests (payment gateways, SQL core, Keycloak DTOs)
           features: >-
             features/parsian_ipg_adapter.feature
             features/saman_ipg_adapter.feature
+            features/sqlalchemy_multiple_databases.feature
+            features/database_error_classification.feature
+            features/keycloak_dtos.feature
+            features/keycloak_protocol_mapper_configs.feature
         - id: telemetry
           name: Telemetry
           features: >-
@@ -415,14 +392,11 @@ jobs:
           features: >-
             features/scylladb_adapter_apm.feature
             features/elastic_adapter_apm.feature
-        - id: apm_sql_postgres
-          name: Elastic APM (PostgreSQL and SQLite)
+        - id: apm_sql_postgres_mysql
+          name: Elastic APM (PostgreSQL, MySQL and SQLite)
           features: >-
             features/atomic_transactions_apm_postgres.feature
             features/atomic_transactions_apm_sqlite.feature
-        - id: apm_sql_mysql
-          name: Elastic APM (MySQL)
-          features: >-
             features/atomic_transactions_apm_mysql.feature
         - id: apm_sql_starrocks
           name: Elastic APM (StarRocks)
@@ -438,11 +412,6 @@ jobs:
           features: >-
             features/temporal_adapter_apm.feature
             features/keycloak_adapter_apm.feature
-        - id: sql_core
-          name: SQL (core)
-          features: >-
-            features/sqlalchemy_multiple_databases.feature
-            features/database_error_classification.feature
         - id: sqlite
           name: SQL (SQLite)
           features: >-
