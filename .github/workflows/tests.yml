@@ -283,106 +283,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Jobs start in this order and only about 16 run at once, so the slowest groups come first and the quick ones wait.
         # The core group runs every feature that no other group lists, so a new feature file is picked up without
         # touching this list.
         group:
-        - id: keycloak_adapter
-          name: Keycloak (realms, users and roles)
-          features: >-
-            features/keycloak_adapter.feature
-        - id: keycloak_tokens_groups
-          name: Keycloak (tokens, organizations, groups and scopes)
-          features: >-
-            features/keycloak_adapter_tokens_orgs.feature
-            features/keycloak_adapter_management.feature
-        - id: keycloak_clients_tokens
-          name: Keycloak (clients and keys)
-          features: >-
-            features/keycloak_adapter_clients_tokens.feature
-        - id: keycloak_mappers_envoy
-          name: Keycloak (authentication flows, mappers and Envoy guards)
-          features: >-
-            features/keycloak_adapter_authn_mappers.feature
-            features/keycloak_auth_guards_cache_envoy.feature
-        - id: keycloak_auth_guards
-          name: Keycloak (FastAPI auth guards)
-          features: >-
-            features/keycloak_auth_guards.feature
-        - id: keycloak_auth_guards_grpc
-          name: Keycloak (gRPC guards)
-          features: >-
-            features/keycloak_auth_guards_grpc.feature
-        - id: kafka_a
-          name: Kafka (admin, producers and consumers)
-          features: >-
-            features/kafka_adapters.feature
-        - id: kafka_b
-          name: Kafka (clients and spans)
-          features: >-
-            features/kafka_clients_spans.feature
-        - id: redis
-          name: Redis
-          features: >-
-            features/redis_adapter.feature
-            features/grpc_rate_limit.feature
-        - id: elasticsearch
-          name: Elasticsearch
-          features: >-
-            features/elastic_adapter.feature
-            features/elastic_apm_telemetry.feature
-        - id: temporal_scylla
-          name: Temporal and ScyllaDB
-          features: >-
-            features/temporal_schedules_errors.feature
-            features/scylladb_adapter.feature
-            features/temporal_adapter.feature
-        - id: light_sql
-          name: MinIO, Vault, email and SQL (PostgreSQL, MySQL, SQLite)
-          features: >-
-            features/minio_adapter.feature
-            features/fastapi_minio_upload.feature
-            features/vault_adapter.feature
-            features/email_adapter.feature
-            features/atomic_transactions_postgres.feature
-            features/atomic_transactions_mysql.feature
-            features/atomic_transactions_sqlite.feature
-        - id: sql_starrocks
-          name: SQL (StarRocks)
-          features: >-
-            features/atomic_transactions_starrocks.feature
-        - id: telemetry
-          name: Telemetry
-          features: >-
-            features/otel.feature
-            features/otel_configuration.feature
-        - id: apm_services
-          name: Elastic APM (Vault, MinIO, email, ScyllaDB and Elasticsearch)
-          features: >-
-            features/vault_adapter_apm.feature
-            features/minio_adapter_apm.feature
-            features/email_adapter_apm.feature
-            features/scylladb_adapter_apm.feature
-            features/elastic_adapter_apm.feature
-        - id: apm_sql
-          name: Elastic APM (PostgreSQL, MySQL and SQLite)
-          features: >-
-            features/atomic_transactions_apm_postgres.feature
-            features/atomic_transactions_apm_sqlite.feature
-            features/atomic_transactions_apm_mysql.feature
-        - id: apm_sql_starrocks
-          name: Elastic APM (StarRocks)
-          features: >-
-            features/atomic_transactions_apm_starrocks.feature
-        - id: apm_messaging
-          name: Elastic APM (Kafka and Redis)
-          features: >-
-            features/kafka_adapters_apm.feature
-            features/redis_adapter_apm.feature
-        - id: apm_workflows
-          name: Elastic APM (Temporal and Keycloak)
-          features: >-
-            features/temporal_adapter_apm.feature
-            features/keycloak_adapter_apm.feature
         - id: core
           name: Core, unit tests and utilities
           exclude: >-
@@ -426,6 +330,103 @@ jobs:
             features/redis_adapter_apm.feature
             features/keycloak_adapter_apm.feature
             features/temporal_adapter_apm.feature
+        - id: keycloak_tokens_groups
+          name: Keycloak (tokens, organizations, groups and scopes)
+          features: >-
+            features/keycloak_adapter_tokens_orgs.feature
+            features/keycloak_adapter_management.feature
+        - id: elasticsearch
+          name: Elasticsearch
+          features: >-
+            features/elastic_adapter.feature
+            features/elastic_apm_telemetry.feature
+        - id: apm_messaging
+          name: Elastic APM (Kafka and Redis)
+          features: >-
+            features/kafka_adapters_apm.feature
+            features/redis_adapter_apm.feature
+        - id: keycloak_auth_guards_grpc
+          name: Keycloak (gRPC guards)
+          features: >-
+            features/keycloak_auth_guards_grpc.feature
+        - id: apm_sql
+          name: Elastic APM (PostgreSQL, MySQL and SQLite)
+          features: >-
+            features/atomic_transactions_apm_postgres.feature
+            features/atomic_transactions_apm_sqlite.feature
+            features/atomic_transactions_apm_mysql.feature
+        - id: apm_sql_starrocks
+          name: Elastic APM (StarRocks)
+          features: >-
+            features/atomic_transactions_apm_starrocks.feature
+        - id: apm_services
+          name: Elastic APM (Vault, MinIO, email, ScyllaDB and Elasticsearch)
+          features: >-
+            features/vault_adapter_apm.feature
+            features/minio_adapter_apm.feature
+            features/email_adapter_apm.feature
+            features/scylladb_adapter_apm.feature
+            features/elastic_adapter_apm.feature
+        - id: kafka_a
+          name: Kafka (admin, producers and consumers)
+          features: >-
+            features/kafka_adapters.feature
+        - id: apm_workflows
+          name: Elastic APM (Temporal and Keycloak)
+          features: >-
+            features/temporal_adapter_apm.feature
+            features/keycloak_adapter_apm.feature
+        - id: kafka_b
+          name: Kafka (clients and spans)
+          features: >-
+            features/kafka_clients_spans.feature
+        - id: sql_starrocks
+          name: SQL (StarRocks)
+          features: >-
+            features/atomic_transactions_starrocks.feature
+        - id: keycloak_mappers_envoy
+          name: Keycloak (authentication flows, mappers and Envoy guards)
+          features: >-
+            features/keycloak_adapter_authn_mappers.feature
+            features/keycloak_auth_guards_cache_envoy.feature
+        - id: redis
+          name: Redis
+          features: >-
+            features/redis_adapter.feature
+            features/grpc_rate_limit.feature
+        - id: temporal_scylla
+          name: Temporal and ScyllaDB
+          features: >-
+            features/temporal_schedules_errors.feature
+            features/scylladb_adapter.feature
+            features/temporal_adapter.feature
+        - id: keycloak_clients_tokens
+          name: Keycloak (clients and keys)
+          features: >-
+            features/keycloak_adapter_clients_tokens.feature
+        - id: keycloak_adapter
+          name: Keycloak (realms, users and roles)
+          features: >-
+            features/keycloak_adapter.feature
+        - id: telemetry
+          name: Telemetry
+          features: >-
+            features/otel.feature
+            features/otel_configuration.feature
+        - id: keycloak_auth_guards
+          name: Keycloak (FastAPI auth guards)
+          features: >-
+            features/keycloak_auth_guards.feature
+        - id: light_sql
+          name: MinIO, Vault, email and SQL (PostgreSQL, MySQL, SQLite)
+          features: >-
+            features/minio_adapter.feature
+            features/fastapi_minio_upload.feature
+            features/vault_adapter.feature
+            features/email_adapter.feature
+            features/atomic_transactions_postgres.feature
+            features/atomic_transactions_mysql.feature
+            features/atomic_transactions_sqlite.feature
 
     steps:
     - uses: actions/checkout@v6
