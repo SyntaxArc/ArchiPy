@@ -113,14 +113,17 @@ jobs:
             - 'features/elastic_adapter_apm.feature'
           apm_sql:
             - 'packages/postgres/**'
+            - 'packages/mysql/**'
             - 'packages/sqlite/**'
             - 'archipy/adapters/base/sqlalchemy/**'
             - 'archipy/helpers/utils/_otel/**'
             - 'features/atomic_transactions_apm_postgres.feature'
             - 'features/atomic_transactions_apm_sqlite.feature'
-            - 'packages/mysql/**'
             - 'features/atomic_transactions_apm_mysql.feature'
+          apm_sql_starrocks:
             - 'packages/starrocks/**'
+            - 'archipy/adapters/base/sqlalchemy/**'
+            - 'archipy/helpers/utils/_otel/**'
             - 'features/atomic_transactions_apm_starrocks.feature'
           apm_messaging:
             - 'packages/kafka/**'
@@ -361,11 +364,14 @@ jobs:
             features/scylladb_adapter_apm.feature
             features/elastic_adapter_apm.feature
         - id: apm_sql
-          name: Elastic APM (SQL databases)
+          name: Elastic APM (PostgreSQL, MySQL and SQLite)
           features: >-
             features/atomic_transactions_apm_postgres.feature
             features/atomic_transactions_apm_sqlite.feature
             features/atomic_transactions_apm_mysql.feature
+        - id: apm_sql_starrocks
+          name: Elastic APM (StarRocks)
+          features: >-
             features/atomic_transactions_apm_starrocks.feature
         - id: apm_messaging
           name: Elastic APM (Kafka and Redis)
