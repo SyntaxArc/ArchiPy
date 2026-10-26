@@ -115,14 +115,23 @@ jobs:
             - 'features/scylladb_adapter_apm.feature'
             - 'features/email_adapter_apm.feature'
             - 'features/elastic_adapter_apm.feature'
-          apm_sql:
+          apm_sql_postgres:
             - 'packages/postgres/**'
-            - 'packages/mysql/**'
             - 'packages/sqlite/**'
+            - 'archipy/adapters/base/sqlalchemy/**'
+            - 'archipy/helpers/utils/_otel/**'
+            - 'features/atomic_transactions_apm_postgres.feature'
+            - 'features/atomic_transactions_apm_sqlite.feature'
+          apm_sql_mysql:
+            - 'packages/mysql/**'
+            - 'archipy/adapters/base/sqlalchemy/**'
+            - 'archipy/helpers/utils/_otel/**'
+            - 'features/atomic_transactions_apm_mysql.feature'
+          apm_sql_starrocks:
             - 'packages/starrocks/**'
             - 'archipy/adapters/base/sqlalchemy/**'
             - 'archipy/helpers/utils/_otel/**'
-            - 'features/atomic_transactions_apm.feature'
+            - 'features/atomic_transactions_apm_starrocks.feature'
           apm_messaging:
             - 'packages/kafka/**'
             - 'packages/redis/**'
@@ -202,7 +211,10 @@ jobs:
             - '!features/scylladb_adapter_apm.feature'
             - '!features/email_adapter_apm.feature'
             - '!features/elastic_adapter_apm.feature'
-            - '!features/atomic_transactions_apm.feature'
+            - '!features/atomic_transactions_apm_postgres.feature'
+            - '!features/atomic_transactions_apm_mysql.feature'
+            - '!features/atomic_transactions_apm_starrocks.feature'
+            - '!features/atomic_transactions_apm_sqlite.feature'
             - '!features/kafka_adapters_apm.feature'
             - '!features/redis_adapter_apm.feature'
             - '!features/keycloak_adapter_apm.feature'
@@ -372,10 +384,19 @@ jobs:
             features/scylladb_adapter_apm.feature
             features/email_adapter_apm.feature
             features/elastic_adapter_apm.feature
-        - id: apm_sql
-          name: Elastic APM (SQL databases)
+        - id: apm_sql_postgres
+          name: Elastic APM (PostgreSQL and SQLite)
           features: >-
-            features/atomic_transactions_apm.feature
+            features/atomic_transactions_apm_postgres.feature
+            features/atomic_transactions_apm_sqlite.feature
+        - id: apm_sql_mysql
+          name: Elastic APM (MySQL)
+          features: >-
+            features/atomic_transactions_apm_mysql.feature
+        - id: apm_sql_starrocks
+          name: Elastic APM (StarRocks)
+          features: >-
+            features/atomic_transactions_apm_starrocks.feature
         - id: apm_messaging
           name: Elastic APM (messaging and auth)
           features: >-
@@ -430,7 +451,10 @@ jobs:
             features/scylladb_adapter_apm.feature
             features/email_adapter_apm.feature
             features/elastic_adapter_apm.feature
-            features/atomic_transactions_apm.feature
+            features/atomic_transactions_apm_postgres.feature
+            features/atomic_transactions_apm_mysql.feature
+            features/atomic_transactions_apm_starrocks.feature
+            features/atomic_transactions_apm_sqlite.feature
             features/kafka_adapters_apm.feature
             features/redis_adapter_apm.feature
             features/keycloak_adapter_apm.feature
