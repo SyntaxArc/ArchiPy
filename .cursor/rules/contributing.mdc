@@ -38,6 +38,7 @@ Large findings: split the work into small PRs.
 
 - Several PRs may reference one issue. Use `Part of #N` in each PR and `Closes #N` only in the last one; list the chunks as a checklist in the issue.
 - Or split the finding into several issues, one per chunk, each closed by its own PR.
+- After each PR merges, update its issue: tick the checklist item, note the result (for example measured timings) and list the next chunk.
 
 Exception: changelog-only PRs need no issue.
 
