@@ -115,14 +115,16 @@ jobs:
           apm_services:
             - 'packages/vault/**'
             - 'packages/minio/**'
-            - 'packages/scylladb/**'
-            - 'packages/elasticsearch/**'
             - 'archipy/adapters/email/**'
             - 'archipy/helpers/utils/_otel/**'
             - 'features/vault_adapter_apm.feature'
             - 'features/minio_adapter_apm.feature'
-            - 'features/scylladb_adapter_apm.feature'
             - 'features/email_adapter_apm.feature'
+          apm_search:
+            - 'packages/scylladb/**'
+            - 'packages/elasticsearch/**'
+            - 'archipy/helpers/utils/_otel/**'
+            - 'features/scylladb_adapter_apm.feature'
             - 'features/elastic_adapter_apm.feature'
           apm_sql_postgres:
             - 'packages/postgres/**'
@@ -144,13 +146,15 @@ jobs:
           apm_messaging:
             - 'packages/kafka/**'
             - 'packages/redis/**'
-            - 'packages/keycloak/**'
-            - 'packages/temporal/**'
             - 'archipy/helpers/utils/_otel/**'
             - 'features/kafka_adapters_apm.feature'
             - 'features/redis_adapter_apm.feature'
-            - 'features/keycloak_adapter_apm.feature'
+          apm_workflows:
+            - 'packages/temporal/**'
+            - 'packages/keycloak/**'
+            - 'archipy/helpers/utils/_otel/**'
             - 'features/temporal_adapter_apm.feature'
+            - 'features/keycloak_adapter_apm.feature'
           sql_core:
             - 'archipy/adapters/base/sqlalchemy/**'
             - 'features/sqlalchemy_multiple_databases.feature'
@@ -401,12 +405,15 @@ jobs:
             features/otel.feature
             features/otel_configuration.feature
         - id: apm_services
-          name: Elastic APM (services)
+          name: Elastic APM (Vault, MinIO and email)
           features: >-
             features/vault_adapter_apm.feature
             features/minio_adapter_apm.feature
-            features/scylladb_adapter_apm.feature
             features/email_adapter_apm.feature
+        - id: apm_search
+          name: Elastic APM (ScyllaDB and Elasticsearch)
+          features: >-
+            features/scylladb_adapter_apm.feature
             features/elastic_adapter_apm.feature
         - id: apm_sql_postgres
           name: Elastic APM (PostgreSQL and SQLite)
@@ -422,12 +429,15 @@ jobs:
           features: >-
             features/atomic_transactions_apm_starrocks.feature
         - id: apm_messaging
-          name: Elastic APM (messaging and auth)
+          name: Elastic APM (Kafka and Redis)
           features: >-
             features/kafka_adapters_apm.feature
             features/redis_adapter_apm.feature
-            features/keycloak_adapter_apm.feature
+        - id: apm_workflows
+          name: Elastic APM (Temporal and Keycloak)
+          features: >-
             features/temporal_adapter_apm.feature
+            features/keycloak_adapter_apm.feature
         - id: sql_core
           name: SQL (core)
           features: >-
