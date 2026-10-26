@@ -1,0 +1,73 @@
+area:elasticsearch:
+  - changed-files:
+      - any-glob-to-any-file: "packages/elasticsearch/**"
+area:kafka:
+  - changed-files:
+      - any-glob-to-any-file: "packages/kafka/**"
+area:keycloak:
+  - changed-files:
+      - any-glob-to-any-file: "packages/keycloak/**"
+area:minio:
+  - changed-files:
+      - any-glob-to-any-file: "packages/minio/**"
+area:mysql:
+  - changed-files:
+      - any-glob-to-any-file: "packages/mysql/**"
+area:parsian-ipg:
+  - changed-files:
+      - any-glob-to-any-file: "packages/parsian-ipg/**"
+area:postgres:
+  - changed-files:
+      - any-glob-to-any-file: "packages/postgres/**"
+area:redis:
+  - changed-files:
+      - any-glob-to-any-file: "packages/redis/**"
+area:saman-ipg:
+  - changed-files:
+      - any-glob-to-any-file: "packages/saman-ipg/**"
+area:scylladb:
+  - changed-files:
+      - any-glob-to-any-file: "packages/scylladb/**"
+area:sqlite:
+  - changed-files:
+      - any-glob-to-any-file: "packages/sqlite/**"
+area:starrocks:
+  - changed-files:
+      - any-glob-to-any-file: "packages/starrocks/**"
+area:temporal:
+  - changed-files:
+      - any-glob-to-any-file: "packages/temporal/**"
+area:vault:
+  - changed-files:
+      - any-glob-to-any-file: "packages/vault/**"
+area:email:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "archipy/adapters/email/**"
+area:models:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "archipy/models/**"
+area:configs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "archipy/configs/**"
+area:helpers:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "archipy/helpers/**"
+area:testing:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "features/**"
+          - "scripts/**"
+area:ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "**/*.md"
+          - "**/*.mdc"
