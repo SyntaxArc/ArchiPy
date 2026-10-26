@@ -118,7 +118,7 @@ jobs:
             - '!LICENSE'
             - '!mkdocs.yml'
             - '!.github/ISSUE_TEMPLATE/**'
-            - '!.github/workflows/{bandit,close-stale-issues,deploy-docs,docs-check,instrumentor-compat,publish,ruff-lint,ty-lint}.yml'
+            - '!.github/workflows/{close-stale-issues,deploy-docs,docs-check,instrumentor-compat,publish,ruff-lint,ty-lint}.yml'
             - '!packages/keycloak/**'
             - '!packages/kafka/**'
             - '!packages/redis/**'
