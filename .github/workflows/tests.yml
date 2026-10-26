@@ -118,11 +118,13 @@ jobs:
             - 'features/keycloak_adapter_apm.feature'
             - 'features/temporal_adapter_apm.feature'
           sql_core:
+            - 'archipy/adapters/base/sqlalchemy/**'
+            - 'features/sqlalchemy_multiple_databases.feature'
+            - 'features/database_error_classification.feature'
+          sqlite:
             - 'packages/sqlite/**'
             - 'archipy/adapters/base/sqlalchemy/**'
             - 'features/atomic_transactions_sqlite.feature'
-            - 'features/sqlalchemy_multiple_databases.feature'
-            - 'features/database_error_classification.feature'
           core:
             - 'features/app_utils.feature'
             - 'features/base_config.feature'
@@ -340,11 +342,14 @@ jobs:
             features/keycloak_adapter_apm.feature
             features/temporal_adapter_apm.feature
         - id: sql_core
-          name: SQL (SQLite and core)
+          name: SQL (core)
           features: >-
-            features/atomic_transactions_sqlite.feature
             features/sqlalchemy_multiple_databases.feature
             features/database_error_classification.feature
+        - id: sqlite
+          name: SQL (SQLite)
+          features: >-
+            features/atomic_transactions_sqlite.feature
         - id: core
           name: Core and utilities
           exclude: >-
