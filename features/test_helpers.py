@@ -142,3 +142,12 @@ def create_test_workflow_id(prefix: str = "test") -> str:
     timestamp = int(time.time() * 1000)
     unique_id = str(uuid4())[:8]
     return f"{prefix}-{timestamp}-{unique_id}"
+
+
+def realm_issuer(server_url: str, realm: str) -> str:
+    """Return the issuer a realm advertises, which follows the configured Keycloak hostname rather than ``server_url``."""
+    import requests
+
+    response = requests.get(f"{server_url.rstrip('/')}/realms/{realm}/.well-known/openid-configuration", timeout=30)
+    response.raise_for_status()
+    return response.json()["issuer"]
