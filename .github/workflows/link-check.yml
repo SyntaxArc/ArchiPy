@@ -1,0 +1,26 @@
+name: Link check
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - '.github/workflows/link-check.yml'
+  schedule:
+    - cron: "0 4 * * 1"  # Mondays at 4:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  link-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --max-retries 2 --accept 200,429 --exclude 'localhost' --exclude '127\.0\.0\.1' 'README.md' 'docs/**/*.md'
+          fail: true

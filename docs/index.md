@@ -11,7 +11,7 @@ description: Introduction to ArchiPy and installation guide for the framework an
 [![Python versions](https://img.shields.io/pypi/pyversions/archipy)](https://pypi.org/project/archipy/)
 [![License](https://img.shields.io/pypi/l/archipy)](community/license.md)
 [![Downloads](https://img.shields.io/pypi/dm/archipy)](https://pypi.org/project/archipy/)
-[![CI](https://github.com/SyntaxArc/ArchiPy/actions/workflows/ci.yml/badge.svg)](https://github.com/SyntaxArc/ArchiPy/actions)
+[![CI](https://github.com/SyntaxArc/ArchiPy/actions/workflows/tests.yml/badge.svg)](https://github.com/SyntaxArc/ArchiPy/actions)
 [![GitHub Stars](https://img.shields.io/github/stars/SyntaxArc/ArchiPy?style=social)](https://github.com/SyntaxArc/ArchiPy)
 
 ArchiPy is a Python framework that provides standardized, scalable building blocks for modern applications.
