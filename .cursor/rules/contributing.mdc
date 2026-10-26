@@ -39,6 +39,16 @@ Large findings: split the work into small PRs.
 - Several PRs may reference one issue. Use `Part of #N` in each PR and `Closes #N` only in the last one; list the chunks as a checklist in the issue.
 - Or split the finding into several issues, one per chunk, each closed by its own PR.
 - After each PR merges, update its issue: tick the checklist item, note the result (for example measured timings) and list the next chunk.
+- Put `Closes #N`, `Fixes #N`, `Resolves #N` or `Part of #N` in the PR description: when the PR merges, `.github/workflows/pr-merged-issue-comment.yml` comments with the PR link on every issue it names. Ticking the checklist and noting results stay manual.
+
+## Labels
+
+Label every issue and PR (`gh issue create --label ...`, `gh pr create --label ...`); list them with `gh label list`.
+
+- **Type** (one): `bug`, `enhancement`, `documentation`, `refactor`, `security`; add `breaking-change` when public behavior changes.
+- **Area** (one or more): `area:<package>` for an adapter package (`area:kafka`, `area:redis`, ...), or `area:models`, `area:configs`, `area:helpers`, `area:testing`, `area:ci`.
+- **Priority** (issues): `priority:high`, `priority:medium` or `priority:low`.
+- A PR gets the labels of the issue it closes or is part of.
 
 Exception: changelog-only PRs need no issue.
 
