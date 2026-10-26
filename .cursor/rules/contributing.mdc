@@ -34,6 +34,8 @@ Canonical owner for day-to-day git collaboration. Changelog format: `changelog.m
 3. Open a PR that closes the issue (`Closes #N`).
 4. Merge the PR once checks pass (`gh pr merge`).
 
+Exception: changelog-only PRs need no issue.
+
 ## Required checks before ask-to-merge
 
 Prefer locally:
