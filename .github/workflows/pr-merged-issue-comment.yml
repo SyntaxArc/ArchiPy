@@ -1,0 +1,33 @@
+name: Comment on issues after a merge
+
+on:
+  # pull_request_target gives a token that can write to issues for pull requests from forks too. Nothing from the pull
+  # request is checked out or run: only its number, title, URL and body are read, through environment variables.
+  pull_request_target:
+    types: [closed]
+
+jobs:
+  comment:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      pull-requests: read
+    steps:
+    - name: Comment on the issues the pull request refers to
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        PR_URL: ${{ github.event.pull_request.html_url }}
+        PR_TITLE: ${{ github.event.pull_request.title }}
+        PR_BODY: ${{ github.event.pull_request.body }}
+      run: |
+        # "Closes #1", "Fixes #2", "Resolves #3" and "Part of #4" in the pull request description.
+        printf '%s' "$PR_BODY" \
+          | grep -oiE '(part of|closes|fixes|resolves) #[0-9]+' \
+          | grep -oE '[0-9]+$' \
+          | sort -un \
+          | while read -r issue; do
+              gh issue comment "$issue" --repo "$REPO" --body "Merged $PR_URL: $PR_TITLE"
+            done
