@@ -1,5 +1,5 @@
 # features/keycloak_auth.feature
-@needs-keycloak @needs-otel-collector @needs-apm-server @needs-apm-collector
+@needs-keycloak @needs-envoy @needs-otel-collector @needs-apm-server @needs-apm-collector
 Feature: Keycloak Authentication Testing
   As a developer
   I want to test Keycloak authentication operations
@@ -7,33 +7,37 @@ Feature: Keycloak Authentication Testing
 
   @realms
   Scenario Outline: Basic realm and client operations
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     When I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     Then the <adapter_type> realm creation should succeed
     And the realm "<realm_name>" should exist
     And the realm should have display name "<realm_display_name>"
 
     Examples:
-      | adapter_type | realm_name       | realm_display_name | client_name       |
-      | sync         | test-realm       | Test Realm         | test-client       |
-      | async        | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | test-realm             | Test Realm         | test-client       | direct |
+      | async        | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @realms
   Scenario Outline: Realm update
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And the <adapter_type> realm creation should succeed
     When I update the realm "<realm_name>" display name to "<new_display_name>" using <adapter_type> adapter
     Then the realm "<realm_name>" should have display name "<new_display_name>"
 
     Examples:
-      | adapter_type | realm_name         | realm_display_name | new_display_name   |
-      | sync         | update-realm       | Original           | Updated Display    |
-      | async        | async-update-realm | Async Original     | Async Updated Name |
+      | adapter_type | realm_name               | realm_display_name | new_display_name   | via    |
+      | sync         | update-realm             | Original           | Updated Display    | direct |
+      | async        | async-update-realm       | Async Original     | Async Updated Name | direct |
+      | sync         | update-realm-envoy       | Original           | Updated Display    | envoy  |
+      | async        | async-update-realm-envoy | Async Original     | Async Updated Name | envoy  |
 
   @tokens
   Scenario Outline: User authentication flow
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     When I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -43,13 +47,15 @@ Feature: Keycloak Authentication Testing
     And the <adapter_type> token response should contain "access_token" and "refresh_token"
 
     Examples:
-      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @tokens
   Scenario Outline: Token operations
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -59,13 +65,15 @@ Feature: Keycloak Authentication Testing
     And the <adapter_type> token response should contain "access_token" and "refresh_token"
 
     Examples:
-      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @users
   Scenario Outline: User information operations
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -75,13 +83,15 @@ Feature: Keycloak Authentication Testing
     And the <adapter_type> user info should contain "sub" and "preferred_username"
 
     Examples:
-      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @tokens
   Scenario Outline: Token validation
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -90,13 +100,15 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> token validation should succeed
 
     Examples:
-      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @users
   Scenario Outline: User retrieval operations
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -105,13 +117,15 @@ Feature: Keycloak Authentication Testing
     And the user should have username "<username>"
 
     Examples:
-      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @users
   Scenario Outline: Email-based user retrieval
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user including username "<username>" email "<email>" and password "<password>" using <adapter_type> adapter
@@ -120,13 +134,15 @@ Feature: Keycloak Authentication Testing
     And the user should have email "<email>"
 
     Examples:
-      | adapter_type | username  | email             | password | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | test@example.com  | pass123  | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async@example.com | async123 | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | email             | password | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | test@example.com  | pass123  | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async@example.com | async123 | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | test@example.com  | pass123  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async@example.com | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @roles
   Scenario Outline: Realm role management
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -137,13 +153,15 @@ Feature: Keycloak Authentication Testing
     And the user "<username>" should have realm role "<role_name>"
 
     Examples:
-      | adapter_type | username  | password | role_name       | role_description | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | role_name       | role_description | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @roles
   Scenario Outline: Client role management
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -154,13 +172,15 @@ Feature: Keycloak Authentication Testing
     And the user "<username>" should have client role "<client_role_name>" for client "<client_name>"
 
     Examples:
-      | adapter_type | username  | password | client_role_name  | client_role_description | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | client-role       | Client Role             | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | async-client-role | Async Client Role       | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | client_role_name  | client_role_description | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | client-role       | Client Role             | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | async-client-role | Async Client Role       | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | client-role       | Client Role             | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | async-client-role | Async Client Role       | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @users
   Scenario Outline: User search operations
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<search_user1>" and password "<password>" using <adapter_type> adapter
@@ -170,13 +190,15 @@ Feature: Keycloak Authentication Testing
     And the search results should contain 2 users
 
     Examples:
-      | adapter_type | search_user1   | search_user2   | search_query  | password | realm_name       | realm_display_name | client_name       |
-      | sync         | searchuser1    | searchuser2    | searchuser    | pass123  | test-realm       | Test Realm         | test-client       |
-      | async        | asynctestuser4 | asynctestuser5 | asynctestuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | search_user1   | search_user2   | search_query  | password | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | searchuser1    | searchuser2    | searchuser    | pass123  | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asynctestuser4 | asynctestuser5 | asynctestuser | async123 | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | searchuser1    | searchuser2    | searchuser    | pass123  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asynctestuser4 | asynctestuser5 | asynctestuser | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @users
   Scenario Outline: User update operations
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -185,13 +207,15 @@ Feature: Keycloak Authentication Testing
     And the user "<username>" should have first name "<first_name>" and last name "<last_name>"
 
     Examples:
-      | adapter_type | username  | password | first_name | last_name | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | John       | Doe       | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | Async      | User      | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | first_name | last_name | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | John       | Doe       | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | Async      | User      | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | John       | Doe       | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | Async      | User      | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @users
   Scenario Outline: Password reset operations
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -200,13 +224,15 @@ Feature: Keycloak Authentication Testing
     And I should be able to get token with username "<username>" and password "<new_password>" using <adapter_type> adapter
 
     Examples:
-      | adapter_type | username  | password | new_password | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | newpass456   | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | newasync456  | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | new_password | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | newpass456   | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | newasync456  | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | newpass456   | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | newasync456  | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @users
   Scenario Outline: Session management
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -215,13 +241,15 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> session clearing should succeed
 
     Examples:
-      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @tokens
   Scenario Outline: Logout operations
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -230,13 +258,15 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> logout operation should succeed
 
     Examples:
-      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @tokens
   Scenario Outline: Client credentials token
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     When I request client credentials token using <adapter_type> adapter
@@ -244,13 +274,15 @@ Feature: Keycloak Authentication Testing
     And the <adapter_type> token response should contain "access_token"
 
     Examples:
-      | adapter_type | realm_name       | realm_display_name | client_name       |
-      | sync         | test-realm       | Test Realm         | test-client       |
-      | async        | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | test-realm             | Test Realm         | test-client       | direct |
+      | async        | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @tokens
   Scenario Outline: Token introspection
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -260,13 +292,15 @@ Feature: Keycloak Authentication Testing
     And the introspection result should indicate active token
 
     Examples:
-      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @tokens
   Scenario Outline: Token info retrieval
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -276,13 +310,15 @@ Feature: Keycloak Authentication Testing
     And the token info should contain user claims
 
     Examples:
-      | adapter_type | username  | password | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @roles
   Scenario Outline: Role permission checking
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -294,13 +330,15 @@ Feature: Keycloak Authentication Testing
     And the user should have the role "<role_name>"
 
     Examples:
-      | adapter_type | username  | password | role_name       | role_description | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | role_name       | role_description | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @roles
   Scenario Outline: Role removal operations
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -311,13 +349,15 @@ Feature: Keycloak Authentication Testing
     And the user "<username>" should not have realm role "<role_name>"
 
     Examples:
-      | adapter_type | username  | password | role_name       | role_description | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | role_name       | role_description | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser  | pass123  | test-role       | Test Role        | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser | async123 | async-test-role | Async Test Role  | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @users
   Scenario Outline: User deletion operations
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -326,13 +366,15 @@ Feature: Keycloak Authentication Testing
     And the user "<username>" should not exist
 
     Examples:
-      | adapter_type | username   | password | realm_name       | realm_display_name | client_name       |
-      | sync         | testuser   | pass123  | test-realm       | Test Realm         | test-client       |
-      | async        | asyncuser6 | async123 | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username   | password | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | testuser   | pass123  | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncuser6 | async123 | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | testuser   | pass123  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncuser6 | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @organizations
   Scenario Outline: Organization create get update and delete
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I enable organization of realm named "<realm_name>"
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
@@ -351,13 +393,15 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> organization deletion should succeed
 
     Examples:
-      | adapter_type | org_name       | org_alias       | org_display_name  | realm_name | realm_display_name | client_name       |
-      | sync         | test-org       | test-org-alias  | Test Org Display  | test-realm | Test Realm         | test-client       |
-      | async        | async-test-org | async-org-alias | Async Org Display | test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | org_name       | org_alias       | org_display_name  | realm_name       | realm_display_name | client_name       | via    |
+      | sync         | test-org       | test-org-alias  | Test Org Display  | test-realm       | Test Realm         | test-client       | direct |
+      | async        | async-test-org | async-org-alias | Async Org Display | test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | test-org       | test-org-alias  | Test Org Display  | test-realm-envoy | Test Realm         | test-client       | envoy  |
+      | async        | async-test-org | async-org-alias | Async Org Display | test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @organizations
   Scenario Outline: Organization members add and remove
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I enable organization of realm named "<realm_name>"
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
@@ -377,13 +421,15 @@ Feature: Keycloak Authentication Testing
     Then the user organizations list should not contain organization "<org_name>"
 
     Examples:
-      | adapter_type | username     | password | org_name   | org_alias    | realm_name | realm_display_name | client_name       |
-      | sync         | orguser      | pass123  | test-org1  | test-alias1  | test-realm | Test Realm         | test-client       |
-      | async        | asyncorguser | async123 | async-org1 | async-alias1 | test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username     | password | org_name   | org_alias    | realm_name       | realm_display_name | client_name       | via    |
+      | sync         | orguser      | pass123  | test-org1  | test-alias1  | test-realm       | Test Realm         | test-client       | direct |
+      | async        | asyncorguser | async123 | async-org1 | async-alias1 | test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | orguser      | pass123  | test-org1  | test-alias1  | test-realm-envoy | Test Realm         | test-client       | envoy  |
+      | async        | asyncorguser | async123 | async-org1 | async-alias1 | test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @organizations
   Scenario Outline: Organization identity providers, counts, members and invitations
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I enable organization of realm named "<realm_name>"
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
@@ -401,13 +447,15 @@ Feature: Keycloak Authentication Testing
     And the organization has no invitations and an unknown invitation is not found using <adapter_type> adapter
 
     Examples:
-      | adapter_type | username       | password | org_name   | org_alias    | idp_alias | realm_name | realm_display_name | client_name       |
-      | sync         | orgextrauser   | pass123  | extra-org  | extra-alias  | ext-idp   | test-realm | Test Realm         | test-client       |
-      | async        | asyncextrauser | async123 | aextra-org | aextra-alias | aext-idp  | test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username       | password | org_name   | org_alias    | idp_alias | realm_name       | realm_display_name | client_name       | via    |
+      | sync         | orgextrauser   | pass123  | extra-org  | extra-alias  | ext-idp   | test-realm       | Test Realm         | test-client       | direct |
+      | async        | asyncextrauser | async123 | aextra-org | aextra-alias | aext-idp  | test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | orgextrauser   | pass123  | extra-org  | extra-alias  | ext-idp   | test-realm-envoy | Test Realm         | test-client       | envoy  |
+      | async        | asyncextrauser | async123 | aextra-org | aextra-alias | aext-idp  | test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @organizations
   Scenario Outline: Organization groups, group members and role mappings
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I enable organization of realm named "<realm_name>"
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
@@ -422,13 +470,15 @@ Feature: Keycloak Authentication Testing
     Then the organization group was renamed, emptied and no longer exists using <adapter_type> adapter
 
     Examples:
-      | adapter_type | username      | password | org_name | org_alias  | group_name | child_name | realm_name | realm_display_name | client_name       |
-      | sync         | orggroupuser  | pass123  | grp-org  | grp-alias  | team       | team-sub   | test-realm | Test Realm         | test-client       |
-      | async        | aorggroupuser | async123 | agrp-org | agrp-alias | ateam      | ateam-sub  | test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username      | password | org_name | org_alias  | group_name | child_name | realm_name       | realm_display_name | client_name       | via    |
+      | sync         | orggroupuser  | pass123  | grp-org  | grp-alias  | team       | team-sub   | test-realm       | Test Realm         | test-client       | direct |
+      | async        | aorggroupuser | async123 | agrp-org | agrp-alias | ateam      | ateam-sub  | test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | orggroupuser  | pass123  | grp-org  | grp-alias  | team       | team-sub   | test-realm-envoy | Test Realm         | test-client       | envoy  |
+      | async        | aorggroupuser | async123 | agrp-org | agrp-alias | ateam      | ateam-sub  | test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @roles
   Scenario Outline: Roles addressed by id with composites and management permissions
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a realm role named "<role>" with description "Parent" using <adapter_type> adapter
@@ -440,13 +490,15 @@ Feature: Keycloak Authentication Testing
     Then the composite was removed and the role no longer exists by id using <adapter_type> adapter
 
     Examples:
-      | adapter_type | role         | child       | realm_name | realm_display_name | client_name       |
-      | sync         | parent-role  | child-role  | test-realm | Test Realm         | test-client       |
-      | async        | aparent-role | achild-role | test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | role         | child       | realm_name       | realm_display_name | client_name       | via    |
+      | sync         | parent-role  | child-role  | test-realm       | Test Realm         | test-client       | direct |
+      | async        | aparent-role | achild-role | test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | parent-role  | child-role  | test-realm-envoy | Test Realm         | test-client       | envoy  |
+      | async        | aparent-role | achild-role | test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @roles
   Scenario Outline: Role mappings of users and groups and scope mappings of clients and client scopes
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -456,13 +508,15 @@ Feature: Keycloak Authentication Testing
     And the client scope "<scope>" and the client map scopes to the realm and client roles using <adapter_type> adapter
 
     Examples:
-      | adapter_type | username     | password | realm_role | client_role | group      | scope      | realm_name | realm_display_name | client_name |
-      | sync         | mapuser      | pass123  | map-rrole  | map-crole   | map-group  | map-scope  | test-realm | Test Realm         | map-client  |
-      | async        | asyncmapuser | async123 | amap-rrole | amap-crole  | amap-group | amap-scope | test-realm | Async Test Realm   | amap-client |
+      | adapter_type | username     | password | realm_role | client_role | group      | scope      | realm_name       | realm_display_name | client_name | via    |
+      | sync         | mapuser      | pass123  | map-rrole  | map-crole   | map-group  | map-scope  | test-realm       | Test Realm         | map-client  | direct |
+      | async        | asyncmapuser | async123 | amap-rrole | amap-crole  | amap-group | amap-scope | test-realm       | Async Test Realm   | amap-client | direct |
+      | sync         | mapuser      | pass123  | map-rrole  | map-crole   | map-group  | map-scope  | test-realm-envoy | Test Realm         | map-client  | envoy  |
+      | async        | asyncmapuser | async123 | amap-rrole | amap-crole  | amap-group | amap-scope | test-realm-envoy | Async Test Realm   | amap-client | envoy  |
 
   @groups
   Scenario Outline: Group CRUD hierarchy membership and roles
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -517,13 +571,15 @@ Feature: Keycloak Authentication Testing
     Then deleting the parent group with the <adapter_type> adapter should succeed
 
     Examples:
-      | adapter_type | username  | password | group_name  | realm_name       | realm_display_name | client_name       |
-      | sync         | groupuser | pass123  | test-group  | test-realm       | Test Realm         | test-client       |
-      | async        | asyncgrp  | async123 | async-group | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username  | password | group_name  | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | groupuser | pass123  | test-group  | test-realm             | Test Realm         | test-client       | direct |
+      | async        | asyncgrp  | async123 | async-group | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | groupuser | pass123  | test-group  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | asyncgrp  | async123 | async-group | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @authflows
   Scenario Outline: Create and manage authentication flows
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     When I create a coverage authentication flow using <adapter_type> adapter
@@ -567,13 +623,15 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> authentication flow deletion should succeed
 
     Examples:
-      | adapter_type | realm_name       | realm_display_name | client_name       |
-      | sync         | test-realm       | Test Realm         | test-client       |
-      | async        | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | test-realm             | Test Realm         | test-client       | direct |
+      | async        | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @clientscopes
   Scenario Outline: Client scope CRUD mappers and assignments
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     When I create a coverage client scope using <adapter_type> adapter
@@ -632,13 +690,15 @@ Feature: Keycloak Authentication Testing
     Then deleting the coverage client scope with the <adapter_type> adapter should succeed
 
     Examples:
-      | adapter_type | realm_name       | realm_display_name | client_name       |
-      | sync         | test-realm       | Test Realm         | test-client       |
-      | async        | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | test-realm             | Test Realm         | test-client       | direct |
+      | async        | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @authz
   Scenario Outline: Authorization settings retrieval
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I enable authorization services for client "<client_name>" using <adapter_type> adapter
@@ -646,13 +706,15 @@ Feature: Keycloak Authentication Testing
     Then the <adapter_type> authorization settings request should succeed
 
     Examples:
-      | adapter_type | realm_name       | realm_display_name | client_name       |
-      | sync         | test-realm       | Test Realm         | test-client       |
-      | async        | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | test-realm             | Test Realm         | test-client       | direct |
+      | async        | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @authz
   Scenario Outline: Authorization resources scopes policies and permissions
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I enable authorization services for client "<client_name>" using <adapter_type> adapter
@@ -668,13 +730,15 @@ Feature: Keycloak Authentication Testing
     Then the policy "self" and resource "report" of client "<client_name>" no longer exist using <adapter_type> adapter
 
     Examples:
-      | adapter_type | realm_name       | realm_display_name | client_name       |
-      | sync         | test-realm       | Test Realm         | test-client       |
-      | async        | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | test-realm             | Test Realm         | test-client       | direct |
+      | async        | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @uma
   Scenario Outline: UMA resource sets policies and permission tickets
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I enable authorization services for client "<client_name>" using <adapter_type> adapter
@@ -688,27 +752,33 @@ Feature: Keycloak Authentication Testing
     Then the UMA resource set "docs" no longer exists using <adapter_type> adapter
 
     Examples:
-      | adapter_type | realm_name       | realm_display_name | client_name       |
-      | sync         | test-realm       | Test Realm         | test-client       |
-      | async        | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | test-realm             | Test Realm         | test-client       | direct |
+      | async        | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @realms
   Scenario Outline: Keycloak rejects unknown fields in <kind> payloads
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "test-realm" with display name "Test Realm" using <adapter_type> adapter
     When I send a <kind> payload with the unknown field "typoField" to Keycloak using <adapter_type> adapter
     Then Keycloak rejects the payload as invalid and names the field "typoField"
 
     Examples:
-      | adapter_type | kind  |
-      | sync         | group |
-      | sync         | user  |
-      | sync         | realm |
-      | async        | group |
+      | adapter_type | kind  | via    |
+      | sync         | group | direct |
+      | sync         | user  | direct |
+      | sync         | realm | direct |
+      | async        | group | direct |
+      | sync         | group | envoy  |
+      | sync         | user  | envoy  |
+      | sync         | realm | envoy  |
+      | async        | group | envoy  |
 
   @users
   Scenario Outline: User counts, credentials, groups, federated identities, sessions and profile
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -721,13 +791,15 @@ Feature: Keycloak Authentication Testing
     And the email actions for user "<username>" reach Keycloak and report the missing SMTP setup using <adapter_type> adapter
 
     Examples:
-      | adapter_type | username      | password | group      | idp_alias | external | realm_name | realm_display_name | client_name       |
-      | sync         | usrextra      | pass123  | extra-grp  | usr-idp   | usrext   | test-realm | Test Realm         | test-client       |
-      | async        | asyncusrextra | async123 | aextra-grp | ausr-idp  | ausrext  | test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | username      | password | group      | idp_alias | external | realm_name       | realm_display_name | client_name       | via    |
+      | sync         | usrextra      | pass123  | extra-grp  | usr-idp   | usrext   | test-realm       | Test Realm         | test-client       | direct |
+      | async        | asyncusrextra | async123 | aextra-grp | ausr-idp  | ausrext  | test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | usrextra      | pass123  | extra-grp  | usr-idp   | usrext   | test-realm-envoy | Test Realm         | test-client       | envoy  |
+      | async        | asyncusrextra | async123 | aextra-grp | ausr-idp  | ausrext  | test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @clients
   Scenario Outline: Clients by UUID with secrets, evaluation, sessions and nodes
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     When I list, read and update the client "<client_name>" by its UUID using <adapter_type> adapter
@@ -739,13 +811,15 @@ Feature: Keycloak Authentication Testing
     Then the deleted client is no longer found using <adapter_type> adapter
 
     Examples:
-      | adapter_type | realm_name | realm_display_name | client_name        |
-      | sync         | test-realm | Test Realm         | extra-client       |
-      | async        | test-realm | Async Test Realm   | async-extra-client |
+      | adapter_type | realm_name       | realm_display_name | client_name        | via    |
+      | sync         | test-realm       | Test Realm         | extra-client       | direct |
+      | async        | test-realm       | Async Test Realm   | async-extra-client | direct |
+      | sync         | test-realm-envoy | Test Realm         | extra-client       | envoy  |
+      | async        | test-realm-envoy | Async Test Realm   | async-extra-client | envoy  |
 
   @realms
   Scenario Outline: Realm administration with events, policies, localization, import and deletion
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     Then the realm "<realm_name>" is listed and its event settings, client policies, profiles and types round-trip using <adapter_type> adapter
@@ -755,13 +829,15 @@ Feature: Keycloak Authentication Testing
     And the realm "<realm_name>" deletes a session, reports SMTP and permission settings and can be deleted using <adapter_type> adapter
 
     Examples:
-      | adapter_type | realm_name        | realm_display_name | client_name         |
-      | sync         | realm-admin-sync  | Realm Admin Sync   | realm-admin-client  |
-      | async        | realm-admin-async | Realm Admin Async  | realm-admin-aclient |
+      | adapter_type | realm_name              | realm_display_name | client_name         | via    |
+      | sync         | realm-admin-sync        | Realm Admin Sync   | realm-admin-client  | direct |
+      | async        | realm-admin-async       | Realm Admin Async  | realm-admin-aclient | direct |
+      | sync         | realm-admin-sync-envoy  | Realm Admin Sync   | realm-admin-client  | envoy  |
+      | async        | realm-admin-async-envoy | Realm Admin Async  | realm-admin-aclient | envoy  |
 
   @realms
   Scenario Outline: Realm keys, attack detection, initial access tokens and client certificates
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -771,26 +847,30 @@ Feature: Keycloak Authentication Testing
     And the client "<client_name>" generates and downloads a certificate using <adapter_type> adapter
 
     Examples:
-      | adapter_type | username      | password | realm_name | realm_display_name | client_name  |
-      | sync         | miscuser      | pass123  | test-realm | Test Realm         | misc-client  |
-      | async        | asyncmiscuser | async123 | test-realm | Async Test Realm   | amisc-client |
+      | adapter_type | username      | password | realm_name       | realm_display_name | client_name  | via    |
+      | sync         | miscuser      | pass123  | test-realm       | Test Realm         | misc-client  | direct |
+      | async        | asyncmiscuser | async123 | test-realm       | Async Test Realm   | amisc-client | direct |
+      | sync         | miscuser      | pass123  | test-realm-envoy | Test Realm         | misc-client  | envoy  |
+      | async        | asyncmiscuser | async123 | test-realm-envoy | Async Test Realm   | amisc-client | envoy  |
 
   @realms
   Scenario Outline: Identity providers with mappers
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     When I create the identity provider "<idp_alias>" with a mapper "<mapper>" using <adapter_type> adapter
     Then the identity provider "<idp_alias>" and its mapper "<mapper>" are listed, read, updated and deleted using <adapter_type> adapter
 
     Examples:
-      | adapter_type | idp_alias | mapper     | realm_name | realm_display_name | client_name |
-      | sync         | idp-main  | role-sync  | test-realm | Test Realm         | idp-client  |
-      | async        | aidp-main | arole-sync | test-realm | Async Test Realm   | aidp-client |
+      | adapter_type | idp_alias | mapper     | realm_name       | realm_display_name | client_name | via    |
+      | sync         | idp-main  | role-sync  | test-realm       | Test Realm         | idp-client  | direct |
+      | async        | aidp-main | arole-sync | test-realm       | Async Test Realm   | aidp-client | direct |
+      | sync         | idp-main  | role-sync  | test-realm-envoy | Test Realm         | idp-client  | envoy  |
+      | async        | aidp-main | arole-sync | test-realm-envoy | Async Test Realm   | aidp-client | envoy  |
 
   @tokens
   Scenario Outline: Token exchange and the JWT authorization grant
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a user with username "<username>" and password "<password>" using <adapter_type> adapter
@@ -800,13 +880,15 @@ Feature: Keycloak Authentication Testing
     Then a JWT signed by the external issuer is traded for an access token using <adapter_type> adapter
 
     Examples:
-      | adapter_type | username      | password | external | realm_name | realm_display_name | client_name      |
-      | sync         | exchuser      | pass123  | exchext  | test-realm | Test Realm         | exchange-client  |
-      | async        | asyncexchuser | async123 | aexchext | test-realm | Async Test Realm   | aexchange-client |
+      | adapter_type | username      | password | external | realm_name       | realm_display_name | client_name      | via    |
+      | sync         | exchuser      | pass123  | exchext  | test-realm       | Test Realm         | exchange-client  | direct |
+      | async        | asyncexchuser | async123 | aexchext | test-realm       | Async Test Realm   | aexchange-client | direct |
+      | sync         | exchuser      | pass123  | exchext  | test-realm-envoy | Test Realm         | exchange-client  | envoy  |
+      | async        | asyncexchuser | async123 | aexchext | test-realm-envoy | Async Test Realm   | aexchange-client | envoy  |
 
   @authz
   Scenario Outline: Requesting party tokens and AuthZEN decisions
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I enable authorization services for client "<client_name>" using <adapter_type> adapter
@@ -816,13 +898,15 @@ Feature: Keycloak Authentication Testing
     And AuthZEN decides access to "<resource>" for "<username>" as granted for "<scope>" and denied for "write" using <adapter_type> adapter
 
     Examples:
-      | adapter_type | username     | password | resource | scope | realm_name | realm_display_name | client_name |
-      | sync         | rptuser      | pass123  | rpt-doc  | read  | test-realm | Test Realm         | rpt-client  |
-      | async        | asyncrptuser | async123 | arpt-doc | read  | test-realm | Async Test Realm   | arpt-client |
+      | adapter_type | username     | password | resource | scope | realm_name       | realm_display_name | client_name | via    |
+      | sync         | rptuser      | pass123  | rpt-doc  | read  | test-realm       | Test Realm         | rpt-client  | direct |
+      | async        | asyncrptuser | async123 | arpt-doc | read  | test-realm       | Async Test Realm   | arpt-client | direct |
+      | sync         | rptuser      | pass123  | rpt-doc  | read  | test-realm-envoy | Test Realm         | rpt-client  | envoy  |
+      | async        | asyncrptuser | async123 | arpt-doc | read  | test-realm-envoy | Async Test Realm   | arpt-client | envoy  |
 
   @roles
   Scenario Outline: Required actions, authentication providers and roles by name
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     Then the authenticator, form and client authenticator providers are listed using <adapter_type> adapter
@@ -831,13 +915,15 @@ Feature: Keycloak Authentication Testing
     Then the roles "<role>" and "<client_role>" are listed with composites, users and groups using <adapter_type> adapter
 
     Examples:
-      | adapter_type | role        | client_role  | realm_name | realm_display_name | client_name   |
-      | sync         | named-role  | named-crole  | test-realm | Test Realm         | named-client  |
-      | async        | anamed-role | anamed-crole | test-realm | Async Test Realm   | anamed-client |
+      | adapter_type | role        | client_role  | realm_name       | realm_display_name | client_name   | via    |
+      | sync         | named-role  | named-crole  | test-realm       | Test Realm         | named-client  | direct |
+      | async        | anamed-role | anamed-crole | test-realm       | Async Test Realm   | anamed-client | direct |
+      | sync         | named-role  | named-crole  | test-realm-envoy | Test Realm         | named-client  | envoy  |
+      | async        | anamed-role | anamed-crole | test-realm-envoy | Async Test Realm   | anamed-client | envoy  |
 
   @authz
   Scenario Outline: Authorization queries, evaluation, protocol mapper bulk calls and group and component settings
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I enable authorization services for client "<client_name>" using <adapter_type> adapter
@@ -848,13 +934,15 @@ Feature: Keycloak Authentication Testing
     And the client scope "<scope>" lists, bulk-adds and reads protocol mappers by id and protocol, and the group "<group>" and a component report their settings using <adapter_type> adapter
 
     Examples:
-      | adapter_type | username     | password | resource | scope     | group     | realm_name | realm_display_name | client_name |
-      | sync         | azxuser      | pass123  | az-doc   | az-scope  | az-group  | test-realm | Test Realm         | az-client   |
-      | async        | asyncazxuser | async123 | aaz-doc  | aaz-scope | aaz-group | test-realm | Async Test Realm   | aaz-client  |
+      | adapter_type | username     | password | resource | scope     | group     | realm_name       | realm_display_name | client_name | via    |
+      | sync         | azxuser      | pass123  | az-doc   | az-scope  | az-group  | test-realm       | Test Realm         | az-client   | direct |
+      | async        | asyncazxuser | async123 | aaz-doc  | aaz-scope | aaz-group | test-realm       | Async Test Realm   | aaz-client  | direct |
+      | sync         | azxuser      | pass123  | az-doc   | az-scope  | az-group  | test-realm-envoy | Test Realm         | az-client   | envoy  |
+      | async        | asyncazxuser | async123 | aaz-doc  | aaz-scope | aaz-group | test-realm-envoy | Async Test Realm   | aaz-client  | envoy  |
 
   @clientscopes
   Scenario Outline: Typed protocol mapper configs change the tokens
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I create a client named "<audience_client>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
@@ -866,25 +954,29 @@ Feature: Keycloak Authentication Testing
     Then the typed client mappers are read back, updated and the example token of client "<client_name>" shows claim "<client_claim>" as "direct" and audience "<audience_client>" using <adapter_type> adapter
 
     Examples:
-      | adapter_type | scope        | claim | client_claim | realm_name | realm_display_name | client_name   | audience_client |
-      | sync         | typed-scope  | tier  | origin       | test-realm | Test Realm         | typed-client  | typed-audience  |
-      | async        | atyped-scope | atier | aorigin      | test-realm | Async Test Realm   | atyped-client | atyped-audience |
+      | adapter_type | scope        | claim | client_claim | realm_name       | realm_display_name | client_name   | audience_client | via    |
+      | sync         | typed-scope  | tier  | origin       | test-realm       | Test Realm         | typed-client  | typed-audience  | direct |
+      | async        | atyped-scope | atier | aorigin      | test-realm       | Async Test Realm   | atyped-client | atyped-audience | direct |
+      | sync         | typed-scope  | tier  | origin       | test-realm-envoy | Test Realm         | typed-client  | typed-audience  | envoy  |
+      | async        | atyped-scope | atier | aorigin      | test-realm-envoy | Async Test Realm   | atyped-client | atyped-audience | envoy  |
 
   @tokens
   Scenario Outline: Chaining identity across two realms with token exchange and the JWT authorization grant
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     When I set up domain A "<realm_a>" with client "<client_a>", user "<username>" and domain B "<realm_b>" as an audience using <adapter_type> adapter
     And I set up domain B "<realm_b>" with client "<client_b>" trusting domain A through the identity provider "<alias>" using <adapter_type> adapter
     Then a token from domain A is exchanged for a JWT assertion and redeemed in domain B using <adapter_type> adapter
 
     Examples:
-      | adapter_type | realm_a       | realm_b       | client_a | client_b | username   | alias    |
-      | sync         | chain-a-sync  | chain-b-sync  | clienta  | clientb  | chainuser  | domaina  |
-      | async        | chain-a-async | chain-b-async | aclienta | aclientb | achainuser | adomaina |
+      | adapter_type | realm_a             | realm_b             | client_a | client_b | username   | alias    | via    |
+      | sync         | chain-a-sync        | chain-b-sync        | clienta  | clientb  | chainuser  | domaina  | direct |
+      | async        | chain-a-async       | chain-b-async       | aclienta | aclientb | achainuser | adomaina | direct |
+      | sync         | chain-a-sync-envoy  | chain-b-sync-envoy  | clienta  | clientb  | chainuser  | domaina  | envoy  |
+      | async        | chain-a-async-envoy | chain-b-async-envoy | aclienta | aclientb | achainuser | adomaina | envoy  |
 
   @authz
   Scenario Outline: UMA permission checks with several permissions and creating an existing realm
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     And I enable authorization services for client "<client_name>" using <adapter_type> adapter
@@ -896,22 +988,26 @@ Feature: Keycloak Authentication Testing
     And creating the realm "<realm_name>" again with skip_exists reports it as existing and without skip_exists fails using <adapter_type> adapter
 
     Examples:
-      | adapter_type | username     | password | resource | resource2 | realm_name | realm_display_name | client_name       |
-      | sync         | umauser      | pass123  | uma-doc  | uma-doc2  | test-realm | Test Realm         | uma-check-client  |
-      | async        | asyncumauser | async123 | auma-doc | auma-doc2 | test-realm | Async Test Realm   | auma-check-client |
+      | adapter_type | username     | password | resource | resource2 | realm_name       | realm_display_name | client_name       | via    |
+      | sync         | umauser      | pass123  | uma-doc  | uma-doc2  | test-realm       | Test Realm         | uma-check-client  | direct |
+      | async        | asyncumauser | async123 | auma-doc | auma-doc2 | test-realm       | Async Test Realm   | auma-check-client | direct |
+      | sync         | umauser      | pass123  | uma-doc  | uma-doc2  | test-realm-envoy | Test Realm         | uma-check-client  | envoy  |
+      | async        | asyncumauser | async123 | auma-doc | auma-doc2 | test-realm-envoy | Async Test Realm   | auma-check-client | envoy  |
 
   @components
   Scenario Outline: Component listing
-    Given a configured <adapter_type> Keycloak adapter
+    Given a configured <adapter_type> Keycloak adapter via <via>
     And I create a realm named "<realm_name>" with display name "<realm_display_name>" using <adapter_type> adapter
     And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using <adapter_type> adapter
     When I get all components using <adapter_type> adapter
     Then the <adapter_type> components request should succeed
 
     Examples:
-      | adapter_type | realm_name       | realm_display_name | client_name       |
-      | sync         | test-realm       | Test Realm         | test-client       |
-      | async        | async-test-realm | Async Test Realm   | async-test-client |
+      | adapter_type | realm_name             | realm_display_name | client_name       | via    |
+      | sync         | test-realm             | Test Realm         | test-client       | direct |
+      | async        | async-test-realm       | Async Test Realm   | async-test-client | direct |
+      | sync         | test-realm-envoy       | Test Realm         | test-client       | envoy  |
+      | async        | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @impersonation
   Scenario: Token without act claim is not impersonated
@@ -930,8 +1026,8 @@ Feature: Keycloak Authentication Testing
   # --- Keycloak auth dependencies and decorators ---
   # Real tokens issued by the Keycloak container drive keycloak.auth fastapi_auth, grpc_auth and
   # AuthContextManager. gRPC uses a ServicerContext fake only to record aborts.
-  Scenario: Auth FastAPI dependency populates request state for a valid token
-    Given a configured sync Keycloak adapter
+  Scenario Outline: Auth FastAPI dependency populates request state for a valid token
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -946,9 +1042,14 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth context holds user "authuser" while the dependency is active
     And the keycloak auth context is cleared after the dependency ends
 
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
   @auth-guards
   Scenario Outline: Reading <field> from the request state warns and points to the auth context
-    Given a configured sync Keycloak adapter
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -962,14 +1063,18 @@ Feature: Keycloak Authentication Testing
     And the request state keeps the same content as the auth context
 
     Examples:
-      | field       | replacement                                         |
-      | user_info   | AuthContextManager.get_auth_context().raw_user_info |
-      | token_info  | AuthContextManager.get_auth_context().token_info    |
-      | actor_chain | AuthContextManager.get_auth_context().actor_chain   |
-      | user_roles  | AuthContextManager.get_auth_context().roles         |
+      | field       | replacement                                         | via    |
+      | user_info   | AuthContextManager.get_auth_context().raw_user_info | direct |
+      | token_info  | AuthContextManager.get_auth_context().token_info    | direct |
+      | actor_chain | AuthContextManager.get_auth_context().actor_chain   | direct |
+      | user_roles  | AuthContextManager.get_auth_context().roles         | direct |
+      | user_info   | AuthContextManager.get_auth_context().raw_user_info | envoy  |
+      | token_info  | AuthContextManager.get_auth_context().token_info    | envoy  |
+      | actor_chain | AuthContextManager.get_auth_context().actor_chain   | envoy  |
+      | user_roles  | AuthContextManager.get_auth_context().roles         | envoy  |
 
-  Scenario: Auth FastAPI dependency accepts a client role from resource access
-    Given a configured sync Keycloak adapter
+  Scenario Outline: Auth FastAPI dependency accepts a client role from resource access
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -982,23 +1087,38 @@ Feature: Keycloak Authentication Testing
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth request state user roles include "auth-reader,auth-operator"
 
-  Scenario: Auth FastAPI dependency rejects missing credentials
-    Given a configured sync Keycloak adapter
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth FastAPI dependency rejects missing credentials
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     When the keycloak auth fastapi dependency is called without credentials
     Then the keycloak auth call fails with error code "UNAUTHENTICATED"
     And the keycloak auth context is cleared after the dependency ends
 
-  Scenario: Auth FastAPI dependency rejects a garbage token
-    Given a configured sync Keycloak adapter
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth FastAPI dependency rejects a garbage token
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     When the keycloak auth fastapi dependency is called with token "not-a-real-jwt"
     Then the keycloak auth call fails with error code "TOKEN_EXPIRED"
 
-  Scenario: Auth FastAPI dependency rejects an expired token
-    Given a configured sync Keycloak adapter
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth FastAPI dependency rejects an expired token
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-expiry-realm" with display name "Auth Expiry Realm" using sync adapter
     And the keycloak auth realm "auth-expiry-realm" has an access token lifespan of 1 seconds
     And I create a client named "auth-expiry-client" in realm "auth-expiry-realm" with service accounts and update adapter using sync adapter
@@ -1008,8 +1128,13 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth fastapi dependency is called with the access token of user "authexpiring"
     Then the keycloak auth call fails with error code "TOKEN_EXPIRED"
 
-  Scenario: Auth FastAPI dependency rejects a caller without the required role
-    Given a configured sync Keycloak adapter
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth FastAPI dependency rejects a caller without the required role
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1021,8 +1146,13 @@ Feature: Keycloak Authentication Testing
     Then the keycloak auth call fails with error code "PERMISSION_DENIED"
     And the keycloak auth error lists required roles "auth-admin"
 
-  Scenario: Auth FastAPI dependency requires every role when all roles are required
-    Given a configured sync Keycloak adapter
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth FastAPI dependency requires every role when all roles are required
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1033,8 +1163,13 @@ Feature: Keycloak Authentication Testing
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth call fails with error code "PERMISSION_DENIED"
 
-  Scenario: Auth FastAPI dependency allows a granted UMA permission
-    Given a configured sync Keycloak adapter
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth FastAPI dependency allows a granted UMA permission
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1046,8 +1181,13 @@ Feature: Keycloak Authentication Testing
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth dependency returns the user info of user "authuser"
 
-  Scenario: Auth FastAPI dependency denies an ungranted UMA permission
-    Given a configured sync Keycloak adapter
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth FastAPI dependency denies an ungranted UMA permission
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1060,8 +1200,13 @@ Feature: Keycloak Authentication Testing
     Then the keycloak auth call fails with error code "PERMISSION_DENIED"
     And the keycloak auth error lists missing permission "auth-doc#write"
 
-  Scenario: Auth FastAPI dependency denies a request when every UMA permission is ungranted
-    Given a configured sync Keycloak adapter
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth FastAPI dependency denies a request when every UMA permission is ungranted
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1074,8 +1219,13 @@ Feature: Keycloak Authentication Testing
     Then the keycloak auth call fails with error code "PERMISSION_DENIED"
     And the keycloak auth error lists missing permission "auth-doc#write"
 
-  Scenario: Auth FastAPI dependency allows the owner of a resource
-    Given a configured sync Keycloak adapter
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth FastAPI dependency allows the owner of a resource
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1091,8 +1241,13 @@ Feature: Keycloak Authentication Testing
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth dependency returns the user info of user "authuser"
 
-  Scenario: Auth FastAPI dependency denies a non owner of a resource
-    Given a configured sync Keycloak adapter
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth FastAPI dependency denies a non owner of a resource
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1108,8 +1263,13 @@ Feature: Keycloak Authentication Testing
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth call fails with error code "PERMISSION_DENIED"
 
-  Scenario: Auth FastAPI dependency lets an admin role bypass resource ownership
-    Given a configured sync Keycloak adapter
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth FastAPI dependency lets an admin role bypass resource ownership
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1126,8 +1286,13 @@ Feature: Keycloak Authentication Testing
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth dependency returns the user info of user "authuser"
 
-  Scenario: Auth FastAPI dependency rejects a request missing the resource path parameter
-    Given a configured sync Keycloak adapter
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth FastAPI dependency rejects a request missing the resource path parameter
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1138,9 +1303,14 @@ Feature: Keycloak Authentication Testing
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth call fails with error code "INVALID_ARGUMENT"
 
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
   @auth-guards
   Scenario Outline: Auth gRPC handler runs with the auth context for a valid token
-    Given a configured sync Keycloak adapter
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1154,13 +1324,15 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth context is cleared
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
   @auth-guards
   Scenario Outline: Auth gRPC handler accepts a raw token without the bearer prefix
-    Given a configured sync Keycloak adapter
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1171,13 +1343,15 @@ Feature: Keycloak Authentication Testing
     Then the keycloak auth grpc handler ran as user "authuser" with roles including "auth-reader"
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
   @auth-guards
   Scenario Outline: Auth gRPC handler allows the owner of a resource
-    Given a configured sync Keycloak adapter
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1190,13 +1364,15 @@ Feature: Keycloak Authentication Testing
     Then the keycloak auth grpc handler ran as user "authuser" with roles including "auth-reader"
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
   @auth-guards
   Scenario Outline: Auth gRPC handler aborts the servicer context when the token is missing
-    Given a configured sync Keycloak adapter
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     When the keycloak auth <mode> grpc handler is invoked without metadata
@@ -1205,13 +1381,15 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth context is cleared
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
   @auth-guards
   Scenario Outline: Auth gRPC handler aborts the servicer context when the token is invalid
-    Given a configured sync Keycloak adapter
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     When the keycloak auth <mode> grpc handler is invoked with bearer token "not-a-real-jwt"
@@ -1219,13 +1397,15 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth grpc handler did not run
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
   @auth-guards
   Scenario Outline: Auth gRPC handler aborts the servicer context when the role is insufficient
-    Given a configured sync Keycloak adapter
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1239,13 +1419,15 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth context is cleared
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
   @auth-guards
   Scenario Outline: Auth gRPC handler aborts when the request lacks the resource attribute
-    Given a configured sync Keycloak adapter
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1257,13 +1439,15 @@ Feature: Keycloak Authentication Testing
     Then the keycloak auth servicer context was aborted with status "INVALID_ARGUMENT"
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
   @auth-guards
   Scenario Outline: Auth gRPC handler raises the typed error when the context is not a servicer context
-    Given a configured sync Keycloak adapter
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     When the keycloak auth <mode> grpc handler is invoked without metadata on a plain context
@@ -1271,12 +1455,14 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth grpc handler did not run
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
-  Scenario: Auth sync gRPC handler wraps unexpected failures in an internal error
-    Given a configured sync Keycloak adapter
+  Scenario Outline: Auth sync gRPC handler wraps unexpected failures in an internal error
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1288,8 +1474,13 @@ Feature: Keycloak Authentication Testing
     Then the keycloak auth call fails with error code "INTERNAL_ERROR"
     And the keycloak auth context is cleared
 
-  Scenario: Auth async gRPC handler aborts with an internal status on unexpected failures
-    Given a configured sync Keycloak adapter
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth async gRPC handler aborts with an internal status on unexpected failures
+    Given a configured sync Keycloak adapter via <via>
     And I create a realm named "auth-realm" with display name "Auth Realm" using sync adapter
     And I create a client named "auth-client" in realm "auth-realm" with service accounts and update adapter using sync adapter
     And I create a user with username "authuser" and password "pass123" using sync adapter
@@ -1300,6 +1491,11 @@ Feature: Keycloak Authentication Testing
     When the keycloak auth async grpc handler is invoked with the bearer access token of user "authuser"
     Then the keycloak auth servicer context was aborted with status "INTERNAL"
     And the keycloak auth context is cleared
+
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
 
   Scenario: Auth context manager stores and returns the context
     Given no keycloak auth context is set
@@ -1322,35 +1518,48 @@ Feature: Keycloak Authentication Testing
 
   @auth-guards
   Scenario Outline: A guarded FastAPI route keeps the auth context on the <path> route
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And a FastAPI app whose routes are guarded by the keycloak fastapi auth
     When the guarded app is requested at "<path>" with the access token of user "authuser"
     Then the app response reports the caller "authuser" every time it reads the auth context
 
     Examples:
-      | path    |
-      | /async  |
-      | /sync   |
-      | /stream |
+      | path    | via    |
+      | /async  | direct |
+      | /sync   | direct |
+      | /stream | direct |
+      | /async  | envoy  |
+      | /sync   | envoy  |
+      | /stream | envoy  |
 
-  Scenario: A FastAPI background task still sees the caller after the response
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+  Scenario Outline: A FastAPI background task still sees the caller after the response
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And a FastAPI app whose routes are guarded by the keycloak fastapi auth
     When the guarded app is requested at "/background" with the access token of user "authuser"
     Then the app response reports the caller "authuser" every time it reads the auth context
     And the background task saw the caller "authuser"
 
-  Scenario: The auth context does not leak into a later unguarded request
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: The auth context does not leak into a later unguarded request
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And a FastAPI app whose routes are guarded by the keycloak fastapi auth
     When the guarded app is requested at "/async" with the access token of user "authuser"
     And the guarded app is requested at "/open" without credentials
     Then the app response reports no caller
 
-  # --- Keycloak auth gRPC decorators and caching against the real Keycloak container ---
+    # --- Keycloak auth gRPC decorators and caching against the real Keycloak container ---
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
   @auth-guards
   Scenario Outline: Auth gRPC response-stream handler keeps the auth context while streaming
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And the keycloak grpc auth requires any of roles "auth-reader"
     And the keycloak auth grpc handler is a response stream
     When the keycloak auth <mode> grpc handler is invoked with the bearer access token of user "authuser"
@@ -1359,26 +1568,30 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth context is cleared
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
   @auth-guards
   Scenario Outline: Auth gRPC response-stream handler rejects a missing token
-    Given a keycloak auth realm with a client
+    Given a keycloak auth realm with a client via <via>
     And the keycloak auth grpc handler is a response stream
     When the keycloak auth <mode> grpc handler is invoked without metadata on a plain context
     Then the keycloak auth call fails with error code "UNAUTHENTICATED"
     And the keycloak auth grpc handler did not run
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
   @auth-guards
   Scenario Outline: Auth gRPC handler abort is not rewritten as an internal error
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And the keycloak grpc auth requires any of roles "auth-reader"
     And the keycloak auth grpc handler aborts the servicer context itself
     When the keycloak auth <mode> grpc handler is invoked with the bearer access token of user "authuser"
@@ -1386,28 +1599,40 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth context is cleared
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
-  Scenario: Auth sync gRPC handler hides the cause of unexpected failures
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+  Scenario Outline: Auth sync gRPC handler hides the cause of unexpected failures
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And the keycloak grpc auth requires any of roles "auth-reader"
     And the keycloak auth grpc handler crashes with a runtime failure
     When the keycloak auth sync grpc handler is invoked with the bearer access token of user "authuser" on a plain context
     Then the keycloak auth call fails with error code "INTERNAL_ERROR"
     And the keycloak auth error should not expose "boom"
 
-  Scenario: Auth lookups are not cached unless a TTL is configured
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth lookups are not cached unless a TTL is configured
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And the keycloak fastapi auth requires any of roles "auth-reader"
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     And the keycloak auth sessions of user "authuser" are cleared
     And the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth call fails with error code "INVALID_CREDENTIALS"
 
-  Scenario: Auth userinfo lookups are cached for the configured TTL
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth userinfo lookups are cached for the configured TTL
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And the keycloak auth adapter caches remote lookups for 60 seconds
     And the keycloak fastapi auth requires any of roles "auth-reader"
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
@@ -1415,8 +1640,13 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth dependency returns the user info of user "authuser"
 
-  Scenario: Auth cached lookups are looked up again after the TTL
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth cached lookups are looked up again after the TTL
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And the keycloak auth adapter caches remote lookups for 60 seconds
     And the keycloak fastapi auth requires any of roles "auth-reader"
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
@@ -1425,8 +1655,13 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth call fails with error code "INVALID_CREDENTIALS"
 
-  Scenario: Auth cached lookups are kept apart per token
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth cached lookups are kept apart per token
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And I create a user with username "authother" and password "pass123" using sync adapter
     And I assign realm role "auth-reader" to user "authother" using sync adapter
     And the keycloak auth access token of user "authother" is obtained with password "pass123"
@@ -1436,8 +1671,13 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth fastapi dependency is called with the access token of user "authother"
     Then the keycloak auth dependency returns the user info of user "authother"
 
-  Scenario: Auth permission lookups are cached for the configured TTL
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth permission lookups are cached for the configured TTL
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And the keycloak auth client "auth-client" guards resource "auth-doc-cached" with scopes "read,write" and grants scope "read" to realm role "auth-reader"
     And the keycloak auth client "auth-client" guards resource "auth-doc-cached" with scopes "read,write" and grants scope "write" to realm role "auth-reader"
     And the keycloak auth adapter caches remote lookups for 60 seconds
@@ -1448,8 +1688,13 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth dependency returns the user info of user "authuser"
 
-  Scenario: Auth permission lookups are not cached unless a TTL is configured
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth permission lookups are not cached unless a TTL is configured
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And the keycloak auth client "auth-client" guards resource "auth-doc-uncached" with scopes "read,write" and grants scope "read" to realm role "auth-reader"
     And the keycloak auth client "auth-client" guards resource "auth-doc-uncached" with scopes "read,write" and grants scope "write" to realm role "auth-reader"
     And the keycloak fastapi auth requires permissions "auth-doc-uncached#read,auth-doc-uncached#write"
@@ -1459,82 +1704,175 @@ Feature: Keycloak Authentication Testing
     And the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth call fails with error code "PERMISSION_DENIED"
 
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
   @auth-guards
   Scenario Outline: Auth gRPC handler reads the bearer scheme case-insensitively
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And the keycloak grpc auth requires any of roles "auth-reader"
     When the keycloak auth <mode> grpc handler is invoked with the access token of user "authuser" under authorization scheme "BEARER"
     Then the keycloak auth grpc handler ran as user "authuser" with roles including "auth-reader"
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
   @auth-guards
   Scenario Outline: Auth gRPC handler rejects an empty bearer credential
-    Given a keycloak auth realm with a client
+    Given a keycloak auth realm with a client via <via>
     And the keycloak grpc auth requires any of roles "auth-reader"
     When the keycloak auth <mode> grpc handler is invoked with metadata key "authorization" value "Bearer "
     Then the keycloak auth servicer context was aborted with status "UNAUTHENTICATED"
     And the keycloak auth grpc handler did not run
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
   @auth-guards
   Scenario Outline: Auth gRPC handler rejects conflicting authorization headers
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And the keycloak grpc auth requires any of roles "auth-reader"
     When the keycloak auth <mode> grpc handler is invoked with a conflicting bearer token "other-token" next to the access token of user "authuser"
     Then the keycloak auth servicer context was aborted with status "UNAUTHENTICATED"
     And the keycloak auth grpc handler did not run
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
-  Scenario: Auth FastAPI dependency rejects a token without userinfo
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+  Scenario Outline: Auth FastAPI dependency rejects a token without userinfo
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And the keycloak fastapi auth requires any of roles "auth-reader"
     When the keycloak auth sessions of user "authuser" are cleared
     And the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth call fails with error code "INVALID_CREDENTIALS"
 
-  # A real Keycloak cannot be made to return empty claims for a token that it just issued and that passed
-  # validation, so this one defensive branch injects an empty claims result into the real adapter.
-  Scenario: Auth FastAPI dependency rejects a token whose claims cannot be read
-    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token
+    # A real Keycloak cannot be made to return empty claims for a token that it just issued and that passed
+    # validation, so this one defensive branch injects an empty claims result into the real adapter.
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
+  Scenario Outline: Auth FastAPI dependency rejects a token whose claims cannot be read
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And the keycloak auth adapter cannot read the claims of issued tokens
     And the keycloak fastapi auth requires any of roles "auth-reader"
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth call fails with error code "TOKEN_EXPIRED"
 
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
   @tracing
   Scenario Outline: Keycloak <mode> adapter requests emit HTTP spans
     Given adapter spans are exported to the collector
-    And a configured <mode> Keycloak adapter
+    And a configured <mode> Keycloak adapter via <via>
     When I create a realm named "span-realm" with display name "Span Realm" using <mode> adapter
     Then the collector should have a span with attribute "http.url" containing "/admin/realms"
 
     Examples:
-      | mode  |
-      | sync  |
-      | async |
+      | mode  | via    |
+      | sync  | direct |
+      | async | direct |
+      | sync  | envoy  |
+      | async | envoy  |
 
   @tracing
   Scenario Outline: Keycloak <mode> adapter spans reach Elastic APM Server <route>
     Given adapter spans are exported to Elastic APM Server <route>
-    And a configured <mode> Keycloak adapter
+    And a configured <mode> Keycloak adapter via <via>
     When I create a realm named "span-realm" with display name "Span Realm" using <mode> adapter
     Then Elastic APM Server should store a span of type "external" with subtype "http"
 
     Examples:
-      | route                 | mode  |
-      | directly              | sync  |
-      | directly              | async |
-      | through the collector | sync  |
-      | through the collector | async |
+      | route                 | mode  | via    |
+      | directly              | sync  | direct |
+      | directly              | async | direct |
+      | through the collector | sync  | direct |
+      | through the collector | async | direct |
+      | directly              | sync  | envoy  |
+      | directly              | async | envoy  |
+      | through the collector | sync  | envoy  |
+      | through the collector | async | envoy  |
+
+  @gateway
+  Scenario Outline: Envoy routes <host> host requests for <path>
+    Given the Keycloak realms "app" and "master2" exist
+    When I request "<path>" on the "<host>" host
+    Then the response status is <status>
+
+    Examples:
+      | host   | path                                             | status |
+      | public | /realms/app/.well-known/openid-configuration     | 200    |
+      | public | /realms/master2/.well-known/openid-configuration | 200    |
+      | public | /realms/master                                   | 404    |
+      | public | /realms/master/                                  | 404    |
+      | public | /realms/master/.well-known/openid-configuration  | 404    |
+      | public | /realms/master/protocol/openid-connect/token     | 404    |
+      | public | /admin/master/console/                           | 404    |
+      | public | /admin/realms/app                                | 404    |
+      | admin  | /admin/master/console/                           | 200    |
+      | admin  | /realms/master/.well-known/openid-configuration  | 200    |
+      | admin  | /realms/app/.well-known/openid-configuration     | 404    |
+      | admin  | /realms/master2/.well-known/openid-configuration | 404    |
+      | admin  | /                                                | 404    |
+
+  @gateway
+  Scenario Outline: The admin console loads every URL from the <present> host
+    Given the Keycloak realms "app" and "master2" exist
+    When I request "/admin/master/console/" on the "<present>" host
+    Then the response body contains the <present> host
+    And the response body does not contain the <absent> host
+
+    Examples:
+      | present | absent |
+      | admin   | public |
+
+  @gateway
+  Scenario Outline: A resource linked from the admin console is served on the <host> host
+    Given the Keycloak realms "app" and "master2" exist
+    When I request "/admin/master/console/" on the "<host>" host
+    And I request the first resource linked from the response on the "<host>" host
+    Then the response status is <status>
+
+    Examples:
+      | host  | status |
+      | admin | 200    |
+
+  @gateway
+  Scenario Outline: The master realm token endpoint through the <host> host answers <status>
+    Given the Keycloak realms "app" and "master2" exist
+    When I request an admin token for the "master" realm on the "<host>" host
+    Then the response status is <status>
+    And the response access token is <token>
+
+    Examples:
+      | host   | status | token   |
+      | admin  | 200    | present |
+      | public | 404    | absent  |
+
+  @gateway
+  Scenario Outline: The <realm> realm issuer on the <host> host is the <expected> host
+    Given the Keycloak realms "app" and "master2" exist
+    Then the "<realm>" realm issuer on the "<host>" host is the <expected> host
+
+    Examples:
+      | realm  | host   | expected |
+      | master | admin  | admin    |
+      | app    | public | public   |

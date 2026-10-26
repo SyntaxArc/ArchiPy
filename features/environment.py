@@ -34,6 +34,7 @@ class TestConfig(BaseConfig):
     KAFKA__IMAGE: str
     MINIO__IMAGE: str
     KEYCLOAK__IMAGE: str
+    ENVOY__IMAGE: str
     SCYLLADB__IMAGE: str
     STARROCKS__IMAGE: str
     TEMPORAL__IMAGE: str

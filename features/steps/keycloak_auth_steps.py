@@ -200,10 +200,16 @@ AUTH_REALM = "auth-realm"
 
 @given("a keycloak auth realm with a client")
 def step_keycloak_auth_realm_with_client(context):
-    """Create the realm and client every keycloak auth scenario needs, against the real Keycloak container."""
+    """Create the realm and client every keycloak auth scenario needs, talking to Keycloak directly."""
+    step_keycloak_auth_realm_with_client_via(context, "direct")
+
+
+@given("a keycloak auth realm with a client via {via}")
+def step_keycloak_auth_realm_with_client_via(context, via):
+    """Create the realm and client every keycloak auth scenario needs, directly or through Envoy."""
     context.execute_steps(
         f"""
-        Given a configured sync Keycloak adapter
+        Given a configured sync Keycloak adapter via {via}
         And I create a realm named "{AUTH_REALM}" with display name "Auth Realm" using sync adapter
         And I create a client named "auth-client" in realm "{AUTH_REALM}" with service accounts and update adapter using sync adapter
         """,
@@ -219,7 +225,15 @@ def step_keycloak_auth_realm_with_client(context):
 )
 def step_keycloak_auth_realm_with_user_token(context, username, role):
     """Realm, client, a user with the realm role and a real access token for that user."""
-    step_keycloak_auth_realm_with_client(context)
+    step_keycloak_auth_realm_with_user_token_via(context, username, role, "direct")
+
+
+@given(
+    'a keycloak auth realm with user "{username}" holding realm role "{role}" and an access token via {via}',
+)
+def step_keycloak_auth_realm_with_user_token_via(context, username, role, via):
+    """Realm, client, a user with the realm role and a real access token, directly or through Envoy."""
+    step_keycloak_auth_realm_with_client_via(context, via)
     context.execute_steps(
         f"""
         Given I create a user with username "{username}" and password "pass123" using sync adapter

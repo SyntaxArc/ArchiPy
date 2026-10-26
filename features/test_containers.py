@@ -52,6 +52,7 @@ CONTAINER_MEM_LIMITS: dict[str, str] = {
     "mailpit": "64m",
     "otel-collector": "128m",
     "pushgateway": "64m",
+    "envoy": "128m",
     "apm-server": "256m",
     "otel-collector-apm": "128m",
 }
@@ -67,6 +68,9 @@ KEYCLOAK_HEAP_OPTS: str = "-Xms64m -Xmx256m"
 # ``KeycloakContainer`` replaces any ``with_command`` call with its ``cmd`` argument, so features go here:
 # Organizations (Keycloak 25+) and the experimental AuthZEN evaluation endpoints.
 KEYCLOAK_COMMAND: str = "start-dev --features=organization,authzen"
+# On by default (opt out with KEYCLOAK_SPLIT_HOSTNAME=0): mirror a deployment with a public host and a separate admin host behind a proxy.
+KEYCLOAK_PUBLIC_HOSTNAME: str = "https://sso.test.local"
+KEYCLOAK_ADMIN_HOSTNAME: str = "https://sso-admin.test.local"
 # kafka-server-start.sh defaults to a fixed 1 GiB heap when this is unset.
 KAFKA_HEAP_OPTS: str = "-Xms512m -Xmx512m"
 # The image ships an 8 GiB FE heap and lets the BE claim 90% of the memory it can see.
@@ -91,6 +95,7 @@ TAG_CONTAINER_MAP: dict[str, str] = {
     "needs-elasticsearch": "elasticsearch",
     "needs-minio": "minio",
     "needs-keycloak": "keycloak",
+    "needs-envoy": "envoy",
     "needs-redis": "redis",
     "needs-redis-cluster": "redis-cluster",
     "needs-scylladb": "scylladb",
@@ -602,6 +607,24 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
         )
         self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["keycloak"])
         self._container.with_env("JAVA_OPTS_KC_HEAP", KEYCLOAK_HEAP_OPTS)
+        self._apply_split_hostname_env()
+
+    @staticmethod
+    def _split_hostname_enabled() -> bool:
+        return os.environ.get("KEYCLOAK_SPLIT_HOSTNAME", "1") != "0"
+
+    def _apply_split_hostname_env(self) -> None:
+        if not self._split_hostname_enabled():
+            return
+        self._container.with_env("KC_HOSTNAME", KEYCLOAK_PUBLIC_HOSTNAME)
+        self._container.with_env("KC_HOSTNAME_ADMIN", KEYCLOAK_ADMIN_HOSTNAME)
+        self._container.with_env("KC_PROXY_HEADERS", "xforwarded")
+        self._container.with_env("KC_HOSTNAME_BACKCHANNEL_DYNAMIC", "true")
+
+    def _set_master_frontend_url(self) -> None:
+        """Point the master realm at the admin host, as the production reconcile step does."""
+        admin = self._container.get_client()
+        admin.update_realm("master", {"attributes": {"frontendUrl": KEYCLOAK_ADMIN_HOSTNAME}})
 
     def start(self) -> KeycloakContainer:
         """Start the Keycloak container."""
@@ -621,6 +644,7 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
             )
             self._container.with_kwargs(mem_limit=CONTAINER_MEM_LIMITS["keycloak"])
             self._container.with_env("JAVA_OPTS_KC_HEAP", KEYCLOAK_HEAP_OPTS)
+        self._apply_split_hostname_env()
 
         self._container.start()
         self._is_running = True
@@ -628,6 +652,9 @@ class KeycloakTestContainer(metaclass=Singleton, thread_safe=True):
         # Get dynamic host and port
         self.host = self._container.get_container_host_ip()
         self.port = int(self._container.get_exposed_port(8080))
+
+        if self._split_hostname_enabled():
+            self._set_master_frontend_url()
 
         # Update global config with actual container endpoint
         global_config = BaseConfig.global_config()
@@ -1706,6 +1733,183 @@ class OtelCollectorTestContainer(metaclass=Singleton, thread_safe=True):
                 # The exporter may be mid-write on the last line; the next read picks it up.
                 break
         return documents
+
+
+ENVOY_CONFIG_TEMPLATE: str = """
+static_resources:
+  listeners:
+    - name: http
+      address:
+        socket_address: {address: 0.0.0.0, port_value: 8080}
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: sso
+                route_config:
+                  name: sso
+                  request_headers_to_add:
+                    - header: {key: X-Forwarded-Proto, value: https}
+                      append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                    - header: {key: X-Forwarded-Port, value: "443"}
+                      append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                    - header: {key: X-Forwarded-Host, value: "%REQ(:AUTHORITY)%"}
+                      append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                  virtual_hosts:
+                    - name: public
+                      domains: ["PUBLIC_HOST"]
+                      routes:
+                        - match: {path_separated_prefix: /realms/master}
+                          direct_response: {status: 404, body: {inline_string: Not Found}}
+                        - match: {path_separated_prefix: /admin}
+                          direct_response: {status: 404, body: {inline_string: Not Found}}
+                        - match: {prefix: /}
+                          route: {cluster: keycloak}
+                    - name: admin
+                      domains: ["ADMIN_HOST"]
+                      routes:
+                        - match: {path_separated_prefix: /admin}
+                          route: {cluster: keycloak}
+                        - match: {path_separated_prefix: /realms/master}
+                          route: {cluster: keycloak}
+                        - match: {path_separated_prefix: /resources}
+                          route: {cluster: keycloak}
+                http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+    - name: passthrough
+      address:
+        socket_address: {address: 0.0.0.0, port_value: 8081}
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: passthrough
+                route_config:
+                  name: passthrough
+                  request_headers_to_add:
+                    - header: {key: X-Forwarded-Host, value: "%REQ(:AUTHORITY)%"}
+                      append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                  virtual_hosts:
+                    - name: all
+                      domains: ["*"]
+                      routes:
+                        - match: {prefix: /}
+                          route: {cluster: keycloak}
+                http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+    - name: keycloak
+      type: STRICT_DNS
+      load_assignment:
+        cluster_name: keycloak
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: {address: host.docker.internal, port_value: KEYCLOAK_PORT}
+"""
+
+
+@ContainerManager.register("envoy")
+class EnvoyTestContainer(metaclass=Singleton, thread_safe=True):
+    """Envoy in front of Keycloak with the production routing rules.
+
+    The public host does not serve the master realm or ``/admin``. The admin host serves only ``/admin``,
+    ``/realms/master`` and ``/resources``. Routing is by ``Host`` header, so clients send the hostnames.
+    """
+
+    PORT = 8080
+    PASSTHROUGH_PORT = 8081
+
+    def __init__(self, image: str | None = None) -> None:
+        """Initialize the Envoy test container.
+
+        Args:
+            image: Docker image override. Defaults to ENVOY__IMAGE from TestConfig.
+        """
+        self.name = "envoy"
+        self.image = image or BaseConfig.global_config().ENVOY__IMAGE
+        self._container: DockerContainer | None = None
+        self._work_dir: tempfile.TemporaryDirectory | None = None
+        self._is_running = False
+        self.host: str | None = None
+        self.url: str | None = None
+        self.passthrough_url: str | None = None
+
+    def _build(self, keycloak_port: int) -> DockerContainer:
+        self._work_dir = tempfile.TemporaryDirectory()
+        config_path = Path(self._work_dir.name) / "envoy.yaml"
+        config_path.write_text(
+            ENVOY_CONFIG_TEMPLATE.replace("PUBLIC_HOST", KEYCLOAK_PUBLIC_HOSTNAME.removeprefix("https://"))
+            .replace("ADMIN_HOST", KEYCLOAK_ADMIN_HOSTNAME.removeprefix("https://"))
+            .replace("KEYCLOAK_PORT", str(keycloak_port)),
+        )
+        config_path.chmod(0o644)
+        return (
+            DockerContainer(self.image)
+            .with_exposed_ports(self.PORT, self.PASSTHROUGH_PORT)
+            .with_volume_mapping(str(config_path), "/etc/envoy/envoy.yaml", "ro")
+            .with_kwargs(
+                mem_limit=CONTAINER_MEM_LIMITS["envoy"],
+                extra_hosts={"host.docker.internal": "host-gateway"},
+            )
+        )
+
+    def start(self) -> DockerContainer:
+        """Start Keycloak if needed, then Envoy, and wait until Envoy serves traffic."""
+        if self._is_running:
+            return self._container
+
+        keycloak = ContainerManager.get_container("keycloak")
+        self._container = self._build(keycloak.port)
+        self._container.start()
+        wait_for_logs(self._container, r"starting main dispatch loop", timeout=60)
+        self._is_running = True
+
+        self.host = self._container.get_container_host_ip()
+        self.url = f"http://{self.host}:{self._container.get_exposed_port(self.PORT)}"
+        self.passthrough_url = f"http://{self.host}:{self._container.get_exposed_port(self.PASSTHROUGH_PORT)}"
+
+        self._wait_until_proxying()
+
+        logger.info("Envoy container started at %s (pass-through at %s)", self.url, self.passthrough_url)
+        return self._container
+
+    def _wait_until_proxying(self, timeout: float = 60.0) -> None:
+        """Wait until the pass-through listener reaches Keycloak; Envoy logs readiness before its upstream resolves."""
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                if httpx2.get(f"{self.passthrough_url}/realms/master", timeout=5).status_code == 200:
+                    return
+            except httpx2.HTTPError:
+                pass
+            if time.monotonic() > deadline:
+                raise TimeoutError("Envoy did not start proxying to Keycloak")
+            time.sleep(0.5)
+
+    def stop(self) -> None:
+        """Stop the Envoy container."""
+        if not self._is_running:
+            return
+
+        if self._container:
+            self._container.stop()
+
+        self._container = None
+        self._work_dir = None
+        self._is_running = False
+        self.host = None
+        self.url = None
+        self.passthrough_url = None
+
+        logger.info("Envoy container stopped")
 
 
 @ContainerManager.register("pushgateway")
