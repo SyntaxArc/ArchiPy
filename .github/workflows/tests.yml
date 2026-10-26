@@ -517,9 +517,10 @@ jobs:
         cache-dependency-glob: uv.lock
         cache-suffix: ${{ env.PYTHON_VERSION }}
 
+    # The locked versions, without the pre-commit hooks and the dependency upgrade that `make install-dev` adds.
     - name: Install dependencies
       if: env.RUN == 'true'
-      run: make install-dev
+      run: uv sync --locked --all-extras --all-packages --all-groups
 
     - name: Run Behave features in parallel
       if: env.RUN == 'true'
