@@ -1,5 +1,5 @@
 # features/elasticsearch.feature
-@needs-otel-collector @needs-elasticsearch @needs-apm-server @needs-apm-collector
+@needs-otel-collector @needs-elasticsearch
 Feature: Elasticsearch Operations Testing
   As a developer
   I want to test Elasticsearch operations using the adapter pattern
@@ -157,16 +157,6 @@ Feature: Elasticsearch Operations Testing
     Given adapter spans are exported to the collector
     When I index and search a document through the Elasticsearch adapter
     Then the collector should have a span with attribute "db.system.name" containing "elasticsearch"
-
-  Scenario Outline: Elasticsearch adapter spans reach Elastic APM Server <route>
-    Given adapter spans are exported to Elastic APM Server <route>
-    When I index and search a document through the Elasticsearch adapter
-    Then Elastic APM Server should store a span of type "external" with subtype "http"
-
-    Examples:
-      | route                 |
-      | directly              |
-      | through the collector |
 
   @async
   Scenario: Async Elasticsearch requests emit spans

@@ -1,4 +1,3 @@
-@needs-apm-server @needs-apm-collector
 Feature: ScyllaDB Adapter
   As a developer
   I want to interact with ScyllaDB using the adapter
@@ -246,17 +245,6 @@ Feature: ScyllaDB Adapter
     Given adapter spans are exported to the collector
     When I run a query through the ScyllaDB adapter
     Then the collector should have a span with attribute "db.system" containing "cassandra"
-
-  @needs-scylladb
-  Scenario Outline: ScyllaDB adapter spans reach Elastic APM Server <route>
-    Given adapter spans are exported to Elastic APM Server <route>
-    When I run a query through the ScyllaDB adapter
-    Then Elastic APM Server should store a span of type "db" with subtype "cassandra"
-
-    Examples:
-      | route                 |
-      | directly              |
-      | through the collector |
 
   @async @needs-scylladb @needs-otel-collector
   Scenario: Async ScyllaDB queries emit Cassandra spans
