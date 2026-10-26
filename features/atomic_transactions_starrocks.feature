@@ -1,5 +1,5 @@
-@needs-postgres @needs-mysql @needs-starrocks
-Feature: SQLAlchemy Atomic Transactions
+@needs-starrocks
+Feature: SQLAlchemy Atomic Transactions on StarRocks
 
   Scenario Outline: Create and retrieve entity in atomic transaction
     Given the application database is initialized for <db_type>
@@ -9,9 +9,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   Scenario Outline: Handle transaction rollback on exception
@@ -23,23 +20,7 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
-
-  Scenario Outline: Support nested atomic transactions
-    Given the application database is initialized for <db_type>
-    And test entities are defined
-    When nested atomic transactions are executed
-    Then operations from successful nested transactions should be visible within outer transaction
-    And operations from failed nested transactions should be rolled back
-
-    Examples:
-      | db_type  |
-      | postgres |
-      | sqlite   |
-      | mysql    |
 
   Scenario Outline: Update entities in atomic transaction
     Given the application database is initialized for <db_type>
@@ -50,22 +31,7 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
-
-  Scenario Outline: Create entities with relationships in atomic transaction
-    Given the application database is initialized for <db_type>
-    And test entities are defined
-    When an entity with relationships is created in an atomic transaction
-    Then the entity and its relationships should be retrievable
-
-    Examples:
-      | db_type  |
-      | postgres |
-      | sqlite   |
-      | mysql    |
 
   Scenario Outline: Support different entity types in atomic transactions
     Given the application database is initialized for <db_type>
@@ -75,9 +41,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   Scenario Outline: Test error handling in atomic transactions
@@ -89,22 +52,7 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
-
-  Scenario Outline: Verify session consistency across multiple atomic blocks
-    Given the application database is initialized for <db_type>
-    And test entities are defined
-    When operations are performed across multiple atomic blocks
-    Then session should maintain consistency across atomic blocks
-
-    Examples:
-      | db_type  |
-      | postgres |
-      | sqlite   |
-      | mysql    |
 
   @async
   Scenario Outline: Create and retrieve entity in async atomic transaction
@@ -115,9 +63,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   @async
@@ -130,9 +75,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   @async
@@ -145,9 +87,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   @async
@@ -159,9 +98,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   @async
@@ -174,36 +110,7 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
-
-  @async
-  Scenario Outline: Create multiple entities in async atomic transaction
-    Given the application database is initialized for <db_type>
-    And test entities are defined
-    When multiple entities are created in an async atomic transaction
-    Then all async entities should be retrievable
-
-    Examples:
-      | db_type  |
-      | postgres |
-      | sqlite   |
-      | mysql    |
-
-  @async
-  Scenario Outline: Create and manage complex entity relationships asynchronously
-    Given the application database is initialized for <db_type>
-    And test entities are defined
-    When complex async operations are performed in a transaction
-    Then all related entities should be accessible
-
-    Examples:
-      | db_type  |
-      | postgres |
-      | sqlite   |
-      | mysql    |
 
   @unit
   Scenario Outline: SQLAlchemy session manager callables stay inspectable at runtime
@@ -212,9 +119,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   @unit
@@ -224,24 +128,7 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
-
-  @unit
-  Scenario Outline: SQLite adapters accept either driver and in-memory databases
-    When a <mode> SQLite adapter runs a query with driver "<driver>" on database "<database>"
-    Then the SQLite query should return 1
-
-    Examples:
-      | mode  | driver           | database |
-      | sync  | sqlite           | :memory: |
-      | sync  | sqlite+aiosqlite | :memory: |
-      | sync  | sqlite+aiosqlite | file     |
-      | async | sqlite           | :memory: |
-      | async | sqlite           | file     |
-      | async | sqlite+aiosqlite | :memory: |
 
   # StarRocks SQL transaction limitations (shared-nothing allin1): nested ArchiPy
   # blocks share one txn and hit multi-insert; no multiple same-table inserts;
@@ -267,70 +154,6 @@ Feature: SQLAlchemy Atomic Transactions
     Then a StarRocks transaction limitation error should be raised
     And the database session should remain usable
 
-  @unit
-  Scenario Outline: Cancellation and interpreter exit pass through the atomic block unchanged
-    Given a fake <mode> session behind the atomic decorator
-    When the atomic function raises <exception>
-    Then <exception> should propagate through the atomic block unchanged
-    And the fake session should have been rolled back and closed
-
-    Examples:
-      | mode  | exception         |
-      | sync  | KeyboardInterrupt |
-      | sync  | SystemExit        |
-      | async | CancelledError    |
-
-  @unit
-  Scenario Outline: A failing rollback does not hide the original error
-    Given a fake <mode> session behind the atomic decorator
-    And the fake session fails to roll back
-    When the atomic function raises ValueError
-    Then an InternalError chained from ValueError should be raised
-    And the fake session should have been closed
-
-    Examples:
-      | mode  |
-      | sync  |
-      | async |
-
-  Scenario Outline: The atomic marker is cleared once the outermost block exits
-    Given the application database is initialized for <db_type>
-    When a nested atomic block succeeds on <db_type>
-    Then the atomic marker should be set in both blocks and cleared only after the outermost one
-
-    Examples:
-      | db_type  |
-      | postgres |
-      | mysql    |
-
-  @async
-  Scenario Outline: The atomic marker is cleared once the outermost async block exits
-    Given the application database is initialized for <db_type>
-    When a nested async atomic block succeeds on <db_type>
-    Then the atomic marker should be set in both blocks and cleared only after the outermost one
-
-    Examples:
-      | db_type  |
-      | postgres |
-      | mysql    |
-
-  @unit
-  Scenario Outline: Driver error codes map to specific database errors
-    When a <kind> error with driver code <code> is handled by the atomic decorator
-    Then the atomic decorator should raise <expected>
-
-    Examples:
-      | kind        | code  | expected                   |
-      | operational | 1213  | DatabaseDeadlockError      |
-      | operational | 1205  | DatabaseTimeoutError       |
-      | operational | 40001 | DatabaseSerializationError |
-      | operational | 40P01 | DatabaseDeadlockError      |
-      | operational | 2003  | DatabaseConnectionError    |
-      | integrity   | 1062  | DatabaseConstraintError    |
-      | integrity   | 1451  | DatabaseConstraintError    |
-      | integrity   | 23505 | DatabaseConstraintError    |
-      | integrity   | 1048  | DatabaseIntegrityError     |
-
   @needs-otel-collector
   Scenario Outline: SQLAlchemy queries emit database spans
     Given adapter spans are exported to the collector
@@ -338,11 +161,8 @@ Feature: SQLAlchemy Atomic Transactions
     Then the collector should have a database span for "<system>" containing statement "span_probe"
 
     Examples:
-      | db_type   | system     |
-      | postgres  | postgresql |
-      | mysql     | mysql      |
-      | starrocks | starrocks  |
-      | sqlite    | sqlite     |
+      | db_type   | system    |
+      | starrocks | starrocks |
 
   @async @needs-otel-collector
   Scenario Outline: Async SQLAlchemy queries emit database spans
@@ -351,11 +171,8 @@ Feature: SQLAlchemy Atomic Transactions
     Then the collector should have a database span for "<system>" containing statement "span_probe"
 
     Examples:
-      | db_type   | system     |
-      | postgres  | postgresql |
-      | mysql     | mysql      |
-      | starrocks | starrocks  |
-      | sqlite    | sqlite     |
+      | db_type   | system    |
+      | starrocks | starrocks |
 
   Scenario Outline: Search returns the total count across pages
     Given the application database is initialized for <db_type>
@@ -366,12 +183,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   | page | rows |
-      | postgres  | 1    | 10   |
-      | postgres  | 3    | 5    |
-      | postgres  | 4    | 0    |
-      | sqlite    | 1    | 10   |
-      | sqlite    | 3    | 5    |
-      | mysql     | 3    | 5    |
       | starrocks | 1    | 10   |
       | starrocks | 3    | 5    |
       | starrocks | 4    | 0    |
@@ -386,9 +197,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   Scenario Outline: A full page runs one count query
@@ -401,9 +209,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   Scenario Outline: The total stays exact when it is below the count threshold
@@ -415,9 +220,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   Scenario Outline: The total is above the count threshold when there are more rows than the threshold
@@ -429,9 +231,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   Scenario Outline: Every page counts when the count cache is disabled
@@ -445,8 +244,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
       | starrocks |
 
   Scenario Outline: The count cache reuses the total for later pages
@@ -462,9 +259,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   Scenario Outline: The count cache counts again after its TTL expires
@@ -479,25 +273,7 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
       | starrocks |
-
-  Scenario: The search output DTO reports whether the total is above the count threshold
-    Given the application database is initialized for postgres
-    And test entities are defined
-    And 25 searchable entities exist with description prefix "search-output"
-    And the search count threshold config is 10
-    And the global count threshold is 10
-    When I search page 1 of size 10 for entities with description prefix "search-output"
-    Then the search output DTO reports the total as estimated
-    And the exact search output DTO reports the total as exact
-    Given the global count threshold is 30
-    When I search page 1 of size 10 for entities with description prefix "search-output"
-    Then the search output DTO reports the total as exact
-    Given the global count threshold is not set
-    When I search page 1 of size 10 for entities with description prefix "search-output"
-    Then the search output DTO reports the total as exact
 
   Scenario Outline: The configured count threshold applies when the search sets none
     Given the application database is initialized for <db_type>
@@ -509,8 +285,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
       | starrocks |
 
   @async
@@ -523,9 +297,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   @async
@@ -539,8 +310,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
       | starrocks |
 
   @async
@@ -553,8 +322,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
       | starrocks |
 
   @async
@@ -570,8 +337,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
       | starrocks |
 
   Scenario Outline: A search with its own limit totals only the limited rows
@@ -583,9 +348,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
 
   Scenario Outline: A total equal to the count threshold is exact
@@ -598,19 +360,7 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
-      | mysql     |
       | starrocks |
-
-  Scenario: The estimate above the count threshold is close to the real total on PostgreSQL
-    Given the application database is initialized for postgres
-    And test entities are defined
-    And 25 searchable entities exist with description prefix "search-estimate"
-    And the table statistics are refreshed
-    When I search page 1 of size 10 for entities with description prefix "search-estimate" and count threshold 10
-    Then the search should return 10 rows and a total of 25
-    And 1 EXPLAIN estimates should have run
 
   Scenario Outline: The count cache keeps the totals of different searches apart
     Given the application database is initialized for <db_type>
@@ -628,8 +378,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
       | starrocks |
 
   @async
@@ -645,8 +393,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   |
-      | postgres  |
-      | sqlite    |
       | starrocks |
 
   Scenario Outline: Search filters match the expected entities
@@ -657,53 +403,10 @@ Feature: SQLAlchemy Atomic Transactions
     Then the filter should match <count> entities
 
     Examples:
-      | db_type   | operation             | value        | count |
-      | postgres  | EQUAL                 | apple        | 1     |
-      | postgres  | NOT_EQUAL             | apple        | 2     |
-      | postgres  | LESS_THAN             | banana       | 1     |
-      | postgres  | LESS_THAN_OR_EQUAL    | banana       | 2     |
-      | postgres  | GREATER_THAN          | banana       | 1     |
-      | postgres  | GREATER_THAN_OR_EQUAL | banana       | 2     |
-      | postgres  | LIKE                  | an           | 1     |
-      | postgres  | ILIKE                 | AN           | 1     |
-      | postgres  | STARTS_WITH           | ch           | 1     |
-      | postgres  | ENDS_WITH             | ana          | 1     |
-      | postgres  | CONTAINS              | rr           | 1     |
-      | postgres  | IS_NULL               | NULL         | 1     |
-      | postgres  | IS_NOT_NULL           | x            | 3     |
-      | postgres  | IN_LIST               | apple,cherry | 2     |
-      | postgres  | NOT_IN_LIST           | apple        | 2     |
-      | postgres  | EQUAL                 | NULL         | 4     |
-      | sqlite    | EQUAL                 | apple        | 1     |
-      | sqlite    | NOT_EQUAL             | apple        | 2     |
-      | sqlite    | LESS_THAN             | banana       | 1     |
-      | sqlite    | GREATER_THAN_OR_EQUAL | banana       | 2     |
-      | sqlite    | LIKE                  | an           | 1     |
-      | sqlite    | ILIKE                 | AN           | 1     |
-      | sqlite    | STARTS_WITH           | ch           | 1     |
-      | sqlite    | ENDS_WITH             | ana          | 1     |
-      | sqlite    | IS_NULL               | NULL         | 1     |
-      | sqlite    | IS_NOT_NULL           | x            | 3     |
-      | sqlite    | IN_LIST               | apple,cherry | 2     |
-      | sqlite    | NOT_IN_LIST           | apple        | 2     |
-      | sqlite    | EQUAL                 | NULL         | 4     |
-      | mysql     | EQUAL                 | apple        | 1     |
-      | mysql     | IN_LIST               | apple,cherry | 2     |
-      | mysql     | IS_NULL               | NULL         | 1     |
-      | starrocks | EQUAL                 | apple        | 1     |
-      | starrocks | NOT_EQUAL             | apple        | 2     |
-      | starrocks | LESS_THAN             | banana       | 1     |
-
-  Scenario Outline: A list filter rejects a value that is not a list
-    Given the application database is initialized for sqlite
-    And test entities are defined
-    When I filter the descriptions with <operation> and the non-list value "apple"
-    Then the filter should be rejected with an InvalidArgumentError
-
-    Examples:
-      | operation   |
-      | IN_LIST     |
-      | NOT_IN_LIST |
+      | db_type   | operation | value  | count |
+      | starrocks | EQUAL     | apple  | 1     |
+      | starrocks | NOT_EQUAL | apple  | 2     |
+      | starrocks | LESS_THAN | banana | 1     |
 
   Scenario Outline: A <shape> search totals the distinct rows, not the entities
     Given the application database is initialized for <db_type>
@@ -716,12 +419,6 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   | shape    |
-      | postgres  | distinct |
-      | postgres  | grouped  |
-      | sqlite    | distinct |
-      | sqlite    | grouped  |
-      | mysql     | distinct |
-      | mysql     | grouped  |
       | starrocks | distinct |
       | starrocks | grouped  |
 
@@ -734,98 +431,5 @@ Feature: SQLAlchemy Atomic Transactions
 
     Examples:
       | db_type   | shape    |
-      | postgres  | distinct |
-      | postgres  | grouped  |
-      | sqlite    | distinct |
       | starrocks | distinct |
       | starrocks | grouped  |
-
-  Scenario Outline: Entities are fetched by UUID through the <mode> adapter
-    Given the application database is initialized for <db_type>
-    And test entities are defined
-    When 2 entities are created through the <mode> adapter
-    Then every created entity should be fetched by UUID through the <mode> adapter
-
-    Examples: Sync adapter
-      | db_type  | mode |
-      | postgres | sync |
-      | sqlite   | sync |
-      | mysql    | sync |
-
-    @async
-    Examples: Async adapter
-      | db_type  | mode  |
-      | postgres | async |
-      | sqlite   | async |
-      | mysql    | async |
-
-  Scenario Outline: An unknown UUID returns no entity through the <mode> adapter
-    Given the application database is initialized for <db_type>
-    And test entities are defined
-    When a random UUID is fetched through the <mode> adapter
-    Then no entity should be returned
-
-    Examples: Sync adapter
-      | db_type  | mode |
-      | postgres | sync |
-      | sqlite   | sync |
-      | mysql    | sync |
-
-    @async
-    Examples: Async adapter
-      | db_type  | mode  |
-      | postgres | async |
-      | sqlite   | async |
-      | mysql    | async |
-
-  Scenario Outline: Entities deleted through the <mode> adapter by <method> are gone
-    Given the application database is initialized for <db_type>
-    And test entities are defined
-    When 3 entities are created through the <mode> adapter
-    And the created entities are deleted through the <mode> adapter by <method>
-    Then no created entity should be fetched by UUID through the <mode> adapter
-
-    Examples: Sync adapter
-      | db_type  | mode | method |
-      | postgres | sync | delete |
-      | postgres | sync | bulk   |
-      | sqlite   | sync | delete |
-      | sqlite   | sync | bulk   |
-      | mysql    | sync | delete |
-      | mysql    | sync | bulk   |
-
-    @async
-    Examples: Async adapter
-      | db_type  | mode  | method |
-      | postgres | async | delete |
-      | postgres | async | bulk   |
-      | sqlite   | async | delete |
-      | sqlite   | async | bulk   |
-      | mysql    | async | delete |
-      | mysql    | async | bulk   |
-
-  Scenario Outline: A failing <statement_kind> through the <mode> adapter raises a database query error
-    Given the application database is initialized for <db_type>
-    And test entities are defined
-    When a statement on a missing table is run as <statement_kind> through the <mode> adapter
-    Then a DatabaseQueryError should be raised
-    And the <mode> adapter should remain usable
-
-    Examples: Sync adapter
-      | db_type  | mode | statement_kind |
-      | postgres | sync | execute        |
-      | postgres | sync | scalars        |
-      | sqlite   | sync | execute        |
-      | sqlite   | sync | scalars        |
-      | mysql    | sync | execute        |
-      | mysql    | sync | scalars        |
-
-    @async
-    Examples: Async adapter
-      | db_type  | mode  | statement_kind |
-      | postgres | async | execute        |
-      | postgres | async | scalars        |
-      | sqlite   | async | execute        |
-      | sqlite   | async | scalars        |
-      | mysql    | async | execute        |
-      | mysql    | async | scalars        |

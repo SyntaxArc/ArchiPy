@@ -65,15 +65,18 @@ jobs:
           vault:
             - 'packages/vault/**'
             - 'features/vault_adapter.feature'
-          sql:
+          sql_postgres:
             - 'packages/postgres/**'
+            - 'archipy/adapters/base/sqlalchemy/**'
+            - 'features/atomic_transactions_postgres.feature'
+          sql_mysql:
             - 'packages/mysql/**'
-            - 'packages/sqlite/**'
+            - 'archipy/adapters/base/sqlalchemy/**'
+            - 'features/atomic_transactions_mysql.feature'
+          sql_starrocks:
             - 'packages/starrocks/**'
             - 'archipy/adapters/base/sqlalchemy/**'
-            - 'features/atomic_transactions.feature'
-            - 'features/sqlalchemy_multiple_databases.feature'
-            - 'features/database_error_classification.feature'
+            - 'features/atomic_transactions_starrocks.feature'
           email:
             - 'archipy/adapters/email/**'
             - 'features/email_adapter.feature'
@@ -114,6 +117,12 @@ jobs:
             - 'features/redis_adapter_apm.feature'
             - 'features/keycloak_adapter_apm.feature'
             - 'features/temporal_adapter_apm.feature'
+          sql_core:
+            - 'packages/sqlite/**'
+            - 'archipy/adapters/base/sqlalchemy/**'
+            - 'features/atomic_transactions_sqlite.feature'
+            - 'features/sqlalchemy_multiple_databases.feature'
+            - 'features/database_error_classification.feature'
           core:
             - 'features/app_utils.feature'
             - 'features/base_config.feature'
@@ -180,7 +189,10 @@ jobs:
             - '!features/redis_adapter_apm.feature'
             - '!features/keycloak_adapter_apm.feature'
             - '!features/temporal_adapter_apm.feature'
-            - '!features/atomic_transactions.feature'
+            - '!features/atomic_transactions_postgres.feature'
+            - '!features/atomic_transactions_mysql.feature'
+            - '!features/atomic_transactions_sqlite.feature'
+            - '!features/atomic_transactions_starrocks.feature'
             - '!features/database_error_classification.feature'
             - '!features/elastic_adapter.feature'
             - '!features/elastic_apm_telemetry.feature'
@@ -285,12 +297,18 @@ jobs:
           name: Vault
           features: >-
             features/vault_adapter.feature
-        - id: sql
-          name: SQL databases
+        - id: sql_postgres
+          name: SQL (PostgreSQL)
           features: >-
-            features/atomic_transactions.feature
-            features/sqlalchemy_multiple_databases.feature
-            features/database_error_classification.feature
+            features/atomic_transactions_postgres.feature
+        - id: sql_mysql
+          name: SQL (MySQL)
+          features: >-
+            features/atomic_transactions_mysql.feature
+        - id: sql_starrocks
+          name: SQL (StarRocks)
+          features: >-
+            features/atomic_transactions_starrocks.feature
         - id: email
           name: Email
           features: >-
@@ -321,11 +339,21 @@ jobs:
             features/redis_adapter_apm.feature
             features/keycloak_adapter_apm.feature
             features/temporal_adapter_apm.feature
+        - id: sql_core
+          name: SQL (SQLite and core)
+          features: >-
+            features/atomic_transactions_sqlite.feature
+            features/sqlalchemy_multiple_databases.feature
+            features/database_error_classification.feature
         - id: core
           name: Core and utilities
           exclude: >-
-            features/atomic_transactions.feature
+            features/atomic_transactions_sqlite.feature
+            features/sqlalchemy_multiple_databases.feature
             features/database_error_classification.feature
+            features/atomic_transactions_postgres.feature
+            features/atomic_transactions_mysql.feature
+            features/atomic_transactions_starrocks.feature
             features/elastic_adapter.feature
             features/elastic_apm_telemetry.feature
             features/email_adapter.feature
@@ -344,7 +372,6 @@ jobs:
             features/redis_adapter.feature
             features/saman_ipg_adapter.feature
             features/scylladb_adapter.feature
-            features/sqlalchemy_multiple_databases.feature
             features/temporal_adapter.feature
             features/vault_adapter.feature
             features/vault_adapter_apm.feature
