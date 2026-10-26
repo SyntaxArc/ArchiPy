@@ -24,21 +24,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Groups are balanced by the durations in .behave_durations.json. "rest" runs every feature that is in no
+        # Groups are balanced by the durations in .behave_durations.json. "Core, utils and payment adapters" runs every feature that is in no
         # other group, so a new feature file is picked up without touching this list.
         group:
-        - name: keycloak
+        - name: Keycloak
           features: >-
             features/keycloak_adapter.feature
             features/keycloak_dtos.feature
             features/keycloak_protocol_mapper_configs.feature
-        - name: telemetry
+        - name: Telemetry and Elasticsearch
           features: >-
             features/otel.feature
             features/otel_configuration.feature
             features/elastic_apm_telemetry.feature
             features/elastic_adapter.feature
-        - name: data
+        - name: Databases, cache and messaging
           features: >-
             features/atomic_transactions.feature
             features/redis_adapter.feature
@@ -48,7 +48,7 @@ jobs:
             features/temporal_adapter.feature
             features/minio_adapter.feature
             features/fastapi_minio_upload.feature
-        - name: rest
+        - name: Core, utils and payment adapters
           exclude: >-
             features/keycloak_adapter.feature
             features/keycloak_dtos.feature
