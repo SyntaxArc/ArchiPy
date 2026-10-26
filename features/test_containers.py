@@ -2149,7 +2149,8 @@ class ApmServerTestContainer(metaclass=Singleton, thread_safe=True):
                 },
                 timeout=10,
             )
-        if response.status_code == 404:
+        # 503: the shards of a data stream created a moment ago are not searchable yet; the poll searches again.
+        if response.status_code in (404, 503):
             return []
         response.raise_for_status()
         return [hit["_source"] for hit in response.json()["hits"]["hits"]]
@@ -2175,7 +2176,8 @@ class ApmServerTestContainer(metaclass=Singleton, thread_safe=True):
             self._wait_for_shards(index)
             httpx2.post(f"{base}/_refresh", timeout=10)
             response = httpx2.post(f"{base}/_search", json={"size": 200, **body}, timeout=10)
-        if response.status_code == 404:
+        # 503: the shards of a data stream created a moment ago are not searchable yet; the poll searches again.
+        if response.status_code in (404, 503):
             return []
         response.raise_for_status()
         return [hit["_source"] for hit in response.json()["hits"]["hits"]]
