@@ -872,6 +872,12 @@ else:
     logger.info(f"Session value: {value}")
 ```
 
+## Testing
+
+Test Redis code against a real Redis started by `testcontainers` (tag the feature `@needs-redis`; the image comes from
+`REDIS__IMAGE` in `.env.test`). `RedisMock` and `fakeredis` are secondary options for logic-only scenarios; they do
+not reproduce every command. See [BDD Testing](../testing_strategy.md).
+
 ## See Also
 
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining

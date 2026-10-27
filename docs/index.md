@@ -58,8 +58,8 @@ That's it — typed config, live Redis adapter, and a TTL cache, all wired toget
   hint support
 - **Modular adapters** — install only what you need; each integration (PostgreSQL, Redis, Kafka, Keycloak…) is an
   optional extra
-- **Testability first** — every adapter ships with a `ports.py` interface and a `mocks.py` test double, so unit tests
-  never need a real database
+- **Testability first** — every adapter ships with a `ports.py` interface; tests run against real services via
+  `testcontainers`, and Redis also ships a `mocks.py` test double for logic-only unit tests
 - **One config system** — environment variables, `.env` files, and runtime overrides all flow through a single validated
   `BaseConfig`
 - **Python 3.14+ native** — uses `X | Y` unions, `list[str]` generics, and modern syntax throughout; no legacy
