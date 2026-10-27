@@ -82,6 +82,7 @@ Comprehensive error handling patterns:
 ## Observability
 
 - [Observability](observability.md) - OpenTelemetry traces, metrics, and logs
+- [Pydantic AI](pydantic_ai.md) - Pydantic AI agent telemetry through `BaseConfig.PYDANTIC_AI`
 
 ---
 
