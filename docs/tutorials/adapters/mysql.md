@@ -14,13 +14,18 @@ Python 3.14 type hints.
 uv add "archipy[mysql]"
 ```
 
-> **Tip:** For async support, also install `archipy[mysql-async,sqlalchemy-async]`.
+!!! tip
+    For async support, also install `archipy[mysql-async,sqlalchemy-async]`.
 
 ## Configuration
 
 Configure the MySQL adapter via environment variables or a `MySQLSQLAlchemyConfig` object.
 
 ### Environment Variables
+
+!!! warning
+    Keep `MYSQL_SQLALCHEMY__PASSWORD` out of source control. Load it from the environment or a secrets store, and use
+    the placeholder values below for local development only.
 
 ```bash
 MYSQL_SQLALCHEMY__HOST=localhost
