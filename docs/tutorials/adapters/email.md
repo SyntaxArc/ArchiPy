@@ -20,6 +20,13 @@ Configure the email adapter via environment variables or an `EmailConfig` object
 
 ### Environment Variables
 
+!!! warning
+    Keep `EMAIL__PASSWORD` out of source control. Load it from the environment or a secrets store.
+
+!!! note
+    `EMAIL__CONNECTION_TIMEOUT` defaults to `30` seconds. Pooled connections idle longer than
+    `EMAIL__CONNECTION_REFRESH_SECONDS` are reconnected.
+
 ```bash
 EMAIL__SMTP_SERVER=smtp.example.com
 EMAIL__SMTP_PORT=587

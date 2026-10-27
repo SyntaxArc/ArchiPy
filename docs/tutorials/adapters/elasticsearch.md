@@ -14,14 +14,23 @@ management with proper error handling and Python 3.14+ type hints.
 uv add "archipy[elasticsearch]"
 ```
 
-> **Tip:** The Elasticsearch adapter is an optional extra. Only install it when you need Elasticsearch support to keep
-> your environment lean.
+!!! tip
+    The Elasticsearch adapter is an optional extra. Only install it when you need Elasticsearch support to keep
+    your environment lean.
 
 ## Configuration
 
 Configure Elasticsearch via environment variables or an `ElasticsearchConfig` object directly.
 
 ### Environment Variables
+
+!!! warning
+    Keep `ELASTIC__HTTP_PASSWORD` and `ELASTIC__API_SECRET` out of source control. Prefer API key authentication over
+    basic auth.
+
+!!! note
+    The config defaults are `REQUEST_TIMEOUT=1.0` seconds and `MAX_RETRIES=1`. The values below are examples; raise the
+    timeout for slow queries such as large aggregations.
 
 ```bash
 # Basic connection
@@ -582,63 +591,65 @@ except BulkIndexError as e:
     raise
 ```
 
-> **Tip:** Pass `stats_only=True` when you only need success and error counts instead of per-document error details.
+!!! tip
+    Pass `stats_only=True` when you only need success and error counts instead of per-document error details.
 
 ## Scan Operations
 
 Use `scan()` to iterate over large result sets without manually managing the scroll API. The helper wraps scroll
 requests and yields hits one at a time.
 
-### Scan Documents
+=== "Sync"
 
-```python
-import logging
+    ```python
+    import logging
 
-from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
+    from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
 
-logger = logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
 
-es = ElasticsearchAdapter()
+    es = ElasticsearchAdapter()
 
-query = {"query": {"match": {"author": "bob"}}}
-
-try:
-    hit_count = 0
-    for hit in es.scan(query=query, index="articles"):
-        hit_count += 1
-        logger.debug(f"Scanned document {hit['_id']}: {hit['_source']['title']}")
-    logger.info(f"Scan complete: {hit_count} documents")
-except Exception as e:
-    logger.error(f"Scan failed: {e}")
-    raise
-```
-
-### Async Scan
-
-```python
-import asyncio
-import logging
-
-from archipy.adapters.elasticsearch.adapters import AsyncElasticsearchAdapter
-
-logger = logging.getLogger(__name__)
-
-
-async def scan_articles() -> None:
-    es = AsyncElasticsearchAdapter()
     query = {"query": {"match": {"author": "bob"}}}
 
-    hit_count = 0
-    async for hit in es.scan(query=query, index="articles"):
-        hit_count += 1
-        logger.debug(f"Scanned document {hit['_id']}: {hit['_source']['title']}")
-    logger.info(f"Async scan complete: {hit_count} documents")
+    try:
+        hit_count = 0
+        for hit in es.scan(query=query, index="articles"):
+            hit_count += 1
+            logger.debug(f"Scanned document {hit['_id']}: {hit['_source']['title']}")
+        logger.info(f"Scan complete: {hit_count} documents")
+    except Exception as e:
+        logger.error(f"Scan failed: {e}")
+        raise
+    ```
+
+=== "Async"
+
+    ```python
+    import asyncio
+    import logging
+
+    from archipy.adapters.elasticsearch.adapters import AsyncElasticsearchAdapter
+
+    logger = logging.getLogger(__name__)
 
 
-asyncio.run(scan_articles())
-```
+    async def scan_articles() -> None:
+        es = AsyncElasticsearchAdapter()
+        query = {"query": {"match": {"author": "bob"}}}
 
-> **Note:** Setting `preserve_order=True` in `scan()` restores deterministic ordering at the cost of scroll performance.
+        hit_count = 0
+        async for hit in es.scan(query=query, index="articles"):
+            hit_count += 1
+            logger.debug(f"Scanned document {hit['_id']}: {hit['_source']['title']}")
+        logger.info(f"Async scan complete: {hit_count} documents")
+
+
+    asyncio.run(scan_articles())
+    ```
+
+!!! note
+    Setting `preserve_order=True` in `scan()` restores deterministic ordering at the cost of scroll performance.
 
 ## Async Usage
 
