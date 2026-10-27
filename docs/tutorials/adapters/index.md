@@ -32,7 +32,7 @@ your business logic and external dependencies.
 
 ArchiPy follows the ports and adapters pattern (hexagonal architecture):
 
-```
+```text
 ┌────────────────────────────────────────┐
 │             Domain Logic               │
 └───────────────────┬────────────────────┘

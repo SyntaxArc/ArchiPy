@@ -59,7 +59,7 @@ Core data structures and types:
 
 The ArchiPy source code is organized into the following structure:
 
-```
+```text
 archipy/
 ├── adapters/           # External system integrations
 │   ├── base/          # Base SQLAlchemy components

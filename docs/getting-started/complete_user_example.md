@@ -13,7 +13,7 @@ entity all the way to the FastAPI endpoint and `manage.py`. Each section corresp
 
 ## Project Layout
 
-```
+```text
 project-root/
 ├── my_app/
 │   ├── configs/

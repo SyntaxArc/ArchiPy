@@ -10,7 +10,7 @@ entities, errors, adapters, repository, and logic classes. This scales naturally
 
 ## Reference Layout
 
-```
+```text
 project-root/
 ├── my_app/                             # Application package
 │   ├── configs/

@@ -162,7 +162,7 @@ python manage.py run
 
 You should see:
 
-```
+```text
 INFO:logics.user_logic:Cache miss — fetching user 42 from database
 INFO:__main__:User-42
 INFO:__main__:User-42
