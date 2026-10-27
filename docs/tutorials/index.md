@@ -84,6 +84,12 @@ Comprehensive error handling patterns:
 - [Observability](observability.md) - OpenTelemetry traces, metrics, and logs
 - [Pydantic AI](pydantic_ai.md) - Pydantic AI agent telemetry through `BaseConfig.PYDANTIC_AI`
 
+## Operations
+
+- [Caching](cache.md) - In-process TTL caching with `ttl_cache` and the `cache` extra
+- [Scheduler](scheduler.md) - Running APScheduler jobs with the `scheduler` extra
+- [Health Checks and Shutdown](health_checks.md) - Readiness checks and graceful shutdown building blocks
+
 ---
 
 > **Note**: Each adapter tutorial links to its BDD scenarios and API reference.
