@@ -729,6 +729,8 @@
       
         
       
+        
+      
     
     
     
@@ -1183,6 +1185,34 @@
     
   
     Elasticsearch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elasticsearch_patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elasticsearch Patterns
   
 
     
@@ -3559,6 +3589,10 @@ rows.</p>
 <p><code>count_threshold=N</code> keeps the total exact up to <code>N</code> rows. Above that, PostgreSQL returns the planner estimate instead of
 scanning every row. MySQL, SQLite and StarRocks still count exactly. The estimate depends on table statistics, so keep
 autovacuum and <code>ANALYZE</code> healthy.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The estimate applies to PostgreSQL only. The other adapters always return an exact total.</p>
+</div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">users</span><span class="p">,</span> <span class="n">total</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">execute_search_query</span><span class="p">(</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">entity</span><span class="o">=</span><span class="n">User</span><span class="p">,</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">query</span><span class="o">=</span><span class="n">base_query</span><span class="p">,</span>
@@ -3593,6 +3627,10 @@ reported as estimated too.</p>
 <p>With <code>COUNT_CACHE_ENABLED=true</code> each total is cached in process, so only the first page of a search runs a <code>COUNT</code> and
 later pages reuse the total. A total can be stale for up to the TTL, so a row created just before a search may be
 missing from it.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The cache is per process and per adapter. Enabling it without the <code>cache</code> extra fails when the adapter is created.</p>
+</div>
 <table>
 <thead>
 <tr>

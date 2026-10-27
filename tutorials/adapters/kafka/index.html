@@ -729,6 +729,8 @@
       
         
       
+        
+      
     
     
     
@@ -1366,6 +1368,34 @@
     
   
     Elasticsearch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elasticsearch_patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elasticsearch Patterns
   
 
     
@@ -3926,6 +3956,11 @@ asynchronous producing/consuming via <code>confluent_kafka.aio</code>.</p>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nv">KAFKA__AUTO_OFFSET_RESET</span><span class="o">=</span>earliest
 </span></code></pre></div>
 <h3 id="direct-configuration">Direct Configuration<a class="headerlink" href="#direct-configuration" title="Permanent link">&para;</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>With <code>SECURITY_PROTOCOL</code> set to <code>SASL_PLAINTEXT</code> or <code>SASL_SSL</code>, <code>SASL_MECHANISM</code>, <code>USERNAME</code> and <code>PASSWORD</code> are all
+required. Load the password from the environment or a secrets store, not from source code.</p>
+</div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.config_template</span><span class="w"> </span><span class="kn">import</span> <span class="n">KafkaConfig</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">config</span> <span class="o">=</span> <span class="n">KafkaConfig</span><span class="p">(</span>
@@ -4037,6 +4072,11 @@ asynchronous producing/consuming via <code>confluent_kafka.aio</code>.</p>
 </span></code></pre></div>
 <h3 id="producer-publishing-messages">Producer — Publishing Messages<a class="headerlink" href="#producer-publishing-messages" title="Permanent link">&para;</a></h3>
 <p><code>KafkaProducerAdapter</code> is bound to a single topic at construction time.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>ENABLE_IDEMPOTENCE</code> requires <code>ACKS="all"</code> (the default), and <code>TRANSACTIONAL_ID</code> requires <code>ENABLE_IDEMPOTENCE</code>.
+Other combinations raise a <code>ConfigurationError</code> when the config is validated.</p>
+</div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.kafka.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">KafkaProducerAdapter</span>
@@ -4080,6 +4120,11 @@ asynchronous producing/consuming via <code>confluent_kafka.aio</code>.</p>
 </span><span id="__span-5-41"><a id="__codelineno-5-41" name="__codelineno-5-41" href="#__codelineno-5-41"></a><span class="k">else</span><span class="p">:</span>
 </span><span id="__span-5-42"><a id="__codelineno-5-42" name="__codelineno-5-42" href="#__codelineno-5-42"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"All messages flushed"</span><span class="p">)</span>
 </span></code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Messages are enqueued, not delivered, when you call the producer. Call <code>flush()</code> before the process exits, or
+pending messages can be lost.</p>
+</div>
 <h3 id="producer-health-check">Producer Health Check<a class="headerlink" href="#producer-health-check" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
@@ -4468,6 +4513,10 @@ shared adapter instance (e.g., via application lifespan) and call <code>close()<
 <code>close</code> runs, which would include idle time and make unrelated work its children. <code>KafkaConsumerAdapter.commit</code> therefore
 ends the span as soon as the offset is committed, so commit after the message is processed. A consumer that never
 commits (auto-commit) keeps the upstream behaviour.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Commit after the message is processed, not before, so the span covers the handler.</p>
+</div>
 <ul>
 <li><strong>Batches:</strong> <code>batch_consume</code> produces one <code>&lt;topic&gt; process</code> span for the whole batch, with a link to the producer
   trace of every message. Commit once after processing the batch.</li>
@@ -4482,6 +4531,7 @@ executor thread, so its span still ends on the next poll or close.</li>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns with proper chaining</li>
 <li><a href="../../config_management/">Configuration Management</a> — Kafka configuration setup</li>
 <li><a href="../../testing_strategy/">BDD Testing</a> — Testing Kafka operations</li>
+<li>BDD feature files — <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/kafka_adapters.feature"><code>kafka_adapters.feature</code></a>, <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/kafka_adapters_apm.feature"><code>kafka_adapters_apm.feature</code></a>, <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/kafka_clients_spans.feature"><code>kafka_clients_spans.feature</code></a></li>
 <li><a href="../../../api_reference/adapters/kafka/">API Reference</a> — Full Kafka adapter API documentation</li>
 </ul>
 

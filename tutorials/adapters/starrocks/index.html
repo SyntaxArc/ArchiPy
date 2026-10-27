@@ -729,6 +729,8 @@
       
         
       
+        
+      
     
     
     
@@ -1266,6 +1268,34 @@
     
   
     Elasticsearch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elasticsearch_patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elasticsearch Patterns
   
 
     
@@ -3718,6 +3748,16 @@ handling and Python 3.14 type hints.</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>Configure the StarRocks adapter via environment variables or a <code>StarRocksSQLAlchemyConfig</code> object.</p>
 <h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>StarRocks only supports the <code>READ COMMITTED</code> isolation level. Any other <code>ISOLATION_LEVEL</code> value raises a
+<code>ConfigurationError</code>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>CONNECT_TIMEOUT</code> defaults to <code>10</code> seconds for StarRocks, because the MySQL protocol needs an explicit connection
+timeout to avoid hanging on network issues.</p>
+</div>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">STARROCKS_SQLALCHEMY__HOST</span><span class="o">=</span>localhost
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">STARROCKS_SQLALCHEMY__PORT</span><span class="o">=</span><span class="m">9030</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nv">STARROCKS_SQLALCHEMY__USERNAME</span><span class="o">=</span>root
@@ -4127,6 +4167,7 @@ queries:</p>
 <li><a href="../postgres/">PostgreSQL Adapter</a> — Similar patterns for PostgreSQL</li>
 <li><a href="../sqlalchemy/">SQLAlchemy Search Totals</a> — Cheap totals for paginated searches, count threshold and count cache</li>
 <li><a href="../../helpers/decorators/#sqlalchemy-transaction-decorators">SQLAlchemy Decorators</a> — Transaction decorator usage</li>
+<li>BDD feature files — <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/atomic_transactions_starrocks.feature"><code>atomic_transactions_starrocks.feature</code></a>, <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/atomic_transactions_apm_starrocks.feature"><code>atomic_transactions_apm_starrocks.feature</code></a></li>
 <li><a href="../../../api_reference/adapters/starrocks/">API Reference</a> — Full StarRocks adapter API documentation</li>
 </ul>
 

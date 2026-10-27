@@ -147,6 +147,7 @@ nav:
           - MinIO: tutorials/adapters/minio.md
           - ScyllaDB: tutorials/adapters/scylladb.md
           - Elasticsearch: tutorials/adapters/elasticsearch.md
+          - Elasticsearch Patterns: tutorials/adapters/elasticsearch_patterns.md
           - Temporal: tutorials/adapters/temporal.md
           - Vault: tutorials/adapters/vault.md
           - Email: tutorials/adapters/email.md

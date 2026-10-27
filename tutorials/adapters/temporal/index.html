@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://syntaxarc.github.io/ArchiPy/tutorials/adapters/temporal/">
       
       
-        <link rel="prev" href="../elasticsearch/">
+        <link rel="prev" href="../elasticsearch_patterns/">
       
       
         <link rel="next" href="../vault/">
@@ -729,6 +729,8 @@
       
         
       
+        
+      
     
     
     
@@ -1081,6 +1083,34 @@
     
   
     Elasticsearch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elasticsearch_patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elasticsearch Patterns
   
 
     
@@ -4012,9 +4042,21 @@ error handling and Python 3.14 type hints.</p>
 </span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="nv">TEMPORAL__RETRY_MAXIMUM_INTERVAL</span><span class="o">=</span><span class="m">60</span>
 </span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="nv">TEMPORAL__RETRY_INITIAL_INTERVAL</span><span class="o">=</span><span class="m">1</span>
 </span></code></pre></div>
-<blockquote>
-<p><strong>Note:</strong> <code>TEMPORAL__API_KEY</code> is for Temporal Cloud authentication. Local dev servers ignore it.</p>
-</blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>TEMPORAL__API_KEY</code> is for Temporal Cloud authentication. Local dev servers ignore it.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Set all three of <code>TLS_CA_CERT</code>, <code>TLS_CLIENT_CERT</code> and <code>TLS_CLIENT_KEY</code>, or none of them. A partial set is rejected
+with an <code>InvalidArgumentError</code>. Keep <code>TEMPORAL__API_KEY</code> and the key file out of source control.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The config validates the timeouts. <code>WORKFLOW_TASK_TIMEOUT</code> must be lower than <code>WORKFLOW_RUN_TIMEOUT</code>, which must be
+lower than <code>WORKFLOW_EXECUTION_TIMEOUT</code>, and <code>KEEP_ALIVE_TIMEOUT_MS</code> must be lower than <code>KEEP_ALIVE_INTERVAL_MS</code>.
+Otherwise creating the config raises an <code>InvalidArgumentError</code>.</p>
+</div>
 <h3 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -4196,6 +4238,11 @@ error handling and Python 3.14 type hints.</p>
 </span><span id="__span-3-87"><a id="__codelineno-3-87" name="__codelineno-3-87" href="#__codelineno-3-87"></a><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </span></code></pre></div>
 <h2 id="advanced-configuration-overrides">Advanced Configuration Overrides<a class="headerlink" href="#advanced-configuration-overrides" title="Permanent link">&para;</a></h2>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Activities and workflows take their defaults from <code>TemporalConfig</code>: 30 seconds start-to-close, a 10 second heartbeat
+timeout and 3 retry attempts for activities. Pass explicit values only where one call needs something different.</p>
+</div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
@@ -4301,6 +4348,11 @@ error handling and Python 3.14 type hints.</p>
 </span><span id="__span-4-103"><a id="__codelineno-4-103" name="__codelineno-4-103" href="#__codelineno-4-103"></a>        <span class="k">return</span> <span class="sa">f</span><span class="s2">"Child workflow processed: </span><span class="si">{</span><span class="n">workflow_input</span><span class="p">[</span><span class="s1">'parent_data'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
 </span></code></pre></div>
 <h2 id="using-atomic-activities">Using Atomic Activities<a class="headerlink" href="#using-atomic-activities" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Activities are retried according to the retry policy (<code>RETRY_MAXIMUM_ATTEMPTS</code>, default <code>3</code>). Write them so that
+running more than once is safe, for example by checking for an existing record before creating one.</p>
+</div>
 <p>Activities can use atomic transactions for database operations:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span>
@@ -4417,6 +4469,10 @@ error handling and Python 3.14 type hints.</p>
 </span><span id="__span-5-113"><a id="__codelineno-5-113" name="__codelineno-5-113" href="#__codelineno-5-113"></a>        <span class="p">}</span>
 </span></code></pre></div>
 <h2 id="async-operations-with-workers">Async Operations with Workers<a class="headerlink" href="#async-operations-with-workers" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>On shutdown the worker waits up to <code>WORKER_GRACEFUL_SHUTDOWN_SECONDS</code> (default <code>30</code>) for running tasks to finish.</p>
+</div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
@@ -4704,10 +4760,11 @@ every second. The series below are verified against a real Temporal server by th
 <li><code>temporal_activity_execution_latency</code>, <code>temporal_activity_succeed_endtoend_latency</code> — activity latency histograms</li>
 <li><code>temporal_activity_execution_failed</code> — failed activity executions (label <code>failure_reason</code>)</li>
 </ul>
-<blockquote>
-<p><strong>Tip:</strong> Query these series in your OTLP backend / Grafana after the collector scrapes or
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Query these series in your OTLP backend / Grafana after the collector scrapes or
 receives OTLP — panel setup is backend-specific and isn't covered here.</p>
-</blockquote>
+</div>
 <h3 id="complete-example-with-metrics">Complete Example with Metrics<a class="headerlink" href="#complete-example-with-metrics" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -4836,6 +4893,7 @@ reconfigured in-process (Temporal SDK limitation).</p>
 <li><a href="../../observability/">Observability</a> — OpenTelemetry OTLP traces and metrics</li>
 <li><a href="../../testing_strategy/">BDD Testing</a> — Testing workflow operations</li>
 <li><a href="../../helpers/decorators/#sqlalchemy-transaction-decorators">SQLAlchemy Decorators</a> — Atomic transaction usage</li>
+<li>BDD feature files — <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/temporal_adapter.feature"><code>temporal_adapter.feature</code></a>, <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/temporal_adapter_apm.feature"><code>temporal_adapter_apm.feature</code></a>, <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/temporal_schedules_errors.feature"><code>temporal_schedules_errors.feature</code></a></li>
 <li><a href="../../../api_reference/adapters/temporal/">API Reference</a> — Full Temporal adapter API documentation</li>
 </ul>
 

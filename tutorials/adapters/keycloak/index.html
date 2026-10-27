@@ -729,6 +729,8 @@
       
         
       
+        
+      
     
     
     
@@ -1432,6 +1434,34 @@
     
   
     Elasticsearch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elasticsearch_patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elasticsearch Patterns
   
 
     
@@ -4051,6 +4081,11 @@ authorization. ArchiPy offers both synchronous and asynchronous implementations.
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>Configure the Keycloak adapter via environment variables or a <code>KeycloakConfig</code> object.</p>
 <h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Keep <code>KEYCLOAK__CLIENT_SECRET_KEY</code> out of source control. Load it from the environment or a secrets store, and keep
+<code>KEYCLOAK__VERIFY_SSL=true</code> outside local development.</p>
+</div>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">KEYCLOAK__SERVER_URL</span><span class="o">=</span>https://keycloak.example.com
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">KEYCLOAK__REALM_NAME</span><span class="o">=</span>my-realm
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nv">KEYCLOAK__CLIENT_ID</span><span class="o">=</span>my-client
@@ -4777,18 +4812,35 @@ configured for each method based on how frequently the data typically changes:</
 <li>User information from tokens: 30 seconds</li>
 <li>User details and role information: 5 minutes</li>
 </ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Token validation is never cached. Write operations such as user creation and updates clear the relevant caches.</p>
+</div>
 <p>You can clear all caches if needed:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.keycloak.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncKeycloakAdapter</span><span class="p">,</span> <span class="n">KeycloakAdapter</span>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Sync</label><label for="__tabbed_1_2">Async</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.keycloak.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">KeycloakAdapter</span>
 </span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="c1"># Sync adapter</span>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="n">keycloak</span> <span class="o">=</span> <span class="n">KeycloakAdapter</span><span class="p">()</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="n">keycloak</span><span class="o">.</span><span class="n">clear_all_caches</span><span class="p">()</span>
-</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>
-</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="c1"># Async adapter</span>
-</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="n">async_keycloak</span> <span class="o">=</span> <span class="n">AsyncKeycloakAdapter</span><span class="p">()</span>
-</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="n">async_keycloak</span><span class="o">.</span><span class="n">clear_all_caches</span><span class="p">()</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="n">keycloak</span> <span class="o">=</span> <span class="n">KeycloakAdapter</span><span class="p">()</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="n">keycloak</span><span class="o">.</span><span class="n">clear_all_caches</span><span class="p">()</span>
 </span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.keycloak.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncKeycloakAdapter</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="n">async_keycloak</span> <span class="o">=</span> <span class="n">AsyncKeycloakAdapter</span><span class="p">()</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="n">async_keycloak</span><span class="o">.</span><span class="n">clear_all_caches</span><span class="p">()</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
 <h2 id="security-considerations">Security Considerations<a class="headerlink" href="#security-considerations" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><code>KEYCLOAK__REMOTE_CACHE_TTL_SECONDS</code> trades freshness for fewer Keycloak calls. While it is set above <code>0</code>, a revoked
+token or a changed permission stays accepted until the cached entry expires.</p>
+</div>
 <ul>
 <li>Token validation is performed without caching to ensure security.</li>
 <li>The adapter automatically refreshes admin tokens before they expire.</li>
@@ -4809,6 +4861,7 @@ configured for each method based on how frequently the data typically changes:</
 <li><a href="../../config_management/">Configuration Management</a> — Keycloak configuration setup</li>
 <li><a href="../../testing_strategy/">BDD Testing</a> — Testing Keycloak operations</li>
 <li><a href="../../helpers/utils/#keycloak-utils">Keycloak Utils</a> — Authentication utilities with Keycloak</li>
+<li>BDD feature files — <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/keycloak_adapter.feature"><code>keycloak_adapter.feature</code></a>, <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/keycloak_adapter_apm.feature"><code>keycloak_adapter_apm.feature</code></a>, <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/keycloak_adapter_management.feature"><code>keycloak_adapter_management.feature</code></a>, <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/keycloak_adapter_tokens_orgs.feature"><code>keycloak_adapter_tokens_orgs.feature</code></a></li>
 <li><a href="../../../api_reference/adapters/keycloak/">API Reference</a> — Full Keycloak adapter API documentation</li>
 </ul>
 

@@ -729,6 +729,8 @@
       
         
       
+        
+      
     
     
     
@@ -911,34 +913,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Basic Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#synchronous-redis-adapter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Synchronous Redis Adapter
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#asynchronous-redis-adapter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Asynchronous Redis Adapter
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -1025,28 +999,6 @@
   
     <nav class="md-nav" aria-label="INCREX Window Counter">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#synchronous-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Synchronous example
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#asynchronous-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Asynchronous example
-      
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#parameters" class="md-nav__link">
@@ -1533,6 +1485,34 @@
     
   
     Elasticsearch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elasticsearch_patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elasticsearch Patterns
   
 
     
@@ -3872,34 +3852,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Basic Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#synchronous-redis-adapter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Synchronous Redis Adapter
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#asynchronous-redis-adapter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Asynchronous Redis Adapter
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -3986,28 +3938,6 @@
   
     <nav class="md-nav" aria-label="INCREX Window Counter">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#synchronous-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Synchronous example
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#asynchronous-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Asynchronous example
-      
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#parameters" class="md-nav__link">
@@ -4250,9 +4180,10 @@ key-value storage, and RediSearch (full-text, vector KNN, vector range, hybrid s
 <p>First, ensure you have the Redis dependencies installed:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[redis]"</span>
 </span></code></pre></div>
-<blockquote>
-<p><strong>Tip:</strong> The Redis adapter is an optional extra. Install only when Redis support is needed.</p>
-</blockquote>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The Redis adapter is an optional extra. Install only when Redis support is needed.</p>
+</div>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>Configure Redis via environment variables or a <code>RedisConfig</code> object.</p>
 <h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
@@ -4273,7 +4204,9 @@ key-value storage, and RediSearch (full-text, vector KNN, vector range, hybrid s
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
-<h3 id="synchronous-redis-adapter">Synchronous Redis Adapter<a class="headerlink" href="#synchronous-redis-adapter" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Sync</label><label for="__tabbed_1_2">Async</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.redis.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">RedisAdapter</span>
@@ -4311,7 +4244,8 @@ key-value storage, and RediSearch (full-text, vector KNN, vector range, hybrid s
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">custom_config</span> <span class="o">=</span> <span class="n">RedisConfig</span><span class="p">(</span><span class="n">MASTER_HOST</span><span class="o">=</span><span class="s2">"redis.internal"</span><span class="p">,</span> <span class="n">PORT</span><span class="o">=</span><span class="mi">6379</span><span class="p">)</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">redis</span> <span class="o">=</span> <span class="n">RedisAdapter</span><span class="p">(</span><span class="n">redis_config</span><span class="o">=</span><span class="n">custom_config</span><span class="p">)</span>
 </span></code></pre></div>
-<h3 id="asynchronous-redis-adapter">Asynchronous Redis Adapter<a class="headerlink" href="#asynchronous-redis-adapter" title="Permanent link">&para;</a></h3>
+</div>
+<div class="tabbed-block">
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
@@ -4338,6 +4272,9 @@ key-value storage, and RediSearch (full-text, vector KNN, vector range, hybrid s
 </span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>
 </span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </span></code></pre></div>
+</div>
+</div>
+</div>
 <h2 id="caching-patterns">Caching Patterns<a class="headerlink" href="#caching-patterns" title="Permanent link">&para;</a></h2>
 <h3 id="function-result-caching">Function Result Caching<a class="headerlink" href="#function-result-caching" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
@@ -4517,13 +4454,16 @@ key-value storage, and RediSearch (full-text, vector KNN, vector range, hybrid s
 ArchiPy exposes it as <code>increx()</code> on both sync and async adapters. It is the primitive behind the
 <a href="../../helpers/interceptors/#rate-limiting-interceptor">gRPC rate-limit interceptor</a>. For FastAPI HTTP
 limits, use <a href="https://github.com/redis/fastapi-redis-sdk"><code>fastapi-redis-sdk</code></a>.</p>
-<blockquote>
-<p><strong>Note:</strong> Redis <strong>8.8+</strong> is required. The test container image in <code>.env.test</code> is <code>redis:8.8.0-alpine</code>.
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Redis <strong>8.8+</strong> is required. The test container image in <code>.env.test</code> is <code>redis:8.8.0-alpine</code>.
 <code>fakeredis</code> does not implement <code>INCREX</code>; use a real Redis 8.8 instance to exercise this command.</p>
-</blockquote>
+</div>
 <p><code>increx</code> returns a two-element list: <code>[new_value, actual_increment_applied]</code>. When <code>actual_increment_applied</code> is
 <code>0</code>, the increment was rejected or clamped at the bound.</p>
-<h4 id="synchronous-example">Synchronous example<a class="headerlink" href="#synchronous-example" title="Permanent link">&para;</a></h4>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Sync</label><label for="__tabbed_2_2">Async</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.redis.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">RedisAdapter</span>
@@ -4547,7 +4487,8 @@ limits, use <a href="https://github.com/redis/fastapi-redis-sdk"><code>fastapi-r
 </span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"INCREX failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="__span-10-22"><a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>    <span class="k">raise</span>
 </span></code></pre></div>
-<h4 id="asynchronous-example">Asynchronous example<a class="headerlink" href="#asynchronous-example" title="Permanent link">&para;</a></h4>
+</div>
+<div class="tabbed-block">
 <div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
@@ -4576,6 +4517,9 @@ limits, use <a href="https://github.com/redis/fastapi-redis-sdk"><code>fastapi-r
 </span><span id="__span-11-26"><a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a>
 </span><span id="__span-11-27"><a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </span></code></pre></div>
+</div>
+</div>
+</div>
 <h4 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h4>
 <table>
 <thead>
@@ -4619,12 +4563,13 @@ limits, use <a href="https://github.com/redis/fastapi-redis-sdk"><code>fastapi-r
 <p>ArchiPy exposes RediSearch through index-bound handles returned by <code>search_index()</code>. Each handle covers index
 management, document upserts, full-text search, vector KNN, vector range queries, hybrid search, aggregations, and
 aliases.</p>
-<blockquote>
-<p><strong>Note:</strong> RediSearch requires <strong>Redis 8+</strong> (query engine built into Redis Open Source). The adapter uses a
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>RediSearch requires <strong>Redis 8+</strong> (query engine built into Redis Open Source). The adapter uses a
 dedicated binary-safe client (<code>decode_responses=False</code>) for vector fields. Cluster and standalone modes are
 supported; sentinel mode is not. On cluster, use hash-tagged key prefixes (for example <code>{products}:</code>) so indexed
 documents share a slot.</p>
-</blockquote>
+</div>
 <h3 id="create-an-index">Create an Index<a class="headerlink" href="#create-an-index" title="Permanent link">&para;</a></h3>
 <p>Define the schema with DTO field configs, then create a HASH or JSON index with a key prefix:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -4742,10 +4687,11 @@ client for RediSearch automatically; sentinel mode is not supported.</p>
 </span><span id="__span-14-24"><a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a><span class="n">handle</span> <span class="o">=</span> <span class="n">redis</span><span class="o">.</span><span class="n">search_index</span><span class="p">(</span><span class="s2">"cluster-products"</span><span class="p">)</span>
 </span><span id="__span-14-25"><a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a><span class="n">handle</span><span class="o">.</span><span class="n">create_index</span><span class="p">(</span><span class="n">cluster_schema</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">"</span><span class="si">{products}</span><span class="s2">:"</span><span class="p">)</span>
 </span></code></pre></div>
-<blockquote>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
 <p>See <a href="https://redis.io/docs/latest/develop/ai/search-and-query/best-practices/scalable-query-best-practices/">Redis scalable query best practices</a>
 for cluster sizing and <code>SHARD_K_RATIO</code> guidance.</p>
-</blockquote>
+</div>
 <h3 id="upsert-documents">Upsert Documents<a class="headerlink" href="#upsert-documents" title="Permanent link">&para;</a></h3>
 <p>HASH documents store scalar fields in a Redis hash and pack vectors as float32 bytes:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -5044,6 +4990,7 @@ not reproduce every command. See <a href="../../testing_strategy/">BDD Testing</
   <code>INCREX</code>; FastAPI via <code>fastapi-redis-sdk</code></li>
 <li><a href="../../testing_strategy/">BDD Testing</a> — RediSearch scenarios in <code>features/redis_adapter.feature</code> (container and
   cluster)</li>
+<li>BDD feature files — <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/redis_adapter.feature"><code>redis_adapter.feature</code></a>, <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/redis_adapter_apm.feature"><code>redis_adapter_apm.feature</code></a></li>
 <li><a href="../../../api_reference/adapters/redis/">API Reference</a> — Full Redis adapter API documentation</li>
 </ul>
 

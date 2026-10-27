@@ -729,6 +729,8 @@
       
         
       
+        
+      
     
     
     
@@ -1081,6 +1083,34 @@
     
   
     Elasticsearch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elasticsearch_patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elasticsearch Patterns
   
 
     
@@ -3919,9 +3949,10 @@ with proper error handling and Python 3.14 type hints.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[parsian-ipg]"</span><span class="w">  </span><span class="c1"># Parsian gateway</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[saman-ipg]"</span><span class="w">    </span><span class="c1"># Saman gateway</span>
 </span></code></pre></div>
-<blockquote>
-<p><strong>Tip:</strong> Payment gateways are optional extras. Install only the gateway (s) you need.</p>
-</blockquote>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Payment gateways are optional extras. Install only the gateway (s) you need.</p>
+</div>
 <hr />
 <h2 id="parsian-shaparak">Parsian Shaparak<a class="headerlink" href="#parsian-shaparak" title="Permanent link">&para;</a></h2>
 <p>Parsian uses a SOAP-based protocol with WSDL service definitions.</p>
@@ -3980,6 +4011,10 @@ with proper error handling and Python 3.14 type hints.</p>
 </span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Payment initiation failed: </span><span class="si">{</span><span class="n">payment_response</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="confirming-a-payment">Confirming a Payment<a class="headerlink" href="#confirming-a-payment" title="Permanent link">&para;</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>A response does not mean the payment is confirmed. Check <code>confirm_response.status</code>: <code>0</code> is a confirmed payment.</p>
+</div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.internet_payment_gateways.ir.parsian</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConfirmRequestDTO</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">UnavailableError</span><span class="p">,</span> <span class="n">InternalError</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
@@ -4028,6 +4063,10 @@ with proper error handling and Python 3.14 type hints.</p>
 </span><span id="__span-6-25"><a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Confirmation failed: </span><span class="si">{</span><span class="n">confirm_response</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="reversing-a-payment">Reversing a Payment<a class="headerlink" href="#reversing-a-payment" title="Permanent link">&para;</a></h3>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Check <code>reverse_response.status</code> after the call. <code>0</code> means the reversal succeeded.</p>
+</div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.internet_payment_gateways.ir.parsian</span><span class="w"> </span><span class="kn">import</span> <span class="n">ReverseRequestDTO</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">UnavailableError</span><span class="p">,</span> <span class="n">InternalError</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
@@ -4119,6 +4158,11 @@ with proper error handling and Python 3.14 type hints.</p>
 </span><span id="__span-11-23"><a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Payment initiation failed: </span><span class="si">{</span><span class="n">payment_response</span><span class="o">.</span><span class="n">error_code</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">payment_response</span><span class="o">.</span><span class="n">error_desc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="neo-pg-capturing-dynamic-payment-url">Neo-PG: Capturing Dynamic Payment URL<a class="headerlink" href="#neo-pg-capturing-dynamic-payment-url" title="Permanent link">&para;</a></h3>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The Neo-PG adapter reads the payment URL from the <code>X-IPG-Url</code> response header. When the header is missing,
+<code>ipg_url</code> is empty, so check it before you redirect the customer.</p>
+</div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">try</span><span class="p">:</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="n">payment_response</span> <span class="o">=</span> <span class="n">neo_adapter</span><span class="o">.</span><span class="n">initiate_payment</span><span class="p">(</span><span class="n">payment_request</span><span class="p">)</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="k">except</span> <span class="n">UnavailableError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
@@ -4283,6 +4327,11 @@ with proper error handling and Python 3.14 type hints.</p>
 </span></code></pre></div>
 <h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
 <p>All adapters use ArchiPy's consistent error hierarchy:</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p><code>FailedPreconditionError</code> means a required setting such as <code>TERMINAL_ID</code> is missing. Fix the configuration instead
+of retrying.</p>
+</div>
 <table>
 <thead>
 <tr>
@@ -4314,6 +4363,7 @@ with proper error handling and Python 3.14 type hints.</p>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns</li>
 <li><a href="../../config_management/">Configuration Management</a> — Gateway configuration setup</li>
 <li><a href="../../testing_strategy/">BDD Testing</a> — Testing payment operations</li>
+<li>BDD feature files — <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/parsian_ipg_adapter.feature"><code>parsian_ipg_adapter.feature</code></a>, <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/saman_ipg_adapter.feature"><code>saman_ipg_adapter.feature</code></a></li>
 <li><a href="../../../api_reference/adapters/payment_gateways/">API Reference</a> — Full payment gateway API documentation</li>
 </ul>
 

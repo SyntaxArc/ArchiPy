@@ -729,6 +729,8 @@
       
         
       
+        
+      
     
     
     
@@ -1081,6 +1083,34 @@
     
   
     Elasticsearch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../elasticsearch_patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Elasticsearch Patterns
   
 
     
@@ -3774,6 +3804,15 @@ handling and logging.</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>Configure the email adapter via environment variables or an <code>EmailConfig</code> object.</p>
 <h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Keep <code>EMAIL__PASSWORD</code> out of source control. Load it from the environment or a secrets store.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>EMAIL__CONNECTION_TIMEOUT</code> defaults to <code>30</code> seconds. Pooled connections idle longer than
+<code>EMAIL__CONNECTION_REFRESH_SECONDS</code> are reconnected.</p>
+</div>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">EMAIL__SMTP_SERVER</span><span class="o">=</span>smtp.example.com
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">EMAIL__SMTP_PORT</span><span class="o">=</span><span class="m">587</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nv">EMAIL__USERNAME</span><span class="o">=</span>your-username
@@ -4089,6 +4128,7 @@ client span:</p>
 <li><a href="../../error_handling/">Error Handling</a> — Exception handling patterns with proper chaining</li>
 <li><a href="../../config_management/">Configuration Management</a> — Email configuration setup</li>
 <li><a href="../../testing_strategy/">BDD Testing</a> — Testing email operations</li>
+<li>BDD feature files — <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/email_adapter.feature"><code>email_adapter.feature</code></a>, <a href="https://github.com/SyntaxArc/ArchiPy/blob/master/features/email_adapter_apm.feature"><code>email_adapter_apm.feature</code></a></li>
 <li><a href="../../../api_reference/adapters/email/">API Reference</a> — Full Email adapter API documentation</li>
 </ul>
 
