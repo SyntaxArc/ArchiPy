@@ -1728,6 +1728,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#pydantic-ai" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pydantic AI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#client-grpc" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3629,6 +3640,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#pydantic-ai" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pydantic AI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#client-grpc" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3780,6 +3802,10 @@
 <tr>
 <td><code>archipy[otel-minio]</code></td>
 <td>Botocore (MinIO/S3) instrumentation</td>
+</tr>
+<tr>
+<td><code>archipy[otel-pydantic-ai]</code></td>
+<td>Pydantic AI agent, model request and tool spans plus token usage metrics</td>
 </tr>
 </tbody>
 </table>
@@ -4312,6 +4338,51 @@ libraries that are instrumented anyway; ArchiPy logs one warning naming the mism
 to turn the bypass off. Remove a key once its instrumentor supports the installed version:
 <code>make check-instrumentor-compat</code> resolves the instrumentor's <code>instruments</code> extra together with
 ArchiPy's own SQLAlchemy bound and reports when upstream has caught up (a weekly CI job runs it too).</p>
+<h3 id="pydantic-ai">Pydantic AI<a class="headerlink" href="#pydantic-ai" title="Permanent link">&para;</a></h3>
+<p>With <code>archipy[otel-pydantic-ai]</code> installed, <code>OtelUtils.init_otel_if_needed</code> calls <code>Agent.instrument_all</code> with
+ArchiPy's tracer and meter providers, so agent runs, model requests and tool calls become spans and token usage
+becomes a metric. An agent the application instrumented itself is left alone. Settings live in <code>BaseConfig.PYDANTIC_AI</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INSTRUMENTATION_ENABLED</code></td>
+<td><code>true</code></td>
+<td>Instrument Pydantic AI agents when OpenTelemetry is enabled</td>
+</tr>
+<tr>
+<td><code>INSTRUMENTATION_INCLUDE_CONTENT</code></td>
+<td><code>true</code></td>
+<td>Prompts, model output and tool arguments in span attributes (turn off for personal data)</td>
+</tr>
+<tr>
+<td><code>INSTRUMENTATION_INCLUDE_BINARY_CONTENT</code></td>
+<td><code>false</code></td>
+<td>Binary content (images, audio, documents) in span attributes</td>
+</tr>
+<tr>
+<td><code>INSTRUMENTATION_INCLUDE_MODEL_REQUEST_PARAMETERS</code></td>
+<td><code>true</code></td>
+<td>Model request parameters (temperature, max tokens, ...) in model request spans</td>
+</tr>
+<tr>
+<td><code>INSTRUMENTATION_VERSION</code></td>
+<td><code>6</code></td>
+<td>Span and attribute format version (<code>5</code> or <code>6</code>)</td>
+</tr>
+<tr>
+<td><code>INSTRUMENTATION_USE_AGGREGATED_USAGE_ATTRIBUTE_NAMES</code></td>
+<td><code>true</code></td>
+<td>Name the agent run usage attributes <code>gen_ai.aggregated_usage.*</code></td>
+</tr>
+</tbody>
+</table>
 <h3 id="client-grpc">Client gRPC<a class="headerlink" href="#client-grpc" title="Permanent link">&para;</a></h3>
 <p>For outbound gRPC clients, attach contrib interceptors explicitly:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
