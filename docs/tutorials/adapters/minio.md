@@ -19,6 +19,10 @@ Configure the MinIO adapter via environment variables or a `MinioConfig` object.
 
 ### Environment Variables
 
+!!! warning
+    `minioadmin` is the MinIO default credential. Use it for local development only, and load real access and secret
+    keys from the environment or a secrets store.
+
 ```bash
 MINIO__ENDPOINT=localhost:9000
 MINIO__ACCESS_KEY=minioadmin
@@ -158,6 +162,10 @@ minio.remove_objects("my-bucket", ["doc1.pdf", "doc2.pdf", "doc3.pdf"])
 
 ### Generating Presigned URLs
 
+!!! warning
+    Anyone holding a presigned URL can use it until it expires. Keep the expiry short and do not log or share URLs
+    outside the intended client.
+
 ```python
 import logging
 
@@ -277,6 +285,10 @@ except InternalError as e:
 ## Performance Optimization
 
 The MinioAdapter includes TTL caching for frequently accessed operations:
+
+!!! note
+    Cached results can be up to 5 minutes old. After you change a bucket or object outside the adapter, call
+    `clear_all_caches()` to read fresh values.
 
 ```python
 # Check if bucket exists (cached for 5 minutes)

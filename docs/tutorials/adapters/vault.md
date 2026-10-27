@@ -25,6 +25,14 @@ Configure the Vault adapter via environment variables or a `VaultConfig` object.
 
 ### Environment Variables
 
+!!! warning
+    Keep `VAULT__TOKEN` and other credentials out of source control. For AppRole, userpass and JWT, prefer the `*_FILE`
+    variants (for example `VAULT__APPROLE_SECRET_ID_FILE`) over inline secrets.
+
+!!! note
+    `VAULT__SECRET_CACHE_TTL=0` disables caching of `read_secret()` results. `VAULT__CONNECT_TIMEOUT` and
+    `VAULT__READ_TIMEOUT` default to `5.0` and `10.0` seconds.
+
 ```bash
 VAULT__ENABLED=true
 VAULT__ADDR=https://vault.example.com:8200
@@ -144,6 +152,10 @@ except (NotFoundError, PermissionDeniedError) as e:
 ## Advanced Features
 
 ### Dynamic Credentials
+
+!!! tip
+    Dynamic credentials come with a lease. Renew the lease while you still need the credentials, and revoke it when
+    you are done.
 
 Without `parameters`, the adapter calls hvac
 [

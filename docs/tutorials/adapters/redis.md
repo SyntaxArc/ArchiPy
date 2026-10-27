@@ -16,7 +16,8 @@ First, ensure you have the Redis dependencies installed:
 uv add "archipy[redis]"
 ```
 
-> **Tip:** The Redis adapter is an optional extra. Install only when Redis support is needed.
+!!! tip
+    The Redis adapter is an optional extra. Install only when Redis support is needed.
 
 ## Configuration
 
@@ -47,79 +48,79 @@ config = RedisConfig(
 
 ## Basic Usage
 
-### Synchronous Redis Adapter
+=== "Sync"
 
-```python
-import logging
+    ```python
+    import logging
 
-from archipy.adapters.redis.adapters import RedisAdapter
-from archipy.models.errors import CacheError
+    from archipy.adapters.redis.adapters import RedisAdapter
+    from archipy.models.errors import CacheError
 
-# Configure logging
-logger = logging.getLogger(__name__)
+    # Configure logging
+    logger = logging.getLogger(__name__)
 
-try:
-    # Uses global config (BaseConfig.global_config().REDIS)
-    redis = RedisAdapter()
-
-    # Set and get values
-    redis.set("user:123:name", "John Doe")
-    name = redis.get("user:123:name")
-    logger.info(f"User name: {name}")
-
-    # Set with expiration (ex = seconds)
-    redis.set("session:456", "active", ex=3600)
-
-    # Delete a key
-    redis.delete("user:123:name")
-
-    # Check if key exists
-    if redis.exists("session:456"):
-        logger.info("Session exists")
-except CacheError as e:
-    logger.error(f"Redis operation failed: {e}")
-    raise
-```
-
-To use a custom config instead of the global one:
-
-```python
-from archipy.adapters.redis.adapters import RedisAdapter
-from archipy.configs.config_template import RedisConfig
-
-custom_config = RedisConfig(MASTER_HOST="redis.internal", PORT=6379)
-redis = RedisAdapter(redis_config=custom_config)
-```
-
-### Asynchronous Redis Adapter
-
-```python
-import asyncio
-import logging
-
-from archipy.adapters.redis.adapters import AsyncRedisAdapter
-from archipy.models.errors import CacheError
-
-# Configure logging
-logger = logging.getLogger(__name__)
-
-
-async def main() -> None:
     try:
-        redis = AsyncRedisAdapter()
+        # Uses global config (BaseConfig.global_config().REDIS)
+        redis = RedisAdapter()
 
-        # Async operations
-        await redis.set("counter", "1")
-        await redis.incrby("counter")  # Increment by 1
-        count = await redis.get("counter")
-        logger.info(f"Counter: {count}")
+        # Set and get values
+        redis.set("user:123:name", "John Doe")
+        name = redis.get("user:123:name")
+        logger.info(f"User name: {name}")
+
+        # Set with expiration (ex = seconds)
+        redis.set("session:456", "active", ex=3600)
+
+        # Delete a key
+        redis.delete("user:123:name")
+
+        # Check if key exists
+        if redis.exists("session:456"):
+            logger.info("Session exists")
     except CacheError as e:
         logger.error(f"Redis operation failed: {e}")
         raise
+    ```
+
+    To use a custom config instead of the global one:
+
+    ```python
+    from archipy.adapters.redis.adapters import RedisAdapter
+    from archipy.configs.config_template import RedisConfig
+
+    custom_config = RedisConfig(MASTER_HOST="redis.internal", PORT=6379)
+    redis = RedisAdapter(redis_config=custom_config)
+    ```
+
+=== "Async"
+
+    ```python
+    import asyncio
+    import logging
+
+    from archipy.adapters.redis.adapters import AsyncRedisAdapter
+    from archipy.models.errors import CacheError
+
+    # Configure logging
+    logger = logging.getLogger(__name__)
 
 
-asyncio.run(main())
-```
+    async def main() -> None:
+        try:
+            redis = AsyncRedisAdapter()
+
+            # Async operations
+            await redis.set("counter", "1")
+            await redis.incrby("counter")  # Increment by 1
+            count = await redis.get("counter")
+            logger.info(f"Counter: {count}")
+        except CacheError as e:
+            logger.error(f"Redis operation failed: {e}")
+            raise
+
+
+    asyncio.run(main())
+    ```
 
 ## Caching Patterns
 
@@ -318,55 +319,27 @@ ArchiPy exposes it as `increx()` on both sync and async adapters. It is the prim
 [gRPC rate-limit interceptor](../helpers/interceptors.md#rate-limiting-interceptor). For FastAPI HTTP
 limits, use [`fastapi-redis-sdk`](https://github.com/redis/fastapi-redis-sdk).
 
-> **Note:** Redis **8.8+** is required. The test container image in `.env.test` is `redis:8.8.0-alpine`.
-> `fakeredis` does not implement `INCREX`; use a real Redis 8.8 instance to exercise this command.
+!!! warning
+    Redis **8.8+** is required. The test container image in `.env.test` is `redis:8.8.0-alpine`.
+    `fakeredis` does not implement `INCREX`; use a real Redis 8.8 instance to exercise this command.
 
 `increx` returns a two-element list: `[new_value, actual_increment_applied]`. When `actual_increment_applied` is
 `0`, the increment was rejected or clamped at the bound.
 
-#### Synchronous example
+=== "Sync"
 
-```python
-import logging
+    ```python
+    import logging
 
-from archipy.adapters.redis.adapters import RedisAdapter
-from archipy.models.errors import CacheError
+    from archipy.adapters.redis.adapters import RedisAdapter
+    from archipy.models.errors import CacheError
 
-logger = logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
 
-redis = RedisAdapter()
+    redis = RedisAdapter()
 
-try:
-    new_value, applied = redis.increx(
-        "rate:api:user-1",
-        byint=1,
-        ubound=5,
-        saturate=True,
-        px=60_000,
-        enx=True,
-    )
-    logger.info(f"Counter: {new_value}, applied: {applied}")
-except CacheError as e:
-    logger.error(f"INCREX failed: {e}")
-    raise
-```
-
-#### Asynchronous example
-
-```python
-import asyncio
-import logging
-
-from archipy.adapters.redis.adapters import AsyncRedisAdapter
-from archipy.models.errors import CacheError
-
-logger = logging.getLogger(__name__)
-
-
-async def main() -> None:
-    redis = AsyncRedisAdapter()
     try:
-        new_value, applied = await redis.increx(
+        new_value, applied = redis.increx(
             "rate:api:user-1",
             byint=1,
             ubound=5,
@@ -378,10 +351,39 @@ async def main() -> None:
     except CacheError as e:
         logger.error(f"INCREX failed: {e}")
         raise
+    ```
+
+=== "Async"
+
+    ```python
+    import asyncio
+    import logging
+
+    from archipy.adapters.redis.adapters import AsyncRedisAdapter
+    from archipy.models.errors import CacheError
+
+    logger = logging.getLogger(__name__)
 
 
-asyncio.run(main())
-```
+    async def main() -> None:
+        redis = AsyncRedisAdapter()
+        try:
+            new_value, applied = await redis.increx(
+                "rate:api:user-1",
+                byint=1,
+                ubound=5,
+                saturate=True,
+                px=60_000,
+                enx=True,
+            )
+            logger.info(f"Counter: {new_value}, applied: {applied}")
+        except CacheError as e:
+            logger.error(f"INCREX failed: {e}")
+            raise
+
+
+    asyncio.run(main())
+    ```
 
 #### Parameters
 
@@ -401,10 +403,11 @@ ArchiPy exposes RediSearch through index-bound handles returned by `search_index
 management, document upserts, full-text search, vector KNN, vector range queries, hybrid search, aggregations, and
 aliases.
 
-> **Note:** RediSearch requires **Redis 8+** (query engine built into Redis Open Source). The adapter uses a
-> dedicated binary-safe client (`decode_responses=False`) for vector fields. Cluster and standalone modes are
-> supported; sentinel mode is not. On cluster, use hash-tagged key prefixes (for example `{products}:`) so indexed
-> documents share a slot.
+!!! warning
+    RediSearch requires **Redis 8+** (query engine built into Redis Open Source). The adapter uses a
+    dedicated binary-safe client (`decode_responses=False`) for vector fields. Cluster and standalone modes are
+    supported; sentinel mode is not. On cluster, use hash-tagged key prefixes (for example `{products}:`) so indexed
+    documents share a slot.
 
 ### Create an Index
 
@@ -536,9 +539,9 @@ handle = redis.search_index("cluster-products")
 handle.create_index(cluster_schema, prefix="{products}:")
 ```
 
->
-See [Redis scalable query best practices](https://redis.io/docs/latest/develop/ai/search-and-query/best-practices/scalable-query-best-practices/)
-> for cluster sizing and `SHARD_K_RATIO` guidance.
+!!! tip
+    See [Redis scalable query best practices](https://redis.io/docs/latest/develop/ai/search-and-query/best-practices/scalable-query-best-practices/)
+    for cluster sizing and `SHARD_K_RATIO` guidance.
 
 ### Upsert Documents
 
