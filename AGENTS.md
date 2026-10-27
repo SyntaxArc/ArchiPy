@@ -76,7 +76,7 @@ Conventional commits (`feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`
 
 ## Findings Workflow
 
-Bugs/issues/improvements found: create GitHub issue first, fix, open PR (`Closes #N`), merge. One PR = one small chunk: split big work into several issues, or several PRs with `Part of #N` (only the last `Closes #N`). After each merged PR, update its issue (checklist, results). Label every issue and PR (type, area, priority; see `contributing.mdc`). Changelog-only PRs need no issue. Details: `contributing.mdc`.
+Bugs/issues/improvements found: create GitHub issue first, fix, open PR (`Closes #N`), merge. One PR = one small chunk: split big work into several issues, or several PRs with `Part of #N` (only the last `Closes #N`). Update its issue checklist and results with every PR, before the merge or right after it; never leave a merged PR's checklist stale. Keep an issue open until every checklist item is ticked (`Closes #N` only in the PR that completes the last item). Label every issue and PR (type, area, priority; see `contributing.mdc`). Changelog-only PRs need no issue. Details: `contributing.mdc`.
 
 ## Gotchas
 

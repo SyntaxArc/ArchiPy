@@ -32,13 +32,15 @@ Canonical owner for day-to-day git collaboration. Changelog format: `changelog.m
 1. Create a GitHub issue per finding **before** fixing (`gh issue create`).
 2. Fix on a focused branch.
 3. Open a PR that closes the issue (`Closes #N`).
-4. Merge the PR once checks pass (`gh pr merge`).
+4. Merge the PR once checks pass (`gh pr merge`). The repo has no required checks, so `gh pr merge --auto` merges at once: watch the checks first (`gh pr checks <N> --watch`), then merge.
+5. Update the issue checklist and result note before or right after the merge (see below).
 
 Large findings: split the work into small PRs.
 
 - Several PRs may reference one issue. Use `Part of #N` in each PR and `Closes #N` only in the last one; list the chunks as a checklist in the issue.
 - Or split the finding into several issues, one per chunk, each closed by its own PR.
-- After each PR merges, update its issue: tick the checklist item, note the result (for example measured timings) and list the next chunk.
+- Update the issue checklist with every PR: tick the item the PR completes, note the result (for example measured timings) and list the next chunk. Do it before the merge when the PR's checks already pass, otherwise right after the merge. A merged PR never leaves its issue checklist stale.
+- Keep an issue open until every checklist item is ticked. Put `Closes #N` only in the PR that completes the last item, and tick that item before merging; every other PR uses `Part of #N`. If a merge closes an issue that still has unticked items, reopen it (`gh issue reopen <N>`).
 - Put `Closes #N`, `Fixes #N`, `Resolves #N` or `Part of #N` in the PR description: when the PR merges, `.github/workflows/pr-merged-issue-comment.yml` comments with the PR link on every issue it names. Ticking the checklist and noting results stay manual.
 
 ## Labels
