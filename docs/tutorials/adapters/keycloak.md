@@ -22,6 +22,10 @@ Configure the Keycloak adapter via environment variables or a `KeycloakConfig` o
 
 ### Environment Variables
 
+!!! warning
+    Keep `KEYCLOAK__CLIENT_SECRET_KEY` out of source control. Load it from the environment or a secrets store, and keep
+    `KEYCLOAK__VERIFY_SSL=true` outside local development.
+
 ```bash
 KEYCLOAK__SERVER_URL=https://keycloak.example.com
 KEYCLOAK__REALM_NAME=my-realm
@@ -741,21 +745,34 @@ configured for each method based on how frequently the data typically changes:
 - User information from tokens: 30 seconds
 - User details and role information: 5 minutes
 
+!!! note
+    Token validation is never cached. Write operations such as user creation and updates clear the relevant caches.
+
 You can clear all caches if needed:
 
-```python
-from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
+=== "Sync"
 
-# Sync adapter
-keycloak = KeycloakAdapter()
-keycloak.clear_all_caches()
+    ```python
+    from archipy.adapters.keycloak.adapters import KeycloakAdapter
 
-# Async adapter
-async_keycloak = AsyncKeycloakAdapter()
-async_keycloak.clear_all_caches()
-```
+    keycloak = KeycloakAdapter()
+    keycloak.clear_all_caches()
+    ```
+
+=== "Async"
+
+    ```python
+    from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter
+
+    async_keycloak = AsyncKeycloakAdapter()
+    async_keycloak.clear_all_caches()
+    ```
 
 ## Security Considerations
+
+!!! warning
+    `KEYCLOAK__REMOTE_CACHE_TTL_SECONDS` trades freshness for fewer Keycloak calls. While it is set above `0`, a revoked
+    token or a changed permission stays accepted until the cached entry expires.
 
 - Token validation is performed without caching to ensure security.
 - The adapter automatically refreshes admin tokens before they expire.
