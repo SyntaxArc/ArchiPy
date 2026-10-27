@@ -15,8 +15,12 @@ adapters and in-memory fakes — are written as Gherkin features with Behave ste
 
 | Level               | Tool                        | Scope                             | Speed | Requires infrastructure |
 |---------------------|-----------------------------|-----------------------------------|-------|-------------------------|
-| BDD (mock adapters) | `behave` + mocks            | Single adapter / helper behaviour | Fast  | No                      |
 | BDD (integration)   | `behave` + `testcontainers` | Adapter against real service      | Slow  | Yes (Docker)            |
+| BDD (mock adapters) | `behave` + mocks            | Single adapter / helper behaviour | Fast  | No                      |
+
+> **Preferred approach:** test against real services started by `testcontainers`. Mocks are a secondary option for
+> logic that never touches the service's real behaviour — see
+> [When a Mock Is Acceptable](#testing-with-mock-adapters-when-a-mock-is-acceptable).
 
 > **Tip:** Features that require a running service are tagged with `@needs-*`. Skip infrastructure-heavy scenarios when
 > Docker is not available:
@@ -26,132 +30,6 @@ uv run behave --tags=~@needs-redis         # skip Redis scenarios
 uv run behave --tags=@needs-postgres       # run only Postgres scenarios
 uv run behave --tags=~@needs-redis,~@needs-postgres,~@needs-kafka  # skip all infra tags
 ```
-
----
-
-## Testing with Mock Adapters
-
-### The Mock Adapter Pattern
-
-Every ArchiPy adapter provides a `ports.py` abstract interface. Your business logic depends only on the
-abstract port — not on the concrete adapter. This means you can swap the real adapter for an in-memory mock
-in Behave step definitions:
-
-```
-Production:  YourLogic → RedisAdapter (real Redis)
-Test:        YourLogic → RedisMock (in-memory dict)
-```
-
-### Using the Built-in `RedisMock`
-
-Redis is the only adapter that ships a built-in `mocks.py`. Use it directly in Behave step definitions:
-
-```python
-# features/steps/session_steps.py
-import logging
-from behave import given, then, when
-from archipy.adapters.redis.mocks import RedisMock
-
-logger = logging.getLogger(__name__)
-
-
-@given("an empty session cache")
-def step_empty_cache(context) -> None:
-    context.cache = RedisMock()
-
-
-@when('a session "{session_id}" is stored with value "{value}"')
-def step_store_session(context, session_id: str, value: str) -> None:
-    context.cache.set(f"session:{session_id}", value, ttl=300)
-
-
-@then('retrieving session "{session_id}" returns "{expected}"')
-def step_get_session(context, session_id: str, expected: str) -> None:
-    result = context.cache.get(f"session:{session_id}")
-    assert result == expected
-    logger.info("Session %s retrieved correctly", session_id)
-```
-
-### Using `fakeredis` for a More Complete Redis Mock
-
-For scenarios that need pipeline support or Lua scripts, use `fakeredis`:
-
-```bash
-uv add "archipy[fakeredis]"
-```
-
-```python
-# features/steps/counter_steps.py
-import logging
-import fakeredis
-from behave import given, then, when
-from archipy.adapters.redis.ports import RedisPort
-
-logger = logging.getLogger(__name__)
-
-
-def make_fake_redis() -> RedisPort:
-    """Create a fake Redis client that satisfies the RedisPort interface."""
-    return fakeredis.FakeRedis(decode_responses=True)  # type: ignore[return-value]
-
-
-@given("a fresh Redis counter at zero")
-def step_fresh_counter(context) -> None:
-    context.client = make_fake_redis()
-    context.client.set("counter", "0")
-
-
-@when("the counter is incremented")
-def step_increment_counter(context) -> None:
-    context.client.incr("counter")
-
-
-@then("the counter value is 1")
-def step_assert_counter(context) -> None:
-    assert context.client.get("counter") == "1"
-    logger.info("Counter increment scenario passed")
-```
-
-### Writing a Custom Mock for Other Adapters
-
-For adapters without a built-in mock, implement the port interface yourself:
-
-```python
-import logging
-from collections.abc import Generator
-from contextlib import contextmanager
-
-from archipy.adapters.base.sqlalchemy.ports import BaseSQLAlchemyAdapterPort
-
-logger = logging.getLogger(__name__)
-
-
-class InMemorySQLAlchemyMock(BaseSQLAlchemyAdapterPort):
-    """In-memory mock for SQLAlchemy adapters — no database required."""
-
-    def __init__(self) -> None:
-        self._store: dict[str, object] = {}
-        self._committed = False
-
-    @contextmanager
-    def session_scope(self) -> Generator:
-        """Yield a fake session context."""
-        yield self
-        self._committed = True
-
-    def add(self, entity: object) -> None:
-        """Store entity by its id attribute."""
-        entity_id = getattr(entity, "id", id(entity))
-        self._store[str(entity_id)] = entity
-        logger.debug("Mock stored entity: %s", entity_id)
-
-    def get(self, entity_type: type, entity_id: str) -> object | None:
-        """Retrieve entity by id."""
-        return self._store.get(str(entity_id))
-```
-
-> **Note:** Implement only the methods your tests actually call. An `NotImplementedError` on unused methods is better
-> than a mock that silently returns wrong values.
 
 ---
 
@@ -337,6 +215,137 @@ uv run behave --tags=~@needs-redis,~@needs-kafka  # skip multiple services
 
 ---
 
+## Testing with Mock Adapters (When a Mock Is Acceptable)
+
+Prefer the real `testcontainers` flow above. Reach for a mock only when the scenario exercises your own logic and does
+not depend on the service's real semantics (Lua scripts, pipelines, newer commands such as `INCREX`, SQL behaviour,
+transactions). Mocks can silently diverge from the real service, so keep at least one container-backed scenario for
+every adapter you rely on.
+
+### The Mock Adapter Pattern
+
+Every ArchiPy adapter provides a `ports.py` abstract interface. Your business logic depends only on the
+abstract port — not on the concrete adapter. This means you can swap the real adapter for an in-memory mock
+in Behave step definitions:
+
+```
+Production:  YourLogic → RedisAdapter (real Redis)
+Test:        YourLogic → RedisMock (in-memory dict)
+```
+
+### Using the Built-in `RedisMock`
+
+Redis is the only adapter that ships a built-in `mocks.py`. Use it directly in Behave step definitions:
+
+```python
+# features/steps/session_steps.py
+import logging
+from behave import given, then, when
+from archipy.adapters.redis.mocks import RedisMock
+
+logger = logging.getLogger(__name__)
+
+
+@given("an empty session cache")
+def step_empty_cache(context) -> None:
+    context.cache = RedisMock()
+
+
+@when('a session "{session_id}" is stored with value "{value}"')
+def step_store_session(context, session_id: str, value: str) -> None:
+    context.cache.set(f"session:{session_id}", value, ttl=300)
+
+
+@then('retrieving session "{session_id}" returns "{expected}"')
+def step_get_session(context, session_id: str, expected: str) -> None:
+    result = context.cache.get(f"session:{session_id}")
+    assert result == expected
+    logger.info("Session %s retrieved correctly", session_id)
+```
+
+### Using `fakeredis` for a More Complete Redis Mock
+
+For scenarios that need pipeline support or Lua scripts, use `fakeredis`:
+
+```bash
+uv add "archipy[fakeredis]"
+```
+
+```python
+# features/steps/counter_steps.py
+import logging
+import fakeredis
+from behave import given, then, when
+from archipy.adapters.redis.ports import RedisPort
+
+logger = logging.getLogger(__name__)
+
+
+def make_fake_redis() -> RedisPort:
+    """Create a fake Redis client that satisfies the RedisPort interface."""
+    return fakeredis.FakeRedis(decode_responses=True)  # type: ignore[return-value]
+
+
+@given("a fresh Redis counter at zero")
+def step_fresh_counter(context) -> None:
+    context.client = make_fake_redis()
+    context.client.set("counter", "0")
+
+
+@when("the counter is incremented")
+def step_increment_counter(context) -> None:
+    context.client.incr("counter")
+
+
+@then("the counter value is 1")
+def step_assert_counter(context) -> None:
+    assert context.client.get("counter") == "1"
+    logger.info("Counter increment scenario passed")
+```
+
+### Writing a Custom Mock for Other Adapters
+
+For adapters without a built-in mock, implement the port interface yourself:
+
+```python
+import logging
+from collections.abc import Generator
+from contextlib import contextmanager
+
+from archipy.adapters.base.sqlalchemy.ports import BaseSQLAlchemyAdapterPort
+
+logger = logging.getLogger(__name__)
+
+
+class InMemorySQLAlchemyMock(BaseSQLAlchemyAdapterPort):
+    """In-memory mock for SQLAlchemy adapters — no database required."""
+
+    def __init__(self) -> None:
+        self._store: dict[str, object] = {}
+        self._committed = False
+
+    @contextmanager
+    def session_scope(self) -> Generator:
+        """Yield a fake session context."""
+        yield self
+        self._committed = True
+
+    def add(self, entity: object) -> None:
+        """Store entity by its id attribute."""
+        entity_id = getattr(entity, "id", id(entity))
+        self._store[str(entity_id)] = entity
+        logger.debug("Mock stored entity: %s", entity_id)
+
+    def get(self, entity_type: type, entity_id: str) -> object | None:
+        """Retrieve entity by id."""
+        return self._store.get(str(entity_id))
+```
+
+> **Note:** Implement only the methods your tests actually call. An `NotImplementedError` on unused methods is better
+> than a mock that silently returns wrong values.
+
+---
+
 ## Testing with Ports & Adapters
 
 The key benefit of the Ports & Adapters pattern is that business logic is **100% testable** without any
@@ -381,7 +390,7 @@ class UserSessionService:
         return value
 ```
 
-### BDD Scenario: Inject the Mock
+### BDD Scenario: Inject the Mock (or a Real Container)
 
 ```gherkin
 # features/user_session.feature
@@ -453,8 +462,8 @@ your_app/
     ├── test_containers.py                # ContainerManager + per-service Singleton container classes
     ├── scenario_context.py               # Per-scenario isolated storage + cleanup
     ├── scenario_context_pool_manager.py  # Singleton pool of ScenarioContext, keyed by scenario ID
-    ├── user_session.feature              # @needs-redis — uses RedisMock (no Docker)
-    ├── redis_integration.feature         # @needs-redis — uses real container
+    ├── user_session.feature              # @needs-redis — uses RedisMock (no Docker; secondary)
+    ├── redis_integration.feature         # @needs-redis — uses real container (preferred)
     └── steps/
         ├── session_service_steps.py
         └── redis_adapter_steps.py
@@ -557,6 +566,6 @@ make check
 ## See Also
 
 - [Error Handling](error_handling.md) — testing that the right exceptions are raised
-- [Redis](adapters/redis.md) — Redis adapter and `fakeredis` configuration
+- [Redis](adapters/redis.md) — Redis adapter and testing notes
 - [Installation](../getting-started/installation.md) — `fakeredis` and `testcontainers` extras
 - [FAQ](../community/faq.md) — common testing questions

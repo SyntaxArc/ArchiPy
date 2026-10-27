@@ -152,12 +152,13 @@ def test_user_cache():
 
 ### How do I write unit tests without a real database or Redis?
 
-Use the mock adapters provided in each adapter's `mocks.py`. For adapters that don't ship a `mocks.py` yet,
-use `fakeredis` (for Redis) or `testcontainers` (for databases):
+Prefer real services started with `testcontainers` (Redis, Postgres, Kafka, ...). Use a mock only when the test
+exercises your own logic and not the service's real behaviour: `RedisMock` from `mocks.py` (Redis is the only adapter
+that ships one), `fakeredis`, or your own port implementation.
 
 ```bash
-uv add "archipy[fakeredis]"     # in-memory Redis for tests
-uv add "archipy[testcontainers]" # Docker-backed real DBs for integration tests
+uv add "archipy[testcontainers]" # Docker-backed real services (preferred)
+uv add "archipy[fakeredis]"      # in-memory Redis, only when a mock is acceptable
 ```
 
 See the [Testing Strategy](../tutorials/testing_strategy.md) guide for full patterns.
