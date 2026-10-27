@@ -196,6 +196,7 @@ nav:
       - Contributing: community/contributing.md
       - Code of Conduct: community/code_of_conduct.md
       - FAQ: community/faq.md
+      - Deprecations: community/deprecations.md
       - Security: community/security.md
       - Changelog:
           - Overview: community/changelog/index.md
