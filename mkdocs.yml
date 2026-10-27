@@ -162,6 +162,7 @@ nav:
       - Error Handling: tutorials/error_handling.md
       - Dependency Injection: tutorials/dependency_injection.md
       - Observability: tutorials/observability.md
+      - Pydantic AI: tutorials/pydantic_ai.md
       - Models:
           - Protobuf DTOs: tutorials/models/protobuf_dtos.md
   - API Reference:
