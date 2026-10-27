@@ -50,7 +50,17 @@ TEMPORAL__RETRY_MAXIMUM_INTERVAL=60
 TEMPORAL__RETRY_INITIAL_INTERVAL=1
 ```
 
-> **Note:** `TEMPORAL__API_KEY` is for Temporal Cloud authentication. Local dev servers ignore it.
+!!! note
+    `TEMPORAL__API_KEY` is for Temporal Cloud authentication. Local dev servers ignore it.
+
+!!! warning
+    Set all three of `TLS_CA_CERT`, `TLS_CLIENT_CERT` and `TLS_CLIENT_KEY`, or none of them. A partial set is rejected
+    with an `InvalidArgumentError`. Keep `TEMPORAL__API_KEY` and the key file out of source control.
+
+!!! warning
+    The config validates the timeouts. `WORKFLOW_TASK_TIMEOUT` must be lower than `WORKFLOW_RUN_TIMEOUT`, which must be
+    lower than `WORKFLOW_EXECUTION_TIMEOUT`, and `KEEP_ALIVE_TIMEOUT_MS` must be lower than `KEEP_ALIVE_INTERVAL_MS`.
+    Otherwise creating the config raises an `InvalidArgumentError`.
 
 ### Configuration Reference
 
@@ -185,6 +195,10 @@ asyncio.run(main())
 
 ## Advanced Configuration Overrides
 
+!!! tip
+    Activities and workflows take their defaults from `TemporalConfig`: 30 seconds start-to-close, a 10 second heartbeat
+    timeout and 3 retry attempts for activities. Pass explicit values only where one call needs something different.
+
 ```python
 import asyncio
 import logging
@@ -292,6 +306,10 @@ class ChildWorkflow(BaseWorkflow[dict, str]):
 ```
 
 ## Using Atomic Activities
+
+!!! warning
+    Activities are retried according to the retry policy (`RETRY_MAXIMUM_ATTEMPTS`, default `3`). Write them so that
+    running more than once is safe, for example by checking for an existing record before creating one.
 
 Activities can use atomic transactions for database operations:
 
@@ -412,6 +430,9 @@ class UserOnboardingWorkflow(BaseWorkflow[dict, dict]):
 ```
 
 ## Async Operations with Workers
+
+!!! note
+    On shutdown the worker waits up to `WORKER_GRACEFUL_SHUTDOWN_SECONDS` (default `30`) for running tasks to finish.
 
 ```python
 import asyncio
@@ -688,8 +709,9 @@ every second. The series below are verified against a real Temporal server by th
 - `temporal_activity_execution_latency`, `temporal_activity_succeed_endtoend_latency` — activity latency histograms
 - `temporal_activity_execution_failed` — failed activity executions (label `failure_reason`)
 
-> **Tip:** Query these series in your OTLP backend / Grafana after the collector scrapes or
-> receives OTLP — panel setup is backend-specific and isn't covered here.
+!!! tip
+    Query these series in your OTLP backend / Grafana after the collector scrapes or
+    receives OTLP — panel setup is backend-specific and isn't covered here.
 
 ### Complete Example with Metrics
 
@@ -824,4 +846,5 @@ reconfigured in-process (Temporal SDK limitation).
 - [Observability](../observability.md) — OpenTelemetry OTLP traces and metrics
 - [BDD Testing](../testing_strategy.md) — Testing workflow operations
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Atomic transaction usage
+- BDD feature files — [`temporal_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/temporal_adapter.feature), [`temporal_adapter_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/temporal_adapter_apm.feature), [`temporal_schedules_errors.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/temporal_schedules_errors.feature)
 - [API Reference](../../api_reference/adapters/temporal.md) — Full Temporal adapter API documentation

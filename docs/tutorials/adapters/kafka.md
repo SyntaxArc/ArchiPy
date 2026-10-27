@@ -31,6 +31,10 @@ KAFKA__AUTO_OFFSET_RESET=earliest
 
 ### Direct Configuration
 
+!!! warning
+    With `SECURITY_PROTOCOL` set to `SASL_PLAINTEXT` or `SASL_SSL`, `SASL_MECHANISM`, `USERNAME` and `PASSWORD` are all
+    required. Load the password from the environment or a secrets store, not from source code.
+
 ```python
 from archipy.configs.config_template import KafkaConfig
 
@@ -131,6 +135,10 @@ else:
 
 `KafkaProducerAdapter` is bound to a single topic at construction time.
 
+!!! note
+    `ENABLE_IDEMPOTENCE` requires `ACKS="all"` (the default), and `TRANSACTIONAL_ID` requires `ENABLE_IDEMPOTENCE`.
+    Other combinations raise a `ConfigurationError` when the config is validated.
+
 ```python
 import logging
 
@@ -175,6 +183,10 @@ except InternalError as e:
 else:
     logger.info("All messages flushed")
 ```
+
+!!! warning
+    Messages are enqueued, not delivered, when you call the producer. Call `flush()` before the process exits, or
+    pending messages can be lost.
 
 ### Producer Health Check
 
@@ -600,6 +612,9 @@ The instrumentor opens a `<topic> process` span when a message is polled. It end
 ends the span as soon as the offset is committed, so commit after the message is processed. A consumer that never
 commits (auto-commit) keeps the upstream behaviour.
 
+!!! tip
+    Commit after the message is processed, not before, so the span covers the handler.
+
 - **Batches:** `batch_consume` produces one `<topic> process` span for the whole batch, with a link to the producer
   trace of every message. Commit once after processing the batch.
 - **One message at a time:** each polled message gets its own span, ended by its commit. Without commits, each span ends
@@ -613,4 +628,5 @@ executor thread, so its span still ends on the next poll or close.
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — Kafka configuration setup
 - [BDD Testing](../testing_strategy.md) — Testing Kafka operations
+- BDD feature files — [`kafka_adapters.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/kafka_adapters.feature), [`kafka_adapters_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/kafka_adapters_apm.feature), [`kafka_clients_spans.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/kafka_clients_spans.feature)
 - [API Reference](../../api_reference/adapters/kafka.md) — Full Kafka adapter API documentation

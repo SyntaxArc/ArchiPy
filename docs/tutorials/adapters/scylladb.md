@@ -17,13 +17,17 @@ The ScyllaDB adapter is included with ArchiPy. Ensure you have the required depe
 uv add "archipy[scylladb]"
 ```
 
-> **Tip:** The ScyllaDB adapter is an optional extra. Install it only when ScyllaDB or Cassandra support is required.
+!!! tip
+    The ScyllaDB adapter is an optional extra. Install it only when ScyllaDB or Cassandra support is required.
 
 ## Configuration
 
 Configure the ScyllaDB adapter via environment variables or a `ScyllaDBConfig` object.
 
 ### Environment Variables
+
+!!! warning
+    Keep `SCYLLADB__PASSWORD` out of source control. Load it from the environment or a secrets store.
 
 ```bash
 SCYLLADB__CONTACT_POINTS='["node1.example.com", "node2.example.com"]'
@@ -84,67 +88,67 @@ config = ScyllaDBConfig(
 
 ## Basic Usage
 
-### Synchronous Adapter
+=== "Sync"
 
-```python
-import logging
+    ```python
+    import logging
 
-from archipy.adapters.scylladb import ScyllaDBAdapter
-from archipy.configs.config_template import ScyllaDBConfig
-from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
+    from archipy.adapters.scylladb import ScyllaDBAdapter
+    from archipy.configs.config_template import ScyllaDBConfig
+    from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
 
-# Configure logging
-logger = logging.getLogger(__name__)
+    # Configure logging
+    logger = logging.getLogger(__name__)
 
-try:
-    # Using default configuration
-    adapter = ScyllaDBAdapter()
-
-    # Using custom configuration
-    config = ScyllaDBConfig(
-        CONTACT_POINTS=["localhost"],
-        PORT=9042,
-        KEYSPACE="my_keyspace",
-    )
-    adapter = ScyllaDBAdapter(config)
-except DatabaseConnectionError as e:
-    logger.error(f"Failed to connect to ScyllaDB: {e}")
-    raise
-```
-
-### Asynchronous Adapter
-
-```python
-import asyncio
-import logging
-
-from archipy.adapters.scylladb import AsyncScyllaDBAdapter
-from archipy.configs.config_template import ScyllaDBConfig
-from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
-
-# Configure logging
-logger = logging.getLogger(__name__)
-
-
-async def main() -> None:
     try:
+        # Using default configuration
+        adapter = ScyllaDBAdapter()
+
+        # Using custom configuration
         config = ScyllaDBConfig(
             CONTACT_POINTS=["localhost"],
             PORT=9042,
             KEYSPACE="my_keyspace",
         )
-        adapter = AsyncScyllaDBAdapter(config)
+        adapter = ScyllaDBAdapter(config)
     except DatabaseConnectionError as e:
         logger.error(f"Failed to connect to ScyllaDB: {e}")
         raise
-    else:
-        logger.info("Connected to ScyllaDB successfully")
-        logger.info(f"Adapter ready: {adapter}")
+    ```
+
+=== "Async"
+
+    ```python
+    import asyncio
+    import logging
+
+    from archipy.adapters.scylladb import AsyncScyllaDBAdapter
+    from archipy.configs.config_template import ScyllaDBConfig
+    from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
+
+    # Configure logging
+    logger = logging.getLogger(__name__)
 
 
-# Run the async function
-asyncio.run(main())
-```
+    async def main() -> None:
+        try:
+            config = ScyllaDBConfig(
+                CONTACT_POINTS=["localhost"],
+                PORT=9042,
+                KEYSPACE="my_keyspace",
+            )
+            adapter = AsyncScyllaDBAdapter(config)
+        except DatabaseConnectionError as e:
+            logger.error(f"Failed to connect to ScyllaDB: {e}")
+            raise
+        else:
+            logger.info("Connected to ScyllaDB successfully")
+            logger.info(f"Adapter ready: {adapter}")
+
+
+    # Run the async function
+    asyncio.run(main())
+    ```
 
 ## Basic CRUD Operations
 
@@ -292,8 +296,9 @@ active_users = adapter.count("users", conditions={"active": True})
 logger.info(f"Active users: {active_users}")
 ```
 
-**Note:** When using conditions with `count()`, the query automatically includes `ALLOW FILTERING` to support filtering
-on non-primary key columns. Be aware that this may impact performance on large tables.
+!!! warning
+    When using conditions with `count()`, the query automatically includes `ALLOW FILTERING` to support filtering
+    on non-primary key columns. Be aware that this may impact performance on large tables.
 
 ### Check if Row Exists
 
@@ -309,8 +314,9 @@ if adapter.exists("users", {"username": "alice", "active": True}):
     logger.info("Active user 'alice' exists")
 ```
 
-**Note:** The `exists()` method uses `ALLOW FILTERING` to support checking conditions on any column. For best
-performance, use primary key columns in the conditions when possible.
+!!! warning
+    The `exists()` method uses `ALLOW FILTERING` to support checking conditions on any column. For best
+    performance, use primary key columns in the conditions when possible.
 
 ## Prepared Statements
 
@@ -831,4 +837,5 @@ async def process_users(user_ids: list[str]) -> None:
 - [BDD Testing](../testing_strategy.md) — Testing ScyllaDB operations
 - [ScyllaDB Documentation](https://docs.scylladb.com/) — Official ScyllaDB docs
 - [Cassandra Query Language (CQL)](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/) — CQL reference
+- BDD feature files — [`scylladb_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/scylladb_adapter.feature), [`scylladb_adapter_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/scylladb_adapter_apm.feature)
 - [API Reference](../../api_reference/adapters/scylladb.md) — Full ScyllaDB adapter API documentation

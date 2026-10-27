@@ -20,6 +20,13 @@ Configure the email adapter via environment variables or an `EmailConfig` object
 
 ### Environment Variables
 
+!!! warning
+    Keep `EMAIL__PASSWORD` out of source control. Load it from the environment or a secrets store.
+
+!!! note
+    `EMAIL__CONNECTION_TIMEOUT` defaults to `30` seconds. Pooled connections idle longer than
+    `EMAIL__CONNECTION_REFRESH_SECONDS` are reconnected.
+
 ```bash
 EMAIL__SMTP_SERVER=smtp.example.com
 EMAIL__SMTP_PORT=587
@@ -334,4 +341,5 @@ A failed send (unreachable server, rejected credentials) marks the span as an er
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — Email configuration setup
 - [BDD Testing](../testing_strategy.md) — Testing email operations
+- BDD feature files — [`email_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/email_adapter.feature), [`email_adapter_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/email_adapter_apm.feature)
 - [API Reference](../../api_reference/adapters/email.md) — Full Email adapter API documentation

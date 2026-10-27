@@ -25,7 +25,8 @@ uv add "archipy[parsian-ipg]"  # Parsian gateway
 uv add "archipy[saman-ipg]"    # Saman gateway
 ```
 
-> **Tip:** Payment gateways are optional extras. Install only the gateway (s) you need.
+!!! tip
+    Payment gateways are optional extras. Install only the gateway (s) you need.
 
 ---
 
@@ -101,6 +102,9 @@ else:
 
 ### Confirming a Payment
 
+!!! warning
+    A response does not mean the payment is confirmed. Check `confirm_response.status`: `0` is a confirmed payment.
+
 ```python
 from archipy.adapters.internet_payment_gateways.ir.parsian import ConfirmRequestDTO
 from archipy.models.errors import UnavailableError, InternalError
@@ -154,6 +158,9 @@ else:
 ```
 
 ### Reversing a Payment
+
+!!! note
+    Check `reverse_response.status` after the call. `0` means the reversal succeeded.
 
 ```python
 from archipy.adapters.internet_payment_gateways.ir.parsian import ReverseRequestDTO
@@ -262,6 +269,10 @@ else:
 ```
 
 ### Neo-PG: Capturing Dynamic Payment URL
+
+!!! note
+    The Neo-PG adapter reads the payment URL from the `X-IPG-Url` response header. When the header is missing,
+    `ipg_url` is empty, so check it before you redirect the customer.
 
 ```python
 try:
@@ -441,6 +452,10 @@ async def saman_callback(ref_num: str, request: Request) -> dict[str, str]:
 
 All adapters use ArchiPy's consistent error hierarchy:
 
+!!! tip
+    `FailedPreconditionError` means a required setting such as `TERMINAL_ID` is missing. Fix the configuration instead
+    of retrying.
+
 | Error Type                | Trigger                                        |
 |---------------------------|------------------------------------------------|
 | `UnavailableError`        | Network failure, service unreachable           |
@@ -453,4 +468,5 @@ All adapters use ArchiPy's consistent error hierarchy:
 - [Error Handling](../error_handling.md) — Exception handling patterns
 - [Configuration Management](../config_management.md) — Gateway configuration setup
 - [BDD Testing](../testing_strategy.md) — Testing payment operations
+- BDD feature files — [`parsian_ipg_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/parsian_ipg_adapter.feature), [`saman_ipg_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/saman_ipg_adapter.feature)
 - [API Reference](../../api_reference/adapters/payment_gateways.md) — Full payment gateway API documentation

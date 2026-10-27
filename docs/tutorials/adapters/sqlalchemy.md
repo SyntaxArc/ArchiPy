@@ -23,6 +23,9 @@ rows.
 scanning every row. MySQL, SQLite and StarRocks still count exactly. The estimate depends on table statistics, so keep
 autovacuum and `ANALYZE` healthy.
 
+!!! note
+    The estimate applies to PostgreSQL only. The other adapters always return an exact total.
+
 ```python
 users, total = adapter.execute_search_query(
     entity=User,
@@ -66,6 +69,9 @@ reported as estimated too.
 With `COUNT_CACHE_ENABLED=true` each total is cached in process, so only the first page of a search runs a `COUNT` and
 later pages reuse the total. A total can be stale for up to the TTL, so a row created just before a search may be
 missing from it.
+
+!!! warning
+    The cache is per process and per adapter. Enabling it without the `cache` extra fails when the adapter is created.
 
 | Setting                   | Default | Meaning                                    |
 |---------------------------|---------|--------------------------------------------|

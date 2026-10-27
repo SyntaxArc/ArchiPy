@@ -19,6 +19,10 @@ Configure the MinIO adapter via environment variables or a `MinioConfig` object.
 
 ### Environment Variables
 
+!!! warning
+    `minioadmin` is the MinIO default credential. Use it for local development only, and load real access and secret
+    keys from the environment or a secrets store.
+
 ```bash
 MINIO__ENDPOINT=localhost:9000
 MINIO__ACCESS_KEY=minioadmin
@@ -158,6 +162,10 @@ minio.remove_objects("my-bucket", ["doc1.pdf", "doc2.pdf", "doc3.pdf"])
 
 ### Generating Presigned URLs
 
+!!! warning
+    Anyone holding a presigned URL can use it until it expires. Keep the expiry short and do not log or share URLs
+    outside the intended client.
+
 ```python
 import logging
 
@@ -278,6 +286,10 @@ except InternalError as e:
 
 The MinioAdapter includes TTL caching for frequently accessed operations:
 
+!!! note
+    Cached results can be up to 5 minutes old. After you change a bucket or object outside the adapter, call
+    `clear_all_caches()` to read fresh values.
+
 ```python
 # Check if bucket exists (cached for 5 minutes)
 minio.bucket_exists("my-bucket")
@@ -360,4 +372,5 @@ async def download_file(bucket_name: str, object_name: str) -> RedirectResponse:
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — MinIO configuration setup
 - [BDD Testing](../testing_strategy.md) — Testing MinIO operations
+- BDD feature files — [`minio_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/minio_adapter.feature), [`minio_adapter_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/minio_adapter_apm.feature)
 - [API Reference](../../api_reference/adapters/minio.md) — Full MinIO adapter API documentation

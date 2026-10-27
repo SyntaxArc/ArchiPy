@@ -25,6 +25,14 @@ Configure the Vault adapter via environment variables or a `VaultConfig` object.
 
 ### Environment Variables
 
+!!! warning
+    Keep `VAULT__TOKEN` and other credentials out of source control. For AppRole, userpass and JWT, prefer the `*_FILE`
+    variants (for example `VAULT__APPROLE_SECRET_ID_FILE`) over inline secrets.
+
+!!! note
+    `VAULT__SECRET_CACHE_TTL=0` disables caching of `read_secret()` results. `VAULT__CONNECT_TIMEOUT` and
+    `VAULT__READ_TIMEOUT` default to `5.0` and `10.0` seconds.
+
 ```bash
 VAULT__ENABLED=true
 VAULT__ADDR=https://vault.example.com:8200
@@ -145,6 +153,10 @@ except (NotFoundError, PermissionDeniedError) as e:
 
 ### Dynamic Credentials
 
+!!! tip
+    Dynamic credentials come with a lease. Renew the lease while you still need the credentials, and revoke it when
+    you are done.
+
 Without `parameters`, the adapter calls hvac
 [
 `secrets.database.generate_credentials`](https://python-hvac.org/en/stable/usage/secrets_engines/database.html#generate-credentials)
@@ -204,5 +216,6 @@ settings-source details.
 - [Configuration Management](../config_management.md) — Vault-backed settings source
 - [Error Handling](../error_handling.md) — Domain error mapping conventions
 - [BDD Testing](../testing_strategy.md) — Testcontainers-based adapter tests
+- BDD feature files — [`vault_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/vault_adapter.feature), [`vault_adapter_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/vault_adapter_apm.feature)
 - [Vault API Reference](../../api_reference/adapters/vault.md) — Ports and adapter docs
 - [Configs API Reference](../../api_reference/configs.md) — `VaultConfig` fields

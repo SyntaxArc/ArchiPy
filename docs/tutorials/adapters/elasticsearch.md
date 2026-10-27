@@ -14,14 +14,23 @@ management with proper error handling and Python 3.14+ type hints.
 uv add "archipy[elasticsearch]"
 ```
 
-> **Tip:** The Elasticsearch adapter is an optional extra. Only install it when you need Elasticsearch support to keep
-> your environment lean.
+!!! tip
+    The Elasticsearch adapter is an optional extra. Only install it when you need Elasticsearch support to keep
+    your environment lean.
 
 ## Configuration
 
 Configure Elasticsearch via environment variables or an `ElasticsearchConfig` object directly.
 
 ### Environment Variables
+
+!!! warning
+    Keep `ELASTIC__HTTP_PASSWORD` and `ELASTIC__API_SECRET` out of source control. Prefer API key authentication over
+    basic auth.
+
+!!! note
+    The config defaults are `REQUEST_TIMEOUT=1.0` seconds and `MAX_RETRIES=1`. The values below are examples; raise the
+    timeout for slow queries such as large aggregations.
 
 ```bash
 # Basic connection
@@ -582,63 +591,65 @@ except BulkIndexError as e:
     raise
 ```
 
-> **Tip:** Pass `stats_only=True` when you only need success and error counts instead of per-document error details.
+!!! tip
+    Pass `stats_only=True` when you only need success and error counts instead of per-document error details.
 
 ## Scan Operations
 
 Use `scan()` to iterate over large result sets without manually managing the scroll API. The helper wraps scroll
 requests and yields hits one at a time.
 
-### Scan Documents
+=== "Sync"
 
-```python
-import logging
+    ```python
+    import logging
 
-from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
+    from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
 
-logger = logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
 
-es = ElasticsearchAdapter()
+    es = ElasticsearchAdapter()
 
-query = {"query": {"match": {"author": "bob"}}}
-
-try:
-    hit_count = 0
-    for hit in es.scan(query=query, index="articles"):
-        hit_count += 1
-        logger.debug(f"Scanned document {hit['_id']}: {hit['_source']['title']}")
-    logger.info(f"Scan complete: {hit_count} documents")
-except Exception as e:
-    logger.error(f"Scan failed: {e}")
-    raise
-```
-
-### Async Scan
-
-```python
-import asyncio
-import logging
-
-from archipy.adapters.elasticsearch.adapters import AsyncElasticsearchAdapter
-
-logger = logging.getLogger(__name__)
-
-
-async def scan_articles() -> None:
-    es = AsyncElasticsearchAdapter()
     query = {"query": {"match": {"author": "bob"}}}
 
-    hit_count = 0
-    async for hit in es.scan(query=query, index="articles"):
-        hit_count += 1
-        logger.debug(f"Scanned document {hit['_id']}: {hit['_source']['title']}")
-    logger.info(f"Async scan complete: {hit_count} documents")
+    try:
+        hit_count = 0
+        for hit in es.scan(query=query, index="articles"):
+            hit_count += 1
+            logger.debug(f"Scanned document {hit['_id']}: {hit['_source']['title']}")
+        logger.info(f"Scan complete: {hit_count} documents")
+    except Exception as e:
+        logger.error(f"Scan failed: {e}")
+        raise
+    ```
+
+=== "Async"
+
+    ```python
+    import asyncio
+    import logging
+
+    from archipy.adapters.elasticsearch.adapters import AsyncElasticsearchAdapter
+
+    logger = logging.getLogger(__name__)
 
 
-asyncio.run(scan_articles())
-```
+    async def scan_articles() -> None:
+        es = AsyncElasticsearchAdapter()
+        query = {"query": {"match": {"author": "bob"}}}
 
-> **Note:** Setting `preserve_order=True` in `scan()` restores deterministic ordering at the cost of scroll performance.
+        hit_count = 0
+        async for hit in es.scan(query=query, index="articles"):
+            hit_count += 1
+            logger.debug(f"Scanned document {hit['_id']}: {hit['_source']['title']}")
+        logger.info(f"Async scan complete: {hit_count} documents")
+
+
+    asyncio.run(scan_articles())
+    ```
+
+!!! note
+    Setting `preserve_order=True` in `scan()` restores deterministic ordering at the cost of scroll performance.
 
 ## Async Usage
 
@@ -741,247 +752,10 @@ async def parallel_searches() -> None:
 asyncio.run(parallel_searches())
 ```
 
-## Repository Pattern
+## Repository Pattern and Advanced Patterns
 
-Wrap the adapter behind a repository class to keep domain logic clean.
-
-```python
-import logging
-from collections.abc import Sequence
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
-
-from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
-from archipy.adapters.elasticsearch.ports import ElasticsearchPort
-from archipy.models.errors import InternalError, NotFoundError
-
-logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Article:
-    """Domain model for an article."""
-
-    title: str
-    content: str
-    author: str
-    tags: list[str]
-    published_at: str = ""
-    view_count: int = 0
-
-    def __post_init__(self) -> None:
-        if not self.published_at:
-            self.published_at = datetime.now(tz=timezone.utc).isoformat()
-
-
-class ArticleRepository:
-    """Repository for Article documents backed by Elasticsearch.
-
-    Args:
-        es_adapter: Elasticsearch port implementation to use.
-    """
-
-    INDEX = "articles"
-
-    def __init__(self, es_adapter: ElasticsearchPort) -> None:
-        self._es = es_adapter
-
-    def save(self, article_id: str, article: Article) -> None:
-        """Persist an article to the index.
-
-        Args:
-            article_id: Unique identifier for the article.
-            article: Article domain object to persist.
-
-        Raises:
-            InternalError: If the Elasticsearch operation fails.
-        """
-        try:
-            self._es.index(index=self.INDEX, document=asdict(article), doc_id=article_id)
-            logger.info(f"Saved article id={article_id}")
-        except InternalError as e:
-            logger.error(f"Failed to save article {article_id}: {e}")
-            raise
-
-    def get(self, article_id: str) -> Article:
-        """Retrieve an article by ID.
-
-        Args:
-            article_id: Unique identifier of the article.
-
-        Returns:
-            The matching Article domain object.
-
-        Raises:
-            NotFoundError: If no article with the given ID exists.
-            InternalError: If the Elasticsearch operation fails.
-        """
-        try:
-            response = self._es.get(index=self.INDEX, doc_id=article_id)
-            src = response["_source"]
-            return Article(**src)
-        except KeyError as e:
-            raise NotFoundError() from e
-        except InternalError as e:
-            logger.error(f"Failed to retrieve article {article_id}: {e}")
-            raise
-
-    def search_by_author(self, author: str) -> Sequence[Article]:
-        """Search articles by author.
-
-        Args:
-            author: Author name to filter by.
-
-        Returns:
-            Sequence of matching Article objects.
-
-        Raises:
-            InternalError: If the search fails.
-        """
-        try:
-            response = self._es.search(
-                index=self.INDEX,
-                query={"query": {"term": {"author": author}}},
-            )
-            return [Article(**hit["_source"]) for hit in response["hits"]["hits"]]
-        except InternalError as e:
-            logger.error(f"Failed to search articles by author={author}: {e}")
-            raise
-
-    def increment_views(self, article_id: str) -> None:
-        """Increment the view count for an article.
-
-        Args:
-            article_id: Unique identifier of the article.
-
-        Raises:
-            InternalError: If the update fails.
-        """
-        try:
-            self._es.update(
-                index=self.INDEX,
-                doc_id=article_id,
-                doc={"view_count": self._get_view_count(article_id) + 1},
-            )
-        except InternalError as e:
-            logger.error(f"Failed to increment views for article {article_id}: {e}")
-            raise
-
-    def _get_view_count(self, article_id: str) -> int:
-        response = self._es.get(index=self.INDEX, doc_id=article_id)
-        return int(response["_source"].get("view_count", 0))
-
-
-# Usage
-repo = ArticleRepository(ElasticsearchAdapter())
-
-article = Article(
-    title="Clean Architecture in Python",
-    content="How to structure Python services for long-term maintainability.",
-    author="alice",
-    tags=["python", "architecture"],
-)
-
-repo.save("arch-001", article)
-found = repo.get("arch-001")
-logger.info(f"Retrieved: {found.title}")
-
-repo.increment_views("arch-001")
-alice_articles = repo.search_by_author("alice")
-logger.info(f"Alice has {len(alice_articles)} articles")
-```
-
-## Advanced Patterns
-
-### Index Alias Strategy
-
-Use aliases so you can swap underlying indices without changing application code (useful for zero-downtime
-re-indexing).
-
-```python
-import logging
-
-from elasticsearch import ApiError, Elasticsearch
-
-from archipy.configs.config_template import ElasticsearchConfig
-
-logger = logging.getLogger(__name__)
-
-config = ElasticsearchConfig(HOSTS=["https://localhost:9200"])
-client = Elasticsearch(
-    hosts=config.HOSTS,
-    basic_auth=(config.HTTP_USER_NAME, config.HTTP_PASSWORD.get_secret_value())
-    if config.HTTP_USER_NAME and config.HTTP_PASSWORD
-    else None,
-)
-
-# Create a versioned index and point the alias at it
-try:
-    client.indices.create(index="articles_v1", body={
-        "mappings": {"properties": {"title": {"type": "text"}}}
-    })
-    client.indices.put_alias(index="articles_v1", name="articles")
-    logger.info("Created articles_v1 with alias articles")
-except ApiError as e:
-    logger.error(f"Alias setup failed: {e}")
-    raise
-```
-
-### Connection Health Check
-
-```python
-import logging
-
-from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
-from archipy.models.errors import ServiceUnavailableError
-
-logger = logging.getLogger(__name__)
-
-
-def ensure_elasticsearch_ready() -> ElasticsearchAdapter:
-    """Create an adapter and verify the cluster is reachable.
-
-    Returns:
-        A connected ElasticsearchAdapter.
-
-    Raises:
-        ServiceUnavailableError: If the cluster does not respond to a ping.
-    """
-    try:
-        es = ElasticsearchAdapter()
-    except InternalError as e:
-        logger.error(f"Elasticsearch health check failed: {e}")
-        raise ServiceUnavailableError() from e
-
-    if not es.ping():
-        raise ServiceUnavailableError()
-    logger.info("Elasticsearch cluster is healthy")
-    return es
-```
-
-### Observability (OpenTelemetry)
-
-The Elasticsearch **adapter** (`ElasticsearchAdapter` / `AsyncElasticsearchAdapter`) is unchanged
-in 5.0.0. Elastic APM (`ElasticsearchAPMConfig` / `ELASTIC_APM`) was removed — use OpenTelemetry
-instead.
-
-The `elasticsearch` client emits OTel spans natively — no extra instrumentor needed. Install `archipy[otel]` and enable
-OTel:
-
-```bash
-uv add "archipy[otel]"
-```
-
-```bash
-OTEL__IS_ENABLED=true
-OTEL__OTLP_ENDPOINT=http://localhost:4317
-OTEL__TRACES_ENABLED=true
-OTEL__METRICS_ENABLED=true
-```
-
-`OtelUtils.init_otel_if_needed` (via `AppUtils.create_fastapi_app` / `create_grpc_app`, or
-manually) instruments the Elasticsearch client library when that extra is installed. See
-[Observability](../observability.md) for full configuration.
+The repository pattern, index alias strategy, connection health check and OpenTelemetry setup live on their own page:
+[Elasticsearch Patterns](elasticsearch_patterns.md).
 
 ## Troubleshooting
 
@@ -1022,6 +796,8 @@ manually) instruments the Elasticsearch client library when that extra is instal
 
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — Elasticsearch configuration setup
+- [Elasticsearch Patterns](elasticsearch_patterns.md) — Repository pattern, index aliases, health check, OpenTelemetry
 - [Observability](../observability.md) — OpenTelemetry (replaces Elastic APM)
+- BDD feature files — [`elastic_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/elastic_adapter.feature), [`elastic_adapter_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/elastic_adapter_apm.feature)
 - [API Reference](../../api_reference/adapters/elasticsearch.md) — Full Elasticsearch adapter API documentation
 - [Elasticsearch Python Client docs](https://www.elastic.co/guide/en/elasticsearch/client/python-api/current/index.html)

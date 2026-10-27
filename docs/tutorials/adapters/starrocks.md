@@ -20,6 +20,14 @@ Configure the StarRocks adapter via environment variables or a `StarRocksSQLAlch
 
 ### Environment Variables
 
+!!! warning
+    StarRocks only supports the `READ COMMITTED` isolation level. Any other `ISOLATION_LEVEL` value raises a
+    `ConfigurationError`.
+
+!!! note
+    `CONNECT_TIMEOUT` defaults to `10` seconds for StarRocks, because the MySQL protocol needs an explicit connection
+    timeout to avoid hanging on network issues.
+
 ```bash
 STARROCKS_SQLALCHEMY__HOST=localhost
 STARROCKS_SQLALCHEMY__PORT=9030
@@ -457,4 +465,5 @@ async def get_age_distribution() -> dict[str, list[dict[str, int]]]:
 - [PostgreSQL Adapter](postgres.md) — Similar patterns for PostgreSQL
 - [SQLAlchemy Search Totals](sqlalchemy.md) — Cheap totals for paginated searches, count threshold and count cache
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Transaction decorator usage
+- BDD feature files — [`atomic_transactions_starrocks.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/atomic_transactions_starrocks.feature), [`atomic_transactions_apm_starrocks.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/atomic_transactions_apm_starrocks.feature)
 - [API Reference](../../api_reference/adapters/starrocks.md) — Full StarRocks adapter API documentation
