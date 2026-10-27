@@ -4037,10 +4037,11 @@ Kafka:</p>
 <hr />
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
 <h3 id="how-do-i-write-unit-tests-without-a-real-database-or-redis">How do I write unit tests without a real database or Redis?<a class="headerlink" href="#how-do-i-write-unit-tests-without-a-real-database-or-redis" title="Permanent link">&para;</a></h3>
-<p>Use the mock adapters provided in each adapter's <code>mocks.py</code>. For adapters that don't ship a <code>mocks.py</code> yet,
-use <code>fakeredis</code> (for Redis) or <code>testcontainers</code> (for databases):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[fakeredis]"</span><span class="w">     </span><span class="c1"># in-memory Redis for tests</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[testcontainers]"</span><span class="w"> </span><span class="c1"># Docker-backed real DBs for integration tests</span>
+<p>Prefer real services started with <code>testcontainers</code> (Redis, Postgres, Kafka, ...). Use a mock only when the test
+exercises your own logic and not the service's real behaviour: <code>RedisMock</code> from <code>mocks.py</code> (Redis is the only adapter
+that ships one), <code>fakeredis</code>, or your own port implementation.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[testcontainers]"</span><span class="w"> </span><span class="c1"># Docker-backed real services (preferred)</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"archipy[fakeredis]"</span><span class="w">      </span><span class="c1"># in-memory Redis, only when a mock is acceptable</span>
 </span></code></pre></div>
 <p>See the <a href="../../tutorials/testing_strategy/">Testing Strategy</a> guide for full patterns.</p>
 <h3 id="how-do-i-run-bdd-tests">How do I run BDD tests?<a class="headerlink" href="#how-do-i-run-bdd-tests" title="Permanent link">&para;</a></h3>

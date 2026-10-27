@@ -3356,8 +3356,8 @@ caches, queues, and services — so you focus on business logic.</p>
   hint support</li>
 <li><strong>Modular adapters</strong> — install only what you need; each integration (PostgreSQL, Redis, Kafka, Keycloak…) is an
   optional extra</li>
-<li><strong>Testability first</strong> — every adapter ships with a <code>ports.py</code> interface and a <code>mocks.py</code> test double, so unit tests
-  never need a real database</li>
+<li><strong>Testability first</strong> — every adapter ships with a <code>ports.py</code> interface; tests run against real services via
+  <code>testcontainers</code>, and Redis also ships a <code>mocks.py</code> test double for logic-only unit tests</li>
 <li><strong>One config system</strong> — environment variables, <code>.env</code> files, and runtime overrides all flow through a single validated
   <code>BaseConfig</code></li>
 <li><strong>Python 3.14+ native</strong> — uses <code>X | Y</code> unions, <code>list[str]</code> generics, and modern syntax throughout; no legacy
