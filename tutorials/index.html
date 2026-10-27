@@ -3276,6 +3276,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#dependency-injection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency Injection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#observability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Observability
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3328,15 +3350,20 @@ handling patterns</strong>, and <strong>comprehensive error chaining</strong>.</
 <li><a href="adapters/postgres/">PostgreSQL</a> - Database operations with SQLAlchemy and atomic transactions</li>
 <li><a href="adapters/mysql/">MySQL</a> - Database operations with SQLAlchemy and atomic transactions</li>
 <li><a href="adapters/sqlite/">SQLite</a> - Lightweight database adapter for local storage</li>
+<li><a href="adapters/sqlalchemy/">SQLAlchemy Search Totals</a> - Search pagination with total counts for SQLAlchemy adapters</li>
 <li><a href="adapters/starrocks/">StarRocks</a> - Analytics database adapter</li>
 <li><a href="adapters/scylladb/">ScyllaDB</a> - NoSQL database adapter for ScyllaDB and Apache Cassandra</li>
-<li><a href="adapters/redis/">Redis</a> - Cache operations, pub/sub, and async mock testing</li>
+<li><a href="adapters/redis/">Redis</a> - Cache operations, pub/sub, and testing with testcontainers</li>
+<li><a href="adapters/elasticsearch/">Elasticsearch</a> - Search and indexing with the Elasticsearch adapter</li>
+<li><a href="adapters/vault/">Vault</a> - Secrets management with HashiCorp Vault</li>
 <li><a href="adapters/email/">Email</a> - Email sending with proper error handling</li>
 <li><a href="adapters/keycloak/">Keycloak</a> - Authentication and authorization with proper exception chaining</li>
 <li><a href="adapters/minio/">MinIO</a> - Object storage operations with presigned URLs</li>
 <li><a href="adapters/kafka/">Kafka</a> - Message streaming with producer/consumer patterns</li>
 <li><a href="adapters/temporal/">Temporal</a> - Workflow orchestration</li>
-<li><a href="adapters/payment_gateways/">Payment Gateways</a> - Iranian payment gateway integration (Parsian, Saman)</li>
+<li><a href="adapters/payment_gateways/">Payment Gateways</a> - Iranian payment gateway integration (
+  <a href="https://github.com/SyntaxArc/ArchiPy/tree/master/packages/parsian-ipg">Parsian</a>,
+  <a href="https://github.com/SyntaxArc/ArchiPy/tree/master/packages/saman-ipg">Saman</a>)</li>
 </ul>
 <h2 id="helpers">Helpers<a class="headerlink" href="#helpers" title="Permanent link">&para;</a></h2>
 <p>Utility functions and decorators following best practices:</p>
@@ -3370,11 +3397,17 @@ handling patterns</strong>, and <strong>comprehensive error chaining</strong>.</
 <li><a href="error_handling/">Error Handling</a> - Domain-specific exceptions, error recovery, and proper exception
   chaining</li>
 </ul>
+<h2 id="dependency-injection">Dependency Injection<a class="headerlink" href="#dependency-injection" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="dependency_injection/">Dependency Injection</a> - Wiring adapters and logics with dependency injection</li>
+</ul>
+<h2 id="observability">Observability<a class="headerlink" href="#observability" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="observability/">Observability</a> - OpenTelemetry traces, metrics, and logs</li>
+</ul>
 <hr />
 <blockquote>
-<p><strong>Note</strong>: All code examples in this section have been updated to follow ArchiPy's architectural principles and Python
-3.14 best practices. Each adapter example includes links to its corresponding BDD test scenarios and API reference
-documentation.</p>
+<p><strong>Note</strong>: Each adapter tutorial links to its BDD scenarios and API reference.</p>
 </blockquote>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
@@ -3415,7 +3448,7 @@ documentation.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2025 Hossein Nejati, Mehdi Einali
+      Copyright &copy; 2025-2026 Hossein Nejati, Mehdi Einali
     </div>
   
   
