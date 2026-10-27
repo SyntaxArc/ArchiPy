@@ -23,6 +23,7 @@ Enable the relevant extras, set `OTEL__IS_ENABLED=true`, and call `AppUtils.crea
 | `archipy[otel-kafka]`      | Confluent Kafka instrumentation                                   |
 | `archipy[otel-scylladb]`   | Cassandra/ScyllaDB driver instrumentation                         |
 | `archipy[otel-minio]`      | Botocore (MinIO/S3) instrumentation                               |
+| `archipy[otel-pydantic-ai]` | Pydantic AI agent, model request and tool spans plus token usage metrics |
 
 === "Core"
 
@@ -377,6 +378,21 @@ libraries that are instrumented anyway; ArchiPy logs one warning naming the mism
 to turn the bypass off. Remove a key once its instrumentor supports the installed version:
 `make check-instrumentor-compat` resolves the instrumentor's `instruments` extra together with
 ArchiPy's own SQLAlchemy bound and reports when upstream has caught up (a weekly CI job runs it too).
+
+### Pydantic AI
+
+With `archipy[otel-pydantic-ai]` installed, `OtelUtils.init_otel_if_needed` calls `Agent.instrument_all` with
+ArchiPy's tracer and meter providers, so agent runs, model requests and tool calls become spans and token usage
+becomes a metric. An agent the application instrumented itself is left alone. Settings live in `BaseConfig.PYDANTIC_AI`:
+
+| Field                                    | Default | Description                                                                          |
+|------------------------------------------|---------|--------------------------------------------------------------------------------------|
+| `INSTRUMENTATION_ENABLED`                | `true`  | Instrument Pydantic AI agents when OpenTelemetry is enabled                          |
+| `INSTRUMENTATION_INCLUDE_CONTENT`        | `true`  | Prompts, model output and tool arguments in span attributes (turn off for personal data) |
+| `INSTRUMENTATION_INCLUDE_BINARY_CONTENT` | `false` | Binary content (images, audio, documents) in span attributes                         |
+| `INSTRUMENTATION_INCLUDE_MODEL_REQUEST_PARAMETERS` | `true` | Model request parameters (temperature, max tokens, ...) in model request spans |
+| `INSTRUMENTATION_VERSION`                | `6`     | Span and attribute format version (`5` or `6`)                                       |
+| `INSTRUMENTATION_USE_AGGREGATED_USAGE_ATTRIBUTE_NAMES` | `true` | Name the agent run usage attributes `gen_ai.aggregated_usage.*`            |
 
 ### Client gRPC
 

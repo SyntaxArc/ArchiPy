@@ -14,13 +14,14 @@ if TYPE_CHECKING:
     from opentelemetry.trace import Span, TracerProvider
 
     from archipy.configs.base_config import BaseConfig
-    from archipy.configs.config_template import OpentelemetryConfig
+    from archipy.configs.config_template import OpentelemetryConfig, PydanticAIConfig
 
 # Same logger as OtelUtils, so log filters and handlers that name it keep seeing these records.
 logger = logging.getLogger("archipy.helpers.utils.otel_utils")
 
 _REDIS_SEARCH_GUARD_MARKER = "_archipy_original"
 _REDIS_SEARCH_ATTRIBUTES_NAME = "_add_search_attributes"
+_PYDANTIC_AI_SETTINGS_MARKER = "_archipy_installed"
 
 
 class Instrumentation:
@@ -102,6 +103,55 @@ class Instrumentation:
                 )
             except Exception:
                 logger.debug("Failed to instrument %s", key, exc_info=True)
+        if config.PYDANTIC_AI.INSTRUMENTATION_ENABLED:
+            cls._instrument_pydantic_ai(config.PYDANTIC_AI, tracer_provider, meter_provider)
+        else:
+            logger.debug("Skipping Pydantic AI instrumentation (disabled by config)")
+
+    @classmethod
+    def _instrument_pydantic_ai(
+        cls,
+        settings_config: PydanticAIConfig,
+        tracer_provider: TracerProvider | None,
+        meter_provider: MeterProvider | None,
+    ) -> None:
+        """Point Pydantic AI's built-in instrumentation at ArchiPy's providers.
+
+        Pydantic AI has no contrib instrumentor; ``Agent.instrument_all`` takes ``InstrumentationSettings``
+        that carry the providers. Settings an application installed itself are left alone, and settings
+        ArchiPy installed earlier are replaced so a re-initialized runtime does not keep spans going to a
+        provider that was shut down.
+        """
+        key = "pydantic_ai"
+        if tracer_provider is None and meter_provider is None:
+            return
+        try:
+            from pydantic_ai import Agent
+            from pydantic_ai.models.instrumented import InstrumentationSettings
+        except ImportError:
+            logger.debug("Skipping OTel instrumentation for %s (package not installed)", key)
+            return
+        try:
+            current = Agent._instrument_default
+            if current is not False and not getattr(current, _PYDANTIC_AI_SETTINGS_MARKER, False):
+                cls.libraries.add(key)
+                logger.debug("Skipping already-instrumented library: %s", key)
+                return
+            settings = InstrumentationSettings(
+                tracer_provider=tracer_provider,
+                meter_provider=meter_provider,
+                include_content=settings_config.INSTRUMENTATION_INCLUDE_CONTENT,
+                include_binary_content=settings_config.INSTRUMENTATION_INCLUDE_BINARY_CONTENT,
+                include_model_request_parameters=settings_config.INSTRUMENTATION_INCLUDE_MODEL_REQUEST_PARAMETERS,
+                version=settings_config.INSTRUMENTATION_VERSION,
+                use_aggregated_usage_attribute_names=settings_config.INSTRUMENTATION_USE_AGGREGATED_USAGE_ATTRIBUTE_NAMES,
+            )
+            setattr(settings, _PYDANTIC_AI_SETTINGS_MARKER, True)
+            Agent.instrument_all(settings)
+            cls.libraries.add(key)
+            logger.debug("Instrumented library: %s", key)
+        except Exception:
+            logger.debug("Failed to instrument %s", key, exc_info=True)
 
     @classmethod
     def _after_library_instrumented(cls, key: str) -> None:

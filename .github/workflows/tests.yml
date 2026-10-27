@@ -99,6 +99,7 @@ jobs:
             - 'archipy/helpers/utils/_otel/**'
             - 'features/otel.feature'
             - 'features/otel_configuration.feature'
+            - 'features/pydantic_ai_otel.feature'
           apm_services:
             - 'packages/vault/**'
             - 'packages/minio/**'
@@ -242,6 +243,7 @@ jobs:
             - '!features/minio_adapter.feature'
             - '!features/otel.feature'
             - '!features/otel_configuration.feature'
+            - '!features/pydantic_ai_otel.feature'
             - '!features/parsian_ipg_adapter.feature'
             - '!features/redis_adapter.feature'
             - '!features/saman_ipg_adapter.feature'
@@ -313,6 +315,7 @@ jobs:
             features/minio_adapter.feature
             features/otel.feature
             features/otel_configuration.feature
+            features/pydantic_ai_otel.feature
             features/redis_adapter.feature
             features/scylladb_adapter.feature
             features/temporal_adapter.feature
@@ -414,6 +417,7 @@ jobs:
           features: >-
             features/otel.feature
             features/otel_configuration.feature
+            features/pydantic_ai_otel.feature
         - id: keycloak_auth_guards
           name: Keycloak (FastAPI auth guards)
           features: >-

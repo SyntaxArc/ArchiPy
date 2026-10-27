@@ -45,6 +45,9 @@ from archipy.configs.sections.payment import (
     ParsianShaparakConfig,
     SamanShaparakConfig,
 )
+from archipy.configs.sections.pydantic_ai import (
+    PydanticAIConfig,
+)
 from archipy.configs.sections.redis import (
     RedisConfig,
     RedisMode,
@@ -90,6 +93,7 @@ __all__ = [
     "PaginationConfig",
     "ParsianShaparakConfig",
     "PostgresSQLAlchemyConfig",
+    "PydanticAIConfig",
     "RedisConfig",
     "RedisMode",
     "SQLAlchemyConfig",

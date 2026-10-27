@@ -42,6 +42,7 @@ from archipy.configs.config_template import (
     PaginationConfig,
     ParsianShaparakConfig,
     PostgresSQLAlchemyConfig,
+    PydanticAIConfig,
     RedisConfig,
     SamanShaparakConfig,
     ScyllaDBConfig,
@@ -95,6 +96,7 @@ class BaseConfig[R](BaseSettings):
         OTEL (OpentelemetryConfig): OpenTelemetry observability configuration
         PARSIAN_SHAPARAK (ParsianShaparakConfig): Parsian Shaparak payment gateway configuration
         POSTGRES_SQLALCHEMY (PostgresSQLAlchemyConfig): PostgreSQL SQLAlchemy configuration
+        PYDANTIC_AI (PydanticAIConfig): Pydantic AI instrumentation configuration
         REDIS (RedisConfig): Redis cache configuration
         SAMAN_SHAPARAK (SamanShaparakConfig): Saman Shaparak (SEP) payment gateway configuration
         SCYLLADB (ScyllaDBConfig): ScyllaDB/Cassandra database configuration
@@ -211,6 +213,7 @@ class BaseConfig[R](BaseSettings):
     PAGINATION: PaginationConfig = PaginationConfig()
     PARSIAN_SHAPARAK: ParsianShaparakConfig = ParsianShaparakConfig()
     SAMAN_SHAPARAK: SamanShaparakConfig = SamanShaparakConfig()
+    PYDANTIC_AI: PydanticAIConfig = PydanticAIConfig()
     REDIS: RedisConfig = RedisConfig()
     SCYLLADB: ScyllaDBConfig = ScyllaDBConfig()
     SQLALCHEMY: SQLAlchemyConfig = SQLAlchemyConfig()

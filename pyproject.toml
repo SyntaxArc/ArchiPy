@@ -36,6 +36,7 @@ parsian-ipg-async = ["archipy-parsian-ipg[async]==0.1.0"]  # Pinned to core vers
 mysql = ["archipy-mysql[sync]==0.1.0"]  # Pinned to core version on publish flow!
 mysql-async = ["archipy-mysql[async]==0.1.0"]  # Pinned to core version on publish flow!
 postgres = ["archipy-postgres==0.1.0"]  # Pinned to core version on publish flow!
+pydantic-ai = ["pydantic-ai-slim>=2.62.0"]
 redis = ["archipy-redis==0.1.0"]  # Pinned to core version on publish flow!
 saman-ipg = ["archipy-saman-ipg==0.1.0"]  # Pinned to core version on publish flow!
 scheduler = ["apscheduler>=3.11.3"]
@@ -64,6 +65,7 @@ otel-redis = ["archipy[otel]", "opentelemetry-instrumentation-redis>=0.66b1"]
 otel-kafka = ["archipy[otel]", "opentelemetry-instrumentation-confluent-kafka>=0.66b1"]
 otel-scylladb = ["archipy[otel]", "opentelemetry-instrumentation-cassandra>=0.66b1"]
 otel-minio = ["archipy[otel]", "opentelemetry-instrumentation-botocore>=0.66b1"]
+otel-pydantic-ai = ["archipy[otel]", "archipy[pydantic-ai]"]
 
 [build-system]
 requires = ["hatchling"]
