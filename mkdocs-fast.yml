@@ -1,34 +1,24 @@
 # Fast build configuration for local development
 # Use this for quick iterations: mkdocs serve -f docs/mkdocs-fast.yml
+# Plugin settings are merged over docs/mkdocs.yml: only the differences are listed here.
 
 INHERIT: ./mkdocs.yml
 
 plugins:
-  - search
-  - autorefs
-  - mkdocstrings:
-      enabled: true
-      default_handler: python
-      handlers:
-        python:
-          paths: [ "..", "../packages/elasticsearch", "../packages/kafka", "../packages/keycloak", "../packages/minio", "../packages/mysql", "../packages/parsian-ipg", "../packages/postgres", "../packages/redis", "../packages/saman-ipg", "../packages/scylladb", "../packages/sqlite", "../packages/starrocks", "../packages/temporal", "../packages/vault" ]
-          options:
-            # Maximum performance for local dev
-            show_source: false
-            show_root_toc_entry: false
-            show_object_full_path: false
-            heading_level: 3
-            members_order: alphabetical
-            docstring_style: google
-            show_submodules: false
-            show_bases: false
-            show_signature_annotations: false
-            separate_signature: false
-            filters:
-              - "!^_"
-              - "!^__"
-            summary: true
-            show_if_no_docstring: false
-            inherited_members: false
-            members: false  # Don't auto-document members
-            docstring_section_style: list  # Faster than table
+  mkdocstrings:
+    enabled: true
+    handlers:
+      python:
+        options:
+          # Maximum performance for local dev
+          show_source: false
+          show_root_toc_entry: false
+          heading_level: 3
+          members_order: alphabetical
+          show_signature_annotations: false
+          separate_signature: false
+          filters:
+            - "!^_"
+            - "!^__"
+          members: false  # Don't auto-document members
+          docstring_section_style: list  # Faster than table
