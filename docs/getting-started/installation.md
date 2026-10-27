@@ -59,46 +59,56 @@ With optional extras (install only what you need):
 
 ## Optional Dependencies
 
-ArchiPy supports modular features through optional extras — install only what you need:
+ArchiPy supports modular features through optional extras — install only what you need.
 
-| Category      | Extra                           | Description                                                        |
-|---------------|---------------------------------|--------------------------------------------------------------------|
-| Database      | `archipy[postgres]`             | PostgreSQL adapter with SQLAlchemy integration                     |
-| Database      | `archipy[mysql]`                | MySQL adapter with SQLAlchemy integration                          |
-| Database      | `archipy[mysql-async]`          | MySQL async adapter (asyncmy)                                      |
-| Database      | `archipy[aiosqlite]`            | SQLite async adapter with SQLAlchemy integration                   |
-| Database      | `archipy[starrocks]`            | StarRocks adapter with SQLAlchemy integration                      |
-| Database      | `archipy[starrocks-async]`      | StarRocks async adapter                                            |
-| Database      | `archipy[sqlalchemy]`           | SQLAlchemy core integration                                        |
-| Database      | `archipy[sqlalchemy-async]`     | SQLAlchemy async integration                                       |
-| Database      | `archipy[elasticsearch]`        | Elasticsearch integration                                          |
-| Database      | `archipy[elasticsearch-async]`  | Elasticsearch async integration                                    |
-| Database      | `archipy[scylladb]`             | ScyllaDB integration                                               |
-| Service       | `archipy[redis]`                | Redis caching and key-value storage                                |
-| Service       | `archipy[keycloak]`             | Authentication and authorization services                          |
-| Service       | `archipy[minio]`                | S3-compatible object storage                                       |
-| Service       | `archipy[kafka]`                | Message streaming and event processing                             |
-| Service       | `archipy[temporalio]`           | Temporal workflow engine                                           |
-| Service       | `archipy[parsian-ipg]`          | Payment gateway (Parsian)                                          |
-| Service       | `archipy[saman-ipg]`            | Payment gateway (Saman)                                            |
-| Web           | `archipy[fastapi]`              | FastAPI integration with middleware and utilities                  |
-| Web           | `archipy[grpc]`                 | gRPC integration with interceptors                                 |
-| Observability | `archipy[otel]`                 | OpenTelemetry SDK, OTLP, httpx/requests, threading, system metrics |
-| Observability | `archipy[otel,fastapi]`         | FastAPI auto-instrumentation                                       |
-| Observability | `archipy[otel-grpc]`            | gRPC server/client contrib interceptors                            |
-| Observability | `archipy[otel-sqlalchemy]`      | SQLAlchemy instrumentation                                         |
-| Observability | `archipy[otel-redis]`           | Redis instrumentation                                              |
-| Observability | `archipy[otel-kafka]`           | Confluent Kafka instrumentation                                    |
-| Observability | `archipy[otel-scylladb]`        | Cassandra/ScyllaDB instrumentation                                 |
-| Observability | `archipy[otel-minio]`           | Botocore (MinIO/S3) instrumentation                                |
-| Observability | `archipy[otel-pydantic-ai]`     | Pydantic AI agent, model and tool spans and token metrics          |
-| Utilities     | `archipy[jwt]`                  | JSON Web Token utilities                                           |
-| Utilities     | `archipy[scheduler]`            | Task scheduling utilities                                          |
-| Utilities     | `archipy[cache]`                | TTL and async caching utilities                                    |
-| Utilities     | `archipy[dependency-injection]` | Dependency injector support                                        |
-| Testing       | `archipy[fakeredis]`            | In-memory Redis mock for testing                                   |
-| Testing       | `archipy[testcontainers]`       | Testcontainers integration                                         |
-| Testing       | `archipy[behave]`               | BDD testing framework                                              |
+### Extras reference
+
+Every extra declared in `[project.optional-dependencies]` of `pyproject.toml`. The **Mode** column tells
+whether the extra targets sync code, async code, or both/neither. Extras marked **workspace** pull a separate
+package (see [Adapter extras and workspace packages](#adapter-extras-and-workspace-packages)).
+
+| Extra                           | Installs / purpose                                                                   | Mode        |
+|---------------------------------|--------------------------------------------------------------------------------------|-------------|
+| `archipy[postgres]`             | PostgreSQL adapter (`archipy-postgres`: psycopg 3 with pool); workspace              | Sync, async |
+| `archipy[mysql]`                | MySQL adapter (`archipy-mysql[sync]`: pymysql); workspace                            | Sync        |
+| `archipy[mysql-async]`          | MySQL adapter (`archipy-mysql[async]`: asyncmy); workspace                           | Async       |
+| `archipy[aiosqlite]`            | SQLite adapter (`archipy-sqlite`: aiosqlite); workspace                              | Async       |
+| `archipy[starrocks]`            | StarRocks adapter (`archipy-starrocks[sync]`: starrocks, pymysql); workspace         | Sync        |
+| `archipy[starrocks-async]`      | StarRocks adapter (`archipy-starrocks[async]`: starrocks, asyncmy); workspace        | Async       |
+| `archipy[sqlalchemy]`           | SQLAlchemy core                                                                      | Sync        |
+| `archipy[sqlalchemy-async]`     | SQLAlchemy with asyncio support                                                      | Async       |
+| `archipy[elasticsearch]`        | Elasticsearch adapter (`archipy-elasticsearch`); workspace                           | Sync        |
+| `archipy[elasticsearch-async]`  | Elasticsearch adapter plus `elasticsearch[async]`; workspace                         | Async       |
+| `archipy[scylladb]`             | ScyllaDB adapter (`archipy-scylladb`: scylla-driver); workspace                      | Sync, async |
+| `archipy[redis]`                | Redis adapter (`archipy-redis`: redis with hiredis); workspace                       | Sync, async |
+| `archipy[keycloak]`             | Keycloak authentication adapter (`archipy-keycloak`); workspace                      | Sync, async |
+| `archipy[minio]`                | S3-compatible object storage adapter (`archipy-minio`: boto3); workspace             | Sync        |
+| `archipy[kafka]`                | Kafka producer/consumer adapter (`archipy-kafka`: confluent-kafka); workspace        | Sync, async |
+| `archipy[vault]`                | HashiCorp Vault adapter (`archipy-vault`: hvac); workspace                           | Sync        |
+| `archipy[temporalio]`           | Temporal workflow adapter (`archipy-temporal`: temporalio); workspace                | Async       |
+| `archipy[parsian-ipg]`          | Parsian payment gateway (`archipy-parsian-ipg[sync]`: zeep, requests); workspace     | Sync        |
+| `archipy[parsian-ipg-async]`    | Parsian payment gateway (`archipy-parsian-ipg[async]`: zeep, httpx2); workspace      | Async       |
+| `archipy[saman-ipg]`            | Saman payment gateway (`archipy-saman-ipg`: httpx2); workspace                       | Sync, async |
+| `archipy[fastapi]`              | FastAPI integration with middleware and utilities                                    | Async       |
+| `archipy[grpc]`                 | gRPC, health checking and protobuf for interceptors                                  | Sync, async |
+| `archipy[pydantic-ai]`          | Pydantic AI (`pydantic-ai-slim`) agent integration                                   | Async       |
+| `archipy[otel]`                 | OpenTelemetry SDK, OTLP and Prometheus exporters, httpx/requests/threading/system metrics | Sync, async |
+| `archipy[otel-grpc]`            | `otel` plus gRPC server/client instrumentation                                       | Sync, async |
+| `archipy[otel-sqlalchemy]`      | `otel` plus SQLAlchemy instrumentation                                               | Sync, async |
+| `archipy[otel-redis]`           | `otel` plus Redis instrumentation                                                    | Sync, async |
+| `archipy[otel-kafka]`           | `otel` plus Confluent Kafka instrumentation                                          | Sync        |
+| `archipy[otel-scylladb]`        | `otel` plus Cassandra/ScyllaDB instrumentation                                       | Sync, async |
+| `archipy[otel-minio]`           | `otel` plus botocore (MinIO/S3) instrumentation                                      | Sync        |
+| `archipy[otel-pydantic-ai]`     | `otel` plus `pydantic-ai`: agent, model and tool spans and token metrics             | Async       |
+| `archipy[jwt]`                  | JSON Web Token utilities (PyJWT)                                                     | Sync        |
+| `archipy[scheduler]`            | Task scheduling (APScheduler)                                                        | Sync, async |
+| `archipy[cache]`                | TTL and async caching utilities (cachetools, async-lru)                              | Sync, async |
+| `archipy[dependency-injection]` | Dependency injector support                                                          | Sync, async |
+| `archipy[fakeredis]`            | In-memory Redis fake for tests                                                       | Sync, async |
+| `archipy[testcontainers]`       | Testcontainers (Elasticsearch, MinIO, MySQL, Vault modules)                          | Sync        |
+| `archipy[behave]`               | Behave BDD testing framework                                                         | Sync        |
+
+> **Note:** Combine extras with commas, for example `archipy[otel,fastapi]` adds FastAPI auto-instrumentation.
 
 > **Note:** Enable observability with `OTEL__IS_ENABLED=true` and install the matching `otel-*`
 > extras for each stack you use. See [Observability](../tutorials/observability.md).
@@ -106,6 +116,20 @@ ArchiPy supports modular features through optional extras — install only what 
 > **Note:** ArchiPy’s HTTP clients (for example payment IPG adapters) use **httpx2**. The
 > `otel` extra instruments **httpx** and **requests**, not httpx2 — outbound httpx2 calls are a
 > known auto-instrumentation gap.
+
+### Adapter extras and workspace packages
+
+Most adapter extras do not carry the adapter code inside the `archipy` wheel. Each one pulls a separate
+workspace package that is published to PyPI on its own. For example, `archipy[redis]` installs `archipy-redis`,
+and `archipy[postgres]` installs `archipy-postgres`.
+
+- **Pinned versions:** the publish flow pins every `archipy-*` package in the extras to the core `archipy`
+  version, so an extra always installs a matching release (the `==0.1.0` pins in the repository are placeholders).
+- **Sources:** each package lives in its own directory under
+  [`packages/`](https://github.com/SyntaxArc/ArchiPy/tree/master/packages) (for example `packages/redis/`).
+- **Imports:** the import path does not change. Adapters are still imported from `archipy.adapters.*`.
+- **Sync/async variants:** some packages split their dependencies into `sync` and `async` extras, for example
+  `archipy[mysql]` installs `archipy-mysql[sync]` and `archipy[mysql-async]` installs `archipy-mysql[async]`.
 
 ## Troubleshooting
 
