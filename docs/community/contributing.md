@@ -188,7 +188,7 @@ New adapters follow a consistent checklist. Use this as your guide when contribu
 
 1. **Create the adapter package**
 
-   ```
+   ```text
    packages/<name>/
    ├── pyproject.toml   # dist `archipy-<name>`, depends on `archipy==<version>` + the client library
    └── archipy/adapters/<name>/

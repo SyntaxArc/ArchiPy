@@ -23,7 +23,7 @@ Copyright 2024 [SyntaxArc](https://github.com/SyntaxArc) — Hossein Nejati & Me
 
 ## Full License Text
 
-```
+```text
                               Apache License
                         Version 2.0, January 2004
                      http://www.apache.org/licenses/

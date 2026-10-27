@@ -47,7 +47,7 @@ uv add "archipy[testcontainers]"
 
 ### How it works
 
-```
+```text
 features/
 ├── environment.py                  # Behave hooks: TestConfig, ContainerManager, ScenarioContextPoolManager
 ├── test_containers.py              # ContainerManager + per-service container classes (Singleton)
@@ -228,7 +228,7 @@ Every ArchiPy adapter provides a `ports.py` abstract interface. Your business lo
 abstract port — not on the concrete adapter. This means you can swap the real adapter for an in-memory mock
 in Behave step definitions:
 
-```
+```text
 Production:  YourLogic → RedisAdapter (real Redis)
 Test:        YourLogic → RedisMock (in-memory dict)
 ```
@@ -453,7 +453,7 @@ def step_assert_not_found(context) -> None:
 
 ### Feature Directory Layout
 
-```
+```text
 your_app/
 ├── logics/
 │   └── user_session_service.py

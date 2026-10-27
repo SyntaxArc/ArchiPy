@@ -129,7 +129,7 @@ flowchart TD
 
 ## Ports & Adapters in Practice
 
-```
+```text
 Production:  UserRepository → PostgresSQLAlchemyAdapter (real Postgres)
 Test:        UserRepository → InMemorySQLAlchemyMock   (no Docker needed)
 ```
@@ -179,7 +179,7 @@ The **logic layer** is the unit of work boundary. Every public method on a logic
 `@postgres_sqlalchemy_atomic`, which opens a SQLAlchemy session, commits on success, and rolls back
 on any exception:
 
-```
+```text
 Service  →  Logic (@atomic)  →  Repository  →  Adapter  →  DB
                  ↑___________commit / rollback____________↑
 ```

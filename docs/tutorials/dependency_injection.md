@@ -32,7 +32,7 @@ Benefits:
 
 ### Project Layout
 
-```
+```text
 your_app/
 ├── configs/
 │   ├── app_config.py     # AppConfig(BaseConfig)

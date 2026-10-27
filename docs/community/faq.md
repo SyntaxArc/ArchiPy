@@ -15,7 +15,7 @@ expensive (swapping PostgreSQL for ScyllaDB requires touching business logic).
 
 ArchiPy enforces a strict four-layer boundary:
 
-```
+```text
 models ← configs ← helpers ← adapters
 ```
 
