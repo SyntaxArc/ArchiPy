@@ -2166,7 +2166,8 @@ class ApmServerTestContainer(metaclass=Singleton, thread_safe=True):
         if response.status_code in (404, 503):
             return []
         response.raise_for_status()
-        return [hit["_source"] for hit in response.json()["hits"]["hits"]]
+        # A document with none of the requested fields (neither a transaction nor a span) is not an event to assert on.
+        return [hit["_source"] for hit in response.json()["hits"]["hits"] if hit["_source"].get("processor")]
 
     def _wait_for_shards(self, index: str) -> None:
         """Block until the primary shards of every index matching ``index`` are allocated.

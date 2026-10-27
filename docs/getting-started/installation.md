@@ -91,6 +91,7 @@ ArchiPy supports modular features through optional extras — install only what 
 | Observability | `archipy[otel-kafka]`           | Confluent Kafka instrumentation                                    |
 | Observability | `archipy[otel-scylladb]`        | Cassandra/ScyllaDB instrumentation                                 |
 | Observability | `archipy[otel-minio]`           | Botocore (MinIO/S3) instrumentation                                |
+| Observability | `archipy[otel-pydantic-ai]`     | Pydantic AI agent, model and tool spans and token metrics          |
 | Utilities     | `archipy[jwt]`                  | JSON Web Token utilities                                           |
 | Utilities     | `archipy[scheduler]`            | Task scheduling utilities                                          |
 | Utilities     | `archipy[cache]`                | TTL and async caching utilities                                    |
