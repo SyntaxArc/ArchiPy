@@ -14,8 +14,9 @@ configuration, CRUD, transactions, filtering, pagination, async patterns, and te
 uv add "archipy[postgres]"
 ```
 
-> **Tip:** The PostgreSQL adapter is an optional extra. Install it alongside any ORM extras you need, for example
-> `archipy[postgres]`.
+!!! tip
+    The PostgreSQL adapter is an optional extra. Install it alongside any ORM extras you need, for example
+    `archipy[postgres]`.
 
 ## Configuration
 
@@ -399,6 +400,10 @@ def delete_user(user_id: UUID) -> None:
 Use the `@postgres_sqlalchemy_atomic` to wrap operations in a transaction. If any exception is raised, the
 entire transaction is automatically rolled back.
 
+!!! note
+    A decorated function called from another decorated function joins the outer transaction. Only the outermost call
+    commits.
+
 ```python
 import logging
 
@@ -571,11 +576,12 @@ def count_active_users() -> int:
 
 ## Async Usage
 
-> **Tip:** Async PostgreSQL support requires the `sqlalchemy-async` extra:
+!!! tip
+    Async PostgreSQL support requires the `sqlalchemy-async` extra:
 
-```bash
-uv add "archipy[postgres,sqlalchemy-async]"
-```
+    ```bash
+    uv add "archipy[postgres,sqlalchemy-async]"
+    ```
 
 ### Asynchronous Adapter
 
@@ -844,6 +850,10 @@ logger.info(f"Total users: {total}")
 
 The default pool settings work for most applications, but you can tune them for your workload:
 
+!!! warning
+    Do not hold a session open during slow external calls. Each open session keeps a pooled connection, and once the
+    pool and its overflow are used up, new requests wait up to `POOL_TIMEOUT` seconds (default `30`) and then fail.
+
 ```python
 from archipy.configs.config_template import PostgresSQLAlchemyConfig
 
@@ -885,6 +895,9 @@ worker_config = PostgresSQLAlchemyConfig(
 - When using SSL, ensure `sslmode` is included in the DSN if required.
 
 ### `DatabaseTransactionError` — serialisation failures
+
+!!! note
+    The ArchiPy default isolation level is `REPEATABLE READ`. Only raise it to `SERIALIZABLE` when you need it.
 
 - Under high concurrency with `ISOLATION_LEVEL="SERIALIZABLE"`, serialisation failures are expected. Add a retry loop
   around your transaction.

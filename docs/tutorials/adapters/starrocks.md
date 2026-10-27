@@ -20,6 +20,14 @@ Configure the StarRocks adapter via environment variables or a `StarRocksSQLAlch
 
 ### Environment Variables
 
+!!! warning
+    StarRocks only supports the `READ COMMITTED` isolation level. Any other `ISOLATION_LEVEL` value raises a
+    `ConfigurationError`.
+
+!!! note
+    `CONNECT_TIMEOUT` defaults to `10` seconds for StarRocks, because the MySQL protocol needs an explicit connection
+    timeout to avoid hanging on network issues.
+
 ```bash
 STARROCKS_SQLALCHEMY__HOST=localhost
 STARROCKS_SQLALCHEMY__PORT=9030

@@ -20,6 +20,10 @@ Configure the SQLite adapter via environment variables or a `SQLiteSQLAlchemyCon
 
 ### Environment Variables
 
+!!! note
+    `DATABASE` defaults to `:memory:`. An in-memory database is gone when the process exits, so set a file path for
+    data you want to keep.
+
 ```bash
 SQLITE_SQLALCHEMY__DATABASE=./app.db
 SQLITE_SQLALCHEMY__ECHO=false
