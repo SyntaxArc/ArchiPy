@@ -887,4 +887,5 @@ not reproduce every command. See [BDD Testing](../testing_strategy.md).
   `INCREX`; FastAPI via `fastapi-redis-sdk`
 - [BDD Testing](../testing_strategy.md) — RediSearch scenarios in `features/redis_adapter.feature` (container and
   cluster)
+- BDD feature files — [`redis_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/redis_adapter.feature), [`redis_adapter_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/redis_adapter_apm.feature)
 - [API Reference](../../api_reference/adapters/redis.md) — Full Redis adapter API documentation

@@ -341,4 +341,5 @@ async def get_user(user_id: UUID) -> dict[str, str | UUID]:
 - [PostgreSQL Adapter](postgres.md) — Similar patterns for PostgreSQL
 - [SQLAlchemy Search Totals](sqlalchemy.md) — Cheap totals for paginated searches, count threshold and count cache
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Transaction decorator usage
+- BDD feature files — [`atomic_transactions_mysql.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/atomic_transactions_mysql.feature), [`atomic_transactions_apm_mysql.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/atomic_transactions_apm_mysql.feature)
 - [API Reference](../../api_reference/adapters/mysql.md) — Full MySQL adapter API documentation

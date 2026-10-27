@@ -457,4 +457,5 @@ async def get_age_distribution() -> dict[str, list[dict[str, int]]]:
 - [PostgreSQL Adapter](postgres.md) — Similar patterns for PostgreSQL
 - [SQLAlchemy Search Totals](sqlalchemy.md) — Cheap totals for paginated searches, count threshold and count cache
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Transaction decorator usage
+- BDD feature files — [`atomic_transactions_starrocks.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/atomic_transactions_starrocks.feature), [`atomic_transactions_apm_starrocks.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/atomic_transactions_apm_starrocks.feature)
 - [API Reference](../../api_reference/adapters/starrocks.md) — Full StarRocks adapter API documentation
