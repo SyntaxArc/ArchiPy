@@ -204,5 +204,6 @@ settings-source details.
 - [Configuration Management](../config_management.md) — Vault-backed settings source
 - [Error Handling](../error_handling.md) — Domain error mapping conventions
 - [BDD Testing](../testing_strategy.md) — Testcontainers-based adapter tests
+- BDD feature files — [`vault_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/vault_adapter.feature), [`vault_adapter_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/vault_adapter_apm.feature)
 - [Vault API Reference](../../api_reference/adapters/vault.md) — Ports and adapter docs
 - [Configs API Reference](../../api_reference/configs.md) — `VaultConfig` fields

@@ -613,4 +613,5 @@ executor thread, so its span still ends on the next poll or close.
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — Kafka configuration setup
 - [BDD Testing](../testing_strategy.md) — Testing Kafka operations
+- BDD feature files — [`kafka_adapters.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/kafka_adapters.feature), [`kafka_adapters_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/kafka_adapters_apm.feature), [`kafka_clients_spans.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/kafka_clients_spans.feature)
 - [API Reference](../../api_reference/adapters/kafka.md) — Full Kafka adapter API documentation

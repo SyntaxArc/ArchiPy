@@ -824,4 +824,5 @@ reconfigured in-process (Temporal SDK limitation).
 - [Observability](../observability.md) — OpenTelemetry OTLP traces and metrics
 - [BDD Testing](../testing_strategy.md) — Testing workflow operations
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Atomic transaction usage
+- BDD feature files — [`temporal_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/temporal_adapter.feature), [`temporal_adapter_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/temporal_adapter_apm.feature), [`temporal_schedules_errors.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/temporal_schedules_errors.feature)
 - [API Reference](../../api_reference/adapters/temporal.md) — Full Temporal adapter API documentation

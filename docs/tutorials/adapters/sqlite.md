@@ -401,4 +401,5 @@ async def get_user(user_id: UUID) -> dict[str, str | UUID]:
 - [PostgreSQL Adapter](postgres.md) — Similar patterns for PostgreSQL
 - [SQLAlchemy Search Totals](sqlalchemy.md) — Cheap totals for paginated searches, count threshold and count cache
 - [SQLAlchemy Decorators](../helpers/decorators.md#sqlalchemy-transaction-decorators) — Transaction decorator usage
+- BDD feature files — [`atomic_transactions_sqlite.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/atomic_transactions_sqlite.feature), [`atomic_transactions_apm_sqlite.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/atomic_transactions_apm_sqlite.feature)
 - [API Reference](../../api_reference/adapters/sqlite.md) — Full SQLite adapter API documentation

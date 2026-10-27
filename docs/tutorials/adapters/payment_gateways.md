@@ -453,4 +453,5 @@ All adapters use ArchiPy's consistent error hierarchy:
 - [Error Handling](../error_handling.md) — Exception handling patterns
 - [Configuration Management](../config_management.md) — Gateway configuration setup
 - [BDD Testing](../testing_strategy.md) — Testing payment operations
+- BDD feature files — [`parsian_ipg_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/parsian_ipg_adapter.feature), [`saman_ipg_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/saman_ipg_adapter.feature)
 - [API Reference](../../api_reference/adapters/payment_gateways.md) — Full payment gateway API documentation

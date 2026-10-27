@@ -1023,5 +1023,6 @@ manually) instruments the Elasticsearch client library when that extra is instal
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — Elasticsearch configuration setup
 - [Observability](../observability.md) — OpenTelemetry (replaces Elastic APM)
+- BDD feature files — [`elastic_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/elastic_adapter.feature), [`elastic_adapter_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/elastic_adapter_apm.feature)
 - [API Reference](../../api_reference/adapters/elasticsearch.md) — Full Elasticsearch adapter API documentation
 - [Elasticsearch Python Client docs](https://www.elastic.co/guide/en/elasticsearch/client/python-api/current/index.html)

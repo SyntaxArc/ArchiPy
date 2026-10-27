@@ -831,4 +831,5 @@ async def process_users(user_ids: list[str]) -> None:
 - [BDD Testing](../testing_strategy.md) — Testing ScyllaDB operations
 - [ScyllaDB Documentation](https://docs.scylladb.com/) — Official ScyllaDB docs
 - [Cassandra Query Language (CQL)](https://cassandra.apache.org/doc/latest/cassandra/developing/cql/) — CQL reference
+- BDD feature files — [`scylladb_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/scylladb_adapter.feature), [`scylladb_adapter_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/scylladb_adapter_apm.feature)
 - [API Reference](../../api_reference/adapters/scylladb.md) — Full ScyllaDB adapter API documentation

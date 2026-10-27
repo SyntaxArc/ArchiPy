@@ -360,4 +360,5 @@ async def download_file(bucket_name: str, object_name: str) -> RedirectResponse:
 - [Error Handling](../error_handling.md) — Exception handling patterns with proper chaining
 - [Configuration Management](../config_management.md) — MinIO configuration setup
 - [BDD Testing](../testing_strategy.md) — Testing MinIO operations
+- BDD feature files — [`minio_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/minio_adapter.feature), [`minio_adapter_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/minio_adapter_apm.feature)
 - [API Reference](../../api_reference/adapters/minio.md) — Full MinIO adapter API documentation

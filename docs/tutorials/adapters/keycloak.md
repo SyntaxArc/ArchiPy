@@ -776,4 +776,5 @@ async_keycloak.clear_all_caches()
 - [Configuration Management](../config_management.md) — Keycloak configuration setup
 - [BDD Testing](../testing_strategy.md) — Testing Keycloak operations
 - [Keycloak Utils](../helpers/utils.md#keycloak-utils) — Authentication utilities with Keycloak
+- BDD feature files — [`keycloak_adapter.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/keycloak_adapter.feature), [`keycloak_adapter_apm.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/keycloak_adapter_apm.feature), [`keycloak_adapter_management.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/keycloak_adapter_management.feature), [`keycloak_adapter_tokens_orgs.feature`](https://github.com/SyntaxArc/ArchiPy/blob/master/features/keycloak_adapter_tokens_orgs.feature)
 - [API Reference](../../api_reference/adapters/keycloak.md) — Full Keycloak adapter API documentation
