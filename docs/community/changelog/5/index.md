@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.22.0](5.22.0.md) | 2026-10-27 | Pydantic AI agents export traces and metrics through ArchiPy's OpenTelemetry providers (new `PYDANTIC_AI` config section, `pydantic-ai` and `otel-pydantic-ai` extras); Behave CI runs affected groups in parallel; issue forms, labeler, link check and contributor rules |
 | [5.21.2](5.21.2.md) | 2026-10-25 | Test container images updated to the latest stable releases; `mkdocs-material` lower bound matches `uv.lock` |
 | [5.21.1](5.21.1.md) | 2026-10-24 | Keycloak: `create_realm` no longer raises a `TypeError` for an existing realm, and UMA `permissions_check` handles several permissions |
 | [5.21.0](5.21.0.md) | 2026-10-24 | Keycloak adapter returns pydantic DTOs and gains about 280 calls (realms, users, clients, roles, mappings, identity providers, organizations, authorization), token exchange, JWT grant, RPT and AuthZEN; **breaking:** the mixin packages are removed and the resource layout is private |
