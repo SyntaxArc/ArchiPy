@@ -13,6 +13,7 @@ from features.test_helpers import get_current_scenario_context
 from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
 from archipy.adapters.keycloak.auth import _build_auth_context
 from archipy.configs.base_config import BaseConfig
+from archipy.configs.sections.keycloak import KeycloakConfig
 from archipy.models.dtos.keycloak.auth_flow_dtos import KeycloakAuthenticationFlowRequestDTO, KeycloakAuthenticatorConfigRequestDTO
 from archipy.models.dtos.keycloak.authenticator_dtos import (
     KeycloakAuthenticationFlowCopyRequestDTO,
