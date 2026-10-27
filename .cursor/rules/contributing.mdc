@@ -39,6 +39,19 @@ Large findings: split the work into small PRs.
 
 - Several PRs may reference one issue. Use `Part of #N` in each PR and `Closes #N` only in the last one; list the chunks as a checklist in the issue.
 - Or split the finding into several issues, one per chunk, each closed by its own PR.
+
+### Integration branch for multi-PR issues
+
+When one issue is split into several PRs, do not merge the chunks into the working branch one by one.
+
+1. Ask the user which branch is the **working branch** (`development`, `main` or `master`) unless the repo or the conversation already states it.
+2. Create an integration branch from the working branch: `feat|fix|chore|ci/<topic>`, named after the issue.
+3. Open every chunk PR against the integration branch with `Part of #N`. Watch the checks (`gh pr checks <N> --watch` until none is pending), then merge each chunk PR automatically. Tick the checklist item with each merge.
+4. When every checklist item is ticked, open one final PR from the integration branch to the working branch with `Closes #N`. Ask the user who to assign it to (GitHub login or name), assign it with `gh pr create --assignee <login>`, and do **not** merge it: the assignee reviews and merges.
+5. Delete the integration branch after the final PR merges.
+
+Single-PR issues skip this and follow the findings workflow above.
+
 - Update the issue checklist with every PR: tick the item the PR completes, note the result (for example measured timings) and list the next chunk. Do it before the merge when the PR's checks already pass, otherwise right after the merge. A merged PR never leaves its issue checklist stale.
 - Keep an issue open until every checklist item is ticked. Put `Closes #N` only in the PR that completes the last item, and tick that item before merging; every other PR uses `Part of #N`. If a merge closes an issue that still has unticked items, reopen it (`gh issue reopen <N>`).
 - Put `Closes #N`, `Fixes #N`, `Resolves #N` or `Part of #N` in the PR description: when the PR merges, `.github/workflows/pr-merged-issue-comment.yml` comments with the PR link on every issue it names. Ticking the checklist and noting results stay manual.
