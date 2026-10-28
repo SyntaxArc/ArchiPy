@@ -296,3 +296,8 @@ Feature: Temporal Adapter Operations
       | none     | 120      |
       | 30       | 30       |
       | 0        | none     |
+
+  Scenario: A worker configured with ValueError as a failure type fails the workflow at once
+    Given a worker is started for task queue "failure-types-queue" that fails workflows on ValueError
+    When I execute workflow "ValueErrorWorkflow" on task queue "failure-types-queue"
+    Then the workflow execution should fail

@@ -69,6 +69,7 @@ from features.test_workflows.temporal_workflows import (
     ScheduledWorkflow,
     SignalQueryWorkflow,
     TimeoutWorkflow,
+    ValueErrorWorkflow,
 )
 
 T = TypeVar("T")
@@ -2511,3 +2512,40 @@ def step_resolved_timeout(context, resolved):
     actual = get_current_scenario_context(context).get("resolved_timeout")
     expected = None if resolved == "none" else timedelta(seconds=int(resolved))
     assert actual == expected, f"Expected {expected}, got {actual}"
+
+
+@given('a worker is started for task queue "{task_queue}" that fails workflows on ValueError')
+def step_worker_with_failure_types(context, task_queue):
+    worker_manager = get_temporal_worker_manager(context)
+
+    async def _start() -> WorkerHandle:
+        return await worker_manager.start_worker(
+            task_queue=task_queue,
+            workflows=[ValueErrorWorkflow],
+            workflow_failure_exception_types=[ValueError],
+        )
+
+    worker_handle = run_async(context, _start())
+    scenario_context = get_current_scenario_context(context)
+    if not hasattr(scenario_context, "workers"):
+        scenario_context.workers = []
+    scenario_context.workers.append(worker_handle)
+    scenario_context.last_worker = worker_handle
+
+
+@when('I execute workflow "{workflow_name}" on task queue "{task_queue}"')
+def step_execute_workflow_on_queue(context, workflow_name, task_queue):
+    from temporalio.client import WorkflowFailureError
+
+    scenario_context = get_current_scenario_context(context)
+    adapter = get_temporal_adapter(context)
+    try:
+        run_async(context, adapter.execute_workflow(workflow_name, task_queue=task_queue, execution_timeout=30))
+        scenario_context.store("workflow_failure", None)
+    except WorkflowFailureError as error:
+        scenario_context.store("workflow_failure", error)
+
+
+@then("the workflow execution should fail")
+def step_workflow_execution_failed(context):
+    assert get_current_scenario_context(context).get("workflow_failure") is not None, "Expected the workflow to fail"

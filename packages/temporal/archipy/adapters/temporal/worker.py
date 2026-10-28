@@ -14,7 +14,13 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
 from uuid import uuid4
 
-from temporalio.worker import PollerBehavior, PollerBehaviorAutoscaling, PollerBehaviorSimpleMaximum, Worker
+from temporalio.worker import (
+    PollerBehavior,
+    PollerBehaviorAutoscaling,
+    PollerBehaviorSimpleMaximum,
+    Worker,
+)
+from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import TemporalConfig
@@ -33,7 +39,7 @@ if TYPE_CHECKING:
 
     from temporalio.client import Client, Interceptor
     from temporalio.converter import DataConverter
-    from temporalio.worker import WorkerDeploymentConfig, WorkerTuner
+    from temporalio.worker import WorkerDeploymentConfig, WorkerTuner, WorkflowRunner
 
 
 # Extra time past the graceful shutdown timeout for the SDK to cancel and drain activities.
@@ -336,6 +342,8 @@ class TemporalWorkerManager(WorkerPort):
         tuner: WorkerTuner | None = None,
         activity_executor: Executor | None = None,
         deployment_config: WorkerDeploymentConfig | None = None,
+        workflow_failure_exception_types: Sequence[type[BaseException]] = (),
+        workflow_runner: WorkflowRunner | None = None,
     ) -> WorkerHandle:
         """Start a Temporal worker for the specified task queue.
 
@@ -359,6 +367,11 @@ class TemporalWorkerManager(WorkerPort):
                 Required when registering sync activities. Defaults to None.
             deployment_config (WorkerDeploymentConfig, optional): Worker Deployment version this worker belongs
                 to, replacing ``build_id``. Defaults to None.
+            workflow_failure_exception_types (Sequence[type[BaseException]], optional): Exception types that fail
+                the workflow instead of retrying the workflow task (e.g. ``[Exception]`` to fail on any error).
+                Defaults to () (only ``FailureError`` subclasses fail it).
+            workflow_runner (WorkflowRunner, optional): Workflow runner, e.g. a ``SandboxedWorkflowRunner`` with
+                ``restrictions.with_passthrough_modules(...)``. Defaults to None (the SDK sandbox).
 
         Returns:
             WorkerHandle: Handle to the started worker.
@@ -400,6 +413,8 @@ class TemporalWorkerManager(WorkerPort):
                 activities=activities or [],
                 build_id=build_id,
                 deployment_config=deployment_config,
+                workflow_failure_exception_types=workflow_failure_exception_types,
+                workflow_runner=workflow_runner or SandboxedWorkflowRunner(),
                 identity=worker_identity,
                 max_concurrent_workflow_tasks=max_concurrent_workflow_tasks,
                 max_concurrent_activities=max_concurrent_activities,

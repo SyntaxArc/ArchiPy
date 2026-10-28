@@ -496,3 +496,17 @@ class EchoOrderWorkflow:
             OrderPayload: The same order.
         """
         return order
+
+
+@workflow.defn(name="ValueErrorWorkflow")
+class ValueErrorWorkflow:
+    """Workflow that raises a plain ``ValueError``, to check ``workflow_failure_exception_types``."""
+
+    @workflow.run
+    async def run(self) -> None:
+        """Raise a plain error.
+
+        Raises:
+            ValueError: Always.
+        """
+        raise ValueError("invalid order")
