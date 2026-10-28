@@ -21,6 +21,12 @@ Feature: Temporal Adapter Operations
     When I start workflow "SignalQueryWorkflow" with workflow id "test-id-policy-1" twice using conflict policy USE_EXISTING
     Then both starts should return the same run id
 
+  Scenario: Configured client and worker interceptors see workflow and activity calls
+    Given a Temporal adapter and worker manager are configured with a counting interceptor
+    And a worker is started for task queue "test-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "Intercepted"
+    Then the counting interceptor should have seen 1 workflow start and 1 activity execution
+
   Scenario: Execute workflow and wait for result
     Given a worker is started for task queue "test-queue" with GreetingWorkflow
     When I execute workflow "GreetingWorkflow" with argument "Bob"
