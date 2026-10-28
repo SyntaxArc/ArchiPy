@@ -451,7 +451,7 @@ class TemporalAdapter(TemporalPort):
             reason (str, optional): Reason for cancellation. Defaults to None.
         """
         handle = await self.get_workflow_handle(workflow_id, run_id)
-        await handle.cancel()
+        await handle.cancel(reason=reason or "")
 
     @override
     async def terminate_workflow(self, workflow_id: str, run_id: str | None = None, reason: str | None = None) -> None:

@@ -2071,6 +2071,27 @@ def step_temporal_client_has_tracing_interceptor(context):
     )
 
 
+@when('I request cancellation of workflow "{workflow_id}" with reason "{reason}"')
+def step_cancel_workflow_with_reason(context, workflow_id, reason):
+    adapter = get_temporal_adapter(context)
+    run_async(context, adapter.cancel_workflow(workflow_id, reason=reason))
+
+
+@then('the cancel request of workflow "{workflow_id}" should carry reason "{reason}"')
+def step_cancel_request_reason(context, workflow_id, reason):
+    adapter = get_temporal_adapter(context)
+
+    async def _cancel_causes() -> list[str]:
+        handle = await adapter.get_workflow_handle(workflow_id)
+        history = await handle.fetch_history()
+        return [
+            event.workflow_execution_cancel_requested_event_attributes.cause
+            for event in history.events
+            if event.HasField("workflow_execution_cancel_requested_event_attributes")
+        ]
+
+    causes = run_async(context, _cancel_causes())
+    assert reason in causes, f"Expected cancel reason {reason!r}, got {causes}"
 @when("{count:d} callers get the client of a new Temporal adapter at once")
 def step_concurrent_get_client(context, count):
     adapter = TemporalAdapter(get_temporal_adapter(context).config)
