@@ -254,3 +254,7 @@ Feature: Temporal Adapter Operations
   Scenario: Concurrent first calls share one Temporal client
     When 5 callers get the client of a new Temporal adapter at once
     Then they should all receive the same client
+
+  Scenario: The messaging tracing interceptor still finds the private temporalio span hook
+    When I build the messaging tracing workflow interceptor class
+    Then the workflow interceptor class should be built without a ConfigurationError
