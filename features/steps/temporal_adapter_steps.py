@@ -2091,3 +2091,18 @@ def step_build_activity_cache_key(context, activity_input):
 def step_activity_cache_key_should_be(context, expected):
     actual = get_current_scenario_context(context).get("activity_cache_key")
     assert actual == expected, f"Expected {expected}, got {actual}"
+@when("the worker run ends without the handle")
+def step_worker_run_ends_outside_handle(context):
+    worker_handle = get_current_scenario_context(context).last_worker
+
+    async def _end_run() -> None:
+        await worker_handle._worker.shutdown()
+        await asyncio.sleep(0)
+
+    run_async(context, _end_run())
+
+
+@then("the worker should have no run error")
+def step_worker_no_run_error(context):
+    worker_handle = get_current_scenario_context(context).last_worker
+    assert worker_handle.run_error is None, worker_handle.run_error

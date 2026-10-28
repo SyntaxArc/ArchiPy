@@ -182,6 +182,13 @@ Feature: Temporal Adapter Operations
     When I stop the worker
     Then the worker should be stopped
 
+  Scenario: Worker handle reports a run that ended outside the handle
+    When I start a worker for task queue "run-ended-queue" with workflows and activities
+    Then the worker should be running
+    When the worker run ends without the handle
+    Then the worker should be stopped
+    And the worker should have no run error
+
   Scenario: Get worker statistics
     When I start a worker for task queue "stats-queue" with workflows and activities
     And I get worker statistics
