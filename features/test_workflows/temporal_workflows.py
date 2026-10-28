@@ -479,8 +479,6 @@ class BaseGreetingWorkflow(BaseWorkflow[str, str]):
             str: Greeting message from the activity.
         """
         return await self._execute_activity_with_retry(greeting_activity, workflow_input)
-
-
 @workflow.defn(name="EchoOrderWorkflow")
 class EchoOrderWorkflow:
     """Workflow that returns its Pydantic input, to check the data converter round trip."""
