@@ -56,6 +56,7 @@ Feature: Temporal Adapter Operations
     Given a worker is started for task queue "test-queue" with EchoOrderWorkflow
     When I execute workflow "EchoOrderWorkflow" with order "order-7" totalling 12.50
     Then the echoed order should equal the sent order
+
   Scenario: List workflows stops at the limit
     Given a worker is started for task queue "test-queue" with GreetingWorkflow
     When I execute workflow "GreetingWorkflow" with argument "Limit-1"
@@ -222,6 +223,7 @@ Feature: Temporal Adapter Operations
   Scenario: Concurrent first calls share one Temporal client
     When 5 callers get the client of a new Temporal adapter at once
     Then they should all receive the same client
+
   Scenario Outline: Activity cache key is a stable content digest
     When I build the activity cache key for input "<input>"
     Then the activity cache key should be "CacheKeyActivity:<digest>"
