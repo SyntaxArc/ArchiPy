@@ -5,6 +5,10 @@ including simple operations, calculations, data processing, long-running tasks,
 and failure scenarios for retry testing.
 """
 
+from datetime import datetime
+from decimal import Decimal
+
+from pydantic import BaseModel
 import asyncio
 from typing import Any
 
@@ -244,3 +248,11 @@ async def notify_customer(order_id: str) -> str:
     """
     await asyncio.sleep(0.05)
     return f"notified:{order_id}"
+
+
+class OrderPayload(BaseModel):
+    """Pydantic payload used to check the Pydantic data converter."""
+
+    order_id: str
+    total: Decimal
+    placed_at: datetime
