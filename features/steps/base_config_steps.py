@@ -516,6 +516,10 @@ _SECTION_SETTINGS = {
         TemporalConfig,
         {"WORKFLOW_RUN_TIMEOUT": 7200, "WORKFLOW_EXECUTION_TIMEOUT": 3600},
     ),
+    ("Temporal", "a task timeout above the run timeout"): (
+        TemporalConfig,
+        {"WORKFLOW_TASK_TIMEOUT": 60, "WORKFLOW_RUN_TIMEOUT": 30, "WORKFLOW_EXECUTION_TIMEOUT": 120},
+    ),
     ("Temporal", "a keep alive timeout above the interval"): (
         TemporalConfig,
         {"KEEP_ALIVE_TIMEOUT_MS": 60000, "KEEP_ALIVE_INTERVAL_MS": 30000},
