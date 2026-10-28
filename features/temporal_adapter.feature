@@ -258,3 +258,7 @@ Feature: Temporal Adapter Operations
   Scenario: The messaging tracing interceptor still finds the private temporalio span hook
     When I build the messaging tracing workflow interceptor class
     Then the workflow interceptor class should be built without a ConfigurationError
+
+  Scenario: A Temporal Runtime that cannot be built raises a ConfigurationError
+    When I build a Temporal Runtime exporting metrics to "not a url"
+    Then building the Temporal Runtime should raise a ConfigurationError

@@ -2289,3 +2289,23 @@ def step_workflow_interceptor_class_built(context):
     error = scenario_context.get("tracing_interceptor_error")
     assert error is None, f"temporalio changed its private span hook: {error}"
     assert scenario_context.get("tracing_interceptor_class") is not None
+
+
+@when('I build a Temporal Runtime exporting metrics to "{endpoint}"')
+def step_build_runtime_with_endpoint(context, endpoint):
+    scenario_context = get_current_scenario_context(context)
+    manager = TemporalRuntimeManager()
+    manager.reset_runtime()
+    try:
+        manager.get_runtime(otel_metrics_enabled=True, otlp_endpoint=endpoint, global_tags={"service": "bdd"})
+        scenario_context.store("runtime_error", None)
+    except ConfigurationError as error:
+        scenario_context.store("runtime_error", error)
+    finally:
+        manager.reset_runtime()
+
+
+@then("building the Temporal Runtime should raise a ConfigurationError")
+def step_runtime_raised_configuration_error(context):
+    error = get_current_scenario_context(context).get("runtime_error")
+    assert isinstance(error, ConfigurationError), f"Expected ConfigurationError, got {error!r}"
