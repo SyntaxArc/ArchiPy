@@ -467,7 +467,7 @@ def step_when_vault_client_built_for_identity(context):
     scenario_context = get_current_scenario_context(context)
     try:
         scenario_context.store(
-            "vault_client", create_vault_client(VaultConfig(**scenario_context.get("vault_login_settings")))
+            "vault_client", create_vault_client(VaultConfig(**scenario_context.get("vault_login_settings"))),
         )
         scenario_context.store("vault_config_error", None)
     except Exception as error:
@@ -541,6 +541,17 @@ def step_then_section_config_outcome(context, outcome):
         assert error is None, error
     else:
         assert error is not None, "Expected the configuration to be rejected"
+
+
+@when("a default Temporal configuration is built")
+def step_when_default_temporal_config_built(context):
+    get_current_scenario_context(context).store("temporal_config", TemporalConfig())
+
+
+@then("the default Temporal setting {field} should be {expected}")
+def step_then_temporal_default(context, field, expected):
+    actual = getattr(get_current_scenario_context(context).get("temporal_config"), field)
+    assert str(actual) == expected, f"Expected {field}={expected}, got {actual!r}"
 
 
 @when("the environment type {environment} is inspected")

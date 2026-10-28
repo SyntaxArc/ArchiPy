@@ -136,10 +136,13 @@ class TemporalConfig(BaseModel):
         ge=1,
         description="Maximum activity execution time in seconds",
     )
-    ACTIVITY_HEARTBEAT_TIMEOUT: int = Field(
-        default=10,
+    ACTIVITY_HEARTBEAT_TIMEOUT: int | None = Field(
+        default=None,
         ge=1,
-        description="Activity heartbeat timeout in seconds",
+        description=(
+            "Activity heartbeat timeout in seconds (None disables it; set only for activities that heartbeat, "
+            "otherwise they fail with a heartbeat timeout)"
+        ),
     )
 
     # Retry Configuration

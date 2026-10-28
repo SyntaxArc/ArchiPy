@@ -90,7 +90,7 @@ class BaseWorkflow[T, R]:
         # Use config defaults if not provided
         if start_to_close_timeout is None:
             start_to_close_timeout = timedelta(seconds=temporal_config.ACTIVITY_START_TO_CLOSE_TIMEOUT)
-        if heartbeat_timeout is None:
+        if heartbeat_timeout is None and temporal_config.ACTIVITY_HEARTBEAT_TIMEOUT is not None:
             heartbeat_timeout = timedelta(seconds=temporal_config.ACTIVITY_HEARTBEAT_TIMEOUT)
         if retry_policy is None:
             retry_policy = RetryPolicy(
