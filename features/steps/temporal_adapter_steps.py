@@ -2111,55 +2111,6 @@ def step_list_workflows_with_limit(context, query, limit):
     get_current_scenario_context(context).workflow_list = workflows
 
 
-@then('the activity cache key should be "{expected}"')
-def step_activity_cache_key_should_be(context, expected):
-    actual = get_current_scenario_context(context).get("activity_cache_key")
-    assert actual == expected, f"Expected {expected}, got {actual}"
-@when("the worker run ends without the handle")
-def step_worker_run_ends_outside_handle(context):
-    worker_handle = get_current_scenario_context(context).last_worker
-
-    async def _end_run() -> None:
-        await worker_handle._worker.shutdown()
-        await asyncio.sleep(0)
-
-    run_async(context, _end_run())
-
-
-@then("the worker should have no run error")
-def step_worker_no_run_error(context):
-    worker_handle = get_current_scenario_context(context).last_worker
-    assert worker_handle.run_error is None, worker_handle.run_error
-@when('I execute workflow "EchoOrderWorkflow" with order "{order_id}" totalling {total}')
-def step_execute_echo_order(context, order_id, total):
-    order = OrderPayload(order_id=order_id, total=Decimal(total), placed_at=datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC))
-    adapter = get_temporal_adapter(context)
-    scenario_context = get_current_scenario_context(context)
-    scenario_context.store("sent_order", order)
-    result = run_async(context, adapter.execute_workflow(EchoOrderWorkflow, order, task_queue="test-queue"))
-    scenario_context.store("echoed_order", result)
-
-
-@then("the echoed order should equal the sent order")
-def step_echoed_order_equal(context):
-    scenario_context = get_current_scenario_context(context)
-    echoed = scenario_context.get("echoed_order")
-    assert isinstance(echoed, OrderPayload), f"Expected OrderPayload, got {type(echoed).__name__}"
-    assert echoed == scenario_context.get("sent_order"), echoed
-@when("{count:d} callers get the client of a new Temporal adapter at once")
-def step_concurrent_get_client(context, count):
-    adapter = TemporalAdapter(get_temporal_adapter(context).config)
-
-    async def _get_all() -> list[Any]:
-        return await asyncio.gather(*(adapter.get_client() for _ in range(count)))
-
-    get_current_scenario_context(context).store("concurrent_clients", run_async(context, _get_all()))
-
-
-@then("they should all receive the same client")
-def step_same_client(context):
-    clients = get_current_scenario_context(context).get("concurrent_clients")
-    assert len({id(client) for client in clients}) == 1, "Expected one shared client"
 @then("the workflow list should contain exactly {count:d} workflow")
 def step_workflow_list_exact(context, count):
     workflows = get_current_scenario_context(context).workflow_list
@@ -2185,221 +2136,6 @@ def step_cancel_request_reason(context, workflow_id, reason):
 
     causes = run_async(context, _cancel_causes())
     assert reason in causes, f"Expected cancel reason {reason!r}, got {causes}"
-@when('I list workflows with query "{query}" and limit {limit:d}')
-def step_list_workflows_with_limit(context, query, limit):
-    adapter = get_temporal_adapter(context)
-    workflows = run_async(context, adapter.list_workflows(query=query, limit=limit))
-    get_current_scenario_context(context).workflow_list = workflows
-
-
-@then("the workflow list should contain exactly {count:d} workflow")
-def step_workflow_list_exact(context, count):
-    workflows = get_current_scenario_context(context).workflow_list
-    assert len(workflows) == count, f"Expected {count} workflows, got {len(workflows)}"
-
-
-@when('I start workflow "{workflow_name}" with workflow id "{workflow_id}" twice using conflict policy {policy}')
-def step_start_workflow_twice_with_conflict_policy(context, workflow_name, workflow_id, policy):
-    adapter = get_temporal_adapter(context)
-    conflict_policy = WorkflowIDConflictPolicy[policy]
-
-    async def _start_twice() -> list[str | None]:
-        handles = [
-            await adapter.start_workflow(
-                workflow_name,
-                workflow_id=workflow_id,
-                task_queue="test-queue",
-                id_conflict_policy=conflict_policy,
-            )
-            for _ in range(2)
-        ]
-        return [handle.result_run_id for handle in handles]
-
-    get_current_scenario_context(context).store("started_run_ids", run_async(context, _start_twice()))
-
-
-@then("both starts should return the same run id")
-def step_same_run_id(context):
-    run_ids = get_current_scenario_context(context).get("started_run_ids")
-    assert run_ids[0] is not None and run_ids[0] == run_ids[1], run_ids
-
-
-@given("a Temporal worker manager is configured with poller autoscaling and {rate:d} activities per second")
-def step_temporal_worker_manager_tuned(context, rate):
-    scenario_context = get_current_scenario_context(context)
-    temporal_config = get_temporal_adapter(context).config.model_copy(
-        update={"WORKER_POLLER_AUTOSCALING": True, "WORKER_MAX_ACTIVITIES_PER_SECOND": float(rate)},
-    )
-    scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
-
-
-@when('I start a worker for task queue "{task_queue}" in deployment "{deployment}" with build id "{build_id}"')
-def step_start_worker_in_deployment(context, task_queue, deployment, build_id):
-    deployment_config = WorkerDeploymentConfig(
-        version=WorkerDeploymentVersion(deployment_name=deployment, build_id=build_id),
-        use_worker_versioning=False,
-    )
-    run_async(context, start_test_worker(context, task_queue, deployment_config=deployment_config))
-
-
-class CountingInterceptor(ClientInterceptor, WorkerInterceptor):
-    """Client and worker interceptor that counts workflow starts and activity executions."""
-
-    def __init__(self) -> None:
-        self.workflow_starts = 0
-        self.activity_executions = 0
-
-    def intercept_client(self, next: OutboundInterceptor) -> OutboundInterceptor:
-        counter = self
-
-        class _Outbound(OutboundInterceptor):
-            async def start_workflow(self, input: StartWorkflowInput) -> Any:
-                counter.workflow_starts += 1
-                return await super().start_workflow(input)
-
-        return _Outbound(next)
-
-    def intercept_activity(self, next: ActivityInboundInterceptor) -> ActivityInboundInterceptor:
-        counter = self
-
-        class _Inbound(ActivityInboundInterceptor):
-            async def execute_activity(self, input: ExecuteActivityInput) -> Any:
-                counter.activity_executions += 1
-                return await super().execute_activity(input)
-
-        return _Inbound(next)
-
-
-@given("a Temporal adapter and worker manager are configured with a counting interceptor")
-def step_configure_counting_interceptor(context):
-    scenario_context = get_current_scenario_context(context)
-    temporal_config = get_temporal_adapter(context).config
-    interceptor = CountingInterceptor()
-    scenario_context.store("counting_interceptor", interceptor)
-    scenario_context.temporal_adapter = TemporalAdapter(temporal_config, interceptors=[interceptor])
-    scenario_context.worker_manager = TemporalWorkerManager(temporal_config, interceptors=[interceptor])
-
-
-@then("the counting interceptor should have seen {starts:d} workflow start and {executions:d} activity execution")
-def step_counting_interceptor_saw(context, starts, executions):
-    interceptor = get_current_scenario_context(context).get("counting_interceptor")
-    assert interceptor.workflow_starts == starts, interceptor.workflow_starts
-    assert interceptor.activity_executions == executions, interceptor.activity_executions
-
-
-@when("I build the messaging tracing workflow interceptor class")
-def step_build_messaging_workflow_interceptor_class(context):
-    scenario_context = get_current_scenario_context(context)
-    try:
-        interceptor_class = MessagingOpenTelemetryInterceptor().workflow_interceptor_class(
-            WorkflowInterceptorClassInput(unsafe_extern_functions={}),
-        )
-        scenario_context.store("tracing_interceptor_error", None)
-        scenario_context.store("tracing_interceptor_class", interceptor_class)
-    except ConfigurationError as error:
-        scenario_context.store("tracing_interceptor_error", error)
-
-
-@then("the workflow interceptor class should be built without a ConfigurationError")
-def step_workflow_interceptor_class_built(context):
-    scenario_context = get_current_scenario_context(context)
-    error = scenario_context.get("tracing_interceptor_error")
-    assert error is None, f"temporalio changed its private span hook: {error}"
-    assert scenario_context.get("tracing_interceptor_class") is not None
-
-
-@when('I build a Temporal Runtime exporting metrics to "{endpoint}"')
-def step_build_runtime_with_endpoint(context, endpoint):
-    scenario_context = get_current_scenario_context(context)
-    manager = TemporalRuntimeManager()
-    manager.reset_runtime()
-    try:
-        manager.get_runtime(otel_metrics_enabled=True, otlp_endpoint=endpoint, global_tags={"service": "bdd"})
-        scenario_context.store("runtime_error", None)
-    except ConfigurationError as error:
-        scenario_context.store("runtime_error", error)
-    finally:
-        manager.reset_runtime()
-
-
-@then("building the Temporal Runtime should raise a ConfigurationError")
-def step_runtime_raised_configuration_error(context):
-    error = get_current_scenario_context(context).get("runtime_error")
-    assert isinstance(error, ConfigurationError), f"Expected ConfigurationError, got {error!r}"
-
-
-@when('I try to start workflow "{workflow_name}" with workflow id "{workflow_id}" again')
-def step_try_start_workflow_again(context, workflow_name, workflow_id):
-    scenario_context = get_current_scenario_context(context)
-    adapter = get_temporal_adapter(context)
-    try:
-        run_async(context, adapter.start_workflow(workflow_name, workflow_id=workflow_id, task_queue="test-queue"))
-    except BaseError as error:
-        scenario_context.error = error
-
-
-@then("the error should be the ArchiPy {error_name}")
-def step_error_is_archipy_error(context, error_name):
-    import archipy.models.errors as archipy_errors
-    from archipy.models.errors import temporal_errors
-
-    error = get_current_scenario_context(context).error
-    expected = getattr(archipy_errors, error_name, None) or getattr(temporal_errors, error_name)
-    assert isinstance(error, expected), f"Expected {error_name}, got {type(error).__name__}: {error!r}"
-
-
-@when('I pause schedule "{schedule_id}" with note "{note}"')
-def step_pause_schedule(context, schedule_id, note):
-    run_async(context, get_temporal_adapter(context).pause_schedule(schedule_id, note=note))
-
-
-@when('I unpause schedule "{schedule_id}"')
-def step_unpause_schedule(context, schedule_id):
-    run_async(context, get_temporal_adapter(context).unpause_schedule(schedule_id))
-
-
-@when('I trigger schedule "{schedule_id}"')
-def step_trigger_schedule(context, schedule_id):
-    run_async(context, get_temporal_adapter(context).trigger_schedule(schedule_id))
-
-
-@then('schedule "{schedule_id}" should be paused')
-def step_schedule_paused(context, schedule_id):
-    description = run_async(context, get_temporal_adapter(context).describe_schedule(schedule_id))
-    assert description.schedule.state.paused, "Expected the schedule to be paused"
-
-
-@then('schedule "{schedule_id}" should not be paused')
-def step_schedule_not_paused(context, schedule_id):
-    description = run_async(context, get_temporal_adapter(context).describe_schedule(schedule_id))
-    assert not description.schedule.state.paused, "Expected the schedule to be running"
-
-
-@then('the schedule list should contain "{schedule_id}"')
-def step_schedule_list_contains(context, schedule_id):
-    schedules = run_async(context, get_temporal_adapter(context).list_schedules())
-    assert schedule_id in [schedule.id for schedule in schedules], [schedule.id for schedule in schedules]
-
-
-@when('I call the deprecated stop_schedule for "{schedule_id}"')
-def step_call_deprecated_stop_schedule(context, schedule_id):
-    import warnings
-
-    adapter = get_temporal_adapter(context)
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        run_async(context, adapter.stop_schedule(schedule_id))
-    get_current_scenario_context(context).store("caught_warnings", caught)
-
-
-@then("a DeprecationWarning should have been emitted")
-def step_deprecation_warning_emitted(context):
-    caught = get_current_scenario_context(context).get("caught_warnings")
-    assert any(issubclass(item.category, DeprecationWarning) for item in caught), [str(item.message) for item in caught]
-
-
-class PostgresAtomicActivity(AtomicActivity[str, str]):
-    """Minimal atomic activity used to check ``with_db_type``."""
 @when("{count:d} callers get the client of a new Temporal adapter at once")
 def step_concurrent_get_client(context, count):
     adapter = TemporalAdapter(get_temporal_adapter(context).config)
@@ -2618,3 +2354,207 @@ def step_activities_without_heartbeat(context, workflow_id):
     timeouts = run_async(context, _heartbeat_timeouts())
     assert timeouts, "Expected at least one scheduled activity"
     assert all(timeout == 0 for timeout in timeouts), f"Unexpected heartbeat timeouts: {timeouts}"
+
+
+@when('I start workflow "{workflow_name}" with workflow id "{workflow_id}" twice using conflict policy {policy}')
+def step_start_workflow_twice_with_conflict_policy(context, workflow_name, workflow_id, policy):
+    adapter = get_temporal_adapter(context)
+    conflict_policy = WorkflowIDConflictPolicy[policy]
+
+    async def _start_twice() -> list[str | None]:
+        handles = [
+            await adapter.start_workflow(
+                workflow_name,
+                workflow_id=workflow_id,
+                task_queue="test-queue",
+                id_conflict_policy=conflict_policy,
+            )
+            for _ in range(2)
+        ]
+        return [handle.result_run_id for handle in handles]
+
+    get_current_scenario_context(context).store("started_run_ids", run_async(context, _start_twice()))
+
+
+@then("both starts should return the same run id")
+def step_same_run_id(context):
+    run_ids = get_current_scenario_context(context).get("started_run_ids")
+    assert run_ids[0] is not None and run_ids[0] == run_ids[1], run_ids
+
+
+@given("a Temporal worker manager is configured with poller autoscaling and {rate:d} activities per second")
+def step_temporal_worker_manager_tuned(context, rate):
+    scenario_context = get_current_scenario_context(context)
+    temporal_config = get_temporal_adapter(context).config.model_copy(
+        update={"WORKER_POLLER_AUTOSCALING": True, "WORKER_MAX_ACTIVITIES_PER_SECOND": float(rate)},
+    )
+    scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
+
+
+@when('I start a worker for task queue "{task_queue}" in deployment "{deployment}" with build id "{build_id}"')
+def step_start_worker_in_deployment(context, task_queue, deployment, build_id):
+    deployment_config = WorkerDeploymentConfig(
+        version=WorkerDeploymentVersion(deployment_name=deployment, build_id=build_id),
+        use_worker_versioning=False,
+    )
+    run_async(context, start_test_worker(context, task_queue, deployment_config=deployment_config))
+
+
+class CountingInterceptor(ClientInterceptor, WorkerInterceptor):
+    """Client and worker interceptor that counts workflow starts and activity executions."""
+
+    def __init__(self) -> None:
+        self.workflow_starts = 0
+        self.activity_executions = 0
+
+    def intercept_client(self, next: OutboundInterceptor) -> OutboundInterceptor:
+        counter = self
+
+        class _Outbound(OutboundInterceptor):
+            async def start_workflow(self, input: StartWorkflowInput) -> Any:
+                counter.workflow_starts += 1
+                return await super().start_workflow(input)
+
+        return _Outbound(next)
+
+    def intercept_activity(self, next: ActivityInboundInterceptor) -> ActivityInboundInterceptor:
+        counter = self
+
+        class _Inbound(ActivityInboundInterceptor):
+            async def execute_activity(self, input: ExecuteActivityInput) -> Any:
+                counter.activity_executions += 1
+                return await super().execute_activity(input)
+
+        return _Inbound(next)
+
+
+@given("a Temporal adapter and worker manager are configured with a counting interceptor")
+def step_configure_counting_interceptor(context):
+    scenario_context = get_current_scenario_context(context)
+    temporal_config = get_temporal_adapter(context).config
+    interceptor = CountingInterceptor()
+    scenario_context.store("counting_interceptor", interceptor)
+    scenario_context.temporal_adapter = TemporalAdapter(temporal_config, interceptors=[interceptor])
+    scenario_context.worker_manager = TemporalWorkerManager(temporal_config, interceptors=[interceptor])
+
+
+@then("the counting interceptor should have seen {starts:d} workflow start and {executions:d} activity execution")
+def step_counting_interceptor_saw(context, starts, executions):
+    interceptor = get_current_scenario_context(context).get("counting_interceptor")
+    assert interceptor.workflow_starts == starts, interceptor.workflow_starts
+    assert interceptor.activity_executions == executions, interceptor.activity_executions
+
+
+@when("I build the messaging tracing workflow interceptor class")
+def step_build_messaging_workflow_interceptor_class(context):
+    scenario_context = get_current_scenario_context(context)
+    try:
+        interceptor_class = MessagingOpenTelemetryInterceptor().workflow_interceptor_class(
+            WorkflowInterceptorClassInput(unsafe_extern_functions={}),
+        )
+        scenario_context.store("tracing_interceptor_error", None)
+        scenario_context.store("tracing_interceptor_class", interceptor_class)
+    except ConfigurationError as error:
+        scenario_context.store("tracing_interceptor_error", error)
+
+
+@then("the workflow interceptor class should be built without a ConfigurationError")
+def step_workflow_interceptor_class_built(context):
+    scenario_context = get_current_scenario_context(context)
+    error = scenario_context.get("tracing_interceptor_error")
+    assert error is None, f"temporalio changed its private span hook: {error}"
+    assert scenario_context.get("tracing_interceptor_class") is not None
+
+
+@when('I build a Temporal Runtime exporting metrics to "{endpoint}"')
+def step_build_runtime_with_endpoint(context, endpoint):
+    scenario_context = get_current_scenario_context(context)
+    manager = TemporalRuntimeManager()
+    manager.reset_runtime()
+    try:
+        manager.get_runtime(otel_metrics_enabled=True, otlp_endpoint=endpoint, global_tags={"service": "bdd"})
+        scenario_context.store("runtime_error", None)
+    except ConfigurationError as error:
+        scenario_context.store("runtime_error", error)
+    finally:
+        manager.reset_runtime()
+
+
+@then("building the Temporal Runtime should raise a ConfigurationError")
+def step_runtime_raised_configuration_error(context):
+    error = get_current_scenario_context(context).get("runtime_error")
+    assert isinstance(error, ConfigurationError), f"Expected ConfigurationError, got {error!r}"
+
+
+@when('I try to start workflow "{workflow_name}" with workflow id "{workflow_id}" again')
+def step_try_start_workflow_again(context, workflow_name, workflow_id):
+    scenario_context = get_current_scenario_context(context)
+    adapter = get_temporal_adapter(context)
+    try:
+        run_async(context, adapter.start_workflow(workflow_name, workflow_id=workflow_id, task_queue="test-queue"))
+    except BaseError as error:
+        scenario_context.error = error
+
+
+@then("the error should be the ArchiPy {error_name}")
+def step_error_is_archipy_error(context, error_name):
+    import archipy.models.errors as archipy_errors
+    from archipy.models.errors import temporal_errors
+
+    error = get_current_scenario_context(context).error
+    expected = getattr(archipy_errors, error_name, None) or getattr(temporal_errors, error_name)
+    assert isinstance(error, expected), f"Expected {error_name}, got {type(error).__name__}: {error!r}"
+
+
+@when('I pause schedule "{schedule_id}" with note "{note}"')
+def step_pause_schedule(context, schedule_id, note):
+    run_async(context, get_temporal_adapter(context).pause_schedule(schedule_id, note=note))
+
+
+@when('I unpause schedule "{schedule_id}"')
+def step_unpause_schedule(context, schedule_id):
+    run_async(context, get_temporal_adapter(context).unpause_schedule(schedule_id))
+
+
+@when('I trigger schedule "{schedule_id}"')
+def step_trigger_schedule(context, schedule_id):
+    run_async(context, get_temporal_adapter(context).trigger_schedule(schedule_id))
+
+
+@then('schedule "{schedule_id}" should be paused')
+def step_schedule_paused(context, schedule_id):
+    description = run_async(context, get_temporal_adapter(context).describe_schedule(schedule_id))
+    assert description.schedule.state.paused, "Expected the schedule to be paused"
+
+
+@then('schedule "{schedule_id}" should not be paused')
+def step_schedule_not_paused(context, schedule_id):
+    description = run_async(context, get_temporal_adapter(context).describe_schedule(schedule_id))
+    assert not description.schedule.state.paused, "Expected the schedule to be running"
+
+
+@then('the schedule list should contain "{schedule_id}"')
+def step_schedule_list_contains(context, schedule_id):
+    schedules = run_async(context, get_temporal_adapter(context).list_schedules())
+    assert schedule_id in [schedule.id for schedule in schedules], [schedule.id for schedule in schedules]
+
+
+@when('I call the deprecated stop_schedule for "{schedule_id}"')
+def step_call_deprecated_stop_schedule(context, schedule_id):
+    import warnings
+
+    adapter = get_temporal_adapter(context)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        run_async(context, adapter.stop_schedule(schedule_id))
+    get_current_scenario_context(context).store("caught_warnings", caught)
+
+
+@then("a DeprecationWarning should have been emitted")
+def step_deprecation_warning_emitted(context):
+    caught = get_current_scenario_context(context).get("caught_warnings")
+    assert any(issubclass(item.category, DeprecationWarning) for item in caught), [str(item.message) for item in caught]
+
+
+class PostgresAtomicActivity(AtomicActivity[str, str]):
+    """Minimal atomic activity used to check ``with_db_type``."""
