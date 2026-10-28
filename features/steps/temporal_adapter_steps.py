@@ -2068,3 +2068,16 @@ def step_temporal_client_has_tracing_interceptor(context):
     assert any(isinstance(item, MessagingOpenTelemetryInterceptor) for item in interceptors), (
         f"No MessagingOpenTelemetryInterceptor on the client: {interceptors!r}"
     )
+
+
+@when('I list workflows with query "{query}" and limit {limit:d}')
+def step_list_workflows_with_limit(context, query, limit):
+    adapter = get_temporal_adapter(context)
+    workflows = run_async(context, adapter.list_workflows(query=query, limit=limit))
+    get_current_scenario_context(context).workflow_list = workflows
+
+
+@then("the workflow list should contain exactly {count:d} workflow")
+def step_workflow_list_exact(context, count):
+    workflows = get_current_scenario_context(context).workflow_list
+    assert len(workflows) == count, f"Expected {count} workflows, got {len(workflows)}"
