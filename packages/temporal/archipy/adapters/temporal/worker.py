@@ -89,6 +89,7 @@ class WorkerHandle(PortWorkerHandle):
         self.max_concurrent_activities = max_concurrent_activities
         self._graceful_shutdown_seconds = graceful_shutdown_seconds
         self._running = False
+        self._run_error: BaseException | None = None
         self._logger = logging.getLogger(__name__)
 
     async def start(self) -> None:
@@ -112,6 +113,7 @@ class WorkerHandle(PortWorkerHandle):
             # Store task reference to avoid it being garbage collected
             self._background_task = task
             self._running = True
+            task.add_done_callback(self._on_worker_done)
 
             self._logger.info(
                 "Worker started successfully",
@@ -130,6 +132,33 @@ class WorkerHandle(PortWorkerHandle):
                     "error": str(error),
                 },
             ) from error
+
+    def _on_worker_done(self, task: asyncio.Task[None]) -> None:
+        """Mark the worker stopped when ``Worker.run`` returns, and log the error that ended it.
+
+        Args:
+            task (asyncio.Task[None]): The finished ``Worker.run`` task.
+        """
+        self._running = False
+        if task.cancelled():
+            return
+        error = task.exception()
+        if error is not None:
+            self._run_error = error
+            self._logger.error(
+                "Worker stopped unexpectedly",
+                exc_info=error,
+                extra={"worker_id": self.worker_id, "task_queue": self.task_queue},
+            )
+
+    @property
+    def run_error(self) -> BaseException | None:
+        """The error that ended ``Worker.run``, if it crashed.
+
+        Returns:
+            BaseException | None: The error, or None while running or after a clean stop.
+        """
+        return self._run_error
 
     async def stop(self, grace_period: int | None = None) -> None:
         """Stop the worker gracefully.
