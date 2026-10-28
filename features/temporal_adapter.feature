@@ -301,3 +301,14 @@ Feature: Temporal Adapter Operations
     Given a worker is started for task queue "failure-types-queue" that fails workflows on ValueError
     When I execute workflow "ValueErrorWorkflow" on task queue "failure-types-queue"
     Then the workflow execution should fail
+
+  Scenario Outline: Replaying a recorded GreetingWorkflow history with <definition> is <outcome>
+    Given a worker is started for task queue "test-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "Replay" and workflow id "<workflow_id>"
+    And I replay the history of workflow "<workflow_id>" with <definition>
+    Then the replay should be <outcome>
+
+    Examples: Workflow definitions
+      | definition              | workflow_id     | outcome          |
+      | the same definition     | replay-same-1   | deterministic    |
+      | a changed activity call | replay-change-1 | nondeterministic |
