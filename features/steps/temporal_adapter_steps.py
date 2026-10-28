@@ -2070,7 +2070,7 @@ def step_temporal_client_has_tracing_interceptor(context):
     )
 
 
-@when('I cancel workflow "{workflow_id}" with reason "{reason}"')
+@when('I request cancellation of workflow "{workflow_id}" with reason "{reason}"')
 def step_cancel_workflow_with_reason(context, workflow_id, reason):
     adapter = get_temporal_adapter(context)
     run_async(context, adapter.cancel_workflow(workflow_id, reason=reason))

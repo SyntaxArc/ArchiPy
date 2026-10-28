@@ -31,7 +31,7 @@ Feature: Temporal Adapter Operations
   Scenario: Cancel running workflow with a reason
     Given a worker is started for task queue "test-queue" with SignalQueryWorkflow
     When I start workflow "SignalQueryWorkflow" with workflow id "test-cancel-reason-1"
-    And I cancel workflow "test-cancel-reason-1" with reason "user abort"
+    And I request cancellation of workflow "test-cancel-reason-1" with reason "user abort"
     Then the cancel request of workflow "test-cancel-reason-1" should carry reason "user abort"
 
   Scenario: Terminate running workflow
