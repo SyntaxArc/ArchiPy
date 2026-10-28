@@ -205,6 +205,11 @@ Feature: Temporal Adapter Operations
     When I execute workflow "GreetingWorkflow" with argument "Tuned"
     Then the workflow result should be "Hello, Tuned!"
 
+  Scenario: Worker joins a Worker Deployment version
+    When I start a worker for task queue "deployment-queue" in deployment "orders" with build id "v2.0.0"
+    Then the worker should be running
+    And the worker should have build_id "v2.0.0"
+
   Scenario: Stop worker gracefully
     When I start a worker for task queue "stop-test-queue" with workflows and activities
     Then the worker should be running

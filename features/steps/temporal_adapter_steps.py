@@ -21,6 +21,7 @@ from behave import given, then, when
 from temporalio.client import WithStartWorkflowOperation
 from temporalio.common import WorkflowIDConflictPolicy
 from temporalio.client import ScheduleIntervalSpec, ScheduleOverlapPolicy, SchedulePolicy, ScheduleSpec
+from temporalio.worker import WorkerDeploymentConfig, WorkerDeploymentVersion
 from temporalio.runtime import LoggingConfig, TelemetryConfig, TelemetryFilter
 
 from archipy.adapters.temporal import runtime as temporal_runtime_module
@@ -214,6 +215,7 @@ async def start_test_worker(
     activities: list | None = None,
     build_id: str | None = None,
     max_concurrent_activities: int | None = None,
+    deployment_config: WorkerDeploymentConfig | None = None,
 ) -> WorkerHandle:
     """Start a test worker with specified workflows and activities.
 
@@ -271,6 +273,7 @@ async def start_test_worker(
         workflows=workflows,
         activities=activities,
         build_id=build_id,
+        deployment_config=deployment_config,
         max_concurrent_activities=max_concurrent_activities,
     )
 
@@ -2208,3 +2211,12 @@ def step_temporal_worker_manager_tuned(context, rate):
         update={"WORKER_POLLER_AUTOSCALING": True, "WORKER_MAX_ACTIVITIES_PER_SECOND": float(rate)},
     )
     scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
+
+
+@when('I start a worker for task queue "{task_queue}" in deployment "{deployment}" with build id "{build_id}"')
+def step_start_worker_in_deployment(context, task_queue, deployment, build_id):
+    deployment_config = WorkerDeploymentConfig(
+        version=WorkerDeploymentVersion(deployment_name=deployment, build_id=build_id),
+        use_worker_versioning=False,
+    )
+    run_async(context, start_test_worker(context, task_queue, deployment_config=deployment_config))
