@@ -172,6 +172,7 @@ Feature: Base Configuration System
     Examples: Temporal defaults
       | field                      | expected |
       | ACTIVITY_HEARTBEAT_TIMEOUT | None     |
+      | PYDANTIC_DATA_CONVERTER    | True     |
 
   Scenario Outline: The <environment> environment reports its kind and log level
     When the environment type <environment> is inspected

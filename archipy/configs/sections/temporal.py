@@ -40,6 +40,14 @@ class TemporalConfig(BaseModel):
         ),
     )
 
+    PYDANTIC_DATA_CONVERTER: bool = Field(
+        default=True,
+        description=(
+            "Serialize workflow and activity payloads with temporalio's Pydantic data converter "
+            "(Pydantic models, datetimes and decimals round trip); ignored when a data_converter is passed explicitly"
+        ),
+    )
+
     # Client Connection Configuration
     CLIENT_IDENTITY: str | None = Field(
         default=None,
