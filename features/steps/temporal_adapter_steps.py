@@ -60,6 +60,7 @@ from features.test_workflows.temporal_workflows import (
     BaseGreetingWorkflow,
     CalculatorWorkflow,
     ConcurrentActivitiesWorkflow,
+    DailyReminderWorkflow,
     DataProcessingWorkflow,
     EchoOrderWorkflow,
     GreetingWorkflow,
@@ -2575,3 +2576,27 @@ def step_replay_outcome(context, outcome):
         assert failure is None, f"Replay failed: {failure!r}"
     else:
         assert failure is not None, "Expected the changed workflow to break determinism"
+
+
+@when("I run DailyReminderWorkflow for {days:d} days in a time-skipping test environment")
+def step_run_time_skipping(context, days):
+    from temporalio.testing import WorkflowEnvironment
+    from temporalio.worker import Worker
+
+    async def _run() -> str:
+        async with await WorkflowEnvironment.start_time_skipping() as env:
+            async with Worker(env.client, task_queue="time-skipping-queue", workflows=[DailyReminderWorkflow]):
+                return await env.client.execute_workflow(
+                    DailyReminderWorkflow.run,
+                    days,
+                    id=f"daily-reminder-{days}",
+                    task_queue="time-skipping-queue",
+                )
+
+    get_current_scenario_context(context).store("time_skipping_result", run_async(context, _run()))
+
+
+@then('the time-skipping result should be "{expected}"')
+def step_time_skipping_result(context, expected):
+    actual = get_current_scenario_context(context).get("time_skipping_result")
+    assert actual == expected, f"Expected {expected!r}, got {actual!r}"

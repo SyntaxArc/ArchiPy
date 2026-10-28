@@ -531,3 +531,21 @@ class ChangedGreetingWorkflow:
             name,
             start_to_close_timeout=timedelta(seconds=10),
         )
+
+
+@workflow.defn(name="DailyReminderWorkflow")
+class DailyReminderWorkflow:
+    """Workflow that waits a full day on a timer, to check time skipping."""
+
+    @workflow.run
+    async def run(self, days: int) -> str:
+        """Sleep for the given number of days, then report.
+
+        Args:
+            days (int): Days to wait.
+
+        Returns:
+            str: A message naming the waited days.
+        """
+        await workflow.sleep(timedelta(days=days))
+        return f"reminded after {days} days"
