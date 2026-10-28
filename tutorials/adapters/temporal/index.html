@@ -4053,8 +4053,9 @@ with an <code>InvalidArgumentError</code>. Keep <code>TEMPORAL__API_KEY</code> a
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>The config validates the timeouts. <code>WORKFLOW_TASK_TIMEOUT</code> must be lower than <code>WORKFLOW_RUN_TIMEOUT</code>, which must be
-lower than <code>WORKFLOW_EXECUTION_TIMEOUT</code>, and <code>KEEP_ALIVE_TIMEOUT_MS</code> must be lower than <code>KEEP_ALIVE_INTERVAL_MS</code>.
+<p>The config validates the timeouts. When both are set, <code>WORKFLOW_RUN_TIMEOUT</code> must not exceed
+<code>WORKFLOW_EXECUTION_TIMEOUT</code>, and <code>KEEP_ALIVE_TIMEOUT_MS</code> must be lower than <code>KEEP_ALIVE_INTERVAL_MS</code>. Both workflow
+timeouts default to unbounded; set them only for workflows that must give up.
 Otherwise creating the config raises an <code>InvalidArgumentError</code>.</p>
 </div>
 <h3 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h3>
