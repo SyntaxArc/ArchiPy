@@ -165,6 +165,14 @@ Feature: Base Configuration System
       | Temporal | a run timeout above the execution one   | rejected |
       | Temporal | a keep alive timeout above the interval | rejected |
 
+  Scenario Outline: The Temporal <field> default is <expected>
+    When a default Temporal configuration is built
+    Then the default Temporal setting <field> should be <expected>
+
+    Examples: Temporal defaults
+      | field                      | expected |
+      | ACTIVITY_HEARTBEAT_TIMEOUT | None     |
+
   Scenario Outline: The <environment> environment reports its kind and log level
     When the environment type <environment> is inspected
     Then it should be production <production>, test <test>, dev <dev>, local <local> and log at <level>
