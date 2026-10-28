@@ -2309,3 +2309,23 @@ def step_build_runtime_with_endpoint(context, endpoint):
 def step_runtime_raised_configuration_error(context):
     error = get_current_scenario_context(context).get("runtime_error")
     assert isinstance(error, ConfigurationError), f"Expected ConfigurationError, got {error!r}"
+
+
+@when('I try to start workflow "{workflow_name}" with workflow id "{workflow_id}" again')
+def step_try_start_workflow_again(context, workflow_name, workflow_id):
+    scenario_context = get_current_scenario_context(context)
+    adapter = get_temporal_adapter(context)
+    try:
+        run_async(context, adapter.start_workflow(workflow_name, workflow_id=workflow_id, task_queue="test-queue"))
+    except BaseError as error:
+        scenario_context.error = error
+
+
+@then("the error should be the ArchiPy {error_name}")
+def step_error_is_archipy_error(context, error_name):
+    import archipy.models.errors as archipy_errors
+    from archipy.models.errors import temporal_errors
+
+    error = get_current_scenario_context(context).error
+    expected = getattr(archipy_errors, error_name, None) or getattr(temporal_errors, error_name)
+    assert isinstance(error, expected), f"Expected {error_name}, got {type(error).__name__}: {error!r}"

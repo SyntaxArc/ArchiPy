@@ -8,6 +8,7 @@ and conventions.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from datetime import timedelta
 from pathlib import Path
@@ -19,6 +20,7 @@ from temporalio.client import (
     KeepAliveConfig,
     Schedule,
     ScheduleActionStartWorkflow,
+    ScheduleAlreadyRunningError,
     ScheduleOverlapPolicy,
     SchedulePolicy,
     ScheduleSpec,
@@ -31,12 +33,19 @@ from temporalio.client import (
 from temporalio.common import RetryPolicy
 from temporalio.contrib.opentelemetry import ReplaySafeTracerProvider
 from temporalio.contrib.pydantic import pydantic_data_converter
-from temporalio.service import RetryConfig
+from temporalio.exceptions import WorkflowAlreadyStartedError
+from temporalio.service import RetryConfig, RPCError, RPCStatusCode
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import OtelMetricsExporter
-from archipy.models.errors import InvalidArgumentError
-from archipy.models.errors.base_error import BaseError
+from archipy.models.errors import (
+    AlreadyExistsError,
+    DeadlineExceededError,
+    InvalidArgumentError,
+    NotFoundError,
+    UnavailableError,
+)
+from archipy.models.errors.temporal_errors import TemporalError, WorkerConnectionError
 
 from .ports import TemporalPort
 from .runtime import TemporalRuntimeManager
@@ -44,7 +53,7 @@ from .runtime import TemporalRuntimeManager
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import AsyncGenerator, Callable, Sequence
 
     from temporalio.client import Interceptor
     from temporalio.common import WorkflowIDConflictPolicy, WorkflowIDReusePolicy
@@ -52,6 +61,7 @@ if TYPE_CHECKING:
     from temporalio.runtime import Runtime
 
     from archipy.configs.config_template import OpentelemetryConfig, TemporalConfig
+    from archipy.models.errors.base_error import BaseError
 
 T = TypeVar("T")
 
@@ -132,7 +142,7 @@ class TemporalAdapter(TemporalPort):
         try:
             return await Client.connect(f"{self.config.HOST}:{self.config.PORT}", **self._build_connect_kwargs())
         except Exception as error:
-            raise BaseError(
+            raise WorkerConnectionError(
                 additional_data={
                     "server": f"{self.config.HOST}:{self.config.PORT}",
                     "namespace": self.config.NAMESPACE,
@@ -332,6 +342,58 @@ class TemporalAdapter(TemporalPort):
         seconds = override or default
         return timedelta(seconds=seconds) if seconds else None
 
+    @contextlib.asynccontextmanager
+    async def _mapped_errors(self, operation: str, resource_id: str | None) -> AsyncGenerator[None]:
+        """Map Temporal client errors raised in the block to ArchiPy domain errors.
+
+        Workflow failures (``WorkflowFailureError``) are left as is: they carry the workflow's own error.
+
+        Args:
+            operation (str): The adapter operation, for error context.
+            resource_id (str | None): The workflow or schedule ID the operation targets.
+
+        Yields:
+            None: Control to the wrapped block.
+
+        Raises:
+            AlreadyExistsError: If the workflow or schedule ID is already in use.
+            NotFoundError: If the workflow or schedule does not exist.
+            UnavailableError: If the Temporal server is unreachable.
+            DeadlineExceededError: If the call timed out.
+            TemporalError: For any other Temporal RPC error.
+        """
+        try:
+            yield
+        except (WorkflowAlreadyStartedError, ScheduleAlreadyRunningError) as error:
+            raise AlreadyExistsError(resource_type=operation, additional_data={"id": resource_id}) from error
+        except RPCError as error:
+            raise self._map_rpc_error(error, operation, resource_id) from error
+
+    @staticmethod
+    def _map_rpc_error(error: RPCError, operation: str, resource_id: str | None) -> BaseError:
+        """Translate a Temporal RPC error into the matching ArchiPy error, without leaking the server message.
+
+        Args:
+            error (RPCError): The Temporal RPC error.
+            operation (str): The adapter operation.
+            resource_id (str | None): The workflow or schedule ID the operation targets.
+
+        Returns:
+            BaseError: The domain error to raise.
+        """
+        context = {"operation": operation, "id": resource_id, "status": error.status.name}
+        match error.status:
+            case RPCStatusCode.NOT_FOUND:
+                return NotFoundError(resource_type=operation, additional_data=context)
+            case RPCStatusCode.ALREADY_EXISTS:
+                return AlreadyExistsError(resource_type=operation, additional_data=context)
+            case RPCStatusCode.UNAVAILABLE:
+                return UnavailableError(resource_type="temporal", additional_data=context)
+            case RPCStatusCode.DEADLINE_EXCEEDED:
+                return DeadlineExceededError(operation=operation, additional_data=context)
+            case _:
+                return TemporalError(additional_data=context)
+
     def _build_retry_policy(self) -> RetryPolicy:
         """Build default retry policy from configuration.
 
@@ -421,28 +483,29 @@ class TemporalAdapter(TemporalPort):
         Returns:
             WorkflowHandle[T, Any]: Handle to the started workflow execution.
         """
-        client = await self.get_client()
+        async with self._mapped_errors("start_workflow", workflow_id):
+            client = await self.get_client()
 
-        workflow_id = workflow_id or str(uuid4())
-        task_queue = task_queue or self.config.TASK_QUEUE
+            workflow_id = workflow_id or str(uuid4())
+            task_queue = task_queue or self.config.TASK_QUEUE
 
-        # Build positional args: only include arg if it's not None,
-        # so workflows that take no parameters aren't given an extra argument.
-        positional_args: list[Any] = [] if arg is None else [arg]
+            # Build positional args: only include arg if it's not None,
+            # so workflows that take no parameters aren't given an extra argument.
+            positional_args: list[Any] = [] if arg is None else [arg]
 
-        return await client.start_workflow(
-            workflow,
-            *positional_args,
-            id=workflow_id,
-            task_queue=task_queue,
-            execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW_EXECUTION_TIMEOUT),
-            run_timeout=self._timeout(run_timeout, self.config.WORKFLOW_RUN_TIMEOUT),
-            task_timeout=self._timeout(task_timeout, self.config.WORKFLOW_TASK_TIMEOUT),
-            retry_policy=self._build_workflow_retry_policy(),
-            memo=memo,
-            search_attributes=search_attributes,
-            **self._id_policies(id_reuse_policy, id_conflict_policy),
-        )
+            return await client.start_workflow(
+                workflow,
+                *positional_args,
+                id=workflow_id,
+                task_queue=task_queue,
+                execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW_EXECUTION_TIMEOUT),
+                run_timeout=self._timeout(run_timeout, self.config.WORKFLOW_RUN_TIMEOUT),
+                task_timeout=self._timeout(task_timeout, self.config.WORKFLOW_TASK_TIMEOUT),
+                retry_policy=self._build_workflow_retry_policy(),
+                memo=memo,
+                search_attributes=search_attributes,
+                **self._id_policies(id_reuse_policy, id_conflict_policy),
+            )
 
     @override
     async def execute_workflow(
@@ -480,26 +543,27 @@ class TemporalAdapter(TemporalPort):
         Returns:
             T: The workflow execution result.
         """
-        client = await self.get_client()
+        async with self._mapped_errors("execute_workflow", workflow_id):
+            client = await self.get_client()
 
-        workflow_id = workflow_id or str(uuid4())
-        task_queue = task_queue or self.config.TASK_QUEUE
+            workflow_id = workflow_id or str(uuid4())
+            task_queue = task_queue or self.config.TASK_QUEUE
 
-        # Build positional args: only include arg if it's not None,
-        # so workflows that take no parameters aren't given an extra argument.
-        positional_args: list[Any] = [] if arg is None else [arg]
+            # Build positional args: only include arg if it's not None,
+            # so workflows that take no parameters aren't given an extra argument.
+            positional_args: list[Any] = [] if arg is None else [arg]
 
-        return await client.execute_workflow(
-            workflow,
-            *positional_args,
-            id=workflow_id,
-            task_queue=task_queue,
-            execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW_EXECUTION_TIMEOUT),
-            run_timeout=self._timeout(run_timeout, self.config.WORKFLOW_RUN_TIMEOUT),
-            task_timeout=self._timeout(task_timeout, self.config.WORKFLOW_TASK_TIMEOUT),
-            retry_policy=self._build_workflow_retry_policy(),
-            **self._id_policies(id_reuse_policy, id_conflict_policy),
-        )
+            return await client.execute_workflow(
+                workflow,
+                *positional_args,
+                id=workflow_id,
+                task_queue=task_queue,
+                execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW_EXECUTION_TIMEOUT),
+                run_timeout=self._timeout(run_timeout, self.config.WORKFLOW_RUN_TIMEOUT),
+                task_timeout=self._timeout(task_timeout, self.config.WORKFLOW_TASK_TIMEOUT),
+                retry_policy=self._build_workflow_retry_policy(),
+                **self._id_policies(id_reuse_policy, id_conflict_policy),
+            )
 
     @override
     async def get_workflow_handle(self, workflow_id: str, run_id: str | None = None) -> WorkflowHandle[T, Any]:
@@ -513,8 +577,9 @@ class TemporalAdapter(TemporalPort):
         Returns:
             WorkflowHandle[T, Any]: Handle to the workflow execution.
         """
-        client = await self.get_client()
-        return client.get_workflow_handle(workflow_id, run_id=run_id)
+        async with self._mapped_errors("get_workflow_handle", workflow_id):
+            client = await self.get_client()
+            return client.get_workflow_handle(workflow_id, run_id=run_id)
 
     @override
     async def cancel_workflow(self, workflow_id: str, run_id: str | None = None, reason: str | None = None) -> None:
@@ -526,8 +591,9 @@ class TemporalAdapter(TemporalPort):
                 If None, cancels the latest run. Defaults to None.
             reason (str, optional): Reason for cancellation. Defaults to None.
         """
-        handle = await self.get_workflow_handle(workflow_id, run_id)
-        await handle.cancel(reason=reason or "")
+        async with self._mapped_errors("cancel_workflow", workflow_id):
+            handle = await self.get_workflow_handle(workflow_id, run_id)
+            await handle.cancel(reason=reason or "")
 
     @override
     async def terminate_workflow(self, workflow_id: str, run_id: str | None = None, reason: str | None = None) -> None:
@@ -539,8 +605,9 @@ class TemporalAdapter(TemporalPort):
                 If None, terminates the latest run. Defaults to None.
             reason (str, optional): Reason for termination. Defaults to None.
         """
-        handle = await self.get_workflow_handle(workflow_id, run_id)
-        await handle.terminate(reason=reason)
+        async with self._mapped_errors("terminate_workflow", workflow_id):
+            handle = await self.get_workflow_handle(workflow_id, run_id)
+            await handle.terminate(reason=reason)
 
     @override
     async def signal_workflow(
@@ -559,10 +626,11 @@ class TemporalAdapter(TemporalPort):
             run_id (str, optional): The specific run identifier within the workflow.
                 If None, signals the latest run. Defaults to None.
         """
-        handle = await self.get_workflow_handle(workflow_id, run_id)
-        # Only pass arg if it's not None, so signal handlers with no parameters work correctly.
-        positional_args: list[Any] = [] if arg is None else [arg]
-        await handle.signal(signal_name, *positional_args)
+        async with self._mapped_errors("signal_workflow", workflow_id):
+            handle = await self.get_workflow_handle(workflow_id, run_id)
+            # Only pass arg if it's not None, so signal handlers with no parameters work correctly.
+            positional_args: list[Any] = [] if arg is None else [arg]
+            await handle.signal(signal_name, *positional_args)
 
     @override
     async def query_workflow(
@@ -584,10 +652,11 @@ class TemporalAdapter(TemporalPort):
         Returns:
             Any: The query result from the workflow.
         """
-        handle = await self.get_workflow_handle(workflow_id, run_id)
-        # Only pass arg if it's not None, so query handlers with no parameters work correctly.
-        positional_args: list[Any] = [] if arg is None else [arg]
-        return await handle.query(query_name, *positional_args)
+        async with self._mapped_errors("query_workflow", workflow_id):
+            handle = await self.get_workflow_handle(workflow_id, run_id)
+            # Only pass arg if it's not None, so query handlers with no parameters work correctly.
+            positional_args: list[Any] = [] if arg is None else [arg]
+            return await handle.query(query_name, *positional_args)
 
     @override
     async def list_workflows(
@@ -638,13 +707,14 @@ class TemporalAdapter(TemporalPort):
         Returns:
             WorkflowExecutionAsyncIterator: Async iterator of executions; its ``next_page_token`` resumes the listing.
         """
-        client = await self.get_client()
-        return client.list_workflows(
-            query=query,
-            limit=limit,
-            page_size=page_size or 100,
-            next_page_token=next_page_token,
-        )
+        async with self._mapped_errors("iter_workflows", None):
+            client = await self.get_client()
+            return client.list_workflows(
+                query=query,
+                limit=limit,
+                page_size=page_size or 100,
+                next_page_token=next_page_token,
+            )
 
     @override
     async def describe_workflow(self, workflow_id: str, run_id: str | None = None) -> WorkflowExecutionDescription:
@@ -658,8 +728,9 @@ class TemporalAdapter(TemporalPort):
         Returns:
             WorkflowExecutionDescription: Detailed workflow execution information.
         """
-        handle = await self.get_workflow_handle(workflow_id, run_id)
-        return await handle.describe()
+        async with self._mapped_errors("describe_workflow", workflow_id):
+            handle = await self.get_workflow_handle(workflow_id, run_id)
+            return await handle.describe()
 
     @override
     async def close(self) -> None:
@@ -683,27 +754,29 @@ class TemporalAdapter(TemporalPort):
         schedule_policy: SchedulePolicy | None = None,
     ) -> None:
         """Create a schedule for a workflow."""
-        client = await self.get_client()
+        async with self._mapped_errors("create_schedule", schedule_id):
+            client = await self.get_client()
 
-        workflow_execution_id = workflow_id or schedule_id
-        sched = Schedule(
-            action=ScheduleActionStartWorkflow(
-                workflow=workflow_class,
-                id=workflow_execution_id,
-                task_queue=task_queue,
-            ),
-            spec=spec,
-            policy=schedule_policy
-            or SchedulePolicy(
-                overlap=ScheduleOverlapPolicy.SKIP,
-            ),
-        )
+            workflow_execution_id = workflow_id or schedule_id
+            sched = Schedule(
+                action=ScheduleActionStartWorkflow(
+                    workflow=workflow_class,
+                    id=workflow_execution_id,
+                    task_queue=task_queue,
+                ),
+                spec=spec,
+                policy=schedule_policy
+                or SchedulePolicy(
+                    overlap=ScheduleOverlapPolicy.SKIP,
+                ),
+            )
 
-        await client.create_schedule(schedule_id, sched)
+            await client.create_schedule(schedule_id, sched)
 
     @override
     async def stop_schedule(self, schedule_id: str) -> None:
         """Stop a schedule."""
-        client = await self.get_client()
-        handle = client.get_schedule_handle(schedule_id)
-        await handle.delete()
+        async with self._mapped_errors("stop_schedule", schedule_id):
+            client = await self.get_client()
+            handle = client.get_schedule_handle(schedule_id)
+            await handle.delete()
