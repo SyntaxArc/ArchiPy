@@ -24,6 +24,7 @@ from temporalio.client import (
     ScheduleSpec,
     TLSConfig,
     WorkflowExecution,
+    WorkflowExecutionAsyncIterator,
     WorkflowExecutionDescription,
     WorkflowHandle,
 )
@@ -292,6 +293,20 @@ class TemporalAdapter(TemporalPort):
         except OSError as error:
             raise InvalidArgumentError(additional_data={"original_error": str(error)}) from error
 
+    @staticmethod
+    def _timeout(override: int | None, default: int | None) -> timedelta | None:
+        """Resolve a timeout in seconds from a call override and its configured default.
+
+        Args:
+            override (int | None): The timeout passed to the call.
+            default (int | None): The configured timeout.
+
+        Returns:
+            timedelta | None: The timeout, or None when neither is set (unbounded).
+        """
+        seconds = override or default
+        return timedelta(seconds=seconds) if seconds else None
+
     def _build_retry_policy(self) -> RetryPolicy:
         """Build default retry policy from configuration.
 
@@ -305,6 +320,18 @@ class TemporalAdapter(TemporalPort):
             maximum_interval=timedelta(seconds=self.config.RETRY_MAXIMUM_INTERVAL),
             non_retryable_error_types=self.config.RETRY_NON_RETRYABLE_ERROR_TYPES,
         )
+
+    def _build_workflow_retry_policy(self) -> RetryPolicy | None:
+        """Build the workflow-level retry policy, only when enabled in configuration.
+
+        A workflow retry reruns the whole workflow from the start, so it is opt-in.
+
+        Returns:
+            RetryPolicy | None: The configured retry policy, or None when workflow retries are disabled.
+        """
+        if not self.config.WORKFLOW_RETRY_ENABLED:
+            return None
+        return self._build_retry_policy()
 
     @override
     async def start_workflow(
@@ -356,10 +383,10 @@ class TemporalAdapter(TemporalPort):
             *positional_args,
             id=workflow_id,
             task_queue=task_queue,
-            execution_timeout=timedelta(seconds=execution_timeout or self.config.WORKFLOW_EXECUTION_TIMEOUT),
-            run_timeout=timedelta(seconds=run_timeout or self.config.WORKFLOW_RUN_TIMEOUT),
-            task_timeout=timedelta(seconds=task_timeout or self.config.WORKFLOW_TASK_TIMEOUT),
-            retry_policy=self._build_retry_policy(),
+            execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW_EXECUTION_TIMEOUT),
+            run_timeout=self._timeout(run_timeout, self.config.WORKFLOW_RUN_TIMEOUT),
+            task_timeout=self._timeout(task_timeout, self.config.WORKFLOW_TASK_TIMEOUT),
+            retry_policy=self._build_workflow_retry_policy(),
             memo=memo,
             search_attributes=search_attributes,
         )
@@ -408,10 +435,10 @@ class TemporalAdapter(TemporalPort):
             *positional_args,
             id=workflow_id,
             task_queue=task_queue,
-            execution_timeout=timedelta(seconds=execution_timeout or self.config.WORKFLOW_EXECUTION_TIMEOUT),
-            run_timeout=timedelta(seconds=run_timeout or self.config.WORKFLOW_RUN_TIMEOUT),
-            task_timeout=timedelta(seconds=task_timeout or self.config.WORKFLOW_TASK_TIMEOUT),
-            retry_policy=self._build_retry_policy(),
+            execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW_EXECUTION_TIMEOUT),
+            run_timeout=self._timeout(run_timeout, self.config.WORKFLOW_RUN_TIMEOUT),
+            task_timeout=self._timeout(task_timeout, self.config.WORKFLOW_TASK_TIMEOUT),
+            retry_policy=self._build_workflow_retry_policy(),
         )
 
     @override
@@ -440,7 +467,7 @@ class TemporalAdapter(TemporalPort):
             reason (str, optional): Reason for cancellation. Defaults to None.
         """
         handle = await self.get_workflow_handle(workflow_id, run_id)
-        await handle.cancel()
+        await handle.cancel(reason=reason or "")
 
     @override
     async def terminate_workflow(self, workflow_id: str, run_id: str | None = None, reason: str | None = None) -> None:
@@ -508,6 +535,7 @@ class TemporalAdapter(TemporalPort):
         query: str | None = None,
         page_size: int | None = None,
         next_page_token: bytes | None = None,
+        limit: int | None = None,
     ) -> list[WorkflowExecution]:
         """List workflow executions matching the given criteria.
 
@@ -518,19 +546,45 @@ class TemporalAdapter(TemporalPort):
                 Defaults to None (server default).
             next_page_token (bytes, optional): Token for pagination.
                 Defaults to None (first page).
+            limit (int, optional): Maximum number of executions to return. Defaults to None, which loads every
+                matching execution into memory; set it, or use ``iter_workflows``, for large namespaces.
 
         Returns:
             list[WorkflowExecution]: The workflow executions matching the query.
         """
-        client = await self.get_client()
-        # list_workflows returns an async iterator, not awaitable
-        workflows_iter = client.list_workflows(
+        workflows_iter = await self.iter_workflows(
             query=query,
+            page_size=page_size,
+            next_page_token=next_page_token,
+            limit=limit,
+        )
+        return [workflow async for workflow in workflows_iter]
+
+    async def iter_workflows(
+        self,
+        query: str | None = None,
+        page_size: int | None = None,
+        next_page_token: bytes | None = None,
+        limit: int | None = None,
+    ) -> WorkflowExecutionAsyncIterator:
+        """Iterate workflow executions page by page without loading them all into memory.
+
+        Args:
+            query (str, optional): List filter query in Temporal SQL syntax. Defaults to None (no filter).
+            page_size (int, optional): Number of results fetched per page. Defaults to None (100).
+            next_page_token (bytes, optional): Token to resume from. Defaults to None (first page).
+            limit (int, optional): Maximum number of executions to yield. Defaults to None (no limit).
+
+        Returns:
+            WorkflowExecutionAsyncIterator: Async iterator of executions; its ``next_page_token`` resumes the listing.
+        """
+        client = await self.get_client()
+        return client.list_workflows(
+            query=query,
+            limit=limit,
             page_size=page_size or 100,
             next_page_token=next_page_token,
         )
-        # Convert to list for compatibility
-        return [workflow async for workflow in workflows_iter]
 
     @override
     async def describe_workflow(self, workflow_id: str, run_id: str | None = None) -> WorkflowExecutionDescription:
