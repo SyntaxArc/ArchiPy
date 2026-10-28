@@ -160,8 +160,9 @@ class TemporalAdapter(TemporalPort):
             optional["api_key"] = self.config.API_KEY
         if self.config.RPC_METADATA:
             optional["rpc_metadata"] = self.config.RPC_METADATA
-        if self._has_tls_config():
-            optional["tls"] = self._build_tls_config()
+        tls = self._tls_option()
+        if tls is not None:
+            optional["tls"] = tls
         return optional
 
     def _build_connect_kwargs(self) -> dict[str, Any]:
@@ -255,61 +256,65 @@ class TemporalAdapter(TemporalPort):
         connect_kwargs.setdefault("plugins", []).append(MessagingOpenTelemetryPlugin())
 
     def _has_tls_config(self) -> bool:
-        """Check if TLS configuration is provided.
+        """Check if any TLS file or server name is configured.
 
         Returns:
-            bool: True if TLS configuration is complete, False otherwise.
+            bool: True if a CA certificate, a client certificate pair or a server name is set.
         """
-        return all(
+        return any(
             [
                 self.config.TLS_CA_CERT,
                 self.config.TLS_CLIENT_CERT,
-                self.config.TLS_CLIENT_KEY,
+                self.config.TLS_SERVER_NAME,
             ],
         )
 
+    def _tls_option(self) -> TLSConfig | bool | None:
+        """Resolve the ``tls`` argument of ``Client.connect``.
+
+        Returns:
+            TLSConfig | bool | None: A TLS configuration when TLS settings are present (unless TLS is forced off),
+                the ``TLS_ENABLED`` flag otherwise, or None to let the SDK enable TLS when an API key is set.
+        """
+        if self.config.TLS_ENABLED is False:
+            return False
+        if self._has_tls_config():
+            return self._build_tls_config()
+        return self.config.TLS_ENABLED
+
     def _build_tls_config(self) -> TLSConfig:
-        """Build TLS configuration for secure connections.
+        """Build TLS configuration for secure connections from the configured files.
+
+        Server-only TLS needs just the CA certificate (or none, to use the system CA bundle); mutual TLS adds the
+        client certificate and key.
 
         Returns:
             TLSConfig: The TLS configuration object.
 
         Raises:
-            InvalidArgumentError: If TLS configuration is incomplete.
+            InvalidArgumentError: If a configured TLS file cannot be read.
         """
-        if not self._has_tls_config():
-            raise InvalidArgumentError(
-                additional_data={
-                    "ca_cert": bool(self.config.TLS_CA_CERT),
-                    "client_cert": bool(self.config.TLS_CLIENT_CERT),
-                    "client_key": bool(self.config.TLS_CLIENT_KEY),
-                },
-            )
-
         try:
-            if self.config.TLS_CA_CERT is None:
-                raise InvalidArgumentError(additional_data={"error": "TLS_CA_CERT is required but not set"})
-            ca_cert_path: str = self.config.TLS_CA_CERT
-            ca_cert_data = Path(ca_cert_path).read_bytes()
-
-            client_cert_data = None
-            client_key_data = None
-
-            if self.config.TLS_CLIENT_CERT:
-                client_cert_path: str = self.config.TLS_CLIENT_CERT
-                client_cert_data = Path(client_cert_path).read_bytes()
-
-            if self.config.TLS_CLIENT_KEY:
-                client_key_path: str = self.config.TLS_CLIENT_KEY
-                client_key_data = Path(client_key_path).read_bytes()
-
             return TLSConfig(
-                server_root_ca_cert=ca_cert_data,
-                client_cert=client_cert_data,
-                client_private_key=client_key_data,
+                server_root_ca_cert=self._read_tls_file(self.config.TLS_CA_CERT),
+                client_cert=self._read_tls_file(self.config.TLS_CLIENT_CERT),
+                client_private_key=self._read_tls_file(self.config.TLS_CLIENT_KEY),
+                domain=self.config.TLS_SERVER_NAME,
             )
         except OSError as error:
             raise InvalidArgumentError(additional_data={"original_error": str(error)}) from error
+
+    @staticmethod
+    def _read_tls_file(path: str | None) -> bytes | None:
+        """Read a TLS file when a path is configured.
+
+        Args:
+            path (str | None): The file path.
+
+        Returns:
+            bytes | None: The file contents, or None when no path is set.
+        """
+        return Path(path).read_bytes() if path else None
 
     @staticmethod
     def _timeout(override: int | None, default: int | None) -> timedelta | None:

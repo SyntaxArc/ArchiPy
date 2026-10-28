@@ -512,6 +512,8 @@ _SECTION_SETTINGS = {
         {"MIN_CONNECTIONS_PER_HOST": 10, "MAX_CONNECTIONS_PER_HOST": 2},
     ),
     ("Temporal", "only a client certificate"): (TemporalConfig, {"TLS_CLIENT_CERT": "/tmp/client.pem"}),
+    ("Temporal", "only a CA certificate"): (TemporalConfig, {"TLS_CA_CERT": "/tmp/ca.pem"}),
+    ("Temporal", "a client key without a certificate"): (TemporalConfig, {"TLS_CLIENT_KEY": "/tmp/client.key"}),
     ("Temporal", "a run timeout above the execution one"): (
         TemporalConfig,
         {"WORKFLOW_RUN_TIMEOUT": 7200, "WORKFLOW_EXECUTION_TIMEOUT": 3600},

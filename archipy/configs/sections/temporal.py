@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from archipy.models.errors import InvalidArgumentError
 
+# Kept for backward compatibility; the TLS files no longer have to be set all together.
 TLS_CERT_PARTS_REQUIRED = 3
 
 
@@ -138,6 +139,17 @@ class TemporalConfig(BaseModel):
     TLS_CA_CERT: str | None = Field(default=None, description="Path to TLS CA certificate")
     TLS_CLIENT_CERT: str | None = Field(default=None, description="Path to TLS client certificate")
     TLS_CLIENT_KEY: str | None = Field(default=None, description="Path to TLS client private key")
+    TLS_SERVER_NAME: str | None = Field(
+        default=None,
+        description="Server name to verify the TLS certificate against, when it differs from HOST",
+    )
+    TLS_ENABLED: bool | None = Field(
+        default=None,
+        description=(
+            "Force TLS on (system CA bundle) or off; None enables it when API_KEY or any TLS_* file is set "
+            "(server-only TLS needs just TLS_CA_CERT or nothing)"
+        ),
+    )
 
     # Workflow Timeout Settings
     WORKFLOW_EXECUTION_TIMEOUT: int | None = Field(
@@ -207,11 +219,8 @@ class TemporalConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_tls_configuration(self) -> Self:
-        """Validate TLS configuration consistency."""
-        tls_fields = [self.TLS_CA_CERT, self.TLS_CLIENT_CERT, self.TLS_CLIENT_KEY]
-        tls_provided = [field for field in tls_fields if field is not None]
-
-        if len(tls_provided) > 0 and len(tls_provided) != TLS_CERT_PARTS_REQUIRED:
+        """Validate the mutual TLS client certificate and key are set together; the CA certificate is optional."""
+        if (self.TLS_CLIENT_CERT is None) != (self.TLS_CLIENT_KEY is None):
             raise InvalidArgumentError()
 
         return self

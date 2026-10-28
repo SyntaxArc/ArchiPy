@@ -54,8 +54,10 @@ TEMPORAL__RETRY_INITIAL_INTERVAL=1
     `TEMPORAL__API_KEY` is for Temporal Cloud authentication. Local dev servers ignore it.
 
 !!! warning
-    Set all three of `TLS_CA_CERT`, `TLS_CLIENT_CERT` and `TLS_CLIENT_KEY`, or none of them. A partial set is rejected
-    with an `InvalidArgumentError`. Keep `TEMPORAL__API_KEY` and the key file out of source control.
+    Set `TLS_CLIENT_CERT` and `TLS_CLIENT_KEY` together for mutual TLS; one without the other is rejected with an
+    `InvalidArgumentError`. `TLS_CA_CERT` alone gives server-only TLS, and `TLS_SERVER_NAME` overrides the name the
+    certificate is checked against. TLS turns on by itself with `API_KEY`; `TLS_ENABLED` forces it on or off. Keep
+    `TEMPORAL__API_KEY` and the key file out of source control.
 
 !!! warning
     The config validates the timeouts. When both are set, `WORKFLOW_RUN_TIMEOUT` must not exceed
