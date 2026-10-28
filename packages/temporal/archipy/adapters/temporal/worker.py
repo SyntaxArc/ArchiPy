@@ -13,7 +13,7 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
 from uuid import uuid4
 
-from temporalio.worker import Worker
+from temporalio.worker import PollerBehavior, PollerBehaviorAutoscaling, PollerBehaviorSimpleMaximum, Worker
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import TemporalConfig
@@ -27,9 +27,11 @@ from .ports import WorkerHandle as PortWorkerHandle, WorkerPort
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from concurrent.futures import Executor
 
     from temporalio.client import Client
     from temporalio.converter import DataConverter
+    from temporalio.worker import WorkerTuner
 
 
 class WorkerHandle(PortWorkerHandle):
@@ -300,6 +302,16 @@ class TemporalWorkerManager(WorkerPort):
         """
         return await self._temporal_adapter.get_client()
 
+    def _poller_behavior(self) -> PollerBehavior:
+        """Build the task poller behaviour, autoscaling when enabled in configuration.
+
+        Returns:
+            PollerBehavior: Autoscaling pollers, or the SDK default of at most 5 pollers.
+        """
+        if self.config.WORKER_POLLER_AUTOSCALING:
+            return PollerBehaviorAutoscaling()
+        return PollerBehaviorSimpleMaximum(maximum=5)
+
     @override
     async def start_worker(
         self,
@@ -310,6 +322,8 @@ class TemporalWorkerManager(WorkerPort):
         identity: str | None = None,
         max_concurrent_workflow_tasks: int | None = None,
         max_concurrent_activities: int | None = None,
+        tuner: WorkerTuner | None = None,
+        activity_executor: Executor | None = None,
     ) -> WorkerHandle:
         """Start a Temporal worker for the specified task queue.
 
@@ -327,6 +341,10 @@ class TemporalWorkerManager(WorkerPort):
                 Defaults to None (server default).
             max_concurrent_activities (int, optional): Maximum concurrent activity tasks.
                 Defaults to None (server default).
+            tuner (WorkerTuner, optional): Slot supplier tuner, e.g. ``WorkerTuner.create_resource_based(...)``.
+                Cannot be combined with the ``max_concurrent_*`` limits. Defaults to None.
+            activity_executor (Executor, optional): Executor that runs synchronous (non-async) activities.
+                Required when registering sync activities. Defaults to None.
 
         Returns:
             WorkerHandle: Handle to the started worker.
@@ -363,6 +381,12 @@ class TemporalWorkerManager(WorkerPort):
                 debug_mode=self.config.WORKER_DEBUG_MODE,
                 disable_eager_activity_execution=self.config.WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION,
                 max_concurrent_local_activities=self.config.WORKER_MAX_CONCURRENT_LOCAL_ACTIVITIES,
+                tuner=tuner,
+                activity_executor=activity_executor,
+                max_activities_per_second=self.config.WORKER_MAX_ACTIVITIES_PER_SECOND,
+                max_task_queue_activities_per_second=self.config.WORKER_MAX_TASK_QUEUE_ACTIVITIES_PER_SECOND,
+                workflow_task_poller_behavior=self._poller_behavior(),
+                activity_task_poller_behavior=self._poller_behavior(),
             )
 
             # Create worker handle

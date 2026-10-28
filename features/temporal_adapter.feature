@@ -199,6 +199,12 @@ Feature: Temporal Adapter Operations
     Then the worker should be running
     And the worker should have build_id "v1.0.0"
 
+  Scenario: Worker with poller autoscaling and an activity rate limit runs workflows
+    Given a Temporal worker manager is configured with poller autoscaling and 50 activities per second
+    And a worker is started for task queue "test-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "Tuned"
+    Then the workflow result should be "Hello, Tuned!"
+
   Scenario: Stop worker gracefully
     When I start a worker for task queue "stop-test-queue" with workflows and activities
     Then the worker should be running

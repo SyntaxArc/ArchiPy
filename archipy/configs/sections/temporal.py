@@ -116,6 +116,24 @@ class TemporalConfig(BaseModel):
         description="Disable eager activity execution on the worker",
     )
 
+    WORKER_POLLER_AUTOSCALING: bool = Field(
+        default=False,
+        description=(
+            "Let the worker scale its workflow and activity task pollers to the backlog "
+            "(requires Temporal Server 1.28+)"
+        ),
+    )
+    WORKER_MAX_ACTIVITIES_PER_SECOND: float | None = Field(
+        default=None,
+        gt=0,
+        description="Rate limit for activities this worker starts per second (None: unlimited)",
+    )
+    WORKER_MAX_TASK_QUEUE_ACTIVITIES_PER_SECOND: float | None = Field(
+        default=None,
+        gt=0,
+        description="Server-enforced rate limit for activities across the whole task queue (None: unlimited)",
+    )
+
     # TLS Configuration
     TLS_CA_CERT: str | None = Field(default=None, description="Path to TLS CA certificate")
     TLS_CLIENT_CERT: str | None = Field(default=None, description="Path to TLS client certificate")
