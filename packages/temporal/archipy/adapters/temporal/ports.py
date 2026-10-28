@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         WorkflowExecutionDescription,
         WorkflowHandle as TemporalWorkflowHandle,
     )
+    from temporalio.common import WorkflowIDConflictPolicy, WorkflowIDReusePolicy
 
 T = TypeVar("T")
 
@@ -46,6 +47,8 @@ class TemporalPort:
         task_timeout: int | None = None,
         memo: dict[str, Any] | None = None,
         search_attributes: dict[str, Any] | None = None,
+        id_reuse_policy: WorkflowIDReusePolicy | None = None,
+        id_conflict_policy: WorkflowIDConflictPolicy | None = None,
     ) -> TemporalWorkflowHandle[T, Any]:
         """Start a workflow execution asynchronously.
 
@@ -66,6 +69,10 @@ class TemporalPort:
                 Defaults to None.
             search_attributes (dict[str, Any], optional): Indexed metadata for workflow search.
                 Defaults to None.
+            id_reuse_policy (WorkflowIDReusePolicy, optional): Whether a closed workflow's ID may be reused.
+                Defaults to None (server default: allow duplicate).
+            id_conflict_policy (WorkflowIDConflictPolicy, optional): What to do when a workflow with the same ID
+                is still running, e.g. ``USE_EXISTING`` for idempotent starts. Defaults to None (server default: fail).
 
         Returns:
             WorkflowHandle[T, Any]: Handle to the started workflow execution.
@@ -85,6 +92,8 @@ class TemporalPort:
         execution_timeout: int | None = None,
         run_timeout: int | None = None,
         task_timeout: int | None = None,
+        id_reuse_policy: WorkflowIDReusePolicy | None = None,
+        id_conflict_policy: WorkflowIDConflictPolicy | None = None,
     ) -> T:
         """Execute a workflow and wait for its completion.
 
@@ -101,6 +110,10 @@ class TemporalPort:
                 Overrides config default. Defaults to None.
             task_timeout (int, optional): Maximum workflow task processing time in seconds.
                 Overrides config default. Defaults to None.
+            id_reuse_policy (WorkflowIDReusePolicy, optional): Whether a closed workflow's ID may be reused.
+                Defaults to None (server default: allow duplicate).
+            id_conflict_policy (WorkflowIDConflictPolicy, optional): What to do when a workflow with the same ID
+                is still running, e.g. ``USE_EXISTING`` for idempotent starts. Defaults to None (server default: fail).
 
         Returns:
             T: The workflow execution result.

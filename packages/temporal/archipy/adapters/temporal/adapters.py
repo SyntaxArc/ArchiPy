@@ -46,6 +46,7 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from temporalio.common import WorkflowIDConflictPolicy, WorkflowIDReusePolicy
     from temporalio.converter import DataConverter
     from temporalio.runtime import Runtime
 
@@ -333,6 +334,27 @@ class TemporalAdapter(TemporalPort):
             return None
         return self._build_retry_policy()
 
+    @staticmethod
+    def _id_policies(
+        id_reuse_policy: WorkflowIDReusePolicy | None,
+        id_conflict_policy: WorkflowIDConflictPolicy | None,
+    ) -> dict[str, Any]:
+        """Build the workflow ID policy keyword arguments, leaving out unset ones so the SDK defaults apply.
+
+        Args:
+            id_reuse_policy (WorkflowIDReusePolicy | None): The ID reuse policy.
+            id_conflict_policy (WorkflowIDConflictPolicy | None): The ID conflict policy.
+
+        Returns:
+            dict[str, Any]: The keyword arguments for ``start_workflow`` / ``execute_workflow``.
+        """
+        policies: dict[str, Any] = {}
+        if id_reuse_policy is not None:
+            policies["id_reuse_policy"] = id_reuse_policy
+        if id_conflict_policy is not None:
+            policies["id_conflict_policy"] = id_conflict_policy
+        return policies
+
     @override
     async def start_workflow(
         self,
@@ -345,6 +367,8 @@ class TemporalAdapter(TemporalPort):
         task_timeout: int | None = None,
         memo: dict[str, Any] | None = None,
         search_attributes: dict[str, Any] | None = None,
+        id_reuse_policy: WorkflowIDReusePolicy | None = None,
+        id_conflict_policy: WorkflowIDConflictPolicy | None = None,
     ) -> WorkflowHandle[T, Any]:
         """Start a workflow execution asynchronously.
 
@@ -365,6 +389,10 @@ class TemporalAdapter(TemporalPort):
                 Defaults to None.
             search_attributes (dict[str, Any], optional): Indexed metadata for workflow search.
                 Defaults to None.
+            id_reuse_policy (WorkflowIDReusePolicy, optional): Whether a closed workflow's ID may be reused.
+                Defaults to None (server default: allow duplicate).
+            id_conflict_policy (WorkflowIDConflictPolicy, optional): What to do when a workflow with the same ID
+                is still running, e.g. ``USE_EXISTING`` for idempotent starts. Defaults to None (server default: fail).
 
         Returns:
             WorkflowHandle[T, Any]: Handle to the started workflow execution.
@@ -389,6 +417,7 @@ class TemporalAdapter(TemporalPort):
             retry_policy=self._build_workflow_retry_policy(),
             memo=memo,
             search_attributes=search_attributes,
+            **self._id_policies(id_reuse_policy, id_conflict_policy),
         )
 
     @override
@@ -401,6 +430,8 @@ class TemporalAdapter(TemporalPort):
         execution_timeout: int | None = None,
         run_timeout: int | None = None,
         task_timeout: int | None = None,
+        id_reuse_policy: WorkflowIDReusePolicy | None = None,
+        id_conflict_policy: WorkflowIDConflictPolicy | None = None,
     ) -> T:
         """Execute a workflow and wait for its completion.
 
@@ -417,6 +448,10 @@ class TemporalAdapter(TemporalPort):
                 Overrides config default. Defaults to None.
             task_timeout (int, optional): Maximum workflow task processing time in seconds.
                 Overrides config default. Defaults to None.
+            id_reuse_policy (WorkflowIDReusePolicy, optional): Whether a closed workflow's ID may be reused.
+                Defaults to None (server default: allow duplicate).
+            id_conflict_policy (WorkflowIDConflictPolicy, optional): What to do when a workflow with the same ID
+                is still running, e.g. ``USE_EXISTING`` for idempotent starts. Defaults to None (server default: fail).
 
         Returns:
             T: The workflow execution result.
@@ -439,6 +474,7 @@ class TemporalAdapter(TemporalPort):
             run_timeout=self._timeout(run_timeout, self.config.WORKFLOW_RUN_TIMEOUT),
             task_timeout=self._timeout(task_timeout, self.config.WORKFLOW_TASK_TIMEOUT),
             retry_policy=self._build_workflow_retry_policy(),
+            **self._id_policies(id_reuse_policy, id_conflict_policy),
         )
 
     @override

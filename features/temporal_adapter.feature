@@ -16,6 +16,11 @@ Feature: Temporal Adapter Operations
     Then I should be able to get workflow handle for "test-greeting-1"
     And the workflow handle should have workflow id "test-greeting-1"
 
+  Scenario: Starting a running workflow ID again with USE_EXISTING returns the same run
+    Given a worker is started for task queue "test-queue" with SignalQueryWorkflow
+    When I start workflow "SignalQueryWorkflow" with workflow id "test-id-policy-1" twice using conflict policy USE_EXISTING
+    Then both starts should return the same run id
+
   Scenario: Execute workflow and wait for result
     Given a worker is started for task queue "test-queue" with GreetingWorkflow
     When I execute workflow "GreetingWorkflow" with argument "Bob"
@@ -56,6 +61,7 @@ Feature: Temporal Adapter Operations
     Given a worker is started for task queue "test-queue" with EchoOrderWorkflow
     When I execute workflow "EchoOrderWorkflow" with order "order-7" totalling 12.50
     Then the echoed order should equal the sent order
+
   Scenario: List workflows stops at the limit
     Given a worker is started for task queue "test-queue" with GreetingWorkflow
     When I execute workflow "GreetingWorkflow" with argument "Limit-1"
