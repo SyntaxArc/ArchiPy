@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from temporalio.client import Client
+    from temporalio.converter import DataConverter
 
 
 class WorkerHandle(PortWorkerHandle):
@@ -234,12 +235,18 @@ class TemporalWorkerManager(WorkerPort):
             If None, retrieves from global config. Defaults to None.
     """
 
-    def __init__(self, temporal_config: TemporalConfig | None = None) -> None:
+    def __init__(
+        self,
+        temporal_config: TemporalConfig | None = None,
+        data_converter: DataConverter | None = None,
+    ) -> None:
         """Initialize the worker manager.
 
         Args:
             temporal_config (TemporalConfig, optional): Configuration settings for Temporal.
                 If None, retrieves from global config. Defaults to None.
+            data_converter (DataConverter, optional): Data converter passed to the client the workers use.
+                Defaults to None (see ``TemporalAdapter``).
         """
         # Get temporal config from the global config or use provided one
         if temporal_config is None:
@@ -252,7 +259,7 @@ class TemporalWorkerManager(WorkerPort):
                 self.config = TemporalConfig()
         else:
             self.config = temporal_config
-        self._temporal_adapter = TemporalAdapter(temporal_config)
+        self._temporal_adapter = TemporalAdapter(temporal_config, data_converter)
         self._workers: dict[str, WorkerHandle] = {}
         self._logger = logging.getLogger(__name__)
 
