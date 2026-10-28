@@ -17,8 +17,9 @@ from typing import TYPE_CHECKING, Any, TypeVar
 from pydantic import BaseModel
 from temporalio import activity, workflow
 from temporalio.common import RetryPolicy
+from temporalio.exceptions import ApplicationError
 
-from archipy.models.errors import InvalidArgumentError
+from archipy.models.errors import BaseError, InvalidArgumentError
 
 # Workflow code runs in a sandbox that re-imports modules; passing the config module through keeps workflows on the
 # global config the host process set, instead of a fresh, unset copy.
@@ -29,6 +30,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 # Type imports for generic base classes
+
+HTTP_CLIENT_ERROR_MIN = 400
+HTTP_SERVER_ERROR_MIN = 500
 
 T = TypeVar("T")
 R = TypeVar("R")
@@ -255,6 +259,14 @@ class BaseActivity[T, R]:
 
         except Exception as error:
             await self._handle_error(activity_input, error)
+            if self._is_non_retryable(error):
+                # Retrying cannot fix a client-side error, so fail the activity at once; the code names the cause
+                # without carrying the (possibly sensitive) error message.
+                raise ApplicationError(
+                    type(error).__name__,
+                    type=getattr(error, "code", type(error).__name__),
+                    non_retryable=True,
+                ) from error
             raise
         else:
             return result
@@ -316,14 +328,28 @@ class BaseActivity[T, R]:
             activity_input (T): The input data that was being processed.
             error (Exception): The exception that occurred.
         """
+        # The error type only: messages can carry user data, and the activity failure keeps the full error.
         self._log_activity_event(
             "execution_failed",
             {
                 "input_type": type(activity_input).__name__,
                 "error_type": type(error).__name__,
-                "error_message": str(error),
             },
         )
+
+    def _is_non_retryable(self, error: Exception) -> bool:
+        """Decide whether an activity error should fail the activity without retries.
+
+        By default ArchiPy errors with a 4xx HTTP status (validation, not found, permission, ...) are non-retryable,
+        since retrying the same input cannot succeed. Override to change the rule.
+
+        Args:
+            error (Exception): The error raised by the activity.
+
+        Returns:
+            bool: True to fail the activity at once, False to let the retry policy apply.
+        """
+        return isinstance(error, BaseError) and HTTP_CLIENT_ERROR_MIN <= error.http_status < HTTP_SERVER_ERROR_MIN
 
     def _is_cacheable(self) -> bool:
         """Determine if this activity's results should be cached.

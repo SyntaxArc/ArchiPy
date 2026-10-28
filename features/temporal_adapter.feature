@@ -276,3 +276,13 @@ Feature: Temporal Adapter Operations
       | sqlite    | on sqlite, original kept    |
       | starrocks | on starrocks, original kept |
       | oracle    | rejected                    |
+
+  Scenario Outline: An activity raising <error> is <outcome>
+    When a base activity raising <error> runs in an activity environment
+    Then the activity failure should be <outcome>
+
+    Examples: Activity errors
+      | error                | outcome                  |
+      | InvalidArgumentError | non-retryable            |
+      | NotFoundError        | non-retryable            |
+      | InternalError        | left to the retry policy |
