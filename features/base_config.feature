@@ -164,6 +164,7 @@ Feature: Base Configuration System
       | Temporal | only a client certificate               | rejected |
       | Temporal | a run timeout above the execution one   | rejected |
       | Temporal | a keep alive timeout above the interval | rejected |
+      | Temporal | a task timeout above the run timeout    | accepted |
 
   Scenario Outline: The Temporal <field> default is <expected>
     When a default Temporal configuration is built
@@ -172,6 +173,8 @@ Feature: Base Configuration System
     Examples: Temporal defaults
       | field                      | expected |
       | ACTIVITY_HEARTBEAT_TIMEOUT | None     |
+      | WORKFLOW_EXECUTION_TIMEOUT | None     |
+      | WORKFLOW_RUN_TIMEOUT       | None     |
 
   Scenario Outline: The <environment> environment reports its kind and log level
     When the environment type <environment> is inspected

@@ -139,7 +139,7 @@ class BaseWorkflow[T, R]:
         temporal_config = BaseConfig.global_config().TEMPORAL
 
         # Use config defaults if not provided
-        if execution_timeout is None:
+        if execution_timeout is None and temporal_config.WORKFLOW_EXECUTION_TIMEOUT is not None:
             execution_timeout = timedelta(seconds=temporal_config.WORKFLOW_EXECUTION_TIMEOUT)
 
         return await workflow.execute_child_workflow(

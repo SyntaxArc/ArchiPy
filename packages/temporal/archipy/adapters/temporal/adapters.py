@@ -259,6 +259,20 @@ class TemporalAdapter(TemporalPort):
         except OSError as error:
             raise InvalidArgumentError(additional_data={"original_error": str(error)}) from error
 
+    @staticmethod
+    def _timeout(override: int | None, default: int | None) -> timedelta | None:
+        """Resolve a timeout in seconds from a call override and its configured default.
+
+        Args:
+            override (int | None): The timeout passed to the call.
+            default (int | None): The configured timeout.
+
+        Returns:
+            timedelta | None: The timeout, or None when neither is set (unbounded).
+        """
+        seconds = override or default
+        return timedelta(seconds=seconds) if seconds else None
+
     def _build_retry_policy(self) -> RetryPolicy:
         """Build default retry policy from configuration.
 
@@ -323,9 +337,9 @@ class TemporalAdapter(TemporalPort):
             *positional_args,
             id=workflow_id,
             task_queue=task_queue,
-            execution_timeout=timedelta(seconds=execution_timeout or self.config.WORKFLOW_EXECUTION_TIMEOUT),
-            run_timeout=timedelta(seconds=run_timeout or self.config.WORKFLOW_RUN_TIMEOUT),
-            task_timeout=timedelta(seconds=task_timeout or self.config.WORKFLOW_TASK_TIMEOUT),
+            execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW_EXECUTION_TIMEOUT),
+            run_timeout=self._timeout(run_timeout, self.config.WORKFLOW_RUN_TIMEOUT),
+            task_timeout=self._timeout(task_timeout, self.config.WORKFLOW_TASK_TIMEOUT),
             retry_policy=self._build_retry_policy(),
             memo=memo,
             search_attributes=search_attributes,
@@ -375,9 +389,9 @@ class TemporalAdapter(TemporalPort):
             *positional_args,
             id=workflow_id,
             task_queue=task_queue,
-            execution_timeout=timedelta(seconds=execution_timeout or self.config.WORKFLOW_EXECUTION_TIMEOUT),
-            run_timeout=timedelta(seconds=run_timeout or self.config.WORKFLOW_RUN_TIMEOUT),
-            task_timeout=timedelta(seconds=task_timeout or self.config.WORKFLOW_TASK_TIMEOUT),
+            execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW_EXECUTION_TIMEOUT),
+            run_timeout=self._timeout(run_timeout, self.config.WORKFLOW_RUN_TIMEOUT),
+            task_timeout=self._timeout(task_timeout, self.config.WORKFLOW_TASK_TIMEOUT),
             retry_policy=self._build_retry_policy(),
         )
 
