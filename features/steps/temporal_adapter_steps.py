@@ -2068,3 +2068,20 @@ def step_temporal_client_has_tracing_interceptor(context):
     assert any(isinstance(item, MessagingOpenTelemetryInterceptor) for item in interceptors), (
         f"No MessagingOpenTelemetryInterceptor on the client: {interceptors!r}"
     )
+
+
+@when("the worker run ends without the handle")
+def step_worker_run_ends_outside_handle(context):
+    worker_handle = get_current_scenario_context(context).last_worker
+
+    async def _end_run() -> None:
+        await worker_handle._worker.shutdown()
+        await asyncio.sleep(0)
+
+    run_async(context, _end_run())
+
+
+@then("the worker should have no run error")
+def step_worker_no_run_error(context):
+    worker_handle = get_current_scenario_context(context).last_worker
+    assert worker_handle.run_error is None, worker_handle.run_error
