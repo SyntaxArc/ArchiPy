@@ -287,6 +287,18 @@ class TemporalAdapter(TemporalPort):
             non_retryable_error_types=self.config.RETRY_NON_RETRYABLE_ERROR_TYPES,
         )
 
+    def _build_workflow_retry_policy(self) -> RetryPolicy | None:
+        """Build the workflow-level retry policy, only when enabled in configuration.
+
+        A workflow retry reruns the whole workflow from the start, so it is opt-in.
+
+        Returns:
+            RetryPolicy | None: The configured retry policy, or None when workflow retries are disabled.
+        """
+        if not self.config.WORKFLOW_RETRY_ENABLED:
+            return None
+        return self._build_retry_policy()
+
     @override
     async def start_workflow(
         self,
@@ -340,7 +352,7 @@ class TemporalAdapter(TemporalPort):
             execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW_EXECUTION_TIMEOUT),
             run_timeout=self._timeout(run_timeout, self.config.WORKFLOW_RUN_TIMEOUT),
             task_timeout=self._timeout(task_timeout, self.config.WORKFLOW_TASK_TIMEOUT),
-            retry_policy=self._build_retry_policy(),
+            retry_policy=self._build_workflow_retry_policy(),
             memo=memo,
             search_attributes=search_attributes,
         )
@@ -392,7 +404,7 @@ class TemporalAdapter(TemporalPort):
             execution_timeout=self._timeout(execution_timeout, self.config.WORKFLOW_EXECUTION_TIMEOUT),
             run_timeout=self._timeout(run_timeout, self.config.WORKFLOW_RUN_TIMEOUT),
             task_timeout=self._timeout(task_timeout, self.config.WORKFLOW_TASK_TIMEOUT),
-            retry_policy=self._build_retry_policy(),
+            retry_policy=self._build_workflow_retry_policy(),
         )
 
     @override

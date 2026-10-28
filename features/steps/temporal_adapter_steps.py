@@ -24,6 +24,7 @@ from temporalio.runtime import LoggingConfig, TelemetryConfig, TelemetryFilter
 
 from archipy.adapters.temporal import runtime as temporal_runtime_module
 from archipy.adapters.temporal.adapters import TemporalAdapter
+from archipy.adapters.temporal.base import BaseActivity
 from archipy.adapters.temporal.runtime import TemporalRuntimeManager
 from archipy.adapters.temporal.tracing import MessagingOpenTelemetryInterceptor
 from archipy.adapters.temporal.worker import TemporalWorkerManager, WorkerHandle
@@ -2068,3 +2069,37 @@ def step_temporal_client_has_tracing_interceptor(context):
     assert any(isinstance(item, MessagingOpenTelemetryInterceptor) for item in interceptors), (
         f"No MessagingOpenTelemetryInterceptor on the client: {interceptors!r}"
     )
+
+
+@when("the worker run ends without the handle")
+def step_worker_run_ends_outside_handle(context):
+    worker_handle = get_current_scenario_context(context).last_worker
+
+    async def _end_run() -> None:
+        await worker_handle._worker.shutdown()
+        await asyncio.sleep(0)
+
+    run_async(context, _end_run())
+
+
+@then("the worker should have no run error")
+def step_worker_no_run_error(context):
+    worker_handle = get_current_scenario_context(context).last_worker
+    assert worker_handle.run_error is None, worker_handle.run_error
+class CacheKeyActivity(BaseActivity[str, str]):
+    """Minimal activity used to check cache key generation."""
+
+    async def _do_execute(self, activity_input: str) -> str:
+        return activity_input
+
+
+@when('I build the activity cache key for input "{activity_input}"')
+def step_build_activity_cache_key(context, activity_input):
+    key = CacheKeyActivity()._get_cache_key(activity_input)
+    get_current_scenario_context(context).store("activity_cache_key", key)
+
+
+@then('the activity cache key should be "{expected}"')
+def step_activity_cache_key_should_be(context, expected):
+    actual = get_current_scenario_context(context).get("activity_cache_key")
+    assert actual == expected, f"Expected {expected}, got {actual}"

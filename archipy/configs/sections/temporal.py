@@ -130,6 +130,14 @@ class TemporalConfig(BaseModel):
         description="Maximum workflow task processing time in seconds",
     )
 
+    WORKFLOW_RETRY_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Apply the RETRY_* policy to whole workflow executions started by the adapter "
+            "(a workflow retry reruns the workflow from the start)"
+        ),
+    )
+
     # Activity Timeout Settings
     ACTIVITY_START_TO_CLOSE_TIMEOUT: int = Field(
         default=30,

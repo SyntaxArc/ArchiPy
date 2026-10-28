@@ -177,6 +177,13 @@ Feature: Temporal Adapter Operations
     When I stop the worker
     Then the worker should be stopped
 
+  Scenario: Worker handle reports a run that ended outside the handle
+    When I start a worker for task queue "run-ended-queue" with workflows and activities
+    Then the worker should be running
+    When the worker run ends without the handle
+    Then the worker should be stopped
+    And the worker should have no run error
+
   Scenario: Get worker statistics
     When I start a worker for task queue "stats-queue" with workflows and activities
     And I get worker statistics
@@ -189,3 +196,12 @@ Feature: Temporal Adapter Operations
     Then the worker manager should have 2 workers
     When I shutdown all workers
     Then the worker manager should have 0 workers
+
+  Scenario Outline: Activity cache key is a stable content digest
+    When I build the activity cache key for input "<input>"
+    Then the activity cache key should be "CacheKeyActivity:<digest>"
+
+    Examples: Cache keys
+      | input    | digest                                                           |
+      | order-42 | 90140eb1a898639024d3752994bf84b1d40cfe639f70bcbdf7d047bf72274a1d |
+      | alice    | 0a50500b2a3435fe7472877eb22d48d47a228e946b0b991ab7402a8d00f6b32d |
