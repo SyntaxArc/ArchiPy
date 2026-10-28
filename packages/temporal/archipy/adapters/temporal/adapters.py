@@ -341,13 +341,13 @@ class TemporalAdapter(TemporalPort):
         """Resolve a timeout in seconds from a call override and its configured default.
 
         Args:
-            override (int | None): The timeout passed to the call.
+            override (int | None): The timeout passed to the call; 0 means no timeout, None uses the default.
             default (int | None): The configured timeout.
 
         Returns:
-            timedelta | None: The timeout, or None when neither is set (unbounded).
+            timedelta | None: The timeout, or None when unbounded.
         """
-        seconds = override or default
+        seconds = default if override is None else override
         return timedelta(seconds=seconds) if seconds else None
 
     @contextlib.asynccontextmanager

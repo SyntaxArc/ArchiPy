@@ -2498,3 +2498,16 @@ def step_activity_failure_outcome(context, outcome):
         assert isinstance(failure.__cause__, BaseError), repr(failure.__cause__)
     else:
         assert isinstance(failure, BaseError) and not isinstance(failure, ApplicationError), repr(failure)
+
+
+@when("I resolve a workflow timeout override of {override} against a configured {default:d} seconds")
+def step_resolve_timeout_override(context, override, default):
+    value = None if override == "none" else int(override)
+    get_current_scenario_context(context).store("resolved_timeout", TemporalAdapter._timeout(value, default))
+
+
+@then("the resolved workflow timeout should be {resolved}")
+def step_resolved_timeout(context, resolved):
+    actual = get_current_scenario_context(context).get("resolved_timeout")
+    expected = None if resolved == "none" else timedelta(seconds=int(resolved))
+    assert actual == expected, f"Expected {expected}, got {actual}"
