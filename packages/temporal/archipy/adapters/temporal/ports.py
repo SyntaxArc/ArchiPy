@@ -210,6 +210,7 @@ class TemporalPort:
         query: str | None = None,
         page_size: int | None = None,
         next_page_token: bytes | None = None,
+        limit: int | None = None,
     ) -> list[WorkflowExecution]:
         """List workflow executions matching the given criteria.
 
@@ -220,6 +221,8 @@ class TemporalPort:
                 Defaults to None (server default).
             next_page_token (bytes, optional): Token for pagination.
                 Defaults to None (first page).
+            limit (int, optional): Maximum number of executions to return. Defaults to None, which loads every
+                matching execution into memory; set it, or use ``iter_workflows``, for large namespaces.
 
         Returns:
             list[WorkflowExecution]: The workflow executions matching the query.

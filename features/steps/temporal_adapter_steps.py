@@ -2162,3 +2162,14 @@ def step_cancel_request_reason(context, workflow_id, reason):
 
     causes = run_async(context, _cancel_causes())
     assert reason in causes, f"Expected cancel reason {reason!r}, got {causes}"
+@when('I list workflows with query "{query}" and limit {limit:d}')
+def step_list_workflows_with_limit(context, query, limit):
+    adapter = get_temporal_adapter(context)
+    workflows = run_async(context, adapter.list_workflows(query=query, limit=limit))
+    get_current_scenario_context(context).workflow_list = workflows
+
+
+@then("the workflow list should contain exactly {count:d} workflow")
+def step_workflow_list_exact(context, count):
+    workflows = get_current_scenario_context(context).workflow_list
+    assert len(workflows) == count, f"Expected {count} workflows, got {len(workflows)}"
