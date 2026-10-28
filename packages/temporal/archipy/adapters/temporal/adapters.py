@@ -24,6 +24,7 @@ from temporalio.client import (
     ScheduleOverlapPolicy,
     SchedulePolicy,
     ScheduleSpec,
+    ScheduleUpdate,
     TLSConfig,
     WorkflowExecution,
     WorkflowExecutionAsyncIterator,
@@ -55,7 +56,13 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Sequence
 
-    from temporalio.client import Interceptor
+    from temporalio.client import (
+        Interceptor,
+        ScheduleDescription,
+        ScheduleHandle,
+        ScheduleListDescription,
+        ScheduleUpdateInput,
+    )
     from temporalio.common import WorkflowIDConflictPolicy, WorkflowIDReusePolicy
     from temporalio.converter import DataConverter
     from temporalio.runtime import Runtime
@@ -752,8 +759,23 @@ class TemporalAdapter(TemporalPort):
         task_queue: str,
         workflow_id: str | None = None,
         schedule_policy: SchedulePolicy | None = None,
+        args: Sequence[Any] | None = None,
+        memo: dict[str, Any] | None = None,
     ) -> None:
-        """Create a schedule for a workflow."""
+        """Create a schedule for a workflow.
+
+        Args:
+            schedule_id (str): Unique schedule ID.
+            workflow_class (Any): The workflow class or workflow type name to start.
+            spec (ScheduleSpec): When the schedule fires (intervals, calendars, cron).
+            task_queue (str): Task queue of the started workflows.
+            workflow_id (str, optional): Base ID of the started workflows; the server appends the fire time.
+                Defaults to the schedule ID.
+            schedule_policy (SchedulePolicy, optional): Overlap, catchup window and pause-on-failure policy.
+                Defaults to skipping overlapping runs.
+            args (Sequence[Any], optional): Arguments of the started workflows. Defaults to None.
+            memo (dict[str, Any], optional): Memo of the started workflows. Defaults to None.
+        """
         async with self._mapped_errors("create_schedule", schedule_id):
             client = await self.get_client()
 
@@ -761,8 +783,10 @@ class TemporalAdapter(TemporalPort):
             sched = Schedule(
                 action=ScheduleActionStartWorkflow(
                     workflow=workflow_class,
+                    args=list(args or []),
                     id=workflow_execution_id,
                     task_queue=task_queue,
+                    memo=memo,
                 ),
                 spec=spec,
                 policy=schedule_policy
@@ -780,3 +804,101 @@ class TemporalAdapter(TemporalPort):
             client = await self.get_client()
             handle = client.get_schedule_handle(schedule_id)
             await handle.delete()
+
+    async def _schedule_handle(self, schedule_id: str) -> ScheduleHandle:
+        """Get a handle to an existing schedule.
+
+        Args:
+            schedule_id (str): The schedule ID.
+
+        Returns:
+            ScheduleHandle: Handle to the schedule.
+        """
+        client = await self.get_client()
+        return client.get_schedule_handle(schedule_id)
+
+    async def pause_schedule(self, schedule_id: str, note: str | None = None) -> None:
+        """Pause a schedule so it stops firing.
+
+        Args:
+            schedule_id (str): The schedule ID.
+            note (str, optional): Why the schedule is paused. Defaults to None.
+        """
+        async with self._mapped_errors("pause_schedule", schedule_id):
+            await (await self._schedule_handle(schedule_id)).pause(note=note)
+
+    async def unpause_schedule(self, schedule_id: str, note: str | None = None) -> None:
+        """Resume a paused schedule.
+
+        Args:
+            schedule_id (str): The schedule ID.
+            note (str, optional): Why the schedule is resumed. Defaults to None.
+        """
+        async with self._mapped_errors("unpause_schedule", schedule_id):
+            await (await self._schedule_handle(schedule_id)).unpause(note=note)
+
+    async def trigger_schedule(self, schedule_id: str, overlap: ScheduleOverlapPolicy | None = None) -> None:
+        """Start the schedule's action now, outside its spec.
+
+        Args:
+            schedule_id (str): The schedule ID.
+            overlap (ScheduleOverlapPolicy, optional): Overlap policy for this run. Defaults to the schedule's.
+        """
+        async with self._mapped_errors("trigger_schedule", schedule_id):
+            await (await self._schedule_handle(schedule_id)).trigger(overlap=overlap)
+
+    async def describe_schedule(self, schedule_id: str) -> ScheduleDescription:
+        """Get a schedule's definition, state and recent actions.
+
+        Args:
+            schedule_id (str): The schedule ID.
+
+        Returns:
+            ScheduleDescription: The schedule description.
+        """
+        async with self._mapped_errors("describe_schedule", schedule_id):
+            return await (await self._schedule_handle(schedule_id)).describe()
+
+    async def update_schedule(
+        self,
+        schedule_id: str,
+        spec: ScheduleSpec | None = None,
+        schedule_policy: SchedulePolicy | None = None,
+    ) -> None:
+        """Replace a schedule's spec and/or policy, keeping its action and state.
+
+        Args:
+            schedule_id (str): The schedule ID.
+            spec (ScheduleSpec, optional): New spec. Defaults to None (unchanged).
+            schedule_policy (SchedulePolicy, optional): New policy. Defaults to None (unchanged).
+        """
+
+        def _update(update_input: ScheduleUpdateInput) -> ScheduleUpdate:
+            schedule = update_input.description.schedule
+            if spec is not None:
+                schedule.spec = spec
+            if schedule_policy is not None:
+                schedule.policy = schedule_policy
+            return ScheduleUpdate(schedule=schedule)
+
+        async with self._mapped_errors("update_schedule", schedule_id):
+            await (await self._schedule_handle(schedule_id)).update(_update)
+
+    async def list_schedules(self, query: str | None = None, limit: int | None = None) -> list[ScheduleListDescription]:
+        """List schedules, optionally filtered by a visibility query.
+
+        Args:
+            query (str, optional): Visibility list filter. Defaults to None (all schedules).
+            limit (int, optional): Maximum number of schedules to return. Defaults to None (all).
+
+        Returns:
+            list[ScheduleListDescription]: The matching schedules.
+        """
+        async with self._mapped_errors("list_schedules", None):
+            client = await self.get_client()
+            schedules: list[ScheduleListDescription] = []
+            async for schedule in await client.list_schedules(query):
+                if limit is not None and len(schedules) >= limit:
+                    break
+                schedules.append(schedule)
+            return schedules

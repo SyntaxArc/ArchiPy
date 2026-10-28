@@ -2329,3 +2329,36 @@ def step_error_is_archipy_error(context, error_name):
     error = get_current_scenario_context(context).error
     expected = getattr(archipy_errors, error_name, None) or getattr(temporal_errors, error_name)
     assert isinstance(error, expected), f"Expected {error_name}, got {type(error).__name__}: {error!r}"
+
+
+@when('I pause schedule "{schedule_id}" with note "{note}"')
+def step_pause_schedule(context, schedule_id, note):
+    run_async(context, get_temporal_adapter(context).pause_schedule(schedule_id, note=note))
+
+
+@when('I unpause schedule "{schedule_id}"')
+def step_unpause_schedule(context, schedule_id):
+    run_async(context, get_temporal_adapter(context).unpause_schedule(schedule_id))
+
+
+@when('I trigger schedule "{schedule_id}"')
+def step_trigger_schedule(context, schedule_id):
+    run_async(context, get_temporal_adapter(context).trigger_schedule(schedule_id))
+
+
+@then('schedule "{schedule_id}" should be paused')
+def step_schedule_paused(context, schedule_id):
+    description = run_async(context, get_temporal_adapter(context).describe_schedule(schedule_id))
+    assert description.schedule.state.paused, "Expected the schedule to be paused"
+
+
+@then('schedule "{schedule_id}" should not be paused')
+def step_schedule_not_paused(context, schedule_id):
+    description = run_async(context, get_temporal_adapter(context).describe_schedule(schedule_id))
+    assert not description.schedule.state.paused, "Expected the schedule to be running"
+
+
+@then('the schedule list should contain "{schedule_id}"')
+def step_schedule_list_contains(context, schedule_id):
+    schedules = run_async(context, get_temporal_adapter(context).list_schedules())
+    assert schedule_id in [schedule.id for schedule in schedules], [schedule.id for schedule in schedules]
