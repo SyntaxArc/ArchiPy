@@ -14,7 +14,7 @@ import warnings
 from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar, override
-from uuid import uuid4
+from uuid import uuid7
 
 from temporalio.client import (
     Client,
@@ -494,7 +494,7 @@ class TemporalAdapter(TemporalPort):
         async with self._mapped_errors("start_workflow", workflow_id):
             client = await self.get_client()
 
-            workflow_id = workflow_id or str(uuid4())
+            workflow_id = workflow_id or str(uuid7())
             task_queue = task_queue or self.config.TASK_QUEUE
 
             # Build positional args: only include arg if it's not None,
@@ -554,7 +554,7 @@ class TemporalAdapter(TemporalPort):
         async with self._mapped_errors("execute_workflow", workflow_id):
             client = await self.get_client()
 
-            workflow_id = workflow_id or str(uuid4())
+            workflow_id = workflow_id or str(uuid7())
             task_queue = task_queue or self.config.TASK_QUEUE
 
             # Build positional args: only include arg if it's not None,
