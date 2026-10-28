@@ -2108,55 +2108,6 @@ def step_list_workflows_with_limit(context, query, limit):
     get_current_scenario_context(context).workflow_list = workflows
 
 
-@then('the activity cache key should be "{expected}"')
-def step_activity_cache_key_should_be(context, expected):
-    actual = get_current_scenario_context(context).get("activity_cache_key")
-    assert actual == expected, f"Expected {expected}, got {actual}"
-@when("the worker run ends without the handle")
-def step_worker_run_ends_outside_handle(context):
-    worker_handle = get_current_scenario_context(context).last_worker
-
-    async def _end_run() -> None:
-        await worker_handle._worker.shutdown()
-        await asyncio.sleep(0)
-
-    run_async(context, _end_run())
-
-
-@then("the worker should have no run error")
-def step_worker_no_run_error(context):
-    worker_handle = get_current_scenario_context(context).last_worker
-    assert worker_handle.run_error is None, worker_handle.run_error
-@when('I execute workflow "EchoOrderWorkflow" with order "{order_id}" totalling {total}')
-def step_execute_echo_order(context, order_id, total):
-    order = OrderPayload(order_id=order_id, total=Decimal(total), placed_at=datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC))
-    adapter = get_temporal_adapter(context)
-    scenario_context = get_current_scenario_context(context)
-    scenario_context.store("sent_order", order)
-    result = run_async(context, adapter.execute_workflow(EchoOrderWorkflow, order, task_queue="test-queue"))
-    scenario_context.store("echoed_order", result)
-
-
-@then("the echoed order should equal the sent order")
-def step_echoed_order_equal(context):
-    scenario_context = get_current_scenario_context(context)
-    echoed = scenario_context.get("echoed_order")
-    assert isinstance(echoed, OrderPayload), f"Expected OrderPayload, got {type(echoed).__name__}"
-    assert echoed == scenario_context.get("sent_order"), echoed
-@when("{count:d} callers get the client of a new Temporal adapter at once")
-def step_concurrent_get_client(context, count):
-    adapter = TemporalAdapter(get_temporal_adapter(context).config)
-
-    async def _get_all() -> list[Any]:
-        return await asyncio.gather(*(adapter.get_client() for _ in range(count)))
-
-    get_current_scenario_context(context).store("concurrent_clients", run_async(context, _get_all()))
-
-
-@then("they should all receive the same client")
-def step_same_client(context):
-    clients = get_current_scenario_context(context).get("concurrent_clients")
-    assert len({id(client) for client in clients}) == 1, "Expected one shared client"
 @then("the workflow list should contain exactly {count:d} workflow")
 def step_workflow_list_exact(context, count):
     workflows = get_current_scenario_context(context).workflow_list
@@ -2182,17 +2133,107 @@ def step_cancel_request_reason(context, workflow_id, reason):
 
     causes = run_async(context, _cancel_causes())
     assert reason in causes, f"Expected cancel reason {reason!r}, got {causes}"
-@when('I list workflows with query "{query}" and limit {limit:d}')
-def step_list_workflows_with_limit(context, query, limit):
-    adapter = get_temporal_adapter(context)
-    workflows = run_async(context, adapter.list_workflows(query=query, limit=limit))
-    get_current_scenario_context(context).workflow_list = workflows
+@when("{count:d} callers get the client of a new Temporal adapter at once")
+def step_concurrent_get_client(context, count):
+    adapter = TemporalAdapter(get_temporal_adapter(context).config)
+
+    async def _get_all() -> list[Any]:
+        return await asyncio.gather(*(adapter.get_client() for _ in range(count)))
+
+    get_current_scenario_context(context).store("concurrent_clients", run_async(context, _get_all()))
 
 
-@then("the workflow list should contain exactly {count:d} workflow")
-def step_workflow_list_exact(context, count):
-    workflows = get_current_scenario_context(context).workflow_list
-    assert len(workflows) == count, f"Expected {count} workflows, got {len(workflows)}"
+@then("they should all receive the same client")
+def step_same_client(context):
+    clients = get_current_scenario_context(context).get("concurrent_clients")
+    assert len({id(client) for client in clients}) == 1, "Expected one shared client"
+@when("the worker run ends without the handle")
+def step_worker_run_ends_outside_handle(context):
+    worker_handle = get_current_scenario_context(context).last_worker
+
+    async def _end_run() -> None:
+        await worker_handle._worker.shutdown()
+        await asyncio.sleep(0)
+
+    run_async(context, _end_run())
+
+
+@then("the worker should have no run error")
+def step_worker_no_run_error(context):
+    worker_handle = get_current_scenario_context(context).last_worker
+    assert worker_handle.run_error is None, worker_handle.run_error
+class CacheKeyActivity(BaseActivity[str, str]):
+    """Minimal activity used to check cache key generation."""
+
+    async def _do_execute(self, activity_input: str) -> str:
+        return activity_input
+
+
+@when('I copy a postgres atomic activity with database type "{db_type}"')
+def step_copy_atomic_activity(context, db_type):
+    scenario_context = get_current_scenario_context(context)
+    original = PostgresAtomicActivity()
+    scenario_context.store("atomic_original", original)
+    try:
+        scenario_context.store("atomic_copy", original.with_db_type(db_type))
+        scenario_context.store("atomic_error", None)
+    except InvalidArgumentError as error:
+        scenario_context.store("atomic_error", error)
+
+
+@then("the atomic activity copy should be {outcome}")
+def step_atomic_activity_copy_outcome(context, outcome):
+    scenario_context = get_current_scenario_context(context)
+    if outcome == "rejected":
+        assert isinstance(scenario_context.get("atomic_error"), InvalidArgumentError)
+        return
+    expected = outcome.removeprefix("on ").split(",")[0]
+    copied = scenario_context.get("atomic_copy")
+    assert copied.db_type == expected, copied.db_type
+    assert scenario_context.get("atomic_original").db_type == "postgres"
+@when('I build the activity cache key for input "{activity_input}"')
+def step_build_activity_cache_key(context, activity_input):
+    key = CacheKeyActivity()._get_cache_key(activity_input)
+    get_current_scenario_context(context).store("activity_cache_key", key)
+
+
+@then('the activity cache key should be "{expected}"')
+def step_activity_cache_key_should_be(context, expected):
+    actual = get_current_scenario_context(context).get("activity_cache_key")
+    assert actual == expected, f"Expected {expected}, got {actual}"
+
+
+class RaisingActivity(BaseActivity[str, str]):
+    """Activity that raises the ArchiPy error named by its input."""
+
+    async def _do_execute(self, activity_input: str) -> str:
+        import archipy.models.errors as archipy_errors
+
+        raise getattr(archipy_errors, activity_input)()
+
+
+@when("a base activity raising {error_name} runs in an activity environment")
+def step_run_raising_activity(context, error_name):
+    from temporalio.testing import ActivityEnvironment
+
+    scenario_context = get_current_scenario_context(context)
+    try:
+        run_async(context, ActivityEnvironment().run(RaisingActivity().execute, error_name))
+        scenario_context.store("activity_failure", None)
+    except Exception as error:
+        scenario_context.store("activity_failure", error)
+
+
+@then("the activity failure should be {outcome}")
+def step_activity_failure_outcome(context, outcome):
+    from temporalio.exceptions import ApplicationError
+
+    failure = get_current_scenario_context(context).get("activity_failure")
+    if outcome == "non-retryable":
+        assert isinstance(failure, ApplicationError) and failure.non_retryable, repr(failure)
+        assert isinstance(failure.__cause__, BaseError), repr(failure.__cause__)
+    else:
+        assert isinstance(failure, BaseError) and not isinstance(failure, ApplicationError), repr(failure)
 
 
 @when('I start workflow "{workflow_name}" with workflow id "{workflow_id}" twice using conflict policy {policy}')
@@ -2397,104 +2438,3 @@ def step_deprecation_warning_emitted(context):
 
 class PostgresAtomicActivity(AtomicActivity[str, str]):
     """Minimal atomic activity used to check ``with_db_type``."""
-@when("{count:d} callers get the client of a new Temporal adapter at once")
-def step_concurrent_get_client(context, count):
-    adapter = TemporalAdapter(get_temporal_adapter(context).config)
-
-    async def _get_all() -> list[Any]:
-        return await asyncio.gather(*(adapter.get_client() for _ in range(count)))
-
-    get_current_scenario_context(context).store("concurrent_clients", run_async(context, _get_all()))
-
-
-@then("they should all receive the same client")
-def step_same_client(context):
-    clients = get_current_scenario_context(context).get("concurrent_clients")
-    assert len({id(client) for client in clients}) == 1, "Expected one shared client"
-@when("the worker run ends without the handle")
-def step_worker_run_ends_outside_handle(context):
-    worker_handle = get_current_scenario_context(context).last_worker
-
-    async def _end_run() -> None:
-        await worker_handle._worker.shutdown()
-        await asyncio.sleep(0)
-
-    run_async(context, _end_run())
-
-
-@then("the worker should have no run error")
-def step_worker_no_run_error(context):
-    worker_handle = get_current_scenario_context(context).last_worker
-    assert worker_handle.run_error is None, worker_handle.run_error
-class CacheKeyActivity(BaseActivity[str, str]):
-    """Minimal activity used to check cache key generation."""
-
-    async def _do_execute(self, activity_input: str) -> str:
-        return activity_input
-
-
-@when('I copy a postgres atomic activity with database type "{db_type}"')
-def step_copy_atomic_activity(context, db_type):
-    scenario_context = get_current_scenario_context(context)
-    original = PostgresAtomicActivity()
-    scenario_context.store("atomic_original", original)
-    try:
-        scenario_context.store("atomic_copy", original.with_db_type(db_type))
-        scenario_context.store("atomic_error", None)
-    except InvalidArgumentError as error:
-        scenario_context.store("atomic_error", error)
-
-
-@then("the atomic activity copy should be {outcome}")
-def step_atomic_activity_copy_outcome(context, outcome):
-    scenario_context = get_current_scenario_context(context)
-    if outcome == "rejected":
-        assert isinstance(scenario_context.get("atomic_error"), InvalidArgumentError)
-        return
-    expected = outcome.removeprefix("on ").split(",")[0]
-    copied = scenario_context.get("atomic_copy")
-    assert copied.db_type == expected, copied.db_type
-    assert scenario_context.get("atomic_original").db_type == "postgres"
-@when('I build the activity cache key for input "{activity_input}"')
-def step_build_activity_cache_key(context, activity_input):
-    key = CacheKeyActivity()._get_cache_key(activity_input)
-    get_current_scenario_context(context).store("activity_cache_key", key)
-
-
-@then('the activity cache key should be "{expected}"')
-def step_activity_cache_key_should_be(context, expected):
-    actual = get_current_scenario_context(context).get("activity_cache_key")
-    assert actual == expected, f"Expected {expected}, got {actual}"
-
-
-class RaisingActivity(BaseActivity[str, str]):
-    """Activity that raises the ArchiPy error named by its input."""
-
-    async def _do_execute(self, activity_input: str) -> str:
-        import archipy.models.errors as archipy_errors
-
-        raise getattr(archipy_errors, activity_input)()
-
-
-@when("a base activity raising {error_name} runs in an activity environment")
-def step_run_raising_activity(context, error_name):
-    from temporalio.testing import ActivityEnvironment
-
-    scenario_context = get_current_scenario_context(context)
-    try:
-        run_async(context, ActivityEnvironment().run(RaisingActivity().execute, error_name))
-        scenario_context.store("activity_failure", None)
-    except Exception as error:
-        scenario_context.store("activity_failure", error)
-
-
-@then("the activity failure should be {outcome}")
-def step_activity_failure_outcome(context, outcome):
-    from temporalio.exceptions import ApplicationError
-
-    failure = get_current_scenario_context(context).get("activity_failure")
-    if outcome == "non-retryable":
-        assert isinstance(failure, ApplicationError) and failure.non_retryable, repr(failure)
-        assert isinstance(failure.__cause__, BaseError), repr(failure.__cause__)
-    else:
-        assert isinstance(failure, BaseError) and not isinstance(failure, ApplicationError), repr(failure)
