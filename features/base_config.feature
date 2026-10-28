@@ -173,10 +173,10 @@ Feature: Base Configuration System
     Examples: Temporal defaults
       | field                      | expected |
       | ACTIVITY_HEARTBEAT_TIMEOUT | None     |
-      | WORKFLOW_RETRY_ENABLED     | False    |
+      | PYDANTIC_DATA_CONVERTER    | True     |
       | WORKFLOW_EXECUTION_TIMEOUT | None     |
       | WORKFLOW_RUN_TIMEOUT       | None     |
-      | PYDANTIC_DATA_CONVERTER    | True     |
+      | WORKFLOW_RETRY_ENABLED     | False    |
 
   Scenario Outline: The <environment> environment reports its kind and log level
     When the environment type <environment> is inspected
