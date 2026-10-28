@@ -49,6 +49,7 @@ from features.test_workflows.temporal_activities import (
     status_activity,
 )
 from features.test_workflows.temporal_workflows import (
+    BaseGreetingWorkflow,
     CalculatorWorkflow,
     ConcurrentActivitiesWorkflow,
     DataProcessingWorkflow,
@@ -240,6 +241,7 @@ async def start_test_worker(
             ConcurrentActivitiesWorkflow,
             OrderSagaWorkflow,
             NotificationWorkflow,
+            BaseGreetingWorkflow,
         ]
 
     if activities is None:
@@ -349,6 +351,7 @@ def step_start_worker_with_workflow(context, task_queue, workflow_name):
         "LongRunningWorkflow": LongRunningWorkflow,
         "ConcurrentActivitiesWorkflow": ConcurrentActivitiesWorkflow,
         "OrderSagaWorkflow": OrderSagaWorkflow,
+        "BaseGreetingWorkflow": BaseGreetingWorkflow,
     }
 
     workflow_class = workflow_map.get(workflow_name)

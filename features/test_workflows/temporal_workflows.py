@@ -29,6 +29,8 @@ with workflow.unsafe.imports_passed_through():
         ship_order,
     )
 
+    from archipy.adapters.temporal.base import BaseWorkflow
+
 
 @workflow.defn(name="GreetingWorkflow")
 class GreetingWorkflow:
@@ -459,3 +461,20 @@ class OrderSagaWorkflow:
                     self._compensations.append(name)
             self._status = "compensated"
         return self.get_state()
+
+
+@workflow.defn(name="BaseGreetingWorkflow")
+class BaseGreetingWorkflow(BaseWorkflow[str, str]):
+    """Greeting workflow built on ``BaseWorkflow`` to check its config-driven activity defaults in the sandbox."""
+
+    @workflow.run
+    async def run(self, workflow_input: str) -> str:
+        """Greet through the base class activity helper.
+
+        Args:
+            workflow_input (str): Name to greet.
+
+        Returns:
+            str: Greeting message from the activity.
+        """
+        return await self._execute_activity_with_retry(greeting_activity, workflow_input)

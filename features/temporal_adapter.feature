@@ -21,6 +21,11 @@ Feature: Temporal Adapter Operations
     When I execute workflow "GreetingWorkflow" with argument "Bob"
     Then the workflow result should be "Hello, Bob!"
 
+  Scenario: BaseWorkflow runs activities with config defaults inside the sandbox
+    Given a worker is started for task queue "test-queue" with BaseGreetingWorkflow
+    When I execute workflow "BaseGreetingWorkflow" with argument "Zed"
+    Then the workflow result should be "Hello, Zed!"
+
   Scenario: Cancel running workflow
     Given a worker is started for task queue "test-queue" with SignalQueryWorkflow
     When I start workflow "SignalQueryWorkflow" with workflow id "test-cancel-1"
