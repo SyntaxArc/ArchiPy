@@ -26,6 +26,13 @@ Feature: Temporal Schedules, Timeouts and Errors
     Then schedule "manage-schedule-1" should not be paused
     And the schedule list should contain "manage-schedule-1"
 
+  Scenario: The deprecated stop_schedule warns and still deletes the schedule
+    Given a worker is started for task queue "test-queue" with ScheduledWorkflow
+    When I create a schedule "deprecated-stop-1" for workflow "ScheduledWorkflow" with interval 3600 seconds
+    And I call the deprecated stop_schedule for "deprecated-stop-1"
+    Then a DeprecationWarning should have been emitted
+    And the schedule "deprecated-stop-1" should be stopped
+
   Scenario: Schedule with interval spec
     Given a worker is started for task queue "test-queue" with ScheduledWorkflow
     When I create a schedule "interval-schedule-1" with interval spec:

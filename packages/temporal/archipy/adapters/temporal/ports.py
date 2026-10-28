@@ -287,8 +287,18 @@ class TemporalPort:
 
     @abstractmethod
     async def stop_schedule(self, schedule_id: str) -> None:
-        """Stop a schedule."""
+        """Delete a schedule (deprecated name, use ``delete_schedule``)."""
         raise NotImplementedError
+
+    async def delete_schedule(self, schedule_id: str) -> None:
+        """Delete a schedule permanently; ``pause_schedule`` stops it while keeping it.
+
+        Defaults to ``stop_schedule`` so existing implementations keep working.
+
+        Args:
+            schedule_id (str): The schedule ID.
+        """
+        await self.stop_schedule(schedule_id)
 
 
 class WorkerPort:

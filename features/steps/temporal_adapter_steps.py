@@ -865,7 +865,7 @@ def step_stop_schedule(context, schedule_id):
     adapter = get_temporal_adapter(context)
 
     async def run():
-        await adapter.stop_schedule(schedule_id)
+        await adapter.delete_schedule(schedule_id)
 
     run_async(context, run())
     context.logger.info(f"Stopped schedule {schedule_id}")
@@ -2362,3 +2362,20 @@ def step_schedule_not_paused(context, schedule_id):
 def step_schedule_list_contains(context, schedule_id):
     schedules = run_async(context, get_temporal_adapter(context).list_schedules())
     assert schedule_id in [schedule.id for schedule in schedules], [schedule.id for schedule in schedules]
+
+
+@when('I call the deprecated stop_schedule for "{schedule_id}"')
+def step_call_deprecated_stop_schedule(context, schedule_id):
+    import warnings
+
+    adapter = get_temporal_adapter(context)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        run_async(context, adapter.stop_schedule(schedule_id))
+    get_current_scenario_context(context).store("caught_warnings", caught)
+
+
+@then("a DeprecationWarning should have been emitted")
+def step_deprecation_warning_emitted(context):
+    caught = get_current_scenario_context(context).get("caught_warnings")
+    assert any(issubclass(item.category, DeprecationWarning) for item in caught), [str(item.message) for item in caught]
