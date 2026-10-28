@@ -246,6 +246,14 @@ Feature: Temporal Adapter Operations
     When 5 callers get the client of a new Temporal adapter at once
     Then they should all receive the same client
 
+  Scenario: The messaging tracing interceptor still finds the private temporalio span hook
+    When I build the messaging tracing workflow interceptor class
+    Then the workflow interceptor class should be built without a ConfigurationError
+
+  Scenario: A Temporal Runtime that cannot be built raises a ConfigurationError
+    When I build a Temporal Runtime exporting metrics to "not a url"
+    Then building the Temporal Runtime should raise a ConfigurationError
+
   Scenario Outline: Activity cache key is a stable content digest
     When I build the activity cache key for input "<input>"
     Then the activity cache key should be "CacheKeyActivity:<digest>"
@@ -254,15 +262,3 @@ Feature: Temporal Adapter Operations
       | input    | digest                                                           |
       | order-42 | 90140eb1a898639024d3752994bf84b1d40cfe639f70bcbdf7d047bf72274a1d |
       | alice    | 0a50500b2a3435fe7472877eb22d48d47a228e946b0b991ab7402a8d00f6b32d |
-
-  Scenario: Concurrent first calls share one Temporal client
-    When 5 callers get the client of a new Temporal adapter at once
-    Then they should all receive the same client
-
-  Scenario: The messaging tracing interceptor still finds the private temporalio span hook
-    When I build the messaging tracing workflow interceptor class
-    Then the workflow interceptor class should be built without a ConfigurationError
-
-  Scenario: A Temporal Runtime that cannot be built raises a ConfigurationError
-    When I build a Temporal Runtime exporting metrics to "not a url"
-    Then building the Temporal Runtime should raise a ConfigurationError
