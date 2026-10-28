@@ -28,6 +28,12 @@ Feature: Temporal Adapter Operations
     And I cancel workflow "test-cancel-1"
     Then the workflow "test-cancel-1" should be cancelled
 
+  Scenario: Cancel running workflow with a reason
+    Given a worker is started for task queue "test-queue" with SignalQueryWorkflow
+    When I start workflow "SignalQueryWorkflow" with workflow id "test-cancel-reason-1"
+    And I request cancellation of workflow "test-cancel-reason-1" with reason "user abort"
+    Then the cancel request of workflow "test-cancel-reason-1" should carry reason "user abort"
+
   Scenario: Terminate running workflow
     Given a worker is started for task queue "test-queue" with SignalQueryWorkflow
     When I start workflow "SignalQueryWorkflow" with workflow id "test-terminate-1"
@@ -184,6 +190,13 @@ Feature: Temporal Adapter Operations
     When I stop the worker
     Then the worker should be stopped
 
+  Scenario: Worker handle reports a run that ended outside the handle
+    When I start a worker for task queue "run-ended-queue" with workflows and activities
+    Then the worker should be running
+    When the worker run ends without the handle
+    Then the worker should be stopped
+    And the worker should have no run error
+
   Scenario: Get worker statistics
     When I start a worker for task queue "stats-queue" with workflows and activities
     And I get worker statistics
@@ -196,3 +209,15 @@ Feature: Temporal Adapter Operations
     Then the worker manager should have 2 workers
     When I shutdown all workers
     Then the worker manager should have 0 workers
+
+  Scenario: Concurrent first calls share one Temporal client
+    When 5 callers get the client of a new Temporal adapter at once
+    Then they should all receive the same client
+  Scenario Outline: Activity cache key is a stable content digest
+    When I build the activity cache key for input "<input>"
+    Then the activity cache key should be "CacheKeyActivity:<digest>"
+
+    Examples: Cache keys
+      | input    | digest                                                           |
+      | order-42 | 90140eb1a898639024d3752994bf84b1d40cfe639f70bcbdf7d047bf72274a1d |
+      | alice    | 0a50500b2a3435fe7472877eb22d48d47a228e946b0b991ab7402a8d00f6b32d |

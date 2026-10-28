@@ -114,20 +114,28 @@ class TemporalConfig(BaseModel):
     TLS_CLIENT_KEY: str | None = Field(default=None, description="Path to TLS client private key")
 
     # Workflow Timeout Settings
-    WORKFLOW_EXECUTION_TIMEOUT: int = Field(
-        default=300,
+    WORKFLOW_EXECUTION_TIMEOUT: int | None = Field(
+        default=None,
         ge=1,
-        description="Maximum workflow execution time in seconds",
+        description="Maximum workflow execution time in seconds, retries included (None: unbounded)",
     )
-    WORKFLOW_RUN_TIMEOUT: int = Field(
-        default=60,
+    WORKFLOW_RUN_TIMEOUT: int | None = Field(
+        default=None,
         ge=1,
-        description="Maximum single workflow run time in seconds",
+        description="Maximum single workflow run time in seconds (None: unbounded)",
     )
     WORKFLOW_TASK_TIMEOUT: int = Field(
         default=30,
         ge=1,
         description="Maximum workflow task processing time in seconds",
+    )
+
+    WORKFLOW_RETRY_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Apply the RETRY_* policy to whole workflow executions started by the adapter "
+            "(a workflow retry reruns the workflow from the start)"
+        ),
     )
 
     # Activity Timeout Settings
@@ -185,10 +193,12 @@ class TemporalConfig(BaseModel):
     @model_validator(mode="after")
     def validate_timeout_hierarchy(self) -> Self:
         """Validate timeout configuration hierarchy."""
-        if self.WORKFLOW_RUN_TIMEOUT >= self.WORKFLOW_EXECUTION_TIMEOUT:
-            raise InvalidArgumentError()
-
-        if self.WORKFLOW_TASK_TIMEOUT >= self.WORKFLOW_RUN_TIMEOUT:
+        # The task timeout bounds a single workflow task, so it is independent of the run timeout.
+        if (
+            self.WORKFLOW_RUN_TIMEOUT is not None
+            and self.WORKFLOW_EXECUTION_TIMEOUT is not None
+            and self.WORKFLOW_RUN_TIMEOUT > self.WORKFLOW_EXECUTION_TIMEOUT
+        ):
             raise InvalidArgumentError()
 
         return self
