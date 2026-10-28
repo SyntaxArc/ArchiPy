@@ -194,3 +194,7 @@ Feature: Temporal Adapter Operations
     Then the worker manager should have 2 workers
     When I shutdown all workers
     Then the worker manager should have 0 workers
+
+  Scenario: Concurrent first calls share one Temporal client
+    When 5 callers get the client of a new Temporal adapter at once
+    Then they should all receive the same client
