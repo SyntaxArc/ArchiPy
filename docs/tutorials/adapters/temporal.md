@@ -58,8 +58,9 @@ TEMPORAL__RETRY_INITIAL_INTERVAL=1
     with an `InvalidArgumentError`. Keep `TEMPORAL__API_KEY` and the key file out of source control.
 
 !!! warning
-    The config validates the timeouts. `WORKFLOW_TASK_TIMEOUT` must be lower than `WORKFLOW_RUN_TIMEOUT`, which must be
-    lower than `WORKFLOW_EXECUTION_TIMEOUT`, and `KEEP_ALIVE_TIMEOUT_MS` must be lower than `KEEP_ALIVE_INTERVAL_MS`.
+    The config validates the timeouts. When both are set, `WORKFLOW_RUN_TIMEOUT` must not exceed
+    `WORKFLOW_EXECUTION_TIMEOUT`, and `KEEP_ALIVE_TIMEOUT_MS` must be lower than `KEEP_ALIVE_INTERVAL_MS`. Both workflow
+    timeouts default to unbounded; set them only for workflows that must give up.
     Otherwise creating the config raises an `InvalidArgumentError`.
 
 ### Configuration Reference

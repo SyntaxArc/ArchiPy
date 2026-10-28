@@ -7,10 +7,13 @@ adapters and standardized patterns.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from abc import abstractmethod
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from pydantic import BaseModel
 from temporalio import activity, workflow
 from temporalio.common import RetryPolicy
 
@@ -139,7 +142,7 @@ class BaseWorkflow[T, R]:
         temporal_config = BaseConfig.global_config().TEMPORAL
 
         # Use config defaults if not provided
-        if execution_timeout is None:
+        if execution_timeout is None and temporal_config.WORKFLOW_EXECUTION_TIMEOUT is not None:
             execution_timeout = timedelta(seconds=temporal_config.WORKFLOW_EXECUTION_TIMEOUT)
 
         return await workflow.execute_child_workflow(
@@ -342,7 +345,13 @@ class BaseActivity[T, R]:
         Returns:
             str: The cache key for storing/retrieving results.
         """
-        return f"{self.__class__.__name__}:{hash(str(activity_input))}"
+        # ``hash()`` is salted per process, so workers would never share a key; a content digest is stable.
+        if isinstance(activity_input, BaseModel):
+            payload = activity_input.model_dump_json()
+        else:
+            payload = json.dumps(activity_input, sort_keys=True, default=str)
+        digest = hashlib.sha256(payload.encode()).hexdigest()
+        return f"{self.__class__.__name__}:{digest}"
 
     async def _get_from_cache(self, cache_key: str) -> R | None:
         """Retrieve a result from cache using your logic instance.
