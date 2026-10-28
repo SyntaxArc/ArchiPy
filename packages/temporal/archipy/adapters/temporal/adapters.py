@@ -7,6 +7,7 @@ and conventions.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 from pathlib import Path
@@ -83,6 +84,7 @@ class TemporalAdapter(TemporalPort):
         else:
             self.config = temporal_config
         self._client: Client | None = None
+        self._client_lock = asyncio.Lock()
 
     async def get_client(self) -> Client:
         """Get or create the Temporal client connection.
@@ -93,61 +95,77 @@ class TemporalAdapter(TemporalPort):
         Raises:
             ConnectionError: If unable to connect to Temporal server.
         """
-        if self._client is None:
-            try:
-                # Build connection kwargs, only including tls if configured
-                connect_kwargs: dict[str, Any] = {
-                    "namespace": self.config.NAMESPACE,
-                    "lazy": self.config.LAZY_CONNECT,
-                    "keep_alive_config": KeepAliveConfig(
-                        interval_millis=self.config.KEEP_ALIVE_INTERVAL_MS,
-                        timeout_millis=self.config.KEEP_ALIVE_TIMEOUT_MS,
-                    ),
-                    "retry_config": RetryConfig(
-                        initial_interval_millis=self.config.CLIENT_RPC_RETRY_INITIAL_INTERVAL_MS,
-                        max_interval_millis=self.config.CLIENT_RPC_RETRY_MAX_INTERVAL_MS,
-                        max_retries=self.config.CLIENT_RPC_RETRY_MAX_RETRIES,
-                    ),
-                }
-                if self.config.CLIENT_IDENTITY is not None:
-                    connect_kwargs["identity"] = self.config.CLIENT_IDENTITY
-                if self.config.API_KEY is not None:
-                    connect_kwargs["api_key"] = self.config.API_KEY
-                if self.config.RPC_METADATA:
-                    connect_kwargs["rpc_metadata"] = self.config.RPC_METADATA
-                if self._has_tls_config():
-                    tls_config = self._build_tls_config()
-                    connect_kwargs["tls"] = tls_config
-
-                # Configure Runtime with OTLP metrics if Temporal + OTel metrics are enabled
-                global_config = BaseConfig.global_config()
-                otel = global_config.OTEL
-                if self.config.ENABLE_METRICS and otel.IS_ENABLED and otel.METRICS_ENABLED:
-                    runtime = self._build_metrics_runtime(otel)
-                    if runtime is not None:
-                        connect_kwargs["runtime"] = runtime
-
-                # Attach OTel tracing plugin when traces are enabled
-                if otel.IS_ENABLED and otel.TRACES_ENABLED:
-                    from archipy.helpers.utils.otel_utils import OtelUtils
-
-                    OtelUtils.init_otel_if_needed(global_config)
-                    self._append_tracing_plugin(connect_kwargs)
-
-                self._client = await Client.connect(
-                    f"{self.config.HOST}:{self.config.PORT}",
-                    **connect_kwargs,
-                )
-            except Exception as error:
-                raise BaseError(
-                    additional_data={
-                        "server": f"{self.config.HOST}:{self.config.PORT}",
-                        "namespace": self.config.NAMESPACE,
-                        "original_error": str(error),
-                    },
-                ) from error
-
+        if self._client is not None:
+            return self._client
+        # Concurrent first calls must share one connection.
+        async with self._client_lock:
+            if self._client is None:
+                self._client = await self._connect()
         return self._client
+
+    async def _connect(self) -> Client:
+        """Connect a new Temporal client from the configuration.
+
+        Returns:
+            Client: The connected client.
+
+        Raises:
+            BaseError: If unable to connect to the Temporal server.
+        """
+        try:
+            return await Client.connect(f"{self.config.HOST}:{self.config.PORT}", **self._build_connect_kwargs())
+        except Exception as error:
+            raise BaseError(
+                additional_data={
+                    "server": f"{self.config.HOST}:{self.config.PORT}",
+                    "namespace": self.config.NAMESPACE,
+                    "original_error": str(error),
+                },
+            ) from error
+
+    def _build_connect_kwargs(self) -> dict[str, Any]:
+        """Build the ``Client.connect`` keyword arguments, only including optional settings when configured.
+
+        Returns:
+            dict[str, Any]: The connection keyword arguments.
+        """
+        connect_kwargs: dict[str, Any] = {
+            "namespace": self.config.NAMESPACE,
+            "lazy": self.config.LAZY_CONNECT,
+            "keep_alive_config": KeepAliveConfig(
+                interval_millis=self.config.KEEP_ALIVE_INTERVAL_MS,
+                timeout_millis=self.config.KEEP_ALIVE_TIMEOUT_MS,
+            ),
+            "retry_config": RetryConfig(
+                initial_interval_millis=self.config.CLIENT_RPC_RETRY_INITIAL_INTERVAL_MS,
+                max_interval_millis=self.config.CLIENT_RPC_RETRY_MAX_INTERVAL_MS,
+                max_retries=self.config.CLIENT_RPC_RETRY_MAX_RETRIES,
+            ),
+        }
+        if self.config.CLIENT_IDENTITY is not None:
+            connect_kwargs["identity"] = self.config.CLIENT_IDENTITY
+        if self.config.API_KEY is not None:
+            connect_kwargs["api_key"] = self.config.API_KEY
+        if self.config.RPC_METADATA:
+            connect_kwargs["rpc_metadata"] = self.config.RPC_METADATA
+        if self._has_tls_config():
+            connect_kwargs["tls"] = self._build_tls_config()
+
+        # Configure Runtime with OTLP metrics if Temporal + OTel metrics are enabled
+        global_config = BaseConfig.global_config()
+        otel = global_config.OTEL
+        if self.config.ENABLE_METRICS and otel.IS_ENABLED and otel.METRICS_ENABLED:
+            runtime = self._build_metrics_runtime(otel)
+            if runtime is not None:
+                connect_kwargs["runtime"] = runtime
+
+        # Attach OTel tracing plugin when traces are enabled
+        if otel.IS_ENABLED and otel.TRACES_ENABLED:
+            from archipy.helpers.utils.otel_utils import OtelUtils
+
+            OtelUtils.init_otel_if_needed(global_config)
+            self._append_tracing_plugin(connect_kwargs)
+        return connect_kwargs
 
     def _build_metrics_runtime(self, otel: OpentelemetryConfig) -> Runtime | None:
         """Build the Temporal Runtime that exports SDK metrics according to the OTel exporter mode.

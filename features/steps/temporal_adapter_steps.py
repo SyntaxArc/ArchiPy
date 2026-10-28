@@ -2068,3 +2068,19 @@ def step_temporal_client_has_tracing_interceptor(context):
     assert any(isinstance(item, MessagingOpenTelemetryInterceptor) for item in interceptors), (
         f"No MessagingOpenTelemetryInterceptor on the client: {interceptors!r}"
     )
+
+
+@when("{count:d} callers get the client of a new Temporal adapter at once")
+def step_concurrent_get_client(context, count):
+    adapter = TemporalAdapter(get_temporal_adapter(context).config)
+
+    async def _get_all() -> list[Any]:
+        return await asyncio.gather(*(adapter.get_client() for _ in range(count)))
+
+    get_current_scenario_context(context).store("concurrent_clients", run_async(context, _get_all()))
+
+
+@then("they should all receive the same client")
+def step_same_client(context):
+    clients = get_current_scenario_context(context).get("concurrent_clients")
+    assert len({id(client) for client in clients}) == 1, "Expected one shared client"
