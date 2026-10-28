@@ -262,3 +262,13 @@ Feature: Temporal Adapter Operations
   Scenario: A Temporal Runtime that cannot be built raises a ConfigurationError
     When I build a Temporal Runtime exporting metrics to "not a url"
     Then building the Temporal Runtime should raise a ConfigurationError
+
+  Scenario Outline: AtomicActivity.with_db_type returns a copy on <db_type>
+    When I copy a postgres atomic activity with database type "<db_type>"
+    Then the atomic activity copy should be <outcome>
+
+    Examples: Database types
+      | db_type   | outcome                     |
+      | sqlite    | on sqlite, original kept    |
+      | starrocks | on starrocks, original kept |
+      | oracle    | rejected                    |

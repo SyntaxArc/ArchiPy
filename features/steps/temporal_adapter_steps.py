@@ -29,13 +29,13 @@ from temporalio.runtime import LoggingConfig, TelemetryConfig, TelemetryFilter
 
 from archipy.adapters.temporal import runtime as temporal_runtime_module
 from archipy.adapters.temporal.adapters import TemporalAdapter
-from archipy.adapters.temporal.base import BaseActivity
+from archipy.adapters.temporal.base import AtomicActivity, BaseActivity
 from archipy.adapters.temporal.runtime import TemporalRuntimeManager
 from archipy.adapters.temporal.tracing import MessagingOpenTelemetryInterceptor
 from archipy.adapters.temporal.worker import TemporalWorkerManager, WorkerHandle
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import OtelMetricsExporter, TemporalConfig
-from archipy.models.errors import BaseError, ConfigurationError
+from archipy.models.errors import BaseError, ConfigurationError, InvalidArgumentError
 from features.steps.elastic_apm_steps import apm_endpoint, wait_for_apm_metric
 from features.test_helpers import get_current_scenario_context
 from features.test_helpers_otel import CollectorTelemetry
@@ -2379,3 +2379,34 @@ def step_call_deprecated_stop_schedule(context, schedule_id):
 def step_deprecation_warning_emitted(context):
     caught = get_current_scenario_context(context).get("caught_warnings")
     assert any(issubclass(item.category, DeprecationWarning) for item in caught), [str(item.message) for item in caught]
+
+
+class PostgresAtomicActivity(AtomicActivity[str, str]):
+    """Minimal atomic activity used to check ``with_db_type``."""
+
+    async def _do_execute(self, activity_input: str) -> str:
+        return activity_input
+
+
+@when('I copy a postgres atomic activity with database type "{db_type}"')
+def step_copy_atomic_activity(context, db_type):
+    scenario_context = get_current_scenario_context(context)
+    original = PostgresAtomicActivity()
+    scenario_context.store("atomic_original", original)
+    try:
+        scenario_context.store("atomic_copy", original.with_db_type(db_type))
+        scenario_context.store("atomic_error", None)
+    except InvalidArgumentError as error:
+        scenario_context.store("atomic_error", error)
+
+
+@then("the atomic activity copy should be {outcome}")
+def step_atomic_activity_copy_outcome(context, outcome):
+    scenario_context = get_current_scenario_context(context)
+    if outcome == "rejected":
+        assert isinstance(scenario_context.get("atomic_error"), InvalidArgumentError)
+        return
+    expected = outcome.removeprefix("on ").split(",")[0]
+    copied = scenario_context.get("atomic_copy")
+    assert copied.db_type == expected, copied.db_type
+    assert scenario_context.get("atomic_original").db_type == "postgres"
