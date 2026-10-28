@@ -24,6 +24,7 @@ from temporalio.client import (
     ScheduleSpec,
     TLSConfig,
     WorkflowExecution,
+    WorkflowExecutionAsyncIterator,
     WorkflowExecutionDescription,
     WorkflowHandle,
 )
@@ -519,6 +520,7 @@ class TemporalAdapter(TemporalPort):
         query: str | None = None,
         page_size: int | None = None,
         next_page_token: bytes | None = None,
+        limit: int | None = None,
     ) -> list[WorkflowExecution]:
         """List workflow executions matching the given criteria.
 
@@ -529,19 +531,45 @@ class TemporalAdapter(TemporalPort):
                 Defaults to None (server default).
             next_page_token (bytes, optional): Token for pagination.
                 Defaults to None (first page).
+            limit (int, optional): Maximum number of executions to return. Defaults to None, which loads every
+                matching execution into memory; set it, or use ``iter_workflows``, for large namespaces.
 
         Returns:
             list[WorkflowExecution]: The workflow executions matching the query.
         """
-        client = await self.get_client()
-        # list_workflows returns an async iterator, not awaitable
-        workflows_iter = client.list_workflows(
+        workflows_iter = await self.iter_workflows(
             query=query,
+            page_size=page_size,
+            next_page_token=next_page_token,
+            limit=limit,
+        )
+        return [workflow async for workflow in workflows_iter]
+
+    async def iter_workflows(
+        self,
+        query: str | None = None,
+        page_size: int | None = None,
+        next_page_token: bytes | None = None,
+        limit: int | None = None,
+    ) -> WorkflowExecutionAsyncIterator:
+        """Iterate workflow executions page by page without loading them all into memory.
+
+        Args:
+            query (str, optional): List filter query in Temporal SQL syntax. Defaults to None (no filter).
+            page_size (int, optional): Number of results fetched per page. Defaults to None (100).
+            next_page_token (bytes, optional): Token to resume from. Defaults to None (first page).
+            limit (int, optional): Maximum number of executions to yield. Defaults to None (no limit).
+
+        Returns:
+            WorkflowExecutionAsyncIterator: Async iterator of executions; its ``next_page_token`` resumes the listing.
+        """
+        client = await self.get_client()
+        return client.list_workflows(
+            query=query,
+            limit=limit,
             page_size=page_size or 100,
             next_page_token=next_page_token,
         )
-        # Convert to list for compatibility
-        return [workflow async for workflow in workflows_iter]
 
     @override
     async def describe_workflow(self, workflow_id: str, run_id: str | None = None) -> WorkflowExecutionDescription:

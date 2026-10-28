@@ -47,6 +47,13 @@ Feature: Temporal Adapter Operations
     And I list workflows with query "WorkflowType='GreetingWorkflow'"
     Then the workflow list should contain at least 1 workflow
 
+  Scenario: List workflows stops at the limit
+    Given a worker is started for task queue "test-queue" with GreetingWorkflow
+    When I execute workflow "GreetingWorkflow" with argument "Limit-1"
+    And I execute workflow "GreetingWorkflow" with argument "Limit-2"
+    And I list workflows with query "WorkflowType='GreetingWorkflow'" and limit 1
+    Then the workflow list should contain exactly 1 workflow
+
   Scenario: Describe workflow execution
     Given a worker is started for task queue "test-queue" with GreetingWorkflow
     When I execute workflow "GreetingWorkflow" with argument "Diana" and workflow id "test-describe-1"
