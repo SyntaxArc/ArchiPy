@@ -46,6 +46,11 @@ Feature: Temporal Adapter Operations
     And I list workflows with query "WorkflowType='GreetingWorkflow'"
     Then the workflow list should contain at least 1 workflow
 
+  Scenario: Pydantic payloads round trip through a workflow
+    Given a worker is started for task queue "test-queue" with EchoOrderWorkflow
+    When I execute workflow "EchoOrderWorkflow" with order "order-7" totalling 12.50
+    Then the echoed order should equal the sent order
+
   Scenario: Describe workflow execution
     Given a worker is started for task queue "test-queue" with GreetingWorkflow
     When I execute workflow "GreetingWorkflow" with argument "Diana" and workflow id "test-describe-1"
@@ -210,3 +215,7 @@ Feature: Temporal Adapter Operations
       | input    | digest                                                           |
       | order-42 | 90140eb1a898639024d3752994bf84b1d40cfe639f70bcbdf7d047bf72274a1d |
       | alice    | 0a50500b2a3435fe7472877eb22d48d47a228e946b0b991ab7402a8d00f6b32d |
+
+  Scenario: Concurrent first calls share one Temporal client
+    When 5 callers get the client of a new Temporal adapter at once
+    Then they should all receive the same client

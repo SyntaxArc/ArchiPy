@@ -28,6 +28,7 @@ with workflow.unsafe.imports_passed_through():
         reserve_inventory,
         ship_order,
     )
+    from features.test_workflows.temporal_activities import OrderPayload
 
     from archipy.adapters.temporal.base import BaseWorkflow
 
@@ -478,3 +479,20 @@ class BaseGreetingWorkflow(BaseWorkflow[str, str]):
             str: Greeting message from the activity.
         """
         return await self._execute_activity_with_retry(greeting_activity, workflow_input)
+
+
+@workflow.defn(name="EchoOrderWorkflow")
+class EchoOrderWorkflow:
+    """Workflow that returns its Pydantic input, to check the data converter round trip."""
+
+    @workflow.run
+    async def run(self, order: OrderPayload) -> OrderPayload:
+        """Return the order unchanged.
+
+        Args:
+            order (OrderPayload): The order payload.
+
+        Returns:
+            OrderPayload: The same order.
+        """
+        return order

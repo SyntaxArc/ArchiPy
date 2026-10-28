@@ -12,7 +12,8 @@ import socket
 import threading
 import time
 from collections.abc import Callable, Coroutine
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from typing import Any, TypeVar
 
 import httpx2
@@ -42,6 +43,7 @@ from features.test_workflows.temporal_activities import (
     failing_activity,
     greeting_activity,
     long_running_activity,
+    OrderPayload,
     notify_customer,
     refund_payment,
     release_inventory,
@@ -54,6 +56,7 @@ from features.test_workflows.temporal_workflows import (
     CalculatorWorkflow,
     ConcurrentActivitiesWorkflow,
     DataProcessingWorkflow,
+    EchoOrderWorkflow,
     GreetingWorkflow,
     LongRunningWorkflow,
     NotificationWorkflow,
@@ -243,6 +246,7 @@ async def start_test_worker(
             OrderSagaWorkflow,
             NotificationWorkflow,
             BaseGreetingWorkflow,
+            EchoOrderWorkflow,
         ]
 
     if activities is None:
@@ -353,6 +357,7 @@ def step_start_worker_with_workflow(context, task_queue, workflow_name):
         "ConcurrentActivitiesWorkflow": ConcurrentActivitiesWorkflow,
         "OrderSagaWorkflow": OrderSagaWorkflow,
         "BaseGreetingWorkflow": BaseGreetingWorkflow,
+        "EchoOrderWorkflow": EchoOrderWorkflow,
     }
 
     workflow_class = workflow_map.get(workflow_name)
@@ -2106,3 +2111,33 @@ def step_worker_run_ends_outside_handle(context):
 def step_worker_no_run_error(context):
     worker_handle = get_current_scenario_context(context).last_worker
     assert worker_handle.run_error is None, worker_handle.run_error
+@when('I execute workflow "EchoOrderWorkflow" with order "{order_id}" totalling {total}')
+def step_execute_echo_order(context, order_id, total):
+    order = OrderPayload(order_id=order_id, total=Decimal(total), placed_at=datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC))
+    adapter = get_temporal_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("sent_order", order)
+    result = run_async(context, adapter.execute_workflow(EchoOrderWorkflow, order, task_queue="test-queue"))
+    scenario_context.store("echoed_order", result)
+
+
+@then("the echoed order should equal the sent order")
+def step_echoed_order_equal(context):
+    scenario_context = get_current_scenario_context(context)
+    echoed = scenario_context.get("echoed_order")
+    assert isinstance(echoed, OrderPayload), f"Expected OrderPayload, got {type(echoed).__name__}"
+    assert echoed == scenario_context.get("sent_order"), echoed
+@when("{count:d} callers get the client of a new Temporal adapter at once")
+def step_concurrent_get_client(context, count):
+    adapter = TemporalAdapter(get_temporal_adapter(context).config)
+
+    async def _get_all() -> list[Any]:
+        return await asyncio.gather(*(adapter.get_client() for _ in range(count)))
+
+    get_current_scenario_context(context).store("concurrent_clients", run_async(context, _get_all()))
+
+
+@then("they should all receive the same client")
+def step_same_client(context):
+    clients = get_current_scenario_context(context).get("concurrent_clients")
+    assert len({id(client) for client in clients}) == 1, "Expected one shared client"

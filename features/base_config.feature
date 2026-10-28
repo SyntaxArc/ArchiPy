@@ -176,6 +176,7 @@ Feature: Base Configuration System
       | WORKFLOW_RETRY_ENABLED     | False    |
       | WORKFLOW_EXECUTION_TIMEOUT | None     |
       | WORKFLOW_RUN_TIMEOUT       | None     |
+      | PYDANTIC_DATA_CONVERTER    | True     |
 
   Scenario Outline: The <environment> environment reports its kind and log level
     When the environment type <environment> is inspected
