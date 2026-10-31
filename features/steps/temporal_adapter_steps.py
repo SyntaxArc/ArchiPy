@@ -8,6 +8,7 @@ A persistent event loop per scenario is used so that Temporal workers
 """
 
 import asyncio
+import contextlib
 import socket
 import threading
 import time
@@ -19,7 +20,7 @@ from typing import Any, TypeVar
 import httpx2
 from behave import given, then, when
 from temporalio.client import Interceptor as ClientInterceptor
-from temporalio.client import OutboundInterceptor, StartWorkflowInput, WithStartWorkflowOperation
+from temporalio.client import OutboundInterceptor, StartWorkflowInput, WithStartWorkflowOperation, WorkflowFailureError
 from temporalio.worker import ActivityInboundInterceptor, ExecuteActivityInput, WorkflowInterceptorClassInput
 from temporalio.worker import Interceptor as WorkerInterceptor
 from temporalio.common import WorkflowIDConflictPolicy
@@ -2125,6 +2126,10 @@ def step_cancel_request_reason(context, workflow_id, reason):
 
     async def _cancel_causes() -> list[str]:
         handle = await adapter.get_workflow_handle(workflow_id)
+        # The server buffers the cancel request while a workflow task runs; once the workflow has ended as
+        # cancelled the request is in the history.
+        with contextlib.suppress(WorkflowFailureError):
+            await handle.result()
         history = await handle.fetch_history()
         return [
             event.workflow_execution_cancel_requested_event_attributes.cause
