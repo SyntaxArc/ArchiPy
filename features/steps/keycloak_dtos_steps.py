@@ -199,3 +199,16 @@ def step_create_result_id(context, expected):
 @then("the lookup ran {ran}")
 def step_lookup_ran(context, ran):
     assert (get_current_scenario_context(context).get("lookup_calls") == 1) == (ran == "yes")
+
+
+@when(
+    'I validate a Keycloak request DTO {dto} from a payload keyed by {key_style} with "{key}" set to "{value}"',
+)
+def step_validate_request_payload(context, dto, key_style, key, value):
+    get_current_scenario_context(context).store("validated_dto", _dto_class(dto).model_validate({key: value}))
+
+
+@then('the validated DTO has {attribute} equal to "{value}"')
+def step_validated_dto_attribute(context, attribute, value):
+    validated = get_current_scenario_context(context).get("validated_dto")
+    assert getattr(validated, attribute) == value, validated

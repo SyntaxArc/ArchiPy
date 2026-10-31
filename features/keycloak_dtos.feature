@@ -42,6 +42,17 @@ Feature: Keycloak DTOs
       | KeycloakClientScopeRequestDTO   | protocol     | protocol    | saml   |
       | KeycloakAuthzResourceRequestDTO | display_name | displayName | Report |
 
+  Scenario Outline: Request DTOs validate both the field name and the wire name
+    When I validate a Keycloak request DTO <dto> from a payload keyed by <key_style> with "<key>" set to "<value>"
+    Then the validated DTO has <attribute> equal to "<value>"
+
+    Examples:
+      | dto                         | key_style  | key         | attribute   | value |
+      | KeycloakUserRequestDTO      | field name | first_name  | first_name  | Alice |
+      | KeycloakUserRequestDTO      | wire name  | firstName   | first_name  | Alice |
+      | KeycloakComponentRequestDTO | field name | provider_id | provider_id | ldap  |
+      | KeycloakComponentRequestDTO | wire name  | providerId  | provider_id | ldap  |
+
   Scenario Outline: Reading a response DTO like a dict warns
     Given a Keycloak KeycloakRoleDTO response with name "admin"
     When the response is read with <access>
