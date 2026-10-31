@@ -22,6 +22,14 @@ class _MySQLDriverError(Exception):
     """Mirrors pymysql/aiomysql errors, which carry ``(errno, message)`` in ``args``."""
 
 
+class _MySQLServerError(Exception):
+    """Mirrors pymysql>=1.2/asyncmy>=0.2.14 server errors, which carry ``(errno, message)`` and a ``sqlstate``."""
+
+    def __init__(self, errno: int, message: str, sqlstate: str) -> None:
+        super().__init__(errno, message)
+        self.sqlstate = sqlstate
+
+
 class _SQLiteDriverError(Exception):
     def __init__(self, name: str, message: str) -> None:
         super().__init__(message)
@@ -53,6 +61,12 @@ def _wrap(driver_error: Exception) -> DBAPIError:
 def step_given_driver_error(context, family, code, message):
     scenario_context = get_current_scenario_context(context)
     scenario_context.store("db_error", _wrap(_build_driver_error(family, code, message)))
+
+
+@given('a {family} server error with errno "{errno}", SQLSTATE "{sqlstate}" and message "{message}"')
+def step_given_mysql_server_error(context, family, errno, sqlstate, message):
+    driver_error = _MySQLServerError(int(errno), message, sqlstate)
+    get_current_scenario_context(context).store("db_error", _wrap(driver_error))
 
 
 @given('a "{family}" driver error with code "{code}" raised by statement "{statement}"')
