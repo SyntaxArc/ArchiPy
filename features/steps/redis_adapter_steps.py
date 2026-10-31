@@ -50,6 +50,16 @@ def _search_until_indexed(search):
     return result
 
 
+def _aggregate_until_indexed(aggregate):
+    """Retry a synchronous aggregation while Redis indexes a recent write."""
+    deadline = time.monotonic() + SEARCH_INDEX_TIMEOUT_SECONDS
+    result = aggregate()
+    while not result["rows"] and time.monotonic() < deadline:
+        time.sleep(SEARCH_INDEX_POLL_INTERVAL_SECONDS)
+        result = aggregate()
+    return result
+
+
 async def _async_search_until_indexed(search):
     """Retry an asynchronous search while Redis indexes a recent write."""
     deadline = time.monotonic() + SEARCH_INDEX_TIMEOUT_SECONDS
@@ -304,7 +314,7 @@ def step_then_sync_list_contains_values(context, list_name, expected_values):
 
 
 @when(
-    r'I assign "(?P<field>[^"]+)" to "(?P<value>[^"]+)" in the hash "(?P<hash_name>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+    r'I assign "(?P<field>[^"]+)" to "(?P<value>[^"]+)" in the hash "(?P<hash_name>[^"]+)" in (?P<adapter_type>mock|container|cluster)',
 )
 def step_when_assign_hash_field_in_adapter(context, field, hash_name, value, adapter_type):
     """Assign a field-value pair to a hash in the Redis mock."""
@@ -341,7 +351,7 @@ def step_then_sync_hash_assignment_succeeds(context):
 
 
 @when(
-    r'I retrieve the "(?P<field>[^"]+)" field from the hash "(?P<hash_name>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+    r'I retrieve the "(?P<field>[^"]+)" field from the hash "(?P<hash_name>[^"]+)" in (?P<adapter_type>mock|container|cluster)',
 )
 def step_when_retrieve_hash_field_in_adapter(context, field, hash_name, adapter_type):
     """Retrieve a field from a hash in the Redis mock."""
@@ -424,7 +434,7 @@ def step_then_sync_set_contains_members(context, set_name, expected_members):
 
 # Asynchronous Redis Mock Steps
 @when(
-    r'I store the key "(?P<key>[^"]+)" with value "(?P<value>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+    r'I store the key "(?P<key>[^"]+)" with value "(?P<value>[^"]+)" in async (?P<adapter_type>mock|container|cluster)',
 )
 async def step_when_store_key_in_async_adapter(context, key, value, adapter_type):
     """Store a key-value pair in the async Redis mock."""
@@ -593,7 +603,7 @@ async def step_then_async_list_contains_values(context, list_name, expected_valu
 
 
 @when(
-    r'I assign "(?P<field>[^"]+)" to "(?P<value>[^"]+)" in the hash "(?P<hash_name>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+    r'I assign "(?P<field>[^"]+)" to "(?P<value>[^"]+)" in the hash "(?P<hash_name>[^"]+)" in async (?P<adapter_type>mock|container|cluster)',
 )
 async def step_when_assign_hash_field_in_async_adapter(context, field, hash_name, value, adapter_type):
     """Assign a field-value pair to a hash in the async Redis mock."""
@@ -630,7 +640,7 @@ async def step_then_async_hash_assignment_succeeds(context):
 
 
 @when(
-    r'I retrieve the "(?P<field>[^"]+)" field from the hash "(?P<hash_name>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+    r'I retrieve the "(?P<field>[^"]+)" field from the hash "(?P<hash_name>[^"]+)" in async (?P<adapter_type>mock|container|cluster)',
 )
 async def step_when_retrieve_hash_field_in_async_adapter(context, field, hash_name, adapter_type):
     """Retrieve a field from a hash in the async Redis mock."""
@@ -1167,7 +1177,7 @@ def step_then_sync_append_length(context, length):
 
 
 @when(
-    r'I create a (?P<redis_type>string|list|hash|set|zset) key "(?P<key>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+    r'I create a (?P<redis_type>string|list|hash|set|zset) key "(?P<key>[^"]+)" in (?P<adapter_type>mock|container|cluster)',
 )
 def step_when_create_key_by_type(context, redis_type, key, adapter_type):
     """Create a key of a specific Redis type."""
@@ -1337,7 +1347,7 @@ def step_when_lset(context, index, value, list_name, adapter_type):
 
 
 @when(
-    r'I check if "(?P<member>[^"]+)" is a member of set "(?P<set_name>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+    r'I check if "(?P<member>[^"]+)" is a member of set "(?P<set_name>[^"]+)" in (?P<adapter_type>mock|container|cluster)',
 )
 def step_when_sismember(context, member, set_name, adapter_type):
     """Check set membership."""
@@ -1405,7 +1415,7 @@ def step_then_sync_zcard(context, name, count):
 
 
 @when(
-    r'I get zscore of "(?P<member>[^"]+)" in sorted set "(?P<name>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+    r'I get zscore of "(?P<member>[^"]+)" in sorted set "(?P<name>[^"]+)" in (?P<adapter_type>mock|container|cluster)',
 )
 def step_when_zscore(context, member, name, adapter_type):
     """Get zscore of a member."""
@@ -2342,7 +2352,7 @@ async def step_when_async_hdel(context, field, hash_name, adapter_type):
 
 
 @when(
-    r'I publish "(?P<message>[^"]+)" to channel "(?P<channel>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+    r'I publish "(?P<message>[^"]+)" to channel "(?P<channel>[^"]+)" in async (?P<adapter_type>mock|container|cluster)',
 )
 async def step_when_async_publish(context, message, channel, adapter_type):
     """Publish a message to a channel asynchronously."""
@@ -3061,14 +3071,13 @@ def step_when_hybrid_search(context, index_name, text_query, vector, k):
 def step_when_aggregate(context, index_name):
     """Run a simple aggregation grouped by category."""
     handle = get_current_scenario_context(context).adapter.search_index(index_name)
-    result = handle.aggregate(
-        AggregationDTO(
-            query="*",
-            group_by=["@category"],
-            reduce_function="COUNT",
-            reduce_field="total",
-        ),
+    aggregation = AggregationDTO(
+        query="*",
+        group_by=["@category"],
+        reduce_function="COUNT",
+        reduce_field="total",
     )
+    result = _aggregate_until_indexed(lambda: handle.aggregate(aggregation))
     store_result(context, "aggregation_result", result)
 
 
@@ -3259,7 +3268,7 @@ def step_then_hash_value_list(context, expected):
 
 
 @when(
-    r'I scan the set "(?P<name>[^"]+)" for members matching "(?P<pattern>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+    r'I scan the set "(?P<name>[^"]+)" for members matching "(?P<pattern>[^"]+)" in (?P<adapter_type>mock|container|cluster)',
 )
 def step_when_sscan(context, name, pattern, adapter_type):
     """Scan set members with sscan."""
@@ -3269,7 +3278,7 @@ def step_when_sscan(context, name, pattern, adapter_type):
 
 
 @when(
-    r'I iterate the set "(?P<name>[^"]+)" for members matching "(?P<pattern>[^"]+)" in (?P<adapter_type>mock|container|cluster)'
+    r'I iterate the set "(?P<name>[^"]+)" for members matching "(?P<pattern>[^"]+)" in (?P<adapter_type>mock|container|cluster)',
 )
 def step_when_sscan_iter(context, name, pattern, adapter_type):
     """Iterate set members with sscan_iter."""
@@ -3377,7 +3386,7 @@ async def step_then_hash_value_list_async(context, expected):
 
 
 @when(
-    r'I scan the set "(?P<name>[^"]+)" for members matching "(?P<pattern>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+    r'I scan the set "(?P<name>[^"]+)" for members matching "(?P<pattern>[^"]+)" in async (?P<adapter_type>mock|container|cluster)',
 )
 async def step_when_sscan_async(context, name, pattern, adapter_type):
     """Scan set members with sscan."""
@@ -3387,7 +3396,7 @@ async def step_when_sscan_async(context, name, pattern, adapter_type):
 
 
 @when(
-    r'I iterate the set "(?P<name>[^"]+)" for members matching "(?P<pattern>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+    r'I iterate the set "(?P<name>[^"]+)" for members matching "(?P<pattern>[^"]+)" in async (?P<adapter_type>mock|container|cluster)',
 )
 async def step_when_sscan_iter_async(context, name, pattern, adapter_type):
     """Iterate set members with sscan_iter."""
@@ -3420,7 +3429,7 @@ async def step_then_popped_count_async(context, count):
 
 
 @when(
-    r'I count the existing keys "(?P<key1>[^"]+)" and "(?P<key2>[^"]+)" in async (?P<adapter_type>mock|container|cluster)'
+    r'I count the existing keys "(?P<key1>[^"]+)" and "(?P<key2>[^"]+)" in async (?P<adapter_type>mock|container|cluster)',
 )
 async def step_when_exists_count_async(context, key1, key2, adapter_type):
     """Count how many of two keys exist."""
