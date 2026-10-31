@@ -284,6 +284,11 @@ Feature: Temporal Adapter Operations
       | 30       | 30       |
       | 0        | none     |
 
+  Scenario: A worker configured with ValueError as a failure type fails the workflow at once
+    Given a worker is started for task queue "failure-types-queue" that fails workflows on ValueError
+    When I execute workflow "ValueErrorWorkflow" on task queue "failure-types-queue"
+    Then the workflow execution should fail
+
   Scenario Outline: Activity cache key is a stable content digest
     When I build the activity cache key for input "<input>"
     Then the activity cache key should be "CacheKeyActivity:<digest>"
