@@ -381,6 +381,15 @@ def step_then_invalid_argument(context, argument):
     )
 
 
+@given('a Vault SSH one-time-password role named "{role_name}"')
+def step_given_vault_ssh_otp_role(context, role_name):
+    """Enable the SSH secrets engine with a one-time-password role; its creds path takes a POST."""
+    client = _admin_client()
+    if "ssh/" not in client.sys.list_mounted_secrets_engines():
+        client.sys.enable_secrets_engine("ssh", path="ssh")
+    client.write(f"ssh/roles/{role_name}", key_type="otp", default_user="ubuntu", cidr_list="127.0.0.0/8")
+
+
 @when('I generate dynamic credentials from mount "{mount}" for role "{role}" with explicit parameters')
 def step_generate_dynamic_creds_with_parameters(context, mount, role):
     import warnings
@@ -388,10 +397,16 @@ def step_generate_dynamic_creds_with_parameters(context, mount, role):
     adapter = get_vault_adapter(context)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        lease = adapter.get_dynamic_credentials(mount, role, parameters={})
+        lease = adapter.get_dynamic_credentials(mount, role, parameters={"ip": "127.0.0.1"})
     scenario_context = get_current_scenario_context(context)
     scenario_context.store("vault_lease", lease)
     scenario_context.store("vault_warnings", [str(item.message) for item in caught])
+
+
+@then("the Vault lease should contain an SSH one-time password")
+def step_then_lease_has_ssh_otp(context):
+    lease = get_current_scenario_context(context).get("vault_lease")
+    assert lease.data.get("key"), f"Expected a one-time password under 'key', got {sorted(lease.data)}"
 
 
 @then("no Vault deprecation warning should have been raised")

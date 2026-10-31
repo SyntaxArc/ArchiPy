@@ -75,11 +75,10 @@ Feature: Vault Adapter
     When I revoke the Vault lease
     Then revoking the Vault lease again should fail
 
-  @needs-postgres
-  Scenario: Dynamic credentials requested with explicit parameters use write_data without deprecation warnings
-    Given a Vault database role named "readonly" backed by Postgres
-    When I generate dynamic credentials from mount "database" for role "readonly" with explicit parameters
-    Then the Vault lease should contain database credentials
+  Scenario: One-time SSH credentials requested with parameters use write_data without deprecation warnings
+    Given a Vault SSH one-time-password role named "otp-role"
+    When I generate dynamic credentials from mount "ssh" for role "otp-role" with explicit parameters
+    Then the Vault lease should contain an SSH one-time password
     And no Vault deprecation warning should have been raised
 
   @needs-otel-collector
