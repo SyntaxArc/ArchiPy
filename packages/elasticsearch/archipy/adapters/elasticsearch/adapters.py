@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
+from functools import cache
 from typing import TYPE_CHECKING, Any, override
 
 from elasticsearch import AsyncElasticsearch, Elasticsearch
@@ -22,11 +24,61 @@ from archipy.adapters.elasticsearch.ports import (
 from archipy.configs.base_config import BaseConfig
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterable
+    from collections.abc import AsyncIterator, Callable, Iterable
 
     from archipy.configs.config_template import ElasticsearchConfig
 
 logger = logging.getLogger(__name__)
+
+# Body keys whose client keyword differs from the JSON field name.
+_BODY_FIELD_ALIASES: dict[str, str] = {"from": "from_"}
+
+
+@cache
+def _keyword_parameters(function: Callable[..., Any]) -> frozenset[str]:
+    """Return the keyword parameters of an elasticsearch-py API function, excluding ``body``.
+
+    Args:
+        function (Callable[..., Any]): The unbound client API function.
+
+    Returns:
+        frozenset[str]: The accepted keyword parameter names.
+    """
+    return frozenset(inspect.signature(function).parameters) - {"self", "body"}
+
+
+def _expand_body(body: dict[str, Any] | None, kwargs: dict[str, Any], method: Callable[..., Any]) -> dict[str, Any]:
+    """Expand a request body into client keyword arguments.
+
+    elasticsearch-py deprecates passing ``body=`` together with body field keywords (such as ``size``).
+    Body fields the client accepts as keywords are expanded; unknown fields stay in ``body``.
+
+    Args:
+        body (dict[str, Any] | None): The request body.
+        kwargs (dict[str, Any]): Keyword arguments supplied by the caller.
+        method (Callable[..., Any]): The bound client API method that receives the arguments.
+
+    Returns:
+        dict[str, Any]: Keyword arguments for the client method.
+
+    Raises:
+        ValueError: If a field is given both in the body and as a keyword argument.
+    """
+    parameters = _keyword_parameters(getattr(method, "__func__", method))
+    merged = dict(kwargs)
+    remaining: dict[str, Any] = {}
+    for key, value in (body or {}).items():
+        name = _BODY_FIELD_ALIASES.get(key, key)
+        if name not in parameters:
+            remaining[key] = value
+            continue
+        if name in merged:
+            msg = f"Received multiple values for '{key}', specify it either in the body or as a keyword."
+            raise ValueError(msg)
+        merged[name] = value
+    if remaining:
+        merged["body"] = remaining
+    return merged
 
 
 class ElasticsearchAdapter(ElasticsearchPort):
@@ -159,7 +211,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         Returns:
             ElasticsearchResponseType: The search results.
         """
-        return self.client.search(index=index, body=query, **kwargs)
+        return self.client.search(index=index, **_expand_body(query, kwargs, self.client.search))
 
     @override
     def update(
@@ -257,7 +309,8 @@ class ElasticsearchAdapter(ElasticsearchPort):
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
         """
-        return self.client.indices.create(index=index, body=body, **kwargs)
+        indices = self.client.indices
+        return indices.create(index=index, **_expand_body(body, kwargs, indices.create))
 
     @override
     def delete_index(
@@ -443,7 +496,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         Returns:
             ElasticsearchResponseType: The search results.
         """
-        return await self.client.search(index=index, body=query, **kwargs)
+        return await self.client.search(index=index, **_expand_body(query, kwargs, self.client.search))
 
     @override
     async def update(
@@ -542,7 +595,8 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         Returns:
             ElasticsearchResponseType: The response from Elasticsearch.
         """
-        return await self.client.indices.create(index=index, body=body, **kwargs)
+        indices = self.client.indices
+        return await indices.create(index=index, **_expand_body(body, kwargs, indices.create))
 
     @override
     async def delete_index(
