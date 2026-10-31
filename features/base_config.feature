@@ -185,6 +185,8 @@ Feature: Base Configuration System
       | CONNECT_TIMEOUT              | None     |
       | TLS_VERIFICATION_SERVER_NAME | None     |
       | GRPC_COMPRESSION             | None     |
+      | PAYLOADS_WARN_SIZE           | None     |
+      | MEMO_WARN_SIZE               | None     |
 
   Scenario Outline: The <environment> environment reports its kind and log level
     When the environment type <environment> is inspected

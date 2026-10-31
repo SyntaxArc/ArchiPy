@@ -19,6 +19,7 @@ from uuid import uuid7
 from temporalio.client import (
     Client,
     KeepAliveConfig,
+    PayloadLimitsConfig,
     Schedule,
     ScheduleActionStartWorkflow,
     ScheduleAlreadyRunningError,
@@ -179,6 +180,7 @@ class TemporalAdapter(TemporalPort):
                 timedelta(seconds=self.config.CONNECT_TIMEOUT) if self.config.CONNECT_TIMEOUT is not None else None
             ),
             "grpc_compression": self._grpc_compression(),
+            "payload_limits": self._payload_limits(),
         }
         return {key: value for key, value in optional.items() if value is not None}
 
@@ -195,6 +197,21 @@ class TemporalAdapter(TemporalPort):
                 return GrpcCompression.NONE
             case _:
                 return None
+
+    def _payload_limits(self) -> PayloadLimitsConfig | None:
+        """Resolve the ``payload_limits`` argument of ``Client.connect`` from the warning size settings.
+
+        Returns:
+            PayloadLimitsConfig | None: The limits when either size is set, the other keeping the SDK default;
+                None when neither is set.
+        """
+        if self.config.PAYLOADS_WARN_SIZE is None and self.config.MEMO_WARN_SIZE is None:
+            return None
+        defaults = PayloadLimitsConfig()
+        return PayloadLimitsConfig(
+            payloads_warn_size=self.config.PAYLOADS_WARN_SIZE or defaults.payloads_warn_size,
+            memo_warn_size=self.config.MEMO_WARN_SIZE or defaults.memo_warn_size,
+        )
 
     def _build_connect_kwargs(self) -> dict[str, Any]:
         """Build the ``Client.connect`` keyword arguments, only including optional settings when configured.
