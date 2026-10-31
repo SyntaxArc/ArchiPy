@@ -1440,6 +1440,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#temporal-sdk-behaviour-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Temporal SDK Behaviour Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#best-practices" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3959,6 +3970,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#temporal-sdk-behaviour-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Temporal SDK Behaviour Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#best-practices" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4877,6 +4899,18 @@ receives OTLP — panel setup is backend-specific and isn't covered here.</p>
 <p>The Temporal Runtime with OTLP is created lazily on first client connection using
 <code>TemporalRuntimeManager</code> (singleton). Once created with metrics enabled, the Runtime cannot be
 reconfigured in-process (Temporal SDK limitation).</p>
+<h2 id="temporal-sdk-behaviour-notes">Temporal SDK Behaviour Notes<a class="headerlink" href="#temporal-sdk-behaviour-notes" title="Permanent link">&para;</a></h2>
+<p>Recent <code>temporalio</code> releases (1.32 to 1.35) changed behaviour that shows up through the adapter:</p>
+<ul>
+<li><strong>UUIDs in workflows</strong>: the workflow sandbox blocks the standard library <code>uuid.uuid7()</code>, which is not
+  deterministic. Inside workflow code, call <code>workflow.uuid7()</code> from <code>temporalio</code>, which is replay-safe. The adapter
+  still uses <code>uuid.uuid7()</code> outside workflows to generate a missing <code>workflow_id</code> in <code>start_workflow</code>.</li>
+<li><strong>Datetime search attributes</strong>: datetime values passed as <code>search_attributes</code> must be timezone-aware, e.g.
+  <code>datetime.now(UTC)</code>. Since <code>temporalio</code> 1.35 a naive datetime raises an error instead of being sent as is.</li>
+<li><strong>Schedule catchup window</strong>: <code>SchedulePolicy.catchup_window</code> now defaults to the server value instead of one year.
+  Pass <code>SchedulePolicy(catchup_window=timedelta(...))</code> to <code>create_schedule</code> when missed runs must be caught up over
+  a set window.</li>
+</ul>
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
 <ol>
 <li><strong>Workflow Design</strong>: Keep workflows as coordinators - let activities handle business logic</li>
