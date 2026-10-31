@@ -274,6 +274,16 @@ Feature: Temporal Adapter Operations
       | NotFoundError        | non-retryable            |
       | InternalError        | left to the retry policy |
 
+  Scenario Outline: A workflow timeout override of <override> resolves to <resolved>
+    When I resolve a workflow timeout override of <override> against a configured 120 seconds
+    Then the resolved workflow timeout should be <resolved>
+
+    Examples: Timeout overrides
+      | override | resolved |
+      | none     | 120      |
+      | 30       | 30       |
+      | 0        | none     |
+
   Scenario Outline: Activity cache key is a stable content digest
     When I build the activity cache key for input "<input>"
     Then the activity cache key should be "CacheKeyActivity:<digest>"
