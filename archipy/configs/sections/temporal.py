@@ -97,6 +97,16 @@ class TemporalConfig(BaseModel):
             "(None: SDK default, gzip)"
         ),
     )
+    PAYLOADS_WARN_SIZE: int | None = Field(
+        default=None,
+        ge=1,
+        description="Payload size in bytes above which the SDK logs a warning (None: SDK default, 512 KiB)",
+    )
+    MEMO_WARN_SIZE: int | None = Field(
+        default=None,
+        ge=1,
+        description="Memo size in bytes above which the SDK logs a warning (None: SDK default, 2 KiB)",
+    )
     CLIENT_RPC_RETRY_MAX_RETRIES: int = Field(
         default=10,
         ge=0,
