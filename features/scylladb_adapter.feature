@@ -370,3 +370,14 @@ Feature: ScyllaDB Adapter
     Examples: Async
       | mode |
       | asyn |
+
+  @needs-scylladb
+  Scenario Outline: The cluster applies policies and timeout through the default execution profile with <setting> set
+    When I build a ScyllaDB cluster with <setting> set to <value>
+    Then the default execution profile should use the configured request timeout and retry policy
+    And a DeprecationWarning should <warning>
+
+    Examples: Pool settings
+      | setting                     | value | warning                         |
+      | MAX_CONNECTIONS_PER_HOST    | 4     | name "MAX_CONNECTIONS_PER_HOST" |
+      | MAX_REQUESTS_PER_CONNECTION | 100   | not be raised                   |

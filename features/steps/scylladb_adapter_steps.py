@@ -1309,3 +1309,61 @@ def step_scylladb_pool_stats_hosts(context: Context) -> None:
     assert stats["monitoring_enabled"] is True, stats
     assert "error" not in stats, stats
     assert stats["total_hosts"] >= 1, stats
+
+
+@when("I build a ScyllaDB cluster with {setting} set to {value:d}")
+def step_build_scylladb_cluster(context: Context, setting: str, value: int) -> None:
+    """Build the cluster without connecting and keep the warnings raised while building.
+
+    Args:
+        context (Context): Behave context.
+        setting (str): The ScyllaDB config field to override.
+        value (int): The value to set.
+    """
+    import warnings
+
+    from archipy.adapters.scylladb.adapters import ScyllaDBAdapter
+
+    config = get_scylladb_adapter(context).config.model_copy(update={setting: value})
+    adapter = ScyllaDBAdapter.__new__(ScyllaDBAdapter)  # skip __init__, which would open a second connection
+    adapter.config = config
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        cluster = adapter._create_cluster()
+    context.cluster = cluster
+    context.cluster_config = config
+    context.cluster_warnings = [str(item.message) for item in caught if issubclass(item.category, DeprecationWarning)]
+
+
+@then("the default execution profile should use the configured request timeout and retry policy")
+def step_default_profile_configured(context: Context) -> None:
+    """Check the default execution profile carries the configured timeout and a retry policy.
+
+    Args:
+        context (Context): Behave context.
+    """
+    profile = context.cluster.profile_manager.default
+    assert profile.request_timeout == context.cluster_config.REQUEST_TIMEOUT, profile.request_timeout
+    assert profile.retry_policy is not None
+    assert profile.load_balancing_policy is not None
+
+
+@then('a DeprecationWarning should name "{setting}"')
+def step_deprecation_names_setting(context: Context, setting: str) -> None:
+    """Check a DeprecationWarning mentions the ignored setting.
+
+    Args:
+        context (Context): Behave context.
+        setting (str): The setting expected in the warning.
+    """
+    assert any(setting in message for message in context.cluster_warnings), context.cluster_warnings
+
+
+@then("a DeprecationWarning should not be raised")
+def step_no_deprecation(context: Context) -> None:
+    """Check no pool-setting DeprecationWarning was raised.
+
+    Args:
+        context (Context): Behave context.
+    """
+    assert not [m for m in context.cluster_warnings if "no effect" in m], context.cluster_warnings
