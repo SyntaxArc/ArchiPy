@@ -314,6 +314,11 @@ Feature: Temporal Adapter Operations
     When I execute workflow "BaseGreetingWorkflow" with argument "Beat" and workflow id "no-heartbeat-1"
     Then the activities scheduled by workflow "no-heartbeat-1" should have no heartbeat timeout
 
+  Scenario: Workflows started without an ID get a time-ordered UUIDv7
+    Given a worker is started for task queue "test-queue" with GreetingWorkflow
+    When I start workflow "GreetingWorkflow" with argument "Seven" and no workflow id
+    Then the generated workflow id should be a version 7 UUID
+
   Scenario Outline: Activity cache key is a stable content digest
     When I build the activity cache key for input "<input>"
     Then the activity cache key should be "CacheKeyActivity:<digest>"

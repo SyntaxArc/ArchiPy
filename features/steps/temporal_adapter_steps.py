@@ -2365,6 +2365,21 @@ def step_activities_without_heartbeat(context, workflow_id):
     assert all(timeout == 0 for timeout in timeouts), f"Unexpected heartbeat timeouts: {timeouts}"
 
 
+@when('I start workflow "{workflow_name}" with argument "{arg}" and no workflow id')
+def step_start_workflow_without_id(context, workflow_name, arg):
+    adapter = get_temporal_adapter(context)
+    handle = run_async(context, adapter.start_workflow(workflow_name, arg, task_queue="test-queue"))
+    get_current_scenario_context(context).store("generated_workflow_id", handle.id)
+
+
+@then("the generated workflow id should be a version {version:d} UUID")
+def step_generated_workflow_id_version(context, version):
+    import uuid
+
+    workflow_id = get_current_scenario_context(context).get("generated_workflow_id")
+    assert uuid.UUID(workflow_id).version == version, f"{workflow_id} is not a version {version} UUID"
+
+
 @when('I start workflow "{workflow_name}" with workflow id "{workflow_id}" twice using conflict policy {policy}')
 def step_start_workflow_twice_with_conflict_policy(context, workflow_name, workflow_id, policy):
     adapter = get_temporal_adapter(context)

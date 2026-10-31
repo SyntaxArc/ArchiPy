@@ -12,7 +12,7 @@ import logging
 import warnings
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
-from uuid import uuid4
+from uuid import uuid7
 
 from temporalio.worker import (
     PollerBehavior,
@@ -400,8 +400,9 @@ class TemporalWorkerManager(WorkerPort):
             )
 
         client = await self._get_client()
-        worker_id = str(uuid4())
-        worker_identity = identity or f"worker-{worker_id[:8]}"
+        worker_id = str(uuid7())
+        # uuid7 starts with the timestamp, so the random tail keeps identities of workers started together apart.
+        worker_identity = identity or f"worker-{worker_id[-12:]}"
 
         try:
             # Create the Temporal worker
