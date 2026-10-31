@@ -85,6 +85,11 @@ class TemporalConfig(BaseModel):
         default=None,
         description="Custom RPC metadata headers sent with every client request",
     )
+    CONNECT_TIMEOUT: float | None = Field(
+        default=None,
+        gt=0,
+        description="Seconds to wait for the TCP connection, separate from RPC timeouts (None: SDK default)",
+    )
     CLIENT_RPC_RETRY_MAX_RETRIES: int = Field(
         default=10,
         ge=0,

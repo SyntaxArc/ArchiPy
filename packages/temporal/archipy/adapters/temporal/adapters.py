@@ -162,26 +162,24 @@ class TemporalAdapter(TemporalPort):
         """Build the ``Client.connect`` keyword arguments that are only passed when configured.
 
         Returns:
-            dict[str, Any]: The configured optional connection keyword arguments.
+            dict[str, Any]: The configured optional connection keyword arguments; unset ones are left out so the SDK
+                defaults apply.
         """
-        optional: dict[str, Any] = {}
         data_converter = self._data_converter
         if data_converter is None and self.config.PYDANTIC_DATA_CONVERTER:
             data_converter = pydantic_data_converter
-        if data_converter is not None:
-            optional["data_converter"] = data_converter
-        if self._interceptors:
-            optional["interceptors"] = self._interceptors
-        if self.config.CLIENT_IDENTITY is not None:
-            optional["identity"] = self.config.CLIENT_IDENTITY
-        if self.config.API_KEY is not None:
-            optional["api_key"] = self.config.API_KEY
-        if self.config.RPC_METADATA:
-            optional["rpc_metadata"] = self.config.RPC_METADATA
-        tls = self._tls_option()
-        if tls is not None:
-            optional["tls"] = tls
-        return optional
+        optional: dict[str, Any] = {
+            "data_converter": data_converter,
+            "interceptors": self._interceptors or None,
+            "identity": self.config.CLIENT_IDENTITY,
+            "api_key": self.config.API_KEY,
+            "rpc_metadata": self.config.RPC_METADATA or None,
+            "tls": self._tls_option(),
+            "connect_timeout": (
+                timedelta(seconds=self.config.CONNECT_TIMEOUT) if self.config.CONNECT_TIMEOUT is not None else None
+            ),
+        }
+        return {key: value for key, value in optional.items() if value is not None}
 
     def _build_connect_kwargs(self) -> dict[str, Any]:
         """Build the ``Client.connect`` keyword arguments, only including optional settings when configured.
