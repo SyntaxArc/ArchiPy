@@ -184,6 +184,7 @@ Feature: Base Configuration System
       | WORKFLOW_RUN_TIMEOUT         | None     |
       | CONNECT_TIMEOUT              | None     |
       | TLS_VERIFICATION_SERVER_NAME | None     |
+      | GRPC_COMPRESSION             | None     |
 
   Scenario Outline: The <environment> environment reports its kind and log level
     When the environment type <environment> is inspected

@@ -36,7 +36,7 @@ from temporalio.common import RetryPolicy
 from temporalio.contrib.opentelemetry import ReplaySafeTracerProvider
 from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.exceptions import WorkflowAlreadyStartedError
-from temporalio.service import RetryConfig, RPCError, RPCStatusCode
+from temporalio.service import GrpcCompression, RetryConfig, RPCError, RPCStatusCode
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import OtelMetricsExporter
@@ -178,8 +178,23 @@ class TemporalAdapter(TemporalPort):
             "connect_timeout": (
                 timedelta(seconds=self.config.CONNECT_TIMEOUT) if self.config.CONNECT_TIMEOUT is not None else None
             ),
+            "grpc_compression": self._grpc_compression(),
         }
         return {key: value for key, value in optional.items() if value is not None}
+
+    def _grpc_compression(self) -> GrpcCompression | None:
+        """Resolve the ``grpc_compression`` argument of ``Client.connect`` from ``GRPC_COMPRESSION``.
+
+        Returns:
+            GrpcCompression | None: The configured compression, or None to keep the SDK default.
+        """
+        match self.config.GRPC_COMPRESSION:
+            case "gzip":
+                return GrpcCompression.GZIP
+            case "none":
+                return GrpcCompression.NONE
+            case _:
+                return None
 
     def _build_connect_kwargs(self) -> dict[str, Any]:
         """Build the ``Client.connect`` keyword arguments, only including optional settings when configured.
