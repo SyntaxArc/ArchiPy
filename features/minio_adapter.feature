@@ -144,6 +144,18 @@ Feature: MinIO Operations Testing
       | create bucket "errors-bucket" again                      | AlreadyExistsError   |
       | check existence of an object with an empty bucket name   | InvalidArgumentError |
 
+  Scenario Outline: Checksum settings <request>/<response> and CA bundle <ca_bundle> reach the S3 client
+    Given a MinIO adapter with request checksum "<request>", response checksum "<response>" and CA bundle "<ca_bundle>"
+    And a bucket named "checksum-bucket" exists
+    When I upload a file "sum.txt" with content "Checksum" to bucket "checksum-bucket"
+    Then downloading "sum.txt" from "checksum-bucket" should return content "Checksum"
+    And the S3 client should use request checksum "<request>" and response checksum "<response>"
+
+    Examples:
+      | request        | response       | ca_bundle |
+      | when_supported | when_supported | none      |
+      | when_required  | when_required  | certifi   |
+
   Scenario: Object existence is not served stale after an upload
     Given a bucket named "cache-bucket" exists
     Then object "late.txt" should not exist in bucket "cache-bucket"
