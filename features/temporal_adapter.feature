@@ -300,6 +300,15 @@ Feature: Temporal Adapter Operations
       | the same definition     | replay-same-1   | deterministic    |
       | a changed activity call | replay-change-1 | nondeterministic |
 
+  Scenario Outline: A <days>-day timer completes at once in a time-skipping environment
+    When I run DailyReminderWorkflow for <days> days in a time-skipping test environment
+    Then the time-skipping result should be "reminded after <days> days"
+
+    Examples: Timer lengths
+      | days |
+      | 1    |
+      | 30   |
+
   Scenario Outline: Activity cache key is a stable content digest
     When I build the activity cache key for input "<input>"
     Then the activity cache key should be "CacheKeyActivity:<digest>"
