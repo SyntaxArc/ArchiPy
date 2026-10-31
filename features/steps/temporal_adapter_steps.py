@@ -2212,6 +2212,39 @@ def step_activity_cache_key_should_be(context, expected):
     assert actual == expected, f"Expected {expected}, got {actual}"
 
 
+class RaisingActivity(BaseActivity[str, str]):
+    """Activity that raises the ArchiPy error named by its input."""
+
+    async def _do_execute(self, activity_input: str) -> str:
+        import archipy.models.errors as archipy_errors
+
+        raise getattr(archipy_errors, activity_input)()
+
+
+@when("a base activity raising {error_name} runs in an activity environment")
+def step_run_raising_activity(context, error_name):
+    from temporalio.testing import ActivityEnvironment
+
+    scenario_context = get_current_scenario_context(context)
+    try:
+        run_async(context, ActivityEnvironment().run(RaisingActivity().execute, error_name))
+        scenario_context.store("activity_failure", None)
+    except Exception as error:
+        scenario_context.store("activity_failure", error)
+
+
+@then("the activity failure should be {outcome}")
+def step_activity_failure_outcome(context, outcome):
+    from temporalio.exceptions import ApplicationError
+
+    failure = get_current_scenario_context(context).get("activity_failure")
+    if outcome == "non-retryable":
+        assert isinstance(failure, ApplicationError) and failure.non_retryable, repr(failure)
+        assert isinstance(failure.__cause__, BaseError), repr(failure.__cause__)
+    else:
+        assert isinstance(failure, BaseError) and not isinstance(failure, ApplicationError), repr(failure)
+
+
 @when('I start workflow "{workflow_name}" with workflow id "{workflow_id}" twice using conflict policy {policy}')
 def step_start_workflow_twice_with_conflict_policy(context, workflow_name, workflow_id, policy):
     adapter = get_temporal_adapter(context)

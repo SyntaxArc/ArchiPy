@@ -264,6 +264,16 @@ Feature: Temporal Adapter Operations
       | starrocks | on starrocks, original kept |
       | oracle    | rejected                    |
 
+  Scenario Outline: An activity raising <error> is <outcome>
+    When a base activity raising <error> runs in an activity environment
+    Then the activity failure should be <outcome>
+
+    Examples: Activity errors
+      | error                | outcome                  |
+      | InvalidArgumentError | non-retryable            |
+      | NotFoundError        | non-retryable            |
+      | InternalError        | left to the retry policy |
+
   Scenario Outline: Activity cache key is a stable content digest
     When I build the activity cache key for input "<input>"
     Then the activity cache key should be "CacheKeyActivity:<digest>"
