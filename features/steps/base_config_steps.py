@@ -605,3 +605,23 @@ def step_then_environment_kind(context, production, test, dev, local, level):
     actual = (environment.is_production, environment.is_test, environment.is_dev, environment.is_local)
     assert actual == (production == "True", test == "True", dev == "True", local == "True"), actual
     assert environment.log_level == getattr(logging, level), environment.log_level
+
+
+@when("I read the connect arguments of the {kind} Postgres session manager with CONNECT_TIMEOUT {value}")
+def step_when_postgres_connect_args(context, kind, value):
+    from archipy.adapters.postgres.sqlalchemy.session_managers import (
+        AsyncPostgresSQlAlchemySessionManager,
+        PostgresSQlAlchemySessionManager,
+    )
+
+    manager_class = AsyncPostgresSQlAlchemySessionManager if kind == "async" else PostgresSQlAlchemySessionManager
+    manager = object.__new__(manager_class)  # skip __init__: it would build an engine
+    manager._configs = PostgresSQLAlchemyConfig(CONNECT_TIMEOUT=None if value == "none" else int(value))
+    get_current_scenario_context(context).store("connect_args", manager._get_connect_args())
+
+
+@then("the connect arguments should be {expected}")
+def step_then_connect_args(context, expected):
+    actual = get_current_scenario_context(context).get("connect_args")
+    wanted = {} if expected == "empty" else {"connect_timeout": int(expected.split()[-1])}
+    assert actual == wanted, f"Expected {wanted}, got {actual}"
