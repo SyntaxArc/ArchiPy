@@ -44,8 +44,9 @@ from .runtime import TemporalRuntimeManager
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
+    from temporalio.client import Interceptor
     from temporalio.common import WorkflowIDConflictPolicy, WorkflowIDReusePolicy
     from temporalio.converter import DataConverter
     from temporalio.runtime import Runtime
@@ -72,6 +73,7 @@ class TemporalAdapter(TemporalPort):
         self,
         temporal_config: TemporalConfig | None = None,
         data_converter: DataConverter | None = None,
+        interceptors: Sequence[Interceptor] | None = None,
     ) -> None:
         """Initialize the TemporalAdapter with configuration settings.
 
@@ -81,6 +83,8 @@ class TemporalAdapter(TemporalPort):
             data_converter (DataConverter, optional): Data converter for payloads, e.g.
                 ``dataclasses.replace(pydantic_data_converter, payload_codec=MyCodec())`` to encrypt or compress them.
                 If None, the Pydantic converter is used when ``PYDANTIC_DATA_CONVERTER`` is enabled. Defaults to None.
+            interceptors (Sequence[Interceptor], optional): Client interceptors. Those that also implement
+                ``temporalio.worker.Interceptor`` apply to workers created from this client. Defaults to None.
         """
         # Get temporal config from the global config or use provided one
         if temporal_config is None:
@@ -95,6 +99,7 @@ class TemporalAdapter(TemporalPort):
         else:
             self.config = temporal_config
         self._data_converter = data_converter
+        self._interceptors = list(interceptors or [])
         self._client: Client | None = None
         self._client_lock = asyncio.Lock()
 
@@ -135,6 +140,30 @@ class TemporalAdapter(TemporalPort):
                 },
             ) from error
 
+    def _optional_connect_kwargs(self) -> dict[str, Any]:
+        """Build the ``Client.connect`` keyword arguments that are only passed when configured.
+
+        Returns:
+            dict[str, Any]: The configured optional connection keyword arguments.
+        """
+        optional: dict[str, Any] = {}
+        data_converter = self._data_converter
+        if data_converter is None and self.config.PYDANTIC_DATA_CONVERTER:
+            data_converter = pydantic_data_converter
+        if data_converter is not None:
+            optional["data_converter"] = data_converter
+        if self._interceptors:
+            optional["interceptors"] = self._interceptors
+        if self.config.CLIENT_IDENTITY is not None:
+            optional["identity"] = self.config.CLIENT_IDENTITY
+        if self.config.API_KEY is not None:
+            optional["api_key"] = self.config.API_KEY
+        if self.config.RPC_METADATA:
+            optional["rpc_metadata"] = self.config.RPC_METADATA
+        if self._has_tls_config():
+            optional["tls"] = self._build_tls_config()
+        return optional
+
     def _build_connect_kwargs(self) -> dict[str, Any]:
         """Build the ``Client.connect`` keyword arguments, only including optional settings when configured.
 
@@ -154,19 +183,7 @@ class TemporalAdapter(TemporalPort):
                 max_retries=self.config.CLIENT_RPC_RETRY_MAX_RETRIES,
             ),
         }
-        data_converter = self._data_converter
-        if data_converter is None and self.config.PYDANTIC_DATA_CONVERTER:
-            data_converter = pydantic_data_converter
-        if data_converter is not None:
-            connect_kwargs["data_converter"] = data_converter
-        if self.config.CLIENT_IDENTITY is not None:
-            connect_kwargs["identity"] = self.config.CLIENT_IDENTITY
-        if self.config.API_KEY is not None:
-            connect_kwargs["api_key"] = self.config.API_KEY
-        if self.config.RPC_METADATA:
-            connect_kwargs["rpc_metadata"] = self.config.RPC_METADATA
-        if self._has_tls_config():
-            connect_kwargs["tls"] = self._build_tls_config()
+        connect_kwargs.update(self._optional_connect_kwargs())
 
         # Configure Runtime with OTLP metrics if Temporal + OTel metrics are enabled
         global_config = BaseConfig.global_config()

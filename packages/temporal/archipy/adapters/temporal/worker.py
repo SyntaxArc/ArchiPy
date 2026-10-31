@@ -28,10 +28,10 @@ from .adapters import TemporalAdapter
 from .ports import WorkerHandle as PortWorkerHandle, WorkerPort
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
     from concurrent.futures import Executor
 
-    from temporalio.client import Client
+    from temporalio.client import Client, Interceptor
     from temporalio.converter import DataConverter
     from temporalio.worker import WorkerDeploymentConfig, WorkerTuner
 
@@ -278,6 +278,7 @@ class TemporalWorkerManager(WorkerPort):
         self,
         temporal_config: TemporalConfig | None = None,
         data_converter: DataConverter | None = None,
+        interceptors: Sequence[Interceptor] | None = None,
     ) -> None:
         """Initialize the worker manager.
 
@@ -286,6 +287,8 @@ class TemporalWorkerManager(WorkerPort):
                 If None, retrieves from global config. Defaults to None.
             data_converter (DataConverter, optional): Data converter passed to the client the workers use.
                 Defaults to None (see ``TemporalAdapter``).
+            interceptors (Sequence[Interceptor], optional): Client interceptors; those that also implement
+                ``temporalio.worker.Interceptor`` apply to every worker this manager starts. Defaults to None.
         """
         # Get temporal config from the global config or use provided one
         if temporal_config is None:
@@ -298,7 +301,7 @@ class TemporalWorkerManager(WorkerPort):
                 self.config = TemporalConfig()
         else:
             self.config = temporal_config
-        self._temporal_adapter = TemporalAdapter(temporal_config, data_converter)
+        self._temporal_adapter = TemporalAdapter(temporal_config, data_converter, interceptors)
         self._workers: dict[str, WorkerHandle] = {}
         self._logger = logging.getLogger(__name__)
 

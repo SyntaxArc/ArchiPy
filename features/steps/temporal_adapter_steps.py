@@ -19,7 +19,10 @@ from typing import Any, TypeVar
 
 import httpx2
 from behave import given, then, when
-from temporalio.client import WithStartWorkflowOperation, WorkflowFailureError
+from temporalio.client import Interceptor as ClientInterceptor
+from temporalio.client import OutboundInterceptor, StartWorkflowInput, WithStartWorkflowOperation, WorkflowFailureError
+from temporalio.worker import ActivityInboundInterceptor, ExecuteActivityInput
+from temporalio.worker import Interceptor as WorkerInterceptor
 from temporalio.common import WorkflowIDConflictPolicy
 from temporalio.client import ScheduleIntervalSpec, ScheduleOverlapPolicy, SchedulePolicy, ScheduleSpec
 from temporalio.worker import WorkerDeploymentConfig, WorkerDeploymentVersion
@@ -2229,3 +2232,48 @@ def step_start_worker_in_deployment(context, task_queue, deployment, build_id):
         use_worker_versioning=False,
     )
     run_async(context, start_test_worker(context, task_queue, deployment_config=deployment_config))
+
+
+class CountingInterceptor(ClientInterceptor, WorkerInterceptor):
+    """Client and worker interceptor that counts workflow starts and activity executions."""
+
+    def __init__(self) -> None:
+        self.workflow_starts = 0
+        self.activity_executions = 0
+
+    def intercept_client(self, next: OutboundInterceptor) -> OutboundInterceptor:
+        counter = self
+
+        class _Outbound(OutboundInterceptor):
+            async def start_workflow(self, input: StartWorkflowInput) -> Any:
+                counter.workflow_starts += 1
+                return await super().start_workflow(input)
+
+        return _Outbound(next)
+
+    def intercept_activity(self, next: ActivityInboundInterceptor) -> ActivityInboundInterceptor:
+        counter = self
+
+        class _Inbound(ActivityInboundInterceptor):
+            async def execute_activity(self, input: ExecuteActivityInput) -> Any:
+                counter.activity_executions += 1
+                return await super().execute_activity(input)
+
+        return _Inbound(next)
+
+
+@given("a Temporal adapter and worker manager are configured with a counting interceptor")
+def step_configure_counting_interceptor(context):
+    scenario_context = get_current_scenario_context(context)
+    temporal_config = get_temporal_adapter(context).config
+    interceptor = CountingInterceptor()
+    scenario_context.store("counting_interceptor", interceptor)
+    scenario_context.temporal_adapter = TemporalAdapter(temporal_config, interceptors=[interceptor])
+    scenario_context.worker_manager = TemporalWorkerManager(temporal_config, interceptors=[interceptor])
+
+
+@then("the counting interceptor should have seen {starts:d} workflow start and {executions:d} activity execution")
+def step_counting_interceptor_saw(context, starts, executions):
+    interceptor = get_current_scenario_context(context).get("counting_interceptor")
+    assert interceptor.workflow_starts == starts, interceptor.workflow_starts
+    assert interceptor.activity_executions == executions, interceptor.activity_executions
