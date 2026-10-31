@@ -167,20 +167,23 @@ Feature: Base Configuration System
       | Temporal | a run timeout above the execution one   | rejected |
       | Temporal | a keep alive timeout above the interval | rejected |
       | Temporal | a task timeout above the run timeout    | accepted |
+      | Temporal | a verification name without a CA        | rejected |
+      | Temporal | a verification name with a CA           | accepted |
 
   Scenario Outline: The Temporal <field> default is <expected>
     When a default Temporal configuration is built
     Then the default Temporal setting <field> should be <expected>
 
     Examples: Temporal defaults
-      | field                      | expected |
-      | ACTIVITY_HEARTBEAT_TIMEOUT | None     |
-      | WORKER_POLLER_AUTOSCALING  | False    |
-      | WORKFLOW_RETRY_ENABLED     | False    |
-      | PYDANTIC_DATA_CONVERTER    | True     |
-      | WORKFLOW_EXECUTION_TIMEOUT | None     |
-      | WORKFLOW_RUN_TIMEOUT       | None     |
-      | CONNECT_TIMEOUT            | None     |
+      | field                        | expected |
+      | ACTIVITY_HEARTBEAT_TIMEOUT   | None     |
+      | WORKER_POLLER_AUTOSCALING    | False    |
+      | WORKFLOW_RETRY_ENABLED       | False    |
+      | PYDANTIC_DATA_CONVERTER      | True     |
+      | WORKFLOW_EXECUTION_TIMEOUT   | None     |
+      | WORKFLOW_RUN_TIMEOUT         | None     |
+      | CONNECT_TIMEOUT              | None     |
+      | TLS_VERIFICATION_SERVER_NAME | None     |
 
   Scenario Outline: The <environment> environment reports its kind and log level
     When the environment type <environment> is inspected
