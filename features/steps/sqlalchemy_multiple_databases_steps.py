@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 from behave import given, then, when
-from sqlalchemy import text
+from sqlalchemy import event, text
 
 from archipy.adapters.base.sqlalchemy.atomic import sqlite_sqlalchemy_atomic
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
@@ -14,8 +14,16 @@ from archipy.adapters.sqlite.sqlalchemy.session_managers import (
     AsyncSQLiteSQLAlchemySessionManager,
     SQLiteSQLAlchemySessionManager,
 )
+from archipy.adapters.starrocks.sqlalchemy.session_managers import (
+    AsyncStarRocksSQlAlchemySessionManager,
+    StarRocksSQlAlchemySessionManager,
+)
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import PostgresSQLAlchemyConfig, SQLiteSQLAlchemyConfig
+from archipy.configs.config_template import (
+    PostgresSQLAlchemyConfig,
+    SQLiteSQLAlchemyConfig,
+    StarRocksSQLAlchemyConfig,
+)
 from archipy.models import errors
 from features.test_helpers import get_current_scenario_context
 
@@ -116,7 +124,7 @@ def step_when_item_added_atomic_fails(context, value, name):
 
 
 @when(
-    'an item "{first_value}" is added on "{first}" and "{second_value}" on "{second}" in nested atomic blocks, then the outer block fails'
+    'an item "{first_value}" is added on "{first}" and "{second_value}" on "{second}" in nested atomic blocks, then the outer block fails',
 )
 def step_when_nested_blocks(context, first_value, first, second_value, second):
     first_registry = _database(context, first)["registry"]
@@ -215,3 +223,94 @@ def step_when_sqlite_manager_built_with_problem(context, mode, problem):
         else SQLiteSQLAlchemyConfig(DRIVER_NAME="no_such_dialect+no_such_driver", DATABASE=":memory:")
     )
     _remember_registry_outcome(context, lambda: manager_class(config))
+
+
+class _ConnectAttemptStoppedError(Exception):
+    """Raised from the ``do_connect`` hook so no real connection is opened."""
+
+
+def _network_session_manager(mode, database, connect_timeout):
+    """Build a session manager for a networked database with a unique, unreachable configuration."""
+    if database == "StarRocks":
+        config = StarRocksSQLAlchemyConfig(
+            HOST="connect-args.invalid",
+            PORT=9030,
+            DATABASE="connect_args",
+            USERNAME="root",
+            CONNECT_TIMEOUT=connect_timeout,
+        )
+        manager_class = AsyncStarRocksSQlAlchemySessionManager if mode == "async" else StarRocksSQlAlchemySessionManager
+        return manager_class(config)
+    raise AssertionError(f"Unsupported database {database}")
+
+
+@when("a {mode} {database} session manager opens a connection with a connect timeout of {seconds:d} seconds")
+def step_when_manager_opens_connection_with_timeout(context, mode, database, seconds):
+    manager = _network_session_manager(mode, database, seconds)
+    sync_engine = manager.engine.sync_engine if mode == "async" else manager.engine
+    captured = {}
+
+    def stop_connect(dialect, conn_rec, cargs, cparams):
+        captured.update(cparams)
+        raise _ConnectAttemptStoppedError
+
+    event.listen(sync_engine, "do_connect", stop_connect)
+    context.add_cleanup(event.remove, sync_engine, "do_connect", stop_connect)
+    try:
+        sync_engine.raw_connection()
+    except _ConnectAttemptStoppedError:
+        pass
+    get_current_scenario_context(context).store("driver_connect_params", captured)
+
+
+@then("the driver should receive a connect timeout of {seconds:d} seconds")
+def step_then_driver_receives_connect_timeout(context, seconds):
+    params = get_current_scenario_context(context).get("driver_connect_params")
+    assert params.get("connect_timeout") == seconds, f"Expected connect_timeout={seconds}, got {params!r}"
+
+
+_IN_MEMORY_ROW_SQL = (
+    "CREATE TABLE IF NOT EXISTS recycled_items (name TEXT)",
+    "DELETE FROM recycled_items",
+    "INSERT INTO recycled_items (name) VALUES ('kept')",
+)
+_IN_MEMORY_COUNT_SQL = "SELECT COUNT(*) FROM recycled_items"
+
+
+def _in_memory_sqlite_config():
+    # A recycle time of 0 makes every checkout older than the recycle time, so no waiting is needed.
+    return SQLiteSQLAlchemyConfig(DRIVER_NAME="sqlite", DATABASE=":memory:", POOL_RECYCLE_SECONDS=0)
+
+
+@when("a row is written to the sync in-memory SQLite database and read back after its pool recycle time")
+def step_when_sync_in_memory_row_written(context):
+    manager = SQLiteSQLAlchemySessionManager(_in_memory_sqlite_config())
+    session = manager.get_session()
+    for statement in _IN_MEMORY_ROW_SQL:
+        session.execute(text(statement))
+    session.commit()
+    manager.remove_session()
+    session = manager.get_session()
+    count = session.execute(text(_IN_MEMORY_COUNT_SQL)).scalar_one()
+    manager.remove_session()
+    get_current_scenario_context(context).store("in_memory_row_count", count)
+
+
+@when("a row is written to the async in-memory SQLite database and read back after its pool recycle time")
+async def step_when_async_in_memory_row_written(context):
+    manager = AsyncSQLiteSQLAlchemySessionManager(_in_memory_sqlite_config())
+    session = manager.get_session()
+    for statement in _IN_MEMORY_ROW_SQL:
+        await session.execute(text(statement))
+    await session.commit()
+    await manager.remove_session()
+    session = manager.get_session()
+    count = (await session.execute(text(_IN_MEMORY_COUNT_SQL))).scalar_one()
+    await manager.remove_session()
+    get_current_scenario_context(context).store("in_memory_row_count", count)
+
+
+@then("the in-memory SQLite database still holds the row")
+def step_then_in_memory_row_kept(context):
+    count = get_current_scenario_context(context).get("in_memory_row_count")
+    assert count == 1, f"Expected 1 row after the pool recycle time, got {count}"

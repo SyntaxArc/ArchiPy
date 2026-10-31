@@ -211,6 +211,16 @@ Feature: Temporal Adapter Operations
     When I execute workflow "GreetingWorkflow" with argument "Tuned"
     Then the workflow result should be "Hello, Tuned!"
 
+  Scenario Outline: A worker with eager activity reservations set to <value> reserves <expected> per workflow task
+    Given a Temporal worker manager is configured with eager activity reservations set to <value>
+    And a worker is started for task queue "test-queue" with GreetingWorkflow
+    Then the worker should reserve <expected> eager activities per workflow task
+
+    Examples: Eager activity reservations
+      | value | expected |
+      | 5     | 5        |
+      | none  | 3        |
+
   Scenario: Worker joins a Worker Deployment version
     When I start a worker for task queue "deployment-queue" in deployment "orders" with build id "v2.0.0"
     Then the worker should be running
@@ -253,6 +263,15 @@ Feature: Temporal Adapter Operations
   Scenario: A Temporal Runtime that cannot be built raises a ConfigurationError
     When I build a Temporal Runtime exporting metrics to "not a url"
     Then building the Temporal Runtime should raise a ConfigurationError
+
+  Scenario Outline: Disabling environment info <outcome> a Temporal Runtime when metrics are off
+    When the Temporal connection arguments are built with RUNTIME_DISABLE_ENVIRONMENT_INFO set to <value>
+    Then the connection arguments should <outcome> a Temporal Runtime
+
+    Examples: Environment info
+      | value | outcome |
+      | true  | include |
+      | false | omit    |
 
   Scenario Outline: AtomicActivity.with_db_type returns a copy on <db_type>
     When I copy a postgres atomic activity with database type "<db_type>"
@@ -333,6 +352,12 @@ Feature: Temporal Adapter Operations
     Then its client option <option> should be <expected>
 
     Examples: Client options
-      | setting         | value | option          | expected |
-      | CONNECT_TIMEOUT | 5     | connect_timeout | 0:00:05  |
-      | CONNECT_TIMEOUT | none  | connect_timeout | absent   |
+      | setting            | value  | option           | expected                                                            |
+      | CONNECT_TIMEOUT    | 5      | connect_timeout  | 0:00:05                                                             |
+      | CONNECT_TIMEOUT    | none   | connect_timeout  | absent                                                              |
+      | GRPC_COMPRESSION   | gzip   | grpc_compression | _GzipGrpcCompression()                                              |
+      | GRPC_COMPRESSION   | "none" | grpc_compression | _NoGrpcCompression()                                                |
+      | GRPC_COMPRESSION   | none   | grpc_compression | absent                                                              |
+      | PAYLOADS_WARN_SIZE | 1024   | payload_limits   | PayloadLimitsConfig(payloads_warn_size=1024, memo_warn_size=2048)   |
+      | MEMO_WARN_SIZE     | 4096   | payload_limits   | PayloadLimitsConfig(payloads_warn_size=524288, memo_warn_size=4096) |
+      | PAYLOADS_WARN_SIZE | none   | payload_limits   | absent                                                              |

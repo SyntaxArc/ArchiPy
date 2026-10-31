@@ -91,12 +91,22 @@ def driver_error_code(exception: BaseException) -> str | int | None:
     for candidate in (driver_error, getattr(driver_error, "__cause__", None)):
         if candidate is None:
             continue
+        # MySQL-family drivers (pymysql>=1.2, asyncmy>=0.2.14) also set ``sqlstate``, but their integer errno in
+        # ``args[0]`` is the precise code; PostgreSQL and SQLite drivers put a message string there instead.
+        errno = _mysql_errno(candidate)
+        if errno is not None:
+            return errno
         sqlstate = getattr(candidate, "sqlstate", None) or getattr(candidate, "pgcode", None)
         if sqlstate:
             return str(sqlstate)
         sqlite_name = getattr(candidate, "sqlite_errorname", None)
         if isinstance(sqlite_name, str):
             return sqlite_name
+    return None
+
+
+def _mysql_errno(driver_error: BaseException) -> int | None:
+    """Return the MySQL-compatible errno carried as ``args[0]``, or ``None`` when ``args[0]`` is not an int."""
     args = getattr(driver_error, "args", ())
     if args and isinstance(args[0], int) and not isinstance(args[0], bool):
         return args[0]

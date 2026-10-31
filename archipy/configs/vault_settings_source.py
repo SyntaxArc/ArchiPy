@@ -27,7 +27,7 @@ from archipy.configs.config_template import VaultConfig
 from archipy.models.errors import ConfigurationError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable
 
     from pydantic.fields import FieldInfo
     from requests import Response
@@ -158,10 +158,10 @@ class _TimeoutHTTPAdapter(HTTPAdapter):
         self,
         request: PreparedRequest,
         stream: bool = False,
-        timeout: float | tuple[float, float] | tuple[float, None] | None = None,
+        timeout: float | tuple[float | None, float | None] | None = None,
         verify: bool | str = True,
-        cert: bytes | str | tuple[bytes | str, bytes | str] | None = None,
-        proxies: Mapping[str, str] | None = None,
+        cert: str | tuple[str, str] | None = None,
+        proxies: dict[str, str] | None = None,
     ) -> Response:
         """Send the request, applying the default timeout when unset."""
         effective_timeout = self._timeout if timeout is None else timeout
@@ -203,12 +203,19 @@ def create_vault_client(config: VaultConfig) -> hvac.Client:
             reason="Both CLIENT_CERT_PATH and CLIENT_KEY_PATH must be set for mutual TLS",
         )
 
+    # hvac copies ``session.verify`` (requests default: True) and ``session.cert``
+    # over the Client arguments when a session is passed, and sends its own
+    # ``timeout=30`` on every request, so set them on the session and pass the
+    # timeout tuple explicitly.
     session = _build_session(config)
+    session.verify = verify
+    session.cert = cert
     client = hvac.Client(
         url=config.ADDR,
         namespace=config.NAMESPACE,
         verify=verify,
         cert=cert,
+        timeout=(config.CONNECT_TIMEOUT, config.READ_TIMEOUT),
         session=session,
     )
 

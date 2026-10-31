@@ -19,6 +19,7 @@ from uuid import uuid7
 from temporalio.client import (
     Client,
     KeepAliveConfig,
+    PayloadLimitsConfig,
     Schedule,
     ScheduleActionStartWorkflow,
     ScheduleAlreadyRunningError,
@@ -36,7 +37,7 @@ from temporalio.common import RetryPolicy
 from temporalio.contrib.opentelemetry import ReplaySafeTracerProvider
 from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.exceptions import WorkflowAlreadyStartedError
-from temporalio.service import RetryConfig, RPCError, RPCStatusCode
+from temporalio.service import GrpcCompression, RetryConfig, RPCError, RPCStatusCode
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import OtelMetricsExporter
@@ -178,8 +179,39 @@ class TemporalAdapter(TemporalPort):
             "connect_timeout": (
                 timedelta(seconds=self.config.CONNECT_TIMEOUT) if self.config.CONNECT_TIMEOUT is not None else None
             ),
+            "grpc_compression": self._grpc_compression(),
+            "payload_limits": self._payload_limits(),
         }
         return {key: value for key, value in optional.items() if value is not None}
+
+    def _grpc_compression(self) -> GrpcCompression | None:
+        """Resolve the ``grpc_compression`` argument of ``Client.connect`` from ``GRPC_COMPRESSION``.
+
+        Returns:
+            GrpcCompression | None: The configured compression, or None to keep the SDK default.
+        """
+        match self.config.GRPC_COMPRESSION:
+            case "gzip":
+                return GrpcCompression.GZIP
+            case "none":
+                return GrpcCompression.NONE
+            case _:
+                return None
+
+    def _payload_limits(self) -> PayloadLimitsConfig | None:
+        """Resolve the ``payload_limits`` argument of ``Client.connect`` from the warning size settings.
+
+        Returns:
+            PayloadLimitsConfig | None: The limits when either size is set, the other keeping the SDK default;
+                None when neither is set.
+        """
+        if self.config.PAYLOADS_WARN_SIZE is None and self.config.MEMO_WARN_SIZE is None:
+            return None
+        defaults = PayloadLimitsConfig()
+        return PayloadLimitsConfig(
+            payloads_warn_size=self.config.PAYLOADS_WARN_SIZE or defaults.payloads_warn_size,
+            memo_warn_size=self.config.MEMO_WARN_SIZE or defaults.memo_warn_size,
+        )
 
     def _build_connect_kwargs(self) -> dict[str, Any]:
         """Build the ``Client.connect`` keyword arguments, only including optional settings when configured.
@@ -202,13 +234,21 @@ class TemporalAdapter(TemporalPort):
         }
         connect_kwargs.update(self._optional_connect_kwargs())
 
-        # Configure Runtime with OTLP metrics if Temporal + OTel metrics are enabled
+        # Configure Runtime with OTLP metrics if Temporal + OTel metrics are enabled, or a plain Runtime when only
+        # environment info is disabled
         global_config = BaseConfig.global_config()
         otel = global_config.OTEL
+        runtime: Runtime | None = None
         if self.config.ENABLE_METRICS and otel.IS_ENABLED and otel.METRICS_ENABLED:
             runtime = self._build_metrics_runtime(otel)
-            if runtime is not None:
-                connect_kwargs["runtime"] = runtime
+        elif self.config.RUNTIME_DISABLE_ENVIRONMENT_INFO:
+            runtime = TemporalRuntimeManager().get_runtime(
+                global_tags=self.config.METRICS_GLOBAL_TAGS,
+                core_log_level=self.config.SDK_CORE_LOG_LEVEL,
+                disable_environment_info=True,
+            )
+        if runtime is not None:
+            connect_kwargs["runtime"] = runtime
 
         # Attach OTel tracing plugin when traces are enabled
         if otel.IS_ENABLED and otel.TRACES_ENABLED:
@@ -250,6 +290,7 @@ class TemporalAdapter(TemporalPort):
             prometheus_bind_address=prometheus_bind_address,
             global_tags=self.config.METRICS_GLOBAL_TAGS,
             core_log_level=self.config.SDK_CORE_LOG_LEVEL,
+            disable_environment_info=self.config.RUNTIME_DISABLE_ENVIRONMENT_INFO,
         )
 
     @staticmethod
@@ -304,7 +345,8 @@ class TemporalAdapter(TemporalPort):
         """Build TLS configuration for secure connections from the configured files.
 
         Server-only TLS needs just the CA certificate (or none, to use the system CA bundle); mutual TLS adds the
-        client certificate and key.
+        client certificate and key. ``TLS_VERIFICATION_SERVER_NAME`` checks the certificate name without changing
+        the SNI that ``TLS_SERVER_NAME`` sets.
 
         Returns:
             TLSConfig: The TLS configuration object.
@@ -318,6 +360,7 @@ class TemporalAdapter(TemporalPort):
                 client_cert=self._read_tls_file(self.config.TLS_CLIENT_CERT),
                 client_private_key=self._read_tls_file(self.config.TLS_CLIENT_KEY),
                 domain=self.config.TLS_SERVER_NAME,
+                verification_server_name=self.config.TLS_VERIFICATION_SERVER_NAME,
             )
         except OSError as error:
             raise InvalidArgumentError(additional_data={"original_error": str(error)}) from error
@@ -362,7 +405,8 @@ class TemporalAdapter(TemporalPort):
             None: Control to the wrapped block.
 
         Raises:
-            AlreadyExistsError: If the workflow or schedule ID is already in use.
+            AlreadyExistsError: If the workflow or schedule ID is already in use; for a workflow its
+                ``additional_data`` holds the ``run_id`` and ``first_run_id`` of the running execution.
             NotFoundError: If the workflow or schedule does not exist.
             UnavailableError: If the Temporal server is unreachable.
             DeadlineExceededError: If the call timed out.
@@ -370,7 +414,13 @@ class TemporalAdapter(TemporalPort):
         """
         try:
             yield
-        except (WorkflowAlreadyStartedError, ScheduleAlreadyRunningError) as error:
+        except WorkflowAlreadyStartedError as error:
+            # The run IDs let callers reach the execution that already holds the workflow ID.
+            raise AlreadyExistsError(
+                resource_type=operation,
+                additional_data={"id": resource_id, "run_id": error.run_id, "first_run_id": error.first_run_id},
+            ) from error
+        except ScheduleAlreadyRunningError as error:
             raise AlreadyExistsError(resource_type=operation, additional_data={"id": resource_id}) from error
         except RPCError as error:
             raise self._map_rpc_error(error, operation, resource_id) from error
@@ -479,8 +529,8 @@ class TemporalAdapter(TemporalPort):
                 Overrides config default. Defaults to None.
             memo (dict[str, Any], optional): Non-indexed metadata for the workflow.
                 Defaults to None.
-            search_attributes (dict[str, Any], optional): Indexed metadata for workflow search.
-                Defaults to None.
+            search_attributes (dict[str, Any], optional): Indexed metadata for workflow search. Datetime values must
+                be timezone-aware; ``temporalio`` 1.35+ raises on naive ones. Defaults to None.
             id_reuse_policy (WorkflowIDReusePolicy, optional): Whether a closed workflow's ID may be reused.
                 Defaults to None (server default: allow duplicate).
             id_conflict_policy (WorkflowIDConflictPolicy, optional): What to do when a workflow with the same ID
@@ -488,6 +538,10 @@ class TemporalAdapter(TemporalPort):
 
         Returns:
             WorkflowHandle[T, Any]: Handle to the started workflow execution.
+
+        Note:
+            The generated ID comes from the standard library ``uuid.uuid7()``, which is fine here, outside workflow
+            code. Inside a workflow the sandbox blocks it: use ``temporalio.workflow.uuid7()`` instead.
         """
         async with self._mapped_errors("start_workflow", workflow_id):
             client = await self.get_client()
@@ -771,7 +825,8 @@ class TemporalAdapter(TemporalPort):
             workflow_id (str, optional): Base ID of the started workflows; the server appends the fire time.
                 Defaults to the schedule ID.
             schedule_policy (SchedulePolicy, optional): Overlap, catchup window and pause-on-failure policy.
-                Defaults to skipping overlapping runs.
+                Defaults to skipping overlapping runs. ``SchedulePolicy.catchup_window`` defaults to the server value,
+                so set it explicitly when missed runs must be caught up over a fixed window.
             args (Sequence[Any], optional): Arguments of the started workflows. Defaults to None.
             memo (dict[str, Any], optional): Memo of the started workflows. Defaults to None.
         """

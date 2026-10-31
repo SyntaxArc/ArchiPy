@@ -2920,15 +2920,14 @@ def step_when_create_search_index_with_algorithm(context, index_name, prefix, al
 def step_when_range_search(context, index_name, radius, vector):
     """Run a vector range search against a search index."""
     handle = get_current_scenario_context(context).adapter.search_index(index_name)
-    result = handle.search(
-        SearchQueryDTO.from_range(
-            _parse_search_vector(vector),
-            radius=float(radius),
-            return_fields=["title"],
-            score_field="vector_distance",
-            limit=10,
-        ),
+    query = SearchQueryDTO.from_range(
+        _parse_search_vector(vector),
+        radius=float(radius),
+        return_fields=["title"],
+        score_field="vector_distance",
+        limit=10,
     )
+    result = _search_until_indexed(lambda: handle.search(query))
     store_result(context, "search_result", result)
 
 
@@ -2939,14 +2938,13 @@ def step_when_range_search(context, index_name, radius, vector):
 def step_when_knn_search_with_shard_ratio(context, index_name, vector, k, ratio):
     """Run a KNN search with cluster shard ratio tuning."""
     handle = get_current_scenario_context(context).adapter.search_index(index_name)
-    result = handle.search(
-        SearchQueryDTO.from_knn(
-            _parse_search_vector(vector),
-            k=int(k),
-            return_fields=["title"],
-            runtime=VectorQueryRuntimeDTO(shard_k_ratio=float(ratio)),
-        ),
+    query = SearchQueryDTO.from_knn(
+        _parse_search_vector(vector),
+        k=int(k),
+        return_fields=["title"],
+        runtime=VectorQueryRuntimeDTO(shard_k_ratio=float(ratio)),
     )
+    result = _search_until_indexed(lambda: handle.search(query))
     store_result(context, "search_result", result)
 
 

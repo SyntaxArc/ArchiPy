@@ -830,6 +830,19 @@ The Temporal Runtime with OTLP is created lazily on first client connection usin
 `TemporalRuntimeManager` (singleton). Once created with metrics enabled, the Runtime cannot be
 reconfigured in-process (Temporal SDK limitation).
 
+## Temporal SDK Behaviour Notes
+
+Recent `temporalio` releases (1.32 to 1.35) changed behaviour that shows up through the adapter:
+
+- **UUIDs in workflows**: the workflow sandbox blocks the standard library `uuid.uuid7()`, which is not
+  deterministic. Inside workflow code, call `workflow.uuid7()` from `temporalio`, which is replay-safe. The adapter
+  still uses `uuid.uuid7()` outside workflows to generate a missing `workflow_id` in `start_workflow`.
+- **Datetime search attributes**: datetime values passed as `search_attributes` must be timezone-aware, e.g.
+  `datetime.now(UTC)`. Since `temporalio` 1.35 a naive datetime raises an error instead of being sent as is.
+- **Schedule catchup window**: `SchedulePolicy.catchup_window` now defaults to the server value instead of one year.
+  Pass `SchedulePolicy(catchup_window=timedelta(...))` to `create_schedule` when missed runs must be caught up over
+  a set window.
+
 ## Best Practices
 
 1. **Workflow Design**: Keep workflows as coordinators - let activities handle business logic

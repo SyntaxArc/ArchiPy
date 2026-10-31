@@ -19,6 +19,22 @@ _ASYNC_DRIVER = "sqlite+aiosqlite"
 _SYNC_DRIVERS = frozenset({"sqlite", "sqlite+pysqlite"})
 # Queue-pool-only arguments; SQLite in-memory engines use SingletonThreadPool/StaticPool, which reject them.
 _QUEUE_POOL_ONLY_KWARGS = frozenset({"pool_size", "max_overflow", "pool_timeout", "pool_use_lifo"})
+_MEMORY_DATABASE = ":memory:"
+
+
+def _uses_single_connection_pool(database: str | None) -> bool:
+    """Return whether SQLAlchemy gives the SQLite database a single-connection pool.
+
+    SQLAlchemy 2.1 selects the pool class from the database name alone: an empty name or ``:memory:`` gets
+    SingletonThreadPool/StaticPool, any other name (including a ``mode=memory`` URI) gets QueuePool.
+
+    Args:
+        database: The configured SQLite database path.
+
+    Returns:
+        bool: True for ``:memory:`` or an empty path.
+    """
+    return not database or database == _MEMORY_DATABASE
 
 
 def _is_in_memory(database: str | None) -> bool:
@@ -28,13 +44,19 @@ def _is_in_memory(database: str | None) -> bool:
         database: The configured SQLite database path.
 
     Returns:
-        bool: True for ``:memory:``, an empty path, or a ``mode=memory`` URI.
+        bool: True for ``:memory:``, an empty path, or a memory URI such as ``file::memory:?cache=shared`` or
+        ``file:name?mode=memory&cache=shared``.
     """
-    return not database or database == ":memory:" or "mode=memory" in database
+    if not database:
+        return True
+    return _MEMORY_DATABASE in database or "mode=memory" in database
 
 
 def _sqlite_pool_kwargs(configs: SQLiteSQLAlchemyConfig, pool_kwargs: dict[str, Any]) -> dict[str, Any]:
-    """Drop queue-pool arguments that SQLite in-memory pools do not accept.
+    """Drop pool arguments that SQLite in-memory databases cannot use.
+
+    Recycling closes the connection, and closing the last connection to an in-memory database discards it, so
+    ``pool_recycle`` is never passed for one. Single-connection pools also reject queue-pool arguments.
 
     Args:
         configs: SQLite configuration.
@@ -45,7 +67,10 @@ def _sqlite_pool_kwargs(configs: SQLiteSQLAlchemyConfig, pool_kwargs: dict[str, 
     """
     if not _is_in_memory(configs.DATABASE):
         return pool_kwargs
-    return {key: value for key, value in pool_kwargs.items() if key not in _QUEUE_POOL_ONLY_KWARGS}
+    dropped = {"pool_recycle"}
+    if _uses_single_connection_pool(configs.DATABASE):
+        dropped |= _QUEUE_POOL_ONLY_KWARGS
+    return {key: value for key, value in pool_kwargs.items() if key not in dropped}
 
 
 class SQLiteSQLAlchemySessionManager(BaseSQLAlchemySessionManager[SQLiteSQLAlchemyConfig], metaclass=Singleton):
