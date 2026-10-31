@@ -715,6 +715,32 @@ async def step_validate_token(context: Context, adapter_type: str) -> None:
     context.logger.info(f"Validated token for {username}")
 
 
+@given('the realm "{realm_name}" rotates its signing key')
+def step_rotate_realm_signing_key(context: Context, realm_name: str) -> None:
+    """Add a higher-priority RSA key so new tokens and the realm public key use it, keeping the old key in JWKS."""
+    from keycloak import KeycloakAdmin
+
+    config = BaseConfig.global_config().KEYCLOAK
+    admin = KeycloakAdmin(
+        server_url=config.SERVER_URL,
+        username=config.ADMIN_USERNAME,
+        password=config.ADMIN_PASSWORD,
+        realm_name=realm_name,
+        user_realm_name=config.ADMIN_REALM_NAME,
+        verify=config.VERIFY_SSL,
+    )
+    admin.create_component(
+        {
+            "name": f"rotated-rsa-{uuid.uuid4().hex[:8]}",
+            "providerId": "rsa-generated",
+            "providerType": "org.keycloak.keys.KeyProvider",
+            "parentId": admin.get_realm(realm_name)["id"],
+            "config": {"priority": ["1000"], "keySize": ["2048"], "active": ["true"], "enabled": ["true"]},
+        },
+    )
+    context.logger.info(f"Rotated the signing key of realm {realm_name}")
+
+
 # User retrieval steps
 @when('I get user by username "{username}" using {adapter_type} adapter')
 async def step_get_user_by_username(context: Context, username: str, adapter_type: str) -> None:
