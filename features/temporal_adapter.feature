@@ -327,3 +327,12 @@ Feature: Temporal Adapter Operations
       | input    | digest                                                           |
       | order-42 | 90140eb1a898639024d3752994bf84b1d40cfe639f70bcbdf7d047bf72274a1d |
       | alice    | 0a50500b2a3435fe7472877eb22d48d47a228e946b0b991ab7402a8d00f6b32d |
+
+  Scenario Outline: The Temporal client option <option> follows <setting>
+    When a Temporal adapter is built with <setting> set to <value>
+    Then its client option <option> should be <expected>
+
+    Examples: Client options
+      | setting         | value | option          | expected |
+      | CONNECT_TIMEOUT | 5     | connect_timeout | 0:00:05  |
+      | CONNECT_TIMEOUT | none  | connect_timeout | absent   |

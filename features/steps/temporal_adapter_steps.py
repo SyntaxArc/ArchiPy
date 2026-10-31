@@ -2588,3 +2588,23 @@ def step_deprecation_warning_emitted(context):
 
 class PostgresAtomicActivity(AtomicActivity[str, str]):
     """Minimal atomic activity used to check ``with_db_type``."""
+
+
+@when("a Temporal adapter is built with {setting} set to {value}")
+def step_adapter_built_with_setting(context, setting, value):
+    import json
+
+    parsed = None if value == "none" else json.loads(value) if value[:1] in "[{0123456789" else value
+    config = get_temporal_adapter(context).config.model_copy(update={setting: parsed})
+    options = TemporalAdapter(config)._optional_connect_kwargs()
+    get_current_scenario_context(context).store("client_options", options)
+
+
+@then("its client option {option} should be {expected}")
+def step_client_option(context, option, expected):
+    options = get_current_scenario_context(context).get("client_options")
+    if expected == "absent":
+        assert option not in options, f"Expected no {option}, got {options.get(option)!r}"
+        return
+    assert option in options, f"Expected {option} in {sorted(options)}"
+    assert str(options[option]) == expected, f"Expected {option}={expected}, got {options[option]!r}"
