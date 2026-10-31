@@ -57,6 +57,7 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
         prometheus_bind_address: str | None = None,
         global_tags: dict[str, str] | None = None,
         core_log_level: str | None = None,
+        disable_environment_info: bool = False,
     ) -> Runtime | None:
         """Get or create a Runtime with OpenTelemetry telemetry.
 
@@ -70,9 +71,11 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
             global_tags: Tags added to every Temporal SDK metric (e.g. service, environment).
             core_log_level: Level of the SDK core's own logs (``ERROR``, ``WARN``, ``INFO``, ``DEBUG``, ``TRACE``);
                 None keeps the SDK default.
+            disable_environment_info: Keep runtime, hosting and platform information out of worker heartbeats.
+                A Runtime is built for it even when metrics are disabled.
 
         Returns:
-            Runtime | None: The configured Runtime instance if metrics are enabled,
+            Runtime | None: The configured Runtime instance if metrics are enabled or environment info is disabled,
                 None otherwise (uses default Runtime).
 
         Raises:
@@ -83,7 +86,7 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
             or recreated with different settings due to Temporal SDK limitations.
             Subsequent calls will return the existing Runtime regardless of parameters.
         """
-        if not otel_metrics_enabled:
+        if not otel_metrics_enabled and not disable_environment_info:
             logger.debug("OTLP metrics disabled for Temporal, using default runtime")
             return None
 
@@ -92,8 +95,11 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
             logger.debug("Returning existing Temporal Runtime instance")
             return self._runtime
 
-        metrics: OpenTelemetryConfig | PrometheusConfig
-        if prometheus_bind_address:
+        metrics: OpenTelemetryConfig | PrometheusConfig | None
+        if not otel_metrics_enabled:
+            logger.info("Creating Temporal Runtime without metrics to disable environment info")
+            metrics = None
+        elif prometheus_bind_address:
             logger.info("Creating Temporal Runtime with a Prometheus scrape endpoint on %s", prometheus_bind_address)
             metrics = PrometheusConfig(bind_address=prometheus_bind_address)
         else:
@@ -106,8 +112,11 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
                 filter=TelemetryFilter(core_level=core_log_level, other_level=core_log_level),
             )
         try:
-            self._runtime = Runtime(telemetry=TelemetryConfig(**telemetry_kwargs))
-            logger.info("Temporal Runtime created successfully with OpenTelemetry telemetry")
+            self._runtime = Runtime(
+                telemetry=TelemetryConfig(**telemetry_kwargs),
+                disable_environment_info=disable_environment_info,
+            )
+            logger.info("Temporal Runtime created successfully")
         except Exception as error:
             # Falling back to the default Runtime would drop every SDK metric without a trace, so fail loudly.
             raise ConfigurationError(

@@ -2517,6 +2517,32 @@ def step_build_runtime_with_endpoint(context, endpoint):
         manager.reset_runtime()
 
 
+@when("the Temporal connection arguments are built with RUNTIME_DISABLE_ENVIRONMENT_INFO set to {value}")
+def step_connect_kwargs_with_environment_info(context, value):
+    config = get_temporal_adapter(context).config.model_copy(
+        update={"RUNTIME_DISABLE_ENVIRONMENT_INFO": value == "true", "ENABLE_METRICS": False},
+    )
+    manager = TemporalRuntimeManager()
+    manager.reset_runtime()
+    try:
+        connect_kwargs = TemporalAdapter(config)._build_connect_kwargs()
+    finally:
+        # The Runtime is a process singleton; later scenarios must not inherit this one.
+        manager.reset_runtime()
+    get_current_scenario_context(context).store("connect_kwargs", connect_kwargs)
+
+
+@then("the connection arguments should {outcome} a Temporal Runtime")
+def step_connect_kwargs_runtime(context, outcome):
+    from temporalio.runtime import Runtime
+
+    runtime = get_current_scenario_context(context).get("connect_kwargs").get("runtime")
+    if outcome == "include":
+        assert isinstance(runtime, Runtime), f"Expected a Runtime, got {runtime!r}"
+    else:
+        assert runtime is None, f"Expected no Runtime, got {runtime!r}"
+
+
 @then("building the Temporal Runtime should raise a ConfigurationError")
 def step_runtime_raised_configuration_error(context):
     error = get_current_scenario_context(context).get("runtime_error")
@@ -2541,6 +2567,15 @@ def step_error_is_archipy_error(context, error_name):
     error = get_current_scenario_context(context).error
     expected = getattr(archipy_errors, error_name, None) or getattr(temporal_errors, error_name)
     assert isinstance(error, expected), f"Expected {error_name}, got {type(error).__name__}: {error!r}"
+
+
+@then("the AlreadyExistsError should carry the run ids of the running workflow")
+def step_already_exists_run_ids(context):
+    scenario_context = get_current_scenario_context(context)
+    data = scenario_context.error.additional_data
+    running_run_id = scenario_context.workflow_handle.first_execution_run_id
+    assert data.get("run_id") == running_run_id, f"Expected run_id {running_run_id}, got {data!r}"
+    assert "first_run_id" in data, f"Expected a first_run_id entry, got {data!r}"
 
 
 @when('I pause schedule "{schedule_id}" with note "{note}"')

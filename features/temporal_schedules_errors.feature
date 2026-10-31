@@ -105,6 +105,7 @@ Feature: Temporal Schedules, Timeouts and Errors
     When I start workflow "SignalQueryWorkflow" with workflow id "dup-start-1"
     And I try to start workflow "SignalQueryWorkflow" with workflow id "dup-start-1" again
     Then the error should be the ArchiPy AlreadyExistsError
+    And the AlreadyExistsError should carry the run ids of the running workflow
 
   Scenario: Worker start failure with invalid task queue
     When I try to start a worker with empty task queue
