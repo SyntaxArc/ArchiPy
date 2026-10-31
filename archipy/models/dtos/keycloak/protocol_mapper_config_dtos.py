@@ -25,7 +25,7 @@ class KeycloakProtocolMapperConfigDTO(KeycloakRequestDTO):
         protocol_mapper: Keycloak mapper id, for example ``oidc-audience-mapper``.
     """
 
-    model_config = ConfigDict(alias_generator=None, populate_by_name=True, extra="forbid")
+    model_config = ConfigDict(alias_generator=None, validate_by_name=True, validate_by_alias=True, extra="forbid")
 
     protocol: ClassVar[str]
     protocol_mapper: ClassVar[str]
