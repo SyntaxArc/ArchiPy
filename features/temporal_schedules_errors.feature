@@ -16,6 +16,16 @@ Feature: Temporal Schedules, Timeouts and Errors
     And I wait for 5 seconds
     Then the schedule "test-schedule-1" should have executed at least 1 time
 
+  Scenario: Pause, unpause, trigger and list a schedule
+    Given a worker is started for task queue "test-queue" with ScheduledWorkflow
+    When I create a schedule "manage-schedule-1" for workflow "ScheduledWorkflow" with interval 3600 seconds
+    And I pause schedule "manage-schedule-1" with note "maintenance"
+    Then schedule "manage-schedule-1" should be paused
+    When I unpause schedule "manage-schedule-1"
+    And I trigger schedule "manage-schedule-1"
+    Then schedule "manage-schedule-1" should not be paused
+    And the schedule list should contain "manage-schedule-1"
+
   Scenario: Schedule with interval spec
     Given a worker is started for task queue "test-queue" with ScheduledWorkflow
     When I create a schedule "interval-schedule-1" with interval spec:
