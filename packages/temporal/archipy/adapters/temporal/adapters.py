@@ -405,7 +405,8 @@ class TemporalAdapter(TemporalPort):
             None: Control to the wrapped block.
 
         Raises:
-            AlreadyExistsError: If the workflow or schedule ID is already in use.
+            AlreadyExistsError: If the workflow or schedule ID is already in use; for a workflow its
+                ``additional_data`` holds the ``run_id`` and ``first_run_id`` of the running execution.
             NotFoundError: If the workflow or schedule does not exist.
             UnavailableError: If the Temporal server is unreachable.
             DeadlineExceededError: If the call timed out.
@@ -413,7 +414,13 @@ class TemporalAdapter(TemporalPort):
         """
         try:
             yield
-        except (WorkflowAlreadyStartedError, ScheduleAlreadyRunningError) as error:
+        except WorkflowAlreadyStartedError as error:
+            # The run IDs let callers reach the execution that already holds the workflow ID.
+            raise AlreadyExistsError(
+                resource_type=operation,
+                additional_data={"id": resource_id, "run_id": error.run_id, "first_run_id": error.first_run_id},
+            ) from error
+        except ScheduleAlreadyRunningError as error:
             raise AlreadyExistsError(resource_type=operation, additional_data={"id": resource_id}) from error
         except RPCError as error:
             raise self._map_rpc_error(error, operation, resource_id) from error

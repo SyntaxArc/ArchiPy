@@ -2569,6 +2569,15 @@ def step_error_is_archipy_error(context, error_name):
     assert isinstance(error, expected), f"Expected {error_name}, got {type(error).__name__}: {error!r}"
 
 
+@then("the AlreadyExistsError should carry the run ids of the running workflow")
+def step_already_exists_run_ids(context):
+    scenario_context = get_current_scenario_context(context)
+    data = scenario_context.error.additional_data
+    running_run_id = scenario_context.workflow_handle.first_execution_run_id
+    assert data.get("run_id") == running_run_id, f"Expected run_id {running_run_id}, got {data!r}"
+    assert "first_run_id" in data, f"Expected a first_run_id entry, got {data!r}"
+
+
 @when('I pause schedule "{schedule_id}" with note "{note}"')
 def step_pause_schedule(context, schedule_id, note):
     run_async(context, get_temporal_adapter(context).pause_schedule(schedule_id, note=note))
