@@ -267,3 +267,50 @@ def step_when_manager_opens_connection_with_timeout(context, mode, database, sec
 def step_then_driver_receives_connect_timeout(context, seconds):
     params = get_current_scenario_context(context).get("driver_connect_params")
     assert params.get("connect_timeout") == seconds, f"Expected connect_timeout={seconds}, got {params!r}"
+
+
+_IN_MEMORY_ROW_SQL = (
+    "CREATE TABLE IF NOT EXISTS recycled_items (name TEXT)",
+    "DELETE FROM recycled_items",
+    "INSERT INTO recycled_items (name) VALUES ('kept')",
+)
+_IN_MEMORY_COUNT_SQL = "SELECT COUNT(*) FROM recycled_items"
+
+
+def _in_memory_sqlite_config():
+    # A recycle time of 0 makes every checkout older than the recycle time, so no waiting is needed.
+    return SQLiteSQLAlchemyConfig(DRIVER_NAME="sqlite", DATABASE=":memory:", POOL_RECYCLE_SECONDS=0)
+
+
+@when("a row is written to the sync in-memory SQLite database and read back after its pool recycle time")
+def step_when_sync_in_memory_row_written(context):
+    manager = SQLiteSQLAlchemySessionManager(_in_memory_sqlite_config())
+    session = manager.get_session()
+    for statement in _IN_MEMORY_ROW_SQL:
+        session.execute(text(statement))
+    session.commit()
+    manager.remove_session()
+    session = manager.get_session()
+    count = session.execute(text(_IN_MEMORY_COUNT_SQL)).scalar_one()
+    manager.remove_session()
+    get_current_scenario_context(context).store("in_memory_row_count", count)
+
+
+@when("a row is written to the async in-memory SQLite database and read back after its pool recycle time")
+async def step_when_async_in_memory_row_written(context):
+    manager = AsyncSQLiteSQLAlchemySessionManager(_in_memory_sqlite_config())
+    session = manager.get_session()
+    for statement in _IN_MEMORY_ROW_SQL:
+        await session.execute(text(statement))
+    await session.commit()
+    await manager.remove_session()
+    session = manager.get_session()
+    count = (await session.execute(text(_IN_MEMORY_COUNT_SQL))).scalar_one()
+    await manager.remove_session()
+    get_current_scenario_context(context).store("in_memory_row_count", count)
+
+
+@then("the in-memory SQLite database still holds the row")
+def step_then_in_memory_row_kept(context):
+    count = get_current_scenario_context(context).get("in_memory_row_count")
+    assert count == 1, f"Expected 1 row after the pool recycle time, got {count}"
