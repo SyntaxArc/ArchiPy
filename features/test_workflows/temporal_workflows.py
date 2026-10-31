@@ -508,3 +508,24 @@ class ValueErrorWorkflow:
             ValueError: Always.
         """
         raise ValueError("invalid order")
+
+
+@workflow.defn(name="GreetingWorkflow", sandboxed=False)
+class ChangedGreetingWorkflow:
+    """``GreetingWorkflow`` with a changed activity call, used only by the replayer to show a determinism break."""
+
+    @workflow.run
+    async def run(self, name: str) -> str:
+        """Call a different activity than the recorded history.
+
+        Args:
+            name (str): Name to calculate with.
+
+        Returns:
+            str: The activity result.
+        """
+        return await workflow.execute_activity(
+            calculation_activity,
+            name,
+            start_to_close_timeout=timedelta(seconds=10),
+        )

@@ -57,6 +57,7 @@ from features.test_workflows.temporal_activities import (
     status_activity,
 )
 from features.test_workflows.temporal_workflows import (
+    ChangedGreetingWorkflow,
     BaseGreetingWorkflow,
     CalculatorWorkflow,
     ConcurrentActivitiesWorkflow,
@@ -2294,6 +2295,31 @@ def step_execute_workflow_on_queue(context, workflow_name, task_queue):
 @then("the workflow execution should fail")
 def step_workflow_execution_failed(context):
     assert get_current_scenario_context(context).get("workflow_failure") is not None, "Expected the workflow to fail"
+
+
+@when('I replay the history of workflow "{workflow_id}" with {definition}')
+def step_replay_workflow_history(context, workflow_id, definition):
+    from temporalio.worker import Replayer
+
+    workflow_class = GreetingWorkflow if definition == "the same definition" else ChangedGreetingWorkflow
+    adapter = get_temporal_adapter(context)
+
+    async def _replay() -> Exception | None:
+        handle = await adapter.get_workflow_handle(workflow_id)
+        history = await handle.fetch_history()
+        result = await Replayer(workflows=[workflow_class]).replay_workflow(history, raise_on_replay_failure=False)
+        return result.replay_failure
+
+    get_current_scenario_context(context).store("replay_failure", run_async(context, _replay()))
+
+
+@then("the replay should be {outcome}")
+def step_replay_outcome(context, outcome):
+    failure = get_current_scenario_context(context).get("replay_failure")
+    if outcome == "deterministic":
+        assert failure is None, f"Replay failed: {failure!r}"
+    else:
+        assert failure is not None, "Expected the changed workflow to break determinism"
 
 
 @when('I start workflow "{workflow_name}" with workflow id "{workflow_id}" twice using conflict policy {policy}')
