@@ -41,7 +41,6 @@ if TYPE_CHECKING:
     import grpc.aio
     from opentelemetry.instrumentation.grpc._client import OpenTelemetryClientInterceptor
     from opentelemetry.metrics import Meter
-    from opentelemetry.sdk._logs import LoggingHandler
     from opentelemetry.sdk._logs.export import LogRecordExporter
     from opentelemetry.sdk.metrics.export import MetricExporter, MetricReader
     from opentelemetry.sdk.resources import Resource
@@ -98,7 +97,7 @@ class OtelRuntime:
         self._owns_tracer = False
         self._owns_meter = False
         self._owns_logger = False
-        self._logging_handler: LoggingHandler | None = None
+        self._logging_handler: logging.Handler | None = None
         self._init_pid: int | None = None
         self._init_failed_at: float | None = None
         self._metrics = MetricsExport()
