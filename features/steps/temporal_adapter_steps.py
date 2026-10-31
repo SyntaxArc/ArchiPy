@@ -2517,6 +2517,32 @@ def step_build_runtime_with_endpoint(context, endpoint):
         manager.reset_runtime()
 
 
+@when("the Temporal connection arguments are built with RUNTIME_DISABLE_ENVIRONMENT_INFO set to {value}")
+def step_connect_kwargs_with_environment_info(context, value):
+    config = get_temporal_adapter(context).config.model_copy(
+        update={"RUNTIME_DISABLE_ENVIRONMENT_INFO": value == "true", "ENABLE_METRICS": False},
+    )
+    manager = TemporalRuntimeManager()
+    manager.reset_runtime()
+    try:
+        connect_kwargs = TemporalAdapter(config)._build_connect_kwargs()
+    finally:
+        # The Runtime is a process singleton; later scenarios must not inherit this one.
+        manager.reset_runtime()
+    get_current_scenario_context(context).store("connect_kwargs", connect_kwargs)
+
+
+@then("the connection arguments should {outcome} a Temporal Runtime")
+def step_connect_kwargs_runtime(context, outcome):
+    from temporalio.runtime import Runtime
+
+    runtime = get_current_scenario_context(context).get("connect_kwargs").get("runtime")
+    if outcome == "include":
+        assert isinstance(runtime, Runtime), f"Expected a Runtime, got {runtime!r}"
+    else:
+        assert runtime is None, f"Expected no Runtime, got {runtime!r}"
+
+
 @then("building the Temporal Runtime should raise a ConfigurationError")
 def step_runtime_raised_configuration_error(context):
     error = get_current_scenario_context(context).get("runtime_error")

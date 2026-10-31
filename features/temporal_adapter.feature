@@ -254,6 +254,15 @@ Feature: Temporal Adapter Operations
     When I build a Temporal Runtime exporting metrics to "not a url"
     Then building the Temporal Runtime should raise a ConfigurationError
 
+  Scenario Outline: Disabling environment info <outcome> a Temporal Runtime when metrics are off
+    When the Temporal connection arguments are built with RUNTIME_DISABLE_ENVIRONMENT_INFO set to <value>
+    Then the connection arguments should <outcome> a Temporal Runtime
+
+    Examples: Environment info
+      | value | outcome |
+      | true  | include |
+      | false | omit    |
+
   Scenario Outline: AtomicActivity.with_db_type returns a copy on <db_type>
     When I copy a postgres atomic activity with database type "<db_type>"
     Then the atomic activity copy should be <outcome>

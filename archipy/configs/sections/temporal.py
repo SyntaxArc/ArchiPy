@@ -57,6 +57,10 @@ class TemporalConfig(BaseModel):
         default=None,
         description="Log level of the Temporal SDK core (None keeps the SDK default of WARN)",
     )
+    RUNTIME_DISABLE_ENVIRONMENT_INFO: bool = Field(
+        default=False,
+        description="Keep runtime, hosting and platform information out of worker heartbeats sent to the server",
+    )
 
     # Client Connection Configuration
     CLIENT_IDENTITY: str | None = Field(

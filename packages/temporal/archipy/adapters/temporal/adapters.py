@@ -234,13 +234,21 @@ class TemporalAdapter(TemporalPort):
         }
         connect_kwargs.update(self._optional_connect_kwargs())
 
-        # Configure Runtime with OTLP metrics if Temporal + OTel metrics are enabled
+        # Configure Runtime with OTLP metrics if Temporal + OTel metrics are enabled, or a plain Runtime when only
+        # environment info is disabled
         global_config = BaseConfig.global_config()
         otel = global_config.OTEL
+        runtime: Runtime | None = None
         if self.config.ENABLE_METRICS and otel.IS_ENABLED and otel.METRICS_ENABLED:
             runtime = self._build_metrics_runtime(otel)
-            if runtime is not None:
-                connect_kwargs["runtime"] = runtime
+        elif self.config.RUNTIME_DISABLE_ENVIRONMENT_INFO:
+            runtime = TemporalRuntimeManager().get_runtime(
+                global_tags=self.config.METRICS_GLOBAL_TAGS,
+                core_log_level=self.config.SDK_CORE_LOG_LEVEL,
+                disable_environment_info=True,
+            )
+        if runtime is not None:
+            connect_kwargs["runtime"] = runtime
 
         # Attach OTel tracing plugin when traces are enabled
         if otel.IS_ENABLED and otel.TRACES_ENABLED:
@@ -282,6 +290,7 @@ class TemporalAdapter(TemporalPort):
             prometheus_bind_address=prometheus_bind_address,
             global_tags=self.config.METRICS_GLOBAL_TAGS,
             core_log_level=self.config.SDK_CORE_LOG_LEVEL,
+            disable_environment_info=self.config.RUNTIME_DISABLE_ENVIRONMENT_INFO,
         )
 
     @staticmethod

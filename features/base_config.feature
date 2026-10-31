@@ -175,18 +175,19 @@ Feature: Base Configuration System
     Then the default Temporal setting <field> should be <expected>
 
     Examples: Temporal defaults
-      | field                        | expected |
-      | ACTIVITY_HEARTBEAT_TIMEOUT   | None     |
-      | WORKER_POLLER_AUTOSCALING    | False    |
-      | WORKFLOW_RETRY_ENABLED       | False    |
-      | PYDANTIC_DATA_CONVERTER      | True     |
-      | WORKFLOW_EXECUTION_TIMEOUT   | None     |
-      | WORKFLOW_RUN_TIMEOUT         | None     |
-      | CONNECT_TIMEOUT              | None     |
-      | TLS_VERIFICATION_SERVER_NAME | None     |
-      | GRPC_COMPRESSION             | None     |
-      | PAYLOADS_WARN_SIZE           | None     |
-      | MEMO_WARN_SIZE               | None     |
+      | field                            | expected |
+      | ACTIVITY_HEARTBEAT_TIMEOUT       | None     |
+      | WORKER_POLLER_AUTOSCALING        | False    |
+      | WORKFLOW_RETRY_ENABLED           | False    |
+      | PYDANTIC_DATA_CONVERTER          | True     |
+      | WORKFLOW_EXECUTION_TIMEOUT       | None     |
+      | WORKFLOW_RUN_TIMEOUT             | None     |
+      | CONNECT_TIMEOUT                  | None     |
+      | TLS_VERIFICATION_SERVER_NAME     | None     |
+      | GRPC_COMPRESSION                 | None     |
+      | PAYLOADS_WARN_SIZE               | None     |
+      | MEMO_WARN_SIZE                   | None     |
+      | RUNTIME_DISABLE_ENVIRONMENT_INFO | False    |
 
   Scenario Outline: The <environment> environment reports its kind and log level
     When the environment type <environment> is inspected
