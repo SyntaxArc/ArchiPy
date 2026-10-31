@@ -106,6 +106,17 @@ Feature: Keycloak Authentication Testing
       | sync         | testuser  | pass123  | test-realm-envoy       | Test Realm         | test-client       | envoy  |
       | async        | asyncuser | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
+  @tokens
+  Scenario: Async token validation after the realm signing key rotates
+    Given a configured sync Keycloak adapter via direct
+    And I create a realm named "async-rotated-key-realm" with display name "Rotated Key Realm" using sync adapter
+    And I create a client named "async-rotated-key-client" in realm "async-rotated-key-realm" with service accounts and update adapter using sync adapter
+    And I create a user with username "rotateuser" and password "pass123" using sync adapter
+    And I have a valid token for "rotateuser" with password "pass123" using sync adapter
+    And the realm "async-rotated-key-realm" rotates its signing key
+    Then an async adapter for realm "async-rotated-key-realm" and client "async-rotated-key-client" should validate the token of "rotateuser"
+    And the same async adapter should read the claims of the token of "rotateuser"
+
   @users
   Scenario Outline: User retrieval operations
     Given a configured <adapter_type> Keycloak adapter via <via>
