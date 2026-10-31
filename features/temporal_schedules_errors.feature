@@ -67,6 +67,7 @@ Feature: Temporal Schedules, Timeouts and Errors
     Given a Temporal adapter with invalid server configuration
     When I try to execute workflow "GreetingWorkflow" with argument "Test"
     Then I should receive a connection error
+    And the error should be the ArchiPy WorkerConnectionError
 
   Scenario: Start workflow with invalid workflow type
     Given a worker is started for task queue "test-queue" with GreetingWorkflow
@@ -80,6 +81,13 @@ Feature: Temporal Schedules, Timeouts and Errors
   Scenario: Signal non-existent workflow
     When I try to send signal "update_counter" with value 5 to workflow "non-existent-signal-workflow"
     Then I should receive a workflow not found error
+    And the error should be the ArchiPy NotFoundError
+
+  Scenario: Starting a running workflow ID again raises AlreadyExistsError
+    Given a worker is started for task queue "test-queue" with SignalQueryWorkflow
+    When I start workflow "SignalQueryWorkflow" with workflow id "dup-start-1"
+    And I try to start workflow "SignalQueryWorkflow" with workflow id "dup-start-1" again
+    Then the error should be the ArchiPy AlreadyExistsError
 
   Scenario: Worker start failure with invalid task queue
     When I try to start a worker with empty task queue
