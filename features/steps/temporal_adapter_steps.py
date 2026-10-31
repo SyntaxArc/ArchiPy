@@ -2182,3 +2182,29 @@ def step_build_activity_cache_key(context, activity_input):
 def step_activity_cache_key_should_be(context, expected):
     actual = get_current_scenario_context(context).get("activity_cache_key")
     assert actual == expected, f"Expected {expected}, got {actual}"
+
+
+@when('I start workflow "{workflow_name}" with workflow id "{workflow_id}" twice using conflict policy {policy}')
+def step_start_workflow_twice_with_conflict_policy(context, workflow_name, workflow_id, policy):
+    adapter = get_temporal_adapter(context)
+    conflict_policy = WorkflowIDConflictPolicy[policy]
+
+    async def _start_twice() -> list[str | None]:
+        handles = [
+            await adapter.start_workflow(
+                workflow_name,
+                workflow_id=workflow_id,
+                task_queue="test-queue",
+                id_conflict_policy=conflict_policy,
+            )
+            for _ in range(2)
+        ]
+        return [handle.result_run_id for handle in handles]
+
+    get_current_scenario_context(context).store("started_run_ids", run_async(context, _start_twice()))
+
+
+@then("both starts should return the same run id")
+def step_same_run_id(context):
+    run_ids = get_current_scenario_context(context).get("started_run_ids")
+    assert run_ids[0] is not None and run_ids[0] == run_ids[1], run_ids
