@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import warnings
 from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar, override
@@ -799,11 +800,30 @@ class TemporalAdapter(TemporalPort):
 
     @override
     async def stop_schedule(self, schedule_id: str) -> None:
-        """Stop a schedule."""
-        async with self._mapped_errors("stop_schedule", schedule_id):
-            client = await self.get_client()
-            handle = client.get_schedule_handle(schedule_id)
-            await handle.delete()
+        """Delete a schedule.
+
+        Deprecated: the name hides that the schedule is deleted; use ``delete_schedule``, or ``pause_schedule`` to
+        stop it while keeping it.
+
+        Args:
+            schedule_id (str): The schedule ID.
+        """
+        warnings.warn(
+            "stop_schedule() deletes the schedule and is deprecated; use delete_schedule() or pause_schedule()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        await self.delete_schedule(schedule_id)
+
+    @override
+    async def delete_schedule(self, schedule_id: str) -> None:
+        """Delete a schedule permanently; ``pause_schedule`` stops it while keeping it.
+
+        Args:
+            schedule_id (str): The schedule ID.
+        """
+        async with self._mapped_errors("delete_schedule", schedule_id):
+            await (await self._schedule_handle(schedule_id)).delete()
 
     async def _schedule_handle(self, schedule_id: str) -> ScheduleHandle:
         """Get a handle to an existing schedule.
