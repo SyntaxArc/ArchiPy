@@ -434,3 +434,14 @@ Feature: OpenTelemetry configuration
   Scenario: A private name set through the facade lands on the runtime
     When a private name "_initialized" is set through the OtelUtils facade
     Then the default runtime holds the new value and no copy sits on the facade class
+
+  Scenario Outline: The Pushgateway grouping key tells replicas apart: <case>
+    When the Pushgateway grouping key is resolved from <configured> with POD_NAME <pod_name> and HOSTNAME <hostname>
+    Then the Pushgateway grouping key should be <expected>
+
+    Examples: Grouping keys
+      | case                         | configured       | pod_name | hostname | expected                          |
+      | the pod name wins            | nothing          | api-7f9  | api-host | instance=api-7f9                  |
+      | the hostname is the fallback | nothing          | none     | api-host | instance=api-host                 |
+      | a configured instance stays  | instance=fixed   | api-7f9  | api-host | instance=fixed                    |
+      | other labels get an instance | component=worker | api-7f9  | api-host | component=worker,instance=api-7f9 |

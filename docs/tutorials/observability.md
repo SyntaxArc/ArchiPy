@@ -116,7 +116,7 @@ logger.info("OTel enabled=%s endpoint=%s", config.OTEL.IS_ENABLED, config.OTEL.O
 | `METRICS_PUSHGATEWAY_JOB`                | `None`                  | Pushgateway job (defaults to `SERVICE_NAME`)                                                 |
 | `METRICS_PUSHGATEWAY_INTERVAL_SECONDS`   | `60`                    | Push interval when exporter is `pushgateway`                                                 |
 | `METRICS_PUSHGATEWAY_TIMEOUT_SECONDS`    | `10`                    | HTTP timeout for push/delete                                                                 |
-| `METRICS_PUSHGATEWAY_GROUPING_KEY`       | `{}`                    | Extra grouping labels (max 16 entries)                                                       |
+| `METRICS_PUSHGATEWAY_GROUPING_KEY`       | `{}`                    | Extra grouping labels (max 16 entries); `instance` defaults to the pod (see below)           |
 | `METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN` | `true`                  | Delete grouping key on graceful shutdown                                                     |
 | `SYSTEM_METRICS_ENABLED`                 | `true`                  | Process/system metrics instrumentor                                                          |
 | `INSTRUMENTATION_SKIP_DEP_CHECK`         | `["sqlalchemy"]`        | Libraries instrumented even when newer than the instrumentor's declared range                |
@@ -127,6 +127,28 @@ logger.info("OTel enabled=%s endpoint=%s", config.OTEL.IS_ENABLED, config.OTEL.O
 | `FASTAPI_LOGS_ENABLED`                   | `false`                 | FastAPI log records for validation failures and unhandled exceptions (includes stack traces) |
 | `RESOURCE_ATTRIBUTES`                    | `{}`                    | Extra OTel resource attributes                                                               |
 | `LOGS_LEVEL`                             | `INFO`                  | Minimum level for the root-logger handler                                                    |
+
+### Pushgateway and several replicas
+
+A Pushgateway push replaces its whole group, so replicas that share a group overwrite each other's metrics. ArchiPy
+therefore adds an `instance` label to the grouping key unless you set one: `POD_NAME`, else `HOSTNAME` (or the host
+name). On Kubernetes the hostname is the pod name unless the pod uses `hostNetwork`; set `POD_NAME` explicitly with the
+downward API:
+
+```yaml
+env:
+  - name: POD_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.name
+```
+
+On plain Docker the hostname is the container ID, because the container name is not visible inside the container.
+
+!!! warning
+    Pushgateway keeps the last push of a group until it is deleted. A graceful shutdown deletes the pod's group
+    (`METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN`), but a crashed pod leaves a stale group, and pod names change on every
+    restart. Clean stale groups up, for example with a CronJob that deletes groups that have not pushed recently.
 
 ### Standard `OTEL_*` variables
 
