@@ -3971,6 +3971,15 @@ required. Load the password from the environment or a secrets store, not from so
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">USERNAME</span><span class="o">=</span><span class="s2">"kafka-user"</span><span class="p">,</span>
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">)</span>
 </span></code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Broker hostname verification is on by default</p>
+<p>With credentials and <code>SSL_CA_FILE</code> set, the adapters verify that each broker certificate matches the broker
+hostname (<code>SSL_ENDPOINT_IDENTIFICATION_ALGORITHM="https"</code>, the default). Earlier releases turned this check off.
+Brokers reached by IP address, or whose certificate SAN does not list the address you connect to, now fail the TLS
+handshake. Fix the certificates if you can. To keep the old behavior, set
+<code>SSL_ENDPOINT_IDENTIFICATION_ALGORITHM="none"</code> (or <code>KAFKA__SSL_ENDPOINT_IDENTIFICATION_ALGORITHM=none</code>); a warning
+is logged because this leaves connections open to man-in-the-middle attacks.</p>
+</div>
 <h3 id="async-specific-configuration">Async-Specific Configuration<a class="headerlink" href="#async-specific-configuration" title="Permanent link">&para;</a></h3>
 <p>The async adapters respect three additional fields that tune the underlying <code>AIOProducer</code> /
 <code>AIOConsumer</code> thread pools:</p>
