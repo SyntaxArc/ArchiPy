@@ -162,6 +162,8 @@ Feature: Base Configuration System
       | ScyllaDB | a username without a password           | rejected |
       | ScyllaDB | a minimum pool above the maximum        | rejected |
       | Temporal | only a client certificate               | rejected |
+      | Temporal | only a CA certificate                   | accepted |
+      | Temporal | a client key without a certificate      | rejected |
       | Temporal | a run timeout above the execution one   | rejected |
       | Temporal | a keep alive timeout above the interval | rejected |
       | Temporal | a task timeout above the run timeout    | accepted |
