@@ -158,6 +158,15 @@ Feature: OpenTelemetry decorators
     Then a span named "GET /otel-ping" should be recorded
     And an HTTP server duration metric should have datapoints
 
+  Scenario Outline: A metric cardinality limit of <limit> folds extra attribute sets into the overflow series
+    When I record <recorded> distinct attribute sets on a counter read through a reader limited to <limit>
+    Then the counter should hold <series> series and <overflow> overflow series
+
+    Examples: Cardinality limits
+      | limit | recorded | series | overflow |
+      | 3     | 6        | 3      | 1        |
+      | 10    | 6        | 6      | 0        |
+
   Scenario: FastAPI log records are off by default
     Given FastAPI log records are disabled with a logger provider
     When I build the FastAPI telemetry config

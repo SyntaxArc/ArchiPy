@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from opentelemetry.sdk._logs.export import LogRecordExporter
+    from opentelemetry.sdk.metrics._internal.export import CardinalityLimits
     from opentelemetry.sdk.metrics.export import MetricExporter, MetricReader
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace.export import SpanExporter
@@ -78,6 +79,7 @@ def build_meter_provider(
 
     readers: list[MetricReader] = []
     registry: CollectorRegistry | None = None
+    cardinality_limits = metrics_cardinality_limits(otel.METRICS_CARDINALITY_LIMIT)
     if otel.METRICS_EXPORTER == OtelMetricsExporter.OTLP:
         from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 
@@ -86,6 +88,7 @@ def build_meter_provider(
             PeriodicExportingMetricReader(
                 exporter,
                 export_interval_millis=otel.METRIC_EXPORT_INTERVAL_MS,
+                cardinality_limits=cardinality_limits,
             ),
         )
     elif otel.METRICS_EXPORTER in {OtelMetricsExporter.PULL, OtelMetricsExporter.PUSHGATEWAY}:
@@ -93,9 +96,42 @@ def build_meter_provider(
         from prometheus_client import CollectorRegistry
 
         registry = CollectorRegistry(auto_describe=True)
-        readers.append(PrometheusMetricReader(registry=registry))
+        readers.append(PrometheusMetricReader(registry=registry, cardinality_limits=cardinality_limits))
 
     return temporal_providers.wrap_meter_provider(MeterProvider(resource=resource, metric_readers=readers)), registry
+
+
+def metrics_cardinality_limits(limit: int | None) -> CardinalityLimits | None:
+    """Build per-instrument cardinality limits for a metric reader.
+
+    Args:
+        limit: Maximum distinct attribute sets per instrument, or None for the SDK default.
+
+    Returns:
+        A mapping of every instrument class to ``limit``, or None when no limit is configured.
+    """
+    if limit is None:
+        return None
+    from opentelemetry.sdk.metrics import (
+        Counter,
+        Histogram,
+        ObservableCounter,
+        ObservableGauge,
+        ObservableUpDownCounter,
+        UpDownCounter,
+    )
+    from opentelemetry.sdk.metrics._internal.instrument import Gauge  # not exported publicly
+
+    instruments = (
+        Counter,
+        UpDownCounter,
+        Histogram,
+        Gauge,
+        ObservableCounter,
+        ObservableUpDownCounter,
+        ObservableGauge,
+    )
+    return dict.fromkeys(instruments, limit)
 
 
 def build_logger_provider(

@@ -202,6 +202,14 @@ class OpentelemetryConfig(BaseModel):
         ge=1000,
         description="Periodic OTLP metric export interval in milliseconds (used when METRICS_EXPORTER=otlp)",
     )
+    METRICS_CARDINALITY_LIMIT: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Maximum distinct attribute sets kept per metric instrument; the rest aggregate into the "
+            "`otel.metric.overflow` series (None: SDK default, 2000)"
+        ),
+    )
     METRICS_EXPORTER: OtelMetricsExporter = Field(
         default=OtelMetricsExporter.OTLP,
         description="Unique metrics exporter when METRICS_ENABLED is true (otlp, pull, or pushgateway)",

@@ -203,6 +203,15 @@ Feature: Base Configuration System
       | RUNTIME_DISABLE_ENVIRONMENT_INFO       | False    |
       | WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS | None     |
 
+  Scenario Outline: The Elasticsearch client carries retry backoff only when configured
+    When I build an Elasticsearch client with RETRY_BACKOFF_BASE <base> and RETRY_BACKOFF_CAP <cap>
+    Then the client retry backoff should be <expected>
+
+    Examples: Retry backoff
+      | base | cap  | expected  |
+      | none | none | default   |
+      | 0.5  | 8    | 0.5 and 8 |
+
   Scenario Outline: The <environment> environment reports its kind and log level
     When the environment type <environment> is inspected
     Then it should be production <production>, test <test>, dev <dev>, local <local> and log at <level>
