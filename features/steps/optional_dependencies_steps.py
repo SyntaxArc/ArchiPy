@@ -56,3 +56,25 @@ def step_then_plain_built(context):
 def step_then_template_fails(context, text):
     result = get_current_scenario_context(context).get("jinja2_result")
     assert "ConfigurationError" in result.stdout and text in result.stdout, f"{result.stdout} {result.stderr[-500:]}"
+
+
+@when('I read the "{extra}" extra of the "{package}" package')
+def step_read_package_extra(context, extra, package):
+    import tomllib
+    from pathlib import Path
+
+    project = tomllib.loads(Path(f"packages/{package}/pyproject.toml").read_text())["project"]
+    requirements = project["dependencies"] if extra == "base" else project["optional-dependencies"][extra]
+    get_current_scenario_context(context).store("package_requirements", requirements)
+
+
+@then('it should require "{requirement}"')
+def step_requires(context, requirement):
+    requirements = get_current_scenario_context(context).get("package_requirements")
+    assert any(item.startswith(requirement) for item in requirements), f"{requirement} not in {requirements}"
+
+
+@then('it should not require "{requirement}"')
+def step_does_not_require(context, requirement):
+    requirements = get_current_scenario_context(context).get("package_requirements")
+    assert not any(item.startswith(requirement) for item in requirements), f"{requirement} found in {requirements}"

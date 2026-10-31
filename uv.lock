@@ -636,6 +636,7 @@ dependencies = [
 [package.optional-dependencies]
 async = [
     { name = "asyncmy" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
 ]
 sync = [
     { name = "pymysql" },
@@ -646,6 +647,7 @@ requires-dist = [
     { name = "archipy", editable = "." },
     { name = "asyncmy", marker = "extra == 'async'", specifier = ">=0.2.17" },
     { name = "pymysql", marker = "extra == 'sync'", specifier = ">=1.2.3" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'async'", specifier = ">=2.1.6" },
 ]
 provides-extras = ["sync", "async"]
 
@@ -750,12 +752,14 @@ source = { editable = "packages/sqlite" }
 dependencies = [
     { name = "aiosqlite" },
     { name = "archipy" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiosqlite", specifier = ">=0.22.1" },
     { name = "archipy", editable = "." },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.1.6" },
 ]
 
 [[package]]
@@ -769,6 +773,7 @@ dependencies = [
 [package.optional-dependencies]
 async = [
     { name = "asyncmy" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "starrocks" },
 ]
 sync = [
@@ -781,6 +786,7 @@ requires-dist = [
     { name = "archipy", editable = "." },
     { name = "asyncmy", marker = "extra == 'async'", specifier = ">=0.2.17" },
     { name = "pymysql", marker = "extra == 'sync'", specifier = ">=1.2.3" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'async'", specifier = ">=2.1.6" },
     { name = "starrocks", marker = "extra == 'async'", specifier = ">=1.3.4" },
     { name = "starrocks", marker = "extra == 'sync'", specifier = ">=1.3.4" },
 ]
