@@ -7,6 +7,7 @@ adapters and standardized patterns.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from abc import abstractmethod
@@ -496,6 +497,19 @@ class AtomicActivity(BaseActivity[T, R]):
             ValueError: If an invalid db_type is provided.
         """
         super().__init__(logic)
+        self._validate_db_type(db_type)
+        self.db_type = db_type
+
+    @staticmethod
+    def _validate_db_type(db_type: str) -> None:
+        """Validate the database type used for atomic operations.
+
+        Args:
+            db_type (str): The database type.
+
+        Raises:
+            InvalidArgumentError: If the database type is not supported.
+        """
         if db_type not in ("postgres", "sqlite", "starrocks"):
             raise InvalidArgumentError(
                 argument_name="db_type",
@@ -504,7 +518,6 @@ class AtomicActivity(BaseActivity[T, R]):
                     "allowed": ["postgres", "sqlite", "starrocks"],
                 },
             )
-        self.db_type = db_type
 
     def _get_atomic_decorator(self) -> Callable[..., Any]:
         """Get the appropriate async atomic decorator for the configured database type.
@@ -604,16 +617,18 @@ class AtomicActivity(BaseActivity[T, R]):
         return await _execute_operation()
 
     def with_db_type(self, db_type: str) -> AtomicActivity[T, R]:
-        """Create a new instance with a different database type.
+        """Create a copy of this activity that runs its transactions on another database type.
 
         Args:
             db_type (str): The new database type ("postgres", "sqlite", or "starrocks").
 
         Returns:
-            AtomicActivity[T, R]: New activity instance with the specified database type.
+            AtomicActivity[T, R]: A shallow copy with the new database type; this instance is unchanged.
 
         Raises:
-            ValueError: If an invalid db_type is provided.
+            InvalidArgumentError: If an invalid db_type is provided.
         """
-        # Cannot return concrete type due to abstract method
-        raise NotImplementedError("AtomicActivity cannot be instantiated directly")
+        self._validate_db_type(db_type)
+        clone = copy.copy(self)
+        clone.db_type = db_type
+        return clone
