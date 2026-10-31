@@ -715,6 +715,32 @@ async def step_validate_token(context: Context, adapter_type: str) -> None:
     context.logger.info(f"Validated token for {username}")
 
 
+@given('the realm "{realm_name}" rotates its signing key')
+def step_rotate_realm_signing_key(context: Context, realm_name: str) -> None:
+    """Add a higher-priority RSA key so new tokens and the realm public key use it, keeping the old key in JWKS."""
+    from keycloak import KeycloakAdmin
+
+    config = BaseConfig.global_config().KEYCLOAK
+    admin = KeycloakAdmin(
+        server_url=config.SERVER_URL,
+        username=config.ADMIN_USERNAME,
+        password=config.ADMIN_PASSWORD,
+        realm_name=realm_name,
+        user_realm_name=config.ADMIN_REALM_NAME,
+        verify=config.VERIFY_SSL,
+    )
+    admin.create_component(
+        {
+            "name": f"rotated-rsa-{uuid.uuid4().hex[:8]}",
+            "providerId": "rsa-generated",
+            "providerType": "org.keycloak.keys.KeyProvider",
+            "parentId": admin.get_realm(realm_name)["id"],
+            "config": {"priority": ["1000"], "keySize": ["2048"], "active": ["true"], "enabled": ["true"]},
+        },
+    )
+    context.logger.info(f"Rotated the signing key of realm {realm_name}")
+
+
 # User retrieval steps
 @when('I get user by username "{username}" using {adapter_type} adapter')
 async def step_get_user_by_username(context: Context, username: str, adapter_type: str) -> None:
@@ -4191,3 +4217,38 @@ def step_coverage_creation_result_has_id(context: Context, kind: str) -> None:
         assert expected, "the execution has no config after the config create call"
     if expected:
         assert created.id == expected, f"{kind} creation id {created.id} != looked-up id {expected}"
+
+
+def _async_adapter_for(realm_name: str, client_name: str) -> AsyncKeycloakAdapter:
+    """Build an async adapter for a realm and client, without admin mode (it only validates tokens)."""
+    config = BaseConfig.global_config().KEYCLOAK.model_copy(
+        update={
+            "REALM_NAME": realm_name,
+            "CLIENT_ID": client_name,
+            "CLIENT_SECRET_KEY": None,
+            "IS_ADMIN_MODE_ENABLED": False,
+        },
+    )
+    return AsyncKeycloakAdapter(config)
+
+
+@then(
+    'an async adapter for realm "{realm_name}" and client "{client_name}" should validate the token of "{username}"',
+)
+async def step_async_adapter_validates_token(context: Context, realm_name: str, client_name: str, username: str) -> None:
+    """Validate a token issued by the sync adapter through a separate async adapter."""
+    scenario_context = get_current_scenario_context(context)
+    adapter = _async_adapter_for(realm_name, client_name)
+    scenario_context.store("async_check_adapter", adapter)
+    access_token = scenario_context.get(f"token_response_{username}").access_token
+    assert await adapter.validate_token(access_token), "The async adapter rejected a token of the rotated realm"
+
+
+@then('the same async adapter should read the claims of the token of "{username}"')
+async def step_async_adapter_reads_claims(context: Context, username: str) -> None:
+    """Read the claims of the same token through the async adapter."""
+    scenario_context = get_current_scenario_context(context)
+    adapter = scenario_context.get("async_check_adapter")
+    access_token = scenario_context.get(f"token_response_{username}").access_token
+    claims = await adapter.get_token_info(access_token)
+    assert claims is not None and claims.preferred_username == username, claims

@@ -680,6 +680,8 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
         """
         try:
             self._adapter.flush()
+            # close() releases the client and aborts any open transaction (confluent-kafka 2.16+); flush alone did not
+            self._adapter.close()
             logger.debug("Producer flushed and closed")
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "close")

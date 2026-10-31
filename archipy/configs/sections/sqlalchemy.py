@@ -74,6 +74,11 @@ class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
     """
 
     POSTGRES_DSN: PostgresDsn | None = Field(default=None, description="PostgreSQL connection URL")
+    CONNECT_TIMEOUT: int | None = Field(
+        default=None,
+        ge=1,
+        description="Seconds to wait for the connection to be established (None: libpq waits indefinitely)",
+    )
 
     @model_validator(mode="after")
     def build_connection_url(self) -> Self:

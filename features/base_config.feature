@@ -203,6 +203,17 @@ Feature: Base Configuration System
       | RUNTIME_DISABLE_ENVIRONMENT_INFO       | False    |
       | WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS | None     |
 
+  Scenario Outline: The Postgres session managers pass connect_timeout to psycopg only when configured
+    When I read the connect arguments of the <kind> Postgres session manager with CONNECT_TIMEOUT <value>
+    Then the connect arguments should be <expected>
+
+    Examples: Connect arguments
+      | kind  | value | expected          |
+      | sync  | none  | empty             |
+      | sync  | 7     | connect_timeout 7 |
+      | async | none  | empty             |
+      | async | 7     | connect_timeout 7 |
+
   Scenario Outline: The <environment> environment reports its kind and log level
     When the environment type <environment> is inspected
     Then it should be production <production>, test <test>, dev <dev>, local <local> and log at <level>
