@@ -481,6 +481,30 @@ def step_then_vault_client_authenticated(context):
     assert scenario_context.get("vault_client").is_authenticated()
 
 
+_VAULT_TLS_SETTINGS = {
+    "no TLS overrides": {},
+    "TLS verification disabled": {"VERIFY_SSL": False},
+    "a custom CA bundle": {"CA_CERT_PATH": "/etc/archipy/vault-ca.pem"},
+}
+
+
+@given("the test identity uses {tls} with a {connect:g}s connect and {read:g}s read timeout")
+def step_given_test_identity_tls_and_timeouts(context, tls, connect, read):
+    scenario_context = get_current_scenario_context(context)
+    settings = scenario_context.get("vault_login_settings")
+    settings.update({**_VAULT_TLS_SETTINGS[tls], "CONNECT_TIMEOUT": connect, "READ_TIMEOUT": read})
+    scenario_context.store("vault_login_settings", settings)
+
+
+@then("the Vault client should send requests with verify {verify} and a {connect:g}s, {read:g}s timeout")
+def step_then_vault_client_request_options(context, verify, connect, read):
+    adapter = get_current_scenario_context(context).get("vault_client").adapter
+    expected_verify = {"True": True, "False": False}.get(verify, verify)
+    assert adapter.session.verify == expected_verify, adapter.session.verify
+    assert adapter._kwargs["verify"] == expected_verify, adapter._kwargs["verify"]
+    assert adapter._kwargs["timeout"] == (connect, read), adapter._kwargs["timeout"]
+
+
 _SECTION_SETTINGS = {
     ("Kafka", "SASL_SSL without credentials"): (KafkaConfig, {"SECURITY_PROTOCOL": "SASL_SSL"}),
     (

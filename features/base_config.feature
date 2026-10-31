@@ -144,6 +144,19 @@ Feature: Base Configuration System
       | approle    |
       | userpass   |
 
+  Scenario Outline: A Vault client applies <tls> and its timeouts to every request
+    Given Vault accepts token file logins for a test identity
+    And the test identity uses <tls> with a 3s connect and 9s read timeout
+    When a Vault client is built for the test identity
+    Then the Vault client should be authenticated
+    And the Vault client should send requests with verify <verify> and a 3s, 9s timeout
+
+    Examples: TLS settings
+      | tls                       | verify                    |
+      | no TLS overrides          | True                      |
+      | TLS verification disabled | False                     |
+      | a custom CA bundle        | /etc/archipy/vault-ca.pem |
+
   Scenario Outline: A <section> configuration with <problem> is <outcome>
     When a <section> configuration is built with <problem>
     Then the configuration should be <outcome>

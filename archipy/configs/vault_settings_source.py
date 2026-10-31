@@ -203,12 +203,19 @@ def create_vault_client(config: VaultConfig) -> hvac.Client:
             reason="Both CLIENT_CERT_PATH and CLIENT_KEY_PATH must be set for mutual TLS",
         )
 
+    # hvac copies ``session.verify`` (requests default: True) and ``session.cert``
+    # over the Client arguments when a session is passed, and sends its own
+    # ``timeout=30`` on every request, so set them on the session and pass the
+    # timeout tuple explicitly.
     session = _build_session(config)
+    session.verify = verify
+    session.cert = cert
     client = hvac.Client(
         url=config.ADDR,
         namespace=config.NAMESPACE,
         verify=verify,
         cert=cert,
+        timeout=(config.CONNECT_TIMEOUT, config.READ_TIMEOUT),
         session=session,
     )
 
