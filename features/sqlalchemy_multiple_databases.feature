@@ -93,3 +93,12 @@ Feature: Several SQLAlchemy databases of the same type
       | mode  | database  |
       | sync  | StarRocks |
       | async | StarRocks |
+
+  Scenario Outline: A <mode> in-memory SQLite database keeps its data past the pool recycle time
+    When a row is written to the <mode> in-memory SQLite database and read back after its pool recycle time
+    Then the in-memory SQLite database still holds the row
+
+    Examples: Session manager kinds
+      | mode  |
+      | sync  |
+      | async |
