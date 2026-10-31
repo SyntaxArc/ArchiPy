@@ -9,6 +9,7 @@ description: "Release history for ArchiPy 5.x series"
 
 | Version           | Date       | Summary                                                                                                                          |
 |-------------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [5.23.0](5.23.0.md) | 2026-10-31 | Temporal gains many client and worker options, the Pydantic converter, schedule management and domain errors; **behavior:** activity heartbeat, workflow timeouts and workflow retries no longer default to limits, Kafka verifies broker hostnames, Pushgateway groups metrics per pod; fixes for MySQL/StarRocks error codes, Vault TLS settings, async Keycloak key rotation, ScyllaDB and Parsian |
 | [5.22.0](5.22.0.md) | 2026-10-27 | Pydantic AI agents export traces and metrics through ArchiPy's OpenTelemetry providers (new `PYDANTIC_AI` config section, `pydantic-ai` and `otel-pydantic-ai` extras); Behave CI runs affected groups in parallel; issue forms, labeler, link check and contributor rules |
 | [5.21.2](5.21.2.md) | 2026-10-25 | Test container images updated to the latest stable releases; `mkdocs-material` lower bound matches `uv.lock` |
 | [5.21.1](5.21.1.md) | 2026-10-24 | Keycloak: `create_realm` no longer raises a `TypeError` for an existing realm, and UMA `permissions_check` handles several permissions |
