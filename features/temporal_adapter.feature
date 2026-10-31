@@ -211,6 +211,16 @@ Feature: Temporal Adapter Operations
     When I execute workflow "GreetingWorkflow" with argument "Tuned"
     Then the workflow result should be "Hello, Tuned!"
 
+  Scenario Outline: A worker with eager activity reservations set to <value> reserves <expected> per workflow task
+    Given a Temporal worker manager is configured with eager activity reservations set to <value>
+    And a worker is started for task queue "test-queue" with GreetingWorkflow
+    Then the worker should reserve <expected> eager activities per workflow task
+
+    Examples: Eager activity reservations
+      | value | expected |
+      | 5     | 5        |
+      | none  | 3        |
+
   Scenario: Worker joins a Worker Deployment version
     When I start a worker for task queue "deployment-queue" in deployment "orders" with build id "v2.0.0"
     Then the worker should be running

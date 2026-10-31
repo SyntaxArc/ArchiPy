@@ -2422,6 +2422,22 @@ def step_temporal_worker_manager_tuned(context, rate):
     scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
 
 
+@given("a Temporal worker manager is configured with eager activity reservations set to {value}")
+def step_temporal_worker_manager_eager_reservations(context, value):
+    scenario_context = get_current_scenario_context(context)
+    temporal_config = get_temporal_adapter(context).config.model_copy(
+        update={"WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS": None if value == "none" else int(value)},
+    )
+    scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
+
+
+@then("the worker should reserve {expected:d} eager activities per workflow task")
+def step_worker_eager_reservations(context, expected):
+    worker = get_current_scenario_context(context).last_worker._worker
+    actual = worker.config().get("max_eager_activity_reservations_per_workflow_task")
+    assert actual == expected, f"Expected {expected} eager activity reservations, got {actual!r}"
+
+
 @when('I start a worker for task queue "{task_queue}" in deployment "{deployment}" with build id "{build_id}"')
 def step_start_worker_in_deployment(context, task_queue, deployment, build_id):
     deployment_config = WorkerDeploymentConfig(
