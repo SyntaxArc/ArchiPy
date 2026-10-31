@@ -4048,8 +4048,10 @@ error handling and Python 3.14 type hints.</p>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Set all three of <code>TLS_CA_CERT</code>, <code>TLS_CLIENT_CERT</code> and <code>TLS_CLIENT_KEY</code>, or none of them. A partial set is rejected
-with an <code>InvalidArgumentError</code>. Keep <code>TEMPORAL__API_KEY</code> and the key file out of source control.</p>
+<p>Set <code>TLS_CLIENT_CERT</code> and <code>TLS_CLIENT_KEY</code> together for mutual TLS; one without the other is rejected with an
+<code>InvalidArgumentError</code>. <code>TLS_CA_CERT</code> alone gives server-only TLS, and <code>TLS_SERVER_NAME</code> overrides the name the
+certificate is checked against. TLS turns on by itself with <code>API_KEY</code>; <code>TLS_ENABLED</code> forces it on or off. Keep
+<code>TEMPORAL__API_KEY</code> and the key file out of source control.</p>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
