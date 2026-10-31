@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 
+import certifi
 import httpx2
 from behave import given, then, when
 from features.test_helpers import get_current_scenario_context
@@ -32,6 +33,32 @@ def step_configured_adapter(context):
     except Exception as e:
         context.logger.exception(f"Failed to connect to MinIO: {e!s}")
         raise
+
+
+@given('a MinIO adapter with request checksum "{request}", response checksum "{response}" and CA bundle "{ca_bundle}"')
+def step_adapter_with_checksum_settings(context, request, response, ca_bundle):
+    scenario_context = get_current_scenario_context(context)
+    bundle_path = certifi.where() if ca_bundle == "certifi" else None
+    minio_config = BaseConfig.global_config().MINIO.model_copy(
+        update={
+            "REQUEST_CHECKSUM_CALCULATION": request,
+            "RESPONSE_CHECKSUM_VALIDATION": response,
+            "CA_BUNDLE": bundle_path,
+        },
+    )
+    scenario_context.adapter = MinioAdapter(minio_config)
+    scenario_context.store("expected_verify", bundle_path or minio_config.VERIFY_SSL)
+
+
+@then('the S3 client should use request checksum "{request}" and response checksum "{response}"')
+def step_s3_client_checksum_settings(context, request, response):
+    scenario_context = get_current_scenario_context(context)
+    client = get_minio_adapter(context)._client
+    assert client.meta.config.request_checksum_calculation == request
+    assert client.meta.config.response_checksum_validation == response
+    verify = client._endpoint.http_session._verify
+    expected_verify = scenario_context.get("expected_verify")
+    assert verify == expected_verify, f"Expected verify {expected_verify!r}, got {verify!r}"
 
 
 @given('a bucket named "{bucket_name}" exists')

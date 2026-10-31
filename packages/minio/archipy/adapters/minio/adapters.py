@@ -187,6 +187,8 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 connect_timeout=self.configs.CONNECT_TIMEOUT,
                 read_timeout=self.configs.READ_TIMEOUT,
                 max_pool_connections=self.configs.MAX_POOL_CONNECTIONS,
+                request_checksum_calculation=self.configs.REQUEST_CHECKSUM_CALCULATION,
+                response_checksum_validation=self.configs.RESPONSE_CHECKSUM_VALIDATION,
             )
 
             # Create boto3 S3 client
@@ -198,7 +200,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 aws_session_token=self.configs.SESSION_TOKEN,
                 region_name=self.configs.REGION,
                 config=boto_config,
-                verify=self.configs.VERIFY_SSL,
+                verify=self._ssl_verify(self.configs),
             )
         except InvalidArgumentError:
             # Pass through our custom errors
@@ -213,6 +215,22 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise NetworkError(service="S3") from e
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             raise InternalError(additional_data={"component": "S3"}) from e
+
+    @staticmethod
+    def _ssl_verify(configs: MinioConfig) -> bool | str:
+        """Resolve the boto3 ``verify`` argument.
+
+        A CA bundle path replaces the default trust store; ``VERIFY_SSL=False`` still disables verification.
+
+        Args:
+            configs (MinioConfig): MinIO configuration.
+
+        Returns:
+            bool | str: The CA bundle path, or whether to verify SSL certificates.
+        """
+        if configs.VERIFY_SSL and configs.CA_BUNDLE:
+            return configs.CA_BUNDLE
+        return configs.VERIFY_SSL
 
     def clear_all_caches(self) -> None:
         """Clear all cached values."""

@@ -30,3 +30,18 @@ class MinioConfig(BaseModel):
     RETRIES_MODE: Literal["legacy", "standard", "adaptive"] = Field(default="standard", description="Retry mode")
     USE_SSL: bool | None = Field(default=None, description="Explicitly set SSL usage (overrides SECURE if set)")
     VERIFY_SSL: bool = Field(default=True, description="Verify SSL certificates")
+    CA_BUNDLE: str | None = Field(
+        default=None,
+        description="Path to a CA bundle used to verify SSL certificates (ignored when VERIFY_SSL is False)",
+    )
+    REQUEST_CHECKSUM_CALCULATION: Literal["when_supported", "when_required"] | None = Field(
+        default=None,
+        description=(
+            "When boto3 calculates request checksums; 'when_required' suits S3-compatible servers that reject "
+            "the default CRC32 checksums. None keeps the boto3 default"
+        ),
+    )
+    RESPONSE_CHECKSUM_VALIDATION: Literal["when_supported", "when_required"] | None = Field(
+        default=None,
+        description="When boto3 validates response checksums. None keeps the boto3 default",
+    )
