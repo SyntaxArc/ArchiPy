@@ -2347,6 +2347,24 @@ def step_time_skipping_result(context, expected):
     assert actual == expected, f"Expected {expected!r}, got {actual!r}"
 
 
+@then('the activities scheduled by workflow "{workflow_id}" should have no heartbeat timeout')
+def step_activities_without_heartbeat(context, workflow_id):
+    adapter = get_temporal_adapter(context)
+
+    async def _heartbeat_timeouts() -> list[float]:
+        handle = await adapter.get_workflow_handle(workflow_id)
+        history = await handle.fetch_history()
+        return [
+            event.activity_task_scheduled_event_attributes.heartbeat_timeout.ToTimedelta().total_seconds()
+            for event in history.events
+            if event.HasField("activity_task_scheduled_event_attributes")
+        ]
+
+    timeouts = run_async(context, _heartbeat_timeouts())
+    assert timeouts, "Expected at least one scheduled activity"
+    assert all(timeout == 0 for timeout in timeouts), f"Unexpected heartbeat timeouts: {timeouts}"
+
+
 @when('I start workflow "{workflow_name}" with workflow id "{workflow_id}" twice using conflict policy {policy}')
 def step_start_workflow_twice_with_conflict_policy(context, workflow_name, workflow_id, policy):
     adapter = get_temporal_adapter(context)
