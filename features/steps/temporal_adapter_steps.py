@@ -387,6 +387,7 @@ def step_start_workflow_no_arg(context, workflow_name, workflow_id):
 
     workflow_map = {
         "GreetingWorkflow": GreetingWorkflow,
+        "BaseGreetingWorkflow": BaseGreetingWorkflow,
         "SignalQueryWorkflow": SignalQueryWorkflow,
     }
 
@@ -415,6 +416,7 @@ def step_start_workflow_with_id(context, workflow_name, arg, workflow_id):
 
     workflow_map = {
         "GreetingWorkflow": GreetingWorkflow,
+        "BaseGreetingWorkflow": BaseGreetingWorkflow,
         "SignalQueryWorkflow": SignalQueryWorkflow,
     }
 
@@ -446,6 +448,7 @@ def step_execute_workflow_with_id(context, workflow_name, arg, workflow_id):
 
     workflow_map = {
         "GreetingWorkflow": GreetingWorkflow,
+        "BaseGreetingWorkflow": BaseGreetingWorkflow,
     }
 
     workflow_class = workflow_map.get(workflow_name)
@@ -474,6 +477,7 @@ def step_execute_workflow_with_arg(context, workflow_name, arg):
 
     workflow_map = {
         "GreetingWorkflow": GreetingWorkflow,
+        "BaseGreetingWorkflow": BaseGreetingWorkflow,
     }
 
     workflow_class = workflow_map.get(workflow_name)
