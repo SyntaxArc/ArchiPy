@@ -203,6 +203,15 @@ Feature: Base Configuration System
       | RUNTIME_DISABLE_ENVIRONMENT_INFO       | False    |
       | WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS | None     |
 
+  Scenario Outline: The Elasticsearch client carries retry backoff only when configured
+    When I build an Elasticsearch client with RETRY_BACKOFF_BASE <base> and RETRY_BACKOFF_CAP <cap>
+    Then the client retry backoff should be <expected>
+
+    Examples: Retry backoff
+      | base | cap  | expected  |
+      | none | none | default   |
+      | 0.5  | 8    | 0.5 and 8 |
+
   Scenario Outline: The Postgres session managers pass connect_timeout to psycopg only when configured
     When I read the connect arguments of the <kind> Postgres session manager with CONNECT_TIMEOUT <value>
     Then the connect arguments should be <expected>

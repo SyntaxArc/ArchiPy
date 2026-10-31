@@ -32,6 +32,16 @@ class ElasticsearchConfig(BaseModel):
     MAX_RETRIES: int = Field(default=1, ge=0, description="Maximum number of retries per request")
     RETRY_ON_TIMEOUT: bool = Field(default=True, description="Retry on connection timeouts")
     RETRY_ON_STATUS: tuple[int, ...] = Field(default=(429, 502, 503, 504), description="HTTP status codes to retry on")
+    RETRY_BACKOFF_BASE: float | None = Field(
+        default=None,
+        gt=0,
+        description="Base delay in seconds for exponential retry backoff (None: retry immediately)",
+    )
+    RETRY_BACKOFF_CAP: float | None = Field(
+        default=None,
+        gt=0,
+        description="Maximum delay in seconds between retries (None: client default)",
+    )
     IGNORE_STATUS: tuple[int, ...] = Field(default=(), description="HTTP status codes to ignore as errors")
     SNIFF_ON_START: bool = Field(default=False, description="Sniff nodes on client instantiation")
     SNIFF_BEFORE_REQUESTS: bool = Field(default=False, description="Sniff nodes before requests")

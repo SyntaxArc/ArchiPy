@@ -131,6 +131,12 @@ class ElasticsearchAdapter(ElasticsearchPort):
             "sniff_before_requests": configs.SNIFF_BEFORE_REQUESTS,
             "sniff_on_node_failure": configs.SNIFF_ON_NODE_FAILURE,
             "max_dead_node_backoff": configs.MAX_DEAD_NODE_BACKOFF,
+            "retry_backoff_base": configs.RETRY_BACKOFF_BASE,
+            "retry_backoff_cap": configs.RETRY_BACKOFF_CAP,
+        }
+        # Leave the backoff options out when unset so the client keeps its own defaults
+        kwargs = {
+            key: value for key, value in kwargs.items() if value is not None or not key.startswith("retry_backoff")
         }
 
         # Only add SSL parameters if they have values (to avoid passing None)
@@ -416,6 +422,12 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
             "sniff_before_requests": configs.SNIFF_BEFORE_REQUESTS,
             "sniff_on_node_failure": configs.SNIFF_ON_NODE_FAILURE,
             "max_dead_node_backoff": configs.MAX_DEAD_NODE_BACKOFF,
+            "retry_backoff_base": configs.RETRY_BACKOFF_BASE,
+            "retry_backoff_cap": configs.RETRY_BACKOFF_CAP,
+        }
+        # Leave the backoff options out when unset so the client keeps its own defaults
+        kwargs = {
+            key: value for key, value in kwargs.items() if value is not None or not key.startswith("retry_backoff")
         }
 
         # Only add SSL parameters if they have values (to avoid passing None)

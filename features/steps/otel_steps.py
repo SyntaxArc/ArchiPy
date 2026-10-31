@@ -3056,6 +3056,28 @@ def step_then_noop_observables(context):
     assert all(isinstance(i, _NoOpObservableInstrument) for i in instruments)
 
 
+@when("I record {recorded:d} distinct attribute sets on a counter read through a reader limited to {limit:d}")
+def step_record_attribute_sets(context: Context, recorded: int, limit: int) -> None:
+    from opentelemetry.sdk.metrics import MeterProvider
+
+    from archipy.helpers.utils._otel.providers import metrics_cardinality_limits
+
+    reader = InMemoryMetricReader(cardinality_limits=metrics_cardinality_limits(limit))
+    counter = MeterProvider(metric_readers=[reader]).get_meter("bdd.cardinality").create_counter("bdd.requests")
+    for index in range(recorded):
+        counter.add(1, {"key": str(index)})
+    points = reader.get_metrics_data().resource_metrics[0].scope_metrics[0].metrics[0].data.data_points
+    get_current_scenario_context(context).store("cardinality_points", [dict(point.attributes) for point in points])
+
+
+@then("the counter should hold {series:d} series and {overflow:d} overflow series")
+def step_counter_series(context: Context, series: int, overflow: int) -> None:
+    points = get_current_scenario_context(context).get("cardinality_points")
+    overflow_points = [attributes for attributes in points if attributes.get("otel.metric.overflow")]
+    assert len(overflow_points) == overflow, points
+    assert len(points) - len(overflow_points) == series, points
+
+
 @when('I attach the OTel logging handler to an in-memory logger provider and log "{message}"')
 def step_attach_otel_logging_handler(context: Context, message: str) -> None:
     import warnings

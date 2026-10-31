@@ -607,6 +607,31 @@ def step_then_environment_kind(context, production, test, dev, local, level):
     assert environment.log_level == getattr(logging, level), environment.log_level
 
 
+@when("I build an Elasticsearch client with RETRY_BACKOFF_BASE {base} and RETRY_BACKOFF_CAP {cap}")
+def step_when_elasticsearch_client_backoff(context, base, cap):
+    from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
+    from archipy.configs.config_template import ElasticsearchConfig
+
+    updates = {}
+    if base != "none":
+        updates["RETRY_BACKOFF_BASE"] = float(base)
+    if cap != "none":
+        updates["RETRY_BACKOFF_CAP"] = float(cap)
+    client = ElasticsearchAdapter._get_client(ElasticsearchConfig(**updates))
+    get_current_scenario_context(context).store("es_backoff", (client._retry_backoff_base, client._retry_backoff_cap))
+
+
+@then("the client retry backoff should be {expected}")
+def step_then_elasticsearch_backoff(context, expected):
+    base, cap = get_current_scenario_context(context).get("es_backoff")
+    if expected == "default":
+        from elastic_transport.client_utils import DEFAULT
+
+        assert base is DEFAULT and cap is DEFAULT, (base, cap)  # unset: the client keeps its own defaults
+    else:
+        assert (base, cap) == (0.5, 8.0), (base, cap)
+
+
 @when("I read the connect arguments of the {kind} Postgres session manager with CONNECT_TIMEOUT {value}")
 def step_when_postgres_connect_args(context, kind, value):
     from archipy.adapters.postgres.sqlalchemy.session_managers import (
