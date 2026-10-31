@@ -304,7 +304,8 @@ class TemporalAdapter(TemporalPort):
         """Build TLS configuration for secure connections from the configured files.
 
         Server-only TLS needs just the CA certificate (or none, to use the system CA bundle); mutual TLS adds the
-        client certificate and key.
+        client certificate and key. ``TLS_VERIFICATION_SERVER_NAME`` checks the certificate name without changing
+        the SNI that ``TLS_SERVER_NAME`` sets.
 
         Returns:
             TLSConfig: The TLS configuration object.
@@ -318,6 +319,7 @@ class TemporalAdapter(TemporalPort):
                 client_cert=self._read_tls_file(self.config.TLS_CLIENT_CERT),
                 client_private_key=self._read_tls_file(self.config.TLS_CLIENT_KEY),
                 domain=self.config.TLS_SERVER_NAME,
+                verification_server_name=self.config.TLS_VERIFICATION_SERVER_NAME,
             )
         except OSError as error:
             raise InvalidArgumentError(additional_data={"original_error": str(error)}) from error

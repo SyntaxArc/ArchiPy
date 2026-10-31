@@ -157,6 +157,13 @@ class TemporalConfig(BaseModel):
         default=None,
         description="Server name to verify the TLS certificate against, when it differs from HOST",
     )
+    TLS_VERIFICATION_SERVER_NAME: str | None = Field(
+        default=None,
+        description=(
+            "Name checked against the server certificate without changing the SNI sent, e.g. behind an "
+            "SNI-inspecting proxy (requires TLS_CA_CERT)"
+        ),
+    )
     TLS_ENABLED: bool | None = Field(
         default=None,
         description=(
@@ -233,8 +240,13 @@ class TemporalConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_tls_configuration(self) -> Self:
-        """Validate the mutual TLS client certificate and key are set together; the CA certificate is optional."""
+        """Validate the mutual TLS client certificate and key are set together; the CA certificate is optional.
+
+        A certificate verification server name needs ``TLS_CA_CERT``, the root it verifies against.
+        """
         if (self.TLS_CLIENT_CERT is None) != (self.TLS_CLIENT_KEY is None):
+            raise InvalidArgumentError()
+        if self.TLS_VERIFICATION_SERVER_NAME is not None and self.TLS_CA_CERT is None:
             raise InvalidArgumentError()
 
         return self
