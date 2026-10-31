@@ -147,6 +147,41 @@ Feature: Elasticsearch Operations Testing
     When I scan "test-index" for query "Async Scan"
     Then the scan should return at least 2 hits
 
+  Scenario Outline: Search with a query body and keyword fields <mode>
+    Given a valid Elasticsearch client connection
+    And index "test-index" exists
+    And a document exists in "test-index" with id "kw-1" and content '{"title": "Keyword Doc", "content": "one"}'
+    And a document exists in "test-index" with id "kw-2" and content '{"title": "Keyword Doc", "content": "two"}'
+    When I search "test-index" for "Keyword Doc" with size 1 as a keyword argument
+    Then no Elasticsearch deprecation warning should be raised
+    And the search should return at most 1 hit
+    And the search query passed to the adapter should be unchanged
+
+    Examples: sync
+      | mode          |
+      | synchronously |
+
+    @async
+    Examples: async
+      | mode           |
+      | asynchronously |
+
+  Scenario Outline: Create an index with a body and keyword fields <mode>
+    Given a valid Elasticsearch client connection
+    When I create index "kw-index" with settings in the body and mappings as a keyword argument
+    Then no Elasticsearch deprecation warning should be raised
+    And the index creation should succeed
+    And index "kw-index" should exist in the cluster
+
+    Examples: sync
+      | mode          |
+      | synchronously |
+
+    @async
+    Examples: async
+      | mode           |
+      | asynchronously |
+
   Scenario: Connect with authenticated user
     Given an Elasticsearch cluster with security enabled
     When I connect with username "elastic-user" and password "elastic-pass"

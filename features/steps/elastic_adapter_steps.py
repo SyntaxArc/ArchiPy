@@ -5,6 +5,7 @@ import logging
 import ast
 import asyncio
 import uuid
+import warnings
 
 from behave import given, when, then
 from elasticsearch import BadRequestError
@@ -548,6 +549,53 @@ async def step_scan_documents(context: Context, index_name: str, query_text: str
         raise
 
 
+@when('I search "{index_name}" for "{query}" with size {size:d} as a keyword argument')
+async def step_search_with_keyword_field(context: Context, index_name: str, query: str, size: int) -> None:
+    """Search with a query body plus a body field passed as a keyword, recording deprecation warnings."""
+    adapter = get_es_adapter(context)
+    scenario_context = _get_scenario_context(context)
+    actual_index_name = get_actual_index_name(context, index_name)
+    search_query = {"query": {"match": {"title": query}}}
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", DeprecationWarning)
+        if _is_async_scenario(context):
+            result = await adapter.search(index=actual_index_name, query=search_query, size=size)
+        else:
+            result = adapter.search(index=actual_index_name, query=search_query, size=size)
+
+    _store_result(scenario_context, "last_search_result", result)
+    _store_result(scenario_context, "es_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+    _store_result(scenario_context, "last_search_query", search_query)
+
+
+@when('I create index "{index_name}" with settings in the body and mappings as a keyword argument')
+async def step_create_index_with_keyword_field(context: Context, index_name: str) -> None:
+    """Create an index with settings in the body and mappings as a keyword, recording deprecation warnings."""
+    adapter = get_es_adapter(context)
+    scenario_context = _get_scenario_context(context)
+    actual_index_name = f"{index_name}-{str(uuid.uuid4())[:8]}"
+    index_name_mapping = scenario_context.get("index_name_mapping", {})
+    index_name_mapping[index_name] = actual_index_name
+    scenario_context.store("index_name_mapping", index_name_mapping)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", DeprecationWarning)
+        result = await _create_index(
+            adapter,
+            _is_async_scenario(context),
+            index=actual_index_name,
+            body={"settings": {"number_of_shards": 1}},
+            mappings={"properties": {"title": {"type": "keyword"}}},
+        )
+
+    created_indices = scenario_context.get("created_indices", [])
+    created_indices.append(actual_index_name)
+    scenario_context.store("created_indices", created_indices)
+    _store_result(scenario_context, "last_create_index_result", result)
+    _store_result(scenario_context, "es_warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+
+
 # Authentication steps
 @given("an Elasticsearch cluster with security enabled")
 def step_cluster_with_security(context: Context) -> None:
@@ -598,6 +646,30 @@ def step_search_returns_hits(context: Context, num_hits: str) -> None:
 
     assert result["hits"]["total"]["value"] >= int(num_hits), "Not enough hits returned"
     context.logger.info(f"Search returned at least {num_hits} hits")
+
+
+@then("the search should return at most {num_hits:d} hit")
+def step_search_returns_at_most(context: Context, num_hits: int) -> None:
+    """Verify that the search returned no more hits than requested."""
+    scenario_context = _get_scenario_context(context)
+    hits = scenario_context.get("last_search_result")["hits"]["hits"]
+    assert len(hits) <= num_hits, f"Search returned {len(hits)} hits, expected at most {num_hits}"
+
+
+@then("no Elasticsearch deprecation warning should be raised")
+def step_no_es_deprecation_warning(context: Context) -> None:
+    """Verify that the adapter call raised no DeprecationWarning."""
+    scenario_context = _get_scenario_context(context)
+    caught = scenario_context.get("es_warnings", [])
+    assert not caught, f"Unexpected deprecation warnings: {[str(w.message) for w in caught]}"
+
+
+@then("the search query passed to the adapter should be unchanged")
+def step_search_query_unchanged(context: Context) -> None:
+    """Verify the adapter did not merge keyword fields into the caller's query."""
+    scenario_context = _get_scenario_context(context)
+    query = scenario_context.get("last_search_query")
+    assert query == {"query": {"match": {"title": query["query"]["match"]["title"]}}}, f"Query mutated: {query}"
 
 
 @then('the hit should contain field "{field}" with value "{value}"')
