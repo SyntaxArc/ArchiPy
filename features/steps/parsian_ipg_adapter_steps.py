@@ -335,9 +335,17 @@ def step_then_request_rejected(context):
     assert type(error).__name__ in {"ValidationError", "InvalidArgumentError"}, type(error).__name__
 
 
-@then("the Parsian SOAP transport is {transport}")
-def step_then_transport(context, transport):
+@then("the Parsian SOAP transport times operations out after {seconds:d} seconds and {proxy_use} the proxy")
+def step_then_transport(context, seconds, proxy_use):
     clients = _state(context)["clients"]
     assert len(clients) == 3
     for client in clients:
-        assert (client.transport is not None) == (transport == "customized")
+        transport = client.transport
+        assert transport is not None
+        if _state(context)["is_async"]:
+            assert transport.client.timeout.read == seconds, transport.client.timeout
+            proxied = bool(transport.wsdl_client._mounts)  # the WSDL loader must get the proxy too
+        else:
+            assert transport.operation_timeout == seconds, transport.operation_timeout
+            proxied = bool(transport.session.proxies)
+        assert proxied == (proxy_use == "uses"), f"proxy_use={proxy_use}, proxied={proxied}"
