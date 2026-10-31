@@ -25,6 +25,14 @@ class KafkaConfig(BaseModel):
     SSL_CA_FILE: str | None = Field(default=None, description="Path to SSL CA certificate file")
     SSL_CERT_FILE: str | None = Field(default=None, description="Path to SSL certificate file")
     SSL_KEY_FILE: str | None = Field(default=None, description="Path to SSL key file")
+    SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: Literal["https", "none"] = Field(
+        default="https",
+        description=(
+            "Broker hostname verification for SSL connections. 'https' checks the broker certificate against the "
+            "broker hostname; 'none' turns the check off and should only be used for brokers whose certificates "
+            "do not match their address"
+        ),
+    )
     ACKS: Literal["0", "1", "all"] = Field(default="all", description="Acknowledgment mode for producers")
     AUTO_OFFSET_RESET: Literal["earliest", "latest", "none"] = Field(
         default="earliest",
@@ -112,6 +120,11 @@ class KafkaConfig(BaseModel):
             raise ConfigurationError(operation="kafka_validate", reason="sasl_auth_incomplete")
         if self.SECURITY_PROTOCOL == "SSL" and not (self.SSL_CA_FILE or self.SSL_CERT_FILE or self.SSL_KEY_FILE):
             logger.warning("SSL enabled but no SSL certificates provided; this may cause connection issues.")
+        if self.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM == "none":
+            logger.warning(
+                "Kafka broker hostname verification is disabled (SSL_ENDPOINT_IDENTIFICATION_ALGORITHM='none'); "
+                "SSL connections will not check that the broker certificate matches its hostname.",
+            )
         return self
 
     @model_validator(mode="after")

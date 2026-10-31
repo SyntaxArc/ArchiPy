@@ -84,6 +84,19 @@ Feature: Kafka Clients and Spans Testing
       | async | producer |
       | async | consumer |
 
+  Scenario Outline: A SASL_SSL <role> with hostname verification <setting> verifies broker hostnames with <expected>
+    When Kafka client settings are built for a <role> with hostname verification <setting>
+    Then the Kafka broker hostname verification should be "<expected>"
+
+    Examples:
+      | role           | setting | expected |
+      | sync client    | default | https    |
+      | sync client    | none    | none     |
+      | async producer | default | https    |
+      | async producer | none    | none     |
+      | async consumer | default | https    |
+      | async consumer | none    | none     |
+
   Scenario Outline: A <mode> consumer created with <arguments> is rejected
     When I create a <mode> consumer with <arguments>
     Then the Kafka operation should raise "InvalidArgumentError"

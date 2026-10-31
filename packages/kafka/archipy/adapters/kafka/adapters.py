@@ -71,6 +71,27 @@ def _end_consume_span(consumer: Consumer) -> None:
     consumer._current_consume_span = None  # ty: ignore[unresolved-attribute]
 
 
+def _apply_security_config(config: dict[str, str | int | float], configs: KafkaConfig) -> None:
+    """Add the SASL and SSL settings to a client configuration when credentials and a CA file are set.
+
+    Broker hostname verification follows ``SSL_ENDPOINT_IDENTIFICATION_ALGORITHM`` (``https`` by default).
+
+    Args:
+        config: The librdkafka configuration dictionary to update in place.
+        configs: Kafka configuration.
+    """
+    if not (configs.USERNAME and configs.PASSWORD and configs.SSL_CA_FILE):
+        return
+    config["sasl.username"] = configs.USERNAME
+    config["sasl.password"] = configs.PASSWORD.get_secret_value()
+    config["security.protocol"] = configs.SECURITY_PROTOCOL
+    config["sasl.mechanism"] = configs.SASL_MECHANISM or ""
+    config["ssl.ca.location"] = configs.SSL_CA_FILE
+    config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
+    config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
+    config["ssl.endpoint.identification.algorithm"] = configs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM
+
+
 # Library/runtime failures observed at the Kafka client boundary.
 _KAFKA_CLIENT_ERRORS: tuple[type[Exception], ...] = (
     KafkaException,
@@ -168,15 +189,7 @@ class KafkaAdminAdapter(KafkaAdminPort, KafkaExceptionHandlerMixin):
         try:
             broker_list_csv = ",".join(configs.BROKERS_LIST)
             config: dict[str, str | int | float] = {"bootstrap.servers": broker_list_csv}
-            if configs.USERNAME and configs.PASSWORD and configs.SSL_CA_FILE:
-                config["sasl.username"] = configs.USERNAME
-                config["sasl.password"] = configs.PASSWORD.get_secret_value()
-                config["security.protocol"] = configs.SECURITY_PROTOCOL
-                config["sasl.mechanism"] = configs.SASL_MECHANISM or ""
-                config["ssl.ca.location"] = configs.SSL_CA_FILE
-                config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
-                config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
-                config["ssl.endpoint.identification.algorithm"] = "none"
+            _apply_security_config(config, configs)
             self.adapter: AdminClient = AdminClient(config)
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "KafkaAdmin_init")
@@ -322,15 +335,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
                 "fetch.max.bytes": configs.FETCH_MAX_BYTES,
                 "max.partition.fetch.bytes": configs.MAX_PARTITION_FETCH_BYTES,
             }
-            if configs.USERNAME and configs.PASSWORD and configs.SSL_CA_FILE:
-                config["sasl.username"] = configs.USERNAME
-                config["sasl.password"] = configs.PASSWORD.get_secret_value()
-                config["security.protocol"] = configs.SECURITY_PROTOCOL
-                config["sasl.mechanism"] = configs.SASL_MECHANISM or ""
-                config["ssl.ca.location"] = configs.SSL_CA_FILE
-                config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
-                config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
-                config["ssl.endpoint.identification.algorithm"] = "none"
+            _apply_security_config(config, configs)
             # Looked up on the module at call time: OpenTelemetry's Kafka instrumentor replaces
             # ``confluent_kafka.Consumer``, so a name bound at import time would never be traced.
             consumer = confluent_kafka.Consumer(config)
@@ -540,15 +545,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             }
             if configs.TRANSACTIONAL_ID:
                 config["transactional.id"] = configs.TRANSACTIONAL_ID
-            if configs.USERNAME and configs.PASSWORD and configs.SSL_CA_FILE:
-                config["sasl.username"] = configs.USERNAME
-                config["sasl.password"] = configs.PASSWORD.get_secret_value()
-                config["security.protocol"] = configs.SECURITY_PROTOCOL
-                config["sasl.mechanism"] = configs.SASL_MECHANISM or ""
-                config["ssl.ca.location"] = configs.SSL_CA_FILE
-                config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
-                config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
-                config["ssl.endpoint.identification.algorithm"] = "none"
+            _apply_security_config(config, configs)
             # See the consumer: resolved at call time so the OpenTelemetry instrumentor can wrap it.
             producer = confluent_kafka.Producer(config)
         except _KAFKA_CLIENT_ERRORS as e:
@@ -738,15 +735,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
         }
         if configs.TRANSACTIONAL_ID:
             config["transactional.id"] = configs.TRANSACTIONAL_ID
-        if configs.USERNAME and configs.PASSWORD and configs.SSL_CA_FILE:
-            config["sasl.username"] = configs.USERNAME
-            config["sasl.password"] = configs.PASSWORD.get_secret_value()
-            config["security.protocol"] = configs.SECURITY_PROTOCOL
-            config["sasl.mechanism"] = configs.SASL_MECHANISM or ""
-            config["ssl.ca.location"] = configs.SSL_CA_FILE
-            config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
-            config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
-            config["ssl.endpoint.identification.algorithm"] = "none"
+        _apply_security_config(config, configs)
         return config
 
     async def _get_adapter(self) -> AIOProducer:
@@ -954,15 +943,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             "fetch.max.bytes": configs.FETCH_MAX_BYTES,
             "max.partition.fetch.bytes": configs.MAX_PARTITION_FETCH_BYTES,
         }
-        if configs.USERNAME and configs.PASSWORD and configs.SSL_CA_FILE:
-            config["sasl.username"] = configs.USERNAME
-            config["sasl.password"] = configs.PASSWORD.get_secret_value()
-            config["security.protocol"] = configs.SECURITY_PROTOCOL
-            config["sasl.mechanism"] = configs.SASL_MECHANISM or ""
-            config["ssl.ca.location"] = configs.SSL_CA_FILE
-            config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
-            config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
-            config["ssl.endpoint.identification.algorithm"] = "none"
+        _apply_security_config(config, configs)
         return config
 
     async def _get_adapter(self) -> AIOConsumer:

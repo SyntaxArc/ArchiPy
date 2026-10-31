@@ -47,6 +47,14 @@ config = KafkaConfig(
 )
 ```
 
+!!! warning "Broker hostname verification is on by default"
+    With credentials and `SSL_CA_FILE` set, the adapters verify that each broker certificate matches the broker
+    hostname (`SSL_ENDPOINT_IDENTIFICATION_ALGORITHM="https"`, the default). Earlier releases turned this check off.
+    Brokers reached by IP address, or whose certificate SAN does not list the address you connect to, now fail the TLS
+    handshake. Fix the certificates if you can. To keep the old behavior, set
+    `SSL_ENDPOINT_IDENTIFICATION_ALGORITHM="none"` (or `KAFKA__SSL_ENDPOINT_IDENTIFICATION_ALGORITHM=none`); a warning
+    is logged because this leaves connections open to man-in-the-middle attacks.
+
 ### Async-Specific Configuration
 
 The async adapters respect three additional fields that tune the underlying `AIOProducer` /
