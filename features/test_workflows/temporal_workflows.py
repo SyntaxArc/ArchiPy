@@ -30,6 +30,8 @@ with workflow.unsafe.imports_passed_through():
     )
     from features.test_workflows.temporal_activities import OrderPayload
 
+    from archipy.adapters.temporal.base import BaseWorkflow
+
 
 @workflow.defn(name="GreetingWorkflow")
 class GreetingWorkflow:
@@ -462,6 +464,21 @@ class OrderSagaWorkflow:
         return self.get_state()
 
 
+@workflow.defn(name="BaseGreetingWorkflow")
+class BaseGreetingWorkflow(BaseWorkflow[str, str]):
+    """Greeting workflow built on ``BaseWorkflow`` to check its config-driven activity defaults in the sandbox."""
+
+    @workflow.run
+    async def run(self, workflow_input: str) -> str:
+        """Greet through the base class activity helper.
+
+        Args:
+            workflow_input (str): Name to greet.
+
+        Returns:
+            str: Greeting message from the activity.
+        """
+        return await self._execute_activity_with_retry(greeting_activity, workflow_input)
 @workflow.defn(name="EchoOrderWorkflow")
 class EchoOrderWorkflow:
     """Workflow that returns its Pydantic input, to check the data converter round trip."""

@@ -19,6 +19,11 @@ from temporalio.common import RetryPolicy
 
 from archipy.models.errors import InvalidArgumentError
 
+# Workflow code runs in a sandbox that re-imports modules; passing the config module through keeps workflows on the
+# global config the host process set, instead of a fresh, unset copy.
+with workflow.unsafe.imports_passed_through():
+    from archipy.configs.base_config import BaseConfig
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -85,9 +90,7 @@ class BaseWorkflow[T, R]:
         Returns:
             Any: The result of the activity execution.
         """
-        # Get temporal config for default values
-        from archipy.configs.base_config import BaseConfig
-
+        # Read the host process's config: the import below is passed through the sandbox (see module imports).
         temporal_config = BaseConfig.global_config().TEMPORAL
 
         # Use config defaults if not provided
@@ -110,7 +113,7 @@ class BaseWorkflow[T, R]:
             start_to_close_timeout=start_to_close_timeout,
             heartbeat_timeout=heartbeat_timeout,
             retry_policy=retry_policy,
-            task_queue=task_queue or temporal_config.TASK_QUEUE,
+            task_queue=task_queue,
         )
 
     async def _execute_child_workflow(
@@ -136,9 +139,7 @@ class BaseWorkflow[T, R]:
         Returns:
             Any: The result of the child workflow execution.
         """
-        # Get temporal config for default values
-        from archipy.configs.base_config import BaseConfig
-
+        # Read the host process's config: the import below is passed through the sandbox (see module imports).
         temporal_config = BaseConfig.global_config().TEMPORAL
 
         # Use config defaults if not provided
@@ -149,7 +150,7 @@ class BaseWorkflow[T, R]:
             child_workflow,
             arg,
             id=workflow_id,
-            task_queue=task_queue or temporal_config.TASK_QUEUE,
+            task_queue=task_queue,
             execution_timeout=execution_timeout,
         )
 
