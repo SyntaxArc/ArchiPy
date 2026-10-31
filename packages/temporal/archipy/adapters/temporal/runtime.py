@@ -5,10 +5,19 @@ instances with OpenTelemetry metrics integration.
 """
 
 import logging
+from typing import Any
 
-from temporalio.runtime import OpenTelemetryConfig, PrometheusConfig, Runtime, TelemetryConfig
+from temporalio.runtime import (
+    LoggingConfig,
+    OpenTelemetryConfig,
+    PrometheusConfig,
+    Runtime,
+    TelemetryConfig,
+    TelemetryFilter,
+)
 
 from archipy.helpers.metaclasses.singleton import Singleton
+from archipy.models.errors import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +55,8 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
         headers: dict[str, str] | None = None,
         use_http: bool = False,
         prometheus_bind_address: str | None = None,
+        global_tags: dict[str, str] | None = None,
+        core_log_level: str | None = None,
     ) -> Runtime | None:
         """Get or create a Runtime with OpenTelemetry telemetry.
 
@@ -56,10 +67,16 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
             use_http: If True, use HTTP/protobuf transport instead of gRPC.
             prometheus_bind_address: If set (``host:port``), the Runtime serves a Prometheus ``/metrics``
                 scrape endpoint on that address instead of exporting over OTLP.
+            global_tags: Tags added to every Temporal SDK metric (e.g. service, environment).
+            core_log_level: Level of the SDK core's own logs (``ERROR``, ``WARN``, ``INFO``, ``DEBUG``, ``TRACE``);
+                None keeps the SDK default.
 
         Returns:
             Runtime | None: The configured Runtime instance if metrics are enabled,
                 None otherwise (uses default Runtime).
+
+        Raises:
+            ConfigurationError: If the Runtime cannot be built from the telemetry settings (e.g. an invalid URL).
 
         Note:
             Once a Runtime is created with metrics enabled, it cannot be disabled
@@ -83,13 +100,20 @@ class TemporalRuntimeManager(metaclass=Singleton, thread_safe=True):
             logger.info("Creating Temporal Runtime with OTLP metrics at %s", otlp_endpoint)
             metrics = OpenTelemetryConfig(url=otlp_endpoint, headers=headers or None, http=use_http)
 
+        telemetry_kwargs: dict[str, Any] = {"metrics": metrics, "global_tags": global_tags or {}}
+        if core_log_level is not None:
+            telemetry_kwargs["logging"] = LoggingConfig(
+                filter=TelemetryFilter(core_level=core_log_level, other_level=core_log_level),
+            )
         try:
-            self._runtime = Runtime(telemetry=TelemetryConfig(metrics=metrics))
+            self._runtime = Runtime(telemetry=TelemetryConfig(**telemetry_kwargs))
             logger.info("Temporal Runtime created successfully with OpenTelemetry telemetry")
-        except Exception:
-            logger.exception("Failed to create Temporal Runtime with OpenTelemetry config")
-            # Return None so Temporal uses default Runtime
-            return None
+        except Exception as error:
+            # Falling back to the default Runtime would drop every SDK metric without a trace, so fail loudly.
+            raise ConfigurationError(
+                operation="temporal_runtime",
+                reason=f"cannot build the Temporal Runtime telemetry: {error}",
+            ) from error
 
         return self._runtime
 

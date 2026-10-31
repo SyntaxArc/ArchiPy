@@ -1,6 +1,6 @@
 """Temporal configuration."""
 
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -47,6 +47,15 @@ class TemporalConfig(BaseModel):
             "Serialize workflow and activity payloads with temporalio's Pydantic data converter "
             "(Pydantic models, datetimes and decimals round trip); ignored when a data_converter is passed explicitly"
         ),
+    )
+
+    METRICS_GLOBAL_TAGS: dict[str, str] | None = Field(
+        default=None,
+        description="Tags added to every Temporal SDK metric, e.g. service and environment",
+    )
+    SDK_CORE_LOG_LEVEL: Literal["ERROR", "WARN", "INFO", "DEBUG", "TRACE"] | None = Field(
+        default=None,
+        description="Log level of the Temporal SDK core (None keeps the SDK default of WARN)",
     )
 
     # Client Connection Configuration

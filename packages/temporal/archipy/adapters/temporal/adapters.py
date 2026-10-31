@@ -232,6 +232,8 @@ class TemporalAdapter(TemporalPort):
             headers=dict(otel.OTLP_HEADERS),
             use_http=(otel.PROTOCOL == "http/protobuf"),
             prometheus_bind_address=prometheus_bind_address,
+            global_tags=self.config.METRICS_GLOBAL_TAGS,
+            core_log_level=self.config.SDK_CORE_LOG_LEVEL,
         )
 
     @staticmethod
