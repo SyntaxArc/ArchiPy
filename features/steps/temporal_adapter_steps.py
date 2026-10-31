@@ -2601,7 +2601,9 @@ class PostgresAtomicActivity(AtomicActivity[str, str]):
 def step_adapter_built_with_setting(context, setting, value):
     import json
 
-    parsed = None if value == "none" else json.loads(value) if value[:1] in "[{0123456789" else value
+    # none means unset; a quoted cell ("none") is the literal string, and JSON cells are parsed.
+    parsed = None if value == "none" else json.loads(value) if value[:1] in '"[{0123456789' else value
+    parsed = {"true": True, "false": False}.get(parsed, parsed) if isinstance(parsed, str) else parsed
     config = get_temporal_adapter(context).config.model_copy(update={setting: parsed})
     options = TemporalAdapter(config)._optional_connect_kwargs()
     get_current_scenario_context(context).store("client_options", options)

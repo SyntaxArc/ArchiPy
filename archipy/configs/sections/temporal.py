@@ -90,6 +90,13 @@ class TemporalConfig(BaseModel):
         gt=0,
         description="Seconds to wait for the TCP connection, separate from RPC timeouts (None: SDK default)",
     )
+    GRPC_COMPRESSION: Literal["gzip", "none"] | None = Field(
+        default=None,
+        description=(
+            "gRPC compression of client requests; 'none' for proxies without gRPC compression support "
+            "(None: SDK default, gzip)"
+        ),
+    )
     CLIENT_RPC_RETRY_MAX_RETRIES: int = Field(
         default=10,
         ge=0,

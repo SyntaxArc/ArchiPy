@@ -333,6 +333,9 @@ Feature: Temporal Adapter Operations
     Then its client option <option> should be <expected>
 
     Examples: Client options
-      | setting         | value | option          | expected |
-      | CONNECT_TIMEOUT | 5     | connect_timeout | 0:00:05  |
-      | CONNECT_TIMEOUT | none  | connect_timeout | absent   |
+      | setting          | value  | option           | expected               |
+      | CONNECT_TIMEOUT  | 5      | connect_timeout  | 0:00:05                |
+      | CONNECT_TIMEOUT  | none   | connect_timeout  | absent                 |
+      | GRPC_COMPRESSION | gzip   | grpc_compression | _GzipGrpcCompression() |
+      | GRPC_COMPRESSION | "none" | grpc_compression | _NoGrpcCompression()   |
+      | GRPC_COMPRESSION | none   | grpc_compression | absent                 |
