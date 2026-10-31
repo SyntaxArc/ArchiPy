@@ -787,3 +787,24 @@ def step_then_facade_forwarded(context):
     assert getattr(OtelUtils.runtime(), name) is (not sc.get("facade_original"))
     assert name not in vars(OtelUtils)
     assert getattr(OtelUtils, name) is (not sc.get("facade_original"))
+
+
+@when(
+    "the Pushgateway grouping key is resolved from {configured} with POD_NAME {pod_name} and HOSTNAME {hostname}",
+)
+def step_resolve_grouping_key(context, configured, pod_name, hostname):
+    import os
+
+    from archipy.helpers.utils._otel.metrics_export import resolve_grouping_key
+
+    labels = {} if configured == "nothing" else dict(pair.split("=", 1) for pair in configured.split(","))
+    environment = {"POD_NAME": "" if pod_name == "none" else pod_name, "HOSTNAME": hostname}
+    with patch.dict(os.environ, environment):
+        get_current_scenario_context(context).store("grouping_key", resolve_grouping_key(labels))
+
+
+@then("the Pushgateway grouping key should be {expected}")
+def step_grouping_key_should_be(context, expected):
+    wanted = dict(pair.split("=", 1) for pair in expected.split(","))
+    actual = get_current_scenario_context(context).get("grouping_key")
+    assert actual == wanted, f"Expected {wanted}, got {actual}"

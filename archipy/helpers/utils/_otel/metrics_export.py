@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import socket
 import threading
 from typing import TYPE_CHECKING, Any
 
@@ -13,6 +15,27 @@ if TYPE_CHECKING:
 
     from archipy.configs.config_template import OpentelemetryConfig
     from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider
+
+
+def resolve_grouping_key(configured: dict[str, str] | None) -> dict[str, str]:
+    """Return the Pushgateway grouping key, with a per-process ``instance`` label unless one is configured.
+
+    A push replaces the whole group, so replicas that share a group overwrite each other's metrics. The default
+    ``instance`` is the Kubernetes pod name (``POD_NAME``, e.g. from the downward API ``metadata.name``), else the
+    hostname (``HOSTNAME`` or ``socket.gethostname()``), which is the pod name on Kubernetes unless the pod uses
+    ``hostNetwork`` and the container ID on plain Docker.
+
+    Args:
+        configured: ``METRICS_PUSHGATEWAY_GROUPING_KEY`` from the configuration.
+
+    Returns:
+        The grouping key to push and delete with.
+    """
+    grouping_key = dict(configured or {})
+    if "instance" not in grouping_key:
+        grouping_key["instance"] = os.environ.get("POD_NAME") or os.environ.get("HOSTNAME") or socket.gethostname()
+    return grouping_key
+
 
 # Same logger as OtelUtils, so log filters and handlers that name it keep seeing these records.
 logger = logging.getLogger("archipy.helpers.utils.otel_utils")
@@ -167,7 +190,7 @@ class MetricsExport:
             raise RuntimeError(msg)
 
         job = str(otel.METRICS_PUSHGATEWAY_JOB or otel.SERVICE_NAME or "archipy").strip() or "archipy"
-        grouping_key = dict(otel.METRICS_PUSHGATEWAY_GROUPING_KEY or {})
+        grouping_key = resolve_grouping_key(otel.METRICS_PUSHGATEWAY_GROUPING_KEY)
         interval = int(otel.METRICS_PUSHGATEWAY_INTERVAL_SECONDS)
         timeout = float(otel.METRICS_PUSHGATEWAY_TIMEOUT_SECONDS)
         delete_on_shutdown = bool(otel.METRICS_PUSHGATEWAY_DELETE_ON_SHUTDOWN)
