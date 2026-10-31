@@ -236,7 +236,6 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             self._cluster = self._create_cluster()
             self._session = self._cluster.connect()
-            self._session.default_timeout = self.config.REQUEST_TIMEOUT
             if self.config.KEYSPACE:
                 self._session.set_keyspace(self.config.KEYSPACE)
 
@@ -710,12 +709,8 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             start_time = time.time()
             session = self.get_session()
-            original_timeout = session.default_timeout
-            session.default_timeout = self.config.HEALTH_CHECK_TIMEOUT
-            try:
-                session.execute("SELECT now() FROM system.local")
-            finally:
-                session.default_timeout = original_timeout
+            # The request timeout lives in the execution profile, so the probe sets its own per call
+            session.execute("SELECT now() FROM system.local", timeout=self.config.HEALTH_CHECK_TIMEOUT)
             latency_ms = (time.time() - start_time) * 1000
         except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
             return {
@@ -856,7 +851,6 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             self._cluster = self._create_cluster()
             self._session = self._cluster.connect()
-            self._session.default_timeout = self.config.REQUEST_TIMEOUT
             if self.config.KEYSPACE:
                 self._session.set_keyspace(self.config.KEYSPACE)
 
@@ -1371,13 +1365,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             start_time = time.time()
             session = await self.get_session()
-            original_timeout = session.default_timeout
-            session.default_timeout = self.config.HEALTH_CHECK_TIMEOUT
-            try:
-                future = session.execute_async("SELECT now() FROM system.local")
-                await self._await_future(future)
-            finally:
-                session.default_timeout = original_timeout
+            future = session.execute_async("SELECT now() FROM system.local", timeout=self.config.HEALTH_CHECK_TIMEOUT)
+            await self._await_future(future)
             latency_ms = (time.time() - start_time) * 1000
         except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
             return {
