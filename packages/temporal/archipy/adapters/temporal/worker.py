@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import warnings
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
 from uuid import uuid4
@@ -17,6 +18,7 @@ from temporalio.worker import PollerBehavior, PollerBehaviorAutoscaling, PollerB
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import TemporalConfig
+from archipy.models.errors import InvalidArgumentError
 from archipy.models.errors.temporal_errors import (
     WorkerConnectionError,
     WorkerShutdownError,
@@ -31,7 +33,7 @@ if TYPE_CHECKING:
 
     from temporalio.client import Client
     from temporalio.converter import DataConverter
-    from temporalio.worker import WorkerTuner
+    from temporalio.worker import WorkerDeploymentConfig, WorkerTuner
 
 
 class WorkerHandle(PortWorkerHandle):
@@ -324,6 +326,7 @@ class TemporalWorkerManager(WorkerPort):
         max_concurrent_activities: int | None = None,
         tuner: WorkerTuner | None = None,
         activity_executor: Executor | None = None,
+        deployment_config: WorkerDeploymentConfig | None = None,
     ) -> WorkerHandle:
         """Start a Temporal worker for the specified task queue.
 
@@ -333,8 +336,8 @@ class TemporalWorkerManager(WorkerPort):
                 Defaults to None.
             activities (list[Callable], optional): List of activity callables to register.
                 Defaults to None.
-            build_id (str, optional): Build identifier for worker versioning.
-                Defaults to None.
+            build_id (str, optional): Deprecated, use ``deployment_config``. Build identifier for worker
+                versioning. Defaults to None.
             identity (str, optional): Unique worker identity. If None, auto-generated.
                 Defaults to None.
             max_concurrent_workflow_tasks (int, optional): Maximum concurrent workflow tasks.
@@ -345,6 +348,8 @@ class TemporalWorkerManager(WorkerPort):
                 Cannot be combined with the ``max_concurrent_*`` limits. Defaults to None.
             activity_executor (Executor, optional): Executor that runs synchronous (non-async) activities.
                 Required when registering sync activities. Defaults to None.
+            deployment_config (WorkerDeploymentConfig, optional): Worker Deployment version this worker belongs
+                to, replacing ``build_id``. Defaults to None.
 
         Returns:
             WorkerHandle: Handle to the started worker.
@@ -360,6 +365,18 @@ class TemporalWorkerManager(WorkerPort):
                 },
             )
 
+        if build_id is not None:
+            if deployment_config is not None:
+                raise InvalidArgumentError(
+                    argument_name="build_id",
+                    additional_data={"reason": "build_id and deployment_config are mutually exclusive"},
+                )
+            warnings.warn(
+                "start_worker(build_id=...) is deprecated; pass deployment_config=WorkerDeploymentConfig(...) instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         client = await self._get_client()
         worker_id = str(uuid4())
         worker_identity = identity or f"worker-{worker_id[:8]}"
@@ -373,6 +390,7 @@ class TemporalWorkerManager(WorkerPort):
                 workflows=workflows or [],
                 activities=activities or [],
                 build_id=build_id,
+                deployment_config=deployment_config,
                 identity=worker_identity,
                 max_concurrent_workflow_tasks=max_concurrent_workflow_tasks,
                 max_concurrent_activities=max_concurrent_activities,
@@ -396,7 +414,7 @@ class TemporalWorkerManager(WorkerPort):
                 task_queue=task_queue,
                 workflows=workflows,
                 activities=activities,
-                build_id=build_id,
+                build_id=build_id or (deployment_config.version.build_id if deployment_config else None),
                 identity=worker_identity,
                 max_concurrent_workflow_tasks=max_concurrent_workflow_tasks,
                 max_concurrent_activities=max_concurrent_activities,
