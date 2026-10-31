@@ -11,9 +11,7 @@ from archipy.helpers.utils._otel.process_state import _ProcessState
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
-    from opentelemetry.sdk._logs import LoggerProvider
-
-    from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider, OwnedTracerProvider
+    from archipy.helpers.utils._otel.provider_types import OwnedLoggerProvider, OwnedMeterProvider, OwnedTracerProvider
 
 logger = logging.getLogger("archipy.helpers.utils.otel_utils")
 
@@ -30,7 +28,7 @@ def is_usable_provider(provider: object) -> bool:
     return not getattr(provider, "_shutdown", False)
 
 
-def mark_provider_shutdown(provider: OwnedTracerProvider | OwnedMeterProvider | LoggerProvider | None) -> None:
+def mark_provider_shutdown(provider: OwnedTracerProvider | OwnedMeterProvider | OwnedLoggerProvider | None) -> None:
     """Remember that a provider was shut down."""
     if provider is not None:
         # Hold the provider weakly: ``id()`` values are reused after garbage collection.
@@ -65,7 +63,7 @@ def existing_concrete_meter_provider() -> OwnedMeterProvider | None:
     return None
 
 
-def existing_concrete_logger_provider() -> LoggerProvider | None:
+def existing_concrete_logger_provider() -> OwnedLoggerProvider | None:
     """Return the usable concrete global logger provider, if any."""
     from opentelemetry._logs import get_logger_provider
     from opentelemetry.sdk._logs import LoggerProvider
@@ -73,6 +71,9 @@ def existing_concrete_logger_provider() -> LoggerProvider | None:
     current = get_logger_provider()
     if is_concrete_provider(current, LoggerProvider) and is_usable_provider(current):
         return current
+    replay_safe = temporal_providers.as_replay_safe_logger_provider(current)
+    if replay_safe is not None and is_usable_provider(replay_safe):
+        return replay_safe
     return None
 
 
@@ -103,7 +104,7 @@ def acquire_provider[P](
 
 
 def shutdown_owned(
-    providers: Iterable[tuple[OwnedTracerProvider | OwnedMeterProvider | LoggerProvider | None, bool]],
+    providers: Iterable[tuple[OwnedTracerProvider | OwnedMeterProvider | OwnedLoggerProvider | None, bool]],
     error_message: str = "Error shutting down OTel provider",
 ) -> None:
     """Shut down every provider ArchiPy owns and mark it as shut down.
@@ -123,7 +124,7 @@ def shutdown_owned(
 
 
 def flush_providers(
-    providers: Iterable[OwnedTracerProvider | OwnedMeterProvider | LoggerProvider | None],
+    providers: Iterable[OwnedTracerProvider | OwnedMeterProvider | OwnedLoggerProvider | None],
     timeout_millis: int,
 ) -> bool:
     """Force-flush every provider that supports it.

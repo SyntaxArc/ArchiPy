@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     import grpc.aio
     from opentelemetry.instrumentation.grpc._client import OpenTelemetryClientInterceptor
     from opentelemetry.metrics import Meter
-    from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk._logs.export import LogRecordExporter
     from opentelemetry.sdk.metrics.export import MetricReader
     from opentelemetry.sdk.trace.export import SpanExporter
@@ -26,7 +25,7 @@ if TYPE_CHECKING:
     from archipy.configs.base_config import BaseConfig
     from archipy.configs.config_template import OpentelemetryConfig
     from archipy.helpers.utils._otel.noop import _NoOpMeter, _NoOpTracer
-    from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider, OwnedTracerProvider
+    from archipy.helpers.utils._otel.provider_types import OwnedLoggerProvider, OwnedMeterProvider, OwnedTracerProvider
 
 __all__ = [
     "DURATION_HISTOGRAM_BUCKETS_S",
@@ -155,7 +154,7 @@ class OtelUtils(metaclass=_OtelUtilsMeta):
         return cls._runtime.meter_provider()
 
     @classmethod
-    def logger_provider(cls) -> LoggerProvider | None:
+    def logger_provider(cls) -> OwnedLoggerProvider | None:
         """Return the owned or adopted logger provider, if any."""
         return cls._runtime.logger_provider()
 

@@ -1,13 +1,12 @@
 """The only place the OpenTelemetry runtime knows about Temporal's replay-safe providers.
 
-Temporal's tracing interceptor needs a ``ReplaySafeTracerProvider``, and workflow code that records metrics needs a
-``ReplaySafeMeterProvider``. Both wrap an SDK provider instead of subclassing it and forward ``shutdown``,
-``force_flush`` and ``add_span_processor``, which is all ArchiPy uses. They are detected rather than registered so the
+Temporal's tracing interceptor needs a ``ReplaySafeTracerProvider``, workflow code that records metrics needs a
+``ReplaySafeMeterProvider``, and workflow code that emits OpenTelemetry log records needs a
+``ReplaySafeLoggerProvider`` so the records are not duplicated on replay. They wrap an SDK provider instead of
+subclassing it and forward ``shutdown``, ``force_flush`` and ``add_span_processor``, which is all ArchiPy uses; log
+record processors are attached before the logger provider is wrapped. They are detected rather than registered so the
 result does not depend on whether the OpenTelemetry runtime or the Temporal adapter initializes first. Without
 ``temporalio`` (or with a version that lacks the classes) every helper falls back to the plain SDK provider.
-
-There is no logger counterpart: ``temporalio`` 1.34.0's ``ReplaySafeLoggerProvider`` cannot be instantiated with
-``opentelemetry-api`` 1.45 (``Logger.enabled`` became abstract), so logs stay unwrapped.
 """
 
 from __future__ import annotations
@@ -18,7 +17,7 @@ if TYPE_CHECKING:
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace.sampling import Sampler
 
-    from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider, OwnedTracerProvider
+    from archipy.helpers.utils._otel.provider_types import OwnedLoggerProvider, OwnedMeterProvider, OwnedTracerProvider
 
 
 def new_tracer_provider(resource: Resource, sampler: Sampler | None = None) -> OwnedTracerProvider:
@@ -56,6 +55,24 @@ def wrap_meter_provider(provider: OwnedMeterProvider) -> OwnedMeterProvider:
     return ReplaySafeMeterProvider(provider)
 
 
+def wrap_logger_provider(provider: OwnedLoggerProvider) -> OwnedLoggerProvider:
+    """Wrap ``provider`` so log records emitted from workflow code are dropped on replay, when ``temporalio`` allows.
+
+    Attach the log record processors first: the wrapper only forwards them to the SDK provider.
+
+    Args:
+        provider: The SDK logger provider to wrap.
+
+    Returns:
+        The wrapped provider, or ``provider`` itself.
+    """
+    try:
+        from temporalio.contrib.opentelemetry import ReplaySafeLoggerProvider
+    except ImportError:
+        return provider
+    return ReplaySafeLoggerProvider(provider)
+
+
 def as_replay_safe_tracer_provider(provider: object) -> OwnedTracerProvider | None:
     """Return ``provider`` when it is Temporal's replay-safe tracer provider, else ``None``."""
     try:
@@ -72,3 +89,12 @@ def as_replay_safe_meter_provider(provider: object) -> OwnedMeterProvider | None
     except ImportError:
         return None
     return provider if isinstance(provider, ReplaySafeMeterProvider) else None
+
+
+def as_replay_safe_logger_provider(provider: object) -> OwnedLoggerProvider | None:
+    """Return ``provider`` when it is Temporal's replay-safe logger provider, else ``None``."""
+    try:
+        from temporalio.contrib.opentelemetry import ReplaySafeLoggerProvider
+    except ImportError:
+        return None
+    return provider if isinstance(provider, ReplaySafeLoggerProvider) else None

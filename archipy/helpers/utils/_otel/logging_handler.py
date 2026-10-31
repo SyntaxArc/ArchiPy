@@ -6,7 +6,9 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs import LoggingHandler
+
+    from archipy.helpers.utils._otel.provider_types import OwnedLoggerProvider
 
 
 logger = logging.getLogger("archipy.helpers.utils.otel_utils")
@@ -19,7 +21,7 @@ class _DropOtelInternalLogs(logging.Filter):
         return not record.name.startswith("opentelemetry")
 
 
-def attach_logging_handler(level: int, logger_provider: LoggerProvider) -> LoggingHandler:
+def attach_logging_handler(level: int, logger_provider: OwnedLoggerProvider) -> LoggingHandler:
     """Attach an OpenTelemetry ``LoggingHandler`` to the root logger.
 
     Args:

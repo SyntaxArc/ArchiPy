@@ -1085,6 +1085,45 @@ def step_then_providers_replay_safe(context):
         assert isinstance(provider, expected), f"{type(provider).__name__} is not a {expected.__name__}"
 
 
+@when("a console logger provider is built with an in-memory log exporter")
+def step_when_console_logger_provider_built(context):
+    from opentelemetry.sdk._logs.export import InMemoryLogRecordExporter
+
+    from archipy.configs.config_template import OpentelemetryConfig
+    from archipy.helpers.utils._otel.providers import build_logger_provider
+
+    otel = OpentelemetryConfig(LOGS_EXPORTER=OtelLogsExporter.CONSOLE)
+    exporter = InMemoryLogRecordExporter()
+    provider = build_logger_provider(otel, OtelUtils._create_resource(otel), console_exporter_factory=lambda: exporter)
+    context.add_cleanup(provider.shutdown)
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("built_logger_provider", provider)
+    scenario_context.store("in_memory_log_exporter", exporter)
+
+
+@then("the logger provider should be a Temporal replay-safe provider")
+def step_then_logger_provider_replay_safe(context):
+    try:
+        from temporalio.contrib.opentelemetry import ReplaySafeLoggerProvider
+    except ImportError:
+        context.scenario.skip("temporalio is not installed")
+        return
+
+    provider = get_current_scenario_context(context).get("built_logger_provider")
+    assert isinstance(provider, ReplaySafeLoggerProvider), f"{type(provider).__name__} is not a ReplaySafeLoggerProvider"
+
+
+@then("a log record emitted outside a workflow should reach the exporter")
+def step_then_log_record_reaches_exporter(context):
+    from opentelemetry._logs import LogRecord
+
+    scenario_context = get_current_scenario_context(context)
+    provider = scenario_context.get("built_logger_provider")
+    provider.get_logger("archipy-replay-safe-bdd").emit(LogRecord(body="outside a workflow"))
+    bodies = [item.log_record.body for item in scenario_context.get("in_memory_log_exporter").get_finished_logs()]
+    assert bodies == ["outside a workflow"], bodies
+
+
 @given("another library registered a replay-safe tracer provider before ArchiPy initialized OpenTelemetry")
 def step_given_other_library_replay_safe(context):
     try:
