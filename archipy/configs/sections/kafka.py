@@ -91,7 +91,11 @@ class KafkaConfig(BaseModel):
     )
 
     # Async adapter settings (AIOProducer / AIOConsumer)
-    CONSUMER_MAX_WORKERS: int = Field(default=2, ge=1, description="Thread pool workers for AIOConsumer")
+    CONSUMER_MAX_WORKERS: int = Field(
+        default=2,
+        ge=1,
+        description="Thread pool workers for AIOConsumer (confluent-kafka's own default is 100; kept low on purpose)",
+    )
     PRODUCER_BATCH_SIZE: int = Field(default=1000, ge=1, description="Max messages per AIOProducer batch")
     PRODUCER_BUFFER_TIMEOUT: float = Field(
         default=1.0,

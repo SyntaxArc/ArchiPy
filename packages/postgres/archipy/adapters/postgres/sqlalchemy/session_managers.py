@@ -1,6 +1,6 @@
 """PostgreSQL SQLAlchemy session manager implementations."""
 
-from typing import override
+from typing import Any, override
 
 from sqlalchemy import URL
 from sqlalchemy.exc import SQLAlchemyError
@@ -38,6 +38,7 @@ class PostgresSQlAlchemySessionManager(BaseSQLAlchemySessionManager[PostgresSQLA
             orm_config: PostgreSQL-specific configuration. If None, uses global config.
         """
         configs = orm_config or self._default_config()
+        self._configs = configs  # read by _get_connect_args, which the base initializer calls
         super().__init__(configs)
 
     @override
@@ -57,6 +58,15 @@ class PostgresSQlAlchemySessionManager(BaseSQLAlchemySessionManager[PostgresSQLA
             str: The name of the database ('postgresql').
         """
         return "postgresql"
+
+    @override
+    def _get_connect_args(self) -> dict[str, Any]:
+        """Return the psycopg connection arguments.
+
+        Returns:
+            dict[str, Any]: ``connect_timeout`` when configured, otherwise empty (libpq waits indefinitely).
+        """
+        return {} if self._configs.CONNECT_TIMEOUT is None else {"connect_timeout": self._configs.CONNECT_TIMEOUT}
 
     @override
     def _create_url(self, configs: PostgresSQLAlchemyConfig) -> URL:
@@ -112,6 +122,7 @@ class AsyncPostgresSQlAlchemySessionManager(
             orm_config: PostgreSQL-specific configuration. If None, uses global config.
         """
         configs = orm_config or self._default_config()
+        self._configs = configs  # read by _get_connect_args, which the base initializer calls
         super().__init__(configs)
 
     @override
@@ -131,6 +142,15 @@ class AsyncPostgresSQlAlchemySessionManager(
             str: The name of the database ('postgresql').
         """
         return "postgresql"
+
+    @override
+    def _get_connect_args(self) -> dict[str, Any]:
+        """Return the psycopg connection arguments.
+
+        Returns:
+            dict[str, Any]: ``connect_timeout`` when configured, otherwise empty (libpq waits indefinitely).
+        """
+        return {} if self._configs.CONNECT_TIMEOUT is None else {"connect_timeout": self._configs.CONNECT_TIMEOUT}
 
     @override
     def _create_url(self, configs: PostgresSQLAlchemyConfig) -> URL:

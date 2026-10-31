@@ -27,6 +27,11 @@ class ParsianShaparakConfig(BaseModel):
         default=None,
         description="Optional HTTP/HTTPS proxy configuration dictionary",
     )
+    TIMEOUT: float = Field(
+        default=30,
+        gt=0,
+        description="Seconds to wait for a SOAP operation response (the WSDL fetch uses zeep's own timeout)",
+    )
 
 
 class SamanShaparakConfig(BaseModel):

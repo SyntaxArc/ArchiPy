@@ -13,13 +13,14 @@ from opentelemetry.instrumentation.utils import suppress_instrumentation
 import requests
 from testcontainers.community.mysql import MySqlContainer
 from testcontainers.core.container import DockerContainer
-from testcontainers.core.waiting_utils import wait_container_is_ready, wait_for_logs
-from testcontainers.elasticsearch import ElasticSearchContainer
-from testcontainers.keycloak import KeycloakContainer
+from testcontainers.core.wait_strategies import LogMessageWaitStrategy
+from testcontainers.core.waiting_utils import wait_container_is_ready
+from testcontainers.community.elasticsearch import ElasticSearchContainer
+from testcontainers.community.keycloak import KeycloakContainer
 from testcontainers.community.vault import VaultContainer
-from testcontainers.minio import MinioContainer
-from testcontainers.postgres import PostgresContainer
-from testcontainers.redis import RedisContainer
+from testcontainers.community.minio import MinioContainer
+from testcontainers.community.postgres import PostgresContainer
+from testcontainers.community.redis import RedisContainer
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import (
@@ -110,6 +111,18 @@ TAG_CONTAINER_MAP: dict[str, str] = {
     "needs-apm-server": "apm-server",
     "needs-apm-collector": "otel-collector-apm",
 }
+
+
+
+def _wait_for_log(container: DockerContainer, pattern: str, timeout: int) -> None:
+    """Block until the container logs ``pattern`` (a regex), failing after ``timeout`` seconds.
+
+    Args:
+        container: The started container.
+        pattern: Regular expression matched against the container's logs.
+        timeout: Seconds to wait before failing.
+    """
+    LogMessageWaitStrategy(pattern).with_startup_timeout(timeout).wait_until_ready(container)
 
 
 class ContainerManager:
@@ -378,7 +391,7 @@ class RedisClusterTestContainer(metaclass=Singleton, thread_safe=True):
 
         for container in self._containers:
             container.start()
-            wait_for_logs(container, "Ready to accept connections", timeout=30)
+            _wait_for_log(container, "Ready to accept connections", 30)
 
         bootstrap_command = [
             "redis-cli",
@@ -866,7 +879,7 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
         self._container.start()
         self._is_running = True
 
-        wait_for_logs(self._container, "Kafka Server started", timeout=120)
+        _wait_for_log(self._container, "Kafka Server started", 120)
 
         self.host = self._container.get_container_host_ip()
         self.port = mapped_port
@@ -1073,7 +1086,7 @@ class ScyllaDBTestContainer(metaclass=Singleton, thread_safe=True):
 
         # Wait for ScyllaDB to be ready
         # ScyllaDB logs "Starting listening for CQL clients" when ready
-        wait_for_logs(self._container, "Starting listening for CQL clients", timeout=120)
+        _wait_for_log(self._container, "Starting listening for CQL clients", 120)
 
         self._is_running = True
 
@@ -1168,7 +1181,7 @@ class StarRocksTestContainer(metaclass=Singleton, thread_safe=True):
         # Wait for StarRocks to be ready
         # StarRocks logs "cluster initialization DONE!" when the cluster is fully initialized
         # This appears after "FE service query port:9030 is alive!" and indicates readiness
-        wait_for_logs(self._container, "Enjoy the journey to StarRocks blazing-fast lake-house engine!", timeout=120)
+        _wait_for_log(self._container, "Enjoy the journey to StarRocks blazing-fast lake-house engine!", 120)
 
         self._is_running = True
 
@@ -1306,7 +1319,7 @@ class TemporalContainer(metaclass=Singleton, thread_safe=True):
 
         # Wait for Temporal to be ready
         # The dev server logs "CLI" when it starts
-        wait_for_logs(self._container, "CLI", timeout=60)
+        _wait_for_log(self._container, "CLI", 60)
 
         self._is_running = True
 
@@ -1512,8 +1525,8 @@ class MailpitTestContainer(metaclass=Singleton, thread_safe=True):
             self._container = self._build()
 
         self._container.start()
-        wait_for_logs(self._container, r"\[http\] accessible via", timeout=60)
-        wait_for_logs(self._container, r"\[smtpd\] starting on", timeout=60)
+        _wait_for_log(self._container, r"\[http\] accessible via", 60)
+        _wait_for_log(self._container, r"\[smtpd\] starting on", 60)
         self._is_running = True
 
         self.host = self._container.get_container_host_ip()
@@ -1681,7 +1694,7 @@ class OtelCollectorTestContainer(metaclass=Singleton, thread_safe=True):
             self._container = self._build()
 
         self._container.start()
-        wait_for_logs(self._container, r"Everything is ready", timeout=60)
+        _wait_for_log(self._container, r"Everything is ready", 60)
         self._is_running = True
 
         self.host = self._container.get_container_host_ip()
@@ -1882,7 +1895,7 @@ class EnvoyTestContainer(metaclass=Singleton, thread_safe=True):
         keycloak = ContainerManager.get_container("keycloak")
         self._container = self._build(keycloak.port)
         self._container.start()
-        wait_for_logs(self._container, r"starting main dispatch loop", timeout=60)
+        _wait_for_log(self._container, r"starting main dispatch loop", 60)
         self._is_running = True
 
         self.host = self._container.get_container_host_ip()
@@ -1961,7 +1974,7 @@ class PushgatewayTestContainer(metaclass=Singleton, thread_safe=True):
             self._container = self._build()
 
         self._container.start()
-        wait_for_logs(self._container, r"Listening on", timeout=60)
+        _wait_for_log(self._container, r"Listening on", 60)
         self._is_running = True
 
         self.host = self._container.get_container_host_ip()
@@ -2096,7 +2109,7 @@ class ApmServerTestContainer(metaclass=Singleton, thread_safe=True):
 
         self._container = self._build(elasticsearch_port)
         self._container.start()
-        wait_for_logs(self._container, r"no longer blocking ingestion", timeout=120)
+        _wait_for_log(self._container, r"no longer blocking ingestion", 120)
         self._is_running = True
 
         self.host = self._container.get_container_host_ip()

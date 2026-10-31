@@ -1310,3 +1310,13 @@ Feature: Redis Testing
       | mock         |
       | container    |
       | cluster      |
+
+  Scenario Outline: The mock follows the configured RESP protocol when shaping ZPOPMAX replies
+    Given a Redis mock configured with RESP protocol <protocol>
+    When I pop the highest member of sorted set "mock-proto" holding "alice" with score 3.0
+    Then the raw ZPOPMAX reply should have the <shape> shape
+
+    Examples: Protocol shapes
+      | protocol | shape |
+      | 2        | pairs |
+      | 3        | flat  |

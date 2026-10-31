@@ -54,6 +54,7 @@ otel = [
     "opentelemetry-instrumentation-httpx>=0.66b2",
     "opentelemetry-instrumentation-requests>=0.66b2",
     "opentelemetry-instrumentation-threading>=0.66b2",
+    "opentelemetry-instrumentation-logging>=0.66b2",
     "opentelemetry-propagator-b3>=1.45.2",
     "opentelemetry-instrumentation-system-metrics>=0.66b2",
     "opentelemetry-exporter-prometheus>=0.66b2",

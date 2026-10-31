@@ -3076,3 +3076,45 @@ def step_counter_series(context: Context, series: int, overflow: int) -> None:
     overflow_points = [attributes for attributes in points if attributes.get("otel.metric.overflow")]
     assert len(overflow_points) == overflow, points
     assert len(points) - len(overflow_points) == series, points
+
+
+@when('I attach the OTel logging handler to an in-memory logger provider and log "{message}"')
+def step_attach_otel_logging_handler(context: Context, message: str) -> None:
+    import warnings
+
+    from opentelemetry.sdk._logs import LoggerProvider
+    from opentelemetry.sdk._logs.export import InMemoryLogRecordExporter, SimpleLogRecordProcessor
+
+    from archipy.helpers.utils._otel.logging_handler import attach_logging_handler, detach_logging_handler
+
+    exporter = InMemoryLogRecordExporter()
+    provider = LoggerProvider()
+    provider.add_log_record_processor(SimpleLogRecordProcessor(exporter))
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        handler = attach_logging_handler(logging.INFO, provider)
+    context.add_cleanup(detach_logging_handler, handler)
+    logging.getLogger("archipy.bdd.otel_handler").warning(message)
+    logging.getLogger("opentelemetry.bdd.skipped").warning("dropped: OpenTelemetry internal logs")
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("otel_log_handler", handler)
+    scenario_context.store("otel_log_warnings", [item for item in caught if issubclass(item.category, DeprecationWarning)])
+    scenario_context.store("otel_log_bodies", [record.log_record.body for record in exporter.get_finished_logs()])
+
+
+@then('the handler should come from "{module}"')
+def step_handler_module(context: Context, module: str) -> None:
+    handler = get_current_scenario_context(context).get("otel_log_handler")
+    assert type(handler).__module__ == module, type(handler).__module__
+
+
+@then("no DeprecationWarning should have been raised by the handler")
+def step_handler_no_deprecation(context: Context) -> None:
+    caught = get_current_scenario_context(context).get("otel_log_warnings")
+    assert not caught, [str(item.message) for item in caught]
+
+
+@then('the in-memory logger provider should hold exactly the record "{message}"')
+def step_logger_provider_holds_record(context: Context, message: str) -> None:
+    bodies = get_current_scenario_context(context).get("otel_log_bodies")
+    assert bodies == [message], bodies

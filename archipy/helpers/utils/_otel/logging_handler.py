@@ -6,8 +6,6 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from opentelemetry.sdk._logs import LoggingHandler
-
     from archipy.helpers.utils._otel.provider_types import OwnedLoggerProvider
 
 
@@ -21,8 +19,11 @@ class _DropOtelInternalLogs(logging.Filter):
         return not record.name.startswith("opentelemetry")
 
 
-def attach_logging_handler(level: int, logger_provider: OwnedLoggerProvider) -> LoggingHandler:
+def attach_logging_handler(level: int, logger_provider: OwnedLoggerProvider) -> logging.Handler:
     """Attach an OpenTelemetry ``LoggingHandler`` to the root logger.
+
+    Uses the handler from ``opentelemetry-instrumentation-logging`` (the SDK's own ``LoggingHandler`` is deprecated
+    since OpenTelemetry 1.40) and falls back to the SDK handler when that package is not installed.
 
     Args:
         level: Minimum level the handler forwards.
@@ -31,15 +32,18 @@ def attach_logging_handler(level: int, logger_provider: OwnedLoggerProvider) -> 
     Returns:
         The attached handler.
     """
-    from opentelemetry.sdk._logs import LoggingHandler
+    try:
+        from opentelemetry.instrumentation.logging.handler import LoggingHandler
+    except ImportError:
+        from opentelemetry.sdk._logs import LoggingHandler  # deprecated; kept for installs without the new package
 
-    handler = LoggingHandler(level=level, logger_provider=logger_provider)
+    handler: logging.Handler = LoggingHandler(level=level, logger_provider=logger_provider)
     handler.addFilter(_DropOtelInternalLogs())
     logging.getLogger().addHandler(handler)
     return handler
 
 
-def detach_logging_handler(handler: LoggingHandler) -> None:
+def detach_logging_handler(handler: logging.Handler) -> None:
     """Remove the handler from the root logger and close it; failures are logged at debug level.
 
     Args:

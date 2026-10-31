@@ -8,7 +8,8 @@ import asyncio
 import logging
 import re
 import time
-from typing import Any, NoReturn, TypedDict, override
+import warnings
+from typing import Any, Final, NoReturn, TypedDict, override
 
 from async_lru import alru_cache
 from cassandra import (
@@ -20,7 +21,15 @@ from cassandra import (
     Unavailable,
 )
 from cassandra.auth import PlainTextAuthProvider
-from cassandra.cluster import Cluster, NoHostAvailable, ResponseFuture, ResultSet, Session
+from cassandra.cluster import (
+    EXEC_PROFILE_DEFAULT,
+    Cluster,
+    ExecutionProfile,
+    NoHostAvailable,
+    ResponseFuture,
+    ResultSet,
+    Session,
+)
 from cassandra.policies import (
     AddressTranslator,
     DCAwareRoundRobinPolicy,
@@ -50,6 +59,33 @@ from archipy.models.errors import (
 
 logger = logging.getLogger(__name__)
 _CQL_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+_POOL_SETTING_DEFAULTS: Final = {
+    "MAX_CONNECTIONS_PER_HOST": 2,
+    "MIN_CONNECTIONS_PER_HOST": 1,
+    "CORE_CONNECTIONS_PER_HOST": 1,
+    "MAX_REQUESTS_PER_CONNECTION": 100,
+}
+
+
+def _warn_ignored_pool_settings(config: ScyllaDBConfig) -> None:
+    """Warn about connection pool settings that scylla-driver does not apply.
+
+    scylla-driver (protocol v3+) keeps one connection per host (per shard when shard-aware); it has no per-host pool
+    size or per-connection request limit, so these settings never had an effect.
+
+    Args:
+        config (ScyllaDBConfig): The ScyllaDB configuration.
+    """
+    ignored = [name for name, default in _POOL_SETTING_DEFAULTS.items() if getattr(config, name) != default]
+    if ignored:
+        warnings.warn(
+            f"{', '.join(ignored)} {'has' if len(ignored) == 1 else 'have'} no effect: scylla-driver does not support "
+            "per-host connection pool sizing, and the setting will be removed in a future release",
+            DeprecationWarning,
+            stacklevel=3,
+        )
 
 
 class _HostPoolStat(TypedDict):
@@ -200,7 +236,6 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             self._cluster = self._create_cluster()
             self._session = self._cluster.connect()
-            self._session.default_timeout = self.config.REQUEST_TIMEOUT
             if self.config.KEYSPACE:
                 self._session.set_keyspace(self.config.KEYSPACE)
 
@@ -278,23 +313,17 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             protocol_version=self.config.PROTOCOL_VERSION,
             compression=bool(self.config.COMPRESSION),
             connect_timeout=self.config.CONNECT_TIMEOUT,
-            load_balancing_policy=load_balancing_policy,
-            default_retry_policy=retry_policy,
+            execution_profiles={
+                EXEC_PROFILE_DEFAULT: ExecutionProfile(
+                    load_balancing_policy=load_balancing_policy,
+                    retry_policy=retry_policy,
+                    request_timeout=self.config.REQUEST_TIMEOUT,
+                ),
+            },
             shard_aware_options=shard_aware_options,
             address_translator=address_translator,
         )
-
-        # Configure connection pool settings
-        if cluster.profile_manager is not None:
-            profile = cluster.profile_manager.default
-            profile.request_timeout = self.config.REQUEST_TIMEOUT
-            # Configure connection pool limits per host
-            profile.max_connections_per_host = self.config.MAX_CONNECTIONS_PER_HOST
-            profile.min_connections_per_host = self.config.MIN_CONNECTIONS_PER_HOST
-            profile.core_connections_per_host = self.config.CORE_CONNECTIONS_PER_HOST
-
-        # Set pool configuration
-        cluster.connection_class.max_requests_per_connection = self.config.MAX_REQUESTS_PER_CONNECTION
+        _warn_ignored_pool_settings(self.config)
 
         return cluster
 
@@ -680,12 +709,8 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             start_time = time.time()
             session = self.get_session()
-            original_timeout = session.default_timeout
-            session.default_timeout = self.config.HEALTH_CHECK_TIMEOUT
-            try:
-                session.execute("SELECT now() FROM system.local")
-            finally:
-                session.default_timeout = original_timeout
+            # The request timeout lives in the execution profile, so the probe sets its own per call
+            session.execute("SELECT now() FROM system.local", timeout=self.config.HEALTH_CHECK_TIMEOUT)
             latency_ms = (time.time() - start_time) * 1000
         except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
             return {
@@ -826,7 +851,6 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             self._cluster = self._create_cluster()
             self._session = self._cluster.connect()
-            self._session.default_timeout = self.config.REQUEST_TIMEOUT
             if self.config.KEYSPACE:
                 self._session.set_keyspace(self.config.KEYSPACE)
 
@@ -904,23 +928,17 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             protocol_version=self.config.PROTOCOL_VERSION,
             compression=bool(self.config.COMPRESSION),
             connect_timeout=self.config.CONNECT_TIMEOUT,
-            load_balancing_policy=load_balancing_policy,
-            default_retry_policy=retry_policy,
+            execution_profiles={
+                EXEC_PROFILE_DEFAULT: ExecutionProfile(
+                    load_balancing_policy=load_balancing_policy,
+                    retry_policy=retry_policy,
+                    request_timeout=self.config.REQUEST_TIMEOUT,
+                ),
+            },
             shard_aware_options=shard_aware_options,
             address_translator=address_translator,
         )
-
-        # Configure connection pool settings
-        if cluster.profile_manager is not None:
-            profile = cluster.profile_manager.default
-            profile.request_timeout = self.config.REQUEST_TIMEOUT
-            # Configure connection pool limits per host
-            profile.max_connections_per_host = self.config.MAX_CONNECTIONS_PER_HOST
-            profile.min_connections_per_host = self.config.MIN_CONNECTIONS_PER_HOST
-            profile.core_connections_per_host = self.config.CORE_CONNECTIONS_PER_HOST
-
-        # Set pool configuration
-        cluster.connection_class.max_requests_per_connection = self.config.MAX_REQUESTS_PER_CONNECTION
+        _warn_ignored_pool_settings(self.config)
 
         return cluster
 
@@ -1347,13 +1365,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             start_time = time.time()
             session = await self.get_session()
-            original_timeout = session.default_timeout
-            session.default_timeout = self.config.HEALTH_CHECK_TIMEOUT
-            try:
-                future = session.execute_async("SELECT now() FROM system.local")
-                await self._await_future(future)
-            finally:
-                session.default_timeout = original_timeout
+            future = session.execute_async("SELECT now() FROM system.local", timeout=self.config.HEALTH_CHECK_TIMEOUT)
+            await self._await_future(future)
             latency_ms = (time.time() - start_time) * 1000
         except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
             return {

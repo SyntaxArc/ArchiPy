@@ -3481,3 +3481,33 @@ async def step_then_whole_hash_empty_async(context):
     """Verify hgetall on a missing hash returns an empty mapping."""
     whole_hash = get_result(context, "async_whole_hash")
     assert whole_hash == {}, f"Expected empty hash, got {whole_hash}"
+
+
+@given(r"a Redis mock configured with RESP protocol (?P<protocol>[23])")
+def step_given_redis_mock_with_protocol(context, protocol):
+    """Build a RedisMock for one RESP protocol version."""
+    redis_config = RedisConfig(
+        MASTER_HOST="localhost",
+        PORT=6379,
+        DATABASE=0,
+        DECODE_RESPONSES=True,
+        PROTOCOL=int(protocol),
+    )
+    get_current_scenario_context(context).adapter = RedisMock(redis_config=redis_config)
+
+
+@when(r'I pop the highest member of sorted set "(?P<name>[^"]+)" holding "(?P<member>[^"]+)" with score (?P<score>[\d.]+)')
+def step_when_pop_highest_raw(context, name, member, score):
+    """Add one member and keep the raw ZPOPMAX reply."""
+    adapter = get_current_scenario_context(context).adapter
+    adapter.zadd(name, {member: float(score)})
+    store_result(context, "raw_zpop_reply", adapter.zpopmax(name))
+
+
+@then(r"the raw ZPOPMAX reply should have the (?P<shape>pairs|flat) shape")
+def step_then_raw_zpop_shape(context, shape):
+    """RESP2 replies are a list of (member, score) pairs, RESP3 a flat [member, score] list."""
+    reply = get_result(context, "raw_zpop_reply")
+    expected_flat = shape == "flat"
+    is_flat = not isinstance(reply[0], (list, tuple))
+    assert is_flat == expected_flat, f"Expected a {shape} reply, got {reply!r}"

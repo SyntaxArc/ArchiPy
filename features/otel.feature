@@ -167,6 +167,12 @@ Feature: OpenTelemetry decorators
       | 3     | 6        | 3      | 1        |
       | 10    | 6        | 6      | 0        |
 
+  Scenario: The log handler comes from the logging instrumentation and ships records without warnings
+    When I attach the OTel logging handler to an in-memory logger provider and log "hello otel"
+    Then the handler should come from "opentelemetry.instrumentation.logging.handler"
+    And no DeprecationWarning should have been raised by the handler
+    And the in-memory logger provider should hold exactly the record "hello otel"
+
   Scenario: FastAPI log records are off by default
     Given FastAPI log records are disabled with a logger provider
     When I build the FastAPI telemetry config
