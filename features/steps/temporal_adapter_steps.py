@@ -393,6 +393,7 @@ def step_start_workflow_no_arg(context, workflow_name, workflow_id):
 
     workflow_map = {
         "GreetingWorkflow": GreetingWorkflow,
+        "BaseGreetingWorkflow": BaseGreetingWorkflow,
         "SignalQueryWorkflow": SignalQueryWorkflow,
     }
 
@@ -421,6 +422,7 @@ def step_start_workflow_with_id(context, workflow_name, arg, workflow_id):
 
     workflow_map = {
         "GreetingWorkflow": GreetingWorkflow,
+        "BaseGreetingWorkflow": BaseGreetingWorkflow,
         "SignalQueryWorkflow": SignalQueryWorkflow,
     }
 
@@ -452,6 +454,7 @@ def step_execute_workflow_with_id(context, workflow_name, arg, workflow_id):
 
     workflow_map = {
         "GreetingWorkflow": GreetingWorkflow,
+        "BaseGreetingWorkflow": BaseGreetingWorkflow,
     }
 
     workflow_class = workflow_map.get(workflow_name)
@@ -480,6 +483,7 @@ def step_execute_workflow_with_arg(context, workflow_name, arg):
 
     workflow_map = {
         "GreetingWorkflow": GreetingWorkflow,
+        "BaseGreetingWorkflow": BaseGreetingWorkflow,
     }
 
     workflow_class = workflow_map.get(workflow_name)
@@ -2277,7 +2281,13 @@ def step_counting_interceptor_saw(context, starts, executions):
 
 @when("I build the messaging tracing workflow interceptor class")
 def step_build_messaging_workflow_interceptor_class(context):
+    from opentelemetry import trace as otel_trace
+    from temporalio.contrib.opentelemetry import ReplaySafeTracerProvider, create_tracer_provider
+
     scenario_context = get_current_scenario_context(context)
+    # The interceptor requires a replay-safe global provider; ArchiPy installs one only when OTel is initialized.
+    if not isinstance(otel_trace.get_tracer_provider(), ReplaySafeTracerProvider):
+        otel_trace.set_tracer_provider(create_tracer_provider())
     try:
         interceptor_class = MessagingOpenTelemetryInterceptor().workflow_interceptor_class(
             WorkflowInterceptorClassInput(unsafe_extern_functions={}),
