@@ -1172,3 +1172,21 @@ def step_check_hostname_verification(context, expected):
     settings = get_current_scenario_context(context).get("kafka_client_settings")
     actual = settings.get("ssl.endpoint.identification.algorithm")
     assert actual == expected, f"Expected hostname verification {expected!r}, got {actual!r}"
+
+
+@when('I close the producer for topic "{topic_name}"')
+def step_close_producer(context, topic_name):
+    """Close the sync producer for a topic."""
+    get_kafka_producer_adapter(context, topic_name).close()
+
+
+@then('producing to the closed producer for topic "{topic_name}" should fail')
+def step_produce_after_close_fails(context, topic_name):
+    """Check the underlying client rejects writes once the adapter is closed."""
+    adapter = get_kafka_producer_adapter(context, topic_name)
+    try:
+        adapter._adapter.produce(topic_name, b"after-close")
+    except Exception as error:  # the client raises a RuntimeError (or KafkaException) once closed
+        context.logger.info(f"Closed producer rejected the write: {type(error).__name__}")
+        return
+    raise AssertionError("Expected a closed producer to reject produce()")

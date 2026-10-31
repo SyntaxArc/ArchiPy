@@ -25,6 +25,11 @@ Feature: Kafka Adapter Operations Testing
     When I validate the producer health for topic "test-topic"
     Then the producer health check should pass
 
+  Scenario: Closing the producer releases the underlying client
+    Given a Kafka producer for topic "test-topic"
+    When I close the producer for topic "test-topic"
+    Then producing to the closed producer for topic "test-topic" should fail
+
   Scenario: Produce message with additional parameters
     Given a test topic named "test-topic2"
     And a Kafka producer for topic "test-topic2"
