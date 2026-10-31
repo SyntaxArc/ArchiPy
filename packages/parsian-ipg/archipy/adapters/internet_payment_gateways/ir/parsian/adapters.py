@@ -59,11 +59,10 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
             raise InvalidArgumentError(argument_name="LOGIN_ACCOUNT")
 
         self.login_account = configs.LOGIN_ACCOUNT
-        sync_transport = None
+        session = requests.Session()
         if configs.PROXIES:
-            session = requests.Session()
             session.proxies = configs.PROXIES
-            sync_transport = Transport(session=session)
+        sync_transport = Transport(session=session, operation_timeout=configs.TIMEOUT)
 
         self.sale_client = zeep.Client(wsdl=configs.PAYMENT_WSDL_URL, transport=sync_transport)
         self.confirm_client = zeep.Client(wsdl=configs.CONFIRM_WSDL_URL, transport=sync_transport)
@@ -234,10 +233,13 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
 
         self.login_account = configs.LOGIN_ACCOUNT
         proxy = self._get_proxy(configs.PROXIES)
-        async_transport = None
-        if proxy:
-            httpx_client = httpx2.AsyncClient(proxy=proxy)
-            async_transport = AsyncTransport(client=httpx_client)
+        # The proxy is also handed to the transport: zeep loads the WSDL with its own client, which would
+        # otherwise bypass it.
+        async_transport = AsyncTransport(
+            client=httpx2.AsyncClient(proxy=proxy, timeout=configs.TIMEOUT),
+            proxy=proxy,
+            operation_timeout=configs.TIMEOUT,
+        )
 
         self.sale_client = AsyncClient(wsdl=configs.PAYMENT_WSDL_URL, transport=async_transport)
         self.confirm_client = AsyncClient(wsdl=configs.CONFIRM_WSDL_URL, transport=async_transport)

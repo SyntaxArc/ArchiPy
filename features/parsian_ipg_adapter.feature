@@ -192,16 +192,16 @@ Feature: Parsian Shaparak payment gateway adapter
       | sync  |
       | async |
 
-  Scenario Outline: Proxy configuration is handed to the SOAP transport only when set
+  Scenario Outline: The SOAP transport bounds operations and carries the proxy only when set
     Given a <kind> Parsian adapter using proxy "<proxy>"
-    Then the Parsian SOAP transport is <transport>
+    Then the Parsian SOAP transport times operations out after 30 seconds and <proxy_use> the proxy
 
     Examples:
-      | kind  | proxy                 | transport  |
-      | sync  | http://127.0.0.1:3128 | customized |
-      | sync  | none                  | default    |
-      | async | http://127.0.0.1:3128 | customized |
-      | async | none                  | default    |
+      | kind  | proxy                 | proxy_use |
+      | sync  | http://127.0.0.1:3128 | uses      |
+      | sync  | none                  | skips     |
+      | async | http://127.0.0.1:3128 | uses      |
+      | async | none                  | skips     |
 
   Scenario Outline: Invalid request data is rejected before reaching the gateway
     When I build a Parsian <request> with <field> <value>
