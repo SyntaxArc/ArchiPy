@@ -36,6 +36,10 @@ if TYPE_CHECKING:
     from temporalio.worker import WorkerDeploymentConfig, WorkerTuner
 
 
+# Extra time past the graceful shutdown timeout for the SDK to cancel and drain activities.
+SHUTDOWN_MARGIN_SECONDS = 10
+
+
 class WorkerHandle(PortWorkerHandle):
     """Handle for managing a Temporal worker instance.
 
@@ -169,8 +173,9 @@ class WorkerHandle(PortWorkerHandle):
         """Stop the worker gracefully.
 
         Args:
-            grace_period (int, optional): Maximum time to wait for graceful shutdown in seconds.
-                If None, uses the configured graceful shutdown timeout.
+            grace_period (int, optional): Seconds to let running activities finish before the SDK cancels them,
+                as set by ``graceful_shutdown_timeout``. If None, uses the configured graceful shutdown timeout.
+                The call gives up ``SHUTDOWN_MARGIN_SECONDS`` after that, so the SDK's own cancellation completes.
 
         Raises:
             WorkerShutdownError: If the worker fails to stop gracefully.
@@ -191,8 +196,9 @@ class WorkerHandle(PortWorkerHandle):
                 },
             )
 
-            # Signal shutdown and wait for graceful completion
-            await asyncio.wait_for(self._worker.shutdown(), timeout=grace_period)
+            # The SDK enforces the grace period itself (cancelling activities when it elapses); the outer timeout only
+            # guards against activities that ignore cancellation, so it must not cut the SDK's shutdown short.
+            await asyncio.wait_for(self._worker.shutdown(), timeout=grace_period + SHUTDOWN_MARGIN_SECONDS)
             self._running = False
 
             self._logger.info(
@@ -506,15 +512,17 @@ class TemporalWorkerManager(WorkerPort):
         workers_to_stop = list(self._workers.values())
 
         # Stop all workers concurrently
-        for worker_handle in workers_to_stop:
-            try:
-                await self.stop_worker(worker_handle)
-            except Exception as error:  # noqa: BLE001  # worker lifecycle; temporal/runtime may raise broadly
+        results = await asyncio.gather(
+            *(self.stop_worker(worker_handle) for worker_handle in workers_to_stop),
+            return_exceptions=True,
+        )
+        for worker_handle, result in zip(workers_to_stop, results, strict=True):
+            if isinstance(result, BaseException):
                 shutdown_errors.append(
                     {
                         "worker_id": worker_handle.worker_id,
                         "task_queue": worker_handle.task_queue,
-                        "error": str(error),
+                        "error": str(result),
                     },
                 )
 
