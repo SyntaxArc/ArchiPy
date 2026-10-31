@@ -84,3 +84,12 @@ Feature: Several SQLAlchemy databases of the same type
       | async | a PostgreSQL configuration | InvalidArgumentError    |
       | sync  | an unknown driver          | DatabaseConnectionError |
       | async | an unknown driver          | DatabaseConnectionError |
+
+  Scenario Outline: A <mode> <database> session manager passes its connect timeout to the driver
+    When a <mode> <database> session manager opens a connection with a connect timeout of 7 seconds
+    Then the driver should receive a connect timeout of 7 seconds
+
+    Examples: Session managers
+      | mode  | database  |
+      | sync  | StarRocks |
+      | async | StarRocks |
