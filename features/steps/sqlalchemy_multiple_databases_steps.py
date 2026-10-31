@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 from behave import given, then, when
-from sqlalchemy import text
+from sqlalchemy import event, text
 
 from archipy.adapters.base.sqlalchemy.atomic import sqlite_sqlalchemy_atomic
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
@@ -14,8 +14,16 @@ from archipy.adapters.sqlite.sqlalchemy.session_managers import (
     AsyncSQLiteSQLAlchemySessionManager,
     SQLiteSQLAlchemySessionManager,
 )
+from archipy.adapters.starrocks.sqlalchemy.session_managers import (
+    AsyncStarRocksSQlAlchemySessionManager,
+    StarRocksSQlAlchemySessionManager,
+)
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import PostgresSQLAlchemyConfig, SQLiteSQLAlchemyConfig
+from archipy.configs.config_template import (
+    PostgresSQLAlchemyConfig,
+    SQLiteSQLAlchemyConfig,
+    StarRocksSQLAlchemyConfig,
+)
 from archipy.models import errors
 from features.test_helpers import get_current_scenario_context
 
@@ -116,7 +124,7 @@ def step_when_item_added_atomic_fails(context, value, name):
 
 
 @when(
-    'an item "{first_value}" is added on "{first}" and "{second_value}" on "{second}" in nested atomic blocks, then the outer block fails'
+    'an item "{first_value}" is added on "{first}" and "{second_value}" on "{second}" in nested atomic blocks, then the outer block fails',
 )
 def step_when_nested_blocks(context, first_value, first, second_value, second):
     first_registry = _database(context, first)["registry"]
@@ -215,3 +223,47 @@ def step_when_sqlite_manager_built_with_problem(context, mode, problem):
         else SQLiteSQLAlchemyConfig(DRIVER_NAME="no_such_dialect+no_such_driver", DATABASE=":memory:")
     )
     _remember_registry_outcome(context, lambda: manager_class(config))
+
+
+class _ConnectAttemptStoppedError(Exception):
+    """Raised from the ``do_connect`` hook so no real connection is opened."""
+
+
+def _network_session_manager(mode, database, connect_timeout):
+    """Build a session manager for a networked database with a unique, unreachable configuration."""
+    if database == "StarRocks":
+        config = StarRocksSQLAlchemyConfig(
+            HOST="connect-args.invalid",
+            PORT=9030,
+            DATABASE="connect_args",
+            USERNAME="root",
+            CONNECT_TIMEOUT=connect_timeout,
+        )
+        manager_class = AsyncStarRocksSQlAlchemySessionManager if mode == "async" else StarRocksSQlAlchemySessionManager
+        return manager_class(config)
+    raise AssertionError(f"Unsupported database {database}")
+
+
+@when("a {mode} {database} session manager opens a connection with a connect timeout of {seconds:d} seconds")
+def step_when_manager_opens_connection_with_timeout(context, mode, database, seconds):
+    manager = _network_session_manager(mode, database, seconds)
+    sync_engine = manager.engine.sync_engine if mode == "async" else manager.engine
+    captured = {}
+
+    def stop_connect(dialect, conn_rec, cargs, cparams):
+        captured.update(cparams)
+        raise _ConnectAttemptStoppedError
+
+    event.listen(sync_engine, "do_connect", stop_connect)
+    context.add_cleanup(event.remove, sync_engine, "do_connect", stop_connect)
+    try:
+        sync_engine.raw_connection()
+    except _ConnectAttemptStoppedError:
+        pass
+    get_current_scenario_context(context).store("driver_connect_params", captured)
+
+
+@then("the driver should receive a connect timeout of {seconds:d} seconds")
+def step_then_driver_receives_connect_timeout(context, seconds):
+    params = get_current_scenario_context(context).get("driver_connect_params")
+    assert params.get("connect_timeout") == seconds, f"Expected connect_timeout={seconds}, got {params!r}"
