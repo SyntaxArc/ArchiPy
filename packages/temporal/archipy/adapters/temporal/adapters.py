@@ -30,6 +30,7 @@ from temporalio.client import (
 )
 from temporalio.common import RetryPolicy
 from temporalio.contrib.opentelemetry import ReplaySafeTracerProvider
+from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.service import RetryConfig
 
 from archipy.configs.base_config import BaseConfig
@@ -45,6 +46,7 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from temporalio.converter import DataConverter
     from temporalio.runtime import Runtime
 
     from archipy.configs.config_template import OpentelemetryConfig, TemporalConfig
@@ -65,12 +67,19 @@ class TemporalAdapter(TemporalPort):
             If None, retrieves from global config. Defaults to None.
     """
 
-    def __init__(self, temporal_config: TemporalConfig | None = None) -> None:
+    def __init__(
+        self,
+        temporal_config: TemporalConfig | None = None,
+        data_converter: DataConverter | None = None,
+    ) -> None:
         """Initialize the TemporalAdapter with configuration settings.
 
         Args:
             temporal_config (TemporalConfig, optional): Configuration settings for Temporal.
                 If None, retrieves from global config. Defaults to None.
+            data_converter (DataConverter, optional): Data converter for payloads, e.g.
+                ``dataclasses.replace(pydantic_data_converter, payload_codec=MyCodec())`` to encrypt or compress them.
+                If None, the Pydantic converter is used when ``PYDANTIC_DATA_CONVERTER`` is enabled. Defaults to None.
         """
         # Get temporal config from the global config or use provided one
         if temporal_config is None:
@@ -84,6 +93,7 @@ class TemporalAdapter(TemporalPort):
                 self.config = TemporalConfig()
         else:
             self.config = temporal_config
+        self._data_converter = data_converter
         self._client: Client | None = None
         self._client_lock = asyncio.Lock()
 
@@ -143,6 +153,11 @@ class TemporalAdapter(TemporalPort):
                 max_retries=self.config.CLIENT_RPC_RETRY_MAX_RETRIES,
             ),
         }
+        data_converter = self._data_converter
+        if data_converter is None and self.config.PYDANTIC_DATA_CONVERTER:
+            data_converter = pydantic_data_converter
+        if data_converter is not None:
+            connect_kwargs["data_converter"] = data_converter
         if self.config.CLIENT_IDENTITY is not None:
             connect_kwargs["identity"] = self.config.CLIENT_IDENTITY
         if self.config.API_KEY is not None:

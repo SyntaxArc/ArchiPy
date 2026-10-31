@@ -8,16 +8,18 @@ A persistent event loop per scenario is used so that Temporal workers
 """
 
 import asyncio
+import contextlib
 import socket
 import threading
 import time
 from collections.abc import Callable, Coroutine
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from typing import Any, TypeVar
 
 import httpx2
 from behave import given, then, when
-from temporalio.client import WithStartWorkflowOperation
+from temporalio.client import WithStartWorkflowOperation, WorkflowFailureError
 from temporalio.common import WorkflowIDConflictPolicy
 from temporalio.client import ScheduleIntervalSpec, ScheduleOverlapPolicy, SchedulePolicy, ScheduleSpec
 from temporalio.runtime import LoggingConfig, TelemetryConfig, TelemetryFilter
@@ -42,6 +44,7 @@ from features.test_workflows.temporal_activities import (
     failing_activity,
     greeting_activity,
     long_running_activity,
+    OrderPayload,
     notify_customer,
     refund_payment,
     release_inventory,
@@ -53,6 +56,7 @@ from features.test_workflows.temporal_workflows import (
     CalculatorWorkflow,
     ConcurrentActivitiesWorkflow,
     DataProcessingWorkflow,
+    EchoOrderWorkflow,
     GreetingWorkflow,
     LongRunningWorkflow,
     NotificationWorkflow,
@@ -241,6 +245,7 @@ async def start_test_worker(
             ConcurrentActivitiesWorkflow,
             OrderSagaWorkflow,
             NotificationWorkflow,
+            EchoOrderWorkflow,
         ]
 
     if activities is None:
@@ -350,6 +355,7 @@ def step_start_worker_with_workflow(context, task_queue, workflow_name):
         "LongRunningWorkflow": LongRunningWorkflow,
         "ConcurrentActivitiesWorkflow": ConcurrentActivitiesWorkflow,
         "OrderSagaWorkflow": OrderSagaWorkflow,
+        "EchoOrderWorkflow": EchoOrderWorkflow,
     }
 
     workflow_class = workflow_map.get(workflow_name)
@@ -2071,6 +2077,22 @@ def step_temporal_client_has_tracing_interceptor(context):
     )
 
 
+@when('I execute workflow "EchoOrderWorkflow" with order "{order_id}" totalling {total}')
+def step_execute_echo_order(context, order_id, total):
+    order = OrderPayload(order_id=order_id, total=Decimal(total), placed_at=datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC))
+    adapter = get_temporal_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("sent_order", order)
+    result = run_async(context, adapter.execute_workflow(EchoOrderWorkflow, order, task_queue="test-queue"))
+    scenario_context.store("echoed_order", result)
+
+
+@then("the echoed order should equal the sent order")
+def step_echoed_order_equal(context):
+    scenario_context = get_current_scenario_context(context)
+    echoed = scenario_context.get("echoed_order")
+    assert isinstance(echoed, OrderPayload), f"Expected OrderPayload, got {type(echoed).__name__}"
+    assert echoed == scenario_context.get("sent_order"), echoed
 @when('I list workflows with query "{query}" and limit {limit:d}')
 def step_list_workflows_with_limit(context, query, limit):
     adapter = get_temporal_adapter(context)
@@ -2094,6 +2116,10 @@ def step_cancel_request_reason(context, workflow_id, reason):
 
     async def _cancel_causes() -> list[str]:
         handle = await adapter.get_workflow_handle(workflow_id)
+        # The server buffers the cancel request while a workflow task runs; once the workflow has ended as
+        # cancelled the request is in the history.
+        with contextlib.suppress(WorkflowFailureError):
+            await handle.result()
         history = await handle.fetch_history()
         return [
             event.workflow_execution_cancel_requested_event_attributes.cause

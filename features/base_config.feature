@@ -173,6 +173,7 @@ Feature: Base Configuration System
     Examples: Temporal defaults
       | field                      | expected |
       | ACTIVITY_HEARTBEAT_TIMEOUT | None     |
+      | PYDANTIC_DATA_CONVERTER    | True     |
       | WORKFLOW_EXECUTION_TIMEOUT | None     |
       | WORKFLOW_RUN_TIMEOUT       | None     |
       | WORKFLOW_RETRY_ENABLED     | False    |

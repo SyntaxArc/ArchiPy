@@ -47,6 +47,11 @@ Feature: Temporal Adapter Operations
     And I list workflows with query "WorkflowType='GreetingWorkflow'"
     Then the workflow list should contain at least 1 workflow
 
+  Scenario: Pydantic payloads round trip through a workflow
+    Given a worker is started for task queue "test-queue" with EchoOrderWorkflow
+    When I execute workflow "EchoOrderWorkflow" with order "order-7" totalling 12.50
+    Then the echoed order should equal the sent order
+
   Scenario: List workflows stops at the limit
     Given a worker is started for task queue "test-queue" with GreetingWorkflow
     When I execute workflow "GreetingWorkflow" with argument "Limit-1"
