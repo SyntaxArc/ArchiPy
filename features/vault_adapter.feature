@@ -75,6 +75,13 @@ Feature: Vault Adapter
     When I revoke the Vault lease
     Then revoking the Vault lease again should fail
 
+  @needs-postgres
+  Scenario: Dynamic credentials requested with explicit parameters use write_data without deprecation warnings
+    Given a Vault database role named "readonly" backed by Postgres
+    When I generate dynamic credentials from mount "database" for role "readonly" with explicit parameters
+    Then the Vault lease should contain database credentials
+    And no Vault deprecation warning should have been raised
+
   @needs-otel-collector
   Scenario: requests client calls emit HTTP spans
     Given adapter spans are exported to the collector

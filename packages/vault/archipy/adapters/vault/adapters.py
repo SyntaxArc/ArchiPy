@@ -376,7 +376,7 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
 
         def _get_creds() -> VaultLeaseDTO:
             if parameters is not None:
-                response = self._client.write(path, **parameters)
+                response = self._client.write_data(path, data=parameters)
             else:
                 try:
                     response = self._client.secrets.database.generate_credentials(

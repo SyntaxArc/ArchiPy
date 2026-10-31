@@ -379,3 +379,23 @@ def step_then_invalid_argument(context, argument):
     assert error.additional_data.get("argument") == argument, (
         f"Expected argument_name={argument!r}, got {error.additional_data!r}"
     )
+
+
+@when('I generate dynamic credentials from mount "{mount}" for role "{role}" with explicit parameters')
+def step_generate_dynamic_creds_with_parameters(context, mount, role):
+    import warnings
+
+    adapter = get_vault_adapter(context)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        lease = adapter.get_dynamic_credentials(mount, role, parameters={})
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("vault_lease", lease)
+    scenario_context.store("vault_warnings", [str(item.message) for item in caught])
+
+
+@then("no Vault deprecation warning should have been raised")
+def step_no_vault_deprecation(context):
+    messages = get_current_scenario_context(context).get("vault_warnings")
+    deprecations = [message for message in messages if "deprecat" in message.lower() or "v3.0.0" in message]
+    assert not deprecations, deprecations
