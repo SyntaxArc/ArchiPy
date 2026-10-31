@@ -2208,3 +2208,12 @@ def step_start_workflow_twice_with_conflict_policy(context, workflow_name, workf
 def step_same_run_id(context):
     run_ids = get_current_scenario_context(context).get("started_run_ids")
     assert run_ids[0] is not None and run_ids[0] == run_ids[1], run_ids
+
+
+@given("a Temporal worker manager is configured with poller autoscaling and {rate:d} activities per second")
+def step_temporal_worker_manager_tuned(context, rate):
+    scenario_context = get_current_scenario_context(context)
+    temporal_config = get_temporal_adapter(context).config.model_copy(
+        update={"WORKER_POLLER_AUTOSCALING": True, "WORKER_MAX_ACTIVITIES_PER_SECOND": float(rate)},
+    )
+    scenario_context.worker_manager = TemporalWorkerManager(temporal_config)
