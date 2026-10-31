@@ -2329,7 +2329,14 @@ def step_run_time_skipping(context, days):
     from temporalio.worker import Worker
 
     async def _run() -> str:
-        async with await WorkflowEnvironment.start_time_skipping() as env:
+        # The v2 environment runs the CLI dev server with a per-workflow clock; bound its startup so a stuck
+        # download or launch fails the scenario instead of hanging the run. The dev server keeps time skipping off
+        # unless its dynamic config turns it on.
+        environment = await WorkflowEnvironment.start_time_skipping_v2(
+            dev_server_startup_timeout=timedelta(seconds=60),
+            dev_server_extra_args=["--dynamic-config-value", "frontend.WorkflowTimeSkippingEnabled=true"],
+        )
+        async with environment as env:
             async with Worker(env.client, task_queue="time-skipping-queue", workflows=[DailyReminderWorkflow]):
                 return await env.client.execute_workflow(
                     DailyReminderWorkflow.run,
