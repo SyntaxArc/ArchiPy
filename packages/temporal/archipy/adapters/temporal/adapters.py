@@ -529,8 +529,8 @@ class TemporalAdapter(TemporalPort):
                 Overrides config default. Defaults to None.
             memo (dict[str, Any], optional): Non-indexed metadata for the workflow.
                 Defaults to None.
-            search_attributes (dict[str, Any], optional): Indexed metadata for workflow search.
-                Defaults to None.
+            search_attributes (dict[str, Any], optional): Indexed metadata for workflow search. Datetime values must
+                be timezone-aware; ``temporalio`` 1.35+ raises on naive ones. Defaults to None.
             id_reuse_policy (WorkflowIDReusePolicy, optional): Whether a closed workflow's ID may be reused.
                 Defaults to None (server default: allow duplicate).
             id_conflict_policy (WorkflowIDConflictPolicy, optional): What to do when a workflow with the same ID
@@ -538,6 +538,10 @@ class TemporalAdapter(TemporalPort):
 
         Returns:
             WorkflowHandle[T, Any]: Handle to the started workflow execution.
+
+        Note:
+            The generated ID comes from the standard library ``uuid.uuid7()``, which is fine here, outside workflow
+            code. Inside a workflow the sandbox blocks it: use ``temporalio.workflow.uuid7()`` instead.
         """
         async with self._mapped_errors("start_workflow", workflow_id):
             client = await self.get_client()
@@ -821,7 +825,8 @@ class TemporalAdapter(TemporalPort):
             workflow_id (str, optional): Base ID of the started workflows; the server appends the fire time.
                 Defaults to the schedule ID.
             schedule_policy (SchedulePolicy, optional): Overlap, catchup window and pause-on-failure policy.
-                Defaults to skipping overlapping runs.
+                Defaults to skipping overlapping runs. ``SchedulePolicy.catchup_window`` defaults to the server value,
+                so set it explicitly when missed runs must be caught up over a fixed window.
             args (Sequence[Any], optional): Arguments of the started workflows. Defaults to None.
             memo (dict[str, Any], optional): Memo of the started workflows. Defaults to None.
         """
