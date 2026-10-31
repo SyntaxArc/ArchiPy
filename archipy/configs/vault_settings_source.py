@@ -27,7 +27,7 @@ from archipy.configs.config_template import VaultConfig
 from archipy.models.errors import ConfigurationError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable
 
     from pydantic.fields import FieldInfo
     from requests import Response
@@ -158,10 +158,10 @@ class _TimeoutHTTPAdapter(HTTPAdapter):
         self,
         request: PreparedRequest,
         stream: bool = False,
-        timeout: float | tuple[float, float] | tuple[float, None] | None = None,
+        timeout: float | tuple[float | None, float | None] | None = None,
         verify: bool | str = True,
-        cert: bytes | str | tuple[bytes | str, bytes | str] | None = None,
-        proxies: Mapping[str, str] | None = None,
+        cert: str | tuple[str, str] | None = None,
+        proxies: dict[str, str] | None = None,
     ) -> Response:
         """Send the request, applying the default timeout when unset."""
         effective_timeout = self._timeout if timeout is None else timeout

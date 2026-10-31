@@ -10,7 +10,6 @@ requires-python = ">=3.14,<4"
 dependencies = [
     "pydantic>=2.14.2",
     "pydantic-settings>=2.16.2",
-    "pydantic-extra-types>=2.11.1",
     "httpx2>=2.16.0",
     "jdatetime>=6.1.1",
 ]
@@ -106,12 +105,10 @@ dev = [
     "pre-commit>=4.7.0",
     "ruff>=0.17.3",
     "ty>=0.0.95",
-    "types-cachetools>=7.0.0.20260713",
     "types-grpcio>=1.85.0.20261028",
     "types-protobuf>=7.35.1.20260906",
     "types-pymysql>=1.2.0.20260923",
     "types-regex>=2026.9.29.20261030",
-    "types-requests>=2.33.0.20261030",
     "validate-pyproject>=0.27",
 ]
 
