@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     import grpc.aio
     from opentelemetry.instrumentation.grpc._client import OpenTelemetryClientInterceptor
     from opentelemetry.metrics import Meter
-    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs import LoggingHandler
     from opentelemetry.sdk._logs.export import LogRecordExporter
     from opentelemetry.sdk.metrics.export import MetricExporter, MetricReader
     from opentelemetry.sdk.resources import Resource
@@ -51,7 +51,7 @@ if TYPE_CHECKING:
 
     from archipy.configs.base_config import BaseConfig
     from archipy.configs.config_template import OpentelemetryConfig
-    from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider, OwnedTracerProvider
+    from archipy.helpers.utils._otel.provider_types import OwnedLoggerProvider, OwnedMeterProvider, OwnedTracerProvider
 
 from archipy.helpers.utils._otel.constants import (
     _DEFAULT_FLUSH_TIMEOUT_MS,
@@ -94,7 +94,7 @@ class OtelRuntime:
         self._import_failed = False
         self._tracer_provider: OwnedTracerProvider | None = None
         self._meter_provider: OwnedMeterProvider | None = None
-        self._logger_provider: LoggerProvider | None = None
+        self._logger_provider: OwnedLoggerProvider | None = None
         self._owns_tracer = False
         self._owns_meter = False
         self._owns_logger = False
@@ -124,7 +124,7 @@ class OtelRuntime:
         _ProcessState.propagator_installed = value
 
     @property
-    def _shutdown_providers(self) -> weakref.WeakSet[OwnedTracerProvider | OwnedMeterProvider | LoggerProvider]:
+    def _shutdown_providers(self) -> weakref.WeakSet[OwnedTracerProvider | OwnedMeterProvider | OwnedLoggerProvider]:
         return _ProcessState.shutdown_providers
 
     @property
@@ -251,7 +251,7 @@ class OtelRuntime:
         """Return the owned or adopted meter provider, if initialized."""
         return self._meter_provider
 
-    def logger_provider(self) -> LoggerProvider | None:
+    def logger_provider(self) -> OwnedLoggerProvider | None:
         """Return the owned or adopted logger provider, if initialized."""
         return self._logger_provider
 
@@ -441,8 +441,9 @@ class OtelRuntime:
                 from opentelemetry.sdk._logs import LoggerProvider
                 from opentelemetry.sdk._logs.export import SimpleLogRecordProcessor
 
-                logger_provider = LoggerProvider(resource=resource)
-                logger_provider.add_log_record_processor(SimpleLogRecordProcessor(log_exporter))
+                sdk_logger_provider = LoggerProvider(resource=resource)
+                sdk_logger_provider.add_log_record_processor(SimpleLogRecordProcessor(log_exporter))
+                logger_provider = temporal_providers.wrap_logger_provider(sdk_logger_provider)
                 set_logger_provider(logger_provider)
                 self._logger_provider = logger_provider
                 self._owns_logger = True
@@ -582,7 +583,7 @@ class OtelRuntime:
         owns_tracer: bool,
         meter: OwnedMeterProvider | None,
         owns_meter: bool,
-        log_provider: LoggerProvider | None,
+        log_provider: OwnedLoggerProvider | None,
         owns_logger: bool,
     ) -> None:
         """Shut down providers built during a failed initialization attempt."""
@@ -601,7 +602,7 @@ class OtelRuntime:
 
     def _mark_provider_shutdown(
         self,
-        provider: OwnedTracerProvider | OwnedMeterProvider | LoggerProvider | None,
+        provider: OwnedTracerProvider | OwnedMeterProvider | OwnedLoggerProvider | None,
     ) -> None:
         provider_lifecycle.mark_provider_shutdown(provider)
 
@@ -611,7 +612,7 @@ class OtelRuntime:
     def _existing_concrete_meter_provider(self) -> OwnedMeterProvider | None:
         return provider_lifecycle.existing_concrete_meter_provider()
 
-    def _existing_concrete_logger_provider(self) -> LoggerProvider | None:
+    def _existing_concrete_logger_provider(self) -> OwnedLoggerProvider | None:
         return provider_lifecycle.existing_concrete_logger_provider()
 
     def _create_resource(self, otel: OpentelemetryConfig) -> Resource:
@@ -650,7 +651,7 @@ class OtelRuntime:
 
         new_tracer: OwnedTracerProvider | None = None
         new_meter: OwnedMeterProvider | None = None
-        new_logger: LoggerProvider | None = None
+        new_logger: OwnedLoggerProvider | None = None
         owns_tracer = False
         owns_meter = False
         owns_logger = False
@@ -715,7 +716,7 @@ class OtelRuntime:
             self._metrics.registry = registry
         return provider
 
-    def _build_logger_provider(self, otel: OpentelemetryConfig, resource: Resource) -> LoggerProvider:
+    def _build_logger_provider(self, otel: OpentelemetryConfig, resource: Resource) -> OwnedLoggerProvider:
         return providers.build_logger_provider(
             otel,
             resource,

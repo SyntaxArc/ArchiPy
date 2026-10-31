@@ -7,9 +7,7 @@ import weakref
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
-    from opentelemetry.sdk._logs import LoggerProvider
-
-    from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider, OwnedTracerProvider
+    from archipy.helpers.utils._otel.provider_types import OwnedLoggerProvider, OwnedMeterProvider, OwnedTracerProvider
 
 
 class _ProcessState:
@@ -23,6 +21,6 @@ class _ProcessState:
     lock: ClassVar[threading.Lock] = threading.Lock()
     globals_set: ClassVar[bool] = False
     propagator_installed: ClassVar[bool] = False
-    shutdown_providers: ClassVar[weakref.WeakSet[OwnedTracerProvider | OwnedMeterProvider | LoggerProvider]] = (
+    shutdown_providers: ClassVar[weakref.WeakSet[OwnedTracerProvider | OwnedMeterProvider | OwnedLoggerProvider]] = (
         weakref.WeakSet()
     )

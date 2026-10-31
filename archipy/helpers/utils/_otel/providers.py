@@ -16,7 +16,6 @@ from archipy.helpers.utils._otel.sampling import create_sampler
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk._logs.export import LogRecordExporter
     from opentelemetry.sdk.metrics.export import MetricExporter, MetricReader
     from opentelemetry.sdk.resources import Resource
@@ -24,7 +23,7 @@ if TYPE_CHECKING:
     from prometheus_client import CollectorRegistry
 
     from archipy.configs.config_template import OpentelemetryConfig
-    from archipy.helpers.utils._otel.provider_types import OwnedMeterProvider, OwnedTracerProvider
+    from archipy.helpers.utils._otel.provider_types import OwnedLoggerProvider, OwnedMeterProvider, OwnedTracerProvider
 
 
 def build_tracer_provider(
@@ -104,8 +103,11 @@ def build_logger_provider(
     resource: Resource,
     console_exporter_factory: Callable[[], LogRecordExporter] = create_console_log_exporter,
     otlp_exporter_factory: Callable[[OpentelemetryConfig], LogRecordExporter] = create_otlp_log_exporter,
-) -> LoggerProvider:
+) -> OwnedLoggerProvider:
     """Build a logger provider with a console (simple) or OTLP (batch) log record processor.
+
+    With ``temporalio`` installed the provider is replay-safe, so records emitted from workflow code are not
+    duplicated on replay.
 
     Args:
         otel: OpenTelemetry config section.
@@ -135,4 +137,5 @@ def build_logger_provider(
                 export_timeout_millis=otel.LOG_BATCH_EXPORT_TIMEOUT_MS,
             ),
         )
-    return provider
+    # Wrapped last: the replay-safe wrapper only forwards to the processors already attached.
+    return temporal_providers.wrap_logger_provider(provider)
