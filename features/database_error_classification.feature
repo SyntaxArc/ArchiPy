@@ -30,6 +30,21 @@ Feature: Database driver error classification
       | starrocks | 1064        | You have an error in your SQL syntax near 'out of memory'                                                                                               | none                           |
       | sqlite    | SQLITE_BUSY | database is locked                                                                                                                                      | DatabaseDeadlockError          |
 
+  Scenario Outline: MySQL-family server errors are classified by errno even when the driver sets a SQLSTATE
+    Given a <family> server error with errno "<errno>", SQLSTATE "<sqlstate>" and message "<message>"
+    When the driver error is classified
+    Then the domain error should be "<domain_error>"
+
+    Examples:
+      | family    | errno | sqlstate | message                        | domain_error                   |
+      | mysql     | 1213  | 40001    | Deadlock found                 | DatabaseDeadlockError          |
+      | mysql     | 1205  | HY000    | Lock wait timeout exceeded     | DatabaseTimeoutError           |
+      | mysql     | 1062  | 23000    | Duplicate entry                | DatabaseConstraintError        |
+      | mysql     | 1452  | 23000    | Cannot add or update a child   | DatabaseConstraintError        |
+      | mysql     | 1040  | 08004    | Too many connections           | DatabaseResourceExhaustedError |
+      | starrocks | 1064  | 42000    | Memory of process exceed limit | DatabaseResourceExhaustedError |
+      | starrocks | 1064  | 42000    | You have an error in your SQL  | none                           |
+
   Scenario: The driver error code is read from the cause of an adapted driver error
     Given an adapted driver error whose cause has SQLSTATE "40001"
     When the driver error is classified

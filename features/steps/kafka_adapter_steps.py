@@ -13,7 +13,9 @@ from archipy.adapters.kafka.adapters import (
     KafkaAdminAdapter,
     KafkaConsumerAdapter,
     KafkaProducerAdapter,
+    _apply_security_config,
 )
+from archipy.configs.config_template import KafkaConfig
 from archipy.models import errors as archipy_errors
 from archipy.models.errors import UnavailableError
 
@@ -1129,3 +1131,44 @@ def step_producer_lists_topic(context, mode, topic_name):
 
         metadata = asyncio.run(run())
     assert topic_name in metadata.topics, f"{topic_name} missing from {list(metadata.topics)}"
+
+
+# SASL_SSL client settings and broker hostname verification
+
+
+def _sasl_ssl_config(setting):
+    """Build a SASL_SSL configuration, leaving hostname verification at its default unless a value is given."""
+    values = {
+        "SECURITY_PROTOCOL": "SASL_SSL",
+        "SASL_MECHANISM": "PLAIN",
+        "USERNAME": "user",
+        "PASSWORD": "pass",
+        "SSL_CA_FILE": "/etc/ssl/certs/kafka-ca.pem",
+    }
+    if setting != "default":
+        values["SSL_ENDPOINT_IDENTIFICATION_ALGORITHM"] = setting
+    return KafkaConfig(**values)
+
+
+@when("Kafka client settings are built for a {role} with hostname verification {setting}")
+def step_build_sasl_ssl_settings(context, role, setting):
+    """Build the librdkafka settings a client of the given role would use."""
+    config = _sasl_ssl_config(setting)
+    if role == "sync client":
+        # The admin, sync producer and sync consumer apply the shared security settings while creating the client.
+        settings = {}
+        _apply_security_config(settings, config)
+    elif role == "async producer":
+        settings = AsyncKafkaProducerAdapter("tls-topic", kafka_configs=config)._build_producer_conf(config)
+    else:
+        adapter = AsyncKafkaConsumerAdapter(group_id="tls-group", topic_list=["tls-topic"], kafka_configs=config)
+        settings = adapter._build_consumer_conf(config)
+    get_current_scenario_context(context).store("kafka_client_settings", settings)
+
+
+@then('the Kafka broker hostname verification should be "{expected}"')
+def step_check_hostname_verification(context, expected):
+    """The SSL settings must carry the expected endpoint identification algorithm."""
+    settings = get_current_scenario_context(context).get("kafka_client_settings")
+    actual = settings.get("ssl.endpoint.identification.algorithm")
+    assert actual == expected, f"Expected hostname verification {expected!r}, got {actual!r}"

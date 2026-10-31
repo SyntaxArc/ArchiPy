@@ -612,6 +612,11 @@ Feature: OpenTelemetry decorators
   Scenario: Owned providers are replay-safe when Temporal is installed
     Then the owned tracer and meter providers should be Temporal replay-safe providers
 
+  Scenario: The built logger provider is replay-safe and still exports log records
+    When a console logger provider is built with an in-memory log exporter
+    Then the logger provider should be a Temporal replay-safe provider
+    And a log record emitted outside a workflow should reach the exporter
+
   Scenario: ArchiPy adopts a replay-safe tracer provider that another library registered first
     Given another library registered a replay-safe tracer provider before ArchiPy initialized OpenTelemetry
     When ArchiPy initializes OpenTelemetry

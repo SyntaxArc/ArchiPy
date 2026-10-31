@@ -250,7 +250,6 @@ dependencies = [
     { name = "httpx2" },
     { name = "jdatetime" },
     { name = "pydantic" },
-    { name = "pydantic-extra-types" },
     { name = "pydantic-settings" },
 ]
 
@@ -450,12 +449,10 @@ dev = [
     { name = "pre-commit-hooks" },
     { name = "ruff" },
     { name = "ty" },
-    { name = "types-cachetools" },
     { name = "types-grpcio" },
     { name = "types-protobuf" },
     { name = "types-pymysql" },
     { name = "types-regex" },
-    { name = "types-requests" },
     { name = "validate-pyproject" },
 ]
 docs = [
@@ -524,7 +521,6 @@ requires-dist = [
     { name = "protobuf", marker = "extra == 'grpc'", specifier = ">=7.36.2" },
     { name = "pydantic", specifier = ">=2.14.2" },
     { name = "pydantic-ai-slim", marker = "extra == 'pydantic-ai'", specifier = ">=2.64.0" },
-    { name = "pydantic-extra-types", specifier = ">=2.11.1" },
     { name = "pydantic-settings", specifier = ">=2.16.2" },
     { name = "pyjwt", marker = "extra == 'jwt'", specifier = ">=2.15.1" },
     { name = "sqlalchemy", marker = "extra == 'sqlalchemy'", specifier = ">=2.1.6" },
@@ -546,12 +542,10 @@ dev = [
     { name = "pre-commit-hooks", specifier = ">=6.0.0" },
     { name = "ruff", specifier = ">=0.17.3" },
     { name = "ty", specifier = ">=0.0.95" },
-    { name = "types-cachetools", specifier = ">=7.0.0.20260713" },
     { name = "types-grpcio", specifier = ">=1.85.0.20261028" },
     { name = "types-protobuf", specifier = ">=7.35.1.20260906" },
     { name = "types-pymysql", specifier = ">=1.2.0.20260923" },
     { name = "types-regex", specifier = ">=2026.9.29.20261030" },
-    { name = "types-requests", specifier = ">=2.33.0.20261030" },
     { name = "validate-pyproject", specifier = ">=0.27" },
 ]
 docs = [
@@ -4323,15 +4317,6 @@ wheels = [
 ]
 
 [[package]]
-name = "types-cachetools"
-version = "7.0.0.20260713"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/34/64/66d7efdb36ecf6826aca5415e59fe2df96e97d24157147e53acfbe8dda11/types_cachetools-7.0.0.20260713.tar.gz", hash = "sha256:f1acf079e9c66a81e096a897ef0b261a82117cf856834e37b4bd0c9a116a076a", size = 10199, upload-time = "2026-07-13T05:22:21.845Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0e/c7/d3525c9dbdc1be7786bad46655ef051b6e7993f656d304719ec40079c91c/types_cachetools-7.0.0.20260713-py3-none-any.whl", hash = "sha256:6db9bcc7a3840d39e91c04117d85a9d0937eacc9d14d12a873e2b01a2d24a71d", size = 9615, upload-time = "2026-07-13T05:22:20.76Z" },
-]
-
-[[package]]
 name = "types-grpcio"
 version = "1.85.0.20261028"
 source = { registry = "https://pypi.org/simple" }
@@ -4365,18 +4350,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e3/65/e12b4d7a96c730e7a696cf83593f952da1b2ab5a539d303c94ef6496ebed/types_regex-2026.9.29.20261030.tar.gz", hash = "sha256:37d6512ef2551c4a3529f06f248c47bbf768d5de6301e04bc55c5bee73f2d4c5", size = 14206, upload-time = "2026-10-30T07:50:11.374Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a9/27/517899e827975f3256b16b301ef6de6aa70830a83f8f4ae6a5cf9eb574f2/types_regex-2026.9.29.20261030-py3-none-any.whl", hash = "sha256:19b1010bd1dad05babd4f4c4d31198f107c7092a2881a12f12c2319e406d9c86", size = 11209, upload-time = "2026-10-30T07:50:10.201Z" },
-]
-
-[[package]]
-name = "types-requests"
-version = "2.33.0.20261030"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "urllib3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a6/15/63ec82f647272ae3df5124def156344ab8856d29d8c4931947f1f15c003b/types_requests-2.33.0.20261030.tar.gz", hash = "sha256:42d75eb02ed0f8220904c8fc08d3129742e7fce42fd5cf706395c8bb4c0ad990", size = 25538, upload-time = "2026-10-30T07:50:39.413Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/35/77ed86be430bd179d34905d62cdb5ba6747c635737092088fcf03c753c61/types_requests-2.33.0.20261030-py3-none-any.whl", hash = "sha256:06cfc2e92399bf46eda78a65cd0e2203d29ebbeede78b4ab0a5922f749ce1492", size = 21450, upload-time = "2026-10-30T07:50:38.247Z" },
 ]
 
 [[package]]

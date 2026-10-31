@@ -57,6 +57,10 @@ class TemporalConfig(BaseModel):
         default=None,
         description="Log level of the Temporal SDK core (None keeps the SDK default of WARN)",
     )
+    RUNTIME_DISABLE_ENVIRONMENT_INFO: bool = Field(
+        default=False,
+        description="Keep runtime, hosting and platform information out of worker heartbeats sent to the server",
+    )
 
     # Client Connection Configuration
     CLIENT_IDENTITY: str | None = Field(
@@ -89,6 +93,23 @@ class TemporalConfig(BaseModel):
         default=None,
         gt=0,
         description="Seconds to wait for the TCP connection, separate from RPC timeouts (None: SDK default)",
+    )
+    GRPC_COMPRESSION: Literal["gzip", "none"] | None = Field(
+        default=None,
+        description=(
+            "gRPC compression of client requests; 'none' for proxies without gRPC compression support "
+            "(None: SDK default, gzip)"
+        ),
+    )
+    PAYLOADS_WARN_SIZE: int | None = Field(
+        default=None,
+        ge=1,
+        description="Payload size in bytes above which the SDK logs a warning (None: SDK default, 512 KiB)",
+    )
+    MEMO_WARN_SIZE: int | None = Field(
+        default=None,
+        ge=1,
+        description="Memo size in bytes above which the SDK logs a warning (None: SDK default, 2 KiB)",
     )
     CLIENT_RPC_RETRY_MAX_RETRIES: int = Field(
         default=10,
@@ -130,6 +151,11 @@ class TemporalConfig(BaseModel):
         default=False,
         description="Disable eager activity execution on the worker",
     )
+    WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS: int | None = Field(
+        default=None,
+        ge=1,
+        description="Maximum eager activities one workflow task may reserve (None: SDK default of 3)",
+    )
 
     WORKER_POLLER_AUTOSCALING: bool = Field(
         default=False,
@@ -156,6 +182,13 @@ class TemporalConfig(BaseModel):
     TLS_SERVER_NAME: str | None = Field(
         default=None,
         description="Server name to verify the TLS certificate against, when it differs from HOST",
+    )
+    TLS_VERIFICATION_SERVER_NAME: str | None = Field(
+        default=None,
+        description=(
+            "Name checked against the server certificate without changing the SNI sent, e.g. behind an "
+            "SNI-inspecting proxy (requires TLS_CA_CERT)"
+        ),
     )
     TLS_ENABLED: bool | None = Field(
         default=None,
@@ -233,8 +266,13 @@ class TemporalConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_tls_configuration(self) -> Self:
-        """Validate the mutual TLS client certificate and key are set together; the CA certificate is optional."""
+        """Validate the mutual TLS client certificate and key are set together; the CA certificate is optional.
+
+        A certificate verification server name needs ``TLS_CA_CERT``, the root it verifies against.
+        """
         if (self.TLS_CLIENT_CERT is None) != (self.TLS_CLIENT_KEY is None):
+            raise InvalidArgumentError()
+        if self.TLS_VERIFICATION_SERVER_NAME is not None and self.TLS_CA_CERT is None:
             raise InvalidArgumentError()
 
         return self

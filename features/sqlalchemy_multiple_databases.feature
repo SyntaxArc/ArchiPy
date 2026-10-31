@@ -84,3 +84,21 @@ Feature: Several SQLAlchemy databases of the same type
       | async | a PostgreSQL configuration | InvalidArgumentError    |
       | sync  | an unknown driver          | DatabaseConnectionError |
       | async | an unknown driver          | DatabaseConnectionError |
+
+  Scenario Outline: A <mode> <database> session manager passes its connect timeout to the driver
+    When a <mode> <database> session manager opens a connection with a connect timeout of 7 seconds
+    Then the driver should receive a connect timeout of 7 seconds
+
+    Examples: Session managers
+      | mode  | database  |
+      | sync  | StarRocks |
+      | async | StarRocks |
+
+  Scenario Outline: A <mode> in-memory SQLite database keeps its data past the pool recycle time
+    When a row is written to the <mode> in-memory SQLite database and read back after its pool recycle time
+    Then the in-memory SQLite database still holds the row
+
+    Examples: Session manager kinds
+      | mode  |
+      | sync  |
+      | async |

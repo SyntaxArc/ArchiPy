@@ -144,6 +144,19 @@ Feature: Base Configuration System
       | approle    |
       | userpass   |
 
+  Scenario Outline: A Vault client applies <tls> and its timeouts to every request
+    Given Vault accepts token file logins for a test identity
+    And the test identity uses <tls> with a 3s connect and 9s read timeout
+    When a Vault client is built for the test identity
+    Then the Vault client should be authenticated
+    And the Vault client should send requests with verify <verify> and a 3s, 9s timeout
+
+    Examples: TLS settings
+      | tls                       | verify                    |
+      | no TLS overrides          | True                      |
+      | TLS verification disabled | False                     |
+      | a custom CA bundle        | /etc/archipy/vault-ca.pem |
+
   Scenario Outline: A <section> configuration with <problem> is <outcome>
     When a <section> configuration is built with <problem>
     Then the configuration should be <outcome>
@@ -167,20 +180,28 @@ Feature: Base Configuration System
       | Temporal | a run timeout above the execution one   | rejected |
       | Temporal | a keep alive timeout above the interval | rejected |
       | Temporal | a task timeout above the run timeout    | accepted |
+      | Temporal | a verification name without a CA        | rejected |
+      | Temporal | a verification name with a CA           | accepted |
 
   Scenario Outline: The Temporal <field> default is <expected>
     When a default Temporal configuration is built
     Then the default Temporal setting <field> should be <expected>
 
     Examples: Temporal defaults
-      | field                      | expected |
-      | ACTIVITY_HEARTBEAT_TIMEOUT | None     |
-      | WORKER_POLLER_AUTOSCALING  | False    |
-      | WORKFLOW_RETRY_ENABLED     | False    |
-      | PYDANTIC_DATA_CONVERTER    | True     |
-      | WORKFLOW_EXECUTION_TIMEOUT | None     |
-      | WORKFLOW_RUN_TIMEOUT       | None     |
-      | CONNECT_TIMEOUT            | None     |
+      | field                                  | expected |
+      | ACTIVITY_HEARTBEAT_TIMEOUT             | None     |
+      | WORKER_POLLER_AUTOSCALING              | False    |
+      | WORKFLOW_RETRY_ENABLED                 | False    |
+      | PYDANTIC_DATA_CONVERTER                | True     |
+      | WORKFLOW_EXECUTION_TIMEOUT             | None     |
+      | WORKFLOW_RUN_TIMEOUT                   | None     |
+      | CONNECT_TIMEOUT                        | None     |
+      | TLS_VERIFICATION_SERVER_NAME           | None     |
+      | GRPC_COMPRESSION                       | None     |
+      | PAYLOADS_WARN_SIZE                     | None     |
+      | MEMO_WARN_SIZE                         | None     |
+      | RUNTIME_DISABLE_ENVIRONMENT_INFO       | False    |
+      | WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS | None     |
 
   Scenario Outline: The <environment> environment reports its kind and log level
     When the environment type <environment> is inspected

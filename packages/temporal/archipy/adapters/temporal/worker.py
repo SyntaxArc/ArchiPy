@@ -45,6 +45,9 @@ if TYPE_CHECKING:
 # Extra time past the graceful shutdown timeout for the SDK to cancel and drain activities.
 SHUTDOWN_MARGIN_SECONDS = 10
 
+# temporalio's own default for Worker(max_eager_activity_reservations_per_workflow_task=...).
+_SDK_EAGER_ACTIVITY_RESERVATIONS = 3
+
 
 class WorkerHandle(PortWorkerHandle):
     """Handle for managing a Temporal worker instance.
@@ -329,6 +332,15 @@ class TemporalWorkerManager(WorkerPort):
             return PollerBehaviorAutoscaling()
         return PollerBehaviorSimpleMaximum(maximum=5)
 
+    def _eager_activity_reservations(self) -> int:
+        """Resolve how many eager activities one workflow task may reserve.
+
+        Returns:
+            int: ``WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS``, or the SDK default when it is unset.
+        """
+        reservations = self.config.WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS
+        return _SDK_EAGER_ACTIVITY_RESERVATIONS if reservations is None else reservations
+
     @override
     async def start_worker(
         self,
@@ -423,6 +435,7 @@ class TemporalWorkerManager(WorkerPort):
                 graceful_shutdown_timeout=timedelta(seconds=self.config.WORKER_GRACEFUL_SHUTDOWN_SECONDS),
                 debug_mode=self.config.WORKER_DEBUG_MODE,
                 disable_eager_activity_execution=self.config.WORKER_DISABLE_EAGER_ACTIVITY_EXECUTION,
+                max_eager_activity_reservations_per_workflow_task=self._eager_activity_reservations(),
                 max_concurrent_local_activities=self.config.WORKER_MAX_CONCURRENT_LOCAL_ACTIVITIES,
                 tuner=tuner,
                 activity_executor=activity_executor,

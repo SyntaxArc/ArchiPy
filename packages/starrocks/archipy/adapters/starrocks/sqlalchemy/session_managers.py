@@ -132,6 +132,7 @@ class StarRocksSQlAlchemySessionManager(BaseSQLAlchemySessionManager[StarRocksSQ
             orm_config: StarRocks-specific configuration. If None, uses global config.
         """
         configs = orm_config or self._default_config()
+        self._configs = configs
         super().__init__(configs)
 
     @override
@@ -167,12 +168,7 @@ class StarRocksSQlAlchemySessionManager(BaseSQLAlchemySessionManager[StarRocksSQ
             "init_command": _STARROCKS_ENABLE_SQL_TRANSACTION,
         }
 
-        # Add connect_timeout if configured
-        if (
-            hasattr(self, "_configs")
-            and hasattr(self._configs, "CONNECT_TIMEOUT")
-            and self._configs.CONNECT_TIMEOUT is not None
-        ):
+        if self._configs.CONNECT_TIMEOUT is not None:
             connect_args["connect_timeout"] = self._configs.CONNECT_TIMEOUT
 
         return connect_args
@@ -231,6 +227,7 @@ class AsyncStarRocksSQlAlchemySessionManager(
             orm_config: StarRocks-specific configuration. If None, uses global config.
         """
         configs = orm_config or self._default_config()
+        self._configs = configs
         super().__init__(configs)
 
     @override
@@ -301,12 +298,7 @@ class AsyncStarRocksSQlAlchemySessionManager(
             "init_command": _STARROCKS_ENABLE_SQL_TRANSACTION,
         }
 
-        # Add connect_timeout if configured
-        if (
-            hasattr(self, "_configs")
-            and hasattr(self._configs, "CONNECT_TIMEOUT")
-            and self._configs.CONNECT_TIMEOUT is not None
-        ):
+        if self._configs.CONNECT_TIMEOUT is not None:
             connect_args["connect_timeout"] = self._configs.CONNECT_TIMEOUT
 
         return connect_args
