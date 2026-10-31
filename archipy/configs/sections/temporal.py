@@ -151,6 +151,11 @@ class TemporalConfig(BaseModel):
         default=False,
         description="Disable eager activity execution on the worker",
     )
+    WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS: int | None = Field(
+        default=None,
+        ge=1,
+        description="Maximum eager activities one workflow task may reserve (None: SDK default of 3)",
+    )
 
     WORKER_POLLER_AUTOSCALING: bool = Field(
         default=False,
