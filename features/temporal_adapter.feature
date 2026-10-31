@@ -246,6 +246,10 @@ Feature: Temporal Adapter Operations
     When 5 callers get the client of a new Temporal adapter at once
     Then they should all receive the same client
 
+  Scenario: The messaging tracing interceptor still finds the private temporalio span hook
+    When I build the messaging tracing workflow interceptor class
+    Then the workflow interceptor class should be built without a ConfigurationError
+
   Scenario Outline: Activity cache key is a stable content digest
     When I build the activity cache key for input "<input>"
     Then the activity cache key should be "CacheKeyActivity:<digest>"

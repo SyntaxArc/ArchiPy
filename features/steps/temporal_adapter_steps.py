@@ -21,7 +21,7 @@ import httpx2
 from behave import given, then, when
 from temporalio.client import Interceptor as ClientInterceptor
 from temporalio.client import OutboundInterceptor, StartWorkflowInput, WithStartWorkflowOperation, WorkflowFailureError
-from temporalio.worker import ActivityInboundInterceptor, ExecuteActivityInput
+from temporalio.worker import ActivityInboundInterceptor, ExecuteActivityInput, WorkflowInterceptorClassInput
 from temporalio.worker import Interceptor as WorkerInterceptor
 from temporalio.common import WorkflowIDConflictPolicy
 from temporalio.client import ScheduleIntervalSpec, ScheduleOverlapPolicy, SchedulePolicy, ScheduleSpec
@@ -36,7 +36,7 @@ from archipy.adapters.temporal.tracing import MessagingOpenTelemetryInterceptor
 from archipy.adapters.temporal.worker import TemporalWorkerManager, WorkerHandle
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import OtelMetricsExporter, TemporalConfig
-from archipy.models.errors import BaseError
+from archipy.models.errors import BaseError, ConfigurationError
 from features.steps.elastic_apm_steps import apm_endpoint, wait_for_apm_metric
 from features.test_helpers import get_current_scenario_context
 from features.test_helpers_otel import CollectorTelemetry
@@ -2277,3 +2277,30 @@ def step_counting_interceptor_saw(context, starts, executions):
     interceptor = get_current_scenario_context(context).get("counting_interceptor")
     assert interceptor.workflow_starts == starts, interceptor.workflow_starts
     assert interceptor.activity_executions == executions, interceptor.activity_executions
+
+
+@when("I build the messaging tracing workflow interceptor class")
+def step_build_messaging_workflow_interceptor_class(context):
+    from opentelemetry import trace as otel_trace
+    from temporalio.contrib.opentelemetry import ReplaySafeTracerProvider, create_tracer_provider
+
+    scenario_context = get_current_scenario_context(context)
+    # The interceptor requires a replay-safe global provider; ArchiPy installs one only when OTel is initialized.
+    if not isinstance(otel_trace.get_tracer_provider(), ReplaySafeTracerProvider):
+        otel_trace.set_tracer_provider(create_tracer_provider())
+    try:
+        interceptor_class = MessagingOpenTelemetryInterceptor().workflow_interceptor_class(
+            WorkflowInterceptorClassInput(unsafe_extern_functions={}),
+        )
+        scenario_context.store("tracing_interceptor_error", None)
+        scenario_context.store("tracing_interceptor_class", interceptor_class)
+    except ConfigurationError as error:
+        scenario_context.store("tracing_interceptor_error", error)
+
+
+@then("the workflow interceptor class should be built without a ConfigurationError")
+def step_workflow_interceptor_class_built(context):
+    scenario_context = get_current_scenario_context(context)
+    error = scenario_context.get("tracing_interceptor_error")
+    assert error is None, f"temporalio changed its private span hook: {error}"
+    assert scenario_context.get("tracing_interceptor_class") is not None
