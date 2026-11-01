@@ -18,6 +18,7 @@ from cassandra import (
     DriverException,
     InvalidRequest,
     OperationTimedOut,
+    Timeout as DriverTimeout,
     Unavailable,
 )
 from cassandra.auth import PlainTextAuthProvider
@@ -26,10 +27,12 @@ from cassandra.cluster import (
     Cluster,
     ExecutionProfile,
     NoHostAvailable,
+    ProtocolVersionUnsupported,
     ResponseFuture,
     ResultSet,
     Session,
 )
+from cassandra.connection import ConnectionException
 from cassandra.policies import (
     AddressTranslator,
     ConstantReconnectionPolicy,
@@ -41,7 +44,7 @@ from cassandra.policies import (
     RoundRobinPolicy,
     TokenAwarePolicy,
 )
-from cassandra.protocol import RequestValidationException
+from cassandra.protocol import ProtocolException, RequestValidationException
 from cassandra.query import BatchStatement, PreparedStatement, SimpleStatement
 
 from archipy.adapters.scylladb.ports import AsyncScyllaDBPort, ScyllaDBPort
@@ -62,6 +65,7 @@ from archipy.models.errors import (
 
 logger = logging.getLogger(__name__)
 _CQL_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_UNCONFIGURED_TABLE_PATTERN = re.compile(r"unconfigured table\s+\"?([A-Za-z0-9_.]+)", re.IGNORECASE)
 # Fixed texts: probe responses must not reveal driver messages, hosts or addresses; details go to the log.
 _HEALTH_CHECK_FAILED: Final = "unavailable"
 _POOL_STATS_FAILED: Final = "unavailable"
@@ -178,57 +182,77 @@ class ScyllaDBExceptionHandlerMixin:
     """Mixin class to handle ScyllaDB/Cassandra exceptions in a consistent way."""
 
     @classmethod
-    def _raise_for_cassandra_driver_exception(cls, exception: Exception, error_msg: str, operation: str) -> None:
-        """Map known cassandra-driver exceptions when applicable."""
-        if isinstance(exception, Unavailable) or "unavailable" in error_msg:
+    def _raise_for_cassandra_driver_exception(cls, exception: Exception, operation: str) -> None:
+        """Map known driver exceptions by type; return when the exception is not one of them."""
+        if isinstance(exception, Unavailable | NoHostAvailable):
             raise ServiceUnavailableError(service="ScyllaDB") from exception
 
-        if isinstance(exception, OperationTimedOut) or "timeout" in error_msg:
+        if isinstance(exception, OperationTimedOut):
+            timeout = int(exception.timeout) if exception.timeout is not None else None
+            raise ConnectionTimeoutError(service="ScyllaDB", timeout=timeout) from exception
+
+        if isinstance(exception, DriverTimeout):  # ReadTimeout and WriteTimeout
             raise ConnectionTimeoutError(service="ScyllaDB", timeout=None) from exception
 
-        if isinstance(exception, AuthenticationFailed) or "authentication" in error_msg:
+        if isinstance(exception, AuthenticationFailed):
             raise InvalidCredentialsError() from exception
 
         if isinstance(exception, InvalidRequest | RequestValidationException):
             raise InvalidArgumentError(argument_name=operation) from exception
 
-        if "protocol" in error_msg:
+        if isinstance(exception, ProtocolException | ProtocolVersionUnsupported):
             raise ConfigurationError(operation="scylladb", reason="Protocol error") from exception
 
-        if isinstance(exception, NoHostAvailable) or "no host available" in error_msg:
-            raise ServiceUnavailableError(service="ScyllaDB") from exception
+        if isinstance(exception, ConnectionException | OSError):
+            raise NetworkError(service="ScyllaDB") from exception
 
     @classmethod
     def _handle_scylladb_exception(cls, exception: Exception, operation: str) -> NoReturn:
         """Handle ScyllaDB/Cassandra exceptions and map them to appropriate application errors.
+
+        Exceptions are mapped by type. The server reports a missing table as an ``InvalidRequest`` whose message is
+        the only place that names the table, so that one message is parsed.
 
         Args:
             exception: The original exception
             operation: The name of the operation that failed
 
         Raises:
-            Various application-specific errors based on the exception type/content
+            Various application-specific errors based on the exception type
         """
-        error_msg = str(exception).lower()
-
-        if "unconfigured table" in error_msg:
-            table_name = operation or "unknown"
+        match = _UNCONFIGURED_TABLE_PATTERN.search(str(exception))
+        if match:
             raise NotFoundError(
                 resource_type="table",
-                additional_data={"table_name": table_name},
+                additional_data={"table_name": match.group(1)},
             ) from exception
 
-        cls._raise_for_cassandra_driver_exception(exception, error_msg, operation)
-
-        if "network" in error_msg or "connection" in error_msg or "socket" in error_msg:
-            raise NetworkError(service="ScyllaDB") from exception
-
-        if "configuration" in error_msg or ("config" in error_msg and "unconfigured" not in error_msg):
-            raise ConfigurationError(operation="scylladb", reason="Configuration error") from exception
+        cls._raise_for_cassandra_driver_exception(exception, operation)
 
         if "connection" in operation.lower() or "connect" in operation.lower():
             raise DatabaseConnectionError(database="scylladb") from exception
         raise DatabaseQueryError(database="scylladb") from exception
+
+    @classmethod
+    def _validate_positive_int(cls, value: int, field_name: str) -> int:
+        """Validate a numeric value that is interpolated into CQL text and must be at least 1.
+
+        Args:
+            value: Value to validate.
+            field_name: Field name for error context.
+
+        Returns:
+            The validated integer.
+
+        Raises:
+            InvalidArgumentError: If the value is not a positive int.
+        """
+        if cls._validate_non_negative_int(value, field_name) < 1:
+            raise InvalidArgumentError(
+                argument_name=field_name,
+                additional_data={"error": "Value must be a positive integer"},
+            )
+        return value
 
     @staticmethod
     def _validate_cql_identifier(identifier: str, field_name: str) -> str:
@@ -406,6 +430,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                     load_balancing_policy=load_balancing_policy,
                     retry_policy=retry_policy,
                     request_timeout=self.config.REQUEST_TIMEOUT,
+                    consistency_level=self._get_consistency_level(),
                     **_execution_profile_options(self.config),
                 ),
             },
@@ -660,6 +685,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         table: str,
         columns: list[str] | None = None,
         conditions: dict[str, Any] | None = None,
+        limit: int | None = None,
     ) -> list[Any]:
         """Select data from a table.
 
@@ -667,6 +693,8 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             table (str): The name of the table.
             columns (list[str] | None): List of columns to select. If None, selects all (*).
             conditions (dict[str, Any] | None): WHERE clause conditions as key-value pairs.
+            limit (int | None): Maximum number of rows to return. If None, returns every matching row, which can be
+                large; pass a limit on big tables.
 
         Returns:
             list[Any]: List of result rows.
@@ -681,6 +709,9 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
             query += f" WHERE {where_clause}"
             params = tuple(conditions.values())
+
+        if limit is not None:
+            query += f" LIMIT {self._validate_positive_int(limit, 'limit')}"
 
         try:
             result = self._execute_dml(query, params)
@@ -883,7 +914,8 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         table = self._validate_cql_identifier(table, "table")
         condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
         where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-        query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
+        # COUNT(*) ... LIMIT 1 still aggregates every match; selecting one key column stops at the first row
+        query = f"SELECT {condition_keys[0]} FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
 
         try:
             result = self._execute_dml(query, tuple(conditions.values()))
@@ -892,7 +924,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             self._handle_scylladb_exception(e, "exists")
             raise
         else:
-            return row.count > 0 if row else False
+            return row is not None
 
     @override
     def get_pool_stats(self) -> dict[str, Any]:
@@ -1048,6 +1080,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                     load_balancing_policy=load_balancing_policy,
                     retry_policy=retry_policy,
                     request_timeout=self.config.REQUEST_TIMEOUT,
+                    consistency_level=self._get_consistency_level(),
                     **_execution_profile_options(self.config),
                 ),
             },
@@ -1338,6 +1371,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         table: str,
         columns: list[str] | None = None,
         conditions: dict[str, Any] | None = None,
+        limit: int | None = None,
     ) -> list[Any]:
         """Select data from a table asynchronously.
 
@@ -1345,6 +1379,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             table (str): The name of the table.
             columns (list[str] | None): List of columns to select. If None, selects all (*).
             conditions (dict[str, Any] | None): WHERE clause conditions as key-value pairs.
+            limit (int | None): Maximum number of rows to return. If None, returns every matching row, which can be
+                large; pass a limit on big tables.
 
         Returns:
             list[Any]: List of result rows.
@@ -1359,6 +1395,9 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
             query += f" WHERE {where_clause}"
             params = tuple(conditions.values())
+
+        if limit is not None:
+            query += f" LIMIT {self._validate_positive_int(limit, 'limit')}"
 
         try:
             result = await self._execute_dml(query, params)
@@ -1566,7 +1605,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         table = self._validate_cql_identifier(table, "table")
         condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
         where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-        query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
+        # COUNT(*) ... LIMIT 1 still aggregates every match; selecting one key column stops at the first row
+        query = f"SELECT {condition_keys[0]} FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
 
         try:
             result = await self._execute_dml(query, tuple(conditions.values()))
@@ -1575,7 +1615,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             self._handle_scylladb_exception(e, "exists")
             raise
         else:
-            return row.count > 0 if row else False
+            return row is not None
 
     @override
     async def get_pool_stats(self) -> dict[str, Any]:

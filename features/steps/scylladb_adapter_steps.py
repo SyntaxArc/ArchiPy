@@ -1091,6 +1091,15 @@ async def _run_scylladb_operation(adapter: Any, operation: str, table: str) -> A
         return str(await _call_adapter(adapter, "exists", table, {"id": 1}))
     elif operation == "drop":
         await _call_adapter(adapter, "drop_table", table)
+    elif operation == "select with limit":
+        for row_id in (1, 2, 3):
+            await _call_adapter(adapter, "insert", table, {"id": row_id, "name": f"n{row_id}", "age": row_id})
+        rows = await _call_adapter(adapter, "select", table, limit=2)
+        return str(len(rows))
+    elif operation == "select with zero limit":
+        await _call_adapter(adapter, "select", table, limit=0)
+    elif operation == "select with injected limit":
+        await _call_adapter(adapter, "select", table, limit="1; DROP TABLE x")
     elif operation == "insert with injected ttl":
         await _call_adapter(adapter, "insert", table, {"id": 1, "name": "x", "age": 1}, ttl="60; DROP TABLE x")
     elif operation == "update with injected ttl":
@@ -1306,6 +1315,63 @@ def step_scylladb_call_succeeds(context: Context) -> None:
     assert error is None, f"Expected success, got {error!r}"
 
 
+@when('I map the ScyllaDB driver exception "{kind}"')
+def step_map_driver_exception(context: Context, kind: str) -> None:
+    """Run a driver exception through the adapter's error mapping and record the ArchiPy error.
+
+    Args:
+        context (Context): Behave context.
+        kind (str): Name of the driver exception to build.
+    """
+    from cassandra import AuthenticationFailed, ConsistencyLevel, OperationTimedOut, ReadTimeout, Unavailable
+    from cassandra.cluster import NoHostAvailable, ProtocolVersionUnsupported
+    from cassandra.connection import ConnectionShutdown
+
+    from archipy.adapters.scylladb.adapters import ScyllaDBExceptionHandlerMixin
+
+    builders = {
+        "OperationTimedOut": lambda: OperationTimedOut(errors={}, last_host=None, timeout=7),
+        "ReadTimeout": lambda: ReadTimeout("read timed out"),
+        "Unavailable": lambda: Unavailable("unavailable", ConsistencyLevel.QUORUM, 3, 1),
+        "NoHostAvailable": lambda: NoHostAvailable("no host", {}),
+        "AuthenticationFailed": lambda: AuthenticationFailed("bad credentials"),
+        "ProtocolVersionUnsupported": lambda: ProtocolVersionUnsupported("node", 5),
+        "ConnectionShutdown": lambda: ConnectionShutdown("closed"),
+        "unrelated message about timeout and connection": lambda: RuntimeError("timeout while on a connection"),
+    }
+    scenario_context = _get_scenario_context(context)
+    scenario_context.scylla_error = None
+    try:
+        ScyllaDBExceptionHandlerMixin._handle_scylladb_exception(builders[kind](), "execute")
+    except Exception as e:  # noqa: BLE001
+        scenario_context.scylla_error = e
+
+
+@then("the ScyllaDB error should carry timeout {timeout}")
+def step_error_carries_timeout(context: Context, timeout: str) -> None:
+    """Assert the mapped error reports the driver timeout, or none.
+
+    Args:
+        context (Context): Behave context.
+        timeout (str): Expected timeout in seconds, or "none".
+    """
+    data = _get_scenario_context(context).scylla_error.additional_data
+    assert str(data.get("timeout", "none")) == timeout, data
+
+
+@then('the NotFoundError should name table "{table}"')
+def step_not_found_names_table(context: Context, table: str) -> None:
+    """Assert the missing-table error names the table, not the operation.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Expected table name.
+    """
+    error = _get_scenario_context(context).scylla_error
+    assert isinstance(error, NotFoundError), error
+    assert error.additional_data.get("table_name") == table, error.additional_data
+
+
 @then("the ScyllaDB call should raise {error_name}")
 def step_scylladb_call_raises(context: Context, error_name: str) -> None:
     """Assert that the last recorded call raised the named ArchiPy error.
@@ -1408,6 +1474,36 @@ def step_build_scylladb_cluster(context: Context, setting: str, value: int) -> N
     context.cluster = cluster
     context.cluster_config = config
     context.cluster_warnings = [str(item.message) for item in caught if issubclass(item.category, DeprecationWarning)]
+
+
+@when("I build a ScyllaDB cluster with consistency level {level}")
+def step_build_scylladb_cluster_consistency(context: Context, level: str) -> None:
+    """Build the cluster without connecting, with the given default consistency level.
+
+    Args:
+        context (Context): Behave context.
+        level (str): The CONSISTENCY_LEVEL value.
+    """
+    from archipy.adapters.scylladb.adapters import ScyllaDBAdapter
+
+    config = get_scylladb_adapter(context).config.model_copy(update={"CONSISTENCY_LEVEL": level})
+    adapter = ScyllaDBAdapter.__new__(ScyllaDBAdapter)  # skip __init__, which would open a second connection
+    adapter.config = config
+    context.cluster = adapter._create_cluster()
+
+
+@then("the default execution profile should use consistency level {level}")
+def step_default_profile_consistency(context: Context, level: str) -> None:
+    """Check the default execution profile carries the configured consistency level.
+
+    Args:
+        context (Context): Behave context.
+        level (str): Expected consistency level name.
+    """
+    from cassandra import ConsistencyLevel
+
+    profile = context.cluster.profile_manager.default
+    assert profile.consistency_level == getattr(ConsistencyLevel, level), profile.consistency_level
 
 
 @then("the default execution profile should use the configured request timeout and retry policy")

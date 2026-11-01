@@ -362,6 +362,50 @@ Feature: ScyllaDB Adapter
     Then the ScyllaDB result should be "alpha"
     And the ScyllaDB driver should hold 2 prepared statements
 
+  Scenario Outline: Select honours an optional limit and rejects invalid ones
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "lim_<mode>"
+    When I run ScyllaDB operation "select with limit" on table "lim_<mode>"
+    Then the ScyllaDB result should be "2"
+    When I run ScyllaDB operation "<operation>" on table "lim_<mode>"
+    Then the ScyllaDB call should raise InvalidArgumentError
+
+    Examples: Sync
+      | mode | operation                  |
+      | syn  | select with zero limit     |
+      | syn  | select with injected limit |
+
+    @async
+    Examples: Async
+      | mode | operation                  |
+      | asyn | select with zero limit     |
+      | asyn | select with injected limit |
+
+  Scenario Outline: Driver exceptions are mapped by type
+    When I map the ScyllaDB driver exception "<exception>"
+    Then the ScyllaDB call should raise <error>
+
+    Examples: Exceptions
+      | exception                                      | error                   |
+      | OperationTimedOut                              | ConnectionTimeoutError  |
+      | ReadTimeout                                    | ConnectionTimeoutError  |
+      | Unavailable                                    | ServiceUnavailableError |
+      | NoHostAvailable                                | ServiceUnavailableError |
+      | AuthenticationFailed                           | InvalidCredentialsError |
+      | ProtocolVersionUnsupported                     | ConfigurationError      |
+      | ConnectionShutdown                             | NetworkError            |
+      | unrelated message about timeout and connection | DatabaseQueryError      |
+
+  @needs-scylladb
+  Scenario: A driver timeout reports its value
+    When I map the ScyllaDB driver exception "OperationTimedOut"
+    Then the ScyllaDB error should carry timeout 7
+
+  @needs-scylladb
+  Scenario Outline: A missing table error names the table
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "named_<mode>"
+    When I run ScyllaDB operation "select" on table "absent_<mode>"
+    Then the NotFoundError should name table "absent_<mode>"
+
     Examples: Sync
       | mode |
       | syn  |
@@ -425,6 +469,19 @@ Feature: ScyllaDB Adapter
     Examples: Async
       | mode |
       | asyn |
+
+  @needs-scylladb
+  Scenario Outline: The default execution profile uses the configured consistency level
+    Given a ScyllaDB adapter is configured
+    When I build a ScyllaDB cluster with consistency level <level>
+    Then the default execution profile should use consistency level <level>
+
+    Examples: Levels
+      | level        |
+      | ONE          |
+      | LOCAL_ONE    |
+      | LOCAL_QUORUM |
+      | QUORUM       |
 
   @needs-scylladb
   Scenario Outline: The cluster applies policies and timeout through the default execution profile with <setting> set
