@@ -746,6 +746,11 @@ if result.id is None:
 
 The adapter maps Keycloak failures to ArchiPy errors, chained with `from`. A `404` raises `ResourceNotFoundError`,
 bad credentials raise `InvalidCredentialsError`, and a forbidden call raises `InsufficientPermissionsError`.
+A `409` raises the `*AlreadyExistsError` of the resource the operation works on (or `ConflictError` when it names none),
+a `429` raises `RateLimitExceededError`, and a `5xx` raises `KeycloakServiceUnavailableError` (`502`, `503`, `504`) or
+`InternalError`. The status code decides before any message text is read. Keycloak's own message reaches callers in
+`additional_data["original_error"]` for `4xx` answers only; a `5xx` or connection failure is logged and its message
+is left out, since it can carry internals such as database URLs.
 
 ```python
 from archipy.models.errors import ResourceNotFoundError

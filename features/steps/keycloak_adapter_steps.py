@@ -6,6 +6,7 @@ from typing import Any
 
 from behave import given, step, then, when
 from behave.runner import Context
+from keycloak.exceptions import KeycloakGetError
 from features.scenario_context import ScenarioContext
 from features.test_containers import ContainerManager
 from features.test_helpers import get_current_scenario_context
@@ -27,6 +28,7 @@ from archipy.models.dtos.keycloak.organization_dtos import KeycloakOrganizationR
 from archipy.models.dtos.keycloak.realm_dtos import KeycloakRealmRequestDTO
 from archipy.models.dtos.keycloak.user_dtos import KeycloakCredentialRequestDTO, KeycloakUserRequestDTO
 from archipy.models.dtos.keycloak.token_dtos import KeycloakTokenClaimsDTO, KeycloakUserInfoDTO
+from archipy.models.errors import BaseError
 from archipy.models.types.actor_type import ActorType
 
 
@@ -4241,6 +4243,29 @@ def step_adapter_clears_caches_without_admin(context: Context, kind: str) -> Non
     adapter = AsyncKeycloakAdapter(config) if kind == "async" else KeycloakAdapter(config)
     adapter.clear_all_caches()
     assert adapter._admin_adapter is None, "clear_all_caches built an admin client"
+
+
+@when('a Keycloak error with status {status:d} and message "{message}" is mapped for operation "{operation}"')
+def step_map_keycloak_error(context: Context, status: int, message: str, operation: str) -> None:
+    """Map a Keycloak error that a container cannot produce on demand (a 5xx carrying internals)."""
+    scenario_context = get_current_scenario_context(context)
+    error = KeycloakGetError(error_message=message, response_code=status)
+    try:
+        KeycloakAdapter._handle_keycloak_exception(error, operation)
+    except BaseError as mapped:
+        scenario_context.store("mapped_error", mapped)
+        scenario_context.store("upstream_message", message)
+        return
+    raise AssertionError("the Keycloak error was not mapped")
+
+
+@then('the mapped error has code "{code}" and {exposure} the upstream message')
+def step_mapped_error_code(context: Context, code: str, exposure: str) -> None:
+    scenario_context = get_current_scenario_context(context)
+    mapped = scenario_context.get("mapped_error")
+    assert mapped.code == code, f"expected {code}, got {mapped.code}"
+    leaked = scenario_context.get("upstream_message") in str(mapped.to_dict())
+    assert leaked == (exposure == "exposes"), f"upstream message {'leaked' if leaked else 'was hidden'}: {mapped.to_dict()}"
 
 
 @then(
