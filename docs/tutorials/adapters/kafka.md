@@ -205,7 +205,8 @@ except InternalError as e:
 else:
     logger.info("Message enqueued successfully")
 
-# Publish with a message key (for partition affinity)
+# Publish with a message key (for partition affinity). Without a key the message is currently sent with an empty
+# key (b""), which emits a DeprecationWarning; set KAFKA.EMPTY_KEY_FOR_MISSING_KEY=False to send no key (None).
 try:
     producer.produce("Hello, Kafka with key!", key="user-123")
 except InternalError as e:

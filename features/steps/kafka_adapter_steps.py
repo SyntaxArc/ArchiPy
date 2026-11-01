@@ -1249,6 +1249,48 @@ def step_logs_hide_payload(context, topic_name, payload):
     assert payload not in logs, f"Payload leaked into logs: {logs}"
 
 
+@when('a {mode} producer with missing keys sent as {setting} produces a message without a key to topic "{topic_name}"')
+def step_produce_without_key(context, mode, setting, topic_name):
+    """Produce a keyless message, noting whether the legacy empty key raised a DeprecationWarning."""
+    import warnings
+
+    config = _get_kafka_config(context).model_copy(
+        update={"EMPTY_KEY_FOR_MISSING_KEY": setting == "an empty key"},
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        if mode == "sync":
+            producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+            producer.produce("keyless")
+            producer.close()
+        else:
+
+            async def run():
+                producer = AsyncKafkaProducerAdapter(topic_name, kafka_configs=config)
+                await producer.produce("keyless")
+                await producer.close()
+
+            asyncio.run(run())
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("kafka_deprecation_warned", any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+
+@then('the message on topic "{topic_name}" should have {key_state} and the deprecation warning should be {warned}')
+def step_keyless_message_key(context, topic_name, key_state, warned):
+    """Read the keyless message and check the key and the deprecation warning."""
+    config = _get_kafka_config(context)
+    consumer = KafkaConsumerAdapter(f"keyless-group-{topic_name}", topic_list=[topic_name], kafka_configs=config)
+    try:
+        message = _poll_until_message(consumer.poll)
+    finally:
+        consumer.close()
+    assert message is not None, "No message received"
+    expected_key = None if key_state == "no key" else b""
+    assert message.key() == expected_key, f"Expected key {expected_key!r}, got {message.key()!r}"
+    expected_warning = warned == "raised"
+    assert get_current_scenario_context(context).get("kafka_deprecation_warned") is expected_warning
+
+
 @then('the Kafka operation should raise one of "{error_names}"')
 def step_operation_should_raise_one_of(context, error_names):
     """Assert the captured exception is one of the comma separated ArchiPy errors."""
