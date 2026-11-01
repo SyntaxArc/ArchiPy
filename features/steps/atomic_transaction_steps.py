@@ -774,8 +774,10 @@ def step_when_nested_atomic_executed(context):
     outer_uuid = uuid.uuid4()
     inner_uuid = uuid.uuid4()
     failing_uuid = uuid.uuid4()
+    after_failure_uuid = uuid.uuid4()
 
     # Store UUIDs for verification
+    scenario_context.entity_ids["after_failure_entity"] = str(after_failure_uuid)
     scenario_context.entity_ids["outer_entity"] = str(outer_uuid)
     scenario_context.entity_ids["inner_entity"] = str(inner_uuid)
     scenario_context.entity_ids["failing_entity"] = str(failing_uuid)
@@ -845,6 +847,14 @@ def step_when_nested_atomic_executed(context):
                     # Store the exception to verify it later
                     scenario_context.store("failed_inner_exception", e)
 
+                # The outer block keeps working after the swallowed inner failure
+                adapter.create(
+                    TestEntityFactory.create_test_entity(
+                        test_uuid=after_failure_uuid,
+                        description="Outer entity written after a failed nested call",
+                    ),
+                )
+
                 return outer_entity
 
             except Exception as e:
@@ -863,41 +873,25 @@ def step_when_nested_atomic_executed(context):
 
 @then("operations from successful nested transactions should be visible within outer transaction")
 def step_then_successful_nested_visible(context):
-    """Verify that entities from successful nested transactions are visible within the outer transaction.
-
-    Note: When a failing inner transaction causes a rollback, it cascades to the outer transaction,
-    so all entities (including successful inner and outer) are rolled back.
-    """
+    """Verify the outer, inner and post-failure entities are committed despite the failed nested call."""
     logger = getattr(context, "logger", logging.getLogger("behave.steps"))
     scenario_context = get_current_scenario_context(context)
     db_type = scenario_context.get("db_type", "sqlite")
 
-    # Get UUIDs for verification
-    entity1_uuid = uuid.UUID(scenario_context.entity_ids["outer_entity"])
-    entity2_uuid = uuid.UUID(scenario_context.entity_ids["inner_entity"])
-
-    logger.info("Verifying nested transaction entities after cascading rollback")
+    visible_ids = [
+        uuid.UUID(scenario_context.entity_ids[key]) for key in ("outer_entity", "inner_entity", "after_failure_entity")
+    ]
     atomic_decorator = _get_atomic_decorator(db_type, is_async=False)
 
     @atomic_decorator
     def verify_nested_results():
-        adapter = get_adapter(context)
-        session = adapter.get_session()
-
-        # When a failing inner transaction causes a rollback, it cascades to the outer transaction
-        # So all entities (including successful inner and outer) should be rolled back
-        # Check entity 1 (outer atomic) - should NOT be visible due to cascading rollback
-        entity1 = session.get(TestEntity, entity1_uuid)
-        assert entity1 is None, "Entity 1 (outer) found after cascading rollback from failed inner transaction"
-
-        # Check entity 2 (successful inner atomic) - should NOT be visible due to cascading rollback
-        entity2 = session.get(TestEntity, entity2_uuid)
-        assert entity2 is None, "Entity 2 (inner) found after cascading rollback from failed inner transaction"
-        logger.info("Verified that all entities were rolled back due to cascading failure")
-
+        session = get_adapter(context).get_session()
+        for entity_id in visible_ids:
+            assert session.get(TestEntity, entity_id) is not None, f"Entity {entity_id} missing after nested block"
         return True
 
     verify_nested_results()
+    logger.info("Verified outer, inner and post-failure entities are committed")
 
 
 @then("operations from failed nested transactions should be rolled back")
@@ -2710,7 +2704,7 @@ async def step_when_entities_created_through_adapter(context, count, mode):
     async def create_all(adapter):
         for entity_uuid, description in expected:
             created = adapter.create(
-                TestEntityFactory.create_test_entity(test_uuid=entity_uuid, description=description)
+                TestEntityFactory.create_test_entity(test_uuid=entity_uuid, description=description),
             )
             if inspect.isawaitable(created):
                 await created
