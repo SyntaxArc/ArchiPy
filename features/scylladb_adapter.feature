@@ -438,6 +438,20 @@ Feature: ScyllaDB Adapter
       | rf_two_as | 2      | not contain |
 
   @needs-scylladb
+  Scenario Outline: Insecure connection settings log a warning
+    Given a ScyllaDB adapter is configured
+    When I build a ScyllaDB cluster with credentials <credentials>, TLS <tls> and verification <verify> and capture the log
+    Then the adapter log should <plain> the plaintext credentials warning
+    And the adapter log should <noverify> the disabled verification warning
+
+    Examples: Settings
+      | credentials | tls | verify        | plain       | noverify    |
+      | set         | off | CERT_REQUIRED | contain     | not contain |
+      | set         | on  | CERT_REQUIRED | not contain | not contain |
+      | unset       | off | CERT_REQUIRED | not contain | not contain |
+      | set         | on  | CERT_NONE     | not contain | contain     |
+
+  @needs-scylladb
   Scenario Outline: Prepared statements are cached and executed with bound parameters
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
     When I execute a prepared ScyllaDB insert into "<table>" twice
