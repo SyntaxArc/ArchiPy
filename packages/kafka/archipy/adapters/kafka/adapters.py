@@ -452,18 +452,23 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
                 neither is provided.
             InternalError: If there is an error initializing the consumer.
         """
-        configs: KafkaConfig = kafka_configs or BaseConfig.global_config().KAFKA
-        self._adapter: Consumer = self._get_adapter(group_id, configs)
-        if topic_list and not partition_list:
-            self.subscribe(topic_list)
-        elif not topic_list and partition_list:
-            self.assign(partition_list)
-        else:
+        if bool(topic_list) == bool(partition_list):
             logger.error("Invalid topic or partition list")
             raise InvalidArgumentError(
                 argument_name="topic_list or partition_list",
                 additional_data={"reason": "Exactly one of topic_list or partition_list must be provided"},
             )
+        configs: KafkaConfig = kafka_configs or BaseConfig.global_config().KAFKA
+        self._adapter: Consumer = self._get_adapter(group_id, configs)
+        try:
+            if topic_list:
+                self.subscribe(topic_list)
+            elif partition_list:
+                self.assign(partition_list)
+        except BaseError:
+            with contextlib.suppress(*_KAFKA_CLIENT_ERRORS):
+                self._adapter.close()
+            raise
 
     @classmethod
     def _get_adapter(cls, group_id: str, configs: KafkaConfig) -> Consumer:
