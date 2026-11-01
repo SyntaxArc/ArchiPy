@@ -33,8 +33,10 @@ def _endpoint_of(url):
 class _StubHttpClient:
     """Recording stand-in for httpx2.Client / httpx2.AsyncClient (the third-party boundary)."""
 
-    def __init__(self, state, is_async, proxy=None, **_):
+    def __init__(self, state, is_async, proxy=None, timeout=None, **_):
         self.proxy = proxy
+        self.timeout = timeout
+        self.closed = False
         self._state = state
         self._is_async = is_async
         state["clients"].append(self)
@@ -60,6 +62,12 @@ class _StubHttpClient:
     async def _post_async(self, url, json=None, **kwargs):
         return self._post(url, json=json, **kwargs)
 
+    def close(self):
+        self.closed = True
+
+    async def aclose(self):
+        self.closed = True
+
 
 def _state(context):
     """Return per-scenario fake-gateway state, installing the client patches on first use."""
@@ -67,7 +75,12 @@ def _state(context):
     state = scenario_context.get("saman_state")
     if state is not None:
         return state
-    state = {"script": {}, "headers": {}, "calls": [], "clients": []}
+    state = {
+        "script": {},
+        "headers": {"token": {"X-IPG-Url": "https://pay.shaparak.ir/default"}},
+        "calls": [],
+        "clients": [],
+    }
 
     def sync_factory(**kwargs):
         return _StubHttpClient(state, False, **kwargs)
@@ -85,13 +98,14 @@ def _state(context):
     return state
 
 
-def _make_config(terminal_id, proxies=None):
+def _make_config(terminal_id, proxies=None, **extra):
     return SamanShaparakConfig(
         TERMINAL_ID=terminal_id or None,
         PAYMENT_URL=f"{GATEWAY}/token",
         VERIFY_URL=f"{GATEWAY}/verify",
         REVERSE_URL=f"{GATEWAY}/reverse",
         PROXIES=proxies,
+        **extra,
     )
 
 
@@ -161,6 +175,23 @@ def step_given_adapter_with_proxies(context, kind, proxies):
     assert get_current_scenario_context(context).get("error") is None
 
 
+@given('a {kind} Saman adapter allowing IPG hosts "{hosts}"')
+def step_given_adapter_with_hosts(context, kind, hosts):
+    _try_create(context, kind, _make_config("13579", ALLOWED_IPG_HOSTS=hosts.split(",")))
+    assert get_current_scenario_context(context).get("error") is None
+
+
+@given("a {kind} Saman adapter with a {timeout:d} second timeout")
+def step_given_adapter_with_timeout(context, kind, timeout):
+    _try_create(context, kind, _make_config("13579", TIMEOUT=timeout))
+    assert get_current_scenario_context(context).get("error") is None
+
+
+@given('the Saman "{endpoint}" endpoint sends no header "{name}"')
+def step_given_no_header(context, endpoint, name):
+    _state(context)["headers"].get(endpoint, {}).pop(name, None)
+
+
 @given('the global Saman terminal id is "{terminal}"')
 def step_given_global_terminal(context, terminal):
     saman_config = BaseConfig.global_config().SAMAN_SHAPARAK
@@ -193,6 +224,26 @@ def step_given_header(context, endpoint, name, value):
 def step_given_failure(context, endpoint, failure):
     exceptions = {"connection error": httpx2.ConnectError("refused"), "timeout": httpx2.ReadTimeout("slow")}
     _state(context)["script"][endpoint] = {"kind": "raise", "exception": exceptions[failure]}
+
+
+@when("I close the Saman adapter")
+async def step_when_close(context):
+    adapter = get_current_scenario_context(context).get("adapter")
+    if inspect.iscoroutinefunction(getattr(adapter, "aclose", None)):
+        await adapter.aclose()
+    else:
+        adapter.close()
+
+
+@when("I use the Saman adapter as a context manager")
+async def step_when_context_manager(context):
+    adapter = get_current_scenario_context(context).get("adapter")
+    if hasattr(adapter, "__aenter__"):
+        async with adapter:
+            pass
+    else:
+        with adapter:
+            pass
 
 
 @when("I create a {kind} Saman adapter with no terminal")
@@ -428,3 +479,17 @@ def step_then_logs_redacted(context, res_num, cell, card_hash):
 def step_then_failure_http_status(context, status):
     error = get_current_scenario_context(context).get("error")
     assert error.additional_data.get("status_code") == status
+
+
+@then("the Saman HTTP client is closed")
+def step_then_client_closed(context):
+    clients = _state(context)["clients"]
+    assert clients
+    assert all(client.closed for client in clients)
+
+
+@then("the Saman HTTP client times out after {seconds:d} seconds")
+def step_then_client_timeout(context, seconds):
+    clients = _state(context)["clients"]
+    assert clients
+    assert all(client.timeout == seconds for client in clients), [client.timeout for client in clients]

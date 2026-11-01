@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 from http import HTTPStatus
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
+from urllib.parse import urlsplit
 
 import httpx2
 
@@ -22,6 +23,7 @@ from archipy.models.dtos.saman_ipg_dtos import (
     VerifyResponseDTO,
 )
 from archipy.models.errors.base_error import BaseError
+from archipy.models.errors.business_errors import FailedPreconditionError
 from archipy.models.errors.resource_errors import NotFoundError
 from archipy.models.errors.system_errors import InternalError, UnavailableError
 from archipy.models.errors.validation_errors import InvalidArgumentError
@@ -53,6 +55,33 @@ def _map_status_error(error: httpx2.HTTPStatusError, resource_type: str) -> Base
     return InternalError()
 
 
+def _validated_ipg_url(url: str | None, status: object, allowed_hosts: list[str]) -> str | None:
+    """Validate the dynamic payment page URL returned by the Neo-PG token service.
+
+    Args:
+        url: Value of the X-IPG-Url response header, if any.
+        status: Status reported in the token reply; the URL is only required when it is 1 (success).
+        allowed_hosts: Domains the URL host must belong to (the domain itself or a subdomain).
+
+    Returns:
+        str | None: The validated URL, or None when the reply carries no URL and is not a success.
+
+    Raises:
+        FailedPreconditionError: If a successful reply carries no X-IPG-Url header.
+        InvalidArgumentError: If the URL is not https or its host is not in the allowed domains.
+    """
+    if not url:
+        if status == 1:
+            raise FailedPreconditionError()
+        return None
+    parts = urlsplit(url)
+    host = (parts.hostname or "").lower()
+    allowed = any(host == domain.lower() or host.endswith(f".{domain.lower()}") for domain in allowed_hosts)
+    if parts.scheme != "https" or not allowed:
+        raise InvalidArgumentError(argument_name="X-IPG-Url")
+    return url
+
+
 class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
     """Saman Shaparak (SEP) Classic Adapter - Full v3/.5 Protocol.
 
@@ -78,9 +107,10 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
         self.payment_url = str(configs.PAYMENT_URL)
         self.verify_url = str(configs.VERIFY_URL)
         self.reverse_url = str(configs.REVERSE_URL)
+        self.allowed_ipg_hosts = list(configs.ALLOWED_IPG_HOSTS)
 
         proxy = self._get_proxy(configs.PROXIES)
-        self.client = httpx2.Client(proxy=proxy, timeout=30)
+        self.client = httpx2.Client(proxy=proxy, timeout=configs.TIMEOUT)
 
         logger.info("SamanShaparakPaymentAdapter initialized with terminal %s", self.terminal_id)
 
@@ -89,6 +119,22 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
         if proxies is None:
             return None
         return proxies.get("https") or proxies.get("http") or proxies.get("socks5") or proxies.get("socks5h")
+
+    def close(self) -> None:
+        """Close the underlying HTTP client and release its connections."""
+        self.client.close()
+
+    def __enter__(self) -> Self:
+        """Enter the context manager.
+
+        Returns:
+            Self: This adapter.
+        """
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        """Close the adapter when leaving the context manager."""
+        self.close()
 
     def _get_terminal_number(self) -> int:
         """Convert the configured terminal ID to the numeric form required by verify/reverse.
@@ -283,7 +329,7 @@ class SamanNeoPgShaparakPaymentAdapter(SamanShaparakPaymentAdapter):
             resp.raise_for_status()
             data = resp.json()
 
-            ipg_url = resp.headers.get("X-IPG-Url")
+            ipg_url = _validated_ipg_url(resp.headers.get("X-IPG-Url"), data.get("status"), self.allowed_ipg_hosts)
 
             return PaymentResponseDTO(
                 status=data.get("status"),
@@ -328,9 +374,10 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
         self.payment_url = str(configs.PAYMENT_URL)
         self.verify_url = str(configs.VERIFY_URL)
         self.reverse_url = str(configs.REVERSE_URL)
+        self.allowed_ipg_hosts = list(configs.ALLOWED_IPG_HOSTS)
 
         proxy = self._get_proxy(configs.PROXIES)
-        self.client = httpx2.AsyncClient(proxy=proxy, timeout=30)
+        self.client = httpx2.AsyncClient(proxy=proxy, timeout=configs.TIMEOUT)
 
         logger.info(
             "AsyncSamanShaparakPaymentAdapter initialized with terminal %s",
@@ -342,6 +389,22 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
         if proxies is None:
             return None
         return proxies.get("https") or proxies.get("http") or proxies.get("socks5") or proxies.get("socks5h")
+
+    async def aclose(self) -> None:
+        """Close the underlying HTTP client and release its connections."""
+        await self.client.aclose()
+
+    async def __aenter__(self) -> Self:
+        """Enter the async context manager.
+
+        Returns:
+            Self: This adapter.
+        """
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        """Close the adapter when leaving the async context manager."""
+        await self.aclose()
 
     def _get_terminal_number(self) -> int:
         """Convert the configured terminal ID to the numeric form required by verify/reverse.
@@ -536,7 +599,7 @@ class AsyncSamanNeoPgShaparakPaymentAdapter(AsyncSamanShaparakPaymentAdapter):
             resp.raise_for_status()
             data = resp.json()
 
-            ipg_url = resp.headers.get("X-IPG-Url")
+            ipg_url = _validated_ipg_url(resp.headers.get("X-IPG-Url"), data.get("status"), self.allowed_ipg_hosts)
 
             return PaymentResponseDTO(
                 status=data.get("status"),
