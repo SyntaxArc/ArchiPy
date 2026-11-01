@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import logging
 from typing import TYPE_CHECKING, Any, NoReturn, override
 
@@ -109,9 +110,9 @@ class VaultExceptionHandlerMixin:
             raise UnavailableError(resource_type="Vault", additional_data={"operation": operation}) from exception
         if isinstance(exception, RequestsConnectionError | RequestsTimeout):
             raise NetworkError(service="Vault") from exception
-        if isinstance(exception, hvac.exceptions.VaultError):
-            raise ConfigurationError(operation=operation, reason=str(exception)) from exception
-        raise ConfigurationError(operation=operation, reason=str(exception)) from exception
+        # The exception text can carry the Vault host, path and file names: log it, keep the reason generic.
+        logger.warning("Vault operation %s failed: %s", operation, exception)
+        raise ConfigurationError(operation=operation, reason="Vault operation failed") from exception
 
 
 class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
@@ -151,7 +152,8 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
             OSError,
             ValueError,
         ) as e:
-            raise ConfigurationError(operation="vault_connect", reason=str(e)) from e
+            logger.warning("Vault connection failed: %s", e)
+            raise ConfigurationError(operation="vault_connect", reason="Failed to connect to Vault") from e
 
         self.token_renew_count = 0
 
@@ -260,8 +262,9 @@ class VaultAdapter(VaultPort, VaultExceptionHandlerMixin):
         """
         if not path:
             raise InvalidArgumentError(argument_name="path")
+        # Return a copy so callers cannot mutate the cached payload.
         if self._read_secret_cached is not None:
-            return self._read_secret_cached(path, mount_point)
+            return copy.deepcopy(self._read_secret_cached(path, mount_point))
         return self._read_secret_uncached(path, mount_point)
 
     @override
