@@ -152,7 +152,12 @@ def step_given_global_terminal(context, terminal):
 
 @given('the Saman "{endpoint}" endpoint answers {status:d} with JSON:')
 def step_given_answers_json(context, endpoint, status):
-    _state(context)["script"][endpoint] = {"kind": "response", "status": status, "json": json.loads(context.text), "raw": None}
+    _state(context)["script"][endpoint] = {
+        "kind": "response",
+        "status": status,
+        "json": json.loads(context.text),
+        "raw": None,
+    }
 
 
 @given('the Saman "{endpoint}" endpoint answers {status:d} with raw body "{body}"')
@@ -321,7 +326,9 @@ def step_then_verify_pan(context, masked, hashed):
     assert result.hashed_pan == hashed
 
 
-@then('the Saman verification detail has original amount {original:d}, affective amount {affective:d} and trace "{trace}"')
+@then(
+    'the Saman verification detail has original amount {original:d}, affective amount {affective:d} and trace "{trace}"',
+)
 def step_then_verify_amounts(context, original, affective, trace):
     result = _result(context)
     assert result.original_amount == original
@@ -386,3 +393,9 @@ def step_then_request_rejected(context):
     error = get_current_scenario_context(context).get("error")
     assert error is not None, "Expected the request to be rejected"
     assert type(error).__name__ in {"ValidationError", "InvalidArgumentError"}, type(error).__name__
+
+
+@then("the Saman failure carries HTTP status {status:d}")
+def step_then_failure_http_status(context, status):
+    error = get_current_scenario_context(context).get("error")
+    assert error.additional_data.get("status_code") == status

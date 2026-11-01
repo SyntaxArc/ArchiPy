@@ -107,40 +107,55 @@ Feature: Saman Shaparak payment gateway adapter
       | sync Neo-PG  |
       | async Neo-PG |
 
-  Scenario Outline: Inconsistent initiation replies are reported as internal error
+  Scenario Outline: Inconsistent or malformed initiation replies are mapped to an ArchiPy error
     Given a <kind> Saman adapter with terminal "13579"
     And the Saman "token" endpoint answers 200 with JSON:
       """
       <body>
       """
     When I initiate a Saman payment of 75000 for reservation "RES-1" redirecting to "https://shop.example.com/return"
-    Then the Saman call fails with "InternalError"
+    Then the Saman call fails with "<error>"
 
     Examples:
-      | kind         | body             |
-      | sync         | {"status": 1}    |
-      | async        | {"status": 1}    |
-      | sync         | {"status": -1}   |
-      | async        | {"status": -1}   |
-      | sync         | {"token": "tok"} |
-      | async        | {"token": "tok"} |
-      | sync Neo-PG  | {"status": 1}    |
-      | async Neo-PG | {"status": -1}   |
+      | kind         | body             | error                   |
+      | sync         | {"status": 1}    | FailedPreconditionError |
+      | async        | {"status": 1}    | FailedPreconditionError |
+      | sync         | {"status": -1}   | FailedPreconditionError |
+      | async        | {"status": -1}   | FailedPreconditionError |
+      | sync         | {"token": "tok"} | InternalError           |
+      | async        | {"token": "tok"} | InternalError           |
+      | sync Neo-PG  | {"status": 1}    | FailedPreconditionError |
+      | async Neo-PG | {"status": -1}   | FailedPreconditionError |
 
-  Scenario Outline: Gateway client error or unreadable body during initiation is reported as internal error
+  Scenario Outline: Gateway client error or unreadable body during initiation is mapped to an ArchiPy error
     Given a <kind> Saman adapter with terminal "13579"
     And the Saman "token" endpoint answers <http_status> with raw body "<body>"
     When I initiate a Saman payment of 75000 for reservation "RES-1" redirecting to "https://shop.example.com/return"
-    Then the Saman call fails with "InternalError"
+    Then the Saman call fails with "<error>"
 
     Examples:
-      | kind         | http_status | body     |
-      | sync         | 400         | bad      |
-      | async        | 400         | bad      |
-      | sync         | 200         | not json |
-      | async        | 200         | not json |
-      | sync Neo-PG  | 404         | missing  |
-      | async Neo-PG | 200         | not json |
+      | kind         | http_status | body     | error                |
+      | sync         | 400         | bad      | InvalidArgumentError |
+      | async        | 400         | bad      | InvalidArgumentError |
+      | sync         | 200         | not json | InternalError        |
+      | async        | 200         | not json | InternalError        |
+      | sync Neo-PG  | 404         | missing  | NotFoundError        |
+      | async Neo-PG | 422         | invalid  | InvalidArgumentError |
+      | async Neo-PG | 200         | not json | InternalError        |
+
+  Scenario Outline: A rejected request keeps the HTTP status in the error data
+    Given a <kind> Saman adapter with terminal "13579"
+    And the Saman "<endpoint>" endpoint answers <http_status> with raw body "bad"
+    When I <action> Saman reference "REF-1"
+    Then the Saman call fails with "<error>"
+    And the Saman failure carries HTTP status <http_status>
+
+    Examples:
+      | kind  | endpoint | action  | http_status | error                |
+      | sync  | verify   | verify  | 400         | InvalidArgumentError |
+      | async | verify   | verify  | 404         | NotFoundError        |
+      | sync  | reverse  | reverse | 404         | NotFoundError        |
+      | async | reverse  | reverse | 400         | InvalidArgumentError |
 
   Scenario Outline: Gateway server error during initiation is reported as unavailable
     Given a <kind> Saman adapter with terminal "13579"
@@ -250,17 +265,17 @@ Feature: Saman Shaparak payment gateway adapter
     Then the Saman call fails with "<error>"
 
     Examples:
-      | kind  | behaviour                           | error            |
-      | sync  | fails with a connection error       | UnavailableError |
-      | async | fails with a connection error       | UnavailableError |
-      | sync  | fails with a timeout                | UnavailableError |
-      | async | fails with a timeout                | UnavailableError |
-      | sync  | answers 500 with raw body "bad"     | UnavailableError |
-      | async | answers 500 with raw body "bad"     | UnavailableError |
-      | sync  | answers 400 with raw body "bad"     | InternalError    |
-      | async | answers 400 with raw body "bad"     | InternalError    |
-      | sync  | answers 200 with raw body "garbage" | InternalError    |
-      | async | answers 200 with raw body "garbage" | InternalError    |
+      | kind  | behaviour                           | error                |
+      | sync  | fails with a connection error       | UnavailableError     |
+      | async | fails with a connection error       | UnavailableError     |
+      | sync  | fails with a timeout                | UnavailableError     |
+      | async | fails with a timeout                | UnavailableError     |
+      | sync  | answers 500 with raw body "bad"     | UnavailableError     |
+      | async | answers 500 with raw body "bad"     | UnavailableError     |
+      | sync  | answers 400 with raw body "bad"     | InvalidArgumentError |
+      | async | answers 400 with raw body "bad"     | InvalidArgumentError |
+      | sync  | answers 200 with raw body "garbage" | InternalError        |
+      | async | answers 200 with raw body "garbage" | InternalError        |
 
   Scenario Outline: Verify outage carries the verify service resource type
     Given a <kind> Saman adapter with terminal "13579"
@@ -360,11 +375,11 @@ Feature: Saman Shaparak payment gateway adapter
       | sync  |
       | async |
 
-  Scenario Outline: Reverse client error is reported as internal error
+  Scenario Outline: Reverse client error is reported as invalid argument
     Given a <kind> Saman adapter with terminal "13579"
     And the Saman "reverse" endpoint answers 400 with raw body "bad request"
     When I reverse Saman reference "REF-9"
-    Then the Saman call fails with "InternalError"
+    Then the Saman call fails with "InvalidArgumentError"
 
     Examples:
       | kind  |

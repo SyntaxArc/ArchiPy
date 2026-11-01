@@ -467,6 +467,11 @@ All adapters use ArchiPy's consistent error hierarchy:
 | `FailedPreconditionError` | Missing required config (e.g., no TERMINAL_ID) |
 | `InvalidArgumentError`    | Invalid request parameters                     |
 
+For Saman, HTTP error statuses from the gateway are mapped as follows: 5xx to `UnavailableError`, 404 to
+`NotFoundError` and other 4xx (for example a bad `RefNum` or terminal) to `InvalidArgumentError`; the HTTP status is
+kept in `additional_data["status_code"]`. A token reply that is inconsistent with its status (status 1 without a
+token) raises `FailedPreconditionError`. Unreadable replies raise `InternalError`.
+
 ## See Also
 
 - [Error Handling](../error_handling.md) — Exception handling patterns

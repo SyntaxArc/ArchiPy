@@ -21,6 +21,8 @@ from archipy.models.dtos.saman_ipg_dtos import (
     VerifyRequestDTO,
     VerifyResponseDTO,
 )
+from archipy.models.errors.base_error import BaseError
+from archipy.models.errors.resource_errors import NotFoundError
 from archipy.models.errors.system_errors import InternalError, UnavailableError
 from archipy.models.errors.validation_errors import InvalidArgumentError
 
@@ -28,6 +30,27 @@ if TYPE_CHECKING:
     from archipy.configs.config_template import SamanShaparakConfig
 
 logger = logging.getLogger(__name__)
+
+
+def _map_status_error(error: httpx2.HTTPStatusError, resource_type: str) -> BaseError:
+    """Map an HTTP error status from the gateway to an ArchiPy error.
+
+    Args:
+        error: The HTTP status error raised by httpx.
+        resource_type: Name of the gateway service that answered.
+
+    Returns:
+        BaseError: UnavailableError for 5xx, NotFoundError for 404, InvalidArgumentError for other 4xx
+            (the HTTP status is kept in additional_data), InternalError otherwise.
+    """
+    status_code = error.response.status_code
+    if status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+        return UnavailableError(resource_type=resource_type)
+    if status_code == HTTPStatus.NOT_FOUND:
+        return NotFoundError(resource_type=resource_type, additional_data={"status_code": status_code})
+    if HTTPStatus.BAD_REQUEST <= status_code < HTTPStatus.INTERNAL_SERVER_ERROR:
+        return InvalidArgumentError(argument_name=resource_type, additional_data={"status_code": status_code})
+    return InternalError()
 
 
 class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
@@ -92,6 +115,8 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
 
         Raises:
             UnavailableError: If the payment service is unavailable or returns HTTP 5xx.
+            InvalidArgumentError: If the gateway rejects the request with an HTTP 4xx status.
+            NotFoundError: If the gateway answers HTTP 404.
             InternalError: If an unexpected error occurs.
         """
         try:
@@ -122,9 +147,9 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Token Service") from e
         except httpx2.HTTPStatusError as e:
-            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
-                raise UnavailableError(resource_type="Saman Token Service") from e
-            raise InternalError() from e
+            raise _map_status_error(e, "Saman Token Service") from e
+        except BaseError:
+            raise
         except Exception as e:
             raise InternalError() from e
 
@@ -140,6 +165,8 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
         Raises:
             InvalidArgumentError: If TERMINAL_ID is not numeric.
             UnavailableError: If the verify service is unavailable or returns HTTP 5xx.
+            InvalidArgumentError: If the gateway rejects the request with an HTTP 4xx status.
+            NotFoundError: If the gateway answers HTTP 404.
             InternalError: If an unexpected error occurs.
         """
         terminal_number = self._get_terminal_number()
@@ -169,9 +196,9 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Verify Service") from e
         except httpx2.HTTPStatusError as e:
-            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
-                raise UnavailableError(resource_type="Saman Verify Service") from e
-            raise InternalError() from e
+            raise _map_status_error(e, "Saman Verify Service") from e
+        except BaseError:
+            raise
         except Exception as e:
             raise InternalError() from e
 
@@ -187,6 +214,8 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
         Raises:
             InvalidArgumentError: If TERMINAL_ID is not numeric.
             UnavailableError: If the reverse service is unavailable or returns HTTP 5xx.
+            InvalidArgumentError: If the gateway rejects the request with an HTTP 4xx status.
+            NotFoundError: If the gateway answers HTTP 404.
             InternalError: If an unexpected error occurs.
         """
         terminal_number = self._get_terminal_number()
@@ -207,9 +236,9 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Reverse Service") from e
         except httpx2.HTTPStatusError as e:
-            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
-                raise UnavailableError(resource_type="Saman Reverse Service") from e
-            raise InternalError() from e
+            raise _map_status_error(e, "Saman Reverse Service") from e
+        except BaseError:
+            raise
         except Exception as e:
             raise InternalError() from e
 
@@ -232,6 +261,8 @@ class SamanNeoPgShaparakPaymentAdapter(SamanShaparakPaymentAdapter):
 
         Raises:
             UnavailableError: If the payment service is unavailable or returns HTTP 5xx.
+            InvalidArgumentError: If the gateway rejects the request with an HTTP 4xx status.
+            NotFoundError: If the gateway answers HTTP 404.
             InternalError: If an unexpected error occurs.
         """
         try:
@@ -264,9 +295,9 @@ class SamanNeoPgShaparakPaymentAdapter(SamanShaparakPaymentAdapter):
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Neo-PG Token Service") from e
         except httpx2.HTTPStatusError as e:
-            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
-                raise UnavailableError(resource_type="Saman Neo-PG Token Service") from e
-            raise InternalError() from e
+            raise _map_status_error(e, "Saman Neo-PG Token Service") from e
+        except BaseError:
+            raise
         except Exception as e:
             raise InternalError() from e
 
@@ -337,6 +368,8 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
 
         Raises:
             UnavailableError: If the payment service is unavailable or returns HTTP 5xx.
+            InvalidArgumentError: If the gateway rejects the request with an HTTP 4xx status.
+            NotFoundError: If the gateway answers HTTP 404.
             InternalError: If an unexpected error occurs.
         """
         try:
@@ -367,9 +400,9 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Token Service") from e
         except httpx2.HTTPStatusError as e:
-            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
-                raise UnavailableError(resource_type="Saman Token Service") from e
-            raise InternalError() from e
+            raise _map_status_error(e, "Saman Token Service") from e
+        except BaseError:
+            raise
         except Exception as e:
             raise InternalError() from e
 
@@ -385,6 +418,8 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
         Raises:
             InvalidArgumentError: If TERMINAL_ID is not numeric.
             UnavailableError: If the verify service is unavailable or returns HTTP 5xx.
+            InvalidArgumentError: If the gateway rejects the request with an HTTP 4xx status.
+            NotFoundError: If the gateway answers HTTP 404.
             InternalError: If an unexpected error occurs.
         """
         terminal_number = self._get_terminal_number()
@@ -414,9 +449,9 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Verify Service") from e
         except httpx2.HTTPStatusError as e:
-            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
-                raise UnavailableError(resource_type="Saman Verify Service") from e
-            raise InternalError() from e
+            raise _map_status_error(e, "Saman Verify Service") from e
+        except BaseError:
+            raise
         except Exception as e:
             raise InternalError() from e
 
@@ -432,6 +467,8 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
         Raises:
             InvalidArgumentError: If TERMINAL_ID is not numeric.
             UnavailableError: If the reverse service is unavailable or returns HTTP 5xx.
+            InvalidArgumentError: If the gateway rejects the request with an HTTP 4xx status.
+            NotFoundError: If the gateway answers HTTP 404.
             InternalError: If an unexpected error occurs.
         """
         terminal_number = self._get_terminal_number()
@@ -452,9 +489,9 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Reverse Service") from e
         except httpx2.HTTPStatusError as e:
-            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
-                raise UnavailableError(resource_type="Saman Reverse Service") from e
-            raise InternalError() from e
+            raise _map_status_error(e, "Saman Reverse Service") from e
+        except BaseError:
+            raise
         except Exception as e:
             raise InternalError() from e
 
@@ -477,6 +514,8 @@ class AsyncSamanNeoPgShaparakPaymentAdapter(AsyncSamanShaparakPaymentAdapter):
 
         Raises:
             UnavailableError: If the payment service is unavailable or returns HTTP 5xx.
+            InvalidArgumentError: If the gateway rejects the request with an HTTP 4xx status.
+            NotFoundError: If the gateway answers HTTP 404.
             InternalError: If an unexpected error occurs.
         """
         try:
@@ -509,8 +548,8 @@ class AsyncSamanNeoPgShaparakPaymentAdapter(AsyncSamanShaparakPaymentAdapter):
         except httpx2.RequestError as e:
             raise UnavailableError(resource_type="Saman Neo-PG Token Service") from e
         except httpx2.HTTPStatusError as e:
-            if e.response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
-                raise UnavailableError(resource_type="Saman Neo-PG Token Service") from e
-            raise InternalError() from e
+            raise _map_status_error(e, "Saman Neo-PG Token Service") from e
+        except BaseError:
+            raise
         except Exception as e:
             raise InternalError() from e
