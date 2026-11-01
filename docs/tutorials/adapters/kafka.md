@@ -119,6 +119,7 @@ from archipy.models.errors import (
     AlreadyExistsError,
     InternalError,
     InvalidArgumentError,
+    NotFoundError,
     ServiceUnavailableError,
 )
 
@@ -127,9 +128,12 @@ logger = logging.getLogger(__name__)
 # Use global configuration
 admin = KafkaAdminAdapter()
 
-# Create a topic
+# Create a topic. The call waits for the broker to confirm (optional `timeout` in seconds,
+# default REQUEST_TIMEOUT_MS), so AlreadyExistsError and broker failures are raised here.
 try:
     admin.create_topic("my-topic", num_partitions=3, replication_factor=1)
+except AlreadyExistsError:
+    logger.info("Topic already exists")
 except InvalidArgumentError as e:
     logger.error("Invalid topic configuration: %s", e)
     raise
@@ -152,9 +156,11 @@ else:
     for topic_name in cluster_metadata.topics:
         logger.info("Topic: %s", topic_name)
 
-# Delete topics — accepts a list of topic names
+# Delete topics — accepts a list of topic names; a missing topic raises NotFoundError
 try:
     admin.delete_topic(["my-topic"])
+except NotFoundError:
+    logger.info("Topic does not exist")
 except InvalidArgumentError as e:
     logger.error("Invalid topic list: %s", e)
     raise

@@ -988,6 +988,17 @@ def step_create_consumer_with_arguments(context, mode, arguments):
     )
 
 
+@when('I try to {operation} topic "{topic_name}"')
+def step_try_admin_operation(context, operation, topic_name):
+    """Create an already existing topic or delete a missing one, keeping the outcome."""
+    adapter = get_kafka_admin_adapter(context)
+    if operation == "create an existing":
+        adapter.create_topic(topic_name)
+        _capture_error(context, lambda: adapter.create_topic(topic_name))
+    else:
+        _capture_error(context, lambda: adapter.delete_topic([topic_name]))
+
+
 @then('the Kafka operation should raise "{error_name}"')
 def step_operation_should_raise(context, error_name):
     """Assert the captured exception is the named ArchiPy error."""

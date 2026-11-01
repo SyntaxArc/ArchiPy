@@ -66,6 +66,15 @@ Feature: Kafka Adapter Operations Testing
     And I commit the consumed offset for topic "test-topic-commit" with group "test-group-commit"
     And the commit should succeed
 
+  Scenario Outline: Admin topic failures are raised to the caller: <operation> topic
+    When I try to <operation> topic "<topic>"
+    Then the Kafka operation should raise "<error>"
+
+    Examples:
+      | operation          | topic                   | error              |
+      | create an existing | test-topic-exists-twice | AlreadyExistsError |
+      | delete a missing   | test-topic-never-made   | NotFoundError      |
+
   @async
   Scenario: Async create and verify a topic
     When I create a topic named "test-topic-create-async"
