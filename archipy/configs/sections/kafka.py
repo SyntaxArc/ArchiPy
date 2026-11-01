@@ -208,6 +208,17 @@ class KafkaConfig(BaseModel):
                 raise ConfigurationError(operation="kafka_validate", reason="sasl_auth_incomplete")
             if self.SASL_MECHANISM in _SASL_MECHANISMS_WITH_CREDENTIALS and not (self.USERNAME and self.PASSWORD):
                 raise ConfigurationError(operation="kafka_validate", reason="sasl_auth_incomplete")
+        if self.SECURITY_PROTOCOL == "SASL_PLAINTEXT" and self.SASL_MECHANISM == "PLAIN":
+            logger.warning(
+                "SASL PLAIN over SASL_PLAINTEXT sends the username and password unencrypted; use SASL_SSL.",
+            )
+        if self.SECURITY_PROTOCOL not in ("SASL_PLAINTEXT", "SASL_SSL") and (
+            self.USERNAME or self.PASSWORD or self.SASL_MECHANISM
+        ):
+            logger.warning(
+                "SASL credentials or a SASL mechanism are set but SECURITY_PROTOCOL is %s; they are ignored.",
+                self.SECURITY_PROTOCOL,
+            )
         if self.SECURITY_PROTOCOL == "SSL" and not (self.SSL_CA_FILE or self.SSL_CERT_FILE or self.SSL_KEY_FILE):
             logger.warning("SSL enabled but no SSL certificates provided; this may cause connection issues.")
         if self.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM == "none":

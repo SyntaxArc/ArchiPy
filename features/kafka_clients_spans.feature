@@ -159,6 +159,45 @@ Feature: Kafka Clients and Spans Testing
       | async | an empty key | legacy | an empty key | raised     |
       | async | no key       | none   | no key       | not raised |
 
+  Scenario Outline: A Kafka configuration with protocol <protocol>, mechanism <mechanism> and username <username> logs <outcome>
+    When the Kafka settings are assembled with protocol <protocol>, mechanism <mechanism> and username <username> while warnings are collected
+    Then <expectation>
+
+    Examples:
+      | protocol       | mechanism | username | outcome              | expectation                                                              |
+      | SASL_PLAINTEXT | PLAIN     | user     | an unencrypted PLAIN | a configuration warning mentioning "unencrypted" should have been logged |
+      | PLAINTEXT      | PLAIN     | user     | ignored credentials  | a configuration warning mentioning "ignored" should have been logged     |
+      | SASL_SSL       | PLAIN     | user     | nothing              | no configuration warning should have been logged                         |
+
+  Scenario: Closing a sync producer is bounded by the delivery timeout and can be repeated
+    Given an unreachable Kafka broker
+    When a sync producer with a pending message on that broker is closed twice
+    Then the close should have finished within 15 seconds without an error
+
+  Scenario: An async producer honors the flush timeout
+    Given an unreachable Kafka broker
+    When an async producer with a pending message on that broker is flushed with a timeout of 1 second
+    Then the Kafka operation should raise "ConnectionTimeoutError"
+
+  Scenario: A closed async producer is not recreated by later calls
+    When an async producer is closed and then used
+    Then the Kafka operation should raise "FailedPreconditionError"
+
+  Scenario: The on_commit callback reports an asynchronous commit
+    Given a test topic named "test-topic-on-commit"
+    When a sync consumer with an on_commit callback commits a message of topic "test-topic-on-commit" asynchronously
+    Then the on_commit callback should have reported a successful commit
+
+  Scenario Outline: A <mode> consumer reports its assigned partitions to the on_assign hook
+    Given a test topic named "test-topic-on-assign-<mode>"
+    When a <mode> consumer subscribes to topic "test-topic-on-assign-<mode>" with an on_assign callback
+    Then the on_assign callback should have received partitions of topic "test-topic-on-assign-<mode>"
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
   Scenario: Producing into a full local queue is reported as resource exhaustion
     Given an unreachable Kafka broker
     When I produce 2 messages with a producer whose queue holds only 1 message on that broker

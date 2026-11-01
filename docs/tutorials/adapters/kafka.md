@@ -236,6 +236,9 @@ except InternalError as e:
     raise
 else:
     logger.info("All messages flushed")
+finally:
+    # close() flushes for at most the delivery timeout, logs the messages it had to drop and releases the client
+    producer.close()
 ```
 
 !!! warning
@@ -332,6 +335,26 @@ else:
 msg = consumer.poll(timeout=1)
 if msg is not None:
     logger.info("Polled: %s", msg.value().decode("utf-8"))
+
+# Always close the consumer: it leaves the group and commits pending offsets
+consumer.close()
+```
+
+#### Commit callbacks and rebalance hooks
+
+Asynchronous commits report their outcome only through a callback, so pass `on_commit` to see failures (they are
+always logged at warning level). `subscribe` accepts `on_assign` and `on_revoke` hooks that run during `poll` when the
+group rebalances; use `on_revoke` to commit offsets before partitions move. The async consumer expects coroutine
+functions for the rebalance hooks.
+
+```python
+def on_commit(error, partitions):
+    if error is not None:
+        logger.error("Commit failed: %s", error)
+
+
+consumer = KafkaConsumerAdapter(group_id="my-consumer-group", topic_list=["my-topic"], on_commit=on_commit)
+consumer.subscribe(["my-topic"], on_revoke=lambda consumer, partitions: logger.info("Revoked %s", partitions))
 ```
 
 ### Assign to Specific Partitions
@@ -668,7 +691,7 @@ async def publish_event(event: EventMessage) -> dict[str, str]:
         raise HTTPException(status_code=502, detail="Network error") from e
     except InternalError as e:
         logger.error("Failed to publish event: %s", e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail="Internal error") from e
     else:
         logger.info("Event published to 'events' topic")
         return {"message": "Event published successfully"}
@@ -689,7 +712,7 @@ async def list_topics() -> dict[str, list[str]]:
         cluster_metadata = admin.list_topics()
     except InternalError as e:
         logger.error("Failed to list topics: %s", e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail="Internal error") from e
     else:
         logger.info("Retrieved topic list")
         return {"topics": list(cluster_metadata.topics.keys())}
