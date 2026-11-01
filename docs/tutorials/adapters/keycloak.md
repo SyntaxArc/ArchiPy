@@ -34,8 +34,17 @@ KEYCLOAK__CLIENT_SECRET_KEY=client-secret
 KEYCLOAK__VERIFY_SSL=true  # true, false, or the path of a CA bundle for a private CA
 KEYCLOAK__TIMEOUT=10  # seconds, fractions allowed (2.5)
 KEYCLOAK__TOKEN_LEEWAY_SECONDS=0  # clock-skew tolerance when validating token expiry
+KEYCLOAK__EXPECTED_ISSUER=https://keycloak.example.com/realms/my-realm  # enforce the iss claim (and typ=Bearer) of locally verified tokens
+KEYCLOAK__EXPECTED_AUDIENCE=my-client  # enforce the aud claim (and typ=Bearer) of locally verified tokens
 KEYCLOAK__REMOTE_CACHE_TTL_SECONDS=0  # opt-in cache for the keycloak auth guards' UserInfo/permission lookups (0 = off)
 ```
+
+!!! warning "Token claim checks"
+    Local verification (`validate_token`, `get_token_info`, role checks) always checks the signature and expiry. Set
+    `KEYCLOAK__EXPECTED_ISSUER` and/or `KEYCLOAK__EXPECTED_AUDIENCE` to also require the `iss` / `aud` claims and
+    `typ == "Bearer"`; mismatching tokens are rejected (`validate_token` returns `False`, `get_token_info` raises
+    `InvalidTokenError`). Without these settings a mismatch only emits a `DeprecationWarning`, and enforcement becomes
+    the default in 6.0.
 
 ### Connection Options
 

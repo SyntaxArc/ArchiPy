@@ -122,6 +122,23 @@ Feature: Keycloak Authentication Testing
       | async        | jwks-async | jwks-async-c | jwksasync |
 
   @tokens
+  Scenario Outline: Local token checks enforce the configured issuer, audience and token type
+    Given a configured sync Keycloak adapter via direct
+    And I create a realm named "<realm_name>" with display name "Claims Realm" using sync adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using sync adapter
+    And I create a user with username "<username>" and password "pass123" using sync adapter
+    And I have a valid token for "<username>" with password "pass123" using sync adapter
+    Then a <adapter_type> adapter of realm "<realm_name>" and client "<client_name>" expecting EXPECTED_ISSUER "https://evil.example" rejects the access token of "<username>"
+    And a <adapter_type> adapter of realm "<realm_name>" and client "<client_name>" expecting EXPECTED_AUDIENCE "other-client" rejects the access token of "<username>"
+    And a <adapter_type> adapter of realm "<realm_name>" and client "<client_name>" expecting the issuer of the token of "<username>" accepts its access token
+    And forged claims with token type "<token_type>" are <outcome> by the claim check
+
+    Examples:
+      | adapter_type | realm_name   | client_name    | username    | token_type | outcome  |
+      | sync         | claims-sync  | claims-sync-c  | claimssync  | Refresh    | rejected |
+      | async        | claims-async | claims-async-c | claimsasync | Bearer     | accepted |
+
+  @tokens
   Scenario: Async token validation after the realm signing key rotates
     Given a configured sync Keycloak adapter via direct
     And I create a realm named "async-rotated-key-realm" with display name "Rotated Key Realm" using sync adapter

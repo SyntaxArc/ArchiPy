@@ -45,6 +45,21 @@ class KeycloakConfig(BaseModel):
         ge=0,
         description="Clock-skew tolerance in seconds when validating token expiry (python-keycloak defaults to 60)",
     )
+    EXPECTED_ISSUER: str | None = Field(
+        default=None,
+        description=(
+            "Required `iss` claim of locally verified tokens. When set, a mismatching issuer (and a `typ` other than "
+            "Bearer) is rejected. When unset, a mismatch against `{SERVER_URL}/realms/{REALM_NAME}` only emits a "
+            "DeprecationWarning; enforcement becomes the default in 6.0."
+        ),
+    )
+    EXPECTED_AUDIENCE: str | None = Field(
+        default=None,
+        description=(
+            "Required `aud` claim of locally verified tokens (typically CLIENT_ID). When set, tokens whose audience "
+            "does not include it (and tokens whose `typ` is not Bearer) are rejected."
+        ),
+    )
     REMOTE_CACHE_TTL_SECONDS: float = Field(
         default=0.0,
         ge=0,
