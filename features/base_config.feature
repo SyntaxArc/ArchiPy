@@ -250,3 +250,34 @@ Feature: Base Configuration System
       | TEST        | False      | True  | False | False | INFO    |
       | DEV         | False      | False | True  | False | DEBUG   |
       | LOCAL       | False      | False | False | True  | DEBUG   |
+
+  Scenario Outline: The <db_type> session managers pass the <field> option to the <kind> driver only when configured
+    When I build the <kind> <db_type> driver options with <field> set to <value>
+    Then the driver options should be <expected>
+
+    Examples: PostgreSQL
+      | kind  | db_type  | field                       | value | expected                                 |
+      | sync  | postgres | STATEMENT_TIMEOUT_MS        | null  | {}                                       |
+      | sync  | postgres | STATEMENT_TIMEOUT_MS        | 5000  | {"options": "-c statement_timeout=5000"} |
+      | async | postgres | LOCK_TIMEOUT_MS             | 1500  | {"options": "-c lock_timeout=1500"}      |
+      | sync  | postgres | APPLICATION_NAME            | "api" | {"application_name": "api"}              |
+      | async | postgres | PREPARE_THRESHOLD           | 0     | {"prepare_threshold": 0}                 |
+      | sync  | postgres | DISABLE_PREPARED_STATEMENTS | true  | {"prepare_threshold": null}              |
+
+    Examples: MySQL
+      | kind  | db_type | field                     | value | expected                                                   |
+      | sync  | mysql   | CONNECT_TIMEOUT           | null  | {}                                                         |
+      | sync  | mysql   | CONNECT_TIMEOUT           | 7     | {"connect_timeout": 7}                                     |
+      | async | mysql   | READ_TIMEOUT              | 9     | {"read_timeout": 9}                                        |
+      | sync  | mysql   | WRITE_TIMEOUT             | 11    | {"write_timeout": 11}                                      |
+      | async | mysql   | WRITE_TIMEOUT             | 11    | {}                                                         |
+      | sync  | mysql   | STATEMENT_TIMEOUT_MS      | 3000  | {"init_command": "SET SESSION max_execution_time=3000"}    |
+      | async | mysql   | LOCK_WAIT_TIMEOUT_SECONDS | 4     | {"init_command": "SET SESSION innodb_lock_wait_timeout=4"} |
+
+    Examples: SQLite
+      | kind  | db_type | field             | value | expected                     |
+      | sync  | sqlite  | TIMEOUT           | null  | {}                           |
+      | sync  | sqlite  | TIMEOUT           | 2.5   | {"timeout": 2.5}             |
+      | async | sqlite  | TIMEOUT           | 2.5   | {"timeout": 2.5}             |
+      | sync  | sqlite  | CHECK_SAME_THREAD | false | {"check_same_thread": false} |
+      | async | sqlite  | CHECK_SAME_THREAD | false | {}                           |

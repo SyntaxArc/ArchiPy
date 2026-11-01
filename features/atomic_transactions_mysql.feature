@@ -435,3 +435,17 @@ Feature: SQLAlchemy Atomic Transactions on MySQL
       | kind  | tls_mode        | outcome   |
       | async | required        | encrypted |
       | async | verify_identity | rejected  |
+
+  Scenario Outline: The <kind> driver applies <setting> from the configuration
+    When I read <setting> from a <kind> mysql connection configured with <field> <value>
+    Then the session setting should be <expected>
+
+    Examples: Sync driver
+      | kind | setting                  | field                     | value | expected |
+      | sync | max_execution_time       | STATEMENT_TIMEOUT_MS      | 3000  | 3000     |
+      | sync | innodb_lock_wait_timeout | LOCK_WAIT_TIMEOUT_SECONDS | 4     | 4        |
+
+    Examples: Async driver
+      | kind  | setting                  | field                     | value | expected |
+      | async | max_execution_time       | STATEMENT_TIMEOUT_MS      | 3000  | 3000     |
+      | async | innodb_lock_wait_timeout | LOCK_WAIT_TIMEOUT_SECONDS | 4     | 4        |
