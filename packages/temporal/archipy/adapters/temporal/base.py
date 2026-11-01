@@ -179,6 +179,35 @@ class BaseWorkflow[T, R]:
         workflow.logger.info("Workflow event", extra=log_data)
 
 
+_claimed_activity_names: set[str] = set()
+
+
+def _name_activity_method(cls: type, method_name: str) -> None:
+    """Register ``method_name`` of ``cls`` under a class-qualified activity name when the bare name is taken.
+
+    Classes defined in this module never claim the bare name. The first other subclass keeps the inherited method
+    (bare name); every later subclass gets its own wrapper named ``<ClassName>.<method_name>``.
+
+    Args:
+        cls (type): The newly created subclass.
+        method_name (str): ``execute`` or ``execute_atomic``.
+    """
+    if cls.__module__ == __name__ or method_name in cls.__dict__:
+        return
+    if method_name not in _claimed_activity_names:
+        _claimed_activity_names.add(method_name)
+        return
+    inherited = getattr(cls, method_name)
+
+    async def wrapper(self: Any, activity_input: Any) -> Any:
+        return await inherited(self, activity_input)
+
+    wrapper.__name__ = method_name
+    wrapper.__qualname__ = f"{cls.__qualname__}.{method_name}"
+    wrapper.__doc__ = inherited.__doc__
+    setattr(cls, method_name, activity.defn(name=f"{cls.__name__}.{method_name}")(wrapper))
+
+
 class BaseActivity[T, R]:
     """Base class for all Temporal activities in ArchiPy.
 
@@ -190,6 +219,24 @@ class BaseActivity[T, R]:
         T: Type of the activity input parameter.
         R: Type of the activity return value.
     """
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Give each subclass a distinct activity name.
+
+        Temporal rejects two activities with the same name, and the bare ``@activity.defn`` name of the inherited
+        ``execute`` method is the same for every subclass. The first user-defined subclass keeps the bare name
+        (``execute``) for backward compatibility; later ones are registered as ``<ClassName>.execute``.
+        """
+        super().__init_subclass__(**kwargs)
+        _name_activity_method(cls, "execute")
+
+    def as_activity(self) -> Callable[..., Any]:
+        """Return the bound method to register with a worker or call from a workflow.
+
+        Returns:
+            Callable[..., Any]: The bound ``execute`` method, carrying this class's activity name.
+        """
+        return self.execute
 
     def __init__(self, logic: Any | None = None) -> None:
         """Initialize the activity with a logic instance.
@@ -511,6 +558,19 @@ class AtomicActivity(BaseActivity[T, R]):
         logic (Any, optional): Business logic instance with repository access. Defaults to None.
         db_type (str, optional): Database type for atomic operations. Defaults to "postgres".
     """
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Give each subclass a distinct ``execute_atomic`` activity name (see ``BaseActivity.__init_subclass__``)."""
+        super().__init_subclass__(**kwargs)
+        _name_activity_method(cls, "execute_atomic")
+
+    def as_activity(self) -> Callable[..., Any]:
+        """Return the bound ``execute_atomic`` method to register with a worker.
+
+        Returns:
+            Callable[..., Any]: The bound ``execute_atomic`` method, carrying this class's activity name.
+        """
+        return self.execute_atomic
 
     def __init__(self, logic: Any | None = None, db_type: str = "postgres") -> None:
         """Initialize the atomic activity.
