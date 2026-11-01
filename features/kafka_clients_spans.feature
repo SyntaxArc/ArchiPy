@@ -100,6 +100,10 @@ Feature: Kafka Clients and Spans Testing
       | sync  | no transactional id | InvalidArgumentError |
       | async | a transactional id  | ConfigurationError   |
 
+  Scenario: An async consumer whose subscription failed keeps failing instead of polling unsubscribed
+    When I poll an async consumer subscribed to an invalid topic pattern twice
+    Then the Kafka operation should raise "InvalidArgumentError"
+
   Scenario: Producing into a full local queue is reported as resource exhaustion
     Given an unreachable Kafka broker
     When I produce 2 messages with a producer whose queue holds only 1 message on that broker

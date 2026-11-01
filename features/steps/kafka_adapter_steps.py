@@ -1063,6 +1063,25 @@ def step_use_transaction_settings(context, mode, setting):
         )
 
 
+@when("I poll an async consumer subscribed to an invalid topic pattern twice")
+def step_async_consumer_invalid_subscription(context):
+    """A failed first subscription must not leave a consumer that silently polls without a subscription."""
+    config = _get_kafka_config(context)
+
+    async def run():
+        consumer = AsyncKafkaConsumerAdapter("invalid-pattern-group", topic_list=["^("], kafka_configs=config)
+        errors = []
+        for _ in range(2):
+            try:
+                await consumer.poll(timeout=1)
+            except Exception as error:
+                errors.append(error)
+        return errors
+
+    errors = asyncio.run(run())
+    get_current_scenario_context(context).store("kafka_operation_error", errors[0] if len(errors) == 2 else None)
+
+
 @then('the Kafka operation should raise one of "{error_names}"')
 def step_operation_should_raise_one_of(context, error_names):
     """Assert the captured exception is one of the comma separated ArchiPy errors."""

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 from typing import TYPE_CHECKING, NoReturn, override
 
@@ -1150,6 +1152,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
         self._topic_list = topic_list
         self._partition_list = partition_list
         self._adapter: AIOConsumer | None = None
+        self._init_lock = asyncio.Lock()
 
         if not (topic_list or partition_list) or (topic_list and partition_list):
             logger.error("Invalid topic or partition list")
@@ -1196,17 +1199,24 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             ConfigurationError: If there is an error in the Kafka configuration.
             InternalError: If there is an error creating the consumer.
         """
-        if self._adapter is None:
+        async with self._init_lock:
+            if self._adapter is not None:
+                return self._adapter
+            consumer: AIOConsumer | None = None
             try:
                 config = self._build_consumer_conf(self._configs)
-                self._adapter = AIOConsumer(config, max_workers=self._configs.CONSUMER_MAX_WORKERS)
+                consumer = AIOConsumer(config, max_workers=self._configs.CONSUMER_MAX_WORKERS)
                 if self._topic_list:
-                    await self._adapter.subscribe(self._topic_list)
+                    await consumer.subscribe(self._topic_list)
                 elif self._partition_list:
-                    await self._adapter.assign(self._partition_list)
+                    await consumer.assign(self._partition_list)
             except _KAFKA_CLIENT_ERRORS as e:
+                if consumer is not None:
+                    with contextlib.suppress(*_KAFKA_CLIENT_ERRORS):
+                        await consumer.close()
                 self._handle_kafka_exception(e, "AsyncKafkaConsumer_init")
-        return self._adapter
+            self._adapter = consumer
+            return consumer
 
     @override
     async def batch_consume(self, messages_number: int = 500, timeout: int = 1) -> list[Message]:
