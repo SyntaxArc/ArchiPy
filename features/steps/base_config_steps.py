@@ -12,6 +12,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
+from pydantic import ValidationError
 from features.environment import TestConfig
 from features.test_helpers import get_current_scenario_context
 
@@ -365,6 +366,16 @@ def step_then_postgres_parts(context, user, password, host, port, database):
     assert actual == (user, password, host, port, database), actual
 
 
+@then('an invalid PostgreSQL configuration with password "{password}" should not echo it in its error')
+def step_then_postgres_error_hides_password(context, password):
+    try:
+        PostgresSQLAlchemyConfig(POSTGRES_DSN=f"postgresql+psycopg://alice:{password}@db.internal:notaport/app")
+    except ValidationError as error:
+        assert password not in str(error), str(error)
+    else:
+        raise AssertionError("expected a ValidationError")
+
+
 @then('the PostgreSQL DSN should be "{dsn}"')
 def step_then_postgres_dsn(context, dsn):
     config = get_current_scenario_context(context).get("postgres_config")
@@ -474,7 +485,8 @@ def step_when_vault_client_built_for_identity(context):
     scenario_context = get_current_scenario_context(context)
     try:
         scenario_context.store(
-            "vault_client", create_vault_client(VaultConfig(**scenario_context.get("vault_login_settings"))),
+            "vault_client",
+            create_vault_client(VaultConfig(**scenario_context.get("vault_login_settings"))),
         )
         scenario_context.store("vault_config_error", None)
     except Exception as error:
