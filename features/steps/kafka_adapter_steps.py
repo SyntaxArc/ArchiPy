@@ -17,7 +17,7 @@ from archipy.adapters.kafka.adapters import (
 )
 from archipy.configs.config_template import KafkaConfig
 from archipy.models import errors as archipy_errors
-from archipy.models.errors import UnavailableError
+from archipy.models.errors import ConfigurationError, UnavailableError
 
 
 def _get_kafka_config(context):
@@ -1172,6 +1172,71 @@ def step_check_hostname_verification(context, expected):
     settings = get_current_scenario_context(context).get("kafka_client_settings")
     actual = settings.get("ssl.endpoint.identification.algorithm")
     assert actual == expected, f"Expected hostname verification {expected!r}, got {actual!r}"
+
+
+def _optional(value):
+    """Map the feature-file placeholder '-' to None."""
+    return None if value == "-" else value
+
+
+def _security_values(protocol, mechanism, username, extra):
+    """Build KafkaConfig keyword arguments, leaving out every setting given as '-'."""
+    values = {"SECURITY_PROTOCOL": protocol, **extra}
+    if _optional(mechanism):
+        values["SASL_MECHANISM"] = mechanism
+    if _optional(username):
+        values["USERNAME"] = username
+        values["PASSWORD"] = "pass"
+    return values
+
+
+@when(
+    "Kafka client settings are built for protocol {protocol} with mechanism {mechanism}, username {username}, "
+    "CA file {ca}, certificate {cert} and key {key}",
+)
+def step_build_protocol_settings(context, protocol, mechanism, username, ca, cert, key):
+    """Build the librdkafka settings for a protocol and the security options that are set."""
+    files = {"SSL_CA_FILE": ca, "SSL_CERT_FILE": cert, "SSL_KEY_FILE": key}
+    extra = {name: value for name, value in files.items() if _optional(value)}
+    config = KafkaConfig(**_security_values(protocol, mechanism, username, extra))
+    settings = {}
+    _apply_security_config(settings, config)
+    get_current_scenario_context(context).store("kafka_client_settings", settings)
+
+
+@then('the Kafka client settings should include "{keys}"')
+def step_settings_include(context, keys):
+    """Every listed librdkafka key must be present."""
+    settings = get_current_scenario_context(context).get("kafka_client_settings")
+    missing = [key for key in keys.split(",") if key not in settings]
+    assert not missing, f"Missing {missing} in {sorted(settings)}"
+
+
+@then('the Kafka client settings should not include "{keys}"')
+def step_settings_exclude(context, keys):
+    """None of the listed librdkafka keys may be present."""
+    settings = get_current_scenario_context(context).get("kafka_client_settings")
+    present = [key for key in keys.split(",") if key in settings]
+    assert not present, f"Unexpected {present} in {sorted(settings)}"
+
+
+@when("a Kafka configuration is validated with protocol {protocol}, mechanism {mechanism} and username {username}")
+def step_validate_protocol_config(context, protocol, mechanism, username):
+    """Try to build a Kafka configuration and keep the outcome."""
+    error = None
+    try:
+        KafkaConfig(**_security_values(protocol, mechanism, username, {}))
+    except (ConfigurationError, ValueError) as exc:
+        error = exc
+    get_current_scenario_context(context).store("kafka_config_error", error)
+
+
+@then("the Kafka configuration should be rejected as incomplete")
+def step_config_rejected(context):
+    """Validation must fail with the incomplete SASL authentication reason."""
+    error = get_current_scenario_context(context).get("kafka_config_error")
+    assert error is not None, "Expected the configuration to be rejected"
+    assert "sasl_auth_incomplete" in str(error), f"Unexpected error: {error}"
 
 
 @when('I close the producer for topic "{topic_name}"')

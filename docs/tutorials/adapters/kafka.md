@@ -32,8 +32,13 @@ KAFKA__AUTO_OFFSET_RESET=earliest
 ### Direct Configuration
 
 !!! warning
-    With `SECURITY_PROTOCOL` set to `SASL_PLAINTEXT` or `SASL_SSL`, `SASL_MECHANISM`, `USERNAME` and `PASSWORD` are all
-    required. Load the password from the environment or a secrets store, not from source code.
+    With `SECURITY_PROTOCOL` set to `SASL_PLAINTEXT` or `SASL_SSL`, `SASL_MECHANISM` is required, and `USERNAME` and
+    `PASSWORD` are required for `PLAIN`, `SCRAM-SHA-256` and `SCRAM-SHA-512`. `GSSAPI` and `OAUTHBEARER` need no
+    username or password. Load the password from the environment or a secrets store, not from source code.
+
+    Each security setting is applied when it is set, based on `SECURITY_PROTOCOL`: SASL settings for the `SASL_*`
+    protocols, and `SSL_CA_FILE`, `SSL_CERT_FILE`, `SSL_KEY_FILE` for `SSL` and `SASL_SSL`. mTLS without SASL works
+    with `SECURITY_PROTOCOL="SSL"` and a certificate and key; leave `SSL_CA_FILE` unset to use the system CA store.
 
 ```python
 from archipy.configs.config_template import KafkaConfig
@@ -48,7 +53,7 @@ config = KafkaConfig(
 ```
 
 !!! warning "Broker hostname verification is on by default"
-    With credentials and `SSL_CA_FILE` set, the adapters verify that each broker certificate matches the broker
+    With `SECURITY_PROTOCOL` set to `SSL` or `SASL_SSL`, the adapters verify that each broker certificate matches the broker
     hostname (`SSL_ENDPOINT_IDENTIFICATION_ALGORITHM="https"`, the default). Earlier releases turned this check off.
     Brokers reached by IP address, or whose certificate SAN does not list the address you connect to, now fail the TLS
     handshake. Fix the certificates if you can. To keep the old behavior, set
