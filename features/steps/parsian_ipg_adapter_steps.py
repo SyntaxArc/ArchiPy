@@ -3,9 +3,12 @@ import logging
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import httpx2
+import requests
 import zeep
 from behave import given, then, when
 from zeep.exceptions import Fault
+from zeep.exceptions import TransportError as ZeepTransportError
 
 from archipy.adapters.internet_payment_gateways.ir.parsian import adapters as parsian_adapters
 from archipy.configs.base_config import BaseConfig
@@ -188,9 +191,20 @@ def step_given_gateway_fault(context, operation):
     _state(context)["script"][operation] = ("raise", Fault("gateway is down"))
 
 
-@given('the Parsian gateway fails with a connection error on "{operation}"')
-def step_given_gateway_connection_error(context, operation):
-    _state(context)["script"][operation] = ("raise", ConnectionError("connection reset"))
+TRANSPORT_FAILURES = {
+    "connection error": lambda: ConnectionError("connection reset"),
+    "requests timeout": lambda: requests.exceptions.ReadTimeout("read timed out"),
+    "requests connection error": lambda: requests.exceptions.ConnectionError("refused"),
+    "httpx timeout": lambda: httpx2.ReadTimeout("read timed out"),
+    "httpx connect error": lambda: httpx2.ConnectError("refused"),
+    "zeep transport error": lambda: ZeepTransportError("HTTP 502"),
+    "unexpected bug": lambda: KeyError("unexpected"),
+}
+
+
+@given('the Parsian gateway fails with {failure} on "{operation}"')
+def step_given_gateway_transport_failure(context, failure, operation):
+    _state(context)["script"][operation] = ("raise", TRANSPORT_FAILURES[failure]())
 
 
 @when("I create a {kind:w} Parsian adapter with no login account")
@@ -208,6 +222,24 @@ def step_when_create_adapter_from_global(context, kind):
 async def step_when_initiate_payment(context, amount, order_id, callback):
     request = PaymentRequestDTO(amount=amount, order_id=order_id, callback_url=callback)
     await _call(context, "initiate_payment", request)
+
+
+@when('I call Parsian "{operation}"')
+async def step_when_call_operation(context, operation):
+    requests_by_operation = {
+        "SalePaymentRequest": (
+            "initiate_payment",
+            PaymentRequestDTO(amount=50000, order_id=1001, callback_url="https://shop.example.com/back"),
+        ),
+        "ConfirmPayment": ("confirm_payment", ConfirmRequestDTO(token=987654)),
+        "ConfirmPaymentWithAmount": (
+            "confirm_payment_with_amount",
+            ConfirmWithAmountRequestDTO(token=987654, order_id=1001, amount=50000),
+        ),
+        "ReversalRequest": ("reverse_payment", ReverseRequestDTO(token=987654)),
+    }
+    method_name, request = requests_by_operation[operation]
+    await _call(context, method_name, request)
 
 
 @when("I confirm Parsian token {token:d}")
