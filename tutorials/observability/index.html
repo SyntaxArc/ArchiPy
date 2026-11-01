@@ -4314,6 +4314,14 @@ so are values that are valid alone but invalid together (for example a batch siz
 <td><code>OTLP_COMPRESSION</code></td>
 </tr>
 <tr>
+<td><code>OTEL_EXPORTER_OTLP_{,TRACES_,METRICS_,LOGS_}{CERTIFICATE,CLIENT_CERTIFICATE,CLIENT_KEY}</code> (PEM file paths; a client certificate needs a client key)</td>
+<td><code>OTLP_</code>, <code>TRACES_</code>, <code>METRICS_</code>, <code>LOGS_</code> + <code>CERTIFICATE</code>, <code>CLIENT_CERTIFICATE</code>, <code>CLIENT_KEY</code></td>
+</tr>
+<tr>
+<td><code>OTEL_EXPORTER_OTLP_{,TRACES_,METRICS_,LOGS_}INSECURE</code> (<code>true</code>/<code>false</code>; gRPC only, HTTP follows the URL scheme)</td>
+<td><code>OTLP_INSECURE</code>, <code>TRACES_INSECURE</code>, <code>METRICS_INSECURE</code>, <code>LOGS_INSECURE</code></td>
+</tr>
+<tr>
 <td><code>OTEL_TRACES_SAMPLER</code>, <code>OTEL_TRACES_SAMPLER_ARG</code></td>
 <td><code>TRACES_SAMPLER</code>, <code>TRACES_SAMPLE_RATIO</code> (the Jaeger and X-Ray samplers are not supported)</td>
 </tr>
