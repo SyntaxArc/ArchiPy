@@ -193,6 +193,43 @@ def step_given_gateway_connection_error(context, operation):
     _state(context)["script"][operation] = ("raise", ConnectionError("connection reset"))
 
 
+def _track_session_close(context, adapter):
+    """Record calls to the sync adapter's requests.Session.close (the third-party boundary)."""
+    closed = []
+    original = adapter._session.close
+
+    def recording_close():
+        closed.append(True)
+        original()
+
+    adapter._session.close = recording_close
+    get_current_scenario_context(context).store("session_closed", closed)
+
+
+@when("I close the Parsian adapter")
+async def step_when_close(context):
+    adapter = get_current_scenario_context(context).get("adapter")
+    if not hasattr(adapter, "aclose"):
+        _track_session_close(context, adapter)
+    if hasattr(adapter, "aclose"):
+        await adapter.aclose()
+    else:
+        adapter.close()
+
+
+@when("I use the Parsian adapter as a context manager")
+async def step_when_context_manager(context):
+    adapter = get_current_scenario_context(context).get("adapter")
+    if not hasattr(adapter, "aclose"):
+        _track_session_close(context, adapter)
+    if hasattr(adapter, "__aenter__"):
+        async with adapter:
+            pass
+    else:
+        with adapter:
+            pass
+
+
 @when("I create a {kind:w} Parsian adapter with no login account")
 def step_when_create_adapter(context, kind):
     _try_create(context, kind, _make_config(""))
@@ -378,3 +415,12 @@ def step_then_logs_redacted(context, secret, token, order_id):
     assert secret not in joined, "login account leaked into the logs"
     assert token not in joined, "full token leaked into the logs"
     assert f"order_id={order_id}" in joined
+
+
+@then("the Parsian HTTP client is closed")
+def step_then_client_closed(context):
+    adapter = get_current_scenario_context(context).get("adapter")
+    if hasattr(adapter, "aclose"):
+        assert adapter._http_client.is_closed
+    else:
+        assert get_current_scenario_context(context).get("session_closed")

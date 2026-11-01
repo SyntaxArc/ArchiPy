@@ -30,7 +30,7 @@ class ParsianShaparakConfig(BaseModel):
     TIMEOUT: float = Field(
         default=30,
         gt=0,
-        description="Seconds to wait for a SOAP operation response (the WSDL fetch uses zeep's own timeout)",
+        description="Seconds to wait for a SOAP operation response and to download each WSDL",
     )
 
 
@@ -51,3 +51,8 @@ class SamanShaparakConfig(BaseModel):
         description="Reverse endpoint",
     )
     PROXIES: dict[str, str] | None = Field(default=None, description="Proxy settings")
+    TIMEOUT: float = Field(default=30, gt=0, description="Seconds to wait for a gateway response")
+    ALLOWED_IPG_HOSTS: list[str] = Field(
+        default_factory=lambda: ["shaparak.ir"],
+        description="Domains (and their subdomains) the Neo-PG X-IPG-Url redirect host must belong to",
+    )
