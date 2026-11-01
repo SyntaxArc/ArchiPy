@@ -1325,6 +1325,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#token-renewal-and-re-login" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Token Renewal and Re-login
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#retries-and-outages" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3678,6 +3689,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#token-renewal-and-re-login" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Token Renewal and Re-login
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#retries-and-outages" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3893,6 +3915,13 @@ force a write to <code>{mount}/creds/{role}</code> for engines like SSH OTP. Lea
 map onto nested config fields (e.g. <code>REDIS__PASSWORD</code> → <code>REDIS.PASSWORD</code>).</p>
 <p>See <a href="../../config_management/">Configuration Management</a> for priority order and
 settings-source details.</p>
+<h3 id="token-renewal-and-re-login">Token Renewal and Re-login<a class="headerlink" href="#token-renewal-and-re-login" title="Permanent link">&para;</a></h3>
+<p>With <code>VAULT__AUTO_RENEW_TOKEN=true</code> the adapter looks the token up once, caches its expiry locally
+and renews it with <code>renew_self</code> when the remaining TTL drops to <code>VAULT__RENEW_THRESHOLD_SECONDS</code>.
+Tokens that never expire (<code>ttl == 0</code>, such as root or periodic tokens) and non-renewable tokens are
+left alone, and a failed renewal is logged without failing the call. For auth methods other than
+<code>token</code> (AppRole, Kubernetes, ...), a call rejected with 403 triggers one new login and one replay
+of the call; with a static <code>token</code> there is nothing to log in again with.</p>
 <h3 id="retries-and-outages">Retries and Outages<a class="headerlink" href="#retries-and-outages" title="Permanent link">&para;</a></h3>
 <p><code>VAULT__RETRIES_MAX_ATTEMPTS</code> retries failed connections for every call. Read errors and
 <code>500</code>/<code>502</code>/<code>503</code>/<code>504</code> responses are retried only for idempotent reads (<code>GET</code>, <code>HEAD</code>, <code>LIST</code>),
