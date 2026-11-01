@@ -19,7 +19,7 @@ sys.meta_path.insert(0, _Blocker())
 from archipy.adapters.email.adapters import EmailAdapter
 
 adapter = EmailAdapter.__new__(EmailAdapter)
-adapter.config = SimpleNamespace(USERNAME="sender@example.com")
+adapter.config = SimpleNamespace(USERNAME="sender@example.com", FROM_ADDRESS=None)
 adapter._create_message("a@example.com", "subject", "plain body")
 print("PLAIN_OK")
 try:
