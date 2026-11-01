@@ -438,6 +438,24 @@ Feature: ScyllaDB Adapter
       | rf_two_as | 2      | not contain |
 
   @needs-scylladb
+  Scenario Outline: Connection and protocol failures are mapped, not leaked
+    When I run ScyllaDB operation "<operation>" on an adapter whose session raises "<kind>"
+    Then the ScyllaDB call should raise <error>
+
+    Examples: Sync
+      | operation | kind                       | error              |
+      | select    | ConnectionShutdown         | NetworkError       |
+      | insert    | OSError                    | NetworkError       |
+      | exists    | ProtocolVersionUnsupported | ConfigurationError |
+
+    @async
+    Examples: Async
+      | operation | kind                       | error              |
+      | select    | ConnectionShutdown         | NetworkError       |
+      | insert    | OSError                    | NetworkError       |
+      | exists    | ProtocolVersionUnsupported | ConfigurationError |
+
+  @needs-scylladb
   Scenario Outline: Prepared statements are cached and executed with bound parameters
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
     When I execute a prepared ScyllaDB insert into "<table>" twice
