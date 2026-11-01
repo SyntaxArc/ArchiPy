@@ -142,12 +142,13 @@ class WorkerHandle(PortWorkerHandle):
             )
 
         except Exception as error:  # worker lifecycle; temporal/runtime may raise broadly
+            self._logger.exception("Failed to start worker", extra={"task_queue": self.task_queue})
             raise WorkerConnectionError(
                 additional_data={
                     "message": f"Failed to start worker for task queue '{self.task_queue}'",
                     "task_queue": self.task_queue,
                     "worker_id": self.worker_id,
-                    "error": str(error),
+                    "error_type": type(error).__name__,
                 },
             ) from error
 
@@ -229,13 +230,14 @@ class WorkerHandle(PortWorkerHandle):
                 },
             ) from error
         except Exception as error:  # worker lifecycle; temporal/runtime may raise broadly
+            self._logger.exception("Failed to stop worker", extra={"task_queue": self.task_queue})
             raise WorkerShutdownError(
                 additional_data={
                     "message": f"Failed to stop worker for task queue '{self.task_queue}'",
                     "worker_identity": self.identity,
                     "task_queue": self.task_queue,
                     "worker_id": self.worker_id,
-                    "error": str(error),
+                    "error_type": type(error).__name__,
                 },
             ) from error
 
@@ -477,13 +479,14 @@ class TemporalWorkerManager(WorkerPort):
             )
 
         except Exception as error:  # worker lifecycle; temporal/runtime may raise broadly
+            self._logger.exception("Failed to start worker", extra={"task_queue": task_queue})
             raise WorkerConnectionError(
                 additional_data={
                     "message": f"Failed to start worker for task queue '{task_queue}'",
                     "task_queue": task_queue,
                     "worker_id": worker_id,
                     "identity": worker_identity,
-                    "error": str(error),
+                    "error_type": type(error).__name__,
                 },
             ) from error
         else:
@@ -550,11 +553,16 @@ class TemporalWorkerManager(WorkerPort):
         )
         for worker_handle, result in zip(workers_to_stop, results, strict=True):
             if isinstance(result, BaseException):
+                self._logger.error(
+                    "Failed to stop worker during shutdown",
+                    extra={"task_queue": worker_handle.task_queue},
+                    exc_info=result,
+                )
                 shutdown_errors.append(
                     {
                         "worker_id": worker_handle.worker_id,
                         "task_queue": worker_handle.task_queue,
-                        "error": str(result),
+                        "error_type": type(result).__name__,
                     },
                 )
 

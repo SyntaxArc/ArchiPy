@@ -85,6 +85,7 @@ Feature: Temporal Schedules, Timeouts and Errors
     When I try to execute workflow "GreetingWorkflow" with argument "Test"
     Then I should receive a connection error
     And the error should be the ArchiPy WorkerConnectionError
+    And the error additional data should hold the error type but not the raw SDK error
 
   Scenario: Start workflow with invalid workflow type
     Given a worker is started for task queue "test-queue" with GreetingWorkflow

@@ -2709,3 +2709,12 @@ def step_activity_names_distinct(context, expected):
     names = get_current_scenario_context(context).get("activity_names")
     assert len(set(names)) == len(names), names
     assert names[-1] == expected, names
+
+
+@then("the error additional data should hold the error type but not the raw SDK error")
+def step_error_data_has_no_raw_error(context):
+    error = get_current_scenario_context(context).error
+    data = error.additional_data
+    assert "error_type" in data, data
+    assert "original_error" not in data and "error" not in data, data
+    assert error.__cause__ is not None and str(error.__cause__) not in str(data), data
