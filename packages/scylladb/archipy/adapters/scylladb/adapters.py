@@ -519,7 +519,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 # Use cached version if available - call the cached method
                 cached_method: Any = getattr(self, "_prepare_cached", None)
                 if cached_method is not None:
-                    return cached_method(query)
+                    return cached_method(session.keyspace, query)
             # Direct prepare without cache
             prepared = session.prepare(query)
         except (DriverException, NoHostAvailable, RequestValidationException) as e:
@@ -532,8 +532,8 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """Post-initialization hook to apply cache decorator if enabled."""
         if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
             # Create a method to cache
-            def _prepare_internal(query: str) -> PreparedStatement:
-                """Internal cached method to prepare a CQL statement."""
+            def _prepare_internal(keyspace: str | None, query: str) -> PreparedStatement:  # noqa: ARG001
+                """Prepare a CQL statement; the keyspace only keys the cache."""
                 session = self.get_session()
                 try:
                     prepared = session.prepare(query)
@@ -1222,7 +1222,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 # Use cached version if available - call the cached method
                 cached_method: Any = getattr(self, "_prepare_cached", None)
                 if cached_method is not None:
-                    return await cached_method(query)
+                    return await cached_method(session.keyspace, query)
             # Direct prepare without cache
             prepared = await asyncio.to_thread(session.prepare, query)
         except (DriverException, NoHostAvailable, RequestValidationException) as e:
@@ -1235,8 +1235,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """Post-initialization hook to apply cache decorator if enabled."""
         if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
             # Create an async method to cache
-            async def _prepare_internal(query: str) -> PreparedStatement:
-                """Internal cached method to prepare a CQL statement asynchronously."""
+            async def _prepare_internal(keyspace: str | None, query: str) -> PreparedStatement:  # noqa: ARG001
+                """Prepare a CQL statement asynchronously; the keyspace only keys the cache."""
                 session = await self.get_session()
                 try:
                     prepared = await asyncio.to_thread(session.prepare, query)

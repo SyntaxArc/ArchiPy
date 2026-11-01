@@ -1360,6 +1360,44 @@ def step_single_replica_warning(context: Context, expectation: str) -> None:
     assert found is (expectation == "contain"), messages
 
 
+@when('I write one row to table "{table}" in each of the keyspaces "{first}" and "{second}" with the same helper call')
+async def step_write_across_keyspaces(context: Context, table: str, first: str, second: str) -> None:
+    """Create the same table in two keyspaces and run the same insert after each ``use_keyspace``.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name used in both keyspaces.
+        first (str): First keyspace.
+        second (str): Second keyspace.
+    """
+    adapter = get_scylladb_adapter(context)
+    for index, keyspace in enumerate((first, second), start=1):
+        await _call_adapter(adapter, "create_keyspace", keyspace, 1)
+        await _call_adapter(adapter, "use_keyspace", keyspace)
+        await _call_adapter(
+            adapter,
+            "create_table",
+            f"CREATE TABLE IF NOT EXISTS {table} (id int PRIMARY KEY, name text, age int)",
+        )
+        await _call_adapter(adapter, "insert", table, {"id": index, "name": keyspace, "age": index})
+    _get_scenario_context(context).scylla_keyspaces = (first, second)
+
+
+@then('table "{table}" should hold only its own row in each keyspace')
+async def step_each_keyspace_holds_own_row(context: Context, table: str) -> None:
+    """Assert each keyspace received exactly the row written while it was current.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name used in both keyspaces.
+    """
+    adapter = get_scylladb_adapter(context)
+    for keyspace in _get_scenario_context(context).scylla_keyspaces:
+        await _call_adapter(adapter, "use_keyspace", keyspace)
+        rows = await _call_adapter(adapter, "select", table)
+        assert [row.name for row in rows] == [keyspace], f"{keyspace}: {[row.name for row in rows]}"
+
+
 @then("the ScyllaDB call should succeed")
 def step_scylladb_call_succeeds(context: Context) -> None:
     """Assert that the last recorded call raised nothing.
