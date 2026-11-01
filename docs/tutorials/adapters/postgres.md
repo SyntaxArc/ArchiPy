@@ -930,7 +930,7 @@ worker_config = PostgresSQLAlchemyConfig(
 - Verify `HOST`, `PORT`, `DATABASE`, `USERNAME`, and `PASSWORD` are correct.
 - Confirm the PostgreSQL server is running: `pg_isready -h localhost -p 5432`.
 - Check firewall rules if connecting to a remote host.
-- When using SSL, set `SSL_MODE` (and `SSL_ROOT_CERT` for `verify-ca` / `verify-full`). The DSN query parameters `sslmode`, `sslrootcert`, `sslcert`, `sslkey`, `application_name` and `connect_timeout` fill the matching fields only when those are unset; user and password in the DSN are percent-decoded.
+- When using SSL, set `SSL_MODE` (and `SSL_ROOT_CERT` for `verify-ca` / `verify-full`). `SSL_ROOT_CERT` with any other mode only emits a `UserWarning`: the server certificate is not verified. The DSN query parameters `sslmode`, `sslrootcert`, `sslcert`, `sslkey`, `application_name` and `connect_timeout` fill the matching fields only when those are unset; user and password in the DSN are percent-decoded.
 
 ### `DatabaseTransactionError` — serialisation failures
 

@@ -501,6 +501,22 @@ Feature: SQLAlchemy Atomic Transactions on SQLite
       | sqlite  | IN_LIST               | apple,cherry | 2     |
       | sqlite  | NOT_IN_LIST           | apple        | 2     |
       | sqlite  | EQUAL                 | NULL         | 4     |
+      | sqlite  | LIKE                  | %            | 0     |
+      | sqlite  | ILIKE                 | _            | 0     |
+      | sqlite  | STARTS_WITH           | %            | 0     |
+      | sqlite  | ENDS_WITH             | _            | 0     |
+      | sqlite  | CONTAINS              | %            | 0     |
+
+  Scenario Outline: A sort column that is not mapped is rejected
+    Given the application database is initialized for sqlite
+    And test entities are defined
+    When I sort the entities by the column "<column>"
+    Then the filter should be rejected with an InvalidArgumentError
+
+    Examples:
+      | column      |
+      | no_such_col |
+      | __class__   |
 
   Scenario Outline: A list filter rejects a value that is not a list
     Given the application database is initialized for sqlite

@@ -1,10 +1,12 @@
 import datetime
+import json
 import logging
 import os
 import shutil
 import ssl
 import tempfile
 import uuid
+import warnings
 from pathlib import Path
 
 from behave import given, then, when
@@ -403,6 +405,38 @@ def step_when_starrocks_config(context, level):
         scenario_context.store("starrocks_error", None)
     except Exception as error:
         scenario_context.store("starrocks_error", error)
+
+
+@when("a StarRocks configuration is built with CONNECT_TIMEOUT {connect} and READ_TIMEOUT {read}")
+def step_when_starrocks_timeouts(context, connect, read):
+    scenario_context = get_current_scenario_context(context)
+    try:
+        config = StarRocksSQLAlchemyConfig(CONNECT_TIMEOUT=json.loads(connect), READ_TIMEOUT=json.loads(read))
+        scenario_context.store("starrocks_config", config)
+        scenario_context.store("starrocks_error", None)
+    except ValidationError as error:
+        scenario_context.store("starrocks_error", error)
+
+
+@when('a PostgreSQL configuration is built with SSL_MODE "{mode}" and SSL_ROOT_CERT "{root_cert}"')
+def step_when_postgres_ssl_warning(context, mode, root_cert):
+    scenario_context = get_current_scenario_context(context)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        PostgresSQLAlchemyConfig(
+            USERNAME="alice",
+            HOST="db.internal",
+            DATABASE="app",
+            SSL_MODE=None if mode == "none" else mode,
+            SSL_ROOT_CERT=None if root_cert == "none" else root_cert,
+        )
+    scenario_context.store("config_warnings", [str(w.message) for w in caught if w.category is UserWarning])
+
+
+@then("a root certificate warning should be {expected}")
+def step_then_root_cert_warning(context, expected):
+    messages = get_current_scenario_context(context).get("config_warnings")
+    assert bool(messages) is (expected == "emitted"), messages
 
 
 @then("the StarRocks configuration should be {outcome}")

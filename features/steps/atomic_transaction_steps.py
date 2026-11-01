@@ -2590,6 +2590,23 @@ def step_when_filter_with_non_list(context, operation, raw_value):
         scenario_context.store("filter_error", error)
 
 
+@when('I sort the entities by the column "{column}"')
+def step_when_sort_by_column(context, column):
+    from archipy.models.dtos.sort_dto import SortDTO
+    from archipy.models.types.sort_order_type import SortOrderType
+
+    scenario_context = get_current_scenario_context(context)
+    adapter = get_adapter(context)
+    try:
+        adapter._apply_sorting(  # noqa: SLF001
+            TestEntity,
+            select(TestEntity),
+            SortDTO(column=column, order=SortOrderType.ASCENDING),
+        )
+    except Exception as error:  # noqa: BLE001
+        scenario_context.store("filter_error", error)
+
+
 @then("the filter should match {count:d} entities")
 def step_then_filter_matches(context, count):
     matched = get_current_scenario_context(context).get("filtered_entities")

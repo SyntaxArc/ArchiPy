@@ -129,6 +129,44 @@ Feature: Base Configuration System
       | SERIALIZABLE    | rejected |
       | REPEATABLE READ | rejected |
 
+  Scenario Outline: StarRocks CONNECT_TIMEOUT <connect> and READ_TIMEOUT <read> are <outcome>
+    When a StarRocks configuration is built with CONNECT_TIMEOUT <connect> and READ_TIMEOUT <read>
+    Then the StarRocks configuration should be <outcome>
+
+    Examples: Timeouts
+      | connect | read | outcome  |
+      | 10      | null | accepted |
+      | 5       | 30   | accepted |
+      | 0       | null | rejected |
+      | 10      | 0    | rejected |
+
+  Scenario: The StarRocks sync driver passes READ_TIMEOUT only when configured
+    When I build the sync starrocks driver options with READ_TIMEOUT set to 5
+    Then the driver options should be {"autocommit": false, "init_command": "SET enable_sql_transaction = TRUE", "connect_timeout": 10, "read_timeout": 5}
+
+  Scenario Outline: A PostgreSQL SSL_ROOT_CERT with SSL_MODE <mode> is <outcome> with a warning
+    When a PostgreSQL configuration is built with SSL_MODE "<mode>" and SSL_ROOT_CERT "<root_cert>"
+    Then a root certificate warning should be <outcome>
+
+    Examples: SSL modes
+      | mode        | root_cert   | outcome     |
+      | none        | /etc/ca.pem | emitted     |
+      | require     | /etc/ca.pem | emitted     |
+      | verify-ca   | /etc/ca.pem | not emitted |
+      | verify-full | /etc/ca.pem | not emitted |
+      | require     | none        | not emitted |
+
+  Scenario Outline: SQLite foreign key enforcement follows FOREIGN_KEYS <value> on the <kind> driver
+    When I read foreign_keys from a <kind> sqlite session manager with FOREIGN_KEYS <value>
+    Then the session setting should be <expected>
+
+    Examples: Foreign keys
+      | kind  | value | expected |
+      | sync  | false | 0        |
+      | sync  | true  | 1        |
+      | async | false | 0        |
+      | async | true  | 1        |
+
   Scenario Outline: A Vault client is refused when <problem>
     When a Vault client is built for <auth_method> auth when <problem>
     Then a ConfigurationError should be raised
