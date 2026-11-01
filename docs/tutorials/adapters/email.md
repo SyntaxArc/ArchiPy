@@ -85,7 +85,7 @@ config = EmailConfig(
 import logging
 
 from archipy.adapters.email.adapters import EmailAdapter
-from archipy.models.errors import InternalError
+from archipy.models.errors import ConfigurationError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ logger = logging.getLogger(__name__)
 # Use global configuration (reads from BaseConfig.global_config().EMAIL)
 try:
     email_adapter = EmailAdapter()
-except InternalError as e:
+except ConfigurationError as e:
     logger.error(f"Failed to configure email adapter: {e}")
     raise
 else:
@@ -117,7 +117,7 @@ email_adapter = EmailAdapter(config=custom_config)
 import logging
 
 from archipy.adapters.email.adapters import EmailAdapter
-from archipy.models.errors import InternalError
+from archipy.models.errors import ConfigurationError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -131,7 +131,7 @@ try:
         subject="Test Email",
         body="This is a test email from ArchiPy",
     )
-except InternalError as e:
+except UnavailableError as e:
     logger.error(f"Failed to send email: {e}")
     raise
 else:
@@ -144,7 +144,7 @@ else:
 import logging
 
 from archipy.adapters.email.adapters import EmailAdapter
-from archipy.models.errors import InternalError
+from archipy.models.errors import ConfigurationError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -160,7 +160,7 @@ try:
         cc=["cc1@example.com", "cc2@example.com"],
         bcc="bcc@example.com",
     )
-except InternalError as e:
+except UnavailableError as e:
     logger.error(f"Failed to send email with CC/BCC: {e}")
     raise
 else:
@@ -173,7 +173,7 @@ else:
 import logging
 
 from archipy.adapters.email.adapters import EmailAdapter
-from archipy.models.errors import InternalError
+from archipy.models.errors import ConfigurationError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -196,7 +196,7 @@ try:
         body=html_content,
         html=True,
     )
-except InternalError as e:
+except UnavailableError as e:
     logger.error(f"Failed to send HTML email: {e}")
     raise
 else:
@@ -211,7 +211,7 @@ Pass file paths as strings or `EmailAttachmentDTO` objects in the `attachments` 
 import logging
 
 from archipy.adapters.email.adapters import EmailAdapter
-from archipy.models.errors import InternalError, InvalidArgumentError
+from archipy.models.errors import InvalidArgumentError, UnavailableError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -228,7 +228,7 @@ try:
 except InvalidArgumentError as e:
     logger.error(f"Invalid attachment: {e}")
     raise
-except InternalError as e:
+except UnavailableError as e:
     logger.error(f"Failed to send email with attachments: {e}")
     raise
 else:
@@ -244,7 +244,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, EmailStr
 
 from archipy.adapters.email.adapters import EmailAdapter
-from archipy.models.errors import InternalError, InvalidArgumentError
+from archipy.models.errors import InvalidArgumentError, UnavailableError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -285,7 +285,7 @@ async def send_email(email_request: EmailRequest) -> dict[str, str]:
     except InvalidArgumentError as e:
         logger.error(f"Invalid email request: {e}")
         raise HTTPException(status_code=400, detail="Invalid email parameters") from e
-    except InternalError as e:
+    except UnavailableError as e:
         logger.error(f"Failed to send email: {e}")
         raise HTTPException(status_code=500, detail="Failed to send email") from e
     else:
@@ -300,7 +300,7 @@ import logging
 
 from archipy.adapters.email.adapters import EmailAdapter
 from archipy.configs.config_template import EmailConfig
-from archipy.models.errors import ConfigurationError, InternalError, InvalidArgumentError
+from archipy.models.errors import ConfigurationError, InvalidArgumentError, UnavailableError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -320,7 +320,7 @@ def send_notification_email(recipient: str, subject: str, body: str) -> bool:
     Raises:
         ConfigurationError: If the email adapter cannot be initialised.
         InvalidArgumentError: If email parameters are invalid.
-        InternalError: If the email service fails.
+        UnavailableError: If the email service fails.
     """
     try:
         email_adapter = EmailAdapter()
@@ -337,7 +337,7 @@ def send_notification_email(recipient: str, subject: str, body: str) -> bool:
     except InvalidArgumentError as e:
         logger.error(f"Invalid email parameters: {e}")
         raise
-    except InternalError as e:
+    except UnavailableError as e:
         logger.error(f"Failed to send email: {e}")
         raise
     else:
@@ -356,12 +356,25 @@ client span:
 | `email.send` | `network.protocol.name`  | `smtp`                                               |
 |              | `server.address`         | Configured SMTP host                                 |
 |              | `server.port`            | Configured SMTP port                                 |
-|              | `email.tls_mode`         | `starttls` or `none`, as negotiated with the server  |
+|              | `email.tls_mode`         | `starttls`, `implicit` or `none`, as negotiated with the server  |
 |              | `email.recipient_count`  | Number of to, cc and bcc recipients                  |
 |              | `email.attachment_count` | Number of attachments                                |
 
 A failed send (unreachable server, rejected credentials) marks the span as an error and records the
 `UnavailableError`. Credentials, addresses, subjects and bodies are never added to spans.
+
+### Delivery Semantics
+
+`MAX_RETRIES` is the number of send attempts. Delivery is at-least-once: if the connection drops after the
+server received the message but before it confirmed, the retry can deliver a duplicate. Permanent (5xx)
+rejections are not retried. A header that cannot be encoded (for example a subject with a line break) raises
+`InvalidArgumentError`.
+
+### URL Attachments
+
+URL attachments accept `http` and `https` only, are downloaded with the `EMAIL__ATTACHMENT_URL_TIMEOUT`
+timeout, and stop once `ATTACHMENT_MAX_SIZE` is exceeded. Set `EMAIL__ATTACHMENT_URL_ALLOWED_HOSTS` when the
+URL can come from user input, to avoid server-side request forgery.
 
 ## See Also
 

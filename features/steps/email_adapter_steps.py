@@ -232,9 +232,8 @@ def step_given_binary_attachment(context, filename, content):
     scenario_context.store("attachment", attachment)
 
 
-@given('a URL attachment "{filename}" served with content "{content}" by a local HTTP server')
-def step_given_url_attachment(context, filename, content):
-    scenario_context = get_current_scenario_context(context)
+def _start_http_server(context, content):
+    """Serve ``content`` on a local HTTP server; return its URL prefix and the list of requested paths."""
     requested = []
 
     class Handler(BaseHTTPRequestHandler):
@@ -259,13 +258,83 @@ def step_given_url_attachment(context, filename, content):
         thread.join(timeout=5)
 
     context.add_cleanup(stop_server)
+    return f"http://127.0.0.1:{server.server_port}", requested
+
+
+@given('a URL attachment "{filename}" served with content "{content}" by a local HTTP server')
+def step_given_url_attachment(context, filename, content):
+    scenario_context = get_current_scenario_context(context)
+    base_url, requested = _start_http_server(context, content)
     scenario_context.store("requested_urls", requested)
     attachment = AttachmentHandler.create_attachment(
-        source=f"http://127.0.0.1:{server.server_port}/{filename}",
+        source=f"{base_url}/{filename}",
         filename=filename,
         attachment_type=EmailAttachmentType.URL,
     )
     scenario_context.store("attachment", attachment)
+
+
+@given('the URL attachment hosts "{hosts}" are allowed')
+def step_given_url_hosts(context, hosts):
+    BaseConfig.global_config().EMAIL.ATTACHMENT_URL_ALLOWED_HOSTS = hosts.split(",")
+
+
+@when('I try to create a URL attachment from "{url}"')
+def step_when_create_url_attachment(context, url):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("error", None)
+    try:
+        AttachmentHandler.create_attachment(source=url, filename="x.bin", attachment_type=EmailAttachmentType.URL)
+    except Exception as exception:
+        scenario_context.store("error", exception)
+
+
+@when('I try to create a URL attachment of {size:d} bytes with a maximum size of {max_size:d} bytes')
+def step_when_create_oversized_url_attachment(context, size, max_size):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("error", None)
+    base_url, _ = _start_http_server(context, "x" * size)
+    try:
+        AttachmentHandler.create_attachment(
+            source=f"{base_url}/big.bin",
+            filename="big.bin",
+            attachment_type=EmailAttachmentType.URL,
+            max_size=max_size,
+        )
+    except Exception as exception:
+        scenario_context.store("error", exception)
+
+
+@then('the attachment is rejected as an invalid argument with reason "{reason}"')
+def step_then_attachment_reason(context, reason):
+    error = get_current_scenario_context(context).get("error")
+    assert isinstance(error, InvalidArgumentError), repr(error)
+    assert error.additional_data["reason"] == reason, error.additional_data
+
+
+@given("every SMTP send is rejected with code {code:d}")
+def step_given_sends_rejected(context, code):
+    scenario_context = get_current_scenario_context(context)
+    state = {"attempts": 0}
+
+    def rejected(self, msg, *args, **kwargs):
+        state["attempts"] += 1
+        raise smtplib.SMTPDataError(code, b"rejected")
+
+    patcher = mock.patch.object(smtplib.SMTP, "send_message", rejected)
+    patcher.start()
+    context.add_cleanup(patcher.stop)
+    scenario_context.store("rejections", state)
+
+
+@then("the SMTP server was tried {count:d} time")
+def step_then_tried(context, count):
+    assert get_current_scenario_context(context).get("rejections")["attempts"] == count
+
+
+@when('I try to send an email to "{to_email}" with a subject containing a line break')
+def step_when_send_line_break_subject(context, to_email):
+    _send(context, to_email, "Hello\r\nBcc: evil@example.com", "Hi there")
 
 
 @when('I send an email to "{to_email}" with subject "{subject}" and body "{body}"')
