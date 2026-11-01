@@ -653,6 +653,39 @@ def step_then_elasticsearch_backoff(context, expected):
         assert (base, cap) == (0.5, 8.0), (base, cap)
 
 
+@when("I validate an Elasticsearch config with BEARER_AUTH and {other} auth")
+def step_when_elasticsearch_bearer_conflict(context, other):
+    from archipy.configs.config_template import ElasticsearchConfig
+    from archipy.models.errors import InvalidArgumentError
+
+    updates = {"BEARER_AUTH": "token"}
+    if other == "API key":
+        updates.update(API_KEY="id", API_SECRET="secret")
+    else:
+        updates.update(HTTP_USER_NAME="user", HTTP_PASSWORD="password")
+    try:
+        ElasticsearchConfig(**updates)
+    except InvalidArgumentError:
+        get_current_scenario_context(context).store("es_config_rejected", True)
+    else:
+        get_current_scenario_context(context).store("es_config_rejected", False)
+
+
+@then("the Elasticsearch config should be rejected as invalid")
+def step_then_elasticsearch_rejected(context):
+    assert get_current_scenario_context(context).get("es_config_rejected") is True
+
+
+@then("the client should carry no bearer, opaque ID or custom headers")
+def step_then_elasticsearch_no_extra_headers(context):
+    from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter
+    from archipy.configs.config_template import ElasticsearchConfig
+
+    client = ElasticsearchAdapter._get_client(ElasticsearchConfig())
+    headers = {name.lower() for name in client._headers}
+    assert not headers & {"authorization", "x-opaque-id"}, headers
+
+
 @when("I read the connect arguments of the {kind} Postgres session manager with CONNECT_TIMEOUT {value}")
 def step_when_postgres_connect_args(context, kind, value):
     from archipy.adapters.postgres.sqlalchemy.session_managers import (

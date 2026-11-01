@@ -1,4 +1,6 @@
 # features/steps/elasticsearch_steps.py
+import base64
+import ssl
 import time
 import json
 import logging
@@ -10,6 +12,7 @@ import warnings
 from behave import given, when, then
 from elasticsearch import BadRequestError
 from behave.runner import Context
+from pydantic import SecretStr
 
 from features.test_helpers import get_current_scenario_context
 from archipy.adapters.elasticsearch.adapters import ElasticsearchAdapter, AsyncElasticsearchAdapter
@@ -927,6 +930,12 @@ async def after_scenario(context: Context, scenario) -> None:
             context.logger.error(f"Failed to delete index {index_name}: {e}")
 
 
+def _cloud_id_for_host(host: str) -> str:
+    """Build a syntactically valid cloud ID that resolves to the given host."""
+    es_id, domain = host.split(".", 1)
+    return "name:" + base64.b64encode(f"{domain}${es_id}$kibana".encode()).decode()
+
+
 @given('an Elasticsearch config with "{field}" set to "{value}"')
 def step_es_config_field(context: Context, field: str, value: str) -> None:
     """Collect config overrides on top of the global Elasticsearch config."""
@@ -937,9 +946,17 @@ def step_es_config_field(context: Context, field: str, value: str) -> None:
         "DEAD_NODE_BACKOFF_FACTOR": float,
         "MIN_DELAY_BETWEEN_SNIFFING": float,
         "SNIFF_BEFORE_REQUESTS": lambda text: text == "true",
+        "BEARER_AUTH": SecretStr,
+        "CLOUD_ID": _cloud_id_for_host,
+        "SSL_VERSION": lambda text: ssl.TLSVersion[text],
+        "OPAQUE_ID": str,
+        "HEADERS": lambda text: dict(pair.split("=", 1) for pair in text.split(",")),
         "IGNORE_STATUS": lambda text: tuple(int(code) for code in text.split(",")),
     }
     updates[field] = parsers[field](value)
+    if field == "BEARER_AUTH":
+        # Bearer auth is exclusive with the container's own credentials
+        updates.update(API_KEY=None, API_SECRET=None, HTTP_USER_NAME=None, HTTP_PASSWORD=None)
     scenario_context.store("es_config_updates", updates)
 
 
@@ -968,6 +985,20 @@ def step_client_applies_option(context: Context, field: str, value: str) -> None
         assert transport.node_pool.dead_node_backoff_factor == float(value)
     elif field == "MIN_DELAY_BETWEEN_SNIFFING":
         assert transport._min_delay_between_sniffing == float(value)  # noqa: SLF001
+    elif field == "BEARER_AUTH":
+        assert adapter.client._headers["authorization"] == f"Bearer {value}"  # noqa: SLF001
+    elif field == "OPAQUE_ID":
+        assert adapter.client._headers["x-opaque-id"] == value  # noqa: SLF001
+    elif field == "HEADERS":
+        name, expected = value.split("=", 1)
+        assert adapter.client._headers[name] == expected  # noqa: SLF001
+    elif field == "SSL_VERSION":
+        node_config = next(iter(transport.node_pool.all())).config
+        assert node_config.ssl_version == ssl.TLSVersion[value]
+    elif field == "CLOUD_ID":
+        # The fake cloud ID decodes to abc123.example.com, so no local HOSTS entry is left
+        hosts = [node.config.host for node in transport.node_pool.all()]
+        assert hosts == [value], f"Unexpected hosts: {hosts}"
     else:
         raise AssertionError(f"Unknown field {field}")
 

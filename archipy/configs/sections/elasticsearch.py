@@ -1,9 +1,10 @@
 """Elasticsearch configuration."""
 
 import logging
+import ssl
 from typing import Self
 
-from pydantic import BaseModel, Field, SecretStr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 
 from archipy.models.errors import FailedPreconditionError, InvalidArgumentError
 
@@ -17,16 +18,36 @@ class ElasticsearchConfig(BaseModel):
     TLS/SSL, request handling, node status management, and batch operation parameters.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     HOSTS: list[str] = Field(default=["https://localhost:9200"], description="List of Elasticsearch server hosts")
     HTTP_USER_NAME: str | None = None
     HTTP_PASSWORD: SecretStr | None = None
     API_KEY: str | None = None
     API_SECRET: SecretStr | None = None
+    BEARER_AUTH: SecretStr | None = Field(
+        default=None,
+        description="Bearer token for token or OIDC auth (exclusive with API key and basic auth)",
+    )
+    CLOUD_ID: str | None = Field(
+        default=None,
+        description="Elastic Cloud ID; when set it replaces HOSTS",
+    )
     CA_CERTS: str | None = Field(default=None, description="Path to CA bundle for SSL verification")
     SSL_ASSERT_FINGERPRINT: str | None = Field(default=None, description="SSL certificate fingerprint for verification")
     VERIFY_CERTS: bool = Field(default=True, description="Whether to verify SSL certificates")
     CLIENT_CERT: str | None = Field(default=None, description="Path to client certificate for TLS authentication")
     CLIENT_KEY: str | None = Field(default=None, description="Path to client key for TLS authentication")
+    SSL_VERSION: ssl.TLSVersion | None = Field(
+        default=None,
+        description="TLS protocol version (client default if unset)",
+    )
+    SSL_CONTEXT: ssl.SSLContext | None = Field(
+        default=None,
+        description="Custom SSL context; takes precedence over the other TLS file settings in the client",
+    )
+    OPAQUE_ID: str | None = Field(default=None, description="Opaque ID sent as X-Opaque-Id to trace requests")
+    HEADERS: dict[str, str] | None = Field(default=None, description="Extra HTTP headers sent with every request")
     HTTP_COMPRESS: bool = Field(default=True, description="Enable HTTP compression (gzip)")
     REQUEST_TIMEOUT: float | None = Field(default=1.0, description="Timeout for HTTP requests in seconds")
     MAX_RETRIES: int = Field(default=1, ge=0, description="Maximum number of retries per request")
@@ -66,6 +87,15 @@ class ElasticsearchConfig(BaseModel):
         ge=0.0,
         description="Maximum timeout duration for a dead node in seconds",
     )
+
+    @model_validator(mode="after")
+    def validate_auth_settings(self) -> Self:
+        """Validate that bearer auth is not combined with another auth method."""
+        has_api_key = bool(self.API_KEY and self.API_SECRET)
+        has_basic = bool(self.HTTP_USER_NAME and self.HTTP_PASSWORD)
+        if self.BEARER_AUTH and (has_api_key or has_basic):
+            raise InvalidArgumentError()
+        return self
 
     @model_validator(mode="after")
     def validate_tls_settings(self) -> Self:
