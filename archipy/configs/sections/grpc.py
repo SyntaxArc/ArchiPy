@@ -1,7 +1,7 @@
 """gRPC configuration."""
 
 import os
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -69,7 +69,7 @@ class GrpcConfig(BaseModel):
         description="Threads per CPU core. Adjust based on thread block to CPU time ratio.",
     )
 
-    SERVER_OPTIONS_CONFIG_LIST: list[tuple[str, int]] = Field(
+    SERVER_OPTIONS_CONFIG_LIST: list[tuple[str, int | str]] = Field(
         default=[
             # ── Message limits ──────────────────────────────────────────────
             ("grpc.max_metadata_size", 16 * 1024),  # 16KB  (default is 8KB)
@@ -92,7 +92,7 @@ class GrpcConfig(BaseModel):
             ("grpc.max_connection_age_ms", 1_800_000),  # 30min
             ("grpc.max_connection_age_grace_ms", 5_000),  # 5s graceful drain
         ],
-        description="Server channel options",
+        description="Server channel options. Values may be integers or strings.",
     )
 
     STUB_OPTIONS_CONFIG_LIST: list[tuple[str, int | str]] = Field(
@@ -131,7 +131,32 @@ class GrpcConfig(BaseModel):
                 "}",
             ),
         ],
-        description="Client stub channel options",
+        description=(
+            "Client stub channel options, applied by ``AppUtils.create_grpc_channel``. Values may be integers or "
+            "strings."
+        ),
+    )
+
+    SERVER_COMPRESSION: Literal["none", "deflate", "gzip"] | None = Field(
+        default=None,
+        description=(
+            "Default server compression, used by ``AppUtils.create_grpc_app`` / ``AppUtils.create_async_grpc_app`` "
+            "when no ``compression`` argument is passed. None leaves the gRPC default."
+        ),
+    )
+    STUB_COMPRESSION: Literal["none", "deflate", "gzip"] | None = Field(
+        default=None,
+        description=(
+            "Default channel compression, used by ``AppUtils.create_grpc_channel``. None leaves the gRPC default."
+        ),
+    )
+    SHUTDOWN_GRACE_SECONDS: float | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Seconds ``AppUtils.stop_grpc_app`` lets in-flight RPCs finish before it aborts them. "
+            "None aborts them at once."
+        ),
     )
 
     TLS_ENABLED: bool = Field(

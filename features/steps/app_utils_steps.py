@@ -992,3 +992,91 @@ def step_when_uvicorn_field_read_and_fastapi_dumped(context, name):
 def step_then_fastapi_schema_deprecated(context, name):
     schema = FastAPIConfig.model_json_schema()
     assert schema["properties"][name].get("deprecated") is True, schema["properties"][name]
+
+
+def _compression_grpc_config(compression: str) -> BaseConfig:
+    return _config_with_grpc(
+        GrpcConfig(
+            SERVER_COMPRESSION=compression,
+            STUB_COMPRESSION=compression,
+            SHUTDOWN_GRACE_SECONDS=2,
+            SERVER_OPTIONS_CONFIG_LIST=[("grpc.primary_user_agent", "archipy-server"), ("grpc.max_metadata_size", 16384)],
+            STUB_OPTIONS_CONFIG_LIST=[("grpc.primary_user_agent", "archipy-stub"), ("grpc.max_metadata_size", 16384)],
+        ),
+    )
+
+
+def _probe_stopped_channel(config, port: int) -> str:
+    try:
+        with AppUtils.create_grpc_channel(config, f"localhost:{port}") as channel:
+            test_service_pb2_grpc.TestServiceStub(channel).TestMethod(test_service_pb2.TestRequest(data="hi"), timeout=2)
+    except grpc.RpcError:
+        return "rejected"
+    return "served"
+
+
+@when(
+    "a {mode} gRPC server with {compression} compression and a string option is called by a channel with the same "
+    "settings",
+)
+def step_when_grpc_compression_call(context, mode, compression):
+    scenario_context = get_current_scenario_context(context)
+    config = _compression_grpc_config(compression)
+    assert config.GRPC.SHUTDOWN_GRACE_SECONDS == 2
+    if mode == "sync":
+        server = AppUtils.create_grpc_app(config)
+        test_service_pb2_grpc.add_TestServiceServicer_to_server(create_test_grpc_servicer(), server)
+        port = AppUtils.add_grpc_port(server, config, "localhost:0")
+        server.start()
+        try:
+            with AppUtils.create_grpc_channel(config, f"localhost:{port}") as channel:
+                result = test_service_pb2_grpc.TestServiceStub(channel).TestMethod(
+                    test_service_pb2.TestRequest(data="hi"),
+                    timeout=5,
+                ).result
+        finally:
+            AppUtils.stop_grpc_app(server, config).wait(5)
+    else:
+
+        async def call() -> tuple[str, int]:
+            server = AppUtils.create_async_grpc_app(config)
+            test_service_pb2_grpc.add_TestServiceServicer_to_server(create_test_async_grpc_servicer(), server)
+            port = AppUtils.add_grpc_port(server, config, "localhost:0")
+            await server.start()
+            try:
+                async with AppUtils.create_grpc_channel(config, f"localhost:{port}", aio=True) as channel:
+                    response = await test_service_pb2_grpc.TestServiceStub(channel).TestMethod(
+                        test_service_pb2.TestRequest(data="hi"),
+                        timeout=5,
+                    )
+                return response.result, port
+            finally:
+                await AppUtils.stop_grpc_app(server, config)
+
+        result, port = asyncio.run(call())
+    scenario_context.store("tls_result", result)
+    scenario_context.store("stopped_probe", _probe_stopped_channel(config, port))
+
+
+@then("a call to the stopped gRPC server should be rejected")
+def step_then_stopped_grpc_call_rejected(context):
+    assert get_current_scenario_context(context).get("stopped_probe") == "rejected"
+
+
+@when("the gRPC config field {field} is set to {value}")
+def step_when_grpc_config_field_set(context, field, value):
+    scenario_context = get_current_scenario_context(context)
+    try:
+        GrpcConfig(**{field: value})
+        scenario_context.store("grpc_field_error", None)
+    except ValidationError as exception:
+        scenario_context.store("grpc_field_error", str(exception))
+
+
+@then("the gRPC field setting should be {outcome}")
+def step_then_grpc_field_outcome(context, outcome):
+    error = get_current_scenario_context(context).get("grpc_field_error")
+    if outcome == "accepted":
+        assert error is None, error
+    else:
+        assert error is not None, "Expected a validation error"

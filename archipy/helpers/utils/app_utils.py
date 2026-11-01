@@ -18,7 +18,8 @@ from archipy.models.errors import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Sequence, Set as AbstractSet
+    import threading
+    from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence, Set as AbstractSet
     from contextlib import AbstractAsyncContextManager
 
     from fastapi.routing import APIRoute
@@ -617,7 +618,7 @@ class AppUtils:
         Args:
             config: The application config.
             customized_interceptors: Extra interceptors appended after the built-in ones.
-            compression: The server compression.
+            compression: The server compression. Defaults to ``GRPC.SERVER_COMPRESSION``.
             validation_errors_as_internal: Report a pydantic ``ValidationError`` raised by a handler as INTERNAL
                 instead of INVALID_ARGUMENT. Defaults to False.
         """
@@ -641,10 +642,45 @@ class AppUtils:
         return create_grpc_server(
             futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),
             interceptors=async_interceptors,
-            compression=compression,
+            compression=cls._server_compression(compression, config),
             options=config.GRPC.SERVER_OPTIONS_CONFIG_LIST,
             maximum_concurrent_rpcs=config.GRPC.MAX_CONCURRENT_RPCS,
         )
+
+    @staticmethod
+    def _grpc_compression(name: str | None) -> grpc.Compression | None:
+        """Map a ``GRPC.*_COMPRESSION`` setting to a ``grpc.Compression`` value, or None when unset."""
+        if name is None:
+            return None
+        return {
+            "none": grpc.Compression.NoCompression,
+            "deflate": grpc.Compression.Deflate,
+            "gzip": grpc.Compression.Gzip,
+        }[name]
+
+    @classmethod
+    def _server_compression(cls, compression: grpc.Compression | None, config: BaseConfig) -> grpc.Compression | None:
+        """Return the explicit compression, or the ``GRPC.SERVER_COMPRESSION`` default when it is None."""
+        if compression is not None:
+            return compression
+        return cls._grpc_compression(config.GRPC.SERVER_COMPRESSION)
+
+    @classmethod
+    def stop_grpc_app(
+        cls,
+        server: grpc.Server | GrpcAioServer,
+        config: BaseConfig,
+    ) -> threading.Event | Awaitable[None]:
+        """Stop a gRPC server, giving in-flight RPCs ``GRPC.SHUTDOWN_GRACE_SECONDS`` to finish.
+
+        Args:
+            server: A server from ``create_grpc_app`` or ``create_async_grpc_app``.
+            config: The application config.
+
+        Returns:
+            threading.Event | Awaitable[None]: An event for a sync server, an awaitable for an async one.
+        """
+        return server.stop(config.GRPC.SHUTDOWN_GRACE_SECONDS)
 
     @staticmethod
     def _read_pem(path: str | None) -> bytes | None:
@@ -686,7 +722,8 @@ class AppUtils:
     def create_grpc_channel(cls, config: BaseConfig, target: str, *, aio: bool = False) -> grpc.Channel:
         """Create a client channel, using TLS when ``GRPC.STUB_TLS_ENABLED`` is set.
 
-        Channel options come from ``GRPC.STUB_OPTIONS_CONFIG_LIST``. Without TLS the channel is plaintext.
+        Channel options come from ``GRPC.STUB_OPTIONS_CONFIG_LIST`` and compression from
+        ``GRPC.STUB_COMPRESSION``. Without TLS the channel is plaintext.
 
         Args:
             config: The application config.
@@ -698,15 +735,16 @@ class AppUtils:
         """
         grpc_config = config.GRPC
         options = grpc_config.STUB_OPTIONS_CONFIG_LIST
+        compression = cls._grpc_compression(grpc_config.STUB_COMPRESSION)
         module: Any = grpc_aio if aio else grpc
         if not grpc_config.STUB_TLS_ENABLED:
-            return module.insecure_channel(target, options=options)
+            return module.insecure_channel(target, options=options, compression=compression)
         credentials = grpc.ssl_channel_credentials(
             root_certificates=cls._read_pem(grpc_config.STUB_TLS_CA_FILE),
             private_key=cls._read_pem(grpc_config.STUB_TLS_KEY_FILE),
             certificate_chain=cls._read_pem(grpc_config.STUB_TLS_CERT_FILE),
         )
-        return module.secure_channel(target, credentials, options=options)
+        return module.secure_channel(target, credentials, options=options, compression=compression)
 
     @classmethod
     def create_grpc_app(
@@ -722,7 +760,7 @@ class AppUtils:
         Args:
             config: The application config.
             customized_interceptors: Extra interceptors appended after the built-in ones.
-            compression: The server compression.
+            compression: The server compression. Defaults to ``GRPC.SERVER_COMPRESSION``.
             validation_errors_as_internal: Report a pydantic ``ValidationError`` raised by a handler as INTERNAL
                 instead of INVALID_ARGUMENT. Defaults to False.
         """
@@ -743,7 +781,7 @@ class AppUtils:
         return grpc.server(
             futures.ThreadPoolExecutor(max_workers=config.GRPC.THREAD_WORKER_COUNT),
             interceptors=interceptors,
-            compression=compression,
+            compression=cls._server_compression(compression, config),
             options=config.GRPC.SERVER_OPTIONS_CONFIG_LIST,
             maximum_concurrent_rpcs=config.GRPC.MAX_CONCURRENT_RPCS,
         )
