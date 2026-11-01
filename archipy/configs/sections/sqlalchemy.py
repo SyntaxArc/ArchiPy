@@ -2,7 +2,7 @@
 
 import contextlib
 from typing import Literal, Self
-from urllib.parse import quote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, PostgresDsn, field_validator, model_validator
 
@@ -82,6 +82,9 @@ class SQLiteSQLAlchemyConfig(SQLAlchemyConfig):
     )
 
 
+_POSTGRES_SSL_MODES = ("disable", "allow", "prefer", "require", "verify-ca", "verify-full")
+
+
 class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
     """Configuration settings for PostgreSQL SQLAlchemy ORM.
 
@@ -143,8 +146,7 @@ class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
         Raises:
             ConfigurationError: If only one of SSL_CERT and SSL_KEY is set.
         """
-        if (self.SSL_CERT is None) != (self.SSL_KEY is None):
-            raise ConfigurationError(operation="postgres", reason="ssl_cert_and_key_must_be_set_together")
+        _check_ssl_client_pair(self)
         return self
 
     @model_validator(mode="after")
@@ -195,7 +197,15 @@ class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
             if self.DATABASE is None and parsed.path and parsed.path.startswith("/"):
                 self.DATABASE = parsed.path[1:]
 
+        _extract_postgres_query_from_url(urlparse(str(self.POSTGRES_DSN)), self)
+        _check_ssl_client_pair(self)
         return self
+
+
+def _check_ssl_client_pair(config: PostgresSQLAlchemyConfig) -> None:
+    """Raise ConfigurationError if only one of SSL_CERT and SSL_KEY is set."""
+    if (config.SSL_CERT is None) != (config.SSL_KEY is None):
+        raise ConfigurationError(operation="postgres", reason="ssl_cert_and_key_must_be_set_together")
 
 
 def _extract_postgres_auth_from_url(parsed: object, config: PostgresSQLAlchemyConfig) -> None:
@@ -207,11 +217,39 @@ def _extract_postgres_auth_from_url(parsed: object, config: PostgresSQLAlchemyCo
     if ":" in auth_part:
         username, password = auth_part.split(":", 1)
         if config.USERNAME is None:
-            config.USERNAME = username
+            config.USERNAME = unquote(username)
         if config.PASSWORD is None:
-            config.PASSWORD = password
+            config.PASSWORD = unquote(password)
     elif auth_part and config.USERNAME is None:
-        config.USERNAME = auth_part
+        config.USERNAME = unquote(auth_part)
+
+
+_POSTGRES_DSN_QUERY_FIELDS = {
+    "sslmode": "SSL_MODE",
+    "sslrootcert": "SSL_ROOT_CERT",
+    "sslcert": "SSL_CERT",
+    "sslkey": "SSL_KEY",
+    "application_name": "APPLICATION_NAME",
+    "connect_timeout": "CONNECT_TIMEOUT",
+}
+
+
+def _extract_postgres_query_from_url(parsed: object, config: PostgresSQLAlchemyConfig) -> None:
+    """Populate unset connection options on config from the query parameters of a Postgres DSN."""
+    query = parse_qs(getattr(parsed, "query", ""))
+    for key, field_name in _POSTGRES_DSN_QUERY_FIELDS.items():
+        if key not in query or getattr(config, field_name) is not None:
+            continue
+        value = query[key][-1]
+        if field_name == "CONNECT_TIMEOUT":
+            with contextlib.suppress(ValueError):
+                timeout = int(value)
+                if timeout >= 1:
+                    config.CONNECT_TIMEOUT = timeout
+            continue
+        if field_name == "SSL_MODE" and value not in _POSTGRES_SSL_MODES:
+            continue
+        setattr(config, field_name, value)
 
 
 def _extract_postgres_host_port_from_url(parsed: object, config: PostgresSQLAlchemyConfig) -> None:
