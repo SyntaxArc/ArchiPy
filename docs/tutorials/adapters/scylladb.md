@@ -149,6 +149,8 @@ config = ScyllaDBConfig(
 | `TLS_KEY_FILE`      | `None`          | Client private key (with `TLS_CERT_FILE`)                            |
 | `TLS_VERIFY_MODE`   | `CERT_REQUIRED` | `CERT_NONE` skips verification and host name checks; insecure        |
 | `TLS_CHECK_HOSTNAME`| `True`          | Match the certificate to the contact point host name                 |
+| `TLS_SERVER_NAME`   | `None`          | Host name to verify, when it differs from the contact point address  |
+| `TLS_SESSION_CACHE_ENABLED` | `True`  | Resume TLS sessions; a resumed session skips the certificate check, so set `False` to verify every connection |
 
 !!! warning
     Do not use `TLS_VERIFY_MODE="CERT_NONE"` outside local testing.
