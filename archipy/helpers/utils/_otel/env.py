@@ -35,6 +35,14 @@ def _parse_headers(raw: str) -> dict[str, str]:
     return dict(parse_env_headers(raw, liberal=True))
 
 
+def _parse_bool(raw: str) -> bool:
+    """Parse ``true``/``false`` (any case); anything else is rejected like the SDK does."""
+    value = raw.strip().lower()
+    if value not in {"true", "false"}:
+        raise ValueError(raw)
+    return value == "true"
+
+
 def _parse_propagators(raw: str) -> list[str]:
     return [name.strip().lower() for name in raw.split(",") if name.strip()]
 
@@ -55,6 +63,22 @@ def _signal_settings() -> list[tuple[str, str, Callable[[str], object]]]:
         # The Python SDK reads this variable in seconds, so ArchiPy does too.
         ("TIMEOUT", "OTEL_EXPORTER_OTLP_TIMEOUT", float),
         ("OTLP_COMPRESSION", "OTEL_EXPORTER_OTLP_COMPRESSION", lambda value: value.strip().lower()),
+        ("OTLP_CERTIFICATE", "OTEL_EXPORTER_OTLP_CERTIFICATE", str),
+        ("OTLP_CLIENT_CERTIFICATE", "OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", str),
+        ("OTLP_CLIENT_KEY", "OTEL_EXPORTER_OTLP_CLIENT_KEY", str),
+        ("OTLP_INSECURE", "OTEL_EXPORTER_OTLP_INSECURE", _parse_bool),
+        ("TRACES_CERTIFICATE", "OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE", str),
+        ("TRACES_CLIENT_CERTIFICATE", "OTEL_EXPORTER_OTLP_TRACES_CLIENT_CERTIFICATE", str),
+        ("TRACES_CLIENT_KEY", "OTEL_EXPORTER_OTLP_TRACES_CLIENT_KEY", str),
+        ("TRACES_INSECURE", "OTEL_EXPORTER_OTLP_TRACES_INSECURE", _parse_bool),
+        ("METRICS_CERTIFICATE", "OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE", str),
+        ("METRICS_CLIENT_CERTIFICATE", "OTEL_EXPORTER_OTLP_METRICS_CLIENT_CERTIFICATE", str),
+        ("METRICS_CLIENT_KEY", "OTEL_EXPORTER_OTLP_METRICS_CLIENT_KEY", str),
+        ("METRICS_INSECURE", "OTEL_EXPORTER_OTLP_METRICS_INSECURE", _parse_bool),
+        ("LOGS_CERTIFICATE", "OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE", str),
+        ("LOGS_CLIENT_CERTIFICATE", "OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE", str),
+        ("LOGS_CLIENT_KEY", "OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY", str),
+        ("LOGS_INSECURE", "OTEL_EXPORTER_OTLP_LOGS_INSECURE", _parse_bool),
         ("PROPAGATORS", "OTEL_PROPAGATORS", _parse_propagators),
         ("SPAN_BATCH_SCHEDULE_DELAY_MS", "OTEL_BSP_SCHEDULE_DELAY", int),
         ("SPAN_BATCH_EXPORT_TIMEOUT_MS", "OTEL_BSP_EXPORT_TIMEOUT", int),

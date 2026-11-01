@@ -105,6 +105,70 @@ class OpentelemetryConfig(BaseModel):
         default=None,
         description="Optional per-signal OTLP logs headers; when set they replace OTLP_HEADERS for logs",
     )
+    OTLP_CERTIFICATE: str | None = Field(
+        default=None,
+        description="Shared OTLP trusted root certificate PEM path",
+    )
+    OTLP_CLIENT_CERTIFICATE: str | None = Field(
+        default=None,
+        description="Shared OTLP mTLS client certificate PEM path (needs CLIENT_KEY)",
+    )
+    OTLP_CLIENT_KEY: str | None = Field(
+        default=None,
+        description="Shared OTLP mTLS client key PEM path (needs CLIENT_CERTIFICATE)",
+    )
+    OTLP_INSECURE: bool | None = Field(
+        default=None,
+        description="Shared OTLP insecure flag (gRPC only; HTTP follows the URL scheme)",
+    )
+    TRACES_CERTIFICATE: str | None = Field(
+        default=None,
+        description="OTLP traces trusted root certificate PEM path; replaces the shared value",
+    )
+    TRACES_CLIENT_CERTIFICATE: str | None = Field(
+        default=None,
+        description="OTLP traces mTLS client certificate PEM path (needs CLIENT_KEY); replaces the shared value",
+    )
+    TRACES_CLIENT_KEY: str | None = Field(
+        default=None,
+        description="OTLP traces mTLS client key PEM path (needs CLIENT_CERTIFICATE); replaces the shared value",
+    )
+    TRACES_INSECURE: bool | None = Field(
+        default=None,
+        description="OTLP traces insecure flag (gRPC only; HTTP follows the URL scheme); replaces the shared value",
+    )
+    METRICS_CERTIFICATE: str | None = Field(
+        default=None,
+        description="OTLP metrics trusted root certificate PEM path; replaces the shared value",
+    )
+    METRICS_CLIENT_CERTIFICATE: str | None = Field(
+        default=None,
+        description="OTLP metrics mTLS client certificate PEM path (needs CLIENT_KEY); replaces the shared value",
+    )
+    METRICS_CLIENT_KEY: str | None = Field(
+        default=None,
+        description="OTLP metrics mTLS client key PEM path (needs CLIENT_CERTIFICATE); replaces the shared value",
+    )
+    METRICS_INSECURE: bool | None = Field(
+        default=None,
+        description="OTLP metrics insecure flag (gRPC only; HTTP follows the URL scheme); replaces the shared value",
+    )
+    LOGS_CERTIFICATE: str | None = Field(
+        default=None,
+        description="OTLP logs trusted root certificate PEM path; replaces the shared value",
+    )
+    LOGS_CLIENT_CERTIFICATE: str | None = Field(
+        default=None,
+        description="OTLP logs mTLS client certificate PEM path (needs CLIENT_KEY); replaces the shared value",
+    )
+    LOGS_CLIENT_KEY: str | None = Field(
+        default=None,
+        description="OTLP logs mTLS client key PEM path (needs CLIENT_CERTIFICATE); replaces the shared value",
+    )
+    LOGS_INSECURE: bool | None = Field(
+        default=None,
+        description="OTLP logs insecure flag (gRPC only; HTTP follows the URL scheme); replaces the shared value",
+    )
     TIMEOUT: float = Field(default=10.0, ge=0.1, description="OTLP export timeout in seconds")
     TRACES_SAMPLER: OtelSampler = Field(
         default=OtelSampler.PARENTBASED_TRACEIDRATIO,
@@ -360,6 +424,22 @@ class OpentelemetryConfig(BaseModel):
                 )
             setattr(self, batch_field, queue_size)
 
+    def _check_client_tls_pairs(self) -> None:
+        """Require a client certificate and a client key together, shared and per signal.
+
+        Raises:
+            ConfigurationError: If only one of a client certificate and a client key is set.
+        """
+        for prefix in ("OTLP", "TRACES", "METRICS", "LOGS"):
+            certificate = getattr(self, f"{prefix}_CLIENT_CERTIFICATE")
+            key = getattr(self, f"{prefix}_CLIENT_KEY")
+            if (certificate is None) != (key is None):
+                raise ConfigurationError(
+                    operation="otel",
+                    reason="client_certificate_and_key_required_together",
+                    additional_data={"hint": f"Set both {prefix}_CLIENT_CERTIFICATE and {prefix}_CLIENT_KEY"},
+                )
+
     @model_validator(mode="after")
     def validate_otel_config(self) -> Self:
         """Validate signal switches, metrics exporters, and log level."""
@@ -386,6 +466,7 @@ class OpentelemetryConfig(BaseModel):
             )
 
         self._fit_batch_sizes_to_queues()
+        self._check_client_tls_pairs()
 
         buckets = self.METRICS_DURATION_BUCKETS_S
         if buckets[0] <= 0 or any(low >= high for low, high in pairwise(buckets)):

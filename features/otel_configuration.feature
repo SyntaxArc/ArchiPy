@@ -325,6 +325,79 @@ Feature: OpenTelemetry configuration
     And a span is recorded with 5 attributes holding the value "abcdefgh"
     Then the recorded span keeps 2 attributes with the value "abcd"
 
+  Scenario: The standard TLS variables map to shared and per-signal settings
+    Given an OpenTelemetry config built from:
+      """
+      {
+        "USE_STANDARD_ENV": true
+      }
+      """
+    And the standard OTEL environment:
+      | name                                   | value         |
+      | OTEL_EXPORTER_OTLP_CERTIFICATE         | /tls/ca.pem   |
+      | OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE  | /tls/c.pem    |
+      | OTEL_EXPORTER_OTLP_CLIENT_KEY          | /tls/c.key    |
+      | OTEL_EXPORTER_OTLP_INSECURE            | false         |
+      | OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE | /tls/m-ca.pem |
+      | OTEL_EXPORTER_OTLP_LOGS_INSECURE       | TRUE          |
+    When the standard environment is applied
+    Then the effective setting "OTLP_CERTIFICATE" is "/tls/ca.pem"
+    And the effective setting "OTLP_CLIENT_KEY" is "/tls/c.key"
+    And the effective setting "OTLP_INSECURE" is false
+    And the effective setting "METRICS_CERTIFICATE" is "/tls/m-ca.pem"
+    And the effective setting "LOGS_INSECURE" is true
+    And the effective setting "TRACES_CERTIFICATE" is null
+
+  Scenario Outline: A per-signal TLS option replaces the shared one for its signal only
+    Given an OpenTelemetry config built from:
+      """
+      {
+        "OTLP_CERTIFICATE": "/tls/ca.pem",
+        "OTLP_CLIENT_CERTIFICATE": "/tls/c.pem",
+        "OTLP_CLIENT_KEY": "/tls/c.key",
+        "METRICS_CERTIFICATE": "/tls/m-ca.pem"
+      }
+      """
+    And the standard OTEL environment:
+      | name | value |
+    When the standard environment is applied
+    Then the HTTP exporter TLS options of <signal> are <options>
+
+    Examples:
+      | signal  | options                                                                                                         |
+      | traces  | {"certificate_file": "/tls/ca.pem", "client_key_file": "/tls/c.key", "client_certificate_file": "/tls/c.pem"}   |
+      | metrics | {"certificate_file": "/tls/m-ca.pem", "client_key_file": "/tls/c.key", "client_certificate_file": "/tls/c.pem"} |
+
+  Scenario Outline: The gRPC exporter builds channel credentials from the TLS files
+    Given an OpenTelemetry config built from:
+      """
+      {}
+      """
+    And the standard OTEL environment:
+      | name | value |
+    When the standard environment is applied
+    Then the gRPC exporter of <signal> gets <outcome> from the TLS files <files>
+
+    Examples:
+      | signal  | outcome              | files                                                                  |
+      | traces  | credentials          | {"OTLP_CERTIFICATE": "ca.pem"}                                         |
+      | metrics | credentials          | {"METRICS_CLIENT_KEY": "c.key", "METRICS_CLIENT_CERTIFICATE": "c.pem"} |
+      | logs    | no credentials       | {}                                                                     |
+      | traces  | a missing file error | {}                                                                     |
+
+  Scenario Outline: A client certificate without a client key is rejected, shared or per signal
+    Then building an OpenTelemetry config from the following fails with "client_certificate_and_key_required_together":
+      """
+      {
+        "<prefix>_CLIENT_CERTIFICATE": "/tls/c.pem"
+      }
+      """
+
+    Examples:
+      | prefix  |
+      | OTLP    |
+      | METRICS |
+
   Scenario: An explicitly set field wins over the standard variable
     Given an OpenTelemetry config built from:
       """

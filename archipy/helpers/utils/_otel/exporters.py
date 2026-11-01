@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -130,6 +131,45 @@ def _signal_headers(otel: OpentelemetryConfig, signal: str) -> dict[str, str] | 
     return dict(specific if specific is not None else otel.OTLP_HEADERS) or None
 
 
+def _tls_setting(otel: OpentelemetryConfig, signal: str, name: str) -> Any:
+    """Return one TLS setting of a signal: ``<SIGNAL>_<name>`` when set, else ``OTLP_<name>``."""
+    specific = getattr(otel, f"{signal}_{name}", None)
+    return specific if specific is not None else getattr(otel, f"OTLP_{name}", None)
+
+
+def _http_tls(otel: OpentelemetryConfig, signal: str) -> dict[str, Any]:
+    """Return the TLS keyword arguments of an HTTP exporter; an ``https://`` URL decides whether TLS is used."""
+    return {
+        "certificate_file": _tls_setting(otel, signal, "CERTIFICATE"),
+        "client_key_file": _tls_setting(otel, signal, "CLIENT_KEY"),
+        "client_certificate_file": _tls_setting(otel, signal, "CLIENT_CERTIFICATE"),
+    }
+
+
+def _read_pem(path: str | None) -> bytes | None:
+    """Return the bytes of a PEM file, or ``None`` when no path is set."""
+    if path is None:
+        return None
+    return Path(path).read_bytes()
+
+
+def _grpc_tls(otel: OpentelemetryConfig, signal: str) -> dict[str, Any]:
+    """Return the TLS keyword arguments of a gRPC exporter: ``insecure`` and, when files are set, ``credentials``."""
+    import grpc
+
+    certificate = _tls_setting(otel, signal, "CERTIFICATE")
+    client_key = _tls_setting(otel, signal, "CLIENT_KEY")
+    client_certificate = _tls_setting(otel, signal, "CLIENT_CERTIFICATE")
+    credentials = None
+    if certificate is not None or client_key is not None:
+        credentials = grpc.ssl_channel_credentials(
+            root_certificates=_read_pem(certificate),
+            private_key=_read_pem(client_key),
+            certificate_chain=_read_pem(client_certificate),
+        )
+    return {"insecure": _tls_setting(otel, signal, "INSECURE"), "credentials": credentials}
+
+
 def create_span_exporter(otel: OpentelemetryConfig) -> SpanExporter:
     headers = _signal_headers(otel, "TRACES")
     endpoint = resolve_otlp_endpoint(otel, "traces", getattr(otel, "TRACES_ENDPOINT", None))
@@ -141,6 +181,7 @@ def create_span_exporter(otel: OpentelemetryConfig) -> SpanExporter:
         return OTLPSpanExporter(
             endpoint=endpoint,
             headers=headers,
+            **_http_tls(otel, "TRACES"),
             timeout=otel.TIMEOUT,
             compression=_http_compression(otel),
         )
@@ -151,6 +192,7 @@ def create_span_exporter(otel: OpentelemetryConfig) -> SpanExporter:
     return OTLPSpanExporter(
         endpoint=endpoint,
         headers=headers,
+        **_grpc_tls(otel, "TRACES"),
         timeout=otel.TIMEOUT,
         compression=_grpc_compression(otel),
     )
@@ -167,6 +209,7 @@ def create_metric_exporter(otel: OpentelemetryConfig) -> MetricExporter:
         return OTLPMetricExporter(
             endpoint=endpoint,
             headers=headers,
+            **_http_tls(otel, "METRICS"),
             timeout=otel.TIMEOUT,
             compression=_http_compression(otel),
         )
@@ -177,6 +220,7 @@ def create_metric_exporter(otel: OpentelemetryConfig) -> MetricExporter:
     return OTLPMetricExporter(
         endpoint=endpoint,
         headers=headers,
+        **_grpc_tls(otel, "METRICS"),
         timeout=otel.TIMEOUT,
         compression=_grpc_compression(otel),
     )
@@ -193,6 +237,7 @@ def create_otlp_log_exporter(otel: OpentelemetryConfig) -> LogRecordExporter:
         return OTLPLogExporter(
             endpoint=endpoint,
             headers=headers,
+            **_http_tls(otel, "LOGS"),
             timeout=otel.TIMEOUT,
             compression=_http_compression(otel),
         )
@@ -203,6 +248,7 @@ def create_otlp_log_exporter(otel: OpentelemetryConfig) -> LogRecordExporter:
     return OTLPLogExporter(
         endpoint=endpoint,
         headers=headers,
+        **_grpc_tls(otel, "LOGS"),
         timeout=otel.TIMEOUT,
         compression=_grpc_compression(otel),
     )
