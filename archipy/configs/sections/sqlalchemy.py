@@ -1,7 +1,7 @@
 """SQLAlchemy database configurations."""
 
 import contextlib
-from typing import Self
+from typing import Literal, Self
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, PostgresDsn, field_validator, model_validator
@@ -79,6 +79,31 @@ class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
         ge=1,
         description="Seconds to wait for the connection to be established (None: libpq waits indefinitely)",
     )
+    SSL_MODE: Literal["disable", "allow", "prefer", "require", "verify-ca", "verify-full"] | None = Field(
+        default=None,
+        description="libpq sslmode. 'require' enforces TLS; 'verify-ca' and 'verify-full' also verify the server "
+        "certificate (and host name). None: the libpq default ('prefer')",
+    )
+    SSL_ROOT_CERT: str | None = Field(
+        default=None,
+        description="Path to the CA certificate file (libpq sslrootcert) used by 'verify-ca' and 'verify-full'",
+    )
+    SSL_CERT: str | None = Field(default=None, description="Path to the client certificate file (libpq sslcert)")
+    SSL_KEY: str | None = Field(default=None, description="Path to the client private key file (libpq sslkey)")
+
+    @model_validator(mode="after")
+    def validate_ssl_client_pair(self) -> Self:
+        """Require the client certificate and key together.
+
+        Returns:
+            Self: The validated configuration instance.
+
+        Raises:
+            ConfigurationError: If only one of SSL_CERT and SSL_KEY is set.
+        """
+        if (self.SSL_CERT is None) != (self.SSL_KEY is None):
+            raise ConfigurationError(operation="postgres", reason="ssl_cert_and_key_must_be_set_together")
+        return self
 
     @model_validator(mode="after")
     def build_connection_url(self) -> Self:
@@ -169,6 +194,35 @@ class MySQLSQLAlchemyConfig(SQLAlchemyConfig):
 
     DRIVER_NAME: str = Field(default="mysql+pymysql", description="MySQL driver name")
     PORT: int | None = Field(default=3306, description="MySQL port")
+    SSL_MODE: Literal["required", "verify_ca", "verify_identity"] | None = Field(
+        default=None,
+        description="TLS mode. 'required' enforces an encrypted connection without verifying the server; "
+        "'verify_ca' also verifies the server certificate; 'verify_identity' also verifies the host name. "
+        "None: the driver default (no TLS options are passed)",
+    )
+    SSL_CA: str | None = Field(
+        default=None,
+        description="Path to the CA certificate file used by 'verify_ca' and 'verify_identity' "
+        "(None: the system trust store)",
+    )
+    SSL_CERT: str | None = Field(default=None, description="Path to the client certificate file")
+    SSL_KEY: str | None = Field(default=None, description="Path to the client private key file")
+
+    @model_validator(mode="after")
+    def validate_ssl_options(self) -> Self:
+        """Require SSL_MODE for any TLS file, and the client certificate and key together.
+
+        Returns:
+            Self: The validated configuration instance.
+
+        Raises:
+            ConfigurationError: If the TLS options are inconsistent.
+        """
+        if self.SSL_MODE is None and any((self.SSL_CA, self.SSL_CERT, self.SSL_KEY)):
+            raise ConfigurationError(operation="mysql", reason="ssl_files_require_ssl_mode")
+        if (self.SSL_CERT is None) != (self.SSL_KEY is None):
+            raise ConfigurationError(operation="mysql", reason="ssl_cert_and_key_must_be_set_together")
+        return self
 
 
 class StarRocksSQLAlchemyConfig(SQLAlchemyConfig):

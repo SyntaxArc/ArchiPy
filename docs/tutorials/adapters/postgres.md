@@ -45,6 +45,24 @@ POSTGRES_SQLALCHEMY__POOL_RECYCLE_SECONDS=600
 POSTGRES_SQLALCHEMY__ECHO=false
 ```
 
+### TLS
+
+By default no TLS options are passed, so libpq uses its own default (`prefer`). Set `SSL_MODE` to enforce or verify TLS.
+These fields map to the libpq `sslmode`, `sslrootcert`, `sslcert` and `sslkey` options of both the sync and async
+managers.
+
+```bash
+POSTGRES_SQLALCHEMY__SSL_MODE=verify-full            # disable, allow, prefer, require, verify-ca or verify-full
+POSTGRES_SQLALCHEMY__SSL_ROOT_CERT=/etc/ssl/db-ca.pem
+# Client certificate (mutual TLS): set both or neither
+POSTGRES_SQLALCHEMY__SSL_CERT=/etc/ssl/client.pem
+POSTGRES_SQLALCHEMY__SSL_KEY=/etc/ssl/client.key
+```
+
+!!! warning
+    Only `require` enforces encryption, and only `verify-ca` and `verify-full` verify the server certificate
+    (`verify-full` also checks the host name). `prefer` silently falls back to an unencrypted connection.
+
 ### Direct Configuration
 
 ```python

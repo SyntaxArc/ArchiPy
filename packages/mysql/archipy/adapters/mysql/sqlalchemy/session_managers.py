@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+import ssl
+from typing import TYPE_CHECKING, Any, override
 
 from sqlalchemy import URL
 from sqlalchemy.dialects.mysql.base import MySQLTypeCompiler
@@ -40,6 +41,30 @@ def _patch_mysql_uuid_mapping() -> None:
 _patch_mysql_uuid_mapping()
 
 
+def _build_connect_args(configs: MySQLSQLAlchemyConfig) -> dict[str, Any]:
+    """Build the pymysql and asyncmy connection arguments from the configuration.
+
+    Both drivers accept an ``ssl.SSLContext`` as ``ssl``.
+
+    Args:
+        configs: MySQL configuration.
+
+    Returns:
+        dict[str, Any]: ``ssl`` when SSL_MODE is set, otherwise empty (the driver default applies).
+    """
+    if configs.SSL_MODE is None:
+        return {}
+    context = ssl.create_default_context(cafile=configs.SSL_CA)
+    if configs.SSL_MODE == "required":
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+    elif configs.SSL_MODE == "verify_ca":
+        context.check_hostname = False
+    if configs.SSL_CERT is not None and configs.SSL_KEY is not None:
+        context.load_cert_chain(configs.SSL_CERT, configs.SSL_KEY)
+    return {"ssl": context}
+
+
 class MySQLSQlAlchemySessionManager(BaseSQLAlchemySessionManager[MySQLSQLAlchemyConfig], metaclass=Singleton):
     """Synchronous SQLAlchemy session manager for MySQL.
 
@@ -63,6 +88,7 @@ class MySQLSQlAlchemySessionManager(BaseSQLAlchemySessionManager[MySQLSQLAlchemy
             orm_config: MySQL-specific configuration. If None, uses global config.
         """
         configs = orm_config or self._default_config()
+        self._configs = configs  # read by _get_connect_args, which the base initializer calls
         super().__init__(configs)
 
     @override
@@ -82,6 +108,15 @@ class MySQLSQlAlchemySessionManager(BaseSQLAlchemySessionManager[MySQLSQLAlchemy
             str: The name of the database ('mysql').
         """
         return "mysql"
+
+    @override
+    def _get_connect_args(self) -> dict[str, Any]:
+        """Return the driver connection arguments.
+
+        Returns:
+            dict[str, Any]: ``ssl`` when TLS is configured, otherwise empty.
+        """
+        return _build_connect_args(self._configs)
 
     @override
     def _create_url(self, configs: MySQLSQLAlchemyConfig) -> URL:
@@ -137,6 +172,7 @@ class AsyncMySQLSQlAlchemySessionManager(
             orm_config: MySQL-specific configuration. If None, uses global config.
         """
         configs = orm_config or self._default_config()
+        self._configs = configs  # read by _get_connect_args, which the base initializer calls
         super().__init__(configs)
 
     @override
@@ -156,6 +192,15 @@ class AsyncMySQLSQlAlchemySessionManager(
             str: The name of the database ('mysql').
         """
         return "mysql"
+
+    @override
+    def _get_connect_args(self) -> dict[str, Any]:
+        """Return the driver connection arguments.
+
+        Returns:
+            dict[str, Any]: ``ssl`` when TLS is configured, otherwise empty.
+        """
+        return _build_connect_args(self._configs)
 
     @override
     def _create_url(self, configs: MySQLSQLAlchemyConfig) -> URL:

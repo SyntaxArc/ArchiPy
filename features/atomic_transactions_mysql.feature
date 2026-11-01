@@ -421,3 +421,17 @@ Feature: SQLAlchemy Atomic Transactions on MySQL
       | db_type | mode  | statement_kind |
       | mysql   | async | execute        |
       | mysql   | async | scalars        |
+
+  Scenario Outline: TLS modes of the <kind> driver against a server with a self-signed certificate
+    When I connect to mysql through the <kind> driver with TLS mode <tls_mode>
+    Then the connection should be <outcome>
+
+    Examples: Sync driver
+      | kind | tls_mode        | outcome   |
+      | sync | required        | encrypted |
+      | sync | verify_identity | rejected  |
+
+    Examples: Async driver
+      | kind  | tls_mode        | outcome   |
+      | async | required        | encrypted |
+      | async | verify_identity | rejected  |
