@@ -1360,6 +1360,24 @@ def step_single_replica_warning(context: Context, expectation: str) -> None:
     assert found is (expectation == "contain"), messages
 
 
+@when('I select every row of "{table}" after inserting {count:d} rows with a fetch size of {fetch_size:d}')
+async def step_select_paged(context: Context, table: str, count: int, fetch_size: int) -> None:
+    """Insert rows, shrink the fetch size so the result spans several pages and select them all.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name.
+        count (int): Number of rows to insert.
+        fetch_size (int): Driver fetch size for the session.
+    """
+    adapter = get_scylladb_adapter(context)
+    for row_id in range(count):
+        await _call_adapter(adapter, "insert", table, {"id": row_id, "name": f"n{row_id}", "age": row_id})
+    adapter._session.default_fetch_size = fetch_size
+    rows = await _call_adapter(adapter, "select", table)
+    _get_scenario_context(context).scylla_result = str(len(rows))
+
+
 @then("the ScyllaDB call should succeed")
 def step_scylladb_call_succeeds(context: Context) -> None:
     """Assert that the last recorded call raised nothing.

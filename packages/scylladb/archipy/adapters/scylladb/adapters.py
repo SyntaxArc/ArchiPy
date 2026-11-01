@@ -1460,7 +1460,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         try:
             result = await self._execute_dml(query, params)
-            return list(result)
+            # pages after the first are fetched with blocking driver calls, so collect the rows off the loop
+            return await asyncio.to_thread(list, result)
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "select")
             raise

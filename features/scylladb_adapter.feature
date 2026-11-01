@@ -438,6 +438,21 @@ Feature: ScyllaDB Adapter
       | rf_two_as | 2      | not contain |
 
   @needs-scylladb
+  Scenario Outline: Select returns every page of a multi-page result
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "page_<mode>"
+    When I select every row of "page_<mode>" after inserting 25 rows with a fetch size of 7
+    Then the ScyllaDB result should be "25"
+
+    Examples: Sync
+      | mode |
+      | syn  |
+
+    @async
+    Examples: Async
+      | mode |
+      | asyn |
+
+  @needs-scylladb
   Scenario Outline: Prepared statements are cached and executed with bound parameters
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
     When I execute a prepared ScyllaDB insert into "<table>" twice
