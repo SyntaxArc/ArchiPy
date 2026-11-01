@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import logging
 from typing import TYPE_CHECKING, NoReturn, override
 
@@ -37,8 +36,10 @@ from archipy.models.errors import (
     InvalidArgumentError,
     NetworkError,
     NotFoundError,
+    PermissionDeniedError,
     ResourceExhaustedError,
     ServiceUnavailableError,
+    UnauthenticatedError,
     UnavailableError,
 )
 
@@ -149,6 +150,29 @@ _KAFKA_CLIENT_ERRORS: tuple[type[Exception], ...] = (
 )
 
 
+def _extract_kafka_error(exception: Exception) -> KafkaError | None:
+    """Return the ``KafkaError`` carried by a ``KafkaException``, or None."""
+    if isinstance(exception, KafkaException) and exception.args and isinstance(exception.args[0], KafkaError):
+        return exception.args[0]
+    return None
+
+
+_TIMEOUT_CODES = frozenset({KafkaError._MSG_TIMED_OUT, KafkaError._TIMED_OUT, KafkaError.REQUEST_TIMED_OUT})
+_NETWORK_CODES = frozenset({KafkaError._TRANSPORT, KafkaError.NETWORK_EXCEPTION})
+_UNAVAILABLE_CODES = frozenset(
+    {KafkaError._ALL_BROKERS_DOWN, KafkaError._RESOLVE, KafkaError.BROKER_NOT_AVAILABLE},
+)
+_AUTHENTICATION_CODES = frozenset({KafkaError._AUTHENTICATION, KafkaError.SASL_AUTHENTICATION_FAILED})
+_AUTHORIZATION_CODES = frozenset(
+    {
+        KafkaError.TOPIC_AUTHORIZATION_FAILED,
+        KafkaError.GROUP_AUTHORIZATION_FAILED,
+        KafkaError.CLUSTER_AUTHORIZATION_FAILED,
+        KafkaError.TRANSACTIONAL_ID_AUTHORIZATION_FAILED,
+    },
+)
+
+
 class KafkaExceptionHandlerMixin:
     """Mixin class to handle Kafka exceptions in a consistent way."""
 
@@ -165,31 +189,56 @@ class KafkaExceptionHandlerMixin:
         """
         error_msg = str(exception).lower()
 
-        # Configuration errors
+        kafka_error = _extract_kafka_error(exception)
+        if kafka_error is not None:
+            cls._raise_for_error_code(kafka_error, exception, operation)
+
+        # Fallback for exceptions that carry no error code
         if "configuration" in error_msg:
             raise ConfigurationError(operation="kafka") from exception
-
-        # Invalid argument errors
         if "invalid" in error_msg:
             raise InvalidArgumentError(argument_name=operation) from exception
-
-        # Timeout errors
-        if "timeout" in error_msg:
-            # Extract timeout value if available
-            timeout = None
-            if hasattr(exception, "args") and len(exception.args) > 1:
-                with contextlib.suppress(IndexError, ValueError):
-                    timeout = int(exception.args[1])
-            raise ConnectionTimeoutError(service="Kafka", timeout=timeout) from exception
-
-        # Network/connectivity errors
+        if "timeout" in error_msg or "timed out" in error_msg:
+            raise ConnectionTimeoutError(service="Kafka") from exception
         if "network" in error_msg:
             raise NetworkError(service="Kafka") from exception
-
-        # Service availability errors
         if "unavailable" in error_msg or "connection" in error_msg:
             raise ServiceUnavailableError(service="Kafka") from exception
         raise InternalError(additional_data={"operation": operation}) from exception
+
+    @classmethod
+    def _raise_for_error_code(cls, kafka_error: KafkaError, exception: Exception, operation: str) -> None:
+        """Raise the application error that matches a librdkafka error code, or return for unknown codes.
+
+        Args:
+            kafka_error: The error carried by the exception.
+            exception: The original exception, chained as the cause.
+            operation: The name of the operation that failed.
+
+        Raises:
+            ConnectionTimeoutError: For timeout codes.
+            NetworkError: For transport failures.
+            ServiceUnavailableError: When no broker is reachable.
+            UnauthenticatedError: For authentication failures.
+            PermissionDeniedError: For authorization failures.
+            InvalidArgumentError: For invalid arguments.
+        """
+        code = kafka_error.code()
+        if code in _TIMEOUT_CODES:
+            raise ConnectionTimeoutError(service="Kafka") from exception
+        if code in _NETWORK_CODES:
+            raise NetworkError(service="Kafka") from exception
+        if code in _UNAVAILABLE_CODES:
+            raise ServiceUnavailableError(service="Kafka") from exception
+        if code in _AUTHENTICATION_CODES:
+            raise UnauthenticatedError from exception
+        if code in _AUTHORIZATION_CODES:
+            raise PermissionDeniedError from exception
+        if code == KafkaError._INVALID_ARG:
+            # librdkafka reports a rejected client setting as an invalid argument naming the property.
+            if "configuration property" in str(kafka_error.str()).lower():
+                raise ConfigurationError(operation="kafka") from exception
+            raise InvalidArgumentError(argument_name=operation) from exception
 
     @classmethod
     def _handle_producer_exception(cls, exception: Exception, operation: str) -> NoReturn:
@@ -264,7 +313,8 @@ class KafkaAdminAdapter(KafkaAdminPort, KafkaExceptionHandlerMixin):
             try:
                 future.result(wait)
             except KafkaException as e:
-                code = e.args[0].code() if e.args and isinstance(e.args[0], KafkaError) else None
+                kafka_error = _extract_kafka_error(e)
+                code = kafka_error.code() if kafka_error is not None else None
                 if code == KafkaError.TOPIC_ALREADY_EXISTS:
                     raise AlreadyExistsError(resource_type=f"topic {topic}") from e
                 if code == KafkaError.UNKNOWN_TOPIC_OR_PART:

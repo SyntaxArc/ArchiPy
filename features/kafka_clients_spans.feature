@@ -60,13 +60,31 @@ Feature: Kafka Clients and Spans Testing
   Scenario Outline: Listing topics with the <adapter_kind> adapter fails when the broker is unreachable
     Given an unreachable Kafka broker
     When I list topics with the <adapter_kind> adapter on that broker
-    Then the Kafka operation should raise "InternalError"
+    Then the Kafka operation should raise one of "NetworkError, ServiceUnavailableError, ConnectionTimeoutError"
 
     Examples:
       | adapter_kind   |
       | admin          |
       | sync producer  |
       | async producer |
+
+  Scenario Outline: A Kafka failure with code <code> is raised as <error>
+    When the adapters handle a Kafka failure with code <code>
+    Then the Kafka operation should raise "<error>"
+
+    Examples:
+      | code                       | error                   |
+      | _MSG_TIMED_OUT             | ConnectionTimeoutError  |
+      | _TIMED_OUT                 | ConnectionTimeoutError  |
+      | REQUEST_TIMED_OUT          | ConnectionTimeoutError  |
+      | _TRANSPORT                 | NetworkError            |
+      | _ALL_BROKERS_DOWN          | ServiceUnavailableError |
+      | BROKER_NOT_AVAILABLE       | ServiceUnavailableError |
+      | _AUTHENTICATION            | UnauthenticatedError    |
+      | SASL_AUTHENTICATION_FAILED | UnauthenticatedError    |
+      | TOPIC_AUTHORIZATION_FAILED | PermissionDeniedError   |
+      | GROUP_AUTHORIZATION_FAILED | PermissionDeniedError   |
+      | _INVALID_ARG               | InvalidArgumentError    |
 
   Scenario: Producing into a full local queue is reported as resource exhaustion
     Given an unreachable Kafka broker
