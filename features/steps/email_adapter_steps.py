@@ -6,6 +6,7 @@ import ssl
 import tempfile
 import threading
 import time
+import warnings
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from unittest import mock
@@ -17,9 +18,9 @@ from pydantic import ValidationError
 from archipy.adapters.email.adapters import AttachmentHandler, EmailAdapter, EmailConnectionPool
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import EmailConfig
-from archipy.models.errors import InvalidArgumentError, UnavailableError
+from archipy.models.errors import ConfigurationError, InvalidArgumentError, UnavailableError
 from archipy.models.types.email_types import EmailAttachmentType
-from features.test_containers import ContainerManager
+from features.test_containers import ContainerManager, _write_self_signed_certificate
 from features.test_helpers import get_current_scenario_context
 
 
@@ -596,3 +597,137 @@ def step_no_span_exposes(context, secret):
         if any(secret in value for value in values):
             exposed.append(span.name)
     assert not exposed, f"{secret!r} appears in spans {exposed}"
+
+
+@given('the SMTP transport security is "{mode}"')
+def step_given_transport_security(context, mode):
+    BaseConfig.global_config().EMAIL.TLS_MODE = mode
+
+
+@given('the SMTP transport security is "{mode}" verified with the Mailpit CA')
+def step_given_transport_security_mailpit_ca(context, mode):
+    config = BaseConfig.global_config().EMAIL
+    config.TLS_MODE = mode
+    config.TLS_CA_FILE = _mailpit("mailpit").ca_file
+
+
+@given('the SMTP transport security is "{mode}" without certificate verification')
+def step_given_transport_security_unverified(context, mode):
+    config = BaseConfig.global_config().EMAIL
+    config.TLS_MODE = mode
+    config.TLS_VERIFY = False
+
+
+@given('the SMTP transport security is "{mode}" verified with the local SMTPS CA')
+def step_given_transport_security_local_ca(context, mode):
+    config = BaseConfig.global_config().EMAIL
+    config.TLS_MODE = mode
+    config.TLS_CA_FILE = get_current_scenario_context(context).get("smtps_ca_file")
+
+
+@given("a local SMTPS server")
+def step_given_local_smtps(context):
+    """Mailpit has no implicit TLS listener, so a minimal TLS-wrapped SMTP greeter stands in for it."""
+    scenario_context = get_current_scenario_context(context)
+    directory = _tmp_dir(context)
+    _write_self_signed_certificate(directory)
+    tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    tls.load_cert_chain(directory / "cert.pem", directory / "key.pem")
+    listener = socket.socket()
+    listener.bind(("127.0.0.1", 0))
+    listener.listen(5)
+
+    def serve():
+        while True:
+            try:
+                raw, _ = listener.accept()
+            except OSError:
+                return
+            try:
+                with tls.wrap_socket(raw, server_side=True) as client:
+                    client.sendall(b"220 localhost ESMTP\r\n")
+                    reader = client.makefile("rb")
+                    for line in reader:
+                        command = line.strip().upper()
+                        if command.startswith(b"EHLO"):
+                            client.sendall(b"250 localhost\r\n")
+                        elif command.startswith(b"QUIT"):
+                            client.sendall(b"221 bye\r\n")
+                            break
+                        else:
+                            client.sendall(b"250 ok\r\n")
+            except (OSError, ssl.SSLError):
+                continue
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    context.add_cleanup(listener.close)
+    scenario_context.store("smtps_ca_file", str(directory / "cert.pem"))
+    _install_email_config(context, SMTP_SERVER="localhost", SMTP_PORT=listener.getsockname()[1])
+
+
+@given("only the SMTP {field} is set")
+def step_given_half_credentials(context, field):
+    config = BaseConfig.global_config().EMAIL
+    if field == "username":
+        config.PASSWORD = None
+    else:
+        config.USERNAME = None
+
+
+@given('the SMTP local host name "{hostname}" and source address "{address}"')
+def step_given_local_identity(context, hostname, address):
+    config = BaseConfig.global_config().EMAIL
+    config.LOCAL_HOSTNAME = hostname
+    config.SOURCE_ADDRESS = address
+
+
+@when("I create an email adapter")
+def step_when_create_adapter(context):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("error", None)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        try:
+            scenario_context.store("email_adapter", EmailAdapter())
+        except Exception as exception:
+            scenario_context.store("error", exception)
+    scenario_context.store("warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+
+
+@then('an email deprecation warning mentions "{text}"')
+def step_then_deprecation_warning(context, text):
+    caught = get_current_scenario_context(context).get("warnings")
+    assert any(text in str(w.message) for w in caught), [str(w.message) for w in caught]
+
+
+@then('a configuration error is raised for "{operation}"')
+def step_then_configuration_error(context, operation):
+    error = get_current_scenario_context(context).get("error")
+    assert isinstance(error, ConfigurationError), repr(error)
+    assert error.additional_data["operation"] == operation, error.additional_data
+
+
+@then("the unavailable error was caused by a certificate verification failure")
+def step_then_unavailable_cause_certificate(context):
+    error = get_current_scenario_context(context).get("error")
+    assert isinstance(error.__cause__, ssl.SSLCertVerificationError), repr(error.__cause__)
+
+
+@then("the unavailable error was caused by a missing STARTTLS offer")
+def step_then_unavailable_cause_no_starttls(context):
+    error = get_current_scenario_context(context).get("error")
+    assert isinstance(error.__cause__, smtplib.SMTPNotSupportedError), repr(error.__cause__)
+
+
+@then("the pooled session is encrypted with TLS")
+def step_then_pooled_session_tls(context):
+    session = get_current_scenario_context(context).get("connections")[-1].smtp_connection
+    assert isinstance(session.sock, ssl.SSLSocket)
+
+
+@then('the adapter session says EHLO as "{hostname}" from source address "{address}"')
+def step_then_local_identity(context, hostname, address):
+    session = get_current_scenario_context(context).get("email_adapter").connection_pool.pool.queue[0].smtp_connection
+    assert session.local_hostname == hostname, session.local_hostname
+    assert session.sock.getsockname()[0] == address, session.sock.getsockname()
