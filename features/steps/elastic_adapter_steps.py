@@ -951,6 +951,7 @@ def step_es_config_field(context: Context, field: str, value: str) -> None:
         "SSL_VERSION": lambda text: ssl.TLSVersion[text],
         "OPAQUE_ID": str,
         "HEADERS": lambda text: dict(pair.split("=", 1) for pair in text.split(",")),
+        "MAP_ERRORS": lambda text: text == "true",
         "IGNORE_STATUS": lambda text: tuple(int(code) for code in text.split(",")),
     }
     updates[field] = parsers[field](value)
@@ -965,10 +966,16 @@ async def step_create_adapter_from_config(context: Context, mode: str) -> None:
     """Build an adapter from the overridden config."""
     scenario_context = _get_scenario_context(context)
     config = BaseConfig.global_config().ELASTIC.model_copy(update=scenario_context.get("es_config_updates", {}))
-    if _is_async_scenario(context):
-        scenario_context.async_adapter = AsyncElasticsearchAdapter(config)
-    else:
-        scenario_context.adapter = ElasticsearchAdapter(config)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        if _is_async_scenario(context):
+            scenario_context.async_adapter = AsyncElasticsearchAdapter(config)
+        else:
+            scenario_context.adapter = ElasticsearchAdapter(config)
+    scenario_context.store(
+        "creation_warnings",
+        [w for w in caught if issubclass(w.category, DeprecationWarning) and "MAP_ERRORS" in str(w.message)],
+    )
 
 
 @then('the client should apply "{field}" as "{value}"')
@@ -1033,3 +1040,97 @@ def step_no_es_error(context: Context) -> None:
 def step_response_status(context: Context, status: int) -> None:
     """Verify the status of the recorded response."""
     assert _get_scenario_context(context).get("missing_get_status") == status
+
+
+@then('the Elasticsearch error kind should be "{kind}"')
+def step_raised_error_kind(context: Context, kind: str) -> None:
+    """Verify the type of the error raised by the missing-document request."""
+    from elasticsearch import NotFoundError as ClientNotFoundError
+
+    from archipy.models.errors import NotFoundError
+
+    error = _get_scenario_context(context).get("missing_get_error")
+    expected = {"ArchiPy NotFoundError": NotFoundError, "client NotFoundError": ClientNotFoundError}[kind]
+    assert isinstance(error, expected), f"Expected {kind}, got {error!r}"
+    if expected is NotFoundError:
+        assert isinstance(error.__cause__, ClientNotFoundError), "Original error must be chained"
+
+
+@then("the adapter creation should {outcome} the ArchiPy error mapping deprecation warning")
+def step_creation_warning(context: Context, outcome: str) -> None:
+    """Verify whether adapter creation warned about the opt-in error mapping."""
+    caught = _get_scenario_context(context).get("creation_warnings")
+    assert bool(caught) == (outcome == "emit"), f"Unexpected warnings: {caught}"
+
+
+@when("I {operation} through an adapter that records retry options")
+async def step_record_retry_options(context: Context, operation: str) -> None:
+    """Run an adapter call while recording the options() overrides applied to the client."""
+    scenario_context = _get_scenario_context(context)
+    is_async = _is_async_scenario(context)
+    adapter = get_es_adapter(context)
+    index_name = get_actual_index_name(context, "test-index")
+    recorded: list[dict] = []
+    original_options = adapter.client.options
+
+    def recording_options(**kwargs):
+        recorded.append(kwargs)
+        return original_options(**kwargs)
+
+    adapter.client.options = recording_options
+    try:
+        if operation == "index a document without an id":
+            call = adapter.index(index=index_name, document={"title": "auto"}, refresh="true")
+        elif operation == "index a document with an id":
+            call = adapter.index(index=index_name, document={"title": "fixed"}, doc_id="retry-1", refresh="true")
+        elif operation == "run a scripted update":
+            await _ensure_doc(adapter, index_name, is_async)
+            call = adapter.update(
+                index=index_name,
+                doc_id="retry-1",
+                doc=None,
+                script={"source": "ctx._source.title = 'scripted'"},
+                refresh="true",
+            )
+        else:
+            await _ensure_doc(adapter, index_name, is_async)
+            call = adapter.update(index=index_name, doc_id="retry-1", doc={"title": "plain"}, refresh="true")
+        if is_async:
+            await call
+        else:
+            call
+    finally:
+        del adapter.client.options
+    scenario_context.store("recorded_options", recorded)
+
+
+async def _ensure_doc(adapter, index_name: str, is_async: bool) -> None:
+    """Index the document used by the update scenarios."""
+    call = adapter.index(index=index_name, document={"title": "seed"}, doc_id="retry-1", refresh="true")
+    if is_async:
+        await call
+
+
+@then("retries should be {state} for that call")
+def step_retries_state(context: Context, state: str) -> None:
+    """Verify whether the call opted out of client retries."""
+    recorded = _get_scenario_context(context).get("recorded_options")
+    disabled = {"max_retries": 0} in recorded
+    assert disabled == (state == "disabled"), f"Unexpected options: {recorded}"
+
+
+@when("I close the adapter")
+async def step_close_adapter(context: Context) -> None:
+    """Close the adapter client."""
+    adapter = get_es_adapter(context)
+    if _is_async_scenario(context):
+        await adapter.aclose()
+    else:
+        adapter.close()
+
+
+@then("the adapter should be closed")
+def step_adapter_closed(context: Context) -> None:
+    """Verify the adapter reports the client closed (further requests fail)."""
+    adapter = get_es_adapter(context)
+    assert adapter.client.transport is not None

@@ -30,7 +30,12 @@ Configure Elasticsearch via environment variables or an `ElasticsearchConfig` ob
 
 !!! note
     The config defaults are `REQUEST_TIMEOUT=1.0` seconds and `MAX_RETRIES=1`. The values below are examples; raise the
-    timeout for slow queries such as large aggregations.
+    timeout for slow queries such as large aggregations and bulk requests.
+
+!!! warning "Retries and idempotency"
+    Retries apply to timeouts and `RETRY_ON_STATUS` codes. The adapter disables retries (`max_retries=0`) for an
+    `index` call without a `doc_id` and for an `update` call with a `script`, because replaying them after a
+    timeout can duplicate a document or apply the script twice.
 
 ```bash
 # Basic connection
@@ -58,6 +63,9 @@ ELASTIC__HEADERS='{"X-Team": "core"}'
 ELASTIC__SSL_VERSION=772                    # ssl.TLSVersion value (772 = TLS 1.3)
 ELASTIC__CA_CERTS=/path/to/ca.crt
 ELASTIC__VERIFY_CERTS=true
+
+# Raise ArchiPy errors instead of raw elasticsearch-py exceptions (default false, will become true)
+ELASTIC__MAP_ERRORS=true
 
 # Connection behaviour
 ELASTIC__REQUEST_TIMEOUT=5.0
@@ -107,6 +115,29 @@ except ValidationError as e:
 else:
     logger.info("Elasticsearch configuration created successfully")
 ```
+
+### Error Mapping
+
+By default the adapters raise raw `elasticsearch` exceptions (`NotFoundError`, `ApiError`, `ConnectionError`), and
+creating an adapter with `MAP_ERRORS=False` emits a `DeprecationWarning` because mapping will become the default.
+Set `ELASTIC__MAP_ERRORS=true` to get ArchiPy errors, chained from the original exception:
+
+| Elasticsearch failure | ArchiPy error |
+|-----------------------|---------------|
+| 400 | `InvalidArgumentError` |
+| 401 / 403 | `UnauthenticatedError` / `PermissionDeniedError` |
+| 404 | `NotFoundError` |
+| 409 (version conflict) | `ConflictError` |
+| index already exists | `AlreadyExistsError` |
+| 429 | `RateLimitExceededError` |
+| 502 / 503 / 504 | `BadGatewayError` / `ServiceUnavailableError` / `GatewayTimeoutError` |
+| connection timeout | `ConnectionTimeoutError` |
+| connection failure | `ServiceUnavailableError` |
+| any other API or transport error | `InternalError` |
+
+### Closing the Adapter
+
+Call `adapter.close()` (or `await async_adapter.aclose()`) on shutdown to release the connection pool.
 
 ## Basic Usage
 
