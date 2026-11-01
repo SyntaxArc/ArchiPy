@@ -261,12 +261,18 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             if hasattr(attr, "clear_cache"):
                 attr.clear_cache()
 
+    def _clear_cache_of(self, *method_names: str) -> None:
+        """Clear the per-instance caches of the named cached methods."""
+        for method_name in method_names:
+            getattr(self, method_name).clear_cache()
+
     def _clear_object_caches(self) -> None:
-        """Clear caches for object listing and existence checks."""
-        if hasattr(self.list_objects, "clear_cache"):
-            self.list_objects.clear_cache()
-        if hasattr(self.object_exists, "clear_cache"):
-            self.object_exists.clear_cache()
+        """Clear every cache whose result depends on object content, metadata or versions."""
+        self._clear_cache_of("list_objects", "object_exists", "stat_object", "list_object_versions")
+
+    def _clear_bucket_config_caches(self) -> None:
+        """Clear every cache whose result depends on bucket policy or versioning."""
+        self._clear_cache_of("get_bucket_policy", "get_bucket_versioning", "list_object_versions")
 
     @override
     @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True)
@@ -375,7 +381,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_general_exception(e, "remove_bucket")
 
     @override
-    @ttl_cache(ttl_seconds=300, maxsize=1, per_instance=True)
+    @ttl_cache(ttl_seconds=300, maxsize=1, per_instance=True, copy_results=True)
     def list_buckets(self) -> list[MinioBucketType]:
         """List all buckets.
 
@@ -611,7 +617,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             return True
 
     @override
-    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True)
+    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True, copy_results=True)
     def list_objects(
         self,
         bucket_name: str,
@@ -688,7 +694,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             return object_list
 
     @override
-    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True)
+    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True, copy_results=True)
     def stat_object(self, bucket_name: str, object_name: str) -> MinioObjectType:
         """Get object metadata.
 
@@ -869,6 +875,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                     ),
                 )
             self._client.put_bucket_policy(Bucket=bucket_name, Policy=policy)
+            self._clear_bucket_config_caches()
         except InvalidArgumentError:
             # Pass through our custom errors
             raise
@@ -880,7 +887,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_general_exception(e, "set_bucket_policy")
 
     @override
-    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True)
+    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True, copy_results=True)
     def get_bucket_policy(self, bucket_name: str) -> MinioPolicyType:
         """Get bucket policy.
 
@@ -1138,6 +1145,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 Key=object_name,
                 Tagging={"TagSet": tag_set},
             )
+            self._clear_object_caches()
         except InvalidArgumentError:
             raise
         except ClientError as e:
@@ -1173,6 +1181,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                     ),
                 )
             self._client.delete_object_tagging(Bucket=bucket_name, Key=object_name)
+            self._clear_object_caches()
         except InvalidArgumentError:
             raise
         except ClientError as e:
@@ -1365,6 +1374,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 Bucket=bucket_name,
                 VersioningConfiguration={"Status": status},
             )
+            self._clear_bucket_config_caches()
         except InvalidArgumentError:
             raise
         except ClientError as e:
@@ -1411,7 +1421,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             return status
 
     @override
-    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True)
+    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True, copy_results=True)
     def list_object_versions(
         self,
         bucket_name: str,

@@ -67,6 +67,16 @@ Feature: TTL Cache Decorator
       | False        | 1,1      | 7,7         |
       | True         | 1,2      | 7,2         |
 
+  Scenario Outline: Mutating a result with copy_results <copy_results>
+    Given a function returning a list decorated with ttl_cache copy_results <copy_results>
+    When I call the list function and mutate the result
+    Then calling the list function again should return "<expected>"
+
+    Examples:
+      | copy_results | expected |
+      | False        | 0,1,mut  |
+      | True         | 0,1      |
+
   Scenario: Clear cache functionality
     Given a function decorated with ttl_cache
     When I call the function with argument 5

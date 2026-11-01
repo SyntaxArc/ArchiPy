@@ -607,3 +607,77 @@ def step_clear_second_adapter_caches(context):
 def step_second_adapter_bucket_exists(context, bucket_name):
     second = get_current_scenario_context(context).get("second_adapter")
     assert second.bucket_exists(bucket_name) is True
+
+
+def _policy_json(bucket_name, action):
+    return json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {"AWS": "*"},
+                    "Action": [action],
+                    "Resource": [f"arn:aws:s3:::{bucket_name}/*"],
+                },
+            ],
+        },
+    )
+
+
+@when('I read the {setting} of bucket "{bucket_name}"')
+def step_read_bucket_setting(context, setting, bucket_name):
+    adapter = get_minio_adapter(context)
+    if setting == "policy":
+        adapter.set_bucket_policy(bucket_name, _policy_json(bucket_name, "s3:GetObject"))
+        assert "s3:GetObject" in adapter.get_bucket_policy(bucket_name)["policy"]
+    else:
+        adapter.get_bucket_versioning(bucket_name)
+
+
+@when('I change the {setting} of bucket "{bucket_name}" to "{new_value}"')
+def step_change_bucket_setting(context, setting, bucket_name, new_value):
+    adapter = get_minio_adapter(context)
+    if setting == "policy":
+        adapter.set_bucket_policy(bucket_name, _policy_json(bucket_name, new_value))
+    else:
+        adapter.set_bucket_versioning(bucket_name, enabled=new_value == "Enabled")
+
+
+@then('the {setting} of bucket "{bucket_name}" should be "{expected}"')
+def step_verify_bucket_setting(context, setting, bucket_name, expected):
+    adapter = get_minio_adapter(context)
+    if setting == "policy":
+        actual = adapter.get_bucket_policy(bucket_name)["policy"]
+        assert expected in actual and "s3:GetObject" not in actual, f"Stale policy: {actual}"
+    else:
+        actual = adapter.get_bucket_versioning(bucket_name)
+        assert actual == expected, f"Expected {expected}, got {actual}"
+
+
+def _read_cached(adapter, kind, bucket_name):
+    if kind == "object list":
+        return adapter.list_objects(bucket_name)
+    if kind == "bucket list":
+        return adapter.list_buckets()
+    return adapter.stat_object(bucket_name, "c.txt")
+
+
+@when('I read the cached {kind} of bucket "{bucket_name}" and mutate the result')
+def step_mutate_cached_result(context, kind, bucket_name):
+    adapter = get_minio_adapter(context)
+    first = _read_cached(adapter, kind, bucket_name)
+    get_current_scenario_context(context).store("original_snapshot", json.loads(json.dumps(first, default=str)))
+    if isinstance(first, list):
+        first.clear()
+    else:
+        first["size"] = -1
+
+
+@then('reading the {kind} of bucket "{bucket_name}" again should show the original data')
+def step_verify_cache_not_corrupted(context, kind, bucket_name):
+    adapter = get_minio_adapter(context)
+    again = json.loads(json.dumps(_read_cached(adapter, kind, bucket_name), default=str))
+    original = get_current_scenario_context(context).get("original_snapshot")
+    assert again == original, f"Cache was corrupted: {again} != {original}"
+    assert original, "Expected a non-empty result"
