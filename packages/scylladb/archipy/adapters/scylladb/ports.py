@@ -6,11 +6,14 @@ synchronous and asynchronous port definitions.
 """
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from cassandra.cluster import ResultSet, Session
     from cassandra.query import PreparedStatement
+
+type BatchItem = str | tuple[str | PreparedStatement, tuple[Any, ...] | list[Any]]
+"""A batch entry: a CQL string, or a ``(statement, params)`` pair."""
 
 
 class ScyllaDBPort(ABC):
@@ -218,11 +221,18 @@ class ScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def batch_execute(self, statements: list[str]) -> None:
+    def batch_execute(
+        self,
+        statements: list[BatchItem],
+        batch_type: Literal["LOGGED", "UNLOGGED", "COUNTER"] = "LOGGED",
+    ) -> None:
         """Execute multiple CQL statements in a batch.
 
         Args:
-            statements (list[str]): List of CQL statements to execute in batch.
+            statements (list[BatchItem]): CQL strings, or ``(statement, params)`` pairs where the statement is a CQL
+                string with ``%s`` placeholders or a prepared statement.
+            batch_type (Literal["LOGGED", "UNLOGGED", "COUNTER"]): ``LOGGED`` (default) is atomic across partitions
+                but costs a batch log; use ``UNLOGGED`` for statements on one partition and ``COUNTER`` for counters.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -517,11 +527,18 @@ class AsyncScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def batch_execute(self, statements: list[str]) -> None:
+    async def batch_execute(
+        self,
+        statements: list[BatchItem],
+        batch_type: Literal["LOGGED", "UNLOGGED", "COUNTER"] = "LOGGED",
+    ) -> None:
         """Execute multiple CQL statements in a batch asynchronously.
 
         Args:
-            statements (list[str]): List of CQL statements to execute in batch.
+            statements (list[BatchItem]): CQL strings, or ``(statement, params)`` pairs where the statement is a CQL
+                string with ``%s`` placeholders or a prepared statement.
+            batch_type (Literal["LOGGED", "UNLOGGED", "COUNTER"]): ``LOGGED`` (default) is atomic across partitions
+                but costs a batch log; use ``UNLOGGED`` for statements on one partition and ``COUNTER`` for counters.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
