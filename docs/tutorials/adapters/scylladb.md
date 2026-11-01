@@ -41,9 +41,10 @@ SCYLLADB__REQUEST_TIMEOUT=10
 ```
 
 !!! warning "Replication factor"
-    `REPLICATION_CONFIG` defaults to `{"datacenter1": 1}` and `create_keyspace` defaults to `replication_factor=1`: one
-    replica, no redundancy. The adapter logs a warning when it creates such a keyspace. Use at least 3 replicas per
-    datacenter in production.
+    `REPLICATION_CONFIG` defaults to `{"datacenter1": 1}`: one replica, no redundancy. `create_keyspace(name)` uses it;
+    `create_keyspace(name, replication_factor=3)` applies the factor to every configured datacenter (or to
+    `SimpleStrategy`). The adapter logs a warning when it creates a keyspace with a single replica. Use at least 3
+    replicas per datacenter in production.
 
 ### Direct Configuration
 

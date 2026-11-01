@@ -294,25 +294,54 @@ class ScyllaDBExceptionHandlerMixin:
             )
         return identifier
 
-    @staticmethod
-    def _warn_single_replica(config: ScyllaDBConfig, keyspace: str, replication_factor: int) -> None:
-        """Log a warning when a keyspace is created with a single replica, which has no redundancy.
+    @classmethod
+    def _build_create_keyspace_query(
+        cls,
+        config: ScyllaDBConfig,
+        keyspace: str,
+        replication_factor: int | None,
+    ) -> str:
+        """Build the CREATE KEYSPACE statement and warn when it leaves a single replica.
+
+        An explicit ``replication_factor`` applies to every configured datacenter; without one the configured
+        ``REPLICATION_CONFIG`` is used.
 
         Args:
             config: The adapter configuration.
-            keyspace: Name of the keyspace being created.
-            replication_factor: Replication factor used by ``SimpleStrategy``.
+            keyspace: Name of the keyspace to create.
+            replication_factor: Explicit replication factor, or None to use the configuration.
+
+        Returns:
+            The CQL statement.
+
+        Raises:
+            InvalidArgumentError: If an identifier or the replication factor is invalid.
         """
+        keyspace = cls._validate_cql_identifier(keyspace, "keyspace")
+        if replication_factor is not None:
+            replication_factor = cls._validate_non_negative_int(replication_factor, "replication_factor")
+
         if config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and config.REPLICATION_CONFIG:
-            factors = list(config.REPLICATION_CONFIG.values())
+            parts = ["'class': 'NetworkTopologyStrategy'"]
+            factors: list[int] = []
+            for dc, configured in config.REPLICATION_CONFIG.items():
+                validated_dc = cls._validate_cql_identifier(dc, "replication_datacenter")
+                factor = configured if replication_factor is None else replication_factor
+                factors.append(factor)
+                parts.append(f"'{validated_dc}': {factor}")
+            replication = ", ".join(parts)
         else:
-            factors = [replication_factor]
+            factor = 1 if replication_factor is None else replication_factor
+            factors = [factor]
+            replication = f"'class': 'SimpleStrategy', 'replication_factor': {factor}"
+
         if max(factors) <= 1:
             logger.warning(
                 "ScyllaDB keyspace %s is created with replication factor 1: losing one node loses data; "
                 "use at least 3 in production",
                 keyspace,
             )
+        return f"CREATE KEYSPACE IF NOT EXISTS {keyspace} WITH replication = {{{replication}}}"
 
     @staticmethod
     def _validate_non_negative_int(value: int, field_name: str) -> int:
@@ -593,34 +622,16 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             return result
 
     @override
-    def create_keyspace(self, keyspace: str, replication_factor: int = 1) -> None:
+    def create_keyspace(self, keyspace: str, replication_factor: int | None = None) -> None:
         """Create a keyspace with simple replication strategy.
 
         Args:
             keyspace (str): The name of the keyspace to create.
-            replication_factor (int): The replication factor. Defaults to 1.
+            replication_factor (int | None): Replicas per datacenter (``NetworkTopologyStrategy``) or in total
+                (``SimpleStrategy``). When None, the configured ``REPLICATION_CONFIG`` is used, or 1 for
+                ``SimpleStrategy``.
         """
-        keyspace = self._validate_cql_identifier(keyspace, "keyspace")
-        replication_factor = self._validate_non_negative_int(replication_factor, "replication_factor")
-        self._warn_single_replica(self.config, keyspace, replication_factor)
-        # Use configured replication strategy
-        if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
-            # Build replication config for NetworkTopologyStrategy
-            replication_parts = ["'class': 'NetworkTopologyStrategy'"]
-            for dc, rf in self.config.REPLICATION_CONFIG.items():
-                validated_dc = self._validate_cql_identifier(dc, "replication_datacenter")
-                replication_parts.append(f"'{validated_dc}': {rf}")
-            replication_str = ", ".join(replication_parts)
-            query = f"""
-                CREATE KEYSPACE IF NOT EXISTS {keyspace}
-                WITH replication = {{{replication_str}}}
-            """
-        else:
-            # Use SimpleStrategy (default)
-            query = f"""
-                CREATE KEYSPACE IF NOT EXISTS {keyspace}
-                WITH replication = {{'class': 'SimpleStrategy', 'replication_factor': {replication_factor}}}
-            """
+        query = self._build_create_keyspace_query(self.config, keyspace, replication_factor)
         try:
             self.execute(query)
         except (DriverException, NoHostAvailable) as e:
@@ -1297,34 +1308,16 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             return result
 
     @override
-    async def create_keyspace(self, keyspace: str, replication_factor: int = 1) -> None:
+    async def create_keyspace(self, keyspace: str, replication_factor: int | None = None) -> None:
         """Create a keyspace asynchronously.
 
         Args:
             keyspace (str): The name of the keyspace to create.
-            replication_factor (int): The replication factor. Defaults to 1.
+            replication_factor (int | None): Replicas per datacenter (``NetworkTopologyStrategy``) or in total
+                (``SimpleStrategy``). When None, the configured ``REPLICATION_CONFIG`` is used, or 1 for
+                ``SimpleStrategy``.
         """
-        keyspace = self._validate_cql_identifier(keyspace, "keyspace")
-        replication_factor = self._validate_non_negative_int(replication_factor, "replication_factor")
-        self._warn_single_replica(self.config, keyspace, replication_factor)
-        # Use configured replication strategy
-        if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
-            # Build replication config for NetworkTopologyStrategy
-            replication_parts = ["'class': 'NetworkTopologyStrategy'"]
-            for dc, rf in self.config.REPLICATION_CONFIG.items():
-                validated_dc = self._validate_cql_identifier(dc, "replication_datacenter")
-                replication_parts.append(f"'{validated_dc}': {rf}")
-            replication_str = ", ".join(replication_parts)
-            query = f"""
-                CREATE KEYSPACE IF NOT EXISTS {keyspace}
-                WITH replication = {{{replication_str}}}
-            """
-        else:
-            # Use SimpleStrategy (default)
-            query = f"""
-                CREATE KEYSPACE IF NOT EXISTS {keyspace}
-                WITH replication = {{'class': 'SimpleStrategy', 'replication_factor': {replication_factor}}}
-            """
+        query = self._build_create_keyspace_query(self.config, keyspace, replication_factor)
         try:
             await self.execute(query)
         except (DriverException, NoHostAvailable) as e:
