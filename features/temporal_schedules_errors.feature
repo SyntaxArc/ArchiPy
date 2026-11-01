@@ -100,6 +100,16 @@ Feature: Temporal Schedules, Timeouts and Errors
     Then I should receive a workflow not found error
     And the error should be the ArchiPy NotFoundError
 
+  Scenario Outline: A managed worker whose shutdown <outcome> leads the manager to <tracking> it
+    Given a Temporal worker manager is configured
+    When I stop a managed worker whose shutdown <outcome>
+    Then the manager should <tracking> the worker
+
+    Examples: Shutdown outcomes
+      | outcome   | tracking |
+      | times out | keep     |
+      | succeeds  | forget   |
+
   Scenario: Starting a running workflow ID again raises AlreadyExistsError
     Given a worker is started for task queue "test-queue" with SignalQueryWorkflow
     When I start workflow "SignalQueryWorkflow" with workflow id "dup-start-1"

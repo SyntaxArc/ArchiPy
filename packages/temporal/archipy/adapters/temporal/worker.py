@@ -515,8 +515,9 @@ class TemporalWorkerManager(WorkerPort):
             )
 
         except Exception:  # worker lifecycle; temporal/runtime may raise broadly
-            # Remove from tracking even if shutdown failed
-            if worker_handle.worker_id in self._workers:
+            # Keep a worker that is still running tracked, so a later stop or shutdown_all_workers can retry; drop it
+            # once it has stopped.
+            if not getattr(worker_handle, "is_running", False) and worker_handle.worker_id in self._workers:
                 del self._workers[worker_handle.worker_id]
             raise
 

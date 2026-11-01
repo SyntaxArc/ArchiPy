@@ -31,6 +31,8 @@ from temporalio.runtime import LoggingConfig, TelemetryConfig, TelemetryFilter
 from archipy.adapters.temporal import runtime as temporal_runtime_module
 from archipy.adapters.temporal.adapters import TemporalAdapter
 from archipy.adapters.temporal.base import AtomicActivity, BaseActivity
+from archipy.adapters.temporal.ports import WorkerHandle as PortWorkerHandle
+from archipy.models.errors.temporal_errors import WorkerShutdownError
 from archipy.adapters.temporal.runtime import TemporalRuntimeManager
 from archipy.adapters.temporal.tracing import MessagingOpenTelemetryInterceptor
 from archipy.adapters.temporal.worker import TemporalWorkerManager, WorkerHandle
@@ -2709,3 +2711,40 @@ def step_activity_names_distinct(context, expected):
     names = get_current_scenario_context(context).get("activity_names")
     assert len(set(names)) == len(names), names
     assert names[-1] == expected, names
+
+
+class StubbornWorkerHandle(PortWorkerHandle):
+    """Worker handle whose stop fails (as after a shutdown timeout) while it keeps running."""
+
+    def __init__(self, fail_stop: bool) -> None:
+        self.worker_id = "stubborn-worker"
+        self.task_queue = "stubborn-queue"
+        self.is_running = True
+        self.fail_stop = fail_stop
+
+    async def stop(self, grace_period: int = 30) -> None:
+        if self.fail_stop:
+            raise WorkerShutdownError()
+        self.is_running = False
+
+
+@when("I stop a managed worker whose shutdown {outcome}")
+def step_stop_stubborn_worker(context, outcome):
+    manager = get_temporal_worker_manager(context)
+    handle = StubbornWorkerHandle(fail_stop=outcome == "times out")
+    manager._workers[handle.worker_id] = handle
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("stubborn_handle", handle)
+    try:
+        run_async(context, manager.stop_worker(handle))
+    except WorkerShutdownError as error:
+        scenario_context.error = error
+
+
+@then("the manager should {tracking} the worker")
+def step_manager_tracking(context, tracking):
+    manager = get_temporal_worker_manager(context)
+    handle = get_current_scenario_context(context).get("stubborn_handle")
+    tracked = handle.worker_id in manager._workers
+    manager._workers.pop(handle.worker_id, None)  # keep the scenario cleanup from stopping the stub
+    assert tracked == (tracking == "keep"), f"tracked={tracked}"
