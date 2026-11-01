@@ -33,15 +33,19 @@ class EmailConfig(BaseModel):
         default=True,
         description="Verify the server certificate and host name (TLS_MODE 'starttls' or 'implicit')",
     )
+    FROM_ADDRESS: str | None = Field(
+        default=None,
+        description="Sender address of outgoing emails; defaults to USERNAME, which is invalid for API-key usernames",
+    )
     LOCAL_HOSTNAME: str | None = Field(default=None, description="Host name sent in EHLO; defaults to the local FQDN")
     SOURCE_ADDRESS: str | None = Field(default=None, description="Local address the SMTP socket binds to")
     SOURCE_PORT: int = Field(default=0, ge=0, le=65535, description="Local port bound with SOURCE_ADDRESS (0 = any)")
-    POOL_SIZE: int = Field(default=5, description="Connection pool size")
-    CONNECTION_TIMEOUT: int = Field(default=30, description="Connection timeout in seconds")
+    POOL_SIZE: int = Field(default=5, ge=1, description="Connection pool size")
+    CONNECTION_TIMEOUT: int = Field(default=30, gt=0, description="Connection timeout in seconds")
     CONNECTION_REFRESH_SECONDS: int = Field(
         default=300,
         ge=1,
         description="Idle seconds after which a pooled SMTP connection is reconnected",
     )
-    MAX_RETRIES: int = Field(default=3, description="Maximum retry attempts")
+    MAX_RETRIES: int = Field(default=3, ge=1, description="Maximum retry attempts")
     ATTACHMENT_MAX_SIZE: int = Field(default=5 * 1024 * 1024, description="Maximum attachment size in bytes")

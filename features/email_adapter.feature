@@ -137,6 +137,23 @@ Feature: Email adapter
     When I create an email adapter
     Then an email deprecation warning mentions "TLS_MODE"
 
+  Scenario Outline: Out-of-range pool, retry and timeout settings are rejected
+    When I build an email config with <field> set to <value>
+    Then the email config is rejected for <field>
+
+    Examples:
+      | field              | value |
+      | POOL_SIZE          | 0     |
+      | MAX_RETRIES        | 0     |
+      | CONNECTION_TIMEOUT | 0     |
+
+  Scenario: The configured sender address is used as the From header
+    Given the Mailpit SMTP server is configured
+    And the SMTP sender address "noreply@example.org"
+    And an email adapter
+    When I send an email to "alice@example.com" with subject "Hello" and body "Hi there"
+    Then the delivered email is sent from "noreply@example.org"
+
   Scenario Outline: A half-set credential pair is rejected
     Given the Mailpit SMTP server is configured
     And the SMTP transport security is "<mode>" verified with the Mailpit CA
