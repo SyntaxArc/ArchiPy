@@ -1439,3 +1439,8 @@ Feature: Redis Testing
     Given a configured async container
     When I use the async container adapter as a context manager and create its search client
     Then the async client pool and the search client pool should be closed
+
+  Scenario: Closing the async adapter directly uses the same method name as the sync adapter
+    Given a configured async container
+    When I close the async container adapter directly
+    Then the async client pool and the search client pool should be closed
