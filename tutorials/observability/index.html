@@ -4302,6 +4302,10 @@ so are values that are valid alone but invalid together (for example a batch siz
 <td><code>OTLP_HEADERS</code></td>
 </tr>
 <tr>
+<td><code>OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_HEADERS</code> (<code>k=v,k=v</code>; replaces <code>OTLP_HEADERS</code> for that signal)</td>
+<td><code>TRACES_HEADERS</code>, <code>METRICS_HEADERS</code>, <code>LOGS_HEADERS</code></td>
+</tr>
+<tr>
 <td><code>OTEL_EXPORTER_OTLP_TIMEOUT</code> (seconds, as the Python SDK reads it)</td>
 <td><code>TIMEOUT</code></td>
 </tr>
