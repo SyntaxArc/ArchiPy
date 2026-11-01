@@ -59,9 +59,9 @@ Feature: Saman Shaparak payment gateway adapter
         "token": "tok-abc-123"
       }
       """
-    And the Saman "token" endpoint sends header "X-IPG-Url" with value "https://pay.example.com/page/42"
+    And the Saman "token" endpoint sends header "X-IPG-Url" with value "https://pay.shaparak.ir/page/42"
     When I initiate a Saman payment of 75000 for reservation "RES-1" redirecting to "https://shop.example.com/return"
-    Then the Saman initiation response has IPG URL "https://pay.example.com/page/42"
+    Then the Saman initiation response has IPG URL "https://pay.shaparak.ir/page/42"
 
     Examples:
       | kind         |
@@ -77,7 +77,7 @@ Feature: Saman Shaparak payment gateway adapter
         "token": "tok-abc-123"
       }
       """
-    And the Saman "token" endpoint sends header "X-IPG-Url" with value "https://pay.example.com/page/42"
+    And the Saman "token" endpoint sends header "X-IPG-Url" with value "https://pay.shaparak.ir/page/42"
     When I initiate a Saman payment of 75000 for reservation "RES-1" redirecting to "https://shop.example.com/return"
     Then the Saman initiation response has no IPG URL
 
@@ -117,15 +117,13 @@ Feature: Saman Shaparak payment gateway adapter
     Then the Saman call fails with "InternalError"
 
     Examples:
-      | kind         | body             |
-      | sync         | {"status": 1}    |
-      | async        | {"status": 1}    |
-      | sync         | {"status": -1}   |
-      | async        | {"status": -1}   |
-      | sync         | {"token": "tok"} |
-      | async        | {"token": "tok"} |
-      | sync Neo-PG  | {"status": 1}    |
-      | async Neo-PG | {"status": -1}   |
+      | kind  | body             |
+      | sync  | {"status": 1}    |
+      | async | {"status": 1}    |
+      | sync  | {"status": -1}   |
+      | async | {"status": -1}   |
+      | sync  | {"token": "tok"} |
+      | async | {"token": "tok"} |
 
   Scenario Outline: Gateway client error or unreadable body during initiation is reported as internal error
     Given a <kind> Saman adapter with terminal "13579"
@@ -440,3 +438,109 @@ Feature: Saman Shaparak payment gateway adapter
       | token_expiry | 3601      |
       | redirect_url | not-a-url |
       | res_num      | none      |
+
+  Scenario Outline: Neo-PG refuses a payment page URL outside the allowed hosts
+    Given a <kind> Saman adapter with terminal "13579"
+    And the Saman "token" endpoint answers 200 with JSON:
+      """
+      {
+        "status": 1,
+        "token": "tok-abc-123"
+      }
+      """
+    And the Saman "token" endpoint sends header "X-IPG-Url" with value "<url>"
+    When I initiate a Saman payment of 75000 for reservation "RES-1" redirecting to "https://shop.example.com/return"
+    Then the Saman call fails with "InvalidArgumentError"
+
+    Examples:
+      | kind         | url                                  |
+      | sync Neo-PG  | http://pay.shaparak.ir/page/42       |
+      | async Neo-PG | https://evil.example.com/page/42     |
+      | sync Neo-PG  | https://shaparak.ir.evil.com/page/42 |
+      | async Neo-PG | https://evilshaparak.ir/page/42      |
+
+  Scenario Outline: Neo-PG accepts hosts from the configured allow-list
+    Given a <kind> Saman adapter allowing IPG hosts "pay.example.com"
+    And the Saman "token" endpoint answers 200 with JSON:
+      """
+      {
+        "status": 1,
+        "token": "tok-abc-123"
+      }
+      """
+    And the Saman "token" endpoint sends header "X-IPG-Url" with value "https://pay.example.com/page/42"
+    When I initiate a Saman payment of 75000 for reservation "RES-1" redirecting to "https://shop.example.com/return"
+    Then the Saman initiation response has IPG URL "https://pay.example.com/page/42"
+
+    Examples:
+      | kind         |
+      | sync Neo-PG  |
+      | async Neo-PG |
+
+  Scenario Outline: Neo-PG requires the payment page URL on a successful token reply
+    Given a <kind> Saman adapter with terminal "13579"
+    And the Saman "token" endpoint answers 200 with JSON:
+      """
+      {
+        "status": 1,
+        "token": "tok-abc-123"
+      }
+      """
+    And the Saman "token" endpoint sends no header "X-IPG-Url"
+    When I initiate a Saman payment of 75000 for reservation "RES-1" redirecting to "https://shop.example.com/return"
+    Then the Saman call fails with "FailedPreconditionError"
+
+    Examples:
+      | kind         |
+      | sync Neo-PG  |
+      | async Neo-PG |
+
+  Scenario Outline: Neo-PG failure replies need no payment page URL
+    Given a <kind> Saman adapter with terminal "13579"
+    And the Saman "token" endpoint answers 200 with JSON:
+      """
+      {
+        "status": -1,
+        "errorCode": "5",
+        "errorDesc": "Invalid terminal"
+      }
+      """
+    And the Saman "token" endpoint sends no header "X-IPG-Url"
+    When I initiate a Saman payment of 75000 for reservation "RES-1" redirecting to "https://shop.example.com/return"
+    Then the Saman initiation response has no IPG URL
+
+    Examples:
+      | kind         |
+      | sync Neo-PG  |
+      | async Neo-PG |
+
+  Scenario Outline: The HTTP timeout is configurable and defaults to 30 seconds
+    Given a <kind> Saman adapter with a <seconds> second timeout
+    Then the Saman HTTP client times out after <seconds> seconds
+
+    Examples:
+      | kind         | seconds |
+      | sync         | 12      |
+      | async        | 45      |
+      | async Neo-PG | 7       |
+
+  Scenario Outline: The default HTTP timeout is 30 seconds
+    Given a <kind> Saman adapter with terminal "13579"
+    Then the Saman HTTP client times out after 30 seconds
+
+    Examples:
+      | kind  |
+      | sync  |
+      | async |
+
+  Scenario Outline: Closing the adapter or leaving its context closes the HTTP client
+    Given a <kind> Saman adapter with terminal "13579"
+    When I <closing>
+    Then the Saman HTTP client is closed
+
+    Examples:
+      | kind         | closing                                    |
+      | sync         | close the Saman adapter                    |
+      | async        | close the Saman adapter                    |
+      | sync Neo-PG  | use the Saman adapter as a context manager |
+      | async Neo-PG | use the Saman adapter as a context manager |

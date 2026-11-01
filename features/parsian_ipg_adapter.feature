@@ -245,3 +245,15 @@ Feature: Parsian Shaparak payment gateway adapter
       | kind  |
       | sync  |
       | async |
+
+  Scenario Outline: Closing the adapter or leaving its context closes the HTTP client
+    Given a <kind> Parsian adapter with login account "merchant-1"
+    When I <closing>
+    Then the Parsian HTTP client is closed
+
+    Examples:
+      | kind  | closing                                      |
+      | sync  | close the Parsian adapter                    |
+      | async | close the Parsian adapter                    |
+      | sync  | use the Parsian adapter as a context manager |
+      | async | use the Parsian adapter as a context manager |
