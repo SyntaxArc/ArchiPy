@@ -3153,6 +3153,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#fastapi-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FastAPI config
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#adding-a-deprecation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3611,6 +3622,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#fastapi-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FastAPI config
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#adding-a-deprecation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3937,6 +3959,42 @@ since 5.21.0.</p>
 </tr>
 </tbody>
 </table>
+<h2 id="fastapi-config">FastAPI config<a class="headerlink" href="#fastapi-config" title="Permanent link">&para;</a></h2>
+<p>The Uvicorn settings moved from <code>FASTAPI</code> to the new <code>UVICORN</code> section, which also gains <code>SSL_KEYFILE</code>,
+<code>SSL_CERTFILE</code> and <code>SSL_CA_CERTS</code>. <code>AppUtils.uvicorn_config()</code> builds the <code>uvicorn.run</code> arguments from it. An old
+field still works when the matching <code>UVICORN</code> field is not set. Building <code>FastAPIConfig</code> with one, and reading it
+through <code>AppUtils.uvicorn_config()</code>, emits a <code>DeprecationWarning</code>. Deprecated since 5.25.0.</p>
+<table>
+<thead>
+<tr>
+<th>Deprecated</th>
+<th>Replacement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FASTAPI.ACCESS_LOG</code>, <code>BACKLOG</code>, <code>DATE_HEADER</code>, <code>SERVER_HEADER</code>, <code>RELOAD</code>, <code>WORKERS_COUNT</code></td>
+<td>The same names on <code>UVICORN</code></td>
+</tr>
+<tr>
+<td><code>FASTAPI.PROXY_HEADERS</code>, <code>FORWARDED_ALLOW_IPS</code></td>
+<td>The same names on <code>UVICORN</code></td>
+</tr>
+<tr>
+<td><code>FASTAPI.LIMIT_CONCURRENCY</code>, <code>LIMIT_MAX_REQUESTS</code></td>
+<td>The same names on <code>UVICORN</code></td>
+</tr>
+<tr>
+<td><code>FASTAPI.TIMEOUT_KEEP_ALIVE</code>, <code>TIMEOUT_GRACEFUL_SHUTDOWN</code></td>
+<td>The same names on <code>UVICORN</code></td>
+</tr>
+<tr>
+<td><code>FASTAPI.WS_MAX_SIZE</code>, <code>WS_PER_MESSAGE_DEFLATE</code>, <code>WS_PING_INTERVAL</code>, <code>WS_PING_TIMEOUT</code></td>
+<td>The same names on <code>UVICORN</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>FASTAPI.SERVE_HOST</code> and <code>FASTAPI.SERVE_PORT</code> stay where they are.</p>
 <h2 id="adding-a-deprecation">Adding a deprecation<a class="headerlink" href="#adding-a-deprecation" title="Permanent link">&para;</a></h2>
 <p>Keep the old name working and route it through <code>archipy.helpers._deprecation</code>:</p>
 <ul>

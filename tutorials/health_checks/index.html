@@ -3741,8 +3741,8 @@ provide the building blocks below; the probe endpoints are plain FastAPI or gRPC
 <td>Startup and shutdown hooks; OTel flush on exit</td>
 </tr>
 <tr>
-<td><code>FASTAPI.TIMEOUT_GRACEFUL_SHUTDOWN</code></td>
-<td>FastAPI config</td>
+<td><code>UVICORN.TIMEOUT_GRACEFUL_SHUTDOWN</code></td>
+<td>Uvicorn config</td>
 <td>Value for Uvicorn's graceful shutdown timeout</td>
 </tr>
 <tr>
@@ -3851,19 +3851,12 @@ your code finishes; the OTel provider itself shuts down at process exit.</p>
 </span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>
 </span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppUtils</span><span class="o">.</span><span class="n">create_fastapi_app</span><span class="p">(</span><span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">(),</span> <span class="n">lifespan</span><span class="o">=</span><span class="n">lifespan</span><span class="p">)</span>
 </span></code></pre></div>
-<p><code>FASTAPI.TIMEOUT_GRACEFUL_SHUTDOWN</code> is only a config field; ArchiPy does not start Uvicorn for you. Pass it when you do:</p>
+<p><code>UVICORN.TIMEOUT_GRACEFUL_SHUTDOWN</code> is only a config field; ArchiPy does not start Uvicorn for you. <code>AppUtils.uvicorn_config</code> passes it, with the rest of the <code>UVICORN</code> section, when you do:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">uvicorn</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.base_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConfig</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.helpers.utils.app_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppUtils</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">config</span> <span class="o">=</span> <span class="n">BaseConfig</span><span class="o">.</span><span class="n">global_config</span><span class="p">()</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">uvicorn</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="s2">"manage:create_app"</span><span class="p">,</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">factory</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">host</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">FASTAPI</span><span class="o">.</span><span class="n">SERVE_HOST</span><span class="p">,</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">port</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">FASTAPI</span><span class="o">.</span><span class="n">SERVE_PORT</span><span class="p">,</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="n">timeout_graceful_shutdown</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">FASTAPI</span><span class="o">.</span><span class="n">TIMEOUT_GRACEFUL_SHUTDOWN</span><span class="p">,</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="p">)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">uvicorn</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">"manage:create_app"</span><span class="p">,</span> <span class="n">factory</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">AppUtils</span><span class="o">.</span><span class="n">uvicorn_config</span><span class="p">())</span>
 </span></code></pre></div>
 <p>Uvicorn handles SIGTERM and SIGINT, stops accepting connections, waits up to that timeout, then runs the lifespan
 shutdown.</p>
