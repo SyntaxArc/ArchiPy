@@ -582,3 +582,28 @@ def step_verify_raised_error(context, error_name):
 @when("I clear all adapter caches")
 def step_clear_all_caches(context):
     get_minio_adapter(context).clear_all_caches()
+
+
+@given('a second MinIO adapter has cached that bucket "{bucket_name}" is missing')
+def step_second_adapter_cached_missing(context, bucket_name):
+    scenario_context = get_current_scenario_context(context)
+    second = MinioAdapter(BaseConfig.global_config().MINIO)
+    assert second.bucket_exists(bucket_name) is False
+    scenario_context.store("second_adapter", second)
+
+
+@then('the second MinIO adapter should still serve bucket "{bucket_name}" as missing from its own cache')
+def step_second_adapter_still_missing(context, bucket_name):
+    second = get_current_scenario_context(context).get("second_adapter")
+    assert second.bucket_exists(bucket_name) is False
+
+
+@when("I clear all caches of the second MinIO adapter")
+def step_clear_second_adapter_caches(context):
+    get_current_scenario_context(context).get("second_adapter").clear_all_caches()
+
+
+@then('the second MinIO adapter should report bucket "{bucket_name}" exists')
+def step_second_adapter_bucket_exists(context, bucket_name):
+    second = get_current_scenario_context(context).get("second_adapter")
+    assert second.bucket_exists(bucket_name) is True
