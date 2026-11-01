@@ -777,7 +777,8 @@ configured for each method based on how frequently the data typically changes:
 !!! note
     Token validation is never cached. Write operations such as user creation and updates clear the relevant caches.
 
-You can clear all caches if needed:
+You can clear all caches if needed. `clear_all_caches()` works with or without admin mode: it never builds the admin
+client or logs in to Keycloak.
 
 === "Sync"
 

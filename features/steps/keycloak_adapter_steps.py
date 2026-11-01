@@ -4232,6 +4232,17 @@ def _async_adapter_for(realm_name: str, client_name: str) -> AsyncKeycloakAdapte
     return AsyncKeycloakAdapter(config)
 
 
+@then("a {kind} adapter without admin mode clears all its caches without logging in")
+def step_adapter_clears_caches_without_admin(context: Context, kind: str) -> None:
+    """Clear the caches of an adapter that has no admin credentials: it must neither raise nor build an admin client."""
+    config = BaseConfig.global_config().KEYCLOAK.model_copy(
+        update={"CLIENT_SECRET_KEY": None, "IS_ADMIN_MODE_ENABLED": False},
+    )
+    adapter = AsyncKeycloakAdapter(config) if kind == "async" else KeycloakAdapter(config)
+    adapter.clear_all_caches()
+    assert adapter._admin_adapter is None, "clear_all_caches built an admin client"
+
+
 @then(
     'an async adapter for realm "{realm_name}" and client "{client_name}" should validate the token of "{username}"',
 )
