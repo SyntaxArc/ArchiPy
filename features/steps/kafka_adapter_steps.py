@@ -1007,6 +1007,25 @@ def step_try_admin_operation(context, operation, topic_name):
         _capture_error(context, lambda: adapter.delete_topic([topic_name]))
 
 
+@when("the adapters handle a Kafka failure with code {code}")
+def step_handle_kafka_failure(context, code):
+    """Map a librdkafka error that a broker container cannot be made to produce on demand."""
+    from confluent_kafka import KafkaError, KafkaException
+
+    from archipy.adapters.kafka.adapters import KafkaExceptionHandlerMixin
+
+    failure = KafkaException(KafkaError(getattr(KafkaError, code)))
+    _capture_error(context, lambda: KafkaExceptionHandlerMixin._handle_kafka_exception(failure, "operation"))
+
+
+@then('the Kafka operation should raise one of "{error_names}"')
+def step_operation_should_raise_one_of(context, error_names):
+    """Assert the captured exception is one of the comma separated ArchiPy errors."""
+    error = get_current_scenario_context(context).get("kafka_operation_error")
+    expected = tuple(getattr(archipy_errors, name.strip()) for name in error_names.split(","))
+    assert isinstance(error, expected), f"Expected one of {error_names}, got {error!r}"
+
+
 @then('the Kafka operation should raise "{error_name}"')
 def step_operation_should_raise(context, error_name):
     """Assert the captured exception is the named ArchiPy error."""
