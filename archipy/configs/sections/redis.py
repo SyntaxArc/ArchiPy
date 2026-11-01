@@ -46,7 +46,7 @@ class RedisConfig(BaseModel):
 
     # Common settings
     PORT: int = Field(default=6379, description="Default Redis server port")
-    DATABASE: int = Field(default=0, description="Redis database number (not used in cluster)")
+    DATABASE: int = Field(default=0, description="Redis database number (standalone and sentinel; ignored in cluster)")
     USERNAME: str | None = Field(default=None, description="Redis ACL username (Redis 6+); None uses the default user")
     PASSWORD: str | None = Field(default=None, description="Redis password")
     DECODE_RESPONSES: Literal[True] = Field(default=True, description="Whether to decode responses")

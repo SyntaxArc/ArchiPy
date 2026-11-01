@@ -1377,6 +1377,16 @@ Feature: Redis Testing
       | standalone |
       | sentinel   |
 
+  Scenario Outline: Database and health check interval reach the <mode> client
+    Given a Redis config in <mode> mode with database 3 and a health check interval of 7 seconds
+    When I build the Redis adapter from that config
+    Then the client connection should use database 3 and a health check interval of 7
+
+    Examples: Modes
+      | mode       |
+      | standalone |
+      | sentinel   |
+
   Scenario: Unset retry settings keep the redis-py defaults
     Given a Redis config in standalone mode with default resilience settings
     When I build the Redis adapter from that config

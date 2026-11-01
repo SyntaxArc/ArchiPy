@@ -63,6 +63,9 @@ REDIS__SSL_CHECK_HOSTNAME=true
 `SSL_CERTFILE` and `SSL_KEYFILE` must be set together. `SSL_CA_CERTS` and `SSL_CERTFILE` require `SSL=true`.
 In sentinel mode the TLS settings also apply to the sentinel nodes.
 
+In sentinel mode `DATABASE` and `HEALTH_CHECK_INTERVAL` also apply to the master and replica connections. Earlier
+versions ignored them, so a sentinel setup with a non-zero `DATABASE` now selects that database instead of database 0.
+
 ### Retries, keepalive and client name
 
 All settings are optional; unset ones keep the redis-py defaults. They apply to standalone, cluster and sentinel modes.
