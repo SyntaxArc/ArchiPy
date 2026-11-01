@@ -2709,3 +2709,12 @@ def step_activity_names_distinct(context, expected):
     names = get_current_scenario_context(context).get("activity_names")
     assert len(set(names)) == len(names), names
     assert names[-1] == expected, names
+
+
+@when('I try to list workflows with query "{query}"')
+def step_try_list_workflows(context, query):
+    scenario_context = get_current_scenario_context(context)
+    try:
+        run_async(context, get_temporal_adapter(context).list_workflows(query=query))
+    except BaseError as error:
+        scenario_context.error = error
