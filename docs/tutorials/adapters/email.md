@@ -35,7 +35,34 @@ EMAIL__PASSWORD=your-password
 EMAIL__POOL_SIZE=5
 EMAIL__CONNECTION_TIMEOUT=30
 EMAIL__CONNECTION_REFRESH_SECONDS=300  # reconnect pooled connections idle longer than this
+EMAIL__TLS_MODE=starttls  # auto (deprecated), none, starttls or implicit
+EMAIL__TLS_CA_FILE=/etc/ssl/smtp-ca.pem  # optional CA bundle that verifies the server
+EMAIL__TLS_VERIFY=true
 ```
+
+### Transport Security
+
+`EMAIL__TLS_MODE` selects how the SMTP session is protected:
+
+| Mode       | Behavior                                                                                      |
+|------------|-----------------------------------------------------------------------------------------------|
+| `starttls` | Requires the server to offer STARTTLS and the upgrade to succeed; never falls back to clear text. |
+| `implicit` | Opens a TLS connection from the start (SMTPS, usually port 465).                              |
+| `none`     | Sends in clear text, only for trusted networks.                                               |
+| `auto`     | Default, deprecated: upgrades only if STARTTLS is offered, without verifying the certificate. |
+
+`starttls` and `implicit` verify the certificate and host name against the system CAs, or against
+`EMAIL__TLS_CA_FILE` when set. `EMAIL__TLS_VERIFY=false` turns verification off.
+
+!!! warning
+    `auto` keeps the previous behavior and emits a `DeprecationWarning`. Set `EMAIL__TLS_MODE`
+    explicitly; the default will change in a future major release.
+
+`USERNAME` and `PASSWORD` must be set together. A half-set pair raises `ConfigurationError` when
+`TLS_MODE` is not `auto`; in `auto` mode login is skipped with a `DeprecationWarning`.
+
+`EMAIL__LOCAL_HOSTNAME` sets the name sent in `EHLO`, and `EMAIL__SOURCE_ADDRESS` with
+`EMAIL__SOURCE_PORT` binds the local end of the connection.
 
 ### Direct Configuration
 

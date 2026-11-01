@@ -1,6 +1,7 @@
 """Container manager for test containers"""
 
 import datetime
+import ipaddress
 import json
 import logging
 import os
@@ -1448,6 +1449,14 @@ def _write_self_signed_certificate(directory: Path) -> None:
         .serial_number(x509.random_serial_number())
         .not_valid_before(now - datetime.timedelta(minutes=1))
         .not_valid_after(now + datetime.timedelta(days=1))
+        # SAN and CA flag let the certificate serve as its own trust anchor for host name verification.
+        .add_extension(
+            x509.SubjectAlternativeName(
+                [x509.DNSName("localhost"), x509.IPAddress(ipaddress.ip_address("127.0.0.1"))],
+            ),
+            critical=False,
+        )
+        .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
         .sign(key, hashes.SHA256())
     )
     (directory / "cert.pem").write_bytes(certificate.public_bytes(serialization.Encoding.PEM))
@@ -1492,6 +1501,11 @@ class MailpitTestContainer(metaclass=Singleton, thread_safe=True):
         self.host: str | None = None
         self.smtp_port: int | None = None
         self.api_url: str | None = None
+
+    @property
+    def ca_file(self) -> str | None:
+        """Path of the PEM certificate that verifies the server (self-signed), or None without TLS."""
+        return str(Path(self._cert_dir.name) / "cert.pem") if self._cert_dir else None
 
     def _build(self) -> DockerContainer:
         container = (

@@ -81,6 +81,84 @@ Feature: Email adapter
     And the unavailable error was caused by an authentication failure
     And Mailpit holds 0 emails
 
+  Scenario: Required STARTTLS delivers over a verified TLS session
+    Given the Mailpit SMTP server is configured
+    And the SMTP transport security is "starttls" verified with the Mailpit CA
+    And an email adapter
+    When I send an email to "alice@example.com" with subject "Hello" and body "Hi there"
+    Then Mailpit holds 1 email
+    And the adapter session is encrypted with TLS
+
+  Scenario: Required STARTTLS refuses an untrusted server certificate
+    Given the Mailpit SMTP server is configured
+    And the SMTP transport security is "starttls"
+    And an email adapter
+    When I try to send an email to "alice@example.com" with subject "Hello" and body "Hi there"
+    Then an unavailable error is raised for "SMTP"
+    And the unavailable error was caused by a certificate verification failure
+    And Mailpit holds 0 emails
+
+  Scenario: Required STARTTLS accepts an untrusted certificate when verification is off
+    Given the Mailpit SMTP server is configured
+    And the SMTP transport security is "starttls" without certificate verification
+    And an email adapter
+    When I send an email to "alice@example.com" with subject "Hello" and body "Hi there"
+    Then Mailpit holds 1 email
+    And the adapter session is encrypted with TLS
+
+  Scenario: Required STARTTLS fails instead of falling back to clear text
+    Given the plain Mailpit SMTP server is configured
+    And the SMTP transport security is "starttls"
+    And an email adapter
+    When I try to send an email to "alice@example.com" with subject "Hello" and body "Hi there"
+    Then an unavailable error is raised for "SMTP"
+    And the unavailable error was caused by a missing STARTTLS offer
+    And Mailpit holds 0 emails
+    And the adapter holds no open SMTP session
+
+  Scenario: Transport security none sends in clear text on request
+    Given the Mailpit SMTP server is configured
+    And the SMTP transport security is "none"
+    And an email adapter
+    When I send an email to "alice@example.com" with subject "Hello" and body "Hi there"
+    Then Mailpit holds 1 email
+    And the adapter session is not encrypted with TLS
+
+  Scenario: Implicit TLS opens an encrypted session from the start
+    Given a local SMTPS server
+    And the SMTP transport security is "implicit" verified with the local SMTPS CA
+    And an email connection pool of size 1
+    When I take a connection from the pool
+    Then the connection is established
+    And the pooled session is encrypted with TLS
+
+  Scenario: The deprecated auto transport security warns
+    Given the Mailpit SMTP server is configured
+    When I create an email adapter
+    Then a deprecation warning mentions "TLS_MODE"
+
+  Scenario Outline: A half-set credential pair is rejected
+    Given the Mailpit SMTP server is configured
+    And the SMTP transport security is "<mode>" verified with the Mailpit CA
+    And only the SMTP <field> is set
+    When I create an email adapter
+    Then a configuration error is raised for "email_credentials"
+
+    Examples:
+      | mode     | field    |
+      | starttls | username |
+      | starttls | password |
+      | implicit | username |
+      | none     | password |
+
+  Scenario: The EHLO host name and source address are applied to the SMTP session
+    Given the Mailpit SMTP server is configured
+    And the SMTP local host name "mailer.example.org" and source address "127.0.0.1"
+    And an email adapter
+    When I send an email to "alice@example.com" with subject "Hello" and body "Hi there"
+    Then Mailpit holds 1 email
+    And the adapter session says EHLO as "mailer.example.org" from source address "127.0.0.1"
+
   Scenario: Send an email with a FILE attachment
     Given the Mailpit SMTP server is configured
     And an email adapter
