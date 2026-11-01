@@ -3940,7 +3940,7 @@ on any exception:</p>
 <blockquote>
 <p><strong>Note:</strong> Logic layer collaboration rules:</p>
 <ul>
-<li>Logic classes <strong>may call other logic classes</strong> — nested <code>@atomic</code> calls reuse the open session.</li>
+<li>Logic classes <strong>may call other logic classes</strong> — nested <code>@atomic</code> calls reuse the open session and run in a savepoint, so a nested call that fails and is caught leaves the outer transaction usable (StarRocks has no savepoints: the outermost call rolls back).</li>
 <li>
 <p>Logic classes <strong>must never import or call a repository from another domain directly</strong>.
   Cross-domain reads must go through the other domain's logic class.</p>
