@@ -52,6 +52,13 @@ ELASTIC__VERIFY_CERTS=true
 ELASTIC__REQUEST_TIMEOUT=5.0
 ELASTIC__MAX_RETRIES=3
 ELASTIC__RETRY_ON_TIMEOUT=true
+
+# Node pool and sniffing
+ELASTIC__NODE_SELECTOR_CLASS=random          # 'round_robin' (default) or 'random'
+ELASTIC__DEAD_NODE_BACKOFF_FACTOR=1.0
+ELASTIC__MAX_DEAD_NODE_BACKOFF=300.0
+ELASTIC__MIN_DELAY_BETWEEN_SNIFFING=60.0     # applied when SNIFF_BEFORE_REQUESTS=true
+ELASTIC__IGNORE_STATUS='[404]'               # status codes not raised as errors
 ```
 
 ### Direct Configuration
@@ -791,6 +798,14 @@ The repository pattern, index alias strategy, connection health check and OpenTe
 - `ElasticsearchConfig` logs a warning when sniffing is enabled with a single non-localhost host — this may bypass
   load balancers. Disable sniffing (`SNIFF_ON_START=False`, `SNIFF_BEFORE_REQUESTS=False`) when connecting through
   a load balancer or Elastic Cloud.
+
+### Node pool options
+
+- `NODE_SELECTOR_CLASS`, `DEAD_NODE_BACKOFF_FACTOR` and `MAX_DEAD_NODE_BACKOFF` are passed to the client transport.
+- `MIN_DELAY_BETWEEN_SNIFFING` is passed only when `SNIFF_BEFORE_REQUESTS=True`, because the client turns on
+  sniffing before requests whenever it receives this option.
+- `IGNORE_STATUS` is applied to the client through `options(ignore_status=...)`; matching responses are returned
+  instead of raising an error.
 
 ## See Also
 
