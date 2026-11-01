@@ -78,7 +78,8 @@ def _warn_ignored_pool_settings(config: ScyllaDBConfig) -> None:
     Args:
         config (ScyllaDBConfig): The ScyllaDB configuration.
     """
-    ignored = [name for name, default in _POOL_SETTING_DEFAULTS.items() if getattr(config, name) != default]
+    values = vars(config)  # read without the pydantic deprecation warning
+    ignored = [name for name, default in _POOL_SETTING_DEFAULTS.items() if values[name] != default]
     if ignored:
         warnings.warn(
             f"{', '.join(ignored)} {'has' if len(ignored) == 1 else 'have'} no effect: scylla-driver does not support "
