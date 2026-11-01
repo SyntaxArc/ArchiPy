@@ -65,6 +65,18 @@ Feature: Vault Adapter
       | get_dynamic_credentials empty mount | mount_point |
       | get_dynamic_credentials empty role  | role        |
 
+  Scenario Outline: Vault outage maps to UnavailableError and only idempotent calls are retried
+    Given a Vault adapter pointed at a server that always returns 503 with 2 retries
+    When I call Vault "<operation>" against the unavailable server
+    Then a Vault UnavailableError without the server address should be raised
+    And the Vault server should have received <requests> data requests
+
+    Examples:
+      | operation     | requests |
+      | write_secret  | 1        |
+      | delete_secret | 1        |
+      | read_secret   | 3        |
+
   @needs-postgres
   Scenario: Generate renew and revoke dynamic database credentials
     Given a Vault database role named "readonly" backed by Postgres

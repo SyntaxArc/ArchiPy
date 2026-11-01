@@ -776,11 +776,10 @@ Both adapters use TTL (Time-To-Live) caching for appropriate operations to impro
 configured for each method based on how frequently the data typically changes:
 
 - Public keys and certificate information: 1 hour
-- User information from tokens: 30 seconds
 - User details and role information: 5 minutes
 
 !!! note
-    Token validation is never cached. Write operations such as user creation and updates clear the relevant caches.
+    Token validation, `get_userinfo` and `check_permissions_batch` are never cached by the adapters. Write operations such as user creation and updates clear the relevant caches.
 
 You can clear all caches if needed. `clear_all_caches()` works with or without admin mode: it never builds the admin
 client or logs in to Keycloak.

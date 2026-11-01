@@ -219,3 +219,29 @@ Feature: Parsian Shaparak payment gateway adapter
   Scenario: Invalid callback URL is rejected before reaching the gateway
     When I build a Parsian payment request whose callback is "not a url"
     Then the Parsian request is rejected as invalid
+
+  Scenario Outline: Debug logs never contain the login account or the full token
+    Given a <kind> Parsian adapter with login account "SECRETLOGIN"
+    And Parsian debug logging is captured
+    And the Parsian gateway answers "SalePaymentRequest" with:
+      | Token  | Status | Message |
+      | 987654 | 0      | Success |
+    And the Parsian gateway answers "ConfirmPayment" with:
+      | Status | RRN | CardNumberMasked | Token  |
+      | 0      | 1   | 603799******1234 | 987654 |
+    And the Parsian gateway answers "ConfirmPaymentWithAmount" with:
+      | Status | RRN | CardNumberMasked | Token  |
+      | 0      | 1   | 603799******1234 | 987654 |
+    And the Parsian gateway answers "ReversalRequest" with:
+      | Status | Message  | Token  |
+      | 0      | Reversed | 987654 |
+    When I initiate a Parsian payment of 50000 for order 1001 with callback "https://shop.example.com/back"
+    And I confirm Parsian token 987654
+    And I confirm Parsian token 987654 for order 1001 and amount 50000
+    And I reverse Parsian token 987654
+    Then the Parsian debug logs contain neither "SECRETLOGIN" nor "987654" but do name order 1001
+
+    Examples:
+      | kind  |
+      | sync  |
+      | async |

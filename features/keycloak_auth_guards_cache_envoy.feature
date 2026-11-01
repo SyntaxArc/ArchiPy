@@ -19,6 +19,19 @@ Feature: Keycloak Auth Guards Caching, Headers and Envoy Testing
       | direct |
       | envoy  |
 
+  Scenario Outline: Auth userinfo lookups are not cached unless a TTL is configured
+    Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
+    And the keycloak fastapi auth requires any of roles "auth-reader"
+    When the keycloak auth fastapi dependency is called with the access token of user "authuser"
+    And the keycloak auth sessions of user "authuser" are cleared
+    And the keycloak auth fastapi dependency is called with the access token of user "authuser"
+    Then the keycloak auth call fails with error code "INVALID_CREDENTIALS"
+
+    Examples:
+      | via    |
+      | direct |
+      | envoy  |
+
   Scenario Outline: Auth cached lookups are looked up again after the TTL
     Given a keycloak auth realm with user "authuser" holding realm role "auth-reader" and an access token via <via>
     And the keycloak auth adapter caches remote lookups for 60 seconds
@@ -58,7 +71,6 @@ Feature: Keycloak Auth Guards Caching, Headers and Envoy Testing
     And the keycloak fastapi auth requires permissions "auth-doc-cached#read,auth-doc-cached#write"
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     And the keycloak auth permission granting scope "read" on resource "auth-doc-cached" of client "auth-client" is deleted
-    And the keycloak adapter's own permission cache is cleared
     And the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth dependency returns the user info of user "authuser"
 
@@ -74,7 +86,6 @@ Feature: Keycloak Auth Guards Caching, Headers and Envoy Testing
     And the keycloak fastapi auth requires permissions "auth-doc-uncached#read,auth-doc-uncached#write"
     When the keycloak auth fastapi dependency is called with the access token of user "authuser"
     And the keycloak auth permission granting scope "read" on resource "auth-doc-uncached" of client "auth-client" is deleted
-    And the keycloak adapter's own permission cache is cleared
     And the keycloak auth fastapi dependency is called with the access token of user "authuser"
     Then the keycloak auth call fails with error code "PERMISSION_DENIED"
 

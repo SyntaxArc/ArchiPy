@@ -96,6 +96,14 @@ class KafkaConfig(BaseModel):
     )
     ENABLE_IDEMPOTENCE: bool = Field(default=False, description="Enable idempotent producer for exactly-once delivery")
     TRANSACTIONAL_ID: str | None = Field(default=None, description="Transactional ID for the producer")
+    TRANSACTION_TIMEOUT_MS: int | None = Field(
+        default=None,
+        ge=1000,
+        description=(
+            "Transaction timeout in ms (transaction.timeout.ms) of a transactional producer. Must not be lower than "
+            "the delivery timeout; None uses 60000, or the delivery timeout when that is higher"
+        ),
+    )
     ISOLATION_LEVEL: Literal["read_uncommitted", "read_committed"] = Field(
         default="read_uncommitted",
         description="Isolation level for consumer",
@@ -205,4 +213,11 @@ class KafkaConfig(BaseModel):
             raise ConfigurationError(operation="kafka_producer", reason="idempotence_requires_acks_all")
         if self.TRANSACTIONAL_ID is not None and not self.ENABLE_IDEMPOTENCE:
             raise ConfigurationError(operation="kafka_producer", reason="transactional_id_requires_idempotence")
+        if self.TRANSACTION_TIMEOUT_MS is not None:
+            delivery_timeout = self.MESSAGE_TIMEOUT_MS or self.DELIVERY_TIMEOUT_MS
+            if delivery_timeout > self.TRANSACTION_TIMEOUT_MS:
+                raise ConfigurationError(
+                    operation="kafka_producer",
+                    reason="transaction_timeout_below_delivery_timeout",
+                )
         return self
