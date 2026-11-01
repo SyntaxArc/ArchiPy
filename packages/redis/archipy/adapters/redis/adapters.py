@@ -22,6 +22,7 @@ from archipy.adapters.redis.adapter_mixins import (
     RedisSetsMixin,
     RedisSortedSetsMixin,
 )
+from archipy.adapters.redis.error_mapping import map_redis_errors
 from archipy.adapters.redis.ports import AsyncRedisPort, RedisPort
 
 __all__ = [
@@ -72,3 +73,7 @@ class AsyncRedisAdapter(
     Args:
         redis_config: Redis settings. Uses global config when None.
     """
+
+
+map_redis_errors(RedisAdapter, is_async=False)
+map_redis_errors(AsyncRedisAdapter, is_async=True)
