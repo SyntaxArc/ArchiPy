@@ -228,6 +228,33 @@ else:
     Messages are enqueued, not delivered, when you call the producer. Call `flush()` before the process exits, or
     pending messages can be lost.
 
+### Producer Transactions
+
+Set `TRANSACTIONAL_ID` (with `ENABLE_IDEMPOTENCE=True`) and the synchronous `KafkaProducerAdapter` initializes
+transactions when it is created. Wrap the messages that must be delivered together in a transaction. Read them with a
+consumer that uses `ISOLATION_LEVEL="read_committed"`.
+
+```python
+producer = KafkaProducerAdapter(topic_name="my-topic")
+
+producer.begin_transaction()
+try:
+    producer.produce("first")
+    producer.produce("second")
+except Exception:
+    producer.abort_transaction()
+    raise
+else:
+    producer.commit_transaction()
+```
+
+`TRANSACTION_TIMEOUT_MS` sets `transaction.timeout.ms`; it must not be lower than the delivery timeout
+(`MESSAGE_TIMEOUT_MS` or `DELIVERY_TIMEOUT_MS`). When unset it is 60000, or the delivery timeout when that is higher.
+
+!!! warning
+    `AsyncKafkaProducerAdapter` does not support transactions: with `TRANSACTIONAL_ID` set it raises a
+    `ConfigurationError` on first use.
+
 ### Producer Health Check
 
 ```python

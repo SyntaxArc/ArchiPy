@@ -133,6 +133,19 @@ def _apply_client_config(config: dict[str, str | int | float], configs: KafkaCon
     config.update({key: value for key, value in optional.items() if value is not None})
 
 
+def _apply_transactional_config(config: dict[str, str | int | float], configs: KafkaConfig) -> None:
+    """Add ``transactional.id`` and a ``transaction.timeout.ms`` that is not below the delivery timeout.
+
+    librdkafka refuses a transactional producer whose delivery timeout exceeds the transaction timeout, so an
+    unset ``TRANSACTION_TIMEOUT_MS`` falls back to 60000 or the delivery timeout when that is higher.
+    """
+    if not configs.TRANSACTIONAL_ID:
+        return
+    config["transactional.id"] = configs.TRANSACTIONAL_ID
+    delivery_timeout = configs.MESSAGE_TIMEOUT_MS or configs.DELIVERY_TIMEOUT_MS
+    config["transaction.timeout.ms"] = configs.TRANSACTION_TIMEOUT_MS or max(60000, delivery_timeout)
+
+
 def _resolve_list_topics_timeout(configs: KafkaConfig, timeout: float | None) -> float:
     """Return the explicit timeout in seconds, or ``LIST_TOPICS_TIMEOUT_MS`` converted to seconds when None."""
     return configs.LIST_TOPICS_TIMEOUT_MS / 1000 if timeout is None else timeout
@@ -691,12 +704,13 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
                 "queue.buffering.max.messages": configs.QUEUE_BUFFERING_MAX_MESSAGES,
                 "statistics.interval.ms": configs.STATISTICS_INTERVAL_MS,
             }
-            if configs.TRANSACTIONAL_ID:
-                config["transactional.id"] = configs.TRANSACTIONAL_ID
+            _apply_transactional_config(config, configs)
             _apply_security_config(config, configs)
             _apply_client_config(config, configs, role="producer")
             # See the consumer: resolved at call time so the OpenTelemetry instrumentor can wrap it.
             producer = confluent_kafka.Producer(config)
+            if configs.TRANSACTIONAL_ID:
+                producer.init_transactions(configs.REQUEST_TIMEOUT_MS / 1000)
         except _KAFKA_CLIENT_ERRORS as e:
             cls._handle_kafka_exception(e, "KafkaProducer_init")
         else:
@@ -759,6 +773,71 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             )
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_producer_exception(e, "produce")
+
+    @override
+    def begin_transaction(self) -> None:
+        """Begins a transaction. Requires ``TRANSACTIONAL_ID`` to be configured.
+
+        Raises:
+            InvalidArgumentError: If the producer is not transactional.
+            ServiceUnavailableError: If Kafka is unavailable.
+            InternalError: If there is an error beginning the transaction.
+        """
+        self._require_transactional("begin_transaction")
+        try:
+            self._adapter.begin_transaction()
+        except _KAFKA_CLIENT_ERRORS as e:
+            self._handle_kafka_exception(e, "begin_transaction")
+
+    @override
+    def commit_transaction(self, timeout: float | None = None) -> None:
+        """Commits the open transaction, flushing the messages produced in it.
+
+        Args:
+            timeout (float | None, optional): Maximum seconds to wait. Defaults to None, which uses
+                ``REQUEST_TIMEOUT_MS``.
+
+        Raises:
+            InvalidArgumentError: If the producer is not transactional.
+            ConnectionTimeoutError: If the commit times out.
+            InternalError: If there is an error committing the transaction.
+        """
+        self._require_transactional("commit_transaction")
+        try:
+            self._adapter.commit_transaction(self._transaction_timeout(timeout))
+        except _KAFKA_CLIENT_ERRORS as e:
+            self._handle_kafka_exception(e, "commit_transaction")
+
+    @override
+    def abort_transaction(self, timeout: float | None = None) -> None:
+        """Aborts the open transaction, discarding the messages produced in it.
+
+        Args:
+            timeout (float | None, optional): Maximum seconds to wait. Defaults to None, which uses
+                ``REQUEST_TIMEOUT_MS``.
+
+        Raises:
+            InvalidArgumentError: If the producer is not transactional.
+            ConnectionTimeoutError: If the abort times out.
+            InternalError: If there is an error aborting the transaction.
+        """
+        self._require_transactional("abort_transaction")
+        try:
+            self._adapter.abort_transaction(self._transaction_timeout(timeout))
+        except _KAFKA_CLIENT_ERRORS as e:
+            self._handle_kafka_exception(e, "abort_transaction")
+
+    def _require_transactional(self, operation: str) -> None:
+        """Raise InvalidArgumentError when ``TRANSACTIONAL_ID`` is not configured."""
+        if not self._configs.TRANSACTIONAL_ID:
+            raise InvalidArgumentError(
+                argument_name=operation,
+                additional_data={"reason": "TRANSACTIONAL_ID must be configured to use transactions"},
+            )
+
+    def _transaction_timeout(self, timeout: float | None) -> float:
+        """Return the explicit timeout in seconds, or ``REQUEST_TIMEOUT_MS`` converted to seconds when None."""
+        return self._configs.REQUEST_TIMEOUT_MS / 1000 if timeout is None else timeout
 
     @override
     def flush(self, timeout: int | None = None) -> None:
@@ -888,8 +967,6 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
             "queue.buffering.max.messages": configs.QUEUE_BUFFERING_MAX_MESSAGES,
             "statistics.interval.ms": configs.STATISTICS_INTERVAL_MS,
         }
-        if configs.TRANSACTIONAL_ID:
-            config["transactional.id"] = configs.TRANSACTIONAL_ID
         _apply_security_config(config, configs)
         _apply_client_config(config, configs, role="producer")
         return config
@@ -905,6 +982,8 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
             InternalError: If there is an error creating the producer.
         """
         if self._adapter is None:
+            if self._configs.TRANSACTIONAL_ID:
+                raise ConfigurationError(operation="kafka_producer", reason="transactional_id_unsupported_async")
             try:
                 config = self._build_producer_conf(self._configs)
                 self._adapter = AIOProducer(

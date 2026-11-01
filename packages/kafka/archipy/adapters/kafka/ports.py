@@ -189,6 +189,36 @@ class KafkaProducerPort:
         """
         raise NotImplementedError
 
+    def begin_transaction(self) -> None:
+        """Begins a transaction. Requires ``TRANSACTIONAL_ID`` to be configured.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+    def commit_transaction(self, timeout: float | None = None) -> None:
+        """Commits the open transaction, flushing the messages produced in it.
+
+        Args:
+            timeout (float | None, optional): Maximum seconds to wait. Defaults to None.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
+    def abort_transaction(self, timeout: float | None = None) -> None:
+        """Aborts the open transaction, discarding the messages produced in it.
+
+        Args:
+            timeout (float | None, optional): Maximum seconds to wait. Defaults to None.
+
+        Raises:
+            NotImplementedError: If the method is not implemented by the concrete class.
+        """
+        raise NotImplementedError
+
     @abstractmethod
     def validate_healthiness(self) -> None:
         """Validates the health of the producer connection.
