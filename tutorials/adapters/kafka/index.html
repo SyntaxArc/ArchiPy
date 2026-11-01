@@ -4453,7 +4453,49 @@ dependency-injection containers) without requiring a running event loop.</p>
 </span><span id="__span-12-28"><a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">check_health</span><span class="p">())</span>
 </span></code></pre></div>
 <h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
-<p>The Kafka adapters map low-level Kafka errors to ArchiPy domain exceptions:</p>
+<p>The Kafka adapters map low-level Kafka errors to ArchiPy domain exceptions by librdkafka error code:</p>
+<table>
+<thead>
+<tr>
+<th>Kafka error</th>
+<th>ArchiPy error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Timeouts (<code>_MSG_TIMED_OUT</code>, <code>_TIMED_OUT</code>, <code>REQUEST_TIMED_OUT</code>)</td>
+<td><code>ConnectionTimeoutError</code></td>
+</tr>
+<tr>
+<td>Transport failure (<code>_TRANSPORT</code>, <code>NETWORK_EXCEPTION</code>)</td>
+<td><code>NetworkError</code></td>
+</tr>
+<tr>
+<td>No broker reachable (<code>_ALL_BROKERS_DOWN</code>, <code>_RESOLVE</code>, <code>BROKER_NOT_AVAILABLE</code>)</td>
+<td><code>ServiceUnavailableError</code></td>
+</tr>
+<tr>
+<td>Authentication failure (<code>_AUTHENTICATION</code>, <code>SASL_AUTHENTICATION_FAILED</code>)</td>
+<td><code>UnauthenticatedError</code></td>
+</tr>
+<tr>
+<td>Authorization failure (topic, group, cluster, transactional id)</td>
+<td><code>PermissionDeniedError</code></td>
+</tr>
+<tr>
+<td><code>_INVALID_ARG</code></td>
+<td><code>InvalidArgumentError</code>, or <code>ConfigurationError</code> when a client setting is rejected</td>
+</tr>
+<tr>
+<td>Full producer queue (<code>BufferError</code>)</td>
+<td><code>ResourceExhaustedError</code></td>
+</tr>
+<tr>
+<td>Anything else</td>
+<td><code>InternalError</code></td>
+</tr>
+</tbody>
+</table>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.kafka.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">KafkaAdminAdapter</span><span class="p">,</span> <span class="n">KafkaProducerAdapter</span>

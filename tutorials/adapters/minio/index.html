@@ -4187,7 +4187,10 @@ outside the intended client.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Cached results can be up to 5 minutes old. After you change a bucket or object outside the adapter, call
-<code>clear_all_caches()</code> to read fresh values.</p>
+<code>clear_all_caches()</code> to read fresh values.
+Caches are per adapter instance. Writes made through the adapter clear every cache they affect (object
+listing, existence and stat, versions, bucket policy and versioning), and cached lists and dicts are returned
+as copies, so mutating a result never changes later reads.</p>
 </div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Check if bucket exists (cached for 5 minutes)</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">minio</span><span class="o">.</span><span class="n">bucket_exists</span><span class="p">(</span><span class="s2">"my-bucket"</span><span class="p">)</span>

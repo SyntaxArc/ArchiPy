@@ -4876,7 +4876,12 @@ They are removed in 6.0.0. Use the request DTOs and the attributes of the respon
 </div>
 <h3 id="error-mapping">Error Mapping<a class="headerlink" href="#error-mapping" title="Permanent link">&para;</a></h3>
 <p>The adapter maps Keycloak failures to ArchiPy errors, chained with <code>from</code>. A <code>404</code> raises <code>ResourceNotFoundError</code>,
-bad credentials raise <code>InvalidCredentialsError</code>, and a forbidden call raises <code>InsufficientPermissionsError</code>.</p>
+bad credentials raise <code>InvalidCredentialsError</code>, and a forbidden call raises <code>InsufficientPermissionsError</code>.
+A <code>409</code> raises the <code>*AlreadyExistsError</code> of the resource the operation works on (or <code>ConflictError</code> when it names none),
+a <code>429</code> raises <code>RateLimitExceededError</code>, and a <code>5xx</code> raises <code>KeycloakServiceUnavailableError</code> (<code>502</code>, <code>503</code>, <code>504</code>) or
+<code>InternalError</code>. The status code decides before any message text is read. Keycloak's own message reaches callers in
+<code>additional_data["original_error"]</code> for <code>4xx</code> answers only; a <code>5xx</code> or connection failure is logged and its message
+is left out, since it can carry internals such as database URLs.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.models.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResourceNotFoundError</span>
 </span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="k">try</span><span class="p">:</span>
