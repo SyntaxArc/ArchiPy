@@ -15,7 +15,7 @@ from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from queue import Queue
+from queue import Empty, Queue
 from typing import TYPE_CHECKING, Any, BinaryIO, cast, override
 
 import httpx2
@@ -219,9 +219,23 @@ class EmailConnectionPool:
             self.pool.put(connection)
 
     def get_connection(self) -> EmailConnectionManager:
-        """Get a connection from the pool."""
-        connection = self.pool.get()
-        connection.refresh_if_needed()
+        """Get a connection from the pool.
+
+        Waits at most ``CONNECTION_TIMEOUT`` seconds for a free slot. The slot goes back to the pool when
+        refreshing the connection raises.
+
+        Raises:
+            UnavailableError: If no slot becomes free within ``CONNECTION_TIMEOUT`` seconds.
+        """
+        try:
+            connection = self.pool.get(timeout=self.config.CONNECTION_TIMEOUT)
+        except Empty as exception:
+            raise UnavailableError(resource_type="SMTP") from exception
+        try:
+            connection.refresh_if_needed()
+        except BaseException:
+            self.pool.put(connection)
+            raise
         return connection
 
     def return_connection(self, connection: EmailConnectionManager) -> None:
