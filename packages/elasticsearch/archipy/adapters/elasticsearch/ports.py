@@ -277,6 +277,15 @@ class ElasticsearchPort:
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def close(self) -> None:
+        """Close the client and release its connection pool.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
 
 class AsyncElasticsearchPort:
     """Async interface for Elasticsearch operations providing a standardized access pattern.
@@ -537,6 +546,15 @@ class AsyncElasticsearchPort:
 
         Returns:
             ElasticsearchResponseType: True if the index exists, False otherwise.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def aclose(self) -> None:
+        """Close the client and release its connection pool.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
