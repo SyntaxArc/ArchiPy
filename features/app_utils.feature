@@ -242,6 +242,42 @@ Feature: App Utilities
       | sync  |
       | async |
 
+  Scenario Outline: A gRPC server with TLS serves a TLS channel
+    When a <mode> gRPC server with TLS is called by a TLS channel with mutual TLS <mtls> and a client certificate <client>
+    Then the TLS call should be <outcome>
+
+    Examples:
+      | mode  | mtls         | client        | outcome  |
+      | sync  | not required | not presented | served   |
+      | async | not required | not presented | served   |
+      | sync  | required     | presented     | served   |
+      | async | required     | presented     | served   |
+      | sync  | required     | not presented | rejected |
+      | async | required     | not presented | rejected |
+
+  Scenario Outline: A gRPC server without TLS keeps serving plaintext channels
+    When a <mode> gRPC server without TLS is called by a plaintext channel
+    Then the TLS call should be served
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
+  Scenario Outline: The gRPC config checks its TLS settings
+    When a gRPC config is built with <settings>
+    Then the gRPC config should be <outcome>
+
+    Examples:
+      | settings                               | outcome  |
+      | TLS_ENABLED                            | rejected |
+      | TLS_ENABLED,TLS_CERT_FILE              | rejected |
+      | TLS_ENABLED,TLS_CERT_FILE,TLS_KEY_FILE | accepted |
+      | TLS_REQUIRE_CLIENT_AUTH                | rejected |
+      | TLS_REQUIRE_CLIENT_AUTH,TLS_CA_FILE    | accepted |
+      | STUB_TLS_CERT_FILE                     | rejected |
+      | STUB_TLS_CERT_FILE,STUB_TLS_KEY_FILE   | accepted |
+
   Scenario Outline: A rate limiter that fails to start stops a fail-closed gRPC server
     Given gRPC rate limiting is enabled with fail closed set to <fail_closed> and a Redis client that cannot be created
     When the <mode> gRPC rate limit interceptor is set up

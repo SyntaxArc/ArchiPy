@@ -1,10 +1,17 @@
 import asyncio
+import datetime
 import json
+import tempfile
 import warnings
+from pathlib import Path
 from types import SimpleNamespace
 
 import grpc
 from behave import given, then, when
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.x509.oid import NameOID
 from fastapi import Depends, FastAPI, WebSocket
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, ValidationError
@@ -12,6 +19,7 @@ from starlette.testclient import TestClient
 
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import FastAPIConfig, RedisMode
+from archipy.configs.sections.grpc import GrpcConfig
 from archipy.helpers.utils.app_utils import (
     AppUtils,
     AsyncGrpcAPIUtils,
@@ -623,6 +631,174 @@ def step_then_grpc_app_all_interceptors(context):
     scenario_context = get_current_scenario_context(context)
     calls = scenario_context.get("called_interceptors")
     assert sorted(calls) == sorted(scenario_context.get("custom_interceptor_names")), f"Got {calls}"
+
+
+def _write_self_signed_certificate(directory: Path) -> tuple[Path, Path]:
+    """Write a self-signed CA certificate valid for localhost and its key; return both paths."""
+    key = ec.generate_private_key(ec.SECP256R1())
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "localhost")])
+    now = datetime.datetime.now(datetime.UTC)
+    certificate = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - datetime.timedelta(minutes=1))
+        .not_valid_after(now + datetime.timedelta(hours=1))
+        .add_extension(x509.SubjectAlternativeName([x509.DNSName("localhost")]), critical=False)
+        .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
+        .sign(key, hashes.SHA256())
+    )
+    cert_path = directory / "cert.pem"
+    key_path = directory / "key.pem"
+    cert_path.write_bytes(certificate.public_bytes(serialization.Encoding.PEM))
+    key_path.write_bytes(
+        key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        ),
+    )
+    return cert_path, key_path
+
+
+def _config_with_grpc(grpc_config: GrpcConfig) -> BaseConfig:
+    return BaseConfig.global_config().model_copy(update={"GRPC": grpc_config})
+
+
+def _tls_grpc_config(directory: Path, *, mtls: bool, client_cert: bool) -> BaseConfig:
+    cert_path, key_path = _write_self_signed_certificate(directory)
+    return _config_with_grpc(
+        GrpcConfig(
+            TLS_ENABLED=True,
+            TLS_CERT_FILE=str(cert_path),
+            TLS_KEY_FILE=str(key_path),
+            TLS_CA_FILE=str(cert_path) if mtls else None,
+            TLS_REQUIRE_CLIENT_AUTH=mtls,
+            STUB_TLS_ENABLED=True,
+            STUB_TLS_CA_FILE=str(cert_path),
+            STUB_TLS_CERT_FILE=str(cert_path) if client_cert else None,
+            STUB_TLS_KEY_FILE=str(key_path) if client_cert else None,
+        ),
+    )
+
+
+def _call_tls_sync(config) -> str:
+    server = AppUtils.create_grpc_app(config)
+    test_service_pb2_grpc.add_TestServiceServicer_to_server(create_test_grpc_servicer(), server)
+    port = AppUtils.add_grpc_port(server, config, "localhost:0")
+    server.start()
+    try:
+        with AppUtils.create_grpc_channel(config, f"localhost:{port}") as channel:
+            response = test_service_pb2_grpc.TestServiceStub(channel).TestMethod(
+                test_service_pb2.TestRequest(data="hi"),
+                timeout=5,
+            )
+        return response.result
+    except grpc.RpcError:
+        return "rejected"
+    finally:
+        server.stop(None).wait(5)
+
+
+async def _call_tls_async(config) -> str:
+    server = AppUtils.create_async_grpc_app(config)
+    test_service_pb2_grpc.add_TestServiceServicer_to_server(create_test_async_grpc_servicer(), server)
+    port = AppUtils.add_grpc_port(server, config, "localhost:0")
+    await server.start()
+    try:
+        async with AppUtils.create_grpc_channel(config, f"localhost:{port}", aio=True) as channel:
+            response = await test_service_pb2_grpc.TestServiceStub(channel).TestMethod(
+                test_service_pb2.TestRequest(data="hi"),
+                timeout=5,
+            )
+        return response.result
+    except grpc.RpcError:
+        return "rejected"
+    finally:
+        await server.stop(None)
+
+
+@when("a {mode} gRPC server with TLS is called by a TLS channel with mutual TLS {mtls} and a client certificate {client}")
+def step_when_grpc_tls_call(context, mode, mtls, client):
+    scenario_context = get_current_scenario_context(context)
+    directory = tempfile.TemporaryDirectory()
+    context.add_cleanup(directory.cleanup)
+    config = _tls_grpc_config(Path(directory.name), mtls=mtls == "required", client_cert=client == "presented")
+    if mode == "sync":
+        result = _call_tls_sync(config)
+    else:
+        result = asyncio.run(_call_tls_async(config))
+    scenario_context.store("tls_result", result)
+
+
+@then("the TLS call should be {outcome}")
+def step_then_grpc_tls_outcome(context, outcome):
+    result = get_current_scenario_context(context).get("tls_result")
+    expected = "success" if outcome == "served" else "rejected"
+    assert result == expected, f"Got {result}"
+
+
+@when("a {mode} gRPC server without TLS is called by a plaintext channel")
+def step_when_grpc_plaintext_call(context, mode):
+    scenario_context = get_current_scenario_context(context)
+    config = _config_with_grpc(GrpcConfig())
+    if mode == "sync":
+        server = AppUtils.create_grpc_app(config)
+        test_service_pb2_grpc.add_TestServiceServicer_to_server(create_test_grpc_servicer(), server)
+        port = AppUtils.add_grpc_port(server, config, "localhost:0")
+        server.start()
+        try:
+            with AppUtils.create_grpc_channel(config, f"localhost:{port}") as channel:
+                response = test_service_pb2_grpc.TestServiceStub(channel).TestMethod(
+                    test_service_pb2.TestRequest(data="hi"),
+                    timeout=5,
+                )
+        finally:
+            server.stop(None).wait(5)
+        result = response.result
+    else:
+
+        async def call() -> str:
+            server = AppUtils.create_async_grpc_app(config)
+            test_service_pb2_grpc.add_TestServiceServicer_to_server(create_test_async_grpc_servicer(), server)
+            port = AppUtils.add_grpc_port(server, config, "localhost:0")
+            await server.start()
+            try:
+                async with AppUtils.create_grpc_channel(config, f"localhost:{port}", aio=True) as channel:
+                    response = await test_service_pb2_grpc.TestServiceStub(channel).TestMethod(
+                        test_service_pb2.TestRequest(data="hi"),
+                        timeout=5,
+                    )
+                return response.result
+            finally:
+                await server.stop(None)
+
+        result = asyncio.run(call())
+    scenario_context.store("tls_result", result)
+
+
+@when("a gRPC config is built with {settings}")
+def step_when_grpc_config_built(context, settings):
+    scenario_context = get_current_scenario_context(context)
+    keys = settings.split(",")
+    values: dict[str, bool | str] = {key: True for key in keys if key in {"TLS_ENABLED", "TLS_REQUIRE_CLIENT_AUTH"}}
+    values.update({key: "/nonexistent/x.pem" for key in keys if key.endswith("_FILE")})
+    try:
+        GrpcConfig(**values)
+        scenario_context.store("grpc_config_error", None)
+    except InvalidArgumentError as exception:
+        scenario_context.store("grpc_config_error", str(exception))
+
+
+@then("the gRPC config should be {outcome}")
+def step_then_grpc_config_outcome(context, outcome):
+    error = get_current_scenario_context(context).get("grpc_config_error")
+    if outcome == "accepted":
+        assert error is None, error
+    else:
+        assert error is not None, "Expected a validation error"
 
 
 @given("gRPC rate limiting is enabled with fail closed set to {fail_closed} and a Redis client that cannot be created")

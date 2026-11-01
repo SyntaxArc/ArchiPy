@@ -6,6 +6,7 @@ import logging
 import re
 import warnings
 from concurrent import futures
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from archipy.configs.base_config import BaseConfig
@@ -644,6 +645,68 @@ class AppUtils:
             options=config.GRPC.SERVER_OPTIONS_CONFIG_LIST,
             maximum_concurrent_rpcs=config.GRPC.MAX_CONCURRENT_RPCS,
         )
+
+    @staticmethod
+    def _read_pem(path: str | None) -> bytes | None:
+        """Read a PEM file, or return None when no path is set."""
+        if path is None:
+            return None
+        return Path(path).read_bytes()
+
+    @classmethod
+    def add_grpc_port(cls, server: grpc.Server | GrpcAioServer, config: BaseConfig, address: str | None = None) -> int:
+        """Bind a port on a gRPC server, using TLS when ``GRPC.TLS_ENABLED`` is set.
+
+        Without TLS this calls ``add_insecure_port``, so existing setups keep working.
+
+        Args:
+            server: A server from ``create_grpc_app`` or ``create_async_grpc_app``.
+            config: The application config.
+            address: The ``host:port`` to bind. Defaults to ``GRPC.SERVE_HOST:GRPC.SERVE_PORT``.
+
+        Returns:
+            int: The bound port.
+        """
+        grpc_config = config.GRPC
+        bind_address = address or f"{grpc_config.SERVE_HOST}:{grpc_config.SERVE_PORT}"
+        if not grpc_config.TLS_ENABLED:
+            return server.add_insecure_port(bind_address)
+        private_key = cls._read_pem(grpc_config.TLS_KEY_FILE)
+        certificate_chain = cls._read_pem(grpc_config.TLS_CERT_FILE)
+        if private_key is None or certificate_chain is None:
+            raise ConfigurationError(operation="grpc_tls", reason="missing_server_certificate_or_key")
+        credentials = grpc.ssl_server_credentials(
+            [(private_key, certificate_chain)],
+            root_certificates=cls._read_pem(grpc_config.TLS_CA_FILE),
+            require_client_auth=grpc_config.TLS_REQUIRE_CLIENT_AUTH,
+        )
+        return server.add_secure_port(bind_address, credentials)
+
+    @classmethod
+    def create_grpc_channel(cls, config: BaseConfig, target: str, *, aio: bool = False) -> grpc.Channel:
+        """Create a client channel, using TLS when ``GRPC.STUB_TLS_ENABLED`` is set.
+
+        Channel options come from ``GRPC.STUB_OPTIONS_CONFIG_LIST``. Without TLS the channel is plaintext.
+
+        Args:
+            config: The application config.
+            target: The server ``host:port``.
+            aio: Create a ``grpc.aio`` channel instead of a sync one.
+
+        Returns:
+            grpc.Channel: The channel.
+        """
+        grpc_config = config.GRPC
+        options = grpc_config.STUB_OPTIONS_CONFIG_LIST
+        module: Any = grpc_aio if aio else grpc
+        if not grpc_config.STUB_TLS_ENABLED:
+            return module.insecure_channel(target, options=options)
+        credentials = grpc.ssl_channel_credentials(
+            root_certificates=cls._read_pem(grpc_config.STUB_TLS_CA_FILE),
+            private_key=cls._read_pem(grpc_config.STUB_TLS_KEY_FILE),
+            certificate_chain=cls._read_pem(grpc_config.STUB_TLS_CERT_FILE),
+        )
+        return module.secure_channel(target, credentials, options=options)
 
     @classmethod
     def create_grpc_app(
