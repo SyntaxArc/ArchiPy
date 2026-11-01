@@ -157,6 +157,25 @@ def _execution_profile_options(config: ScyllaDBConfig) -> dict[str, Any]:
     return options
 
 
+def _tls_cluster_options(config: ScyllaDBConfig) -> dict[str, Any]:
+    """Build the optional TLS ``Cluster`` keyword arguments for the server name and session resumption.
+
+    Args:
+        config (ScyllaDBConfig): The ScyllaDB configuration.
+
+    Returns:
+        dict[str, Any]: Keyword arguments for ``Cluster``; empty when TLS is disabled.
+    """
+    if not config.TLS_ENABLED:
+        return {}
+    options: dict[str, Any] = {}
+    if config.TLS_SERVER_NAME:
+        options["ssl_options"] = {"server_hostname": config.TLS_SERVER_NAME}
+    if not config.TLS_SESSION_CACHE_ENABLED:
+        options["ssl_session_cache"] = None
+    return options
+
+
 class _HostPoolStat(TypedDict):
     """Per-host connection pool statistics for ScyllaDB monitoring."""
 
@@ -437,6 +456,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             shard_aware_options=shard_aware_options,
             address_translator=address_translator,
             ssl_context=self.config.build_ssl_context(),
+            **_tls_cluster_options(self.config),
             **_cluster_resilience_options(self.config),
         )
         _warn_ignored_pool_settings(self.config)
@@ -1082,6 +1102,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             shard_aware_options=shard_aware_options,
             address_translator=address_translator,
             ssl_context=self.config.build_ssl_context(),
+            **_tls_cluster_options(self.config),
             **_cluster_resilience_options(self.config),
         )
         _warn_ignored_pool_settings(self.config)

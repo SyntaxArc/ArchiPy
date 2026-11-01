@@ -227,6 +227,17 @@ class ScyllaDBConfig(BaseModel):
         default=True,
         description="Check that the server certificate matches the contact point host name",
     )
+    TLS_SERVER_NAME: str | None = Field(
+        default=None,
+        description="Host name to match the server certificate against, when it differs from the contact point address",
+    )
+    TLS_SESSION_CACHE_ENABLED: bool = Field(
+        default=True,
+        description=(
+            "Resume TLS sessions. A resumed session skips the certificate check, so a revoked or expired certificate "
+            "can be accepted until the cached session expires; disable to verify on every connection"
+        ),
+    )
 
     # Connection Pool Configuration
     MAX_CONNECTIONS_PER_HOST: int = Field(

@@ -480,6 +480,19 @@ Feature: ScyllaDB Adapter
       | QUORUM       |
 
   @needs-scylladb
+  Scenario Outline: The cluster applies the TLS server name and session cache settings
+    Given a ScyllaDB adapter is configured
+    When I build a ScyllaDB cluster with TLS enabled <enabled>, server name "<server_name>" and session cache <cache>
+    Then the cluster TLS server name should be "<expected_name>" and session resumption should be <resumption>
+
+    Examples: TLS options
+      | enabled | server_name | cache | expected_name | resumption |
+      | no      | db.internal | no    | -             | off        |
+      | yes     | -           | yes   | -             | on         |
+      | yes     | db.internal | yes   | db.internal   | on         |
+      | yes     | -           | no    | -             | off        |
+
+  @needs-scylladb
   Scenario Outline: The cluster applies policies and timeout through the default execution profile with <setting> set
     When I build a ScyllaDB cluster with <setting> set to <value>
     Then the default execution profile should use the configured request timeout and retry policy

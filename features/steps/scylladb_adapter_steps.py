@@ -1509,6 +1509,43 @@ def step_default_profile_consistency(context: Context, level: str) -> None:
     assert profile.consistency_level == getattr(ConsistencyLevel, level), profile.consistency_level
 
 
+@when('I build a ScyllaDB cluster with TLS enabled {enabled}, server name "{server_name}" and session cache {cache}')
+def step_build_scylladb_tls_cluster(context: Context, enabled: str, server_name: str, cache: str) -> None:
+    """Build the cluster without connecting, with TLS options, and keep it for assertions.
+
+    Args:
+        context (Context): Behave context.
+        enabled (str): "yes" or "no" for TLS_ENABLED.
+        server_name (str): TLS_SERVER_NAME, or "-" for none.
+        cache (str): "yes" or "no" for TLS_SESSION_CACHE_ENABLED.
+    """
+    from archipy.adapters.scylladb.adapters import ScyllaDBAdapter
+
+    updates = {
+        "TLS_ENABLED": enabled == "yes",
+        "TLS_SERVER_NAME": None if server_name == "-" else server_name,
+        "TLS_SESSION_CACHE_ENABLED": cache == "yes",
+    }
+    config = get_scylladb_adapter(context).config.model_copy(update=updates)
+    adapter = ScyllaDBAdapter.__new__(ScyllaDBAdapter)  # skip __init__, which would open a second connection
+    adapter.config = config
+    context.cluster = adapter._create_cluster()
+
+
+@then('the cluster TLS server name should be "{server_name}" and session resumption should be {cache}')
+def step_cluster_tls_options(context: Context, server_name: str, cache: str) -> None:
+    """Check the TLS server name option and whether session resumption stays enabled.
+
+    Args:
+        context (Context): Behave context.
+        server_name (str): Expected server name, or "-" for none.
+        cache (str): "on" or "off" ("off" means no session cache, or no TLS at all).
+    """
+    options = context.cluster.ssl_options or {}
+    assert options.get("server_hostname") == (None if server_name == "-" else server_name), options
+    assert (context.cluster.ssl_session_cache is not None) is (cache == "on"), context.cluster.ssl_session_cache
+
+
 @then("the default execution profile should use the configured request timeout and retry policy")
 def step_default_profile_configured(context: Context) -> None:
     """Check the default execution profile carries the configured timeout and a retry policy.
