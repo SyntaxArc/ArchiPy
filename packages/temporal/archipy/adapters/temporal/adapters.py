@@ -151,11 +151,12 @@ class TemporalAdapter(TemporalPort):
         try:
             return await Client.connect(f"{self.config.HOST}:{self.config.PORT}", **self._build_connect_kwargs())
         except Exception as error:
+            logger.exception("Failed to connect to Temporal", extra={"namespace": self.config.NAMESPACE})
             raise WorkerConnectionError(
                 additional_data={
                     "server": f"{self.config.HOST}:{self.config.PORT}",
                     "namespace": self.config.NAMESPACE,
-                    "original_error": str(error),
+                    "error_type": type(error).__name__,
                 },
             ) from error
 
@@ -363,7 +364,7 @@ class TemporalAdapter(TemporalPort):
                 verification_server_name=self.config.TLS_VERIFICATION_SERVER_NAME,
             )
         except OSError as error:
-            raise InvalidArgumentError(additional_data={"original_error": str(error)}) from error
+            raise InvalidArgumentError(additional_data={"error_type": type(error).__name__}) from error
 
     @staticmethod
     def _read_tls_file(path: str | None) -> bytes | None:
