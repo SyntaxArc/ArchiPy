@@ -1534,6 +1534,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#node-pool-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node pool options
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -4254,6 +4265,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#node-pool-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Node pool options
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -4338,6 +4360,13 @@ timeout for slow queries such as large aggregations.</p>
 </span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="nv">ELASTIC__REQUEST_TIMEOUT</span><span class="o">=</span><span class="m">5</span>.0
 </span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="nv">ELASTIC__MAX_RETRIES</span><span class="o">=</span><span class="m">3</span>
 </span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="nv">ELASTIC__RETRY_ON_TIMEOUT</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="c1"># Node pool and sniffing</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="nv">ELASTIC__NODE_SELECTOR_CLASS</span><span class="o">=</span>random<span class="w">          </span><span class="c1"># 'round_robin' (default) or 'random'</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="nv">ELASTIC__DEAD_NODE_BACKOFF_FACTOR</span><span class="o">=</span><span class="m">1</span>.0
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="nv">ELASTIC__MAX_DEAD_NODE_BACKOFF</span><span class="o">=</span><span class="m">300</span>.0
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="nv">ELASTIC__MIN_DELAY_BETWEEN_SNIFFING</span><span class="o">=</span><span class="m">60</span>.0<span class="w">     </span><span class="c1"># applied when SNIFF_BEFORE_REQUESTS=true</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="nv">ELASTIC__IGNORE_STATUS</span><span class="o">=</span><span class="s1">'[404]'</span><span class="w">               </span><span class="c1"># status codes not raised as errors</span>
 </span></code></pre></div>
 <h3 id="direct-configuration">Direct Configuration<a class="headerlink" href="#direct-configuration" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -5014,6 +5043,14 @@ requests and yields hits one at a time.</p>
 <li><code>ElasticsearchConfig</code> logs a warning when sniffing is enabled with a single non-localhost host — this may bypass
   load balancers. Disable sniffing (<code>SNIFF_ON_START=False</code>, <code>SNIFF_BEFORE_REQUESTS=False</code>) when connecting through
   a load balancer or Elastic Cloud.</li>
+</ul>
+<h3 id="node-pool-options">Node pool options<a class="headerlink" href="#node-pool-options" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>NODE_SELECTOR_CLASS</code>, <code>DEAD_NODE_BACKOFF_FACTOR</code> and <code>MAX_DEAD_NODE_BACKOFF</code> are passed to the client transport.</li>
+<li><code>MIN_DELAY_BETWEEN_SNIFFING</code> is passed only when <code>SNIFF_BEFORE_REQUESTS=True</code>, because the client turns on
+  sniffing before requests whenever it receives this option.</li>
+<li><code>IGNORE_STATUS</code> is applied to the client through <code>options(ignore_status=...)</code>; matching responses are returned
+  instead of raising an error.</li>
 </ul>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
