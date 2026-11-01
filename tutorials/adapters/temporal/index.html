@@ -4594,6 +4594,10 @@ callable, or by its class-qualified name.</p>
 </span><span id="__span-6-54"><a id="__codelineno-6-54" name="__codelineno-6-54" href="#__codelineno-6-54"></a>    <span class="k">return</span> <span class="kc">True</span>
 </span></code></pre></div>
 <h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
+<p>A non-retryable failure carries only the error type: the original error, with its message and <code>additional_data</code>, is
+not attached as the cause and so is not sent to the Temporal server. A retryable error is re-raised as is, so its
+message is part of the activity failure. Set <code>REDACT_RETRYABLE_ERRORS = True</code> on your activity class to send only
+the error type for those too.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>

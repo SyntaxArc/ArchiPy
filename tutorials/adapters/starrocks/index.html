@@ -3756,7 +3756,15 @@ handling and Python 3.14 type hints.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p><code>CONNECT_TIMEOUT</code> defaults to <code>10</code> seconds for StarRocks, because the MySQL protocol needs an explicit connection
-timeout to avoid hanging on network issues.</p>
+timeout to avoid hanging on network issues. It must be at least <code>1</code>. <code>READ_TIMEOUT</code> (seconds, at least <code>1</code>) is
+optional and applied by the sync driver only; asyncmy has no read timeout.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The adapter runs <code>SET enable_sql_transaction = TRUE</code> on every connection so <code>BEGIN</code>/<code>COMMIT</code>/<code>ROLLBACK</code> are not
+no-ops. The adapter is built and tested against StarRocks 4.x. On older servers the session variable may not exist
+and the connection is refused, so check it before upgrading or downgrading. The adapter has no TLS settings: terminate TLS in front of the frontend node if the network is not
+trusted.</p>
 </div>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">STARROCKS_SQLALCHEMY__HOST</span><span class="o">=</span>localhost
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">STARROCKS_SQLALCHEMY__PORT</span><span class="o">=</span><span class="m">9030</span>

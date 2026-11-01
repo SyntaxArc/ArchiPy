@@ -4902,11 +4902,12 @@ is left out, since it can carry internals such as database URLs.</p>
 configured for each method based on how frequently the data typically changes:</p>
 <ul>
 <li>Public keys and certificate information: 1 hour</li>
+<li>Realm JWKS used for local token verification: 1 hour, fetched again (at most every 10 seconds) when a token names an unknown <code>kid</code>, so a rotated signing key is picked up</li>
 <li>User details and role information: 5 minutes</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Token validation, <code>get_userinfo</code> and <code>check_permissions_batch</code> are never cached by the adapters. Write operations such as user creation and updates clear the relevant caches.</p>
+<p>Token validation, <code>get_userinfo</code> and <code>check_permissions_batch</code> are never cached by the adapters. If Keycloak cannot be reached while its JWKS is fetched, <code>validate_token</code> and <code>get_token_info</code> raise <code>ServiceUnavailableError</code> instead of reporting an invalid token. Write operations such as user creation and updates clear the relevant caches.</p>
 </div>
 <p>You can clear all caches if needed. <code>clear_all_caches()</code> works with or without admin mode: it never builds the admin
 client or logs in to Keycloak.</p>
