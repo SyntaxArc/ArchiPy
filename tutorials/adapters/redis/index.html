@@ -4876,6 +4876,8 @@ outside the adapter:</p>
 </span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>    <span class="p">),</span>
 </span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="p">)</span>
 </span></code></pre></div>
+<p>By default the filter is intersected with the range (<code>filter_mode="and"</code>): only documents that match the filter and lie
+within the radius are returned. Pass <code>filter_mode="or"</code> to also return documents that match only the filter.</p>
 <h3 id="runtime-query-parameters">Runtime Query Parameters<a class="headerlink" href="#runtime-query-parameters" title="Permanent link">&para;</a></h3>
 <p>Pass per-query tuning through <code>VectorQueryRuntimeDTO</code> on KNN, range, and hybrid builders. Supported fields include
 <code>ef_runtime</code>, <code>epsilon</code>, <code>batch_size</code>, <code>search_window_size</code>, <code>hybrid_policy</code>, <code>use_search_history</code>,
