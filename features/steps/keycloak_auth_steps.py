@@ -264,12 +264,6 @@ def step_keycloak_auth_clear_sessions(context, username):
     _real_sync_adapter(sc).clear_user_sessions(_user_id(sc, username))
 
 
-@when("the keycloak adapter's own permission cache is cleared")
-def step_keycloak_auth_clear_adapter_permission_cache(context):
-    """Drop the adapter-level permission cache so only the keycloak auth TTL cache can serve a stale answer."""
-    _real_sync_adapter(_ctx(context)).check_permissions_batch.clear_cache()
-
-
 @when('the keycloak auth permission granting scope "{scope}" on resource "{resource}" of client "{client}" is deleted')
 def step_keycloak_auth_delete_permission(context, scope, resource, client):
     sc = _ctx(context)
