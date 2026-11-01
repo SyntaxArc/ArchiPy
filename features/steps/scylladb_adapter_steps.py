@@ -1307,6 +1307,46 @@ async def step_read_scylladb_pool_stats(context: Context) -> None:
     _get_scenario_context(context).pool_stats = stats
 
 
+@when('I create the keyspace "{keyspace}" with replication factor {factor:d} and capture the adapter log')
+async def step_create_keyspace_capture_log(context: Context, keyspace: str, factor: int) -> None:
+    """Create a keyspace with the given factor in the configured datacenter and keep the adapter's warnings.
+
+    Args:
+        context (Context): Behave context.
+        keyspace (str): Keyspace name.
+        factor (int): Replication factor.
+    """
+    adapter = get_scylladb_adapter(context)
+    adapter.config = adapter.config.model_copy(update={"REPLICATION_CONFIG": {"datacenter1": factor}})
+    records: list[logging.LogRecord] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record)
+
+    handler = _Capture(level=logging.WARNING)
+    adapter_logger = logging.getLogger("archipy.adapters.scylladb.adapters")
+    adapter_logger.addHandler(handler)
+    try:
+        await _call_adapter(adapter, "create_keyspace", keyspace, factor)
+    finally:
+        adapter_logger.removeHandler(handler)
+    _get_scenario_context(context).scylla_log = [r.getMessage() for r in records]
+
+
+@then("the adapter log should {expectation} a single replica warning")
+def step_single_replica_warning(context: Context, expectation: str) -> None:
+    """Assert whether the single replica warning was logged.
+
+    Args:
+        context (Context): Behave context.
+        expectation (str): "contain" or "not contain".
+    """
+    messages = _get_scenario_context(context).scylla_log
+    found = any("replication factor 1" in message for message in messages)
+    assert found is (expectation == "contain"), messages
+
+
 @then("the ScyllaDB call should succeed")
 def step_scylladb_call_succeeds(context: Context) -> None:
     """Assert that the last recorded call raised nothing.
