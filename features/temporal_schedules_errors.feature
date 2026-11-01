@@ -100,6 +100,10 @@ Feature: Temporal Schedules, Timeouts and Errors
     Then I should receive a workflow not found error
     And the error should be the ArchiPy NotFoundError
 
+  Scenario: Listing workflows with an invalid query raises an ArchiPy error
+    When I try to list workflows with query "this is not a valid query ((("
+    Then the error should be the ArchiPy TemporalError
+
   Scenario: Starting a running workflow ID again raises AlreadyExistsError
     Given a worker is started for task queue "test-queue" with SignalQueryWorkflow
     When I start workflow "SignalQueryWorkflow" with workflow id "dup-start-1"

@@ -747,7 +747,8 @@ class TemporalAdapter(TemporalPort):
             next_page_token=next_page_token,
             limit=limit,
         )
-        return [workflow async for workflow in workflows_iter]
+        async with self._mapped_errors("list_workflows", None):
+            return [workflow async for workflow in workflows_iter]
 
     async def iter_workflows(
         self,
