@@ -11,17 +11,16 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.elements import ClauseElement
 from sqlalchemy.sql.visitors import InternalTraversal
 
-from archipy.adapters.base.sqlalchemy.driver_errors import classify_driver_error, log_driver_error
+from archipy.adapters.base.sqlalchemy.driver_errors import (
+    classify_by_message,
+    classify_driver_error,
+    driver_error_message,
+    log_driver_error,
+)
 from archipy.configs.config_template import SQLAlchemyConfig
 from archipy.models.entities import BaseEntity
 from archipy.models.errors import (
-    DatabaseConnectionError,
-    DatabaseConstraintError,
     DatabaseError,
-    DatabaseIntegrityError,
-    DatabaseQueryError,
-    DatabaseTimeoutError,
-    DatabaseTransactionError,
     InvalidArgumentError,
 )
 from archipy.models.types.base_types import FilterOperationType
@@ -73,24 +72,16 @@ class SQLAlchemyExceptionHandlerMixin:
             DatabaseQueryError: For other database errors.
         """
         # Classify by driver error code first (SQLSTATE / errno); message matching is only the fallback.
-        error_class = classify_driver_error(exception) or cls._classify_by_message(str(exception).lower())
+        error_class = classify_driver_error(exception) or cls._classify_by_message(
+            driver_error_message(exception).lower(),
+        )
         log_driver_error(exception, error_class, db_name)
         raise error_class(database=db_name) from exception
 
     @staticmethod
     def _classify_by_message(message: str) -> type[DatabaseError]:
         """Fallback classification for drivers that expose no usable error code."""
-        if "timeout" in message:
-            return DatabaseTimeoutError
-        if "integrity" in message:
-            return DatabaseIntegrityError
-        if "constraint" in message:
-            return DatabaseConstraintError
-        if "connection" in message:
-            return DatabaseConnectionError
-        if "transaction" in message:
-            return DatabaseTransactionError
-        return DatabaseQueryError
+        return classify_by_message(message)
 
 
 # Operations that need no validation, mapped to the SQLAlchemy expression they build.
