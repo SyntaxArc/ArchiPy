@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
+import time
 from typing import TYPE_CHECKING, Any
 
 from async_lru import alru_cache
 from jwcrypto import jwk
+from jwcrypto.common import JWException
 from keycloak.exceptions import (
     KeycloakError,
 )
@@ -33,6 +36,7 @@ from archipy.models.dtos.keycloak.token_exchange_dtos import (
 )
 from archipy.models.errors import (
     InternalError,
+    InvalidTokenError,
 )
 
 if TYPE_CHECKING:
@@ -46,6 +50,48 @@ logger = logging.getLogger(__name__)
 TOKEN_EXCHANGE_GRANT = "urn:ietf:params:oauth:grant-type:token-exchange"  # noqa: S105 # nosec B105
 JWT_BEARER_GRANT = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 UMA_TICKET_GRANT = "urn:ietf:params:oauth:grant-type:uma-ticket"
+
+JWKS_TTL_SECONDS = 3600.0
+JWKS_UNKNOWN_KID_REFRESH_INTERVAL_SECONDS = 10.0
+
+
+def _token_kid(token: str) -> str | None:
+    """Read the ``kid`` header of a JWT without verifying it.
+
+    Args:
+        token: Compact JWT.
+
+    Returns:
+        The key id, or None when the token header is missing, malformed or has no ``kid``.
+    """
+    try:
+        segment_b64 = token.split(".", 1)[0]
+        header = json.loads(base64.urlsafe_b64decode(segment_b64 + "=" * (-len(segment_b64) % 4)))
+    except ValueError:
+        return None
+    kid = header.get("kid") if isinstance(header, dict) else None
+    return kid if isinstance(kid, str) else None
+
+
+def _jwks_needs_refresh(raw: dict[str, Any] | None, fetched_at: float, kid: str | None, now: float) -> bool:
+    """Decide whether the cached realm JWKS must be fetched again.
+
+    The set is refreshed when it is missing or older than ``JWKS_TTL_SECONDS``, or (rate limited) when the token
+    names a ``kid`` the cached set does not contain, which is how a rotated signing key shows up.
+    """
+    if raw is None or now - fetched_at >= JWKS_TTL_SECONDS:
+        return True
+    if kid is None or now - fetched_at < JWKS_UNKNOWN_KID_REFRESH_INTERVAL_SECONDS:
+        return False
+    return all(key.get("kid") != kid for key in raw.get("keys", []))
+
+
+def _build_jwk_set(raw: dict[str, Any]) -> jwk.JWKSet:
+    """Build a jwcrypto key set from a raw JWKS document."""
+    key_set = jwk.JWKSet()
+    for cert in raw["keys"]:
+        key_set.add(jwk.JWK(**cert))
+    return key_set
 
 
 def _normalize_userinfo(raw: dict[str, Any] | bytes) -> KeycloakUserType:
@@ -69,6 +115,21 @@ def _normalize_userinfo(raw: dict[str, Any] | bytes) -> KeycloakUserType:
 class KeycloakAuthMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for auth/token operations."""
 
+    _jwks_raw: dict[str, Any] | None = None
+    _jwks_fetched_at: float = 0.0
+
+    def _decode_token_locally(self, token: str) -> dict[str, Any]:
+        """Verify and decode a token against the cached realm JWKS (one JWKS fetch per TTL or key rotation)."""
+        now = time.monotonic()
+        if _jwks_needs_refresh(self._jwks_raw, self._jwks_fetched_at, _token_kid(token), now):
+            self._jwks_raw = self._openid_adapter.certs()
+            self._jwks_fetched_at = now
+        return self._openid_adapter.decode_token(
+            token,
+            key=_build_jwk_set(self._jwks_raw or {"keys": []}),
+            leeway=self.configs.TOKEN_LEEWAY_SECONDS,
+        )
+
     @ttl_cache(ttl_seconds=3600, maxsize=1, per_instance=True)  # Cache for 1 hour, public key rarely changes
     def get_public_key(self) -> PublicKeyType:
         """Get the public key used to verify tokens.
@@ -87,7 +148,8 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_public_key")
         except Exception as e:  # soft-fail authz/role checks; JWT/Keycloak libs
-            raise InternalError(additional_data={"operation": "get_public_key", "error": str(e)}) from e
+            logger.exception("Failed to build the realm public key")
+            raise InternalError(additional_data={"operation": "get_public_key"}) from e
 
     def get_token(self, username: str, password: str) -> KeycloakTokenDTO | None:
         """Get a user token by username and password using the Resource Owner Password Credentials Grant.
@@ -147,8 +209,9 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         """
         # Not caching validation results as tokens are time-sensitive
         try:
-            # Let the underlying adapter handle key selection to align with expected types
-            self._openid_adapter.decode_token(token, leeway=self.configs.TOKEN_LEEWAY_SECONDS)
+            self._decode_token_locally(token)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "validate_token")
         except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("Token validation failed: %s", e)
             return False
@@ -325,13 +388,11 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             ValueError: If token decoding fails
         """
         try:
-            # Let the underlying adapter handle key selection to align with expected types
-            return to_dto_or_none(
-                KeycloakTokenClaimsDTO,
-                self._openid_adapter.decode_token(token, leeway=self.configs.TOKEN_LEEWAY_SECONDS),
-            )
+            return to_dto_or_none(KeycloakTokenClaimsDTO, self._decode_token_locally(token))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token_info")
+        except (JWException, ValueError) as e:
+            raise InvalidTokenError from e
 
     def check_permissions_batch(
         self,
@@ -492,6 +553,21 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
 class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
     """Async Keycloak mixin for auth/token operations."""
 
+    _jwks_raw: dict[str, Any] | None = None
+    _jwks_fetched_at: float = 0.0
+
+    async def _decode_token_locally(self, token: str) -> dict[str, Any]:
+        """Verify and decode a token against the cached realm JWKS (one JWKS fetch per TTL or key rotation)."""
+        now = time.monotonic()
+        if _jwks_needs_refresh(self._jwks_raw, self._jwks_fetched_at, _token_kid(token), now):
+            self._jwks_raw = await self.openid_adapter.a_certs()
+            self._jwks_fetched_at = now
+        return await self.openid_adapter.a_decode_token(
+            token,
+            key=_build_jwk_set(self._jwks_raw or {"keys": []}),
+            leeway=self.configs.TOKEN_LEEWAY_SECONDS,
+        )
+
     @alru_cache(ttl=3600, maxsize=1)  # Cache for 1 hour, public key rarely changes
     async def get_public_key(self) -> PublicKeyType:
         """Get the public key used to verify tokens.
@@ -510,7 +586,8 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_public_key")
         except Exception as e:  # soft-fail authz/role checks; JWT/Keycloak libs
-            raise InternalError(additional_data={"operation": "get_public_key", "error": str(e)}) from e
+            logger.exception("Failed to build the realm public key")
+            raise InternalError(additional_data={"operation": "get_public_key"}) from e
 
     async def get_token(self, username: str, password: str) -> KeycloakTokenDTO | None:
         """Get a user token by username and password using the Resource Owner Password Credentials Grant.
@@ -570,8 +647,9 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         """
         # Not caching validation results as tokens are time-sensitive
         try:
-            # No explicit key: python-keycloak verifies against every realm JWKS key (key rotation)
-            await self.openid_adapter.a_decode_token(token, leeway=self.configs.TOKEN_LEEWAY_SECONDS)
+            await self._decode_token_locally(token)
+        except KeycloakError as e:
+            self._handle_keycloak_exception(e, "validate_token")
         except Exception as e:  # noqa: BLE001  # soft-fail authz/role checks; JWT/Keycloak libs
             logger.debug("Token validation failed: %s", e)
             return False
@@ -749,13 +827,11 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             ValueError: If token decoding fails
         """
         try:
-            # No explicit key: python-keycloak verifies against every realm JWKS key (key rotation)
-            return to_dto_or_none(
-                KeycloakTokenClaimsDTO,
-                await self.openid_adapter.a_decode_token(token),
-            )
+            return to_dto_or_none(KeycloakTokenClaimsDTO, await self._decode_token_locally(token))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token_info")
+        except (JWException, ValueError) as e:
+            raise InvalidTokenError from e
 
     async def check_permissions_batch(
         self,

@@ -4288,3 +4288,103 @@ async def step_async_adapter_reads_claims(context: Context, username: str) -> No
     access_token = scenario_context.get(f"token_response_{username}").access_token
     claims = await adapter.get_token_info(access_token)
     assert claims is not None and claims.preferred_username == username, claims
+
+
+def _no_admin_adapter(kind: str, **overrides: Any) -> AsyncKeycloakAdapter | KeycloakAdapter:
+    """Build a sync or async adapter without admin mode, overriding config fields."""
+    config = BaseConfig.global_config().KEYCLOAK.model_copy(
+        update={"CLIENT_SECRET_KEY": None, "IS_ADMIN_MODE_ENABLED": False, **overrides},
+    )
+    return AsyncKeycloakAdapter(config) if kind == "async" else KeycloakAdapter(config)
+
+
+@then(
+    'a {kind} adapter for realm "{realm_name}" and client "{client_name}" fetches the realm JWKS once '
+    'for {checks:d} token checks of "{username}"',
+)
+async def step_adapter_fetches_jwks_once(
+    context: Context,
+    kind: str,
+    realm_name: str,
+    client_name: str,
+    checks: int,
+    username: str,
+) -> None:
+    """Count real JWKS requests across repeated validate and read-claims calls, including garbage tokens."""
+    scenario_context = get_current_scenario_context(context)
+    token = scenario_context.get(f"token_response_{username}").access_token
+    adapter = _no_admin_adapter(kind, REALM_NAME=realm_name, CLIENT_ID=client_name)
+    calls: list[int] = []
+    if kind == "async":
+        original_async = adapter.openid_adapter.a_certs
+
+        async def counted_async() -> Any:
+            calls.append(1)
+            return await original_async()
+
+        adapter.openid_adapter.a_certs = counted_async
+    else:
+        original_sync = adapter._openid_adapter.certs
+
+        def counted_sync() -> Any:
+            calls.append(1)
+            return original_sync()
+
+        adapter._openid_adapter.certs = counted_sync
+    for _ in range(checks):
+        if kind == "async":
+            assert await adapter.validate_token(token), "valid token rejected"
+            assert not await adapter.validate_token("not.a.jwt"), "garbage token accepted"
+            claims = await adapter.get_token_info(token)
+        else:
+            assert adapter.validate_token(token), "valid token rejected"
+            assert not adapter.validate_token("not.a.jwt"), "garbage token accepted"
+            claims = adapter.get_token_info(token)
+        assert claims is not None and claims.preferred_username == username, claims
+    assert len(calls) == 1, f"expected 1 JWKS fetch for {checks} checks, got {len(calls)}"
+
+
+@then('a {kind} adapter pointing at an unreachable Keycloak reports "{code}" when validating the token of "{username}"')
+async def step_unreachable_keycloak_is_not_a_bad_token(context: Context, kind: str, code: str, username: str) -> None:
+    """A JWKS outage must surface as a service error, not as an invalid or expired token."""
+    scenario_context = get_current_scenario_context(context)
+    token = scenario_context.get(f"token_response_{username}").access_token
+    adapter = _no_admin_adapter(kind, SERVER_URL="http://127.0.0.1:1")
+    try:
+        if kind == "async":
+            await adapter.validate_token(token)
+        else:
+            adapter.validate_token(token)
+    except BaseError as error:
+        assert error.code == code, f"expected {code}, got {error.code}"
+        return
+    raise AssertionError("an unreachable Keycloak was reported as a plain invalid token")
+
+
+@then('a {kind} adapter maps reading the claims of a token signed by an unknown key to "{code}"')
+async def step_adapter_maps_bad_signature(context: Context, kind: str, code: str) -> None:
+    """A token that no realm key signed must surface as a mapped error, not a raw jwcrypto exception."""
+    import base64
+    import json
+
+    def segment_b64(value: dict[str, Any]) -> str:
+        return base64.urlsafe_b64encode(json.dumps(value).encode()).rstrip(b"=").decode()
+
+    forged = f"{segment_b64({'alg': 'RS256', 'kid': 'unknown'})}.{segment_b64({'sub': 'x'})}.c2ln"
+    adapter = _no_admin_adapter(kind)
+    try:
+        if kind == "async":
+            await adapter.get_token_info(forged)
+        else:
+            adapter.get_token_info(forged)
+    except BaseError as error:
+        assert error.code == code, f"expected {code}, got {error.code}"
+        return
+    raise AssertionError("the forged token was accepted")
+
+
+@then("the Keycloak config repr does not contain the client secret or the admin password")
+def step_config_repr_hides_secrets(context: Context) -> None:
+    config = KeycloakConfig(CLIENT_SECRET_KEY="client-secret-value", ADMIN_PASSWORD="admin-password-value")
+    text = repr(config) + str(config)
+    assert "client-secret-value" not in text and "admin-password-value" not in text, text
