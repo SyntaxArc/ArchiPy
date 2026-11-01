@@ -152,6 +152,18 @@ Feature: MinIO Operations Testing
       | create bucket "errors-bucket" again                      | AlreadyExistsError   |
       | check existence of an object with an empty bucket name   | InvalidArgumentError |
 
+  Scenario Outline: Copy keeps the source key literal for <key>
+    Given a bucket named "copy-key-bucket" exists
+    And an object "<key>" exists with content "literal" in bucket "copy-key-bucket"
+    When I copy object "<key>" from bucket "copy-key-bucket" to "copied.txt" in the same bucket
+    Then downloading "copied.txt" from "copy-key-bucket" should return content "literal"
+
+    Examples:
+      | key                  |
+      | plain.txt            |
+      | tricky?versionId=abc |
+      | with space+plus.txt  |
+
   Scenario Outline: Botocore connection failures map to <error>
     When I check bucket existence while the S3 client raises botocore "<raised_error>"
     Then the MinIO call should raise <error>
