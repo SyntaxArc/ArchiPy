@@ -532,6 +532,13 @@ class EmailAdapter(EmailPort):
             if connection:
                 self.connection_pool.return_connection(connection)
 
+    def _sender_address(self) -> str:
+        """Return ``FROM_ADDRESS``, else ``USERNAME``, else a placeholder; warn when the sender is not an address."""
+        sender = self.config.FROM_ADDRESS or self.config.USERNAME or "no-reply@example.com"
+        if "@" not in sender:
+            logger.warning("The email sender %r is not an address; set EMAIL.FROM_ADDRESS", sender)
+        return sender
+
     def _create_message(
         self,
         to_email: EmailStr | list[EmailStr],
@@ -545,7 +552,7 @@ class EmailAdapter(EmailPort):
         template_vars: dict[str, Any] | None = None,
     ) -> MIMEMultipart:
         msg = MIMEMultipart()
-        msg["From"] = self.config.USERNAME or "no-reply@example.com"
+        msg["From"] = self._sender_address()
         msg["To"] = to_email if isinstance(to_email, str) else ", ".join(to_email)
         msg["Subject"] = subject
 

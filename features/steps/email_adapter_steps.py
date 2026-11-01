@@ -767,3 +767,25 @@ def step_then_local_identity(context, hostname, address):
     session = get_current_scenario_context(context).get("email_adapter").connection_pool.pool.queue[0].smtp_connection
     assert session.local_hostname == hostname, session.local_hostname
     assert session.sock.getsockname()[0] == address, session.sock.getsockname()
+
+
+@when("I build an email config with {field} set to {value:d}")
+def step_when_build_config(context, field, value):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("error", None)
+    try:
+        EmailConfig(**{field: value})
+    except ValidationError as exception:
+        scenario_context.store("error", exception)
+
+
+@then("the email config is rejected for {field}")
+def step_then_config_rejected(context, field):
+    error = get_current_scenario_context(context).get("error")
+    assert isinstance(error, ValidationError), repr(error)
+    assert field in {location for item in error.errors() for location in item["loc"]}, str(error)
+
+
+@given('the SMTP sender address "{address}"')
+def step_given_sender_address(context, address):
+    BaseConfig.global_config().EMAIL.FROM_ADDRESS = address
