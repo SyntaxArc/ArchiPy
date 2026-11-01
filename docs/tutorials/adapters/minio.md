@@ -190,6 +190,10 @@ minio.remove_objects("my-bucket", ["doc1.pdf", "doc2.pdf", "doc3.pdf"])
     Anyone holding a presigned URL can use it until it expires. Keep the expiry short and do not log or share URLs
     outside the intended client.
 
+!!! note
+    Presigning is a local computation: it does not check that the bucket or object exists or that the credentials may
+    access it. Such errors only surface when the URL is used.
+
 ```python
 import logging
 
@@ -200,7 +204,7 @@ logger = logging.getLogger(__name__)
 download_url = minio.presigned_get_object("my-bucket", "document.pdf")
 logger.info(f"Download URL: {download_url}")
 
-# Generate a presigned URL for uploading (with custom expiry time in seconds)
+# Generate a presigned URL for uploading (expiry 1 to 604800 seconds, otherwise InvalidArgumentError)
 upload_url = minio.presigned_put_object("my-bucket", "new-document.pdf", expires=7200)  # 2 hours
 logger.info(f"Upload URL: {upload_url}")
 ```
