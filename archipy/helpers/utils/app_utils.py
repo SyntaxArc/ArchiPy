@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import warnings
 from concurrent import futures
 from typing import TYPE_CHECKING, Any
 
@@ -423,6 +424,67 @@ class GrpcAPIUtils:
 
 class AppUtils:
     """Utility class for creating and configuring FastAPI applications."""
+
+    @staticmethod
+    def uvicorn_config(config: BaseConfig | None = None, **overrides: Any) -> dict[str, Any]:  # noqa: ANN401
+        """Build the keyword arguments of ``uvicorn.run`` or ``uvicorn.Config`` from the configuration.
+
+        Each setting comes from ``UVICORN`` when it is set there, else from the deprecated field of the same name on
+        ``FASTAPI`` when that is set (with a ``DeprecationWarning``), else from the ``UVICORN`` default. Unset
+        optional settings are left out so uvicorn keeps its own defaults. ``host`` and ``port`` come from
+        ``FASTAPI.SERVE_HOST`` and ``FASTAPI.SERVE_PORT``.
+
+        Args:
+            config (BaseConfig | None, optional): Custom configuration. If not provided, uses global config.
+            **overrides: Keyword arguments that replace the computed ones, such as ``host`` or ``reload``.
+
+        Returns:
+            dict[str, Any]: Keyword arguments for uvicorn. Pass the application separately.
+        """
+        from archipy.configs.sections.uvicorn import UVICORN_FIELDS_ON_FASTAPI
+
+        config = config or BaseConfig.global_config()
+        uvicorn_section, fastapi_section = config.UVICORN, config.FASTAPI
+
+        def resolve(name: str) -> Any:  # noqa: ANN401
+            if name in uvicorn_section.model_fields_set or name not in UVICORN_FIELDS_ON_FASTAPI:
+                return getattr(uvicorn_section, name)
+            if name in fastapi_section.model_fields_set:
+                warnings.warn(
+                    f"FASTAPI.{name} is deprecated and will be removed in 6.0.0; set UVICORN.{name} instead",
+                    DeprecationWarning,
+                    stacklevel=3,
+                )
+                return getattr(fastapi_section, name)
+            return getattr(uvicorn_section, name)
+
+        values = {
+            "host": fastapi_section.SERVE_HOST,
+            "port": fastapi_section.SERVE_PORT,
+            "reload": resolve("RELOAD"),
+            "backlog": resolve("BACKLOG"),
+            "access_log": resolve("ACCESS_LOG"),
+            "date_header": resolve("DATE_HEADER"),
+            "server_header": resolve("SERVER_HEADER"),
+            "proxy_headers": resolve("PROXY_HEADERS"),
+            "forwarded_allow_ips": resolve("FORWARDED_ALLOW_IPS"),
+            "limit_concurrency": resolve("LIMIT_CONCURRENCY"),
+            "limit_max_requests": resolve("LIMIT_MAX_REQUESTS"),
+            "timeout_keep_alive": resolve("TIMEOUT_KEEP_ALIVE"),
+            "timeout_graceful_shutdown": resolve("TIMEOUT_GRACEFUL_SHUTDOWN"),
+            "ws_max_size": resolve("WS_MAX_SIZE"),
+            "ws_per_message_deflate": resolve("WS_PER_MESSAGE_DEFLATE"),
+            "ws_ping_interval": resolve("WS_PING_INTERVAL"),
+            "ws_ping_timeout": resolve("WS_PING_TIMEOUT"),
+            "ssl_keyfile": uvicorn_section.SSL_KEYFILE,
+            "ssl_certfile": uvicorn_section.SSL_CERTFILE,
+            "ssl_ca_certs": uvicorn_section.SSL_CA_CERTS,
+        }
+        if not values["reload"]:
+            values["workers"] = resolve("WORKERS_COUNT")
+        result = {name: value for name, value in values.items() if value is not None}
+        result.update(overrides)
+        return result
 
     @staticmethod
     def _compose_otel_lifespan(

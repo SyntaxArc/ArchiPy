@@ -1,6 +1,11 @@
 """FastAPI configuration."""
 
-from pydantic import BaseModel, Field
+import warnings
+from typing import Self
+
+from pydantic import BaseModel, Field, model_validator
+
+from archipy.configs.sections.uvicorn import UVICORN_FIELDS_ON_FASTAPI
 
 
 class FastAPIConfig(BaseModel):
@@ -79,3 +84,16 @@ class FastAPIConfig(BaseModel):
         default={"docExpansion": "none"},
         description="Swagger UI parameters",
     )
+
+    @model_validator(mode="after")
+    def warn_deprecated_uvicorn_fields(self) -> Self:
+        """Warn when a deprecated uvicorn setting is set here; ``UVICORN`` holds it now."""
+        used = sorted(name for name in UVICORN_FIELDS_ON_FASTAPI if name in self.model_fields_set)
+        if used:
+            warnings.warn(
+                f"FASTAPI.{', FASTAPI.'.join(used)} are deprecated and will be removed in 6.0.0; "
+                "set the same names on UVICORN instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return self

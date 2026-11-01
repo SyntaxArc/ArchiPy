@@ -50,6 +50,7 @@ from archipy.configs.config_template import (
     SQLiteSQLAlchemyConfig,
     StarRocksSQLAlchemyConfig,
     TemporalConfig,
+    UvicornConfig,
     VaultConfig,
 )
 from archipy.configs.environment_type import EnvironmentType
@@ -104,6 +105,7 @@ class BaseConfig[R](BaseSettings):
         SQLITE_SQLALCHEMY (SqliteSQLAlchemyConfig): SQLite SQLAlchemy configuration
         STARROCKS_SQLALCHEMY (StarrocksSQLAlchemyConfig): Starrocks SQLAlchemy configuration
         TEMPORAL (TemporalConfig): Temporal workflow orchestration configuration
+        UVICORN (UvicornConfig): Uvicorn server settings
         VAULT (VaultConfig): HashiCorp Vault connection and secrets settings
 
     Examples:
@@ -222,6 +224,7 @@ class BaseConfig[R](BaseSettings):
     MYSQL_SQLALCHEMY: MySQLSQLAlchemyConfig = MySQLSQLAlchemyConfig()
     SQLITE_SQLALCHEMY: SQLiteSQLAlchemyConfig = SQLiteSQLAlchemyConfig()
     TEMPORAL: TemporalConfig = TemporalConfig()
+    UVICORN: UvicornConfig = UvicornConfig()
     VAULT: VaultConfig = VaultConfig()
     LANGUAGE: LanguageType = LanguageType.FA
 

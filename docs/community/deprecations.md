@@ -109,6 +109,23 @@ since 5.21.0.
 | `KeycloakProtocolMapperType` | `KeycloakProtocolMapperDTO` |
 | `KeycloakComponentType`      | `KeycloakComponentDTO`      |
 
+## FastAPI config
+
+The Uvicorn settings moved from `FASTAPI` to the new `UVICORN` section, which also gains `SSL_KEYFILE`,
+`SSL_CERTFILE` and `SSL_CA_CERTS`. `AppUtils.uvicorn_config()` builds the `uvicorn.run` arguments from it. An old
+field still works when the matching `UVICORN` field is not set. Building `FastAPIConfig` with one, and reading it
+through `AppUtils.uvicorn_config()`, emits a `DeprecationWarning`. Deprecated since 5.25.0.
+
+| Deprecated                                                                                    | Replacement                                    |
+|-----------------------------------------------------------------------------------------------|------------------------------------------------|
+| `FASTAPI.ACCESS_LOG`, `BACKLOG`, `DATE_HEADER`, `SERVER_HEADER`, `RELOAD`, `WORKERS_COUNT`    | The same names on `UVICORN`                    |
+| `FASTAPI.PROXY_HEADERS`, `FORWARDED_ALLOW_IPS`                                                | The same names on `UVICORN`                    |
+| `FASTAPI.LIMIT_CONCURRENCY`, `LIMIT_MAX_REQUESTS`                                             | The same names on `UVICORN`                    |
+| `FASTAPI.TIMEOUT_KEEP_ALIVE`, `TIMEOUT_GRACEFUL_SHUTDOWN`                                     | The same names on `UVICORN`                    |
+| `FASTAPI.WS_MAX_SIZE`, `WS_PER_MESSAGE_DEFLATE`, `WS_PING_INTERVAL`, `WS_PING_TIMEOUT`        | The same names on `UVICORN`                    |
+
+`FASTAPI.SERVE_HOST` and `FASTAPI.SERVE_PORT` stay where they are.
+
 ## Adding a deprecation
 
 Keep the old name working and route it through `archipy.helpers._deprecation`:
