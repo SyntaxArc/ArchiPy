@@ -1291,6 +1291,167 @@ def step_keyless_message_key(context, topic_name, key_state, warned):
     assert get_current_scenario_context(context).get("kafka_deprecation_warned") is expected_warning
 
 
+@when("the Kafka settings are assembled with protocol {protocol}, mechanism {mechanism} and username {username} while warnings are collected")
+def step_collect_config_warnings(context, protocol, mechanism, username):
+    """Build a Kafka configuration and keep the warnings its validators log."""
+    import logging
+
+    records = []
+
+    class _Collector(logging.Handler):
+        def emit(self, record):
+            records.append(record.getMessage())
+
+    config_logger = logging.getLogger("archipy.configs.sections.kafka")
+    handler = _Collector()
+    config_logger.addHandler(handler)
+    try:
+        KafkaConfig(**_security_values(protocol, mechanism, username, {}))
+    finally:
+        config_logger.removeHandler(handler)
+    get_current_scenario_context(context).store("kafka_config_warnings", records)
+
+
+@then('a configuration warning mentioning "{text}" should have been logged')
+def step_config_warning_logged(context, text):
+    """One of the collected warnings must mention the text."""
+    records = get_current_scenario_context(context).get("kafka_config_warnings")
+    assert any(text in record for record in records), f"No warning mentions {text!r}: {records}"
+
+
+@then("no configuration warning should have been logged")
+def step_no_config_warning(context):
+    """The configuration must have been accepted silently."""
+    records = get_current_scenario_context(context).get("kafka_config_warnings")
+    assert not [r for r in records if "SASL" in r], f"Unexpected warnings: {records}"
+
+
+@when("a sync producer with a pending message on that broker is closed twice")
+def step_close_pending_producer_twice(context):
+    """Close a producer whose message cannot be delivered: the close is bounded by the delivery timeout."""
+    config = get_current_scenario_context(context).get("kafka_unreachable_config")
+    config = config.model_copy(update={"MESSAGE_TIMEOUT_MS": 1000})
+    producer = KafkaProducerAdapter("pending-close-topic", kafka_configs=config)
+    producer.produce("never-delivered")
+    started = time.monotonic()
+
+    def close_twice():
+        producer.close()
+        producer.close()
+
+    _capture_error(context, close_twice)
+    get_current_scenario_context(context).store("kafka_close_elapsed", time.monotonic() - started)
+
+
+@then("the close should have finished within {seconds:d} seconds without an error")
+def step_close_bounded(context, seconds):
+    """The close must not hang and must not fail."""
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("kafka_operation_error") is None, scenario_context.get("kafka_operation_error")
+    assert scenario_context.get("kafka_close_elapsed") < seconds
+
+
+@when("an async producer with a pending message on that broker is flushed with a timeout of {seconds:d} second")
+def step_async_flush_timeout(context, seconds):
+    """Flush an async producer that cannot deliver: the flush must honor its timeout."""
+    config = get_current_scenario_context(context).get("kafka_unreachable_config")
+
+    async def run():
+        producer = AsyncKafkaProducerAdapter("async-flush-topic", kafka_configs=config)
+        await producer.produce("never-delivered")
+        await producer.flush(timeout=seconds)
+
+    _capture_error(context, lambda: asyncio.run(run()))
+
+
+@when("an async producer is closed and then used")
+def step_async_use_after_close(context):
+    """Using a closed async producer must fail instead of creating a new client."""
+    config = _get_kafka_config(context)
+
+    async def run():
+        producer = AsyncKafkaProducerAdapter("closed-async-topic", kafka_configs=config)
+        await producer.list_topics()
+        await producer.close()
+        await producer.produce("after-close")
+
+    _capture_error(context, lambda: asyncio.run(run()))
+
+
+@when('a sync consumer with an on_commit callback commits a message of topic "{topic_name}" asynchronously')
+def step_on_commit_callback(context, topic_name):
+    """Produce a message, consume it and commit asynchronously; the callback must report the commit."""
+    config = _get_kafka_config(context)
+    producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+    producer.produce("commit-callback")
+    producer.close()
+    outcomes = []
+    consumer = KafkaConsumerAdapter(
+        "on-commit-group", topic_list=[topic_name], kafka_configs=config,
+        on_commit=lambda error, partitions: outcomes.append((error, partitions)),
+    )
+    try:
+        message = _poll_until_message(consumer.poll)
+        consumer.commit(message, asynchronous=True)
+        deadline = time.monotonic() + 20
+        while not outcomes and time.monotonic() < deadline:
+            consumer.poll(1)
+    finally:
+        consumer.close()
+    get_current_scenario_context(context).store("kafka_commit_outcomes", outcomes)
+
+
+@then("the on_commit callback should have reported a successful commit")
+def step_on_commit_reported(context):
+    """The callback gets no error and the committed partitions."""
+    outcomes = get_current_scenario_context(context).get("kafka_commit_outcomes")
+    assert outcomes and outcomes[0][0] is None, f"Unexpected outcomes: {outcomes}"
+
+
+@when('a {mode} consumer subscribes to topic "{topic_name}" with an on_assign callback')
+def step_on_assign_callback(context, mode, topic_name):
+    """Join a consumer group and let the rebalance call the on_assign hook."""
+    config = _get_kafka_config(context)
+    assigned = []
+
+    def on_assign(consumer, partitions):
+        assigned.extend(partitions)
+
+    async def on_assign_async(consumer, partitions):
+        assigned.extend(partitions)
+
+    if mode == "sync":
+        consumer = KafkaConsumerAdapter("on-assign-group-sync", partition_list=None, topic_list=[topic_name], kafka_configs=config)
+        consumer.subscribe([topic_name], on_assign=on_assign)
+        deadline = time.monotonic() + 30
+        try:
+            while not assigned and time.monotonic() < deadline:
+                consumer.poll(1)
+        finally:
+            consumer.close()
+    else:
+
+        async def run():
+            consumer = AsyncKafkaConsumerAdapter("on-assign-group-async", topic_list=[topic_name], kafka_configs=config)
+            await consumer.subscribe([topic_name], on_assign=on_assign_async)
+            deadline = time.monotonic() + 30
+            try:
+                while not assigned and time.monotonic() < deadline:
+                    await consumer.poll(1)
+            finally:
+                await consumer.close()
+
+        asyncio.run(run())
+    get_current_scenario_context(context).store("kafka_assigned_partitions", assigned)
+
+
+@then('the on_assign callback should have received partitions of topic "{topic_name}"')
+def step_on_assign_received(context, topic_name):
+    """The rebalance must have reported the partitions of the subscribed topic."""
+    assigned = get_current_scenario_context(context).get("kafka_assigned_partitions")
+    assert assigned and all(partition.topic == topic_name for partition in assigned), f"Unexpected: {assigned}"
+
+
 @then('the Kafka operation should raise one of "{error_names}"')
 def step_operation_should_raise_one_of(context, error_names):
     """Assert the captured exception is one of the comma separated ArchiPy errors."""
@@ -1549,6 +1710,14 @@ def step_config_rejected(context):
     error = get_current_scenario_context(context).get("kafka_config_error")
     assert error is not None, "Expected the configuration to be rejected"
     assert "sasl_auth_incomplete" in str(error), f"Unexpected error: {error}"
+
+
+@then("the Kafka configuration should be rejected as an unknown protocol")
+def step_config_rejected_unknown_protocol(context):
+    """Validation must fail with the unknown security protocol reason."""
+    error = get_current_scenario_context(context).get("kafka_config_error")
+    assert error is not None, "Expected the configuration to be rejected"
+    assert "unknown_security_protocol" in str(error), f"Unexpected error: {error}"
 
 
 @when('I close the producer for topic "{topic_name}"')

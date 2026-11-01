@@ -3,7 +3,7 @@
 import logging
 from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr, model_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 
 from archipy.models.errors import ConfigurationError
 
@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 # SASL mechanisms that authenticate with a username and password.
 _SASL_MECHANISMS_WITH_CREDENTIALS = frozenset({"PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"})
+_SECURITY_PROTOCOLS = frozenset({"PLAINTEXT", "SSL", "SASL_PLAINTEXT", "SASL_SSL"})
 
 
 class KafkaConfig(BaseModel):
@@ -156,6 +157,37 @@ class KafkaConfig(BaseModel):
     )
     PRODUCER_MAX_WORKERS: int = Field(default=4, ge=1, description="Thread pool workers for AIOProducer")
 
+    @field_validator("SECURITY_PROTOCOL", "SASL_MECHANISM", mode="before")
+    @classmethod
+    def normalize_security_names(cls, value: object) -> object:
+        """Uppercase the security protocol and the SASL mechanism, so ``ssl`` and ``plain`` behave like ``SSL``.
+
+        Args:
+            value: The raw setting.
+
+        Returns:
+            object: The uppercased string, or the value unchanged when it is not a string.
+        """
+        return value.strip().upper() if isinstance(value, str) else value
+
+    @field_validator("SECURITY_PROTOCOL")
+    @classmethod
+    def validate_security_protocol(cls, value: str) -> str:
+        """Reject security protocols librdkafka does not know.
+
+        Args:
+            value: The normalized protocol.
+
+        Returns:
+            str: The protocol.
+
+        Raises:
+            ConfigurationError: If the protocol is not PLAINTEXT, SSL, SASL_PLAINTEXT or SASL_SSL.
+        """
+        if value not in _SECURITY_PROTOCOLS:
+            raise ConfigurationError(operation="kafka_validate", reason="unknown_security_protocol")
+        return value
+
     @model_validator(mode="after")
     def validate_security_settings(self) -> KafkaConfig:
         """Validate security-related settings for Kafka configuration.
@@ -176,6 +208,17 @@ class KafkaConfig(BaseModel):
                 raise ConfigurationError(operation="kafka_validate", reason="sasl_auth_incomplete")
             if self.SASL_MECHANISM in _SASL_MECHANISMS_WITH_CREDENTIALS and not (self.USERNAME and self.PASSWORD):
                 raise ConfigurationError(operation="kafka_validate", reason="sasl_auth_incomplete")
+        if self.SECURITY_PROTOCOL == "SASL_PLAINTEXT" and self.SASL_MECHANISM == "PLAIN":
+            logger.warning(
+                "SASL PLAIN over SASL_PLAINTEXT sends the username and password unencrypted; use SASL_SSL.",
+            )
+        if self.SECURITY_PROTOCOL not in ("SASL_PLAINTEXT", "SASL_SSL") and (
+            self.USERNAME or self.PASSWORD or self.SASL_MECHANISM
+        ):
+            logger.warning(
+                "SASL credentials or a SASL mechanism are set but SECURITY_PROTOCOL is %s; they are ignored.",
+                self.SECURITY_PROTOCOL,
+            )
         if self.SECURITY_PROTOCOL == "SSL" and not (self.SSL_CA_FILE or self.SSL_CERT_FILE or self.SSL_KEY_FILE):
             logger.warning("SSL enabled but no SSL certificates provided; this may cause connection issues.")
         if self.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM == "none":
