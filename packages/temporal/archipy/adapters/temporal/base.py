@@ -220,6 +220,12 @@ class BaseActivity[T, R]:
         R: Type of the activity return value.
     """
 
+    REDACT_RETRYABLE_ERRORS: bool = False
+    """When True, retryable errors reach Temporal as an ApplicationError carrying only the error type.
+
+    By default a retryable error is re-raised as is, so Temporal serialises its message into the activity failure.
+    """
+
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Give each subclass a distinct activity name.
 
@@ -313,7 +319,14 @@ class BaseActivity[T, R]:
                     type(error).__name__,
                     type=getattr(error, "code", type(error).__name__),
                     non_retryable=True,
-                ) from error
+                ) from None
+            if self.REDACT_RETRYABLE_ERRORS:
+                # Opt-in: the converted failure carries only the error type, never the message or additional data.
+                raise ApplicationError(
+                    type(error).__name__,
+                    type=getattr(error, "code", type(error).__name__),
+                    non_retryable=False,
+                ) from None
             raise
         else:
             return result
