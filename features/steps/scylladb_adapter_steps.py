@@ -1385,6 +1385,57 @@ def step_single_replica_warning(context: Context, expectation: str) -> None:
     assert found is (expectation == "contain"), messages
 
 
+class _RaisingSession:
+    """Stand-in session whose queries raise a chosen driver exception."""
+
+    is_shutdown = False
+    keyspace = None
+
+    def __init__(self, error: Exception) -> None:
+        self._error = error
+
+    def execute(self, *args: Any, **kwargs: Any) -> NoReturn:  # noqa: ANN401, ARG002
+        raise self._error
+
+    def execute_async(self, *args: Any, **kwargs: Any) -> NoReturn:  # noqa: ANN401, ARG002
+        raise self._error
+
+    def prepare(self, *args: Any, **kwargs: Any) -> NoReturn:  # noqa: ANN401, ARG002
+        raise self._error
+
+
+@when('I run ScyllaDB operation "{operation}" on an adapter whose session raises "{kind}"')
+async def step_run_operation_with_raising_session(context: Context, operation: str, kind: str) -> None:
+    """Swap in a session that raises a driver exception and record what the adapter raises.
+
+    Args:
+        context (Context): Behave context.
+        operation (str): Operation name from ``_run_scylladb_operation``.
+        kind (str): Driver exception to raise.
+    """
+    from cassandra.cluster import ProtocolVersionUnsupported
+    from cassandra.connection import ConnectionShutdown
+
+    errors_by_kind = {
+        "ConnectionShutdown": lambda: ConnectionShutdown("closed"),
+        "ProtocolVersionUnsupported": lambda: ProtocolVersionUnsupported("node", 5),
+        "OSError": lambda: OSError("socket closed"),
+    }
+    adapter_class = AsyncScyllaDBAdapter if _is_async_scenario(context) else ScyllaDBAdapter
+    adapter = adapter_class(BaseConfig.global_config().SCYLLADB)
+    real_session = adapter._session
+    adapter._session = _RaisingSession(errors_by_kind[kind]())
+    scenario_context = _get_scenario_context(context)
+    scenario_context.scylla_error = None
+    try:
+        await _run_scylladb_operation(adapter, operation, "any_table")
+    except Exception as e:  # noqa: BLE001
+        scenario_context.scylla_error = e
+    finally:
+        adapter._session = real_session
+        await _call_adapter(adapter, "close")
+
+
 @when('I write one row to table "{table}" in each of the keyspaces "{first}" and "{second}" with the same helper call')
 async def step_write_across_keyspaces(context: Context, table: str, first: str, second: str) -> None:
     """Create the same table in two keyspaces and run the same insert after each ``use_keyspace``.
