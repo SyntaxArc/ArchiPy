@@ -1282,6 +1282,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Using Atomic Activities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#activity-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Activity Names
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3812,6 +3829,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Using Atomic Activities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#activity-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Activity Names
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4493,6 +4527,12 @@ running more than once is safe, for example by checking for an existing record b
 </span><span id="__span-5-112"><a id="__codelineno-5-112" name="__codelineno-5-112" href="#__codelineno-5-112"></a>            <span class="s2">"email_sent"</span><span class="p">:</span> <span class="n">email_result</span>
 </span><span id="__span-5-113"><a id="__codelineno-5-113" name="__codelineno-5-113" href="#__codelineno-5-113"></a>        <span class="p">}</span>
 </span></code></pre></div>
+<h3 id="activity-names">Activity Names<a class="headerlink" href="#activity-names" title="Permanent link">&para;</a></h3>
+<p>Every <code>BaseActivity</code> subclass inherits the same <code>execute</code> method, but Temporal needs one unique name per activity.
+The first subclass keeps the bare name (<code>execute</code>, or <code>execute_atomic</code> for <code>AtomicActivity</code>) for backward
+compatibility; every later subclass is registered as <code>&lt;ClassName&gt;.execute</code> (or <code>&lt;ClassName&gt;.execute_atomic</code>).
+Register an instance with <code>activities=[MyActivity().as_activity()]</code> and call it from a workflow with the same bound
+callable, or by its class-qualified name.</p>
 <h2 id="async-operations-with-workers">Async Operations with Workers<a class="headerlink" href="#async-operations-with-workers" title="Permanent link">&para;</a></h2>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -4517,7 +4557,7 @@ running more than once is safe, for example by checking for an existing record b
 </span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>        <span class="n">worker_handle</span> <span class="o">=</span> <span class="k">await</span> <span class="n">worker_manager</span><span class="o">.</span><span class="n">start_worker</span><span class="p">(</span>
 </span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>            <span class="n">task_queue</span><span class="o">=</span><span class="s2">"my-task-queue"</span><span class="p">,</span>
 </span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>            <span class="n">workflows</span><span class="o">=</span><span class="p">[</span><span class="n">MyWorkflow</span><span class="p">,</span> <span class="n">UserOnboardingWorkflow</span><span class="p">],</span>
-</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>            <span class="n">activities</span><span class="o">=</span><span class="p">[</span><span class="n">UserCreationActivity</span><span class="p">,</span> <span class="n">process_data_activity</span><span class="p">,</span> <span class="n">send_welcome_email_activity</span><span class="p">],</span>
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>            <span class="n">activities</span><span class="o">=</span><span class="p">[</span><span class="n">UserCreationActivity</span><span class="p">()</span><span class="o">.</span><span class="n">as_activity</span><span class="p">(),</span> <span class="n">process_data_activity</span><span class="p">,</span> <span class="n">send_welcome_email_activity</span><span class="p">],</span>
 </span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>            <span class="n">max_concurrent_workflow_tasks</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
 </span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>            <span class="n">max_concurrent_activities</span><span class="o">=</span><span class="mi">20</span>
 </span><span id="__span-6-23"><a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>        <span class="p">)</span>

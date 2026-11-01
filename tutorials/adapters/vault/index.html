@@ -1324,6 +1324,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#retries-and-outages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retries and Outages
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3666,6 +3677,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#retries-and-outages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retries and Outages
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3871,6 +3893,12 @@ force a write to <code>{mount}/creds/{role}</code> for engines like SSH OTP. Lea
 map onto nested config fields (e.g. <code>REDIS__PASSWORD</code> → <code>REDIS.PASSWORD</code>).</p>
 <p>See <a href="../../config_management/">Configuration Management</a> for priority order and
 settings-source details.</p>
+<h3 id="retries-and-outages">Retries and Outages<a class="headerlink" href="#retries-and-outages" title="Permanent link">&para;</a></h3>
+<p><code>VAULT__RETRIES_MAX_ATTEMPTS</code> retries failed connections for every call. Read errors and
+<code>500</code>/<code>502</code>/<code>503</code>/<code>504</code> responses are retried only for idempotent reads (<code>GET</code>, <code>HEAD</code>, <code>LIST</code>),
+so a write, delete or lease operation is never replayed. When Vault stays unavailable the adapter
+raises <code>UnavailableError</code> with a fixed message (the Vault address and path are logged, not
+returned in the error).</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="https://python-hvac.org/en/stable/overview.html">hvac overview</a> — Client init and auth</li>
