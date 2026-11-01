@@ -1361,3 +1361,25 @@ Feature: Redis Testing
       | settings                          |
       | a client certificate but no key   |
       | a CA bundle while TLS is disabled |
+
+  Scenario Outline: Bytes keys, fields and members are stored as plain text
+    Given a configured <adapter_type>
+    When I write bytes keys, fields and members tagged "{bdd-bytes}" in <adapter_type>
+    Then the bytes keys, fields and members tagged "{bdd-bytes}" should be stored as plain text
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Async bytes keys, fields and members are stored as plain text
+    Given a configured async <adapter_type>
+    When I write bytes keys, fields and members tagged "{bdd-bytes-a}" in async <adapter_type>
+    Then the async bytes keys, fields and members tagged "{bdd-bytes-a}" should be stored as plain text
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
