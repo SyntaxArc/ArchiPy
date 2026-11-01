@@ -552,6 +552,23 @@ Feature: ScyllaDB Adapter
       | yes     | -           | no    | -             | off        |
 
   @needs-scylladb
+  Scenario Outline: The retry policy never replays non-idempotent statements after a request error
+    Given a ScyllaDB adapter is configured
+    When I build a ScyllaDB cluster with consistency level ONE
+    Then the retry policy should <decision> request errors on the next host for <kind> statements
+
+    Examples: Statements
+      | decision | kind           |
+      | retry    | idempotent     |
+      | rethrow  | non-idempotent |
+
+  @needs-scylladb
+  Scenario: Unavailable errors are still retried for non-idempotent statements
+    Given a ScyllaDB adapter is configured
+    When I build a ScyllaDB cluster with consistency level ONE
+    Then the retry policy should retry unavailable errors for non-idempotent statements
+
+  @needs-scylladb
   Scenario Outline: The cluster applies policies and timeout through the default execution profile with <setting> set
     When I build a ScyllaDB cluster with <setting> set to <value>
     Then the default execution profile should use the configured request timeout and retry policy
