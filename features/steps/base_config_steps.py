@@ -19,6 +19,7 @@ from features.test_helpers import get_current_scenario_context
 from archipy.adapters.vault.adapters import VaultAdapter
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import (
+    ElasticsearchConfig,
     KafkaConfig,
     PostgresSQLAlchemyConfig,
     RedisConfig,
@@ -603,6 +604,21 @@ _SECTION_SETTINGS = {
         {"RECONNECTION_POLICY": "EXPONENTIAL", "RECONNECTION_BASE_DELAY": 1.0, "RECONNECTION_MAX_DELAY": 5.0},
     ),
     ("ScyllaDB", "TLS enabled with a CA file"): (ScyllaDBConfig, {"TLS_ENABLED": True, "TLS_CA_FILE": "/tmp/ca.pem"}),
+    ("Elasticsearch", "only a username"): (ElasticsearchConfig, {"HTTP_USER_NAME": "user"}),
+    ("Elasticsearch", "only a password"): (ElasticsearchConfig, {"HTTP_PASSWORD": "secret"}),
+    ("Elasticsearch", "only an API key"): (ElasticsearchConfig, {"API_KEY": "id"}),
+    ("Elasticsearch", "only an API secret"): (ElasticsearchConfig, {"API_SECRET": "secret"}),
+    ("Elasticsearch", "a username and password"): (
+        ElasticsearchConfig,
+        {"HTTP_USER_NAME": "user", "HTTP_PASSWORD": "secret"},
+    ),
+    ("Elasticsearch", "a client key without a certificate"): (ElasticsearchConfig, {"CLIENT_KEY": "/tmp/c.key"}),
+    ("Elasticsearch", "a client certificate and key"): (
+        ElasticsearchConfig,
+        {"CLIENT_CERT": "/tmp/c.pem", "CLIENT_KEY": "/tmp/c.key"},
+    ),
+    ("Elasticsearch", "an unknown node selector"): (ElasticsearchConfig, {"NODE_SELECTOR_CLASS": "fastest"}),
+    ("Elasticsearch", "the random node selector"): (ElasticsearchConfig, {"NODE_SELECTOR_CLASS": "random"}),
     ("Temporal", "only a client certificate"): (TemporalConfig, {"TLS_CLIENT_CERT": "/tmp/client.pem"}),
     ("Temporal", "only a CA certificate"): (TemporalConfig, {"TLS_CA_CERT": "/tmp/ca.pem"}),
     ("Temporal", "a client key without a certificate"): (TemporalConfig, {"TLS_CLIENT_KEY": "/tmp/client.key"}),
@@ -697,7 +713,8 @@ def step_then_elasticsearch_backoff(context, expected):
 
         assert base is DEFAULT and cap is DEFAULT, (base, cap)  # unset: the client keeps its own defaults
     else:
-        assert (base, cap) == (0.5, 8.0), (base, cap)
+        wanted_base, wanted_cap = (float(value) for value in expected.split(" and "))
+        assert (base, cap) == (wanted_base, wanted_cap), (base, cap)
 
 
 @when("I validate an Elasticsearch config with BEARER_AUTH and {other} auth")
@@ -823,3 +840,33 @@ def step_then_scylladb_tls_context(context, expected):
     assert ssl_context.verify_mode == ssl.CERT_REQUIRED
     assert ssl_context.check_hostname is (expected != "verifying without host name check")
     assert len(ssl_context.get_ca_certs()) == 1
+
+
+@when("an Elasticsearch config is built with {credential} and {transport}")
+def step_when_elasticsearch_insecure_config(context, credential, transport):
+    updates = {"HTTP_USER_NAME": "user", "HTTP_PASSWORD": "secret"} if credential == "credentials" else {}
+    if transport == "an http host":
+        updates["HOSTS"] = ["http://es:9200"]
+    elif transport == "verification disabled":
+        updates["VERIFY_CERTS"] = False
+    messages: list[str] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record):
+            if "credentials" in record.getMessage():
+                messages.append(record.getMessage())
+
+    target = logging.getLogger("archipy.configs.sections.elasticsearch")
+    handler = _Capture(level=logging.WARNING)
+    target.addHandler(handler)
+    try:
+        ElasticsearchConfig(**updates)
+    finally:
+        target.removeHandler(handler)
+    get_current_scenario_context(context).store("es_config_warnings", messages)
+
+
+@then("the Elasticsearch config should log {count:d} security warning")
+def step_then_elasticsearch_warning_count(context, count):
+    messages = get_current_scenario_context(context).get("es_config_warnings")
+    assert len(messages) == count, messages

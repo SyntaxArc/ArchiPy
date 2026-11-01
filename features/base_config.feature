@@ -193,31 +193,40 @@ Feature: Base Configuration System
     Then the configuration should be <outcome>
 
     Examples: Configuration checks
-      | section  | problem                                            | outcome  |
-      | Kafka    | SASL_SSL without credentials                       | rejected |
-      | Kafka    | SASL_SSL with credentials                          | accepted |
-      | Kafka    | auto commit and no offset reset                    | rejected |
-      | Kafka    | a heartbeat longer than the session                | rejected |
-      | Redis    | cluster mode without nodes                         | rejected |
-      | Redis    | cluster mode with nodes                            | accepted |
-      | Redis    | sentinel mode without a service name               | rejected |
-      | Redis    | standalone mode without a host                     | rejected |
-      | ScyllaDB | no contact points                                  | rejected |
-      | ScyllaDB | a username without a password                      | rejected |
-      | ScyllaDB | a minimum pool above the maximum                   | rejected |
-      | ScyllaDB | a client certificate without a key                 | rejected |
-      | ScyllaDB | a CA file with TLS disabled                        | rejected |
-      | ScyllaDB | TLS enabled with a CA file                         | accepted |
-      | ScyllaDB | an exponential reconnection base above the maximum | rejected |
-      | ScyllaDB | an exponential reconnection within bounds          | accepted |
-      | Temporal | only a client certificate                          | rejected |
-      | Temporal | only a CA certificate                              | accepted |
-      | Temporal | a client key without a certificate                 | rejected |
-      | Temporal | a run timeout above the execution one              | rejected |
-      | Temporal | a keep alive timeout above the interval            | rejected |
-      | Temporal | a task timeout above the run timeout               | accepted |
-      | Temporal | a verification name without a CA                   | rejected |
-      | Temporal | a verification name with a CA                      | accepted |
+      | section       | problem                                            | outcome  |
+      | Kafka         | SASL_SSL without credentials                       | rejected |
+      | Kafka         | SASL_SSL with credentials                          | accepted |
+      | Kafka         | auto commit and no offset reset                    | rejected |
+      | Kafka         | a heartbeat longer than the session                | rejected |
+      | Redis         | cluster mode without nodes                         | rejected |
+      | Redis         | cluster mode with nodes                            | accepted |
+      | Redis         | sentinel mode without a service name               | rejected |
+      | Redis         | standalone mode without a host                     | rejected |
+      | ScyllaDB      | no contact points                                  | rejected |
+      | ScyllaDB      | a username without a password                      | rejected |
+      | ScyllaDB      | a minimum pool above the maximum                   | rejected |
+      | ScyllaDB      | a client certificate without a key                 | rejected |
+      | ScyllaDB      | a CA file with TLS disabled                        | rejected |
+      | ScyllaDB      | TLS enabled with a CA file                         | accepted |
+      | ScyllaDB      | an exponential reconnection base above the maximum | rejected |
+      | ScyllaDB      | an exponential reconnection within bounds          | accepted |
+      | Elasticsearch | only a username                                    | rejected |
+      | Elasticsearch | only a password                                    | rejected |
+      | Elasticsearch | only an API key                                    | rejected |
+      | Elasticsearch | only an API secret                                 | rejected |
+      | Elasticsearch | a username and password                            | accepted |
+      | Elasticsearch | a client key without a certificate                 | rejected |
+      | Elasticsearch | a client certificate and key                       | accepted |
+      | Elasticsearch | an unknown node selector                           | rejected |
+      | Elasticsearch | the random node selector                           | accepted |
+      | Temporal      | only a client certificate                          | rejected |
+      | Temporal      | only a CA certificate                              | accepted |
+      | Temporal      | a client key without a certificate                 | rejected |
+      | Temporal      | a run timeout above the execution one              | rejected |
+      | Temporal      | a keep alive timeout above the interval            | rejected |
+      | Temporal      | a task timeout above the run timeout               | accepted |
+      | Temporal      | a verification name without a CA                   | rejected |
+      | Temporal      | a verification name with a CA                      | accepted |
 
   Scenario Outline: A ScyllaDB configuration with <tls> builds <context>
     When a ScyllaDB TLS context is built with <tls>
@@ -267,9 +276,22 @@ Feature: Base Configuration System
     Then the client retry backoff should be <expected>
 
     Examples: Retry backoff
-      | base | cap  | expected  |
-      | none | none | default   |
-      | 0.5  | 8    | 0.5 and 8 |
+      | base | cap  | expected   |
+      | none | none | default    |
+      | 0.5  | 8    | 0.5 and 8  |
+      | 0.5  | none | 0.5 and 30 |
+      | 45   | none | 45 and 45  |
+
+  Scenario Outline: The Elasticsearch config warns about credentials with <transport>
+    When an Elasticsearch config is built with <credential> and <transport>
+    Then the Elasticsearch config should log <count> security warning
+
+    Examples: Insecure transport
+      | credential     | transport              | count |
+      | credentials    | an http host           | 1     |
+      | credentials    | verification disabled  | 1     |
+      | credentials    | https and verification | 0     |
+      | no credentials | an http host           | 0     |
 
   Scenario Outline: The Elasticsearch config rejects bearer auth combined with <other> auth
     When I validate an Elasticsearch config with BEARER_AUTH and <other> auth

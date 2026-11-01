@@ -116,6 +116,14 @@ else:
     logger.info("Elasticsearch configuration created successfully")
 ```
 
+### Config Validation
+
+The config rejects (`InvalidArgumentError`) a username without a password (and the reverse), an API key without a
+secret (and the reverse), and `CLIENT_KEY` without `CLIENT_CERT`. It logs a warning when credentials are used with an
+`http://` host or with `VERIFY_CERTS=false`. `NODE_SELECTOR_CLASS` accepts only `round_robin` or `random`. When only
+`RETRY_BACKOFF_BASE` is set, `RETRY_BACKOFF_CAP` defaults to the larger of the base and 30 seconds, because the client
+needs both values to back off.
+
 ### Error Mapping
 
 By default the adapters raise raw `elasticsearch` exceptions (`NotFoundError`, `ApiError`, `ConnectionError`), and
