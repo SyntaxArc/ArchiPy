@@ -1233,6 +1233,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#detachedinstanceerror-when-reading-an-entity-returned-from-an-atomic-block" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DetachedInstanceError when reading an entity returned from an atomic block
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#databasetransactionerror-serialisation-failures" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4199,6 +4210,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#detachedinstanceerror-when-reading-an-entity-returned-from-an-atomic-block" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DetachedInstanceError when reading an entity returned from an atomic block
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#databasetransactionerror-serialisation-failures" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5179,6 +5201,10 @@ pool and its overflow are used up, new requests wait up to <code>POOL_TIMEOUT</c
 <li>Check firewall rules if connecting to a remote host.</li>
 <li>When using SSL, set <code>SSL_MODE</code> (and <code>SSL_ROOT_CERT</code> for <code>verify-ca</code> / <code>verify-full</code>). The DSN query parameters <code>sslmode</code>, <code>sslrootcert</code>, <code>sslcert</code>, <code>sslkey</code>, <code>application_name</code> and <code>connect_timeout</code> fill the matching fields only when those are unset; user and password in the DSN are percent-decoded.</li>
 </ul>
+<h3 id="detachedinstanceerror-when-reading-an-entity-returned-from-an-atomic-block"><code>DetachedInstanceError</code> when reading an entity returned from an atomic block<a class="headerlink" href="#detachedinstanceerror-when-reading-an-entity-returned-from-an-atomic-block" title="Permanent link">&para;</a></h3>
+<p>The atomic block commits and closes the session before it returns, and by default a commit expires every loaded
+entity. Convert entities to DTOs inside the block, or set <code>EXPIRE_ON_COMMIT=False</code> in the configuration to keep the
+loaded attributes readable after the commit.</p>
 <h3 id="databasetransactionerror-serialisation-failures"><code>DatabaseTransactionError</code> — serialisation failures<a class="headerlink" href="#databasetransactionerror-serialisation-failures" title="Permanent link">&para;</a></h3>
 <div class="admonition note">
 <p class="admonition-title">Note</p>

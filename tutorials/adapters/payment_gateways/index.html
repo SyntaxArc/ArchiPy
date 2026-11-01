@@ -3969,6 +3969,11 @@ with proper error handling and Python 3.14 type hints.</p>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">LOGIN_ACCOUNT</span><span class="o">=</span><span class="s2">"your_merchant_login_account"</span><span class="p">,</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="p">)</span>
 </span></code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Logging</p>
+<p>Debug logs name only the order id, the amount and the last four characters of a token. The login account and
+full tokens are never logged.</p>
+</div>
 <h3 id="initializing-the-adapter">Initializing the Adapter<a class="headerlink" href="#initializing-the-adapter" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
