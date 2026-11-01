@@ -117,6 +117,16 @@ Feature: Keycloak Authentication Testing
     Then an async adapter for realm "async-rotated-key-realm" and client "async-rotated-key-client" should validate the token of "rotateuser"
     And the same async adapter should read the claims of the token of "rotateuser"
 
+  @tokens
+  Scenario Outline: Clearing all caches works without admin mode
+    Given a configured sync Keycloak adapter via direct
+    Then a <kind> adapter without admin mode clears all its caches without logging in
+
+    Examples:
+      | kind  |
+      | sync  |
+      | async |
+
   @users
   Scenario Outline: User retrieval operations
     Given a configured <adapter_type> Keycloak adapter via <via>

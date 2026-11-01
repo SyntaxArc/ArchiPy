@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 import time
 from typing import TYPE_CHECKING
@@ -33,6 +34,27 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_CACHE_CLEAR_NAMES = ("clear_cache", "cache_clear")
+
+
+def _clear_cached_callables(adapter: object) -> None:
+    """Clear every cached method of an adapter, whichever clear method its cache decorator offers.
+
+    Names come from the class and the instance dict and are read with ``inspect.getattr_static``, so properties such
+    as ``admin_adapter`` and ``uma_adapter`` are never evaluated (they could raise or log in to Keycloak).
+    """
+    names = set(dir(type(adapter))) | set(vars(adapter))
+    for name in names:
+        static_attr = inspect.getattr_static(adapter, name, None)
+        if static_attr is None or isinstance(static_attr, property):
+            continue
+        attr = getattr(adapter, name, None)
+        for clear_name in _CACHE_CLEAR_NAMES:
+            clear = getattr(attr, clear_name, None)
+            if callable(clear):
+                clear()
+                break
+
 
 class KeycloakConnectionMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for connection/init operations."""
@@ -61,10 +83,7 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
 
     def clear_all_caches(self) -> None:
         """Clear all cached values."""
-        for attr_name in dir(self):
-            attr = getattr(self, attr_name)
-            if hasattr(attr, "clear_cache"):
-                attr.clear_cache()
+        _clear_cached_callables(self)
 
     @staticmethod
     def _get_openid_client(configs: KeycloakConfig) -> KeycloakOpenID:
@@ -246,10 +265,7 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
 
     def clear_all_caches(self) -> None:
         """Clear all cached values."""
-        for attr_name in dir(self):
-            attr = getattr(self, attr_name)
-            if hasattr(attr, "cache_clear"):
-                attr.cache_clear()
+        _clear_cached_callables(self)
 
     @staticmethod
     def _get_openid_client(configs: KeycloakConfig) -> KeycloakOpenID:
