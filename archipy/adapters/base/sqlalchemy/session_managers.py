@@ -83,6 +83,7 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
                 },
             )
         try:
+            self._expire_on_commit = orm_config.EXPIRE_ON_COMMIT
             self.engine = self._create_engine(orm_config)
             self._session_generator = self._get_session_generator()
         except SQLAlchemyError as e:
@@ -200,7 +201,7 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
             DatabaseConfigurationError: If there's an error in the database configuration.
         """
         try:
-            session_maker = sessionmaker(self.engine)
+            session_maker = sessionmaker(self.engine, expire_on_commit=self._expire_on_commit)
             return scoped_session(session_maker)
         except SQLAlchemyError as e:
             if "configuration" in str(e).lower():
@@ -311,6 +312,7 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
                 },
             )
         try:
+            self._expire_on_commit = orm_config.EXPIRE_ON_COMMIT
             self.engine = self._create_async_engine(orm_config)
             self._session_generator = self._get_session_generator()
         except SQLAlchemyError as e:
@@ -430,7 +432,7 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
         from sqlalchemy.ext.asyncio import async_scoped_session, async_sessionmaker
 
         try:
-            session_maker = async_sessionmaker(self.engine)
+            session_maker = async_sessionmaker(self.engine, expire_on_commit=self._expire_on_commit)
             return async_scoped_session(session_maker, scopefunc=current_task)
         except SQLAlchemyError as e:
             if "configuration" in str(e).lower():

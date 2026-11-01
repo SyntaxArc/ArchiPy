@@ -932,6 +932,12 @@ worker_config = PostgresSQLAlchemyConfig(
 - Check firewall rules if connecting to a remote host.
 - When using SSL, set `SSL_MODE` (and `SSL_ROOT_CERT` for `verify-ca` / `verify-full`). The DSN query parameters `sslmode`, `sslrootcert`, `sslcert`, `sslkey`, `application_name` and `connect_timeout` fill the matching fields only when those are unset; user and password in the DSN are percent-decoded.
 
+### `DetachedInstanceError` when reading an entity returned from an atomic block
+
+The atomic block commits and closes the session before it returns, and by default a commit expires every loaded
+entity. Convert entities to DTOs inside the block, or set `EXPIRE_ON_COMMIT=False` in the configuration to keep the
+loaded attributes readable after the commit.
+
 ### `DatabaseTransactionError` — serialisation failures
 
 !!! note
