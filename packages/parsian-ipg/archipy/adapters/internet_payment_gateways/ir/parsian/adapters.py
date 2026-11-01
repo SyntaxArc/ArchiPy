@@ -9,7 +9,7 @@ import httpx2
 import requests
 import zeep
 from zeep import AsyncClient
-from zeep.exceptions import Fault
+from zeep.exceptions import Fault, TransportError
 from zeep.transports import AsyncTransport, Transport
 
 from archipy.adapters.internet_payment_gateways.ir.parsian.ports import (
@@ -33,6 +33,16 @@ if TYPE_CHECKING:
     from archipy.configs.config_template import ParsianShaparakConfig
 
 logger = logging.getLogger(__name__)
+
+# Failures while reaching the gateway (timeouts, refused connections, proxy and TLS errors, bad HTTP statuses).
+_UNAVAILABLE_ERRORS = (
+    Fault,
+    TransportError,
+    requests.RequestException,
+    httpx2.TransportError,
+    ConnectionError,
+    TimeoutError,
+)
 
 
 def _mask_token(token: object) -> str:
@@ -67,6 +77,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
 
         Raises:
             InvalidArgumentError: If LOGIN_ACCOUNT is not a valid string.
+            UnavailableError: If a WSDL cannot be downloaded within TIMEOUT seconds.
         """
         configs = config or BaseConfig.global_config().PARSIAN_SHAPARAK
         if not configs.LOGIN_ACCOUNT or not isinstance(configs.LOGIN_ACCOUNT, str):
@@ -76,11 +87,14 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
         session = requests.Session()
         if configs.PROXIES:
             session.proxies = configs.PROXIES
-        sync_transport = Transport(session=session, operation_timeout=configs.TIMEOUT)
+        sync_transport = Transport(session=session, timeout=configs.TIMEOUT, operation_timeout=configs.TIMEOUT)
 
-        self.sale_client = zeep.Client(wsdl=configs.PAYMENT_WSDL_URL, transport=sync_transport)
-        self.confirm_client = zeep.Client(wsdl=configs.CONFIRM_WSDL_URL, transport=sync_transport)
-        self.reversal_client = zeep.Client(wsdl=configs.REVERSAL_WSDL_URL, transport=sync_transport)
+        try:
+            self.sale_client = zeep.Client(wsdl=configs.PAYMENT_WSDL_URL, transport=sync_transport)
+            self.confirm_client = zeep.Client(wsdl=configs.CONFIRM_WSDL_URL, transport=sync_transport)
+            self.reversal_client = zeep.Client(wsdl=configs.REVERSAL_WSDL_URL, transport=sync_transport)
+        except _UNAVAILABLE_ERRORS as exception:
+            raise UnavailableError(resource_type="Parsian Shaparak WSDL") from exception
 
     def initiate_payment(self, request: PaymentRequestDTO) -> PaymentResponseDTO:
         """Step 1: Request payment token.
@@ -249,6 +263,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
 
         Raises:
             InvalidArgumentError: If LOGIN_ACCOUNT is not a valid string.
+            UnavailableError: If a WSDL cannot be downloaded within TIMEOUT seconds.
         """
         configs = config or BaseConfig.global_config().PARSIAN_SHAPARAK
         if not configs.LOGIN_ACCOUNT or not isinstance(configs.LOGIN_ACCOUNT, str):
@@ -261,12 +276,16 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
         async_transport = AsyncTransport(
             client=httpx2.AsyncClient(proxy=proxy, timeout=configs.TIMEOUT),
             proxy=proxy,
+            timeout=configs.TIMEOUT,
             operation_timeout=configs.TIMEOUT,
         )
 
-        self.sale_client = AsyncClient(wsdl=configs.PAYMENT_WSDL_URL, transport=async_transport)
-        self.confirm_client = AsyncClient(wsdl=configs.CONFIRM_WSDL_URL, transport=async_transport)
-        self.reversal_client = AsyncClient(wsdl=configs.REVERSAL_WSDL_URL, transport=async_transport)
+        try:
+            self.sale_client = AsyncClient(wsdl=configs.PAYMENT_WSDL_URL, transport=async_transport)
+            self.confirm_client = AsyncClient(wsdl=configs.CONFIRM_WSDL_URL, transport=async_transport)
+            self.reversal_client = AsyncClient(wsdl=configs.REVERSAL_WSDL_URL, transport=async_transport)
+        except _UNAVAILABLE_ERRORS as exception:
+            raise UnavailableError(resource_type="Parsian Shaparak WSDL") from exception
 
     @staticmethod
     def _get_proxy(proxies: dict[str, str] | None) -> str | None:

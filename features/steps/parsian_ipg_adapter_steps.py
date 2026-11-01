@@ -3,6 +3,7 @@ import logging
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import requests
 import zeep
 from behave import given, then, when
 from zeep.exceptions import Fault
@@ -81,6 +82,8 @@ def _state(context):
     state = {"script": {}, "calls": [], "clients": [], "is_async": False}
 
     def client_factory(wsdl=None, transport=None, **_):
+        if state.get("wsdl_failure") is not None:
+            raise state["wsdl_failure"]
         return _StubClient(state, wsdl=wsdl, transport=transport)
 
     sync_patch = patch.object(zeep, "Client", client_factory)
@@ -176,6 +179,11 @@ def step_given_log_capture(context):
     get_current_scenario_context(context).store("parsian_logs", records)
 
 
+@given("the Parsian WSDL download fails with a timeout")
+def step_given_wsdl_timeout(context):
+    _state(context)["wsdl_failure"] = requests.exceptions.ConnectTimeout("wsdl timed out")
+
+
 @given('the Parsian gateway answers "{operation}" with:')
 def step_given_gateway_answers(context, operation):
     row = context.table.rows[0]
@@ -191,6 +199,11 @@ def step_given_gateway_fault(context, operation):
 @given('the Parsian gateway fails with a connection error on "{operation}"')
 def step_given_gateway_connection_error(context, operation):
     _state(context)["script"][operation] = ("raise", ConnectionError("connection reset"))
+
+
+@when("I create a {kind:w} Parsian adapter while the WSDL is unreachable")
+def step_when_create_adapter_wsdl_down(context, kind):
+    _try_create(context, kind, _make_config("merchant-1"))
 
 
 @when("I create a {kind:w} Parsian adapter with no login account")
@@ -354,7 +367,9 @@ def step_then_request_rejected(context):
     assert type(error).__name__ in {"ValidationError", "InvalidArgumentError"}, type(error).__name__
 
 
-@then("the Parsian SOAP transport times operations out after {seconds:d} seconds and {proxy_use} the proxy")
+@then(
+    "the Parsian SOAP transport times operations and WSDL loads out after {seconds:d} seconds and {proxy_use} the proxy",
+)
 def step_then_transport(context, seconds, proxy_use):
     clients = _state(context)["clients"]
     assert len(clients) == 3
@@ -363,9 +378,11 @@ def step_then_transport(context, seconds, proxy_use):
         assert transport is not None
         if _state(context)["is_async"]:
             assert transport.client.timeout.read == seconds, transport.client.timeout
+            assert transport.wsdl_client.timeout.read == seconds, transport.wsdl_client.timeout
             proxied = bool(transport.wsdl_client._mounts)  # the WSDL loader must get the proxy too
         else:
             assert transport.operation_timeout == seconds, transport.operation_timeout
+            assert transport.load_timeout == seconds, transport.load_timeout
             proxied = bool(transport.session.proxies)
         assert proxied == (proxy_use == "uses"), f"proxy_use={proxy_use}, proxied={proxied}"
 

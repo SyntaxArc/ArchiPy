@@ -194,7 +194,7 @@ Feature: Parsian Shaparak payment gateway adapter
 
   Scenario Outline: The SOAP transport bounds operations and carries the proxy only when set
     Given a <kind> Parsian adapter using proxy "<proxy>"
-    Then the Parsian SOAP transport times operations out after 30 seconds and <proxy_use> the proxy
+    Then the Parsian SOAP transport times operations and WSDL loads out after 30 seconds and <proxy_use> the proxy
 
     Examples:
       | kind  | proxy                 | proxy_use |
@@ -240,6 +240,17 @@ Feature: Parsian Shaparak payment gateway adapter
     And I confirm Parsian token 987654 for order 1001 and amount 50000
     And I reverse Parsian token 987654
     Then the Parsian debug logs contain neither "SECRETLOGIN" nor "987654" but do name order 1001
+
+    Examples:
+      | kind  |
+      | sync  |
+      | async |
+
+  Scenario Outline: An unreachable WSDL makes construction fail as unavailable
+    Given the Parsian WSDL download fails with a timeout
+    When I create a <kind> Parsian adapter while the WSDL is unreachable
+    Then the Parsian call fails with "UnavailableError"
+    And the Parsian failure carries resource type "Parsian Shaparak WSDL"
 
     Examples:
       | kind  |
