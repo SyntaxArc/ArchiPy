@@ -44,4 +44,13 @@ class EmailConfig(BaseModel):
         description="Idle seconds after which a pooled SMTP connection is reconnected",
     )
     MAX_RETRIES: int = Field(default=3, description="Maximum retry attempts")
+    ATTACHMENT_URL_TIMEOUT: int = Field(
+        default=30,
+        gt=0,
+        description="Timeout in seconds for downloading URL attachments",
+    )
+    ATTACHMENT_URL_ALLOWED_HOSTS: list[str] | None = Field(
+        default=None,
+        description="Host names URL attachments may be downloaded from; None allows any host (http and https only)",
+    )
     ATTACHMENT_MAX_SIZE: int = Field(default=5 * 1024 * 1024, description="Maximum attachment size in bytes")

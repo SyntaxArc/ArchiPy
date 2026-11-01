@@ -9,6 +9,7 @@ import smtplib
 import ssl
 import warnings
 from email import encoders
+from email.errors import MessageError
 from email.mime.audio import MIMEAudio
 from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
@@ -17,6 +18,7 @@ from email.mime.text import MIMEText
 from pathlib import Path
 from queue import Empty, Queue
 from typing import TYPE_CHECKING, Any, BinaryIO, cast, override
+from urllib.parse import urlparse
 
 import httpx2
 from pydantic import EmailStr, HttpUrl, ValidationError
@@ -39,6 +41,8 @@ if TYPE_CHECKING:
     from archipy.configs.config_template import EmailConfig
 
 logger = logging.getLogger(__name__)
+
+_PERMANENT_FAILURE_CODE = 500
 
 
 def _smtp_span_kind() -> SpanKind | None:
@@ -295,7 +299,7 @@ class AttachmentHandler:
         if max_size is None:
             max_size = BaseConfig.global_config().EMAIL.ATTACHMENT_MAX_SIZE
         try:
-            processed_content = AttachmentHandler._process_source(source, attachment_type)
+            processed_content = AttachmentHandler._process_source(source, attachment_type, max_size)
 
             return EmailAttachmentDTO(
                 content=processed_content,
@@ -306,7 +310,7 @@ class AttachmentHandler:
                 attachment_type=attachment_type,
                 max_size=max_size,
             )
-        except (smtplib.SMTPException, OSError, TimeoutError) as exception:
+        except (smtplib.SMTPException, OSError, TimeoutError, httpx2.HTTPError) as exception:
             raise InvalidArgumentError(
                 argument_name="attachment",
                 additional_data={"reason": "create_failed", "detail": str(exception)},
@@ -342,16 +346,37 @@ class AttachmentHandler:
 
     @staticmethod
     @trace_span(name="email.fetch_attachment_url")
-    def _process_url_source(source: str | bytes | BinaryIO | HttpUrl) -> bytes:
-        """Fetch bytes from a URL attachment source."""
-        if isinstance(source, str | HttpUrl):
-            response = httpx2.get(str(source), timeout=30)
+    def _process_url_source(source: str | bytes | BinaryIO | HttpUrl, max_size: int | None = None) -> bytes:
+        """Fetch bytes from a URL attachment source.
+
+        Only ``http`` and ``https`` URLs are fetched, on a host allowed by ``ATTACHMENT_URL_ALLOWED_HOSTS`` when
+        set. The body is streamed and the download stops once it exceeds ``max_size``.
+        """
+        if not isinstance(source, str | HttpUrl):
+            raise InvalidArgumentError(
+                argument_name="source",
+                additional_data={"attachment_type": "url", "got": type(source).__name__},
+            )
+        config = BaseConfig.global_config().EMAIL
+        url = str(source)
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            raise InvalidArgumentError(argument_name="source", additional_data={"reason": "unsupported_url_scheme"})
+        allowed_hosts = config.ATTACHMENT_URL_ALLOWED_HOSTS
+        if allowed_hosts is not None and parsed.hostname not in allowed_hosts:
+            raise InvalidArgumentError(argument_name="source", additional_data={"reason": "url_host_not_allowed"})
+        limit = max_size if max_size is not None else config.ATTACHMENT_MAX_SIZE
+        content = bytearray()
+        with httpx2.stream("GET", url, timeout=config.ATTACHMENT_URL_TIMEOUT) as response:
             response.raise_for_status()
-            return bytes(response.content)
-        raise InvalidArgumentError(
-            argument_name="source",
-            additional_data={"attachment_type": "url", "got": type(source).__name__},
-        )
+            for chunk in response.iter_bytes():
+                content.extend(chunk)
+                if len(content) > limit:
+                    raise InvalidArgumentError(
+                        argument_name="attachment",
+                        additional_data={"reason": "url_content_too_large", "max_size": limit},
+                    )
+        return bytes(content)
 
     @staticmethod
     def _read_binary_content(source: object) -> bytes:
@@ -377,8 +402,14 @@ class AttachmentHandler:
         )
 
     @staticmethod
-    def _process_source(source: str | bytes | BinaryIO | HttpUrl, attachment_type: EmailAttachmentType) -> bytes:
+    def _process_source(
+        source: str | bytes | BinaryIO | HttpUrl,
+        attachment_type: EmailAttachmentType,
+        max_size: int | None = None,
+    ) -> bytes:
         """Process different types of attachment sources."""
+        if attachment_type == EmailAttachmentType.URL:
+            return AttachmentHandler._process_url_source(source, max_size)
         processors = {
             EmailAttachmentType.FILE: AttachmentHandler._process_file_source,
             EmailAttachmentType.BASE64: AttachmentHandler._process_base64_source,
@@ -473,7 +504,8 @@ class EmailAdapter(EmailPort):
         Raises:
             InvalidArgumentError: If no SMTP server is configured or an attachment is invalid.
             UnavailableError: If the SMTP server cannot be reached or the email cannot be sent
-                after ``MAX_RETRIES`` attempts.
+                after ``MAX_RETRIES`` attempts. Delivery is at-least-once: a connection that drops after the
+                message was sent can lead to a duplicate on retry; permanent (5xx) rejections are not retried.
         """
         self._send_email_traced(
             to_email=to_email,
@@ -536,10 +568,17 @@ class EmailAdapter(EmailPort):
                         logger.debug("Email sent successfully to %s", to_email)
                         return
                     last_error = connection.last_error
+                except (MessageError, ValueError) as e:
+                    raise InvalidArgumentError(
+                        argument_name="message",
+                        additional_data={"reason": "invalid_header", "detail": str(e)},
+                    ) from e
                 except (smtplib.SMTPException, OSError, TimeoutError) as e:
                     BaseUtils.capture_exception(e)
                     last_error = e
                     connection.disconnect()  # Close the broken session; reconnect on next attempt
+                    if isinstance(e, smtplib.SMTPResponseException) and e.smtp_code >= _PERMANENT_FAILURE_CODE:
+                        break  # Permanent rejection: a retry cannot succeed and could duplicate the message
 
             raise UnavailableError(resource_type="SMTP") from last_error
         except (smtplib.SMTPException, OSError, TimeoutError) as e:
