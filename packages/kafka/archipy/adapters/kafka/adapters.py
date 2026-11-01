@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 from typing import TYPE_CHECKING, NoReturn, override
 
@@ -185,6 +187,8 @@ _AUTHORIZATION_CODES = frozenset(
     },
 )
 
+_CONSUMER_RAISED_CODES = _AUTHENTICATION_CODES | _AUTHORIZATION_CODES | {KafkaError._ALL_BROKERS_DOWN}
+
 
 class KafkaExceptionHandlerMixin:
     """Mixin class to handle Kafka exceptions in a consistent way."""
@@ -252,6 +256,36 @@ class KafkaExceptionHandlerMixin:
             if "configuration property" in str(kafka_error.str()).lower():
                 raise ConfigurationError(operation="kafka") from exception
             raise InvalidArgumentError(argument_name=operation) from exception
+
+    @classmethod
+    def _is_usable_message(cls, message: Message, operation: str) -> bool:
+        """Check a polled message and raise for errors the caller must see.
+
+        ``_PARTITION_EOF`` is informational and skipped. Fatal errors, authentication and authorization failures and
+        a lost connection to every broker are raised through the exception mapper. Other errors are logged at
+        warning level and the message is skipped.
+
+        Args:
+            message: The polled message.
+            operation: The name of the operation, used for error mapping.
+
+        Returns:
+            bool: True when the message carries a value, False when it is skipped.
+
+        Raises:
+            Various application errors for fatal, authentication, authorization and connection errors.
+        """
+        error = message.error()
+        if not error:
+            return True
+        code = error.code()
+        if code == KafkaError._PARTITION_EOF:
+            logger.debug("Reached the end of %s [%s]", message.topic(), message.partition())
+            return False
+        if error.fatal() or code in _CONSUMER_RAISED_CODES:
+            cls._handle_kafka_exception(KafkaException(error), operation)
+        logger.warning("Consumer error: %s", error)
+        return False
 
     @classmethod
     def _handle_producer_exception(cls, exception: Exception, operation: str) -> NoReturn:
@@ -450,18 +484,23 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
                 neither is provided.
             InternalError: If there is an error initializing the consumer.
         """
-        configs: KafkaConfig = kafka_configs or BaseConfig.global_config().KAFKA
-        self._adapter: Consumer = self._get_adapter(group_id, configs)
-        if topic_list and not partition_list:
-            self.subscribe(topic_list)
-        elif not topic_list and partition_list:
-            self.assign(partition_list)
-        else:
+        if bool(topic_list) == bool(partition_list):
             logger.error("Invalid topic or partition list")
             raise InvalidArgumentError(
                 argument_name="topic_list or partition_list",
                 additional_data={"reason": "Exactly one of topic_list or partition_list must be provided"},
             )
+        configs: KafkaConfig = kafka_configs or BaseConfig.global_config().KAFKA
+        self._adapter: Consumer = self._get_adapter(group_id, configs)
+        try:
+            if topic_list:
+                self.subscribe(topic_list)
+            elif partition_list:
+                self.assign(partition_list)
+        except BaseError:
+            with contextlib.suppress(*_KAFKA_CLIENT_ERRORS):
+                self._adapter.close()
+            raise
 
     @classmethod
     def _get_adapter(cls, group_id: str, configs: KafkaConfig) -> Consumer:
@@ -525,8 +564,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
             result_list: list[Message] = []
             messages: list[Message] = self._adapter.consume(num_messages=messages_number, timeout=timeout)
             for message in messages:
-                if message.error():
-                    logger.error("Consumer error: %s", message.error())
+                if not self._is_usable_message(message, "batch_consume"):
                     continue
                 logger.debug("Message consumed: %s", message)
                 message.set_value(message.value())
@@ -558,8 +596,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
             if message is None:
                 logger.debug("No message received")
                 return None
-            if message.error():
-                logger.error("Consumer error: %s", message.error())
+            if not self._is_usable_message(message, "poll"):
                 return None
             logger.debug("Message consumed: %s", message)
             message.set_value(message.value())
@@ -1150,6 +1187,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
         self._topic_list = topic_list
         self._partition_list = partition_list
         self._adapter: AIOConsumer | None = None
+        self._init_lock = asyncio.Lock()
 
         if not (topic_list or partition_list) or (topic_list and partition_list):
             logger.error("Invalid topic or partition list")
@@ -1196,17 +1234,24 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             ConfigurationError: If there is an error in the Kafka configuration.
             InternalError: If there is an error creating the consumer.
         """
-        if self._adapter is None:
+        async with self._init_lock:
+            if self._adapter is not None:
+                return self._adapter
+            consumer: AIOConsumer | None = None
             try:
                 config = self._build_consumer_conf(self._configs)
-                self._adapter = AIOConsumer(config, max_workers=self._configs.CONSUMER_MAX_WORKERS)
+                consumer = AIOConsumer(config, max_workers=self._configs.CONSUMER_MAX_WORKERS)
                 if self._topic_list:
-                    await self._adapter.subscribe(self._topic_list)
+                    await consumer.subscribe(self._topic_list)
                 elif self._partition_list:
-                    await self._adapter.assign(self._partition_list)
+                    await consumer.assign(self._partition_list)
             except _KAFKA_CLIENT_ERRORS as e:
+                if consumer is not None:
+                    with contextlib.suppress(*_KAFKA_CLIENT_ERRORS):
+                        await consumer.close()
                 self._handle_kafka_exception(e, "AsyncKafkaConsumer_init")
-        return self._adapter
+            self._adapter = consumer
+            return consumer
 
     @override
     async def batch_consume(self, messages_number: int = 500, timeout: int = 1) -> list[Message]:
@@ -1230,8 +1275,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             result_list: list[Message] = []
             messages: list[Message] = await adapter.consume(num_messages=messages_number, timeout=timeout)
             for message in messages:
-                if message.error():
-                    logger.error("Async consumer error: %s", message.error())
+                if not self._is_usable_message(message, "batch_consume"):
                     continue
                 logger.debug("Async message consumed: %s", message)
                 message.set_value(message.value())
@@ -1263,8 +1307,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             if message is None:
                 logger.debug("No async message received")
                 return None
-            if message.error():
-                logger.error("Async consumer error: %s", message.error())
+            if not self._is_usable_message(message, "poll"):
                 return None
             logger.debug("Async message consumed: %s", message)
             message.set_value(message.value())

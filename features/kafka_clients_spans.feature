@@ -100,6 +100,42 @@ Feature: Kafka Clients and Spans Testing
       | sync  | no transactional id | InvalidArgumentError |
       | async | a transactional id  | ConfigurationError   |
 
+  Scenario: An async consumer whose subscription failed keeps failing instead of polling unsubscribed
+    When I poll an async consumer subscribed to an invalid topic pattern twice
+    Then the Kafka operation should raise "InvalidArgumentError"
+
+  Scenario Outline: A sync consumer that fails with <failure> leaves no client running
+    When I create 3 sync consumers that fail with <failure>
+    Then the Kafka operation should raise "InvalidArgumentError"
+    And no librdkafka client should be left running
+
+    Examples:
+      | failure                 |
+      | no topics               |
+      | an invalid subscription |
+
+  Scenario Outline: A <mode> consumer that <operation>s a message carrying <code> raises <error>
+    When a <mode> consumer <operation>s a message that carries the Kafka error <code>
+    Then the Kafka operation should raise "<error>"
+
+    Examples:
+      | mode  | operation | code                       | error                   |
+      | sync  | poll      | _ALL_BROKERS_DOWN          | ServiceUnavailableError |
+      | sync  | consume   | _AUTHENTICATION            | UnauthenticatedError    |
+      | async | poll      | TOPIC_AUTHORIZATION_FAILED | PermissionDeniedError   |
+      | async | consume   | _ALL_BROKERS_DOWN          | ServiceUnavailableError |
+
+  Scenario Outline: A <mode> consumer skips a message carrying the harmless error <code>
+    When a <mode> consumer <operation>s a message that carries the Kafka error <code>
+    Then the consumer should have received nothing
+
+    Examples:
+      | mode  | operation | code                  |
+      | sync  | poll      | _PARTITION_EOF        |
+      | sync  | consume   | UNKNOWN_TOPIC_OR_PART |
+      | async | poll      | _PARTITION_EOF        |
+      | async | consume   | UNKNOWN_TOPIC_OR_PART |
+
   Scenario: Producing into a full local queue is reported as resource exhaustion
     Given an unreachable Kafka broker
     When I produce 2 messages with a producer whose queue holds only 1 message on that broker

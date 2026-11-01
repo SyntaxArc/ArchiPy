@@ -1063,6 +1063,133 @@ def step_use_transaction_settings(context, mode, setting):
         )
 
 
+@when("I poll an async consumer subscribed to an invalid topic pattern twice")
+def step_async_consumer_invalid_subscription(context):
+    """A failed first subscription must not leave a consumer that silently polls without a subscription."""
+    config = _get_kafka_config(context)
+
+    async def run():
+        consumer = AsyncKafkaConsumerAdapter("invalid-pattern-group", topic_list=["^("], kafka_configs=config)
+        errors = []
+        for _ in range(2):
+            try:
+                await consumer.poll(timeout=1)
+            except Exception as error:
+                errors.append(error)
+        return errors
+
+    errors = asyncio.run(run())
+    get_current_scenario_context(context).store("kafka_operation_error", errors[0] if len(errors) == 2 else None)
+
+
+def _rdkafka_thread_count():
+    """Count the native librdkafka threads of this process (they are named ``rdk:*``)."""
+    import os
+
+    count = 0
+    for task in os.listdir("/proc/self/task"):
+        with open(f"/proc/self/task/{task}/comm") as comm:
+            count += comm.read().startswith("rdk:")
+    return count
+
+
+@when("I create {count:d} sync consumers that fail with {failure}")
+def step_create_failing_consumers(context, count, failure):
+    """Create consumers that fail, keeping their errors (and so their frames) alive."""
+    config = _get_kafka_config(context)
+    if failure == "no topics":
+        arguments = {"topic_list": None, "partition_list": None}
+    else:
+        arguments = {"topic_list": ["^("], "partition_list": None}
+    before = _rdkafka_thread_count()
+    errors = []
+    for _ in range(count):
+        try:
+            KafkaConsumerAdapter("failing-init-group", kafka_configs=config, **arguments)
+        except Exception as error:
+            errors.append(error)
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("kafka_failed_consumers", errors)
+    scenario_context.store("kafka_rdkafka_threads_added", _rdkafka_thread_count() - before)
+    scenario_context.store("kafka_operation_error", errors[0] if len(errors) == count else None)
+
+
+@then("no librdkafka client should be left running")
+def step_no_client_left(context):
+    """A failed consumer construction must close the client it created."""
+    added = get_current_scenario_context(context).get("kafka_rdkafka_threads_added")
+    assert added == 0, f"{added} librdkafka threads are still running"
+
+
+class _ErrorMessage:
+    """A polled message that carries a Kafka error, as a broker cannot be made to produce on demand."""
+
+    def __init__(self, error):
+        self._error = error
+
+    def error(self):
+        return self._error
+
+    def topic(self):
+        return "stub-topic"
+
+    def partition(self):
+        return 0
+
+
+class _ErrorClient:
+    """Stands in for the underlying client: every poll or consume yields one error message."""
+
+    def __init__(self, error):
+        self._message = _ErrorMessage(error)
+
+    def poll(self, timeout):
+        return self._message
+
+    def consume(self, num_messages, timeout):
+        return [self._message]
+
+    async def async_poll(self, timeout):
+        return self._message
+
+    async def async_consume(self, num_messages, timeout):
+        return [self._message]
+
+
+@when("a {mode} consumer {operation}s a message that carries the Kafka error {code}")
+def step_consumer_receives_error_message(context, mode, operation, code):
+    """Poll or batch consume through a consumer whose client returns an error message."""
+    from confluent_kafka import KafkaError
+
+    config = _get_kafka_config(context)
+    client = _ErrorClient(KafkaError(getattr(KafkaError, code)))
+    scenario_context = get_current_scenario_context(context)
+    if mode == "sync":
+        consumer = KafkaConsumerAdapter("error-message-group", topic_list=["error-topic"], kafka_configs=config)
+        real_client, consumer._adapter = consumer._adapter, client
+        call = consumer.poll if operation == "poll" else consumer.batch_consume
+        _capture_error(context, lambda: scenario_context.store("kafka_consumer_result", call(timeout=1)))
+        real_client.close()
+    else:
+
+        async def run():
+            consumer = AsyncKafkaConsumerAdapter("error-message-group", topic_list=["error-topic"], kafka_configs=config)
+            client.poll, client.consume = client.async_poll, client.async_consume
+            consumer._adapter = client
+            call = consumer.poll if operation == "poll" else consumer.batch_consume
+            scenario_context.store("kafka_consumer_result", await call(timeout=1))
+
+        _capture_error(context, lambda: asyncio.run(run()))
+
+
+@then("the consumer should have received nothing")
+def step_consumer_received_nothing(context):
+    """The error message must have been skipped without raising."""
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("kafka_operation_error") is None, scenario_context.get("kafka_operation_error")
+    assert not scenario_context.get("kafka_consumer_result")
+
+
 @then('the Kafka operation should raise one of "{error_names}"')
 def step_operation_should_raise_one_of(context, error_names):
     """Assert the captured exception is one of the comma separated ArchiPy errors."""
