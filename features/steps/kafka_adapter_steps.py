@@ -18,7 +18,7 @@ from archipy.adapters.kafka.adapters import (
 )
 from archipy.configs.config_template import KafkaConfig
 from archipy.models import errors as archipy_errors
-from archipy.models.errors import ConfigurationError, UnavailableError
+from archipy.models.errors import AlreadyExistsError, ConfigurationError, UnavailableError
 
 
 def _get_kafka_config(context):
@@ -79,6 +79,14 @@ def get_async_kafka_consumer_adapter(context, topic_name, group_id):
         )
         setattr(scenario_context, key, consumer)
     return getattr(scenario_context, key)
+
+
+def _create_topic_if_missing(admin, topic, **kwargs):
+    """Create a topic, accepting that an earlier scenario of the feature already created it."""
+    try:
+        admin.create_topic(topic, **kwargs)
+    except AlreadyExistsError:
+        pass
 
 
 CONSUME_DEADLINE_SECONDS = 60
@@ -148,7 +156,7 @@ def step_test_topic(context, topic_name):
         topics = adapter.list_topics(timeout=1).topics
         if topic_name not in topics:
             context.logger.info(f"Creating test topic '{topic_name}'")
-            adapter.create_topic(topic_name)
+            _create_topic_if_missing(adapter, topic_name)
         context.logger.info(f"Ensured topic '{topic_name}' exists")
     except Exception as e:
         context.logger.exception(f"Failed to ensure topic exists: {str(e)}")
@@ -163,7 +171,7 @@ def step_topic_exists(context, topic_name):
         topics = adapter.list_topics(timeout=1).topics
         if topic_name not in topics:
             context.logger.info(f"Creating topic '{topic_name}'")
-            adapter.create_topic(topic_name)
+            _create_topic_if_missing(adapter, topic_name)
         context.logger.info(f"Ensured topic '{topic_name}' exists")
     except Exception as e:
         context.logger.exception(f"Failed to create topic: {str(e)}")
@@ -238,7 +246,7 @@ def step_create_topic(context, topic_name):
     """Create a Kafka topic."""
     adapter = get_kafka_admin_adapter(context)
     try:
-        adapter.create_topic(topic_name)
+        _create_topic_if_missing(adapter, topic_name)
         context.logger.info(f"Created topic '{topic_name}'")
     except Exception as e:
         context.logger.exception(f"Failed to create topic: {str(e)}")
@@ -696,7 +704,7 @@ def step_async_kafka_roundtrip(context, topic):
     import uuid
 
     admin = get_kafka_admin_adapter(context)
-    admin.create_topic(topic, num_partitions=1, replication_factor=1)
+    _create_topic_if_missing(admin, topic, num_partitions=1, replication_factor=1)
     assert wait_for_topic_condition(admin, lambda name, topics: name in topics, topic)
 
     async def roundtrip():
@@ -735,7 +743,7 @@ def step_produce_and_batch_consume(context, count, topic):
     import uuid
 
     admin = get_kafka_admin_adapter(context)
-    admin.create_topic(topic, num_partitions=1, replication_factor=1)
+    _create_topic_if_missing(admin, topic, num_partitions=1, replication_factor=1)
     assert wait_for_topic_condition(admin, lambda name, topics: name in topics, topic)
 
     producer = get_kafka_producer_adapter(context, topic)
@@ -778,7 +786,7 @@ def step_poll_with_auto_commit(context, topic):
     import uuid
 
     admin = get_kafka_admin_adapter(context)
-    admin.create_topic(topic, num_partitions=1, replication_factor=1)
+    _create_topic_if_missing(admin, topic, num_partitions=1, replication_factor=1)
     assert wait_for_topic_condition(admin, lambda name, topics: name in topics, topic)
 
     producer = get_kafka_producer_adapter(context, topic)
@@ -810,7 +818,7 @@ def _prepare_topic_with_messages(context, topic, count):
     import uuid
 
     admin = get_kafka_admin_adapter(context)
-    admin.create_topic(topic, num_partitions=1, replication_factor=1)
+    _create_topic_if_missing(admin, topic, num_partitions=1, replication_factor=1)
     assert wait_for_topic_condition(admin, lambda name, topics: name in topics, topic)
 
     producer = get_kafka_producer_adapter(context, topic)
@@ -993,7 +1001,7 @@ def step_try_admin_operation(context, operation, topic_name):
     """Create an already existing topic or delete a missing one, keeping the outcome."""
     adapter = get_kafka_admin_adapter(context)
     if operation == "create an existing":
-        adapter.create_topic(topic_name)
+        _create_topic_if_missing(adapter, topic_name)
         _capture_error(context, lambda: adapter.create_topic(topic_name))
     else:
         _capture_error(context, lambda: adapter.delete_topic([topic_name]))
@@ -1011,7 +1019,7 @@ def step_operation_should_raise(context, error_name):
 def step_single_partition_topic(context, topic_name):
     """Create a one partition topic so that partition 0 holds every message."""
     adapter = get_kafka_admin_adapter(context)
-    adapter.create_topic(topic_name, num_partitions=1, replication_factor=1)
+    _create_topic_if_missing(adapter, topic_name, num_partitions=1, replication_factor=1)
     assert wait_for_topic_condition(adapter, lambda name, topics: name in topics, topic_name)
 
 
