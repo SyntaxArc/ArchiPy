@@ -695,7 +695,7 @@ def step_when_create_adapter(context):
     scenario_context.store("warnings", [w for w in caught if issubclass(w.category, DeprecationWarning)])
 
 
-@then('a deprecation warning mentions "{text}"')
+@then('an email deprecation warning mentions "{text}"')
 def step_then_deprecation_warning(context, text):
     caught = get_current_scenario_context(context).get("warnings")
     assert any(text in str(w.message) for w in caught), [str(w.message) for w in caught]

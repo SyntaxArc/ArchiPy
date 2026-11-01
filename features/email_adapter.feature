@@ -135,7 +135,7 @@ Feature: Email adapter
   Scenario: The deprecated auto transport security warns
     Given the Mailpit SMTP server is configured
     When I create an email adapter
-    Then a deprecation warning mentions "TLS_MODE"
+    Then an email deprecation warning mentions "TLS_MODE"
 
   Scenario Outline: A half-set credential pair is rejected
     Given the Mailpit SMTP server is configured
