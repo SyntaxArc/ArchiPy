@@ -29,18 +29,22 @@ from archipy.adapters.kafka.ports import (
 )
 from archipy.configs.base_config import BaseConfig
 from archipy.models.errors import (
+    AlreadyExistsError,
     BaseError,
     ConfigurationError,
     ConnectionTimeoutError,
     InternalError,
     InvalidArgumentError,
     NetworkError,
+    NotFoundError,
     ResourceExhaustedError,
     ServiceUnavailableError,
     UnavailableError,
 )
 
 if TYPE_CHECKING:
+    from concurrent.futures import Future
+
     from archipy.configs.config_template import KafkaConfig
 
 logger = logging.getLogger(__name__)
@@ -237,43 +241,91 @@ class KafkaAdminAdapter(KafkaAdminPort, KafkaExceptionHandlerMixin):
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "KafkaAdmin_init")
 
+    def _admin_timeout(self, timeout: float | None) -> float:
+        """Return the explicit timeout in seconds, or ``REQUEST_TIMEOUT_MS`` converted to seconds when None."""
+        return self._configs.REQUEST_TIMEOUT_MS / 1000 if timeout is None else timeout
+
+    def _await_admin_futures(self, futures: dict[str, Future[None]], timeout: float | None, operation: str) -> None:
+        """Wait for the per-topic futures of an admin call and raise the first failure.
+
+        Args:
+            futures: The ``{topic: Future}`` mapping returned by the confluent-kafka admin client.
+            timeout: Seconds to wait for each future; None uses ``REQUEST_TIMEOUT_MS``.
+            operation: The name of the operation, used for error mapping.
+
+        Raises:
+            AlreadyExistsError: If a topic to create already exists.
+            NotFoundError: If a topic to delete does not exist.
+            ConnectionTimeoutError: If a result does not arrive in time.
+            Various other errors from the exception handler for broker failures.
+        """
+        wait = self._admin_timeout(timeout)
+        for topic, future in futures.items():
+            try:
+                future.result(wait)
+            except KafkaException as e:
+                code = e.args[0].code() if e.args and isinstance(e.args[0], KafkaError) else None
+                if code == KafkaError.TOPIC_ALREADY_EXISTS:
+                    raise AlreadyExistsError(resource_type=f"topic {topic}") from e
+                if code == KafkaError.UNKNOWN_TOPIC_OR_PART:
+                    raise NotFoundError(resource_type=f"topic {topic}") from e
+                self._handle_kafka_exception(e, operation)
+            except TimeoutError as e:
+                raise ConnectionTimeoutError(service="Kafka", timeout=int(wait)) from e
+
     @override
-    def create_topic(self, topic: str, num_partitions: int = 3, replication_factor: int = 1) -> None:
-        """Creates a new Kafka topic.
+    def create_topic(
+        self,
+        topic: str,
+        num_partitions: int = 3,
+        replication_factor: int = 1,
+        timeout: float | None = None,
+    ) -> None:
+        """Creates a new Kafka topic and waits until the broker confirms it.
 
         Args:
             topic (str): Name of the topic to create.
             num_partitions (int, optional): Number of partitions for the topic. Defaults to 3.
             replication_factor (int, optional): Replication factor for the topic. Defaults to 1.
+            timeout (float | None, optional): Seconds to wait for the broker. Defaults to None, which uses
+                ``REQUEST_TIMEOUT_MS``.
 
         Raises:
+            AlreadyExistsError: If the topic already exists.
             InvalidArgumentError: If the topic name or partition configuration is invalid.
+            ConnectionTimeoutError: If the broker does not confirm in time.
             ServiceUnavailableError: If the Kafka service is unavailable during topic creation.
             InternalError: If there is an internal error creating the topic.
         """
         try:
             new_topic = NewTopic(topic, num_partitions, replication_factor)
-            self.adapter.create_topics([new_topic])
+            futures = self.adapter.create_topics([new_topic])
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "create_topic")
+        self._await_admin_futures(futures, timeout, "create_topic")
 
     @override
-    def delete_topic(self, topics: list[str]) -> None:
-        """Deletes one or more Kafka topics.
+    def delete_topic(self, topics: list[str], timeout: float | None = None) -> None:
+        """Deletes one or more Kafka topics and waits until the broker confirms it.
 
         Args:
             topics (list[str]): List of topic names to delete.
+            timeout (float | None, optional): Seconds to wait for the broker. Defaults to None, which uses
+                ``REQUEST_TIMEOUT_MS``.
 
         Raises:
+            NotFoundError: If a topic does not exist.
             InvalidArgumentError: If the topics list is invalid.
+            ConnectionTimeoutError: If the broker does not confirm in time.
             ServiceUnavailableError: If the Kafka service is unavailable during topic deletion.
             InternalError: If there is an internal error deleting the topics.
         """
         try:
-            self.adapter.delete_topics(topics)
-            logger.debug("Deleted topics: %s", topics)
+            futures = self.adapter.delete_topics(topics)
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "delete_topic")
+        self._await_admin_futures(futures, timeout, "delete_topic")
+        logger.debug("Deleted topics: %s", topics)
 
     @override
     def list_topics(self, topic: str | None = None, timeout: float | None = None) -> ClusterMetadata:
