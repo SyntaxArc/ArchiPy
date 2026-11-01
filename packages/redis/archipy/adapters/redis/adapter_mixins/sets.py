@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Awaitable, Iterable, Iterator
+from collections.abc import Awaitable, Iterable, Iterator
 
 from archipy.adapters.redis.adapter_mixins._shared import (
     AsyncRedisMixinBase,
@@ -10,6 +10,7 @@ from archipy.adapters.redis.adapter_mixins._shared import (
     _set,
     _text,
 )
+from archipy.adapters.redis.async_iteration import AwaitableAsyncIterator
 from archipy.models.errors import InternalError, InvalidArgumentError
 
 
@@ -181,12 +182,12 @@ class AsyncRedisSetsMixin(AsyncRedisMixinBase):
             return awaited_result
         return result
 
-    async def sscan_iter(
+    def sscan_iter(
         self,
         name: bytes | str,
         match: bytes | str | None = None,
         count: int | None = None,
-    ) -> AsyncIterator[bytes | str]:
+    ) -> AwaitableAsyncIterator[bytes | str]:
         """Iterate over set members asynchronously.
 
         Args:
@@ -197,7 +198,7 @@ class AsyncRedisSetsMixin(AsyncRedisMixinBase):
         Returns:
             Iterator[Any]: Iterator over set members.
         """
-        return self.read_only_client.sscan_iter(name, match, count)
+        return AwaitableAsyncIterator(self.read_only_client.sscan_iter(name, match, count))
 
     async def sadd(self, name: str, *values: bytes | str | float) -> int:
         """Add members to a set asynchronously.

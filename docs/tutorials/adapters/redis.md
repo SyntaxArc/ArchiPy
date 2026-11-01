@@ -175,6 +175,11 @@ async def run() -> None:
         await redis.set("key", "value")
 ```
 
+### Async iteration
+
+On the async adapter, `scan_iter()` and `sscan_iter()` can be iterated directly with `async for key in
+redis.scan_iter(match="user:*")`. The older `async for key in await redis.scan_iter(...)` form still works.
+
 ## Caching Patterns
 
 ### Function Result Caching

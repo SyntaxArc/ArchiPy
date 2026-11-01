@@ -651,6 +651,19 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  Scenario Outline: Async scan_iter and sscan_iter work with a plain async for
+    Given a configured async <adapter_type>
+    When I mset "{bdd-a-direct}:1" to "a" and "{bdd-a-direct}:2" to "b" in async <adapter_type>
+    And I add "x, y" to the set "{bdd-a-direct}:set" in async <adapter_type>
+    And I iterate keys matching "{bdd-a-direct}:[12]" and members of the set "{bdd-a-direct}:set" directly in async <adapter_type>
+    Then the directly iterated keys should be "{bdd-a-direct}:1, {bdd-a-direct}:2" and members "x, y"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
   @async
   Scenario Outline: Lpush and lpop preserve order asynchronously
     Given a configured async <adapter_type>

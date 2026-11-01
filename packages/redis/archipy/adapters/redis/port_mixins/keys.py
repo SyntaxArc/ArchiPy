@@ -6,8 +6,10 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterable, Iterator, Mapping
+    from collections.abc import Iterable, Iterator, Mapping
     from datetime import datetime, timedelta
+
+    from archipy.adapters.redis.async_iteration import AwaitableAsyncIterator
 
 
 class RedisKeysPort:
@@ -666,13 +668,13 @@ class AsyncRedisKeysPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def scan_iter(
+    def scan_iter(
         self,
         match: bytes | str | None = None,
         count: int | None = None,
         _type: str | None = None,
         **kwargs: Any,
-    ) -> AsyncIterator[bytes | str]:
+    ) -> AwaitableAsyncIterator[bytes | str]:
         """Provides an iterator over keys in the database asynchronously.
 
         Args:
