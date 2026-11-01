@@ -332,6 +332,27 @@ Feature: ScyllaDB Adapter
       | asyn | execute | SELECT FROM WHERE                              | InvalidArgumentError |
 
   @needs-scylladb
+  Scenario Outline: Values interpolated into CQL are rejected unless they are non-negative integers
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "inj_<mode>"
+    When I run ScyllaDB operation "<operation>" on table "inj_<mode>"
+    Then the ScyllaDB call should raise InvalidArgumentError
+
+    Examples: Sync
+      | mode | operation                                        |
+      | syn  | insert with injected ttl                         |
+      | syn  | update with injected ttl                         |
+      | syn  | insert with negative ttl                         |
+      | syn  | create keyspace with injected replication factor |
+
+    @async
+    Examples: Async
+      | mode | operation                                        |
+      | asyn | insert with injected ttl                         |
+      | asyn | update with injected ttl                         |
+      | asyn | insert with negative ttl                         |
+      | asyn | create keyspace with injected replication factor |
+
+  @needs-scylladb
   Scenario Outline: Prepared statements are cached and executed with bound parameters
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
     When I execute a prepared ScyllaDB insert into "<table>" twice
