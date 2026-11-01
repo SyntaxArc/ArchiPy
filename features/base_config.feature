@@ -99,6 +99,16 @@ Feature: Base Configuration System
       | postgresql+psycopg://al%40ice:p%40ss%2Fw@db.internal:5432/app                                                                         | al@ice | p@ss/w   | (none)      | (none)      | (none) | (none)  |
       | postgresql+psycopg://alice:s3@db.internal:5432/app?sslmode=verify-full&sslrootcert=/etc/ca.pem&application_name=svc&connect_timeout=7 | alice  | s3       | verify-full | /etc/ca.pem | svc    | 7       |
 
+  Scenario Outline: The <kind> database password is kept out of repr and the session manager singleton key
+    When a PostgreSQL configuration is built from the parts user "alice", password "<password>", host "db.internal", port 5433 and database "app"
+    Then the PostgreSQL configuration repr should not contain "<password>"
+    And the <kind> session manager singleton key should not contain "<password>"
+
+    Examples: Session managers
+      | kind  | password   |
+      | sync  | zq9Secret1 |
+      | async | zq9Secret2 |
+
   Scenario: PostgreSQL connection parts build the DSN
     When a PostgreSQL configuration is built from the parts user "alice", password "s3cret", host "db.internal", port 5433 and database "app"
     Then the PostgreSQL DSN should be "postgresql+psycopg://alice:s3cret@db.internal:5433/app"
@@ -240,6 +250,17 @@ Feature: Base Configuration System
       | MEMO_WARN_SIZE                         | None     |
       | RUNTIME_DISABLE_ENVIRONMENT_INFO       | False    |
       | WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS | None     |
+
+  Scenario Outline: The <kind> SQLAlchemy session factory follows EXPIRE_ON_COMMIT <value>
+    When I build a <kind> sqlite session manager with EXPIRE_ON_COMMIT <value>
+    Then the session factory should expire on commit <value>
+
+    Examples: Session factories
+      | kind  | value |
+      | sync  | true  |
+      | sync  | false |
+      | async | true  |
+      | async | false |
 
   Scenario Outline: The Elasticsearch client carries retry backoff only when configured
     When I build an Elasticsearch client with RETRY_BACKOFF_BASE <base> and RETRY_BACKOFF_CAP <cap>
