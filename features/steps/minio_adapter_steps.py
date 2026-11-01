@@ -327,6 +327,28 @@ def step_stream_download_verify(context, object_name, bucket_name, expected_cont
     context.logger.info(f"Verified streaming download content of '{object_name}'")
 
 
+@when('I stream download "{object_name}" from "{bucket_name}" with max bytes {max_bytes:d}')
+def step_stream_download_with_limit(context, object_name, bucket_name, max_bytes):
+    adapter = get_minio_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    try:
+        content = adapter.get_object_stream(bucket_name, object_name, max_bytes=max_bytes)
+    except Exception as error:  # noqa: BLE001
+        scenario_context.store("raised_error", error)
+        scenario_context.store("streamed_content", None)
+    else:
+        scenario_context.store("raised_error", None)
+        scenario_context.store("streamed_content", content)
+
+
+@then('the downloaded stream content should be "{expected_content}"')
+def step_stream_download_content(context, expected_content):
+    scenario_context = get_current_scenario_context(context)
+    content = scenario_context.get("streamed_content")
+    assert content is not None, "Expected streamed content"
+    assert content.decode("utf-8") == expected_content, f"Content mismatch: expected '{expected_content}'"
+
+
 @when('I upload a tagged file "{object_name}" with content "{content}" and tags "{tags_str}" to bucket "{bucket_name}"')
 def step_upload_file_with_tags(context, object_name, content, tags_str, bucket_name):
     adapter = get_minio_adapter(context)

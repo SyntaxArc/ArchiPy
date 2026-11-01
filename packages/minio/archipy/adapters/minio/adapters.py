@@ -1,8 +1,9 @@
 """MinIO adapter implementations for ArchiPy."""
 
+import contextlib
 import logging
 import urllib.parse
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any, BinaryIO, NoReturn, TypeVar, cast, override
 
 import boto3
@@ -262,6 +263,27 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         if configs.CLIENT_KEY:
             return (configs.CLIENT_CERT, configs.CLIENT_KEY)
         return configs.CLIENT_CERT
+
+    @staticmethod
+    def _read_stream_body(response: Mapping[str, object], max_bytes: int | None) -> bytes:
+        """Read and close a streaming response body, enforcing an optional size limit."""
+        body = cast("BinaryIO", response["Body"])
+        with contextlib.closing(body) as stream:
+            if max_bytes is None:
+                return stream.read()
+            content_length = response.get("ContentLength")
+            if isinstance(content_length, int) and content_length > max_bytes:
+                raise ResourceExhaustedError(
+                    resource_type="object",
+                    additional_data={"max_bytes": max_bytes},
+                )
+            content: bytes = stream.read(max_bytes + 1)
+            if len(content) > max_bytes:
+                raise ResourceExhaustedError(
+                    resource_type="object",
+                    additional_data={"max_bytes": max_bytes},
+                )
+            return content
 
     @staticmethod
     def _ssl_verify(configs: MinioConfig) -> bool | str:
@@ -1086,7 +1108,12 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_general_exception(e, "put_object_stream")
 
     @override
-    def get_object_stream(self, bucket_name: str, object_name: str) -> bytes:
+    def get_object_stream(
+        self,
+        bucket_name: str,
+        object_name: str,
+        max_bytes: int | None = None,
+    ) -> bytes:
         """Download an object and return its content as bytes.
 
         Unlike get_object which requires a local file path, this method returns
@@ -1095,17 +1122,20 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         Args:
             bucket_name: Source bucket name.
             object_name: Object name in the bucket.
+            max_bytes: Maximum number of bytes to read. None means no limit.
 
         Returns:
             bytes: The full content of the object.
 
         Raises:
-            InvalidArgumentError: If any required parameter is empty.
+            InvalidArgumentError: If any required parameter is invalid.
             NotFoundError: If the bucket or object does not exist.
             PermissionDeniedError: If permission to download is denied.
+            ResourceExhaustedError: If the object is larger than max_bytes.
             ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
+        content: bytes = b""
         try:
             if not bucket_name or not object_name:
                 _raise_invalid_argument(
@@ -1117,7 +1147,11 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                         else "object_name"
                     ),
                 )
+            if max_bytes is not None and max_bytes <= 0:
+                _raise_invalid_argument("max_bytes")
+
             response = self._client.get_object(Bucket=bucket_name, Key=object_name)
+            content = self._read_stream_body(response, max_bytes)
         except InvalidArgumentError:
             raise
         except ClientError as e:
@@ -1130,7 +1164,6 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_general_exception(e, "get_object_stream")
             raise
         else:
-            content: bytes = response["Body"].read()
             return content
 
     @override
