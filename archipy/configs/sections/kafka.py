@@ -9,6 +9,9 @@ from archipy.models.errors import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
+# SASL mechanisms that authenticate with a username and password.
+_SASL_MECHANISMS_WITH_CREDENTIALS = frozenset({"PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"})
+
 
 class KafkaConfig(BaseModel):
     """Configuration settings for Apache Kafka integration.
@@ -109,8 +112,9 @@ class KafkaConfig(BaseModel):
         """Validate security-related settings for Kafka configuration.
 
         Ensures that SASL authentication settings are properly configured when
-        using SASL security protocols, and warns about missing SSL certificates
-        when SSL is enabled.
+        using SASL security protocols (a mechanism is always required; ``USERNAME`` and ``PASSWORD`` are required
+        only for the PLAIN and SCRAM mechanisms, not for GSSAPI or OAUTHBEARER), and warns about missing SSL
+        certificates when SSL is enabled.
 
         Returns:
             KafkaConfig: The validated configuration instance.
@@ -118,10 +122,11 @@ class KafkaConfig(BaseModel):
         Raises:
             ValueError: If SASL authentication is incomplete.
         """
-        if self.SECURITY_PROTOCOL in ["SASL_PLAINTEXT", "SASL_SSL"] and not (
-            self.SASL_MECHANISM and self.USERNAME and self.PASSWORD
-        ):
-            raise ConfigurationError(operation="kafka_validate", reason="sasl_auth_incomplete")
+        if self.SECURITY_PROTOCOL in ["SASL_PLAINTEXT", "SASL_SSL"]:
+            if not self.SASL_MECHANISM:
+                raise ConfigurationError(operation="kafka_validate", reason="sasl_auth_incomplete")
+            if self.SASL_MECHANISM in _SASL_MECHANISMS_WITH_CREDENTIALS and not (self.USERNAME and self.PASSWORD):
+                raise ConfigurationError(operation="kafka_validate", reason="sasl_auth_incomplete")
         if self.SECURITY_PROTOCOL == "SSL" and not (self.SSL_CA_FILE or self.SSL_CERT_FILE or self.SSL_KEY_FILE):
             logger.warning("SSL enabled but no SSL certificates provided; this may cause connection issues.")
         if self.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM == "none":

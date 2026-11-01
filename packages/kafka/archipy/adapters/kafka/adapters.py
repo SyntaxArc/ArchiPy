@@ -72,24 +72,34 @@ def _end_consume_span(consumer: Consumer) -> None:
 
 
 def _apply_security_config(config: dict[str, str | int | float], configs: KafkaConfig) -> None:
-    """Add the SASL and SSL settings to a client configuration when credentials and a CA file are set.
+    """Add the security, SASL and SSL settings to a client configuration.
 
-    Broker hostname verification follows ``SSL_ENDPOINT_IDENTIFICATION_ALGORITHM`` (``https`` by default).
+    ``security.protocol`` is always set. SASL settings are added for the SASL protocols and SSL settings for the
+    SSL protocols; each is applied only when it is set, so mTLS without SASL, SASL_PLAINTEXT, GSSAPI, OAUTHBEARER
+    and the system CA store all work. Broker hostname verification follows
+    ``SSL_ENDPOINT_IDENTIFICATION_ALGORITHM`` (``https`` by default).
 
     Args:
         config: The librdkafka configuration dictionary to update in place.
         configs: Kafka configuration.
     """
-    if not (configs.USERNAME and configs.PASSWORD and configs.SSL_CA_FILE):
-        return
-    config["sasl.username"] = configs.USERNAME
-    config["sasl.password"] = configs.PASSWORD.get_secret_value()
-    config["security.protocol"] = configs.SECURITY_PROTOCOL
-    config["sasl.mechanism"] = configs.SASL_MECHANISM or ""
-    config["ssl.ca.location"] = configs.SSL_CA_FILE
-    config["ssl.certificate.location"] = configs.SSL_CERT_FILE or ""
-    config["ssl.key.location"] = configs.SSL_KEY_FILE or ""
-    config["ssl.endpoint.identification.algorithm"] = configs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM
+    protocol = configs.SECURITY_PROTOCOL
+    config["security.protocol"] = protocol
+    if protocol in ("SASL_PLAINTEXT", "SASL_SSL"):
+        if configs.SASL_MECHANISM:
+            config["sasl.mechanism"] = configs.SASL_MECHANISM
+        if configs.USERNAME:
+            config["sasl.username"] = configs.USERNAME
+        if configs.PASSWORD:
+            config["sasl.password"] = configs.PASSWORD.get_secret_value()
+    if protocol in ("SSL", "SASL_SSL"):
+        if configs.SSL_CA_FILE:
+            config["ssl.ca.location"] = configs.SSL_CA_FILE
+        if configs.SSL_CERT_FILE:
+            config["ssl.certificate.location"] = configs.SSL_CERT_FILE
+        if configs.SSL_KEY_FILE:
+            config["ssl.key.location"] = configs.SSL_KEY_FILE
+        config["ssl.endpoint.identification.algorithm"] = configs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM
 
 
 # Library/runtime failures observed at the Kafka client boundary.

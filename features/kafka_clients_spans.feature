@@ -97,6 +97,30 @@ Feature: Kafka Clients and Spans Testing
       | async consumer | default | https    |
       | async consumer | none    | none     |
 
+  Scenario Outline: Kafka client settings for protocol <protocol> with mechanism <mechanism> carry <present> and omit <absent>
+    When Kafka client settings are built for protocol <protocol> with mechanism <mechanism>, username <username>, CA file <ca>, certificate <cert> and key <key>
+    Then the Kafka client settings should include "<present>"
+    And the Kafka client settings should not include "<absent>"
+
+    Examples:
+      | protocol       | mechanism     | username | ca     | cert       | key        | present                                             | absent                                 |
+      | SSL            | -             | -        | -      | client.pem | client.key | ssl.certificate.location,ssl.key.location           | ssl.ca.location,sasl.username          |
+      | SASL_PLAINTEXT | PLAIN         | user     | -      | -          | -          | sasl.mechanism,sasl.username,sasl.password          | ssl.ca.location                        |
+      | SASL_PLAINTEXT | OAUTHBEARER   | -        | -      | -          | -          | security.protocol,sasl.mechanism                    | sasl.username,sasl.password            |
+      | SASL_SSL       | GSSAPI        | -        | ca.pem | -          | -          | sasl.mechanism,ssl.ca.location                      | sasl.username,ssl.certificate.location |
+      | SASL_SSL       | SCRAM-SHA-512 | user     | -      | -          | -          | sasl.username,ssl.endpoint.identification.algorithm | ssl.ca.location                        |
+      | PLAINTEXT      | -             | -        | -      | -          | -          | security.protocol                                   | sasl.mechanism,ssl.ca.location         |
+
+  Scenario Outline: A Kafka configuration with protocol <protocol>, mechanism <mechanism> and username <username> is rejected
+    When a Kafka configuration is validated with protocol <protocol>, mechanism <mechanism> and username <username>
+    Then the Kafka configuration should be rejected as incomplete
+
+    Examples:
+      | protocol       | mechanism     | username |
+      | SASL_PLAINTEXT | -             | user     |
+      | SASL_SSL       | PLAIN         | -        |
+      | SASL_SSL       | SCRAM-SHA-256 | -        |
+
   Scenario Outline: A <mode> consumer created with <arguments> is rejected
     When I create a <mode> consumer with <arguments>
     Then the Kafka operation should raise "InvalidArgumentError"
