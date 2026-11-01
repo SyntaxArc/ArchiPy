@@ -79,12 +79,14 @@ class ScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def create_keyspace(self, keyspace: str, replication_factor: int = 1) -> None:
+    def create_keyspace(self, keyspace: str, replication_factor: int | None = None) -> None:
         """Create a keyspace with simple replication strategy.
 
         Args:
             keyspace (str): The name of the keyspace to create.
-            replication_factor (int): The replication factor. Defaults to 1.
+            replication_factor (int | None): Replicas per datacenter (``NetworkTopologyStrategy``) or in total
+                (``SimpleStrategy``). When None, the configured ``REPLICATION_CONFIG`` is used, or 1 for
+                ``SimpleStrategy``.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
@@ -385,12 +387,14 @@ class AsyncScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def create_keyspace(self, keyspace: str, replication_factor: int = 1) -> None:
+    async def create_keyspace(self, keyspace: str, replication_factor: int | None = None) -> None:
         """Create a keyspace asynchronously.
 
         Args:
             keyspace (str): The name of the keyspace to create.
-            replication_factor (int): The replication factor. Defaults to 1.
+            replication_factor (int | None): Replicas per datacenter (``NetworkTopologyStrategy``) or in total
+                (``SimpleStrategy``). When None, the configured ``REPLICATION_CONFIG`` is used, or 1 for
+                ``SimpleStrategy``.
 
         Raises:
             NotImplementedError: If not implemented by the subclass.
