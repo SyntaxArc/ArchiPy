@@ -3164,6 +3164,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#scylladb-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ScyllaDB config
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#adding-a-deprecation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3633,6 +3644,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#scylladb-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ScyllaDB config
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#adding-a-deprecation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3995,6 +4017,13 @@ through <code>AppUtils.uvicorn_config()</code>, emits a <code>DeprecationWarning
 </tbody>
 </table>
 <p><code>FASTAPI.SERVE_HOST</code> and <code>FASTAPI.SERVE_PORT</code> stay where they are.</p>
+<p>These fields are marked with pydantic <code>deprecated</code>: reading one (<code>config.FASTAPI.RELOAD</code>) emits a
+<code>DeprecationWarning</code> that names the replacement, and the JSON schema flags the field. ArchiPy's own reads do not warn.</p>
+<h2 id="scylladb-config">ScyllaDB config<a class="headerlink" href="#scylladb-config" title="Permanent link">&para;</a></h2>
+<p><code>MAX_CONNECTIONS_PER_HOST</code>, <code>MIN_CONNECTIONS_PER_HOST</code>, <code>CORE_CONNECTIONS_PER_HOST</code> and
+<code>MAX_REQUESTS_PER_CONNECTION</code> of <code>SCYLLADB</code> never had an effect, because scylla-driver has no per-host pool sizing.
+Reading one emits a <code>DeprecationWarning</code>, and building a cluster with a non-default value warns too. They are removed
+in <strong>6.0.0</strong> with no replacement. Deprecated since 5.23.0.</p>
 <h2 id="adding-a-deprecation">Adding a deprecation<a class="headerlink" href="#adding-a-deprecation" title="Permanent link">&para;</a></h2>
 <p>Keep the old name working and route it through <code>archipy.helpers._deprecation</code>:</p>
 <ul>

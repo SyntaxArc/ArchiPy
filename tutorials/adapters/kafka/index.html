@@ -1068,6 +1068,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#connection-identity-and-timeout-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection, Identity and Timeout Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#async-specific-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3722,6 +3733,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#connection-identity-and-timeout-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection, Identity and Timeout Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#async-specific-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3983,6 +4005,58 @@ Brokers reached by IP address, or whose certificate SAN does not list the addres
 handshake. Fix the certificates if you can. To keep the old behavior, set
 <code>SSL_ENDPOINT_IDENTIFICATION_ALGORITHM="none"</code> (or <code>KAFKA__SSL_ENDPOINT_IDENTIFICATION_ALGORITHM=none</code>); a warning
 is logged because this leaves connections open to man-in-the-middle attacks.</p>
+</div>
+<h3 id="connection-identity-and-timeout-settings">Connection, Identity and Timeout Settings<a class="headerlink" href="#connection-identity-and-timeout-settings" title="Permanent link">&para;</a></h3>
+<p><code>CLIENT_ID</code> (<code>client.id</code>) and <code>CONNECTIONS_MAX_IDLE_MS</code> (<code>connections.max.idle.ms</code>) are applied to every client, and
+<code>LIST_TOPICS_TIMEOUT_MS</code> is the timeout <code>list_topics()</code> and the producer health check use when no <code>timeout</code> is passed.
+The options below are optional; <code>None</code> leaves the librdkafka default in place.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>librdkafka option</th>
+<th>Applies to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SOCKET_TIMEOUT_MS</code></td>
+<td><code>socket.timeout.ms</code></td>
+<td>all</td>
+</tr>
+<tr>
+<td><code>RECONNECT_BACKOFF_MAX_MS</code></td>
+<td><code>reconnect.backoff.max.ms</code></td>
+<td>all</td>
+</tr>
+<tr>
+<td><code>RETRY_BACKOFF_MS</code></td>
+<td><code>retry.backoff.ms</code></td>
+<td>all</td>
+</tr>
+<tr>
+<td><code>MESSAGE_TIMEOUT_MS</code></td>
+<td><code>message.timeout.ms</code></td>
+<td>producers</td>
+</tr>
+<tr>
+<td><code>GROUP_INSTANCE_ID</code></td>
+<td><code>group.instance.id</code></td>
+<td>consumers</td>
+</tr>
+<tr>
+<td><code>ENABLE_AUTO_OFFSET_STORE</code></td>
+<td><code>enable.auto.offset.store</code></td>
+<td>consumers</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>librdkafka treats <code>message.timeout.ms</code> as an alias of <code>delivery.timeout.ms</code>, so a set <code>MESSAGE_TIMEOUT_MS</code> takes
+precedence over <code>DELIVERY_TIMEOUT_MS</code>. Earlier releases ignored <code>CLIENT_ID</code>, <code>CONNECTIONS_MAX_IDLE_MS</code> and
+<code>LIST_TOPICS_TIMEOUT_MS</code>; <code>list_topics()</code> without a <code>timeout</code> now waits <code>LIST_TOPICS_TIMEOUT_MS</code> (5 seconds by
+default) instead of 1 second. Pass <code>timeout=</code> to choose a value per call.</p>
 </div>
 <h3 id="async-specific-configuration">Async-Specific Configuration<a class="headerlink" href="#async-specific-configuration" title="Permanent link">&para;</a></h3>
 <p>The async adapters respect three additional fields that tune the underlying <code>AIOProducer</code> /

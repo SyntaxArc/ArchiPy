@@ -1281,6 +1281,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#transport-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transport Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#direct-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3639,6 +3650,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#transport-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transport Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#direct-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3820,7 +3842,49 @@ handling and logging.</p>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nv">EMAIL__POOL_SIZE</span><span class="o">=</span><span class="m">5</span>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nv">EMAIL__CONNECTION_TIMEOUT</span><span class="o">=</span><span class="m">30</span>
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nv">EMAIL__CONNECTION_REFRESH_SECONDS</span><span class="o">=</span><span class="m">300</span><span class="w">  </span><span class="c1"># reconnect pooled connections idle longer than this</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nv">EMAIL__TLS_MODE</span><span class="o">=</span>starttls<span class="w">  </span><span class="c1"># auto (deprecated), none, starttls or implicit</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nv">EMAIL__TLS_CA_FILE</span><span class="o">=</span>/etc/ssl/smtp-ca.pem<span class="w">  </span><span class="c1"># optional CA bundle that verifies the server</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nv">EMAIL__TLS_VERIFY</span><span class="o">=</span><span class="nb">true</span>
 </span></code></pre></div>
+<h3 id="transport-security">Transport Security<a class="headerlink" href="#transport-security" title="Permanent link">&para;</a></h3>
+<p><code>EMAIL__TLS_MODE</code> selects how the SMTP session is protected:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>starttls</code></td>
+<td>Requires the server to offer STARTTLS and the upgrade to succeed; never falls back to clear text.</td>
+</tr>
+<tr>
+<td><code>implicit</code></td>
+<td>Opens a TLS connection from the start (SMTPS, usually port 465).</td>
+</tr>
+<tr>
+<td><code>none</code></td>
+<td>Sends in clear text, only for trusted networks.</td>
+</tr>
+<tr>
+<td><code>auto</code></td>
+<td>Default, deprecated: upgrades only if STARTTLS is offered, without verifying the certificate.</td>
+</tr>
+</tbody>
+</table>
+<p><code>starttls</code> and <code>implicit</code> verify the certificate and host name against the system CAs, or against
+<code>EMAIL__TLS_CA_FILE</code> when set. <code>EMAIL__TLS_VERIFY=false</code> turns verification off.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><code>auto</code> keeps the previous behavior and emits a <code>DeprecationWarning</code>. Set <code>EMAIL__TLS_MODE</code>
+explicitly; the default will change in a future major release.</p>
+</div>
+<p><code>USERNAME</code> and <code>PASSWORD</code> must be set together. A half-set pair raises <code>ConfigurationError</code> when
+<code>TLS_MODE</code> is not <code>auto</code>; in <code>auto</code> mode login is skipped with a <code>DeprecationWarning</code>.</p>
+<p><code>EMAIL__LOCAL_HOSTNAME</code> sets the name sent in <code>EHLO</code>, and <code>EMAIL__SOURCE_ADDRESS</code> with
+<code>EMAIL__SOURCE_PORT</code> binds the local end of the connection.</p>
 <h3 id="direct-configuration">Direct Configuration<a class="headerlink" href="#direct-configuration" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.config_template</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmailConfig</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
