@@ -1196,6 +1196,22 @@ async def step_prepared_insert_twice(context: Context, table: str) -> None:
     await _call_adapter(adapter, "execute_prepared", second, {"id": 2, "name": "beta", "age": 31})
 
 
+@when("I create an async ScyllaDB adapter with the factory and check its health")
+async def step_async_factory_health(context: Context) -> None:
+    """Create the async adapter through ``create`` and run the health check.
+
+    Args:
+        context (Context): Behave context.
+    """
+    adapter = await AsyncScyllaDBAdapter.create(BaseConfig.global_config().SCYLLADB)
+    scenario_context = _get_scenario_context(context)
+    try:
+        scenario_context.scylla_connected = await adapter.is_connected()
+        scenario_context.scylla_health = await adapter.health_check()
+    finally:
+        await adapter.close()
+
+
 @when("I close the ScyllaDB adapter")
 async def step_close_scylladb_adapter(context: Context) -> None:
     """Close the adapter.
