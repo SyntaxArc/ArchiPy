@@ -101,6 +101,21 @@ class EmailConnectionManager:
                 operation="email_credentials",
                 reason="USERNAME and PASSWORD must be set together",
             )
+        if self.config.TLS_MODE == "none" and self.config.USERNAME and self.config.PASSWORD:
+            warnings.warn(
+                "EMAIL.TLS_MODE='none' sends USERNAME and PASSWORD in clear text. "
+                "Set TLS_MODE to 'starttls' or 'implicit'; clear-text login will be rejected in a future release.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        if self.config.TLS_MODE in ("starttls", "implicit") and not self.config.TLS_VERIFY:
+            warnings.warn(
+                "EMAIL.TLS_VERIFY=False disables certificate and host name verification, which exposes the "
+                "session and credentials to interception. Use TLS_CA_FILE for a private CA; "
+                "TLS_VERIFY=False will be rejected in a future release.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
 
     def _build_ssl_context(self) -> ssl.SSLContext:
         """Build the TLS context from ``TLS_CA_FILE`` and ``TLS_VERIFY``."""
@@ -169,6 +184,8 @@ class EmailConnectionManager:
             try:
                 _annotate_current_span({"email.tls_mode": tls_mode})
                 if self.config.USERNAME and self.config.PASSWORD:
+                    if tls_mode == "none":
+                        logger.warning("Logging in to the SMTP server without TLS: credentials are sent in clear text")
                     session.login(self.config.USERNAME, self.config.PASSWORD)
             except BaseException:
                 session.close()
