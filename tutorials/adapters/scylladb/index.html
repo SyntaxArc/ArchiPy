@@ -4589,9 +4589,10 @@ connection pool monitoring.</p>
 </span></code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">Replication factor</p>
-<p><code>REPLICATION_CONFIG</code> defaults to <code>{"datacenter1": 1}</code> and <code>create_keyspace</code> defaults to <code>replication_factor=1</code>: one
-replica, no redundancy. The adapter logs a warning when it creates such a keyspace. Use at least 3 replicas per
-datacenter in production.</p>
+<p><code>REPLICATION_CONFIG</code> defaults to <code>{"datacenter1": 1}</code>: one replica, no redundancy. <code>create_keyspace(name)</code> uses it;
+<code>create_keyspace(name, replication_factor=3)</code> applies the factor to every configured datacenter (or to
+<code>SimpleStrategy</code>). The adapter logs a warning when it creates a keyspace with a single replica. Use at least 3
+replicas per datacenter in production.</p>
 </div>
 <h3 id="direct-configuration">Direct Configuration<a class="headerlink" href="#direct-configuration" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.config_template</span><span class="w"> </span><span class="kn">import</span> <span class="n">ScyllaDBConfig</span>
