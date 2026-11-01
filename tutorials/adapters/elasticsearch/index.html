@@ -1535,6 +1535,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#auth-cloud-and-request-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auth, cloud and request options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#node-pool-options" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4266,6 +4277,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#auth-cloud-and-request-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auth, cloud and request options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#node-pool-options" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4352,21 +4374,32 @@ timeout for slow queries such as large aggregations.</p>
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nv">ELASTIC__API_KEY</span><span class="o">=</span>your-api-key-id
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nv">ELASTIC__API_SECRET</span><span class="o">=</span>your-api-key-secret
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c1"># TLS/SSL</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nv">ELASTIC__CA_CERTS</span><span class="o">=</span>/path/to/ca.crt
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="nv">ELASTIC__VERIFY_CERTS</span><span class="o">=</span><span class="nb">true</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="c1"># Connection behaviour</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="nv">ELASTIC__REQUEST_TIMEOUT</span><span class="o">=</span><span class="m">5</span>.0
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="nv">ELASTIC__MAX_RETRIES</span><span class="o">=</span><span class="m">3</span>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="nv">ELASTIC__RETRY_ON_TIMEOUT</span><span class="o">=</span><span class="nb">true</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="c1"># Node pool and sniffing</span>
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="nv">ELASTIC__NODE_SELECTOR_CLASS</span><span class="o">=</span>random<span class="w">          </span><span class="c1"># 'round_robin' (default) or 'random'</span>
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="nv">ELASTIC__DEAD_NODE_BACKOFF_FACTOR</span><span class="o">=</span><span class="m">1</span>.0
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="nv">ELASTIC__MAX_DEAD_NODE_BACKOFF</span><span class="o">=</span><span class="m">300</span>.0
-</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="nv">ELASTIC__MIN_DELAY_BETWEEN_SNIFFING</span><span class="o">=</span><span class="m">60</span>.0<span class="w">     </span><span class="c1"># applied when SNIFF_BEFORE_REQUESTS=true</span>
-</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="nv">ELASTIC__IGNORE_STATUS</span><span class="o">=</span><span class="s1">'[404]'</span><span class="w">               </span><span class="c1"># status codes not raised as errors</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c1"># Bearer token / OIDC auth (exclusive with API key and basic auth)</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nv">ELASTIC__BEARER_AUTH</span><span class="o">=</span>your-token
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># Elastic Cloud (replaces HOSTS)</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="nv">ELASTIC__CLOUD_ID</span><span class="o">=</span>name:base64-cloud-id
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="c1"># Request metadata</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="nv">ELASTIC__OPAQUE_ID</span><span class="o">=</span>billing-service<span class="w">          </span><span class="c1"># sent as X-Opaque-Id</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="nv">ELASTIC__HEADERS</span><span class="o">=</span><span class="s1">'{"X-Team": "core"}'</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="c1"># TLS/SSL</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="nv">ELASTIC__SSL_VERSION</span><span class="o">=</span><span class="m">772</span><span class="w">                    </span><span class="c1"># ssl.TLSVersion value (772 = TLS 1.3)</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="nv">ELASTIC__CA_CERTS</span><span class="o">=</span>/path/to/ca.crt
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="nv">ELASTIC__VERIFY_CERTS</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="c1"># Connection behaviour</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="nv">ELASTIC__REQUEST_TIMEOUT</span><span class="o">=</span><span class="m">5</span>.0
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="nv">ELASTIC__MAX_RETRIES</span><span class="o">=</span><span class="m">3</span>
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="nv">ELASTIC__RETRY_ON_TIMEOUT</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>
+</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a><span class="c1"># Node pool and sniffing</span>
+</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a><span class="nv">ELASTIC__NODE_SELECTOR_CLASS</span><span class="o">=</span>random<span class="w">          </span><span class="c1"># 'round_robin' (default) or 'random'</span>
+</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a><span class="nv">ELASTIC__DEAD_NODE_BACKOFF_FACTOR</span><span class="o">=</span><span class="m">1</span>.0
+</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a><span class="nv">ELASTIC__MAX_DEAD_NODE_BACKOFF</span><span class="o">=</span><span class="m">300</span>.0
+</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a><span class="nv">ELASTIC__MIN_DELAY_BETWEEN_SNIFFING</span><span class="o">=</span><span class="m">60</span>.0<span class="w">     </span><span class="c1"># applied when SNIFF_BEFORE_REQUESTS=true</span>
+</span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a><span class="nv">ELASTIC__IGNORE_STATUS</span><span class="o">=</span><span class="s1">'[404]'</span><span class="w">               </span><span class="c1"># status codes not raised as errors</span>
 </span></code></pre></div>
 <h3 id="direct-configuration">Direct Configuration<a class="headerlink" href="#direct-configuration" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -5043,6 +5076,18 @@ requests and yields hits one at a time.</p>
 <li><code>ElasticsearchConfig</code> logs a warning when sniffing is enabled with a single non-localhost host — this may bypass
   load balancers. Disable sniffing (<code>SNIFF_ON_START=False</code>, <code>SNIFF_BEFORE_REQUESTS=False</code>) when connecting through
   a load balancer or Elastic Cloud.</li>
+</ul>
+<h3 id="auth-cloud-and-request-options">Auth, cloud and request options<a class="headerlink" href="#auth-cloud-and-request-options" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>BEARER_AUTH</code> sends <code>Authorization: Bearer &lt;token&gt;</code>; it cannot be combined with API key or basic auth, and
+  <code>ElasticsearchConfig</code> raises <code>InvalidArgumentError</code> when it is.</li>
+<li><code>CLOUD_ID</code> replaces <code>HOSTS</code> because the client treats them as mutually exclusive, and it turns sniffing off
+  because the client refuses sniffing with a cloud ID.</li>
+<li><code>OPAQUE_ID</code> and <code>HEADERS</code> are added to every request.</li>
+<li><code>SSL_VERSION</code> and <code>SSL_CONTEXT</code> (an <code>ssl.SSLContext</code>, set in code) are passed to the client. A custom <code>SSL_CONTEXT</code>
+  takes precedence over the file-based TLS settings.</li>
+<li>Unset options are not passed, so the client keeps its defaults.</li>
+<li><code>connect_timeout</code> and <code>proxy</code> are not options of elasticsearch-py 9.x, so they are not exposed.</li>
 </ul>
 <h3 id="node-pool-options">Node pool options<a class="headerlink" href="#node-pool-options" title="Permanent link">&para;</a></h3>
 <ul>
