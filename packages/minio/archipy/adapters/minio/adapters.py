@@ -186,8 +186,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             if not endpoint:
                 _raise_invalid_argument("endpoint")
 
-            # Determine SSL usage (USE_SSL overrides SECURE if set)
-            use_ssl = self.configs.USE_SSL if self.configs.USE_SSL is not None else self.configs.SECURE
+            use_ssl, endpoint = self._resolve_endpoint(self.configs, endpoint)
 
             # Construct endpoint URL with protocol
             protocol = "https" if use_ssl else "http"
@@ -263,6 +262,27 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         if configs.CLIENT_KEY:
             return (configs.CLIENT_CERT, configs.CLIENT_KEY)
         return configs.CLIENT_CERT
+
+    @staticmethod
+    def _resolve_endpoint(configs: MinioConfig, endpoint: str) -> tuple[bool, str]:
+        """Resolve TLS usage and the scheme-less endpoint, warning about insecure settings.
+
+        An explicit http/https scheme in ENDPOINT wins over SECURE/USE_SSL (USE_SSL overrides SECURE).
+        """
+        use_ssl = configs.USE_SSL if configs.USE_SSL is not None else configs.SECURE
+        if "://" in endpoint:
+            parsed_endpoint = urllib.parse.urlsplit(endpoint)
+            if parsed_endpoint.scheme not in ("http", "https") or not parsed_endpoint.netloc:
+                _raise_invalid_argument("endpoint")
+            use_ssl = parsed_endpoint.scheme == "https"
+            endpoint = parsed_endpoint.netloc + parsed_endpoint.path.rstrip("/")
+
+        hostname = urllib.parse.urlsplit(f"//{endpoint}").hostname or ""
+        if not use_ssl and hostname not in ("localhost", "127.0.0.1", "::1"):
+            logger.warning("MinIO endpoint %s is not using TLS; credentials are sent in clear text", hostname)
+        if not configs.VERIFY_SSL:
+            logger.warning("MinIO VERIFY_SSL is disabled; server certificates are not verified")
+        return use_ssl, endpoint
 
     @staticmethod
     def _read_stream_body(response: Mapping[str, object], max_bytes: int | None) -> bytes:

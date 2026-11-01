@@ -625,6 +625,37 @@ def step_verify_raised_error(context, error_name):
     assert type(error).__name__ == error_name, f"Expected {error_name}, got {type(error).__name__}: {error}"
 
 
+@given('a MinIO adapter whose endpoint is written as "{endpoint}"')
+def step_adapter_with_endpoint_form(context, endpoint):
+    scenario_context = get_current_scenario_context(context)
+    minio_config = BaseConfig.global_config().MINIO.model_copy(update={"ENDPOINT": endpoint})
+    try:
+        scenario_context.adapter = MinioAdapter(minio_config)
+    except Exception as exc:  # noqa: BLE001
+        scenario_context.store("adapter_creation_error", exc)
+
+
+@then('the S3 client endpoint should be "{expected_url}"')
+def step_s3_client_endpoint(context, expected_url):
+    scenario_context = get_current_scenario_context(context)
+    if expected_url == "invalid":
+        error = scenario_context.get("adapter_creation_error")
+        assert type(error).__name__ == "InvalidArgumentError", f"Expected InvalidArgumentError, got {error!r}"
+        return
+    actual = get_minio_adapter(context)._client.meta.endpoint_url
+    assert actual == expected_url, f"Expected {expected_url}, got {actual}"
+
+
+@then("the MinIO configuration repr should not contain any credential")
+def step_config_repr_hides_credentials(context):
+    config = BaseConfig.global_config().MINIO.model_copy(
+        update={"ACCESS_KEY": "ak-visible", "SECRET_KEY": "sk-visible", "SESSION_TOKEN": "st-visible"},
+    )
+    text = repr(config)
+    for secret in ("ak-visible", "sk-visible", "st-visible"):
+        assert secret not in text, f"{secret} leaked in repr"
+
+
 @when("I clear all adapter caches")
 def step_clear_all_caches(context):
     get_minio_adapter(context).clear_all_caches()
