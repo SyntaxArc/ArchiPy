@@ -1147,6 +1147,21 @@ Feature: Redis Testing
       | container    | products-range         | rng    | rng:1   | rng:2   | 0.5    |
       | cluster      | cluster-products-range | {rng}  | {rng}:1 | {rng}:2 | 0.5    |
 
+  Scenario Outline: Vector range search intersects the filter with the radius
+    Given a configured <adapter_type>
+    And search index "<index_name>" exists with prefix "<prefix>:" and algorithm FLAT for HASH documents
+    And search document "<doc1>" exists with title "Near Doc" category "books" and vector "[1.0, 0.0, 0.0]" for HASH documents
+    And search document "<doc2>" exists with title "Far Doc" category "books" and vector "[0.0, 1.0, 0.0]" for HASH documents
+    And search document "<doc3>" exists with title "Other Doc" category "toys" and vector "[0.9, 0.1, 0.0]" for HASH documents
+    When I search index "<index_name>" for vectors within radius 0.05 of "[0.95, 0.05, 0.0]" filtered by "@category:{books}" in <mode> mode
+    Then the search should return exactly <count> hits
+
+    Examples: Filter modes
+      | adapter_type | index_name         | prefix | doc1   | doc2   | doc3   | mode | count |
+      | container    | products-range-and | rngf   | rngf:1 | rngf:2 | rngf:3 | and  | 1     |
+      | container    | products-range-or  | rngo   | rngo:1 | rngo:2 | rngo:3 | or   | 3     |
+      | cluster      | cluster-range-and  | {rf}   | {rf}:1 | {rf}:2 | {rf}:3 | and  | 1     |
+
   Scenario Outline: KNN search with shard ratio on cluster
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" for HASH documents

@@ -714,6 +714,9 @@ result = handle.search(
 )
 ```
 
+By default the filter is intersected with the range (`filter_mode="and"`): only documents that match the filter and lie
+within the radius are returned. Pass `filter_mode="or"` to also return documents that match only the filter.
+
 ### Runtime Query Parameters
 
 Pass per-query tuning through `VectorQueryRuntimeDTO` on KNN, range, and hybrid builders. Supported fields include

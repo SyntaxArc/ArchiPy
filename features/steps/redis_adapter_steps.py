@@ -2934,6 +2934,33 @@ def step_when_range_search(context, index_name, radius, vector):
 
 
 @when(
+    r'I search index "(?P<index_name>[^"]+)" for vectors within radius (?P<radius>[\d.]+) of "(?P<vector>[^"]+)" '
+    r'filtered by "(?P<filter_expr>[^"]+)" in (?P<mode>and|or) mode',
+)
+def step_when_range_search_filtered(context, index_name, radius, vector, filter_expr, mode):
+    """Run a vector range search combined with a filter expression."""
+    handle = get_current_scenario_context(context).adapter.search_index(index_name)
+    query = SearchQueryDTO.from_range(
+        _parse_search_vector(vector),
+        radius=float(radius),
+        filter_expr=filter_expr,
+        filter_mode=mode,
+        return_fields=["title"],
+        limit=10,
+    )
+    result = _search_until_indexed(lambda: handle.search(query))
+    store_result(context, "search_result", result)
+
+
+@then(r"the search should return exactly (?P<count>\d+) hits?")
+def step_then_search_exact_hits(context, count):
+    """Assert the exact synchronous search hit count."""
+    result = get_result(context, "search_result")
+    assert result is not None
+    assert len(result.hits) == int(count), f"Expected {count} hits, got {len(result.hits)}"
+
+
+@when(
     r'I search index "(?P<index_name>[^"]+)" for nearest vector "(?P<vector>[^"]+)" with k (?P<k>\d+) '
     r"and shard_k_ratio (?P<ratio>[\d.]+)",
 )
