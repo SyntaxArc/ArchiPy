@@ -141,6 +141,12 @@ Feature: Kafka Clients and Spans Testing
     When I produce 200 messages to topic "test-topic-small-queue" without flushing through a queue limited to 5 messages
     Then the Kafka operation should raise nothing
 
+  Scenario: A failed delivery is reported to the caller and logged without the payload
+    Given an unreachable Kafka broker
+    When a sync producer on that broker fails to deliver "secret-payload" with key "user-key" to topic "failed-delivery-topic"
+    Then the delivery failure should be passed to the on_delivery callback
+    And the logs should mention topic "failed-delivery-topic" but not "secret-payload"
+
   Scenario: Producing into a full local queue is reported as resource exhaustion
     Given an unreachable Kafka broker
     When I produce 2 messages with a producer whose queue holds only 1 message on that broker

@@ -1206,6 +1206,49 @@ def step_operation_should_raise_nothing(context):
     assert error is None, f"Expected no error, got {error!r}"
 
 
+@when('a sync producer on that broker fails to deliver "{payload}" with key "{key}" to topic "{topic_name}"')
+def step_failed_delivery(context, payload, key, topic_name):
+    """Let a message time out in the local queue, capturing the producer logs and the on_delivery outcome."""
+    import logging
+
+    config = get_current_scenario_context(context).get("kafka_unreachable_config")
+    config = config.model_copy(update={"MESSAGE_TIMEOUT_MS": 1000})
+    records = []
+
+    class _Collector(logging.Handler):
+        def emit(self, record):
+            records.append(record.getMessage())
+
+    adapter_logger = logging.getLogger("archipy.adapters.kafka.adapters")
+    handler = _Collector()
+    adapter_logger.addHandler(handler)
+    outcomes = []
+    try:
+        producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+        producer.produce(payload, key=key, on_delivery=lambda error, message: outcomes.append(error))
+        producer.flush(timeout=10)
+    finally:
+        adapter_logger.removeHandler(handler)
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("kafka_delivery_logs", records)
+    scenario_context.store("kafka_delivery_outcomes", outcomes)
+
+
+@then('the delivery failure should be passed to the on_delivery callback')
+def step_delivery_failure_reported(context):
+    """The caller's callback must observe the failed delivery."""
+    outcomes = get_current_scenario_context(context).get("kafka_delivery_outcomes")
+    assert len(outcomes) == 1 and outcomes[0] is not None, f"Unexpected outcomes: {outcomes}"
+
+
+@then('the logs should mention topic "{topic_name}" but not "{payload}"')
+def step_logs_hide_payload(context, topic_name, payload):
+    """The failure is logged with its topic but never with the payload."""
+    logs = "\n".join(get_current_scenario_context(context).get("kafka_delivery_logs"))
+    assert f"topic={topic_name}" in logs, f"Missing topic in logs: {logs}"
+    assert payload not in logs, f"Payload leaked into logs: {logs}"
+
+
 @then('the Kafka operation should raise one of "{error_names}"')
 def step_operation_should_raise_one_of(context, error_names):
     """Assert the captured exception is one of the comma separated ArchiPy errors."""
