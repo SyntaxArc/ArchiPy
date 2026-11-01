@@ -59,6 +59,15 @@ CONNECTION_EXCEPTIONS = (
 )
 
 
+MAX_PRESIGNED_EXPIRES = 604800  # SigV4 limit: 7 days
+
+
+def _validate_presigned_expires(expires: int) -> None:
+    """Reject expiry values outside 1..604800 seconds (outside try bodies, TRY301)."""
+    if isinstance(expires, bool) or not isinstance(expires, int) or not 1 <= expires <= MAX_PRESIGNED_EXPIRES:
+        _raise_invalid_argument("expires")
+
+
 def _raise_invalid_argument(argument_name: str) -> NoReturn:
     """Raise InvalidArgumentError outside try bodies (TRY301)."""
     raise InvalidArgumentError(argument_name=argument_name)
@@ -800,7 +809,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         Args:
             bucket_name: Bucket name.
             object_name: Object name to generate URL for.
-            expires: URL expiry time in seconds.
+            expires: URL expiry time in seconds, between 1 and 604800.
 
         Returns:
             str: Presigned URL for downloading the object.
@@ -823,6 +832,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                         else "object_name"
                     ),
                 )
+            _validate_presigned_expires(expires)
             url = self._client.generate_presigned_url(
                 "get_object",
                 Params={"Bucket": bucket_name, "Key": object_name},
@@ -851,15 +861,13 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         Args:
             bucket_name: Bucket name.
             object_name: Object name to generate URL for.
-            expires: URL expiry time in seconds.
+            expires: URL expiry time in seconds, between 1 and 604800.
 
         Returns:
             str: Presigned URL for uploading the object.
 
         Raises:
-            InvalidArgumentError: If any required parameter is empty.
-            NotFoundError: If the bucket does not exist.
-            PermissionDeniedError: If permission to generate URL is denied.
+            InvalidArgumentError: If a parameter is empty or expires is outside 1..604800.
             ServiceUnavailableError: If the S3 service is unavailable.
             StorageError: If there's a storage-related error.
         """
@@ -874,6 +882,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                         else "object_name"
                     ),
                 )
+            _validate_presigned_expires(expires)
             url = self._client.generate_presigned_url(
                 "put_object",
                 Params={"Bucket": bucket_name, "Key": object_name},

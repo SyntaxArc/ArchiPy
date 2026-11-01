@@ -617,10 +617,20 @@ def step_object_exists_empty_bucket(context):
     _capture_error(context, lambda: adapter.object_exists("", "any.txt"))
 
 
+@when("I generate a presigned {kind} URL with expiry {expires:d}")
+def step_presigned_with_expiry(context, kind, expires):
+    adapter = get_minio_adapter(context)
+    method = adapter.presigned_get_object if kind == "GET" else adapter.presigned_put_object
+    _capture_error(context, lambda: method("errors-bucket", "expiry.txt", expires=expires))
+
+
 @then("the MinIO call should raise {error_name}")
 def step_verify_raised_error(context, error_name):
     scenario_context = get_current_scenario_context(context)
     error = scenario_context.get("raised_error")
+    if error_name == "NoError":
+        assert error is None, f"Expected no error, got {type(error).__name__}: {error}"
+        return
     assert error is not None, f"Expected {error_name} but no error was raised"
     assert type(error).__name__ == error_name, f"Expected {error_name}, got {type(error).__name__}: {error}"
 
