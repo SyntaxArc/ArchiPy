@@ -3,6 +3,7 @@ import io
 import json
 import os
 import tempfile
+from unittest import mock
 
 import certifi
 import httpx2
@@ -306,7 +307,11 @@ def step_upload_stream(context, input_kind, content, object_name, bucket_name):
     raw = content.encode("utf-8")
     if input_kind == "a binary stream":
         adapter.put_object_stream(
-            bucket_name, object_name, io.BytesIO(raw), length=len(raw), content_type="text/plain; charset=utf-8",
+            bucket_name,
+            object_name,
+            io.BytesIO(raw),
+            length=len(raw),
+            content_type="text/plain; charset=utf-8",
         )
     else:
         adapter.put_object_stream(bucket_name, object_name, raw, content_type="text/plain; charset=utf-8")
@@ -353,7 +358,9 @@ def step_verify_object_tag(context, object_name, bucket_name, key, value):
     context.logger.info(f"Verified tag '{key}={value}' on '{object_name}'")
 
 
-@when('I set a lifecycle rule on "{bucket_name}" with id "{rule_id}" expiring after {days:d} days with prefix "{prefix}"')
+@when(
+    'I set a lifecycle rule on "{bucket_name}" with id "{rule_id}" expiring after {days:d} days with prefix "{prefix}"',
+)
 def step_set_lifecycle_rule(context, bucket_name, rule_id, days, prefix):
     adapter = get_minio_adapter(context)
     rule = {
@@ -448,9 +455,7 @@ def step_verify_versioning_enabled(context, bucket_name):
 def step_verify_object_version_count(context, bucket_name, count, object_name):
     adapter = get_minio_adapter(context)
     versions = adapter.list_object_versions(bucket_name, prefix=object_name)
-    object_versions = [
-        v for v in versions if v["object_name"] == object_name and not v.get("is_delete_marker", False)
-    ]
+    object_versions = [v for v in versions if v["object_name"] == object_name and not v.get("is_delete_marker", False)]
     assert len(object_versions) >= count, (
         f"Expected at least {count} versions of '{object_name}', got {len(object_versions)}"
     )
@@ -563,6 +568,25 @@ def step_list_missing_bucket(context, bucket_name):
 def step_create_bucket_again(context, bucket_name):
     adapter = get_minio_adapter(context)
     _capture_error(context, lambda: adapter.make_bucket(bucket_name))
+
+
+@when('I check bucket existence while the S3 client raises botocore "{error_name}"')
+def step_bucket_exists_with_client_error(context, error_name):
+    from botocore.exceptions import (
+        ConnectionClosedError,
+        ConnectTimeoutError,
+        ReadTimeoutError,
+    )
+
+    adapter = get_minio_adapter(context)
+    error_classes = {
+        "ReadTimeoutError": ReadTimeoutError,
+        "ConnectTimeoutError": ConnectTimeoutError,
+        "ConnectionClosedError": ConnectionClosedError,
+    }
+    error = error_classes[error_name](endpoint_url="http://localhost:9000")
+    with mock.patch.object(adapter._client, "head_bucket", side_effect=error):
+        _capture_error(context, lambda: adapter.bucket_exists("errors-bucket"))
 
 
 @when("I check existence of an object with an empty bucket name")

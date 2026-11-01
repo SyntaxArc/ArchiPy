@@ -777,11 +777,10 @@ configured for each method based on how frequently the data typically changes:
 
 - Public keys and certificate information: 1 hour
 - Realm JWKS used for local token verification: 1 hour, fetched again (at most every 10 seconds) when a token names an unknown `kid`, so a rotated signing key is picked up
-- User information from tokens: 30 seconds
 - User details and role information: 5 minutes
 
 !!! note
-    Token validation is never cached. If Keycloak cannot be reached while its JWKS is fetched, `validate_token` and `get_token_info` raise `ServiceUnavailableError` instead of reporting an invalid token. Write operations such as user creation and updates clear the relevant caches.
+    Token validation, `get_userinfo` and `check_permissions_batch` are never cached by the adapters. If Keycloak cannot be reached while its JWKS is fetched, `validate_token` and `get_token_info` raise `ServiceUnavailableError` instead of reporting an invalid token. Write operations such as user creation and updates clear the relevant caches.
 
 You can clear all caches if needed. `clear_all_caches()` works with or without admin mode: it never builds the admin
 client or logs in to Keycloak.

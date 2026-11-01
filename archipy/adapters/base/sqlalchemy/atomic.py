@@ -208,9 +208,16 @@ def _load_session_manager_registry(db_type: str) -> type[SessionManagerRegistry]
 
 
 async def _close_async_session(session: Any, session_manager: AsyncSessionManagerPort) -> None:
-    """Close the session and drop it from the manager."""
-    await session.close()
-    await session_manager.remove_session()
+    """Close the session and drop it from the manager.
+
+    Only ``close`` is shielded: the registry of the async scoped session is keyed by the current task, so
+    ``remove_session`` must run in the calling task, not in the task ``asyncio.shield`` creates.
+    """
+    try:
+        # Cleanup must finish even when the task is being cancelled
+        await asyncio.shield(session.close())
+    finally:
+        await session_manager.remove_session()
 
 
 async def _run_async_scope[R](
@@ -297,8 +304,7 @@ def _create_async_atomic_wrapper[R](
             if not is_nested:
                 session.info.pop(atomic_flag, None)
             if not is_nested and not session.in_transaction():
-                # Cleanup must finish even when the task is being cancelled
-                await asyncio.shield(_close_async_session(session, session_manager))
+                await _close_async_session(session, session_manager)
 
     return async_wrapper
 

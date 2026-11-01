@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, NoReturn, override
 import hvac.exceptions
 from requests.exceptions import (
     ConnectionError as RequestsConnectionError,
+    RetryError as RequestsRetryError,
     Timeout as RequestsTimeout,
 )
 
@@ -95,7 +96,16 @@ class VaultExceptionHandlerMixin:
             hvac.exceptions.InvalidRequest | hvac.exceptions.ParamValidationError,
         ):
             raise InvalidArgumentError(argument_name=operation) from exception
-        if isinstance(exception, hvac.exceptions.VaultDown | hvac.exceptions.RateLimitExceeded):
+        if isinstance(
+            exception,
+            hvac.exceptions.VaultDown
+            | hvac.exceptions.RateLimitExceeded
+            | hvac.exceptions.InternalServerError
+            | hvac.exceptions.BadGateway
+            | RequestsRetryError,
+        ):
+            # Fixed payload: the exception text carries the Vault host and path.
+            logger.warning("Vault unavailable during %s: %s", operation, exception)
             raise UnavailableError(resource_type="Vault", additional_data={"operation": operation}) from exception
         if isinstance(exception, RequestsConnectionError | RequestsTimeout):
             raise NetworkError(service="Vault") from exception

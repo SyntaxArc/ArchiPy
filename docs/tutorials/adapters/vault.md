@@ -209,6 +209,14 @@ map onto nested config fields (e.g. `REDIS__PASSWORD` → `REDIS.PASSWORD`).
 See [Configuration Management](../config_management.md) for priority order and
 settings-source details.
 
+### Retries and Outages
+
+`VAULT__RETRIES_MAX_ATTEMPTS` retries failed connections for every call. Read errors and
+`500`/`502`/`503`/`504` responses are retried only for idempotent reads (`GET`, `HEAD`, `LIST`),
+so a write, delete or lease operation is never replayed. When Vault stays unavailable the adapter
+raises `UnavailableError` with a fixed message (the Vault address and path are logged, not
+returned in the error).
+
 ## See Also
 
 - [hvac overview](https://python-hvac.org/en/stable/overview.html) — Client init and auth
