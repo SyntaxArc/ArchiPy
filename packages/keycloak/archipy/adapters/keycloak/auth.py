@@ -24,6 +24,7 @@ from archipy.models.dtos.keycloak.token_dtos import KeycloakTokenClaimsDTO, Keyc
 from archipy.models.dtos.keycloak_dtos import ActorDTO, AuthenticatedUserDTO
 from archipy.models.errors import (
     BaseError,
+    ConfigurationError,
     InternalError,
     InvalidArgumentError,
     PermissionDeniedError,
@@ -631,8 +632,16 @@ def fastapi_auth(
         InvalidTokenError: If token is invalid
         TokenExpiredError: If token is expired
         PermissionDeniedError: If user lacks required roles, permissions, or resource access
-        InvalidArgumentError: If resource_type_param is missing when resource_type is provided
+        InvalidArgumentError: If the path parameter named by resource_type_param is missing from the request
+        ConfigurationError: At decoration time, if only one of resource_type and resource_type_param is set
     """
+    if bool(resource_type) != bool(resource_type_param):
+        # Setting one side only would silently skip the ownership check, so refuse to build the guard.
+        raise ConfigurationError(
+            operation="fastapi_auth",
+            reason="resource_type and resource_type_param must be set together",
+            lang=lang,
+        )
 
     async def dependency(
         request: Request,
