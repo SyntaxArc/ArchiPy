@@ -255,6 +255,26 @@ class ScyllaDBExceptionHandlerMixin:
         return identifier
 
     @staticmethod
+    def _warn_single_replica(config: ScyllaDBConfig, keyspace: str, replication_factor: int) -> None:
+        """Log a warning when a keyspace is created with a single replica, which has no redundancy.
+
+        Args:
+            config: The adapter configuration.
+            keyspace: Name of the keyspace being created.
+            replication_factor: Replication factor used by ``SimpleStrategy``.
+        """
+        if config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and config.REPLICATION_CONFIG:
+            factors = list(config.REPLICATION_CONFIG.values())
+        else:
+            factors = [replication_factor]
+        if max(factors) <= 1:
+            logger.warning(
+                "ScyllaDB keyspace %s is created with replication factor 1: losing one node loses data; "
+                "use at least 3 in production",
+                keyspace,
+            )
+
+    @staticmethod
     def _validate_non_negative_int(value: int, field_name: str) -> int:
         """Validate a numeric value that is interpolated into CQL text.
 
@@ -520,6 +540,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         keyspace = self._validate_cql_identifier(keyspace, "keyspace")
         replication_factor = self._validate_non_negative_int(replication_factor, "replication_factor")
+        self._warn_single_replica(self.config, keyspace, replication_factor)
         # Use configured replication strategy
         if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
             # Build replication config for NetworkTopologyStrategy
@@ -1178,6 +1199,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         keyspace = self._validate_cql_identifier(keyspace, "keyspace")
         replication_factor = self._validate_non_negative_int(replication_factor, "replication_factor")
+        self._warn_single_replica(self.config, keyspace, replication_factor)
         # Use configured replication strategy
         if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
             # Build replication config for NetworkTopologyStrategy

@@ -389,6 +389,23 @@ Feature: ScyllaDB Adapter
       | asyn |
 
   @needs-scylladb
+  Scenario Outline: Creating a single replica keyspace logs a warning
+    Given a ScyllaDB adapter is configured
+    When I create the keyspace "<keyspace>" with replication factor <factor> and capture the adapter log
+    Then the adapter log should <expectation> a single replica warning
+
+    Examples: Sync
+      | keyspace | factor | expectation |
+      | rf_one   | 1      | contain     |
+      | rf_two   | 2      | not contain |
+
+    @async
+    Examples: Async
+      | keyspace  | factor | expectation |
+      | rf_one_as | 1      | contain     |
+      | rf_two_as | 2      | not contain |
+
+  @needs-scylladb
   Scenario Outline: Prepared statements are cached and executed with bound parameters
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
     When I execute a prepared ScyllaDB insert into "<table>" twice
