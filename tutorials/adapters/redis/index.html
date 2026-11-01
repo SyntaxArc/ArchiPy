@@ -949,6 +949,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#async-iteration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Async iteration
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3927,6 +3938,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#async-iteration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Async iteration
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -4391,6 +4413,9 @@ clients and their connection pools. Both adapters also work as context managers:
 </span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="k">async</span> <span class="k">with</span> <span class="n">AsyncRedisAdapter</span><span class="p">()</span> <span class="k">as</span> <span class="n">redis</span><span class="p">:</span>
 </span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="k">await</span> <span class="n">redis</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">"key"</span><span class="p">,</span> <span class="s2">"value"</span><span class="p">)</span>
 </span></code></pre></div>
+<h3 id="async-iteration">Async iteration<a class="headerlink" href="#async-iteration" title="Permanent link">&para;</a></h3>
+<p>On the async adapter, <code>scan_iter()</code> and <code>sscan_iter()</code> can be iterated directly with <code>async for key in
+redis.scan_iter(match="user:*")</code>. The older <code>async for key in await redis.scan_iter(...)</code> form still works.</p>
 <h2 id="caching-patterns">Caching Patterns<a class="headerlink" href="#caching-patterns" title="Permanent link">&para;</a></h2>
 <h3 id="function-result-caching">Function Result Caching<a class="headerlink" href="#function-result-caching" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
