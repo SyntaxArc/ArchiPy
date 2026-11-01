@@ -214,6 +214,15 @@ except InternalError as e:
 else:
     logger.info("Keyed message enqueued")
 
+# Observe the delivery outcome: the callback runs while the producer is polled (later produce calls and flush).
+# A failed delivery is also logged with topic, partition and key length, never with the payload.
+def on_delivery(error, message):
+    if error is not None:
+        logger.error("Delivery to %s failed: %s", message.topic(), error)
+
+
+producer.produce("Hello, Kafka with callback!", on_delivery=on_delivery)
+
 # Flush to ensure all pending messages are delivered
 try:
     producer.flush(timeout=10)
