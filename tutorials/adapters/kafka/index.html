@@ -3958,8 +3958,12 @@ asynchronous producing/consuming via <code>confluent_kafka.aio</code>.</p>
 <h3 id="direct-configuration">Direct Configuration<a class="headerlink" href="#direct-configuration" title="Permanent link">&para;</a></h3>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>With <code>SECURITY_PROTOCOL</code> set to <code>SASL_PLAINTEXT</code> or <code>SASL_SSL</code>, <code>SASL_MECHANISM</code>, <code>USERNAME</code> and <code>PASSWORD</code> are all
-required. Load the password from the environment or a secrets store, not from source code.</p>
+<p>With <code>SECURITY_PROTOCOL</code> set to <code>SASL_PLAINTEXT</code> or <code>SASL_SSL</code>, <code>SASL_MECHANISM</code> is required, and <code>USERNAME</code> and
+<code>PASSWORD</code> are required for <code>PLAIN</code>, <code>SCRAM-SHA-256</code> and <code>SCRAM-SHA-512</code>. <code>GSSAPI</code> and <code>OAUTHBEARER</code> need no
+username or password. Load the password from the environment or a secrets store, not from source code.</p>
+<p>Each security setting is applied when it is set, based on <code>SECURITY_PROTOCOL</code>: SASL settings for the <code>SASL_*</code>
+protocols, and <code>SSL_CA_FILE</code>, <code>SSL_CERT_FILE</code>, <code>SSL_KEY_FILE</code> for <code>SSL</code> and <code>SASL_SSL</code>. mTLS without SASL works
+with <code>SECURITY_PROTOCOL="SSL"</code> and a certificate and key; leave <code>SSL_CA_FILE</code> unset to use the system CA store.</p>
 </div>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.configs.config_template</span><span class="w"> </span><span class="kn">import</span> <span class="n">KafkaConfig</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
@@ -3973,7 +3977,7 @@ required. Load the password from the environment or a secrets store, not from so
 </span></code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">Broker hostname verification is on by default</p>
-<p>With credentials and <code>SSL_CA_FILE</code> set, the adapters verify that each broker certificate matches the broker
+<p>With <code>SECURITY_PROTOCOL</code> set to <code>SSL</code> or <code>SASL_SSL</code>, the adapters verify that each broker certificate matches the broker
 hostname (<code>SSL_ENDPOINT_IDENTIFICATION_ALGORITHM="https"</code>, the default). Earlier releases turned this check off.
 Brokers reached by IP address, or whose certificate SAN does not list the address you connect to, now fail the TLS
 handshake. Fix the certificates if you can. To keep the old behavior, set
