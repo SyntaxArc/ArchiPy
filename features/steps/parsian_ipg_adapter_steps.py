@@ -1,4 +1,5 @@
 import inspect
+import logging
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -155,6 +156,24 @@ def step_given_global_login_account(context, account):
     original = parsian_config.LOGIN_ACCOUNT
     parsian_config.LOGIN_ACCOUNT = account
     context.add_cleanup(setattr, parsian_config, "LOGIN_ACCOUNT", original)
+
+
+@given("Parsian debug logging is captured")
+def step_given_log_capture(context):
+    records = []
+
+    class _Collector(logging.Handler):
+        def emit(self, record):
+            records.append(record.getMessage())
+
+    handler = _Collector(level=logging.DEBUG)
+    adapter_logger = logging.getLogger(parsian_adapters.__name__)
+    original_level = adapter_logger.level
+    adapter_logger.setLevel(logging.DEBUG)
+    adapter_logger.addHandler(handler)
+    context.add_cleanup(adapter_logger.removeHandler, handler)
+    context.add_cleanup(adapter_logger.setLevel, original_level)
+    get_current_scenario_context(context).store("parsian_logs", records)
 
 
 @given('the Parsian gateway answers "{operation}" with:')
@@ -349,3 +368,13 @@ def step_then_transport(context, seconds, proxy_use):
             assert transport.operation_timeout == seconds, transport.operation_timeout
             proxied = bool(transport.session.proxies)
         assert proxied == (proxy_use == "uses"), f"proxy_use={proxy_use}, proxied={proxied}"
+
+
+@then('the Parsian debug logs contain neither "{secret}" nor "{token}" but do name order {order_id:d}')
+def step_then_logs_redacted(context, secret, token, order_id):
+    logs = get_current_scenario_context(context).get("parsian_logs")
+    assert logs, "No debug logs were captured"
+    joined = "\n".join(logs)
+    assert secret not in joined, "login account leaked into the logs"
+    assert token not in joined, "full token leaked into the logs"
+    assert f"order_id={order_id}" in joined

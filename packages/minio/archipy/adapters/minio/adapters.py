@@ -10,8 +10,11 @@ from botocore.client import Config
 from botocore.exceptions import (
     BotoCoreError,
     ClientError,
+    ConnectionClosedError,
     ConnectionError as BotocoreConnectionError,
+    ConnectTimeoutError,
     EndpointConnectionError,
+    ReadTimeoutError,
 )
 
 from archipy.adapters.minio.ports import (
@@ -44,6 +47,15 @@ T = TypeVar("T")  # Return type
 F = TypeVar("F", bound=Callable[..., Any])  # Function type
 
 logger = logging.getLogger(__name__)
+
+CONNECTION_EXCEPTIONS = (
+    ConnectionError,
+    BotocoreConnectionError,
+    EndpointConnectionError,
+    ConnectTimeoutError,
+    ReadTimeoutError,
+    ConnectionClosedError,
+)
 
 
 def _raise_invalid_argument(argument_name: str) -> NoReturn:
@@ -109,10 +121,16 @@ class MinioExceptionHandlerMixin:
         """
         error_msg = str(exception).lower()
 
+        if isinstance(exception, (ConnectTimeoutError, ReadTimeoutError)):
+            raise ConnectionTimeoutError(service="S3") from exception
+
         if "timeout" in error_msg or "timed out" in error_msg:
             raise ConnectionTimeoutError(service="S3") from exception
 
-        if isinstance(exception, (BotocoreConnectionError, EndpointConnectionError)):
+        if isinstance(
+            exception,
+            (BotocoreConnectionError, EndpointConnectionError, ConnectionClosedError, ConnectionError),
+        ):
             raise NetworkError(service="S3") from exception
 
         if "unavailable" in error_msg or "connection" in error_msg:
@@ -217,8 +235,15 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 raise ConfigurationError(operation="s3") from e
             else:
                 raise InternalError(additional_data={"component": "S3"}) from e
-        except (BotocoreConnectionError, EndpointConnectionError) as e:
-            raise NetworkError(service="S3") from e
+        except (
+            ConnectTimeoutError,
+            ReadTimeoutError,
+            BotocoreConnectionError,
+            EndpointConnectionError,
+            ConnectionClosedError,
+            ConnectionError,
+        ) as e:
+            self._handle_connection_exception(e, "init")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             raise InternalError(additional_data={"component": "S3"}) from e
 
@@ -303,7 +328,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 return False
             self._handle_client_exception(e, "bucket_exists")
             raise
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "bucket_exists")
             raise
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
@@ -346,7 +371,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "make_bucket")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "make_bucket")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "make_bucket")
@@ -375,7 +400,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "remove_bucket")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "remove_bucket")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "remove_bucket")
@@ -398,7 +423,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except ClientError as e:
             self._handle_client_exception(e, "list_buckets")
             raise
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "list_buckets")
             raise
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
@@ -456,7 +481,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "put_object")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "put_object")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "put_object")
@@ -492,7 +517,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "get_object")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "get_object")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "get_object")
@@ -530,7 +555,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "remove_object")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "remove_object")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "remove_object")
@@ -565,7 +590,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "remove_objects")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "remove_objects")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "remove_objects")
@@ -607,7 +632,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 return False
             self._handle_client_exception(e, "object_exists")
             raise
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "object_exists")
             raise
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
@@ -684,7 +709,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except ClientError as e:
             self._handle_client_exception(e, "list_objects")
             raise
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "list_objects")
             raise
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
@@ -730,7 +755,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except ClientError as e:
             self._handle_client_exception(e, "stat_object")
             raise
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "stat_object")
             raise
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
@@ -787,7 +812,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except ClientError as e:
             self._handle_client_exception(e, "presigned_get_object")
             raise
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "presigned_get_object")
             raise
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
@@ -838,7 +863,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except ClientError as e:
             self._handle_client_exception(e, "presigned_put_object")
             raise
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "presigned_put_object")
             raise
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
@@ -881,7 +906,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "set_bucket_policy")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "set_bucket_policy")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "set_bucket_policy")
@@ -915,7 +940,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except ClientError as e:
             self._handle_client_exception(e, "get_bucket_policy")
             raise
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "get_bucket_policy")
             raise
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
@@ -984,7 +1009,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "copy_object")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "copy_object")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "copy_object")
@@ -1055,7 +1080,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "put_object_stream")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "put_object_stream")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "put_object_stream")
@@ -1098,7 +1123,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except ClientError as e:
             self._handle_client_exception(e, "get_object_stream")
             raise
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "get_object_stream")
             raise
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
@@ -1150,7 +1175,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "set_object_tags")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "set_object_tags")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "set_object_tags")
@@ -1186,7 +1211,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "remove_object_tags")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "remove_object_tags")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "remove_object_tags")
@@ -1225,7 +1250,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except ClientError as e:
             self._handle_client_exception(e, "get_object_tags")
             raise
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "get_object_tags")
             raise
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
@@ -1280,7 +1305,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "set_bucket_lifecycle")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "set_bucket_lifecycle")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "set_bucket_lifecycle")
@@ -1313,7 +1338,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                 return []
             self._handle_client_exception(e, "get_bucket_lifecycle")
             raise
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "get_bucket_lifecycle")
             raise
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
@@ -1347,7 +1372,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "delete_bucket_lifecycle")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "delete_bucket_lifecycle")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "delete_bucket_lifecycle")
@@ -1379,7 +1404,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "set_bucket_versioning")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "set_bucket_versioning")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "set_bucket_versioning")
@@ -1410,7 +1435,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except ClientError as e:
             self._handle_client_exception(e, "get_bucket_versioning")
             raise
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "get_bucket_versioning")
             raise
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
@@ -1480,7 +1505,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
         except ClientError as e:
             self._handle_client_exception(e, "list_object_versions")
             raise
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "list_object_versions")
             raise
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
@@ -1519,7 +1544,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             raise
         except ClientError as e:
             self._handle_client_exception(e, "remove_object_version")
-        except (ConnectionError, EndpointConnectionError) as e:
+        except CONNECTION_EXCEPTIONS as e:
             self._handle_connection_exception(e, "remove_object_version")
         except (BotoCoreError, OSError, ValueError, TypeError) as e:
             self._handle_general_exception(e, "remove_object_version")

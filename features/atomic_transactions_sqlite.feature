@@ -222,6 +222,16 @@ Feature: SQLAlchemy Atomic Transactions on SQLite
       | sync  |
       | async |
 
+  @async
+  Scenario Outline: Async atomic blocks leave no session behind in the registry
+    Given the application database is initialized for <db_type>
+    When 20 async atomic blocks run in separate tasks on <db_type>
+    Then the async session registry should be empty
+
+    Examples:
+      | db_type |
+      | sqlite  |
+
   @unit
   Scenario Outline: Driver error codes map to specific database errors
     When a <kind> error with driver code <code> is handled by the atomic decorator

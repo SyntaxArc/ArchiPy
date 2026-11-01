@@ -91,8 +91,10 @@ config = MySQLSQLAlchemyConfig(
 
 ```python
 import logging
+from uuid import uuid4
 
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Uuid
+from sqlalchemy.orm import Synonym
 
 from archipy.adapters.mysql.sqlalchemy.adapters import MySQLSQLAlchemyAdapter
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
@@ -105,6 +107,10 @@ logger = logging.getLogger(__name__)
 # Define a model
 class User(BaseEntity):
     __tablename__ = "users"
+
+    # BaseEntity requires a pk_uuid synonym that points at the primary key column
+    uuid = Column(Uuid, primary_key=True, default=uuid4)
+    pk_uuid = Synonym("uuid")
     username = Column(String(100), unique=True)
     email = Column(String(255), unique=True)
 
@@ -265,7 +271,7 @@ import logging
 from uuid import UUID
 
 from archipy.models.errors import (
-    AlreadyExistsError,
+    DatabaseConstraintError,
     DatabaseConnectionError,
     DatabaseQueryError,
     NotFoundError,
@@ -313,8 +319,9 @@ from uuid import UUID
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, EmailStr
 
+from archipy.adapters.base.sqlalchemy.atomic import mysql_sqlalchemy_atomic
 from archipy.adapters.mysql.sqlalchemy.adapters import MySQLSQLAlchemyAdapter
-from archipy.models.errors import AlreadyExistsError, DatabaseQueryError, NotFoundError
+from archipy.models.errors import DatabaseConstraintError, DatabaseQueryError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -334,13 +341,29 @@ class UserResponse(BaseModel):
     email: str
 
 
+@mysql_sqlalchemy_atomic
+def create_user_record(username: str, email: str) -> dict[str, str | UUID]:
+    """Create a user inside one transaction and return plain values (entities expire after the commit)."""
+    created_user = adapter.create(User(username=username, email=email))
+    return {"uuid": created_user.uuid, "username": created_user.username, "email": created_user.email}
+
+
+@mysql_sqlalchemy_atomic
+def get_user_record(user_id: UUID) -> dict[str, str | UUID] | None:
+    """Read a user inside one transaction and return plain values."""
+    user = adapter.get_by_uuid(User, user_id)
+    if user is None:
+        return None
+    return {"uuid": user.uuid, "username": user.username, "email": user.email}
+
+
+# Plain ``def`` handlers: FastAPI runs them in a worker thread, so the blocking sync adapter does not stall the loop
 @app.post("/users", response_model=UserResponse)
-async def create_user(user_data: UserCreate) -> dict[str, str | UUID]:
+def create_user(user_data: UserCreate) -> dict[str, str | UUID]:
     """Create a new user."""
     try:
-        user = User(username=user_data.username, email=user_data.email)
-        created_user = adapter.create(user)
-    except AlreadyExistsError as e:
+        created_user = create_user_record(user_data.username, user_data.email)
+    except DatabaseConstraintError as e:
         logger.warning(f"User already exists: {user_data.username}")
         raise HTTPException(status_code=409, detail="User already exists") from e
     except DatabaseQueryError as e:
@@ -348,30 +371,22 @@ async def create_user(user_data: UserCreate) -> dict[str, str | UUID]:
         raise HTTPException(status_code=500, detail="Database error") from e
     else:
         logger.info(f"User created: {user_data.username}")
-        return {
-            "uuid": created_user.uuid,
-            "username": created_user.username,
-            "email": created_user.email,
-        }
+        return created_user
 
 
 @app.get("/users/{user_id}", response_model=UserResponse)
-async def get_user(user_id: UUID) -> dict[str, str | UUID]:
+def get_user(user_id: UUID) -> dict[str, str | UUID]:
     """Get a user by ID."""
     try:
-        user = adapter.get_by_uuid(User, user_id)
+        user = get_user_record(user_id)
     except DatabaseQueryError as e:
         logger.error(f"Database query failed: {e}")
         raise HTTPException(status_code=500, detail="Database error") from e
     else:
-        if not user:
+        if user is None:
             raise HTTPException(status_code=404, detail="User not found")
-        logger.info(f"User retrieved: {user.username}")
-        return {
-            "uuid": user.uuid,
-            "username": user.username,
-            "email": user.email,
-        }
+        logger.info(f"User retrieved: {user['username']}")
+        return user
 ```
 
 ## See Also

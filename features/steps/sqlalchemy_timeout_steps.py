@@ -134,3 +134,17 @@ def step_when_read_foreign_keys(context, kind, value):
     else:
         result = asyncio.run(read_async())
     get_current_scenario_context(context).store("session_setting", result)
+
+
+@when("I build a {kind} sqlite session manager with EXPIRE_ON_COMMIT {value}")
+def step_when_build_sqlite_manager_expire(context, kind, value):
+    section = getattr(BaseConfig.global_config(), _SECTIONS["sqlite"])
+    configs = section.model_copy(update={"EXPIRE_ON_COMMIT": json.loads(value)})
+    manager = _MANAGERS["sqlite", kind](configs)
+    get_current_scenario_context(context).store("session_factory", manager._session_generator.session_factory)
+
+
+@then("the session factory should expire on commit {expected}")
+def step_then_session_factory_expire(context, expected):
+    factory = get_current_scenario_context(context).get("session_factory")
+    assert factory.kw["expire_on_commit"] is json.loads(expected), factory.kw

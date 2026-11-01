@@ -64,11 +64,13 @@ config = StarRocksSQLAlchemyConfig(
 ```python
 import logging
 from datetime import datetime
+from uuid import uuid4
 
 from archipy.adapters.starrocks.sqlalchemy.adapters import StarrocksSQLAlchemyAdapter
 from archipy.models.entities.sqlalchemy.base_entities import BaseEntity
 from archipy.models.errors import DatabaseConnectionError, DatabaseQueryError
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Column, DateTime, Integer, String, Uuid
+from sqlalchemy.orm import Synonym
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -77,6 +79,15 @@ logger = logging.getLogger(__name__)
 # Define a model
 class User(BaseEntity):
     __tablename__ = "users"
+    __table_args__ = {
+        "starrocks_primary_key": "uuid",
+        "starrocks_distributed_by": "HASH(uuid) BUCKETS 10",
+        "starrocks_properties": {"replication_num": "1"},
+    }
+
+    # BaseEntity requires a pk_uuid synonym that points at the primary key column
+    uuid = Column(Uuid, primary_key=True, default=uuid4)
+    pk_uuid = Synonym("uuid")
     username = Column(String(100), unique=True)
     email = Column(String(255), unique=True)
     age = Column(Integer)
@@ -246,7 +257,7 @@ import logging
 from uuid import UUID
 
 from archipy.models.errors import (
-    AlreadyExistsError,
+    DatabaseConstraintError,
     DatabaseConnectionError,
     DatabaseQueryError,
     NotFoundError,
@@ -397,8 +408,9 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import func, select
 
+from archipy.adapters.base.sqlalchemy.atomic import starrocks_sqlalchemy_atomic
 from archipy.adapters.starrocks.sqlalchemy.adapters import StarrocksSQLAlchemyAdapter
-from archipy.models.errors import DatabaseQueryError, NotFoundError
+from archipy.models.errors import DatabaseConstraintError, DatabaseQueryError
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -420,32 +432,37 @@ class UserResponse(BaseModel):
     age: int
 
 
+@starrocks_sqlalchemy_atomic
+def create_user_record(username: str, email: str, age: int) -> dict[str, str | UUID | int]:
+    """Create a user inside one transaction and return plain values (entities expire after the commit)."""
+    created_user = adapter.create(User(username=username, email=email, age=age, created_at=datetime.now()))
+    return {
+        "uuid": created_user.uuid,
+        "username": created_user.username,
+        "email": created_user.email,
+        "age": created_user.age,
+    }
+
+
+# Plain ``def`` handler: FastAPI runs it in a worker thread, so the blocking sync adapter does not stall the loop
 @app.post("/users", response_model=UserResponse)
-async def create_user(user_data: UserCreate) -> dict[str, str | UUID | int]:
+def create_user(user_data: UserCreate) -> dict[str, str | UUID | int]:
     """Create a new user for analytics."""
     try:
-        user = User(
-            username=user_data.username,
-            email=user_data.email,
-            age=user_data.age,
-            created_at=datetime.now(),
-        )
-        created_user = adapter.create(user)
+        created_user = create_user_record(user_data.username, user_data.email, user_data.age)
+    except DatabaseConstraintError as e:
+        logger.warning(f"User already exists: {user_data.username}")
+        raise HTTPException(status_code=409, detail="User already exists") from e
     except DatabaseQueryError as e:
         logger.error(f"Failed to create user: {e}")
         raise HTTPException(status_code=500, detail="Database error") from e
     else:
         logger.info(f"User created: {user_data.username}")
-        return {
-            "uuid": created_user.uuid,
-            "username": created_user.username,
-            "email": created_user.email,
-            "age": created_user.age,
-        }
+        return created_user
 
 
 @app.get("/analytics/age-distribution")
-async def get_age_distribution() -> dict[str, list[dict[str, int]]]:
+def get_age_distribution() -> dict[str, list[dict[str, int]]]:
     """Get age distribution analytics."""
     try:
         with adapter.get_session() as session:

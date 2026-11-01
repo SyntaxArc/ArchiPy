@@ -391,6 +391,28 @@ def step_then_postgres_error_hides_password(context, password):
         raise AssertionError("expected a ValidationError")
 
 
+@then('the PostgreSQL configuration repr should not contain "{secret}"')
+def step_then_postgres_repr_hides(context, secret):
+    config = get_current_scenario_context(context).get("postgres_config")
+    assert secret not in repr(config), repr(config)
+
+
+@then('the {kind} session manager singleton key should not contain "{secret}"')
+def step_then_singleton_key_hides(context, kind, secret):
+    from archipy.adapters.postgres.sqlalchemy.session_managers import (
+        AsyncPostgresSQlAlchemySessionManager,
+        PostgresSQlAlchemySessionManager,
+    )
+
+    config = get_current_scenario_context(context).get("postgres_config")
+    manager_class = AsyncPostgresSQlAlchemySessionManager if kind == "async" else PostgresSQlAlchemySessionManager
+    key = manager_class._singleton_key(config)
+    assert secret not in key, key
+    assert key != manager_class._singleton_key(config.model_copy(update={"PASSWORD": secret + "x"})), (
+        "key ignores password"
+    )
+
+
 @then('the PostgreSQL DSN should be "{dsn}"')
 def step_then_postgres_dsn(context, dsn):
     config = get_current_scenario_context(context).get("postgres_config")
