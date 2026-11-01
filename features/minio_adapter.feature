@@ -191,6 +191,18 @@ Feature: MinIO Operations Testing
       | stat missing object "nope.txt" in bucket "errors-bucket" | object   |
       | list objects in missing bucket "no-such-bucket-xyz"      | bucket   |
 
+  Scenario Outline: Copy keeps the source key literal for <key>
+    Given a bucket named "copy-key-bucket" exists
+    And an object "<key>" exists with content "literal" in bucket "copy-key-bucket"
+    When I copy object "<key>" from bucket "copy-key-bucket" to "copied.txt" in the same bucket
+    Then downloading "copied.txt" from "copy-key-bucket" should return content "literal"
+
+    Examples:
+      | key                  |
+      | plain.txt            |
+      | tricky?versionId=abc |
+      | with space+plus.txt  |
+
   Scenario Outline: Botocore connection failures map to <error>
     When I check bucket existence while the S3 client raises botocore "<raised_error>"
     Then the MinIO call should raise <error>
