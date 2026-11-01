@@ -3670,3 +3670,44 @@ def step_then_config_rejected(context):
     """Verify the config was rejected."""
     scenario_context = get_current_scenario_context(context)
     assert scenario_context.config_error is not None, "Config was accepted"
+
+
+def _plain(value):
+    """Decode a bytes response to str."""
+    return value.decode() if isinstance(value, bytes) else value
+
+
+@when(r'I write bytes keys, fields and members tagged "(?P<tag>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
+def step_when_write_bytes(context, tag, adapter_type):
+    """Write bytes keys, hash fields and sorted-set members."""
+    adapter = get_current_scenario_context(context).adapter
+    adapter.mset({f"{tag}:k1".encode(): "v"})
+    adapter.hset(f"{tag}:h", f"{tag}-f".encode(), b"val")
+    adapter.zadd(f"{tag}:z".encode(), {f"{tag}-m".encode(): 1.0})
+
+
+@then(r'the bytes keys, fields and members tagged "(?P<tag>[^"]+)" should be stored as plain text')
+def step_then_bytes_plain(context, tag):
+    """Verify no b'..' repr was stored."""
+    adapter = get_current_scenario_context(context).adapter
+    assert _plain(adapter.get(f"{tag}:k1")) == "v"
+    assert {_plain(k): _plain(v) for k, v in adapter.hgetall(f"{tag}:h").items()} == {f"{tag}-f": "val"}
+    assert [_plain(m) for m in adapter.zrange(f"{tag}:z", 0, -1)] == [f"{tag}-m"]
+
+
+@when(r'I write bytes keys, fields and members tagged "(?P<tag>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
+async def step_when_write_bytes_async(context, tag, adapter_type):
+    """Write bytes keys, hash fields and sorted-set members asynchronously."""
+    adapter = get_current_scenario_context(context).async_adapter
+    await adapter.mset({f"{tag}:k1".encode(): "v"})
+    await adapter.hset(f"{tag}:h", f"{tag}-f".encode(), b"val")
+    await adapter.zadd(f"{tag}:z".encode(), {f"{tag}-m".encode(): 1.0})
+
+
+@then(r'the async bytes keys, fields and members tagged "(?P<tag>[^"]+)" should be stored as plain text')
+async def step_then_bytes_plain_async(context, tag):
+    """Verify no b'..' repr was stored."""
+    adapter = get_current_scenario_context(context).async_adapter
+    assert _plain(await adapter.get(f"{tag}:k1")) == "v"
+    assert {_plain(k): _plain(v) for k, v in (await adapter.hgetall(f"{tag}:h")).items()} == {f"{tag}-f": "val"}
+    assert [_plain(m) for m in await adapter.zrange(f"{tag}:z", 0, -1)] == [f"{tag}-m"]
