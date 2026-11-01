@@ -22,6 +22,7 @@ from archipy.adapters.redis.adapter_mixins._shared import (
     _redis_connection_kwargs,
     _sentinel_kwargs,
     _sentinel_redis_kwargs,
+    _tls_acl_kwargs,
 )
 from archipy.adapters.redis.search import (
     AsyncRedisSearchHandle,
@@ -120,6 +121,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             health_check_interval=configs.HEALTH_CHECK_INTERVAL,
             require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
             protocol=configs.PROTOCOL,
+            **_tls_acl_kwargs(configs),
             **cluster_kwargs,
         )
 
@@ -204,6 +206,7 @@ class RedisConnectionMixin(SyncRedisMixinBase):
                 health_check_interval=configs.HEALTH_CHECK_INTERVAL,
                 require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
                 protocol=configs.PROTOCOL,
+                **_tls_acl_kwargs(configs),
                 **cluster_kwargs,
             )
 
@@ -365,6 +368,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
             health_check_interval=configs.HEALTH_CHECK_INTERVAL,
             require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
             protocol=configs.PROTOCOL,
+            **_tls_acl_kwargs(configs),
             **cluster_kwargs,
         )
 
@@ -449,6 +453,7 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
                 health_check_interval=configs.HEALTH_CHECK_INTERVAL,
                 require_full_coverage=configs.CLUSTER_REQUIRE_FULL_COVERAGE,
                 protocol=configs.PROTOCOL,
+                **_tls_acl_kwargs(configs),
                 **cluster_kwargs,
             )
 

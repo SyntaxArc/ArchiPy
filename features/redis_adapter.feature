@@ -1320,3 +1320,28 @@ Feature: Redis Testing
       | protocol | shape |
       | 2        | pairs |
       | 3        | flat  |
+
+  Scenario: A Redis ACL user can connect with its username
+    Given a configured container
+    When I create the ACL user "acl-reader" with password "acl-secret" and connect as that user
+    Then the connected Redis user should be "acl-reader"
+
+  Scenario Outline: TLS settings reach the <mode> client
+    Given a Redis config in <mode> mode with TLS and the username "acl-tls-user"
+    When I build the Redis adapter from that config
+    Then the client connection should use TLS with the CA bundle "/certs/ca.pem" and hostname checking enabled
+    And the client connection should use the username "acl-tls-user"
+
+    Examples: Modes
+      | mode       |
+      | standalone |
+      | sentinel   |
+
+  Scenario Outline: Invalid TLS settings are rejected
+    When I create a Redis config with <settings>
+    Then the Redis config should be rejected
+
+    Examples: Settings
+      | settings                          |
+      | a client certificate but no key   |
+      | a CA bundle while TLS is disabled |

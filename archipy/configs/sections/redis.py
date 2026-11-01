@@ -46,15 +46,32 @@ class RedisConfig(BaseModel):
     # Common settings
     PORT: int = Field(default=6379, description="Default Redis server port")
     DATABASE: int = Field(default=0, description="Redis database number (not used in cluster)")
+    USERNAME: str | None = Field(default=None, description="Redis ACL username (Redis 6+); None uses the default user")
     PASSWORD: str | None = Field(default=None, description="Redis password")
     DECODE_RESPONSES: Literal[True] = Field(default=True, description="Whether to decode responses")
     PROTOCOL: Literal[2, 3] = Field(default=3, description="RESP protocol version (2 or 3)")
     HEALTH_CHECK_INTERVAL: int = Field(default=10, description="Health check interval in seconds")
 
+    # TLS settings
+    SSL: bool = Field(default=False, description="Connect to Redis over TLS")
+    SSL_CA_CERTS: str | None = Field(default=None, description="Path to the CA bundle used to verify the server")
+    SSL_CERTFILE: str | None = Field(default=None, description="Path to the client certificate (mTLS)")
+    SSL_KEYFILE: str | None = Field(default=None, description="Path to the client private key (mTLS)")
+    SSL_CHECK_HOSTNAME: bool = Field(default=True, description="Verify the server hostname against its certificate")
+
     # Connection pooling
     MAX_CONNECTIONS: int = Field(default=50, description="Maximum connections per node")
     SOCKET_CONNECT_TIMEOUT: float = Field(default=5.0, description="Socket connection timeout")
     SOCKET_TIMEOUT: float = Field(default=5.0, description="Socket operation timeout")
+
+    @model_validator(mode="after")
+    def validate_tls_configuration(self) -> Self:
+        """Validate TLS settings."""
+        if bool(self.SSL_CERTFILE) != bool(self.SSL_KEYFILE):
+            raise ConfigurationError(operation="redis", reason="ssl_certfile_and_keyfile_must_be_set_together")
+        if not self.SSL and (self.SSL_CA_CERTS or self.SSL_CERTFILE):
+            raise ConfigurationError(operation="redis", reason="ssl_options_require_ssl_enabled")
+        return self
 
     @model_validator(mode="after")
     def validate_mode_configuration(self) -> Self:
