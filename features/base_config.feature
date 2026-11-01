@@ -251,6 +251,17 @@ Feature: Base Configuration System
       | RUNTIME_DISABLE_ENVIRONMENT_INFO       | False    |
       | WORKER_MAX_EAGER_ACTIVITY_RESERVATIONS | None     |
 
+  Scenario Outline: The <kind> SQLAlchemy session factory follows EXPIRE_ON_COMMIT <value>
+    When I build a <kind> sqlite session manager with EXPIRE_ON_COMMIT <value>
+    Then the session factory should expire on commit <value>
+
+    Examples: Session factories
+      | kind  | value |
+      | sync  | true  |
+      | sync  | false |
+      | async | true  |
+      | async | false |
+
   Scenario Outline: The Elasticsearch client carries retry backoff only when configured
     When I build an Elasticsearch client with RETRY_BACKOFF_BASE <base> and RETRY_BACKOFF_CAP <cap>
     Then the client retry backoff should be <expected>

@@ -38,6 +38,12 @@ class SQLAlchemyConfig(BaseModel):
     )
     ECHO: bool = Field(default=False, description="Whether to log SQL statements")
     ECHO_POOL: bool = Field(default=False, description="Whether to log connection pool events")
+    EXPIRE_ON_COMMIT: bool = Field(
+        default=True,
+        description="Whether committing expires loaded entities (SQLAlchemy expire_on_commit). With True, "
+        "attributes of an entity returned from an atomic block raise DetachedInstanceError because the session "
+        "is closed after the commit: convert entities to DTOs inside the block, or set False to keep them readable",
+    )
     ENABLE_FROM_LINTING: bool = Field(default=True, description="Whether to enable SQL linting")
     HIDE_PARAMETERS: bool = Field(default=False, description="Whether to hide SQL parameters in logs")
     HOST: str | None = Field(default=None, description="Database host")
