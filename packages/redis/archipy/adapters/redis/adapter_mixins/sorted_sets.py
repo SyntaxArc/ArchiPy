@@ -9,6 +9,7 @@ from archipy.adapters.redis.adapter_mixins._shared import (
     AsyncRedisMixinBase,
     SyncRedisMixinBase,
     _normalize_zset_keys,
+    _text,
 )
 
 if TYPE_CHECKING:
@@ -45,8 +46,8 @@ class RedisSortedSetsMixin(SyncRedisMixinBase):
             RedisResponseType: Number of elements added or modified.
         """
         # Convert Mapping to dict for type compatibility with Redis client
-        dict_mapping: dict[str, bytes | str | float] = {str(k): v for k, v in mapping.items()}
-        str_name = str(name)
+        dict_mapping: dict[str, bytes | str | float] = {_text(k): v for k, v in mapping.items()}
+        str_name = _text(name)
         return self.client.zadd(str_name, dict_mapping, nx, xx, ch, incr, gt, lt)
 
     def zcard(self, name: bytes | str) -> int:
@@ -317,10 +318,10 @@ class AsyncRedisSortedSetsMixin(AsyncRedisMixinBase):
         """
         # Convert Mapping to dict for type compatibility with Redis client
         if isinstance(mapping, dict):
-            dict_mapping: dict[str, bytes | str | float] = {str(k): v for k, v in mapping.items()}
+            dict_mapping: dict[str, bytes | str | float] = {_text(k): v for k, v in mapping.items()}
         else:
-            dict_mapping = {str(k): v for k, v in mapping.items()}
-        str_name = str(name)
+            dict_mapping = {_text(k): v for k, v in mapping.items()}
+        str_name = _text(name)
         result = self.client.zadd(str_name, dict_mapping, nx, xx, ch, incr, gt, lt)
         if isinstance(result, Awaitable):
             return await result
