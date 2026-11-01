@@ -187,6 +187,31 @@ def _tls_cluster_options(config: ScyllaDBConfig) -> dict[str, Any]:
     return options
 
 
+_CONSISTENCY_LEVELS: Final = {
+    "ONE": ConsistencyLevel.ONE,
+    "TWO": ConsistencyLevel.TWO,
+    "THREE": ConsistencyLevel.THREE,
+    "QUORUM": ConsistencyLevel.QUORUM,
+    "ALL": ConsistencyLevel.ALL,
+    "LOCAL_QUORUM": ConsistencyLevel.LOCAL_QUORUM,
+    "EACH_QUORUM": ConsistencyLevel.EACH_QUORUM,
+    "LOCAL_ONE": ConsistencyLevel.LOCAL_ONE,
+    "ANY": ConsistencyLevel.ANY,
+}
+
+
+def _consistency_level(config: ScyllaDBConfig) -> int:
+    """Map the configured consistency level name to the driver value.
+
+    Args:
+        config (ScyllaDBConfig): The ScyllaDB configuration.
+
+    Returns:
+        int: The consistency level enum value.
+    """
+    return _CONSISTENCY_LEVELS[config.CONSISTENCY_LEVEL.upper()]
+
+
 def _warn_insecure_connection(config: ScyllaDBConfig) -> None:
     """Log a warning when credentials travel unencrypted or the server certificate is not verified.
 
@@ -214,12 +239,113 @@ class _IdempotentSafeRetryPolicy(ExponentialBackoffRetryPolicy):
         return super().on_request_error(query, consistency, error, retry_num)
 
 
+def _build_cluster(config: ScyllaDBConfig) -> Cluster:
+    """Create and configure the Cluster instance.
+
+    Args:
+        config (ScyllaDBConfig): The ScyllaDB configuration.
+
+    Returns:
+        Cluster: Configured cluster instance.
+    """
+    auth_provider = None
+    if config.USERNAME and config.PASSWORD:
+        auth_provider = PlainTextAuthProvider(
+            username=config.USERNAME,
+            password=config.PASSWORD.get_secret_value(),
+        )
+
+    # Configure load balancing policy with optional datacenter awareness
+    if config.LOCAL_DC:
+        base_policy = DCAwareRoundRobinPolicy(local_dc=config.LOCAL_DC)
+        load_balancing_policy = TokenAwarePolicy(base_policy)
+    else:
+        load_balancing_policy = TokenAwarePolicy(RoundRobinPolicy())
+
+    if config.RETRY_POLICY == "FALLTHROUGH":
+        retry_policy = FallthroughRetryPolicy()
+    else:  # EXPONENTIAL_BACKOFF (default)
+        retry_policy = _IdempotentSafeRetryPolicy(
+            max_num_retries=config.RETRY_MAX_NUM_RETRIES,
+            min_interval=config.RETRY_MIN_INTERVAL,
+            max_interval=config.RETRY_MAX_INTERVAL,
+        )
+    # Shard awareness disabled for Docker/NAT environments
+    shard_aware_options = None
+    if config.DISABLE_SHARD_AWARENESS:
+        shard_aware_options = {"disable": True}
+
+    # Address translation for Docker/NAT environments where gossip-discovered
+    # internal container IPs are unreachable from the host
+    address_translator = None
+    if config.ADDRESS_TRANSLATION_ENABLED:
+        address_translator = _FixedAddressTranslator(config.CONTACT_POINTS[0])
+
+    # Cluster is from cassandra.cluster, properly typed
+    cluster = Cluster(
+        contact_points=config.CONTACT_POINTS,
+        port=config.PORT,
+        auth_provider=auth_provider,
+        protocol_version=config.PROTOCOL_VERSION,
+        compression=bool(config.COMPRESSION),
+        connect_timeout=config.CONNECT_TIMEOUT,
+        execution_profiles={
+            EXEC_PROFILE_DEFAULT: ExecutionProfile(
+                load_balancing_policy=load_balancing_policy,
+                retry_policy=retry_policy,
+                request_timeout=config.REQUEST_TIMEOUT,
+                consistency_level=_consistency_level(config),
+                **_execution_profile_options(config),
+            ),
+        },
+        shard_aware_options=shard_aware_options,
+        address_translator=address_translator,
+        ssl_context=config.build_ssl_context(),
+        **_tls_cluster_options(config),
+        **_cluster_resilience_options(config),
+    )
+    return cluster
+
+
 class _HostPoolStat(TypedDict):
     """Per-host connection pool statistics for ScyllaDB monitoring."""
 
     host: str
     open_connections: int
     in_flight_queries: int
+
+
+def _collect_pool_stats(session: Session) -> dict[str, Any]:
+    """Collect per-host connection statistics from a session.
+
+    Args:
+        session (Session): The active session.
+
+    Returns:
+        dict[str, Any]: Pool statistics, or an ``error`` entry with a fixed text when the driver call fails.
+    """
+    stats: dict[str, Any] = {"monitoring_enabled": True}
+    try:
+        # Get pool state for each host (driver returns {host: state})
+        hosts_stats: list[_HostPoolStat] = []
+        for host, host_pool in session.get_pool_state().items():
+            if host_pool:
+                hosts_stats.append(
+                    {
+                        "host": str(host),
+                        "open_connections": int(host_pool.get("open_count", 0) or 0),
+                        "in_flight_queries": int(host_pool.get("in_flight", 0) or 0),
+                    },
+                )
+
+        stats["hosts"] = hosts_stats
+        stats["total_hosts"] = len(hosts_stats)
+        stats["total_open_connections"] = sum(h["open_connections"] for h in hosts_stats)
+        stats["total_in_flight_queries"] = sum(h["in_flight_queries"] for h in hosts_stats)
+    except Exception:  # cleanup/health soft-fail; unconstrained errors
+        logger.warning("ScyllaDB pool statistics unavailable", exc_info=True)
+        stats["error"] = _POOL_STATS_FAILED
+    return stats
 
 
 class _FixedAddressTranslator(AddressTranslator):
@@ -431,6 +557,105 @@ class ScyllaDBExceptionHandlerMixin:
         return value
 
     @classmethod
+    def _insert_query(
+        cls,
+        table: str,
+        data: dict[str, Any],
+        ttl: int | None,
+        if_not_exists: bool,
+    ) -> tuple[str, tuple[Any, ...]]:
+        """Build an INSERT statement with ``%s`` placeholders and its values."""
+        table = cls._validate_cql_identifier(table, "table")
+        columns = ", ".join(cls._validate_cql_identifiers(list(data.keys()), "columns"))
+        placeholders = ", ".join(["%s" for _ in data])
+        query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"  # nosec B608
+
+        if if_not_exists:
+            query += " IF NOT EXISTS"
+
+        if ttl is not None:
+            query += f" USING TTL {cls._validate_non_negative_int(ttl, 'ttl')}"
+        return query, tuple(data.values())
+
+    @classmethod
+    def _select_query(
+        cls,
+        table: str,
+        columns: list[str] | None,
+        conditions: dict[str, Any] | None,
+        limit: int | None,
+    ) -> tuple[str, tuple[Any, ...] | None]:
+        """Build a SELECT statement with ``%s`` placeholders and its values."""
+        table = cls._validate_cql_identifier(table, "table")
+        cols = ", ".join(cls._validate_cql_identifiers(columns, "columns")) if columns else "*"
+        query = f"SELECT {cols} FROM {table}"  # nosec B608
+
+        params = None
+        if conditions:
+            condition_keys = cls._validate_cql_identifiers(list(conditions.keys()), "conditions")
+            where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
+            query += f" WHERE {where_clause}"
+            params = tuple(conditions.values())
+
+        if limit is not None:
+            query += f" LIMIT {cls._validate_positive_int(limit, 'limit')}"
+        return query, params
+
+    @classmethod
+    def _update_query(
+        cls,
+        table: str,
+        data: dict[str, Any],
+        conditions: dict[str, Any],
+        ttl: int | None,
+    ) -> tuple[str, tuple[Any, ...]]:
+        """Build an UPDATE statement with ``%s`` placeholders and its values (SET values first)."""
+        table = cls._validate_cql_identifier(table, "table")
+        set_keys = cls._validate_cql_identifiers(list(data.keys()), "data")
+        condition_keys = cls._validate_cql_identifiers(list(conditions.keys()), "conditions")
+        set_clause = ", ".join([f"{key} = %s" for key in set_keys])
+        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
+        query = f"UPDATE {table}"
+
+        if ttl is not None:
+            query += f" USING TTL {cls._validate_non_negative_int(ttl, 'ttl')}"
+
+        query += f" SET {set_clause} WHERE {where_clause}"
+        return query, tuple(data.values()) + tuple(conditions.values())
+
+    @classmethod
+    def _delete_query(cls, table: str, conditions: dict[str, Any]) -> tuple[str, tuple[Any, ...]]:
+        """Build a DELETE statement with ``%s`` placeholders and its values."""
+        table = cls._validate_cql_identifier(table, "table")
+        condition_keys = cls._validate_cql_identifiers(list(conditions.keys()), "conditions")
+        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
+        return f"DELETE FROM {table} WHERE {where_clause}", tuple(conditions.values())  # nosec B608
+
+    @classmethod
+    def _count_query(cls, table: str, conditions: dict[str, Any] | None) -> tuple[str, tuple[Any, ...] | None]:
+        """Build a COUNT statement with ``%s`` placeholders and its values."""
+        table = cls._validate_cql_identifier(table, "table")
+        query = f"SELECT COUNT(*) FROM {table}"  # nosec B608
+
+        params = None
+        if conditions:
+            condition_keys = cls._validate_cql_identifiers(list(conditions.keys()), "conditions")
+            where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
+            query += f" WHERE {where_clause} ALLOW FILTERING"
+            params = tuple(conditions.values())
+        return query, params
+
+    @classmethod
+    def _exists_query(cls, table: str, conditions: dict[str, Any]) -> tuple[str, tuple[Any, ...]]:
+        """Build the statement that checks for a matching row, with ``%s`` placeholders and its values."""
+        table = cls._validate_cql_identifier(table, "table")
+        condition_keys = cls._validate_cql_identifiers(list(conditions.keys()), "conditions")
+        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
+        # COUNT(*) ... LIMIT 1 still aggregates every match; selecting one key column stops at the first row
+        query = f"SELECT {condition_keys[0]} FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
+        return query, tuple(conditions.values())
+
+    @classmethod
     def _validate_cql_identifiers(cls, identifiers: list[str], field_name: str) -> list[str]:
         """Validate multiple CQL identifiers.
 
@@ -488,27 +713,12 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     def _get_consistency_level(self) -> int:
-        """Get ConsistencyLevel enum from config string.
+        """Get the ConsistencyLevel value for the configured default level.
 
         Returns:
             int: The consistency level enum value.
         """
-        consistency_map: dict[str, int] = {
-            "ONE": ConsistencyLevel.ONE,
-            "TWO": ConsistencyLevel.TWO,
-            "THREE": ConsistencyLevel.THREE,
-            "QUORUM": ConsistencyLevel.QUORUM,
-            "ALL": ConsistencyLevel.ALL,
-            "LOCAL_QUORUM": ConsistencyLevel.LOCAL_QUORUM,
-            "EACH_QUORUM": ConsistencyLevel.EACH_QUORUM,
-            "LOCAL_ONE": ConsistencyLevel.LOCAL_ONE,
-            "ANY": ConsistencyLevel.ANY,
-        }
-        # get() returns int | None, but we provide a default
-        consistency = consistency_map.get(self.config.CONSISTENCY_LEVEL.upper())
-        if consistency is None:
-            return ConsistencyLevel.ONE
-        return consistency
+        return _consistency_level(self.config)
 
     def _create_cluster(self) -> Cluster:
         """Create and configure the Cluster instance.
@@ -516,65 +726,9 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             Cluster: Configured cluster instance.
         """
-        auth_provider = None
-        if self.config.USERNAME and self.config.PASSWORD:
-            auth_provider = PlainTextAuthProvider(
-                username=self.config.USERNAME,
-                password=self.config.PASSWORD.get_secret_value(),
-            )
-
-        # Configure load balancing policy with optional datacenter awareness
-        if self.config.LOCAL_DC:
-            base_policy = DCAwareRoundRobinPolicy(local_dc=self.config.LOCAL_DC)
-            load_balancing_policy = TokenAwarePolicy(base_policy)
-        else:
-            load_balancing_policy = TokenAwarePolicy(RoundRobinPolicy())
-
-        if self.config.RETRY_POLICY == "FALLTHROUGH":
-            retry_policy = FallthroughRetryPolicy()
-        else:  # EXPONENTIAL_BACKOFF (default)
-            retry_policy = _IdempotentSafeRetryPolicy(
-                max_num_retries=self.config.RETRY_MAX_NUM_RETRIES,
-                min_interval=self.config.RETRY_MIN_INTERVAL,
-                max_interval=self.config.RETRY_MAX_INTERVAL,
-            )
-        # Shard awareness disabled for Docker/NAT environments
-        shard_aware_options = None
-        if self.config.DISABLE_SHARD_AWARENESS:
-            shard_aware_options = {"disable": True}
-
-        # Address translation for Docker/NAT environments where gossip-discovered
-        # internal container IPs are unreachable from the host
-        address_translator = None
-        if self.config.ADDRESS_TRANSLATION_ENABLED:
-            address_translator = _FixedAddressTranslator(self.config.CONTACT_POINTS[0])
-
-        # Cluster is from cassandra.cluster, properly typed
-        cluster = Cluster(
-            contact_points=self.config.CONTACT_POINTS,
-            port=self.config.PORT,
-            auth_provider=auth_provider,
-            protocol_version=self.config.PROTOCOL_VERSION,
-            compression=bool(self.config.COMPRESSION),
-            connect_timeout=self.config.CONNECT_TIMEOUT,
-            execution_profiles={
-                EXEC_PROFILE_DEFAULT: ExecutionProfile(
-                    load_balancing_policy=load_balancing_policy,
-                    retry_policy=retry_policy,
-                    request_timeout=self.config.REQUEST_TIMEOUT,
-                    consistency_level=self._get_consistency_level(),
-                    **_execution_profile_options(self.config),
-                ),
-            },
-            shard_aware_options=shard_aware_options,
-            address_translator=address_translator,
-            ssl_context=self.config.build_ssl_context(),
-            **_tls_cluster_options(self.config),
-            **_cluster_resilience_options(self.config),
-        )
+        cluster = _build_cluster(self.config)
         _warn_ignored_pool_settings(self.config)
         _warn_insecure_connection(self.config)
-
         return cluster
 
     @override
@@ -782,20 +936,9 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             if_not_exists (bool): If True, use lightweight transaction (INSERT ... IF NOT EXISTS).
                               This prevents errors on duplicate primary keys but is slow
         """
-        table = self._validate_cql_identifier(table, "table")
-        validated_columns = self._validate_cql_identifiers(list(data.keys()), "columns")
-        columns = ", ".join(validated_columns)
-        placeholders = ", ".join(["%s" for _ in data])
-        query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"  # nosec B608
-
-        if if_not_exists:
-            query += " IF NOT EXISTS"
-
-        if ttl is not None:
-            query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
-
+        query, params = self._insert_query(table, data, ttl, if_not_exists)
         try:
-            self._execute_dml(query, tuple(data.values()), idempotent=not if_not_exists)
+            self._execute_dml(query, params, idempotent=not if_not_exists)
         except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "insert")
             raise
@@ -820,20 +963,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             list[Any]: List of result rows.
         """
-        table = self._validate_cql_identifier(table, "table")
-        cols = ", ".join(self._validate_cql_identifiers(columns, "columns")) if columns else "*"
-        query = f"SELECT {cols} FROM {table}"  # nosec B608
-
-        params = None
-        if conditions:
-            condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
-            where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-            query += f" WHERE {where_clause}"
-            params = tuple(conditions.values())
-
-        if limit is not None:
-            query += f" LIMIT {self._validate_positive_int(limit, 'limit')}"
-
+        query, params = self._select_query(table, columns, conditions, limit)
         try:
             result = self._execute_dml(query, params)
             return list(result)
@@ -857,21 +987,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
             ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
         """
-        table = self._validate_cql_identifier(table, "table")
-        set_keys = self._validate_cql_identifiers(list(data.keys()), "data")
-        condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
-        set_clause = ", ".join([f"{key} = %s" for key in set_keys])
-        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-        query = f"UPDATE {table}"
-
-        if ttl is not None:
-            query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
-
-        query += f" SET {set_clause} WHERE {where_clause}"
-
-        # Combine params: SET values first, then WHERE values
-        params = tuple(data.values()) + tuple(conditions.values())
-
+        query, params = self._update_query(table, data, conditions, ttl)
         try:
             self._execute_dml(query, params)
         except _DRIVER_ERRORS as e:
@@ -886,13 +1002,9 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             table (str): The name of the table.
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
         """
-        table = self._validate_cql_identifier(table, "table")
-        condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
-        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-        query = f"DELETE FROM {table} WHERE {where_clause}"  # nosec B608
-
+        query, params = self._delete_query(table, conditions)
         try:
-            self._execute_dml(query, tuple(conditions.values()))
+            self._execute_dml(query, params)
         except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "delete")
             raise
@@ -1007,16 +1119,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             int: The number of rows matching the conditions.
         """
-        table = self._validate_cql_identifier(table, "table")
-        query = f"SELECT COUNT(*) FROM {table}"  # nosec B608
-
-        params = None
-        if conditions:
-            condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
-            where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-            query += f" WHERE {where_clause} ALLOW FILTERING"
-            params = tuple(conditions.values())
-
+        query, params = self._count_query(table, conditions)
         try:
             result = self._execute_dml(query, params)
             row = result.one()
@@ -1037,14 +1140,9 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             bool: True if at least one row exists, False otherwise.
         """
-        table = self._validate_cql_identifier(table, "table")
-        condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
-        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-        # COUNT(*) ... LIMIT 1 still aggregates every match; selecting one key column stops at the first row
-        query = f"SELECT {condition_keys[0]} FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
-
+        query, params = self._exists_query(table, conditions)
         try:
-            result = self._execute_dml(query, tuple(conditions.values()))
+            result = self._execute_dml(query, params)
             row = result.one()
         except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "exists")
@@ -1065,33 +1163,12 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 "message": "Connection pool monitoring is disabled",
             }
 
-        stats: dict[str, Any] = {"monitoring_enabled": True}
-
         try:
             session = self.get_session()
-
-            # Get pool state for each host (driver returns {host: state})
-            hosts_stats: list[_HostPoolStat] = []
-            for host, host_pool in session.get_pool_state().items():
-                if host_pool:
-                    hosts_stats.append(
-                        {
-                            "host": str(host),
-                            "open_connections": int(host_pool.get("open_count", 0) or 0),
-                            "in_flight_queries": int(host_pool.get("in_flight", 0) or 0),
-                        },
-                    )
-
-            stats["hosts"] = hosts_stats
-            stats["total_hosts"] = len(hosts_stats)
-            stats["total_open_connections"] = sum(h["open_connections"] for h in hosts_stats)
-            stats["total_in_flight_queries"] = sum(h["in_flight_queries"] for h in hosts_stats)
-
         except Exception:  # cleanup/health soft-fail; unconstrained errors
             logger.warning("ScyllaDB pool statistics unavailable", exc_info=True)
-            stats["error"] = _POOL_STATS_FAILED
-
-        return stats
+            return {"monitoring_enabled": True, "error": _POOL_STATS_FAILED}
+        return _collect_pool_stats(session)
 
 
 class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
@@ -1148,27 +1225,12 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             raise
 
     def _get_consistency_level(self) -> int:
-        """Get ConsistencyLevel enum from config string.
+        """Get the ConsistencyLevel value for the configured default level.
 
         Returns:
             int: The consistency level enum value.
         """
-        consistency_map: dict[str, int] = {
-            "ONE": ConsistencyLevel.ONE,
-            "TWO": ConsistencyLevel.TWO,
-            "THREE": ConsistencyLevel.THREE,
-            "QUORUM": ConsistencyLevel.QUORUM,
-            "ALL": ConsistencyLevel.ALL,
-            "LOCAL_QUORUM": ConsistencyLevel.LOCAL_QUORUM,
-            "EACH_QUORUM": ConsistencyLevel.EACH_QUORUM,
-            "LOCAL_ONE": ConsistencyLevel.LOCAL_ONE,
-            "ANY": ConsistencyLevel.ANY,
-        }
-        # get() returns int | None, but we provide a default
-        consistency = consistency_map.get(self.config.CONSISTENCY_LEVEL.upper())
-        if consistency is None:
-            return ConsistencyLevel.ONE
-        return consistency
+        return _consistency_level(self.config)
 
     def _create_cluster(self) -> Cluster:
         """Create and configure the Cluster instance.
@@ -1176,65 +1238,9 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             Cluster: Configured cluster instance.
         """
-        auth_provider = None
-        if self.config.USERNAME and self.config.PASSWORD:
-            auth_provider = PlainTextAuthProvider(
-                username=self.config.USERNAME,
-                password=self.config.PASSWORD.get_secret_value(),
-            )
-
-        # Configure load balancing policy with optional datacenter awareness
-        if self.config.LOCAL_DC:
-            base_policy = DCAwareRoundRobinPolicy(local_dc=self.config.LOCAL_DC)
-            load_balancing_policy = TokenAwarePolicy(base_policy)
-        else:
-            load_balancing_policy = TokenAwarePolicy(RoundRobinPolicy())
-
-        if self.config.RETRY_POLICY == "FALLTHROUGH":
-            retry_policy = FallthroughRetryPolicy()
-        else:  # EXPONENTIAL_BACKOFF (default)
-            retry_policy = _IdempotentSafeRetryPolicy(
-                max_num_retries=self.config.RETRY_MAX_NUM_RETRIES,
-                min_interval=self.config.RETRY_MIN_INTERVAL,
-                max_interval=self.config.RETRY_MAX_INTERVAL,
-            )
-        # Shard awareness disabled for Docker/NAT environments
-        shard_aware_options = None
-        if self.config.DISABLE_SHARD_AWARENESS:
-            shard_aware_options = {"disable": True}
-
-        # Address translation for Docker/NAT environments where gossip-discovered
-        # internal container IPs are unreachable from the host
-        address_translator = None
-        if self.config.ADDRESS_TRANSLATION_ENABLED:
-            address_translator = _FixedAddressTranslator(self.config.CONTACT_POINTS[0])
-
-        # Cluster is from cassandra.cluster, properly typed
-        cluster = Cluster(
-            contact_points=self.config.CONTACT_POINTS,
-            port=self.config.PORT,
-            auth_provider=auth_provider,
-            protocol_version=self.config.PROTOCOL_VERSION,
-            compression=bool(self.config.COMPRESSION),
-            connect_timeout=self.config.CONNECT_TIMEOUT,
-            execution_profiles={
-                EXEC_PROFILE_DEFAULT: ExecutionProfile(
-                    load_balancing_policy=load_balancing_policy,
-                    retry_policy=retry_policy,
-                    request_timeout=self.config.REQUEST_TIMEOUT,
-                    consistency_level=self._get_consistency_level(),
-                    **_execution_profile_options(self.config),
-                ),
-            },
-            shard_aware_options=shard_aware_options,
-            address_translator=address_translator,
-            ssl_context=self.config.build_ssl_context(),
-            **_tls_cluster_options(self.config),
-            **_cluster_resilience_options(self.config),
-        )
+        cluster = _build_cluster(self.config)
         _warn_ignored_pool_settings(self.config)
         _warn_insecure_connection(self.config)
-
         return cluster
 
     async def _await_future(self, future: ResponseFuture) -> ResultSet:
@@ -1484,20 +1490,9 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             if_not_exists (bool): If True, use lightweight transaction (INSERT ... IF NOT EXISTS).
                               This prevents errors on duplicate primary keys but is slow
         """
-        table = self._validate_cql_identifier(table, "table")
-        validated_columns = self._validate_cql_identifiers(list(data.keys()), "columns")
-        columns = ", ".join(validated_columns)
-        placeholders = ", ".join(["%s" for _ in data])
-        query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"  # nosec B608
-
-        if if_not_exists:
-            query += " IF NOT EXISTS"
-
-        if ttl is not None:
-            query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
-
+        query, params = self._insert_query(table, data, ttl, if_not_exists)
         try:
-            await self._execute_dml(query, tuple(data.values()), idempotent=not if_not_exists)
+            await self._execute_dml(query, params, idempotent=not if_not_exists)
         except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "insert")
             raise
@@ -1522,20 +1517,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             list[Any]: List of result rows.
         """
-        table = self._validate_cql_identifier(table, "table")
-        cols = ", ".join(self._validate_cql_identifiers(columns, "columns")) if columns else "*"
-        query = f"SELECT {cols} FROM {table}"  # nosec B608
-
-        params = None
-        if conditions:
-            condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
-            where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-            query += f" WHERE {where_clause}"
-            params = tuple(conditions.values())
-
-        if limit is not None:
-            query += f" LIMIT {self._validate_positive_int(limit, 'limit')}"
-
+        query, params = self._select_query(table, columns, conditions, limit)
         try:
             result = await self._execute_dml(query, params)
             # pages after the first are fetched with blocking driver calls, so collect the rows off the loop
@@ -1560,21 +1542,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
             ttl (int | None): Time to live in seconds. If None, data persists indefinitely.
         """
-        table = self._validate_cql_identifier(table, "table")
-        set_keys = self._validate_cql_identifiers(list(data.keys()), "data")
-        condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
-        set_clause = ", ".join([f"{key} = %s" for key in set_keys])
-        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-        query = f"UPDATE {table}"
-
-        if ttl is not None:
-            query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
-
-        query += f" SET {set_clause} WHERE {where_clause}"
-
-        # Combine params: SET values first, then WHERE values
-        params = tuple(data.values()) + tuple(conditions.values())
-
+        query, params = self._update_query(table, data, conditions, ttl)
         try:
             await self._execute_dml(query, params)
         except _DRIVER_ERRORS as e:
@@ -1589,13 +1557,9 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             table (str): The name of the table.
             conditions (dict[str, Any]): WHERE clause conditions as key-value pairs.
         """
-        table = self._validate_cql_identifier(table, "table")
-        condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
-        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-        query = f"DELETE FROM {table} WHERE {where_clause}"  # nosec B608
-
+        query, params = self._delete_query(table, conditions)
         try:
-            await self._execute_dml(query, tuple(conditions.values()))
+            await self._execute_dml(query, params)
         except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "delete")
             raise
@@ -1715,16 +1679,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             int: The number of rows matching the conditions.
         """
-        table = self._validate_cql_identifier(table, "table")
-        query = f"SELECT COUNT(*) FROM {table}"  # nosec B608
-
-        params = None
-        if conditions:
-            condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
-            where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-            query += f" WHERE {where_clause} ALLOW FILTERING"
-            params = tuple(conditions.values())
-
+        query, params = self._count_query(table, conditions)
         try:
             result = await self._execute_dml(query, params)
             row = result.one()
@@ -1745,14 +1700,9 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Returns:
             bool: True if at least one row exists, False otherwise.
         """
-        table = self._validate_cql_identifier(table, "table")
-        condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
-        where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-        # COUNT(*) ... LIMIT 1 still aggregates every match; selecting one key column stops at the first row
-        query = f"SELECT {condition_keys[0]} FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
-
+        query, params = self._exists_query(table, conditions)
         try:
-            result = await self._execute_dml(query, tuple(conditions.values()))
+            result = await self._execute_dml(query, params)
             row = result.one()
         except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "exists")
@@ -1773,30 +1723,9 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 "message": "Connection pool monitoring is disabled",
             }
 
-        stats: dict[str, Any] = {"monitoring_enabled": True}
-
         try:
             session = await self.get_session()
-
-            # Get pool state for each host (driver returns {host: state})
-            hosts_stats: list[_HostPoolStat] = []
-            for host, host_pool in session.get_pool_state().items():
-                if host_pool:
-                    hosts_stats.append(
-                        {
-                            "host": str(host),
-                            "open_connections": int(host_pool.get("open_count", 0) or 0),
-                            "in_flight_queries": int(host_pool.get("in_flight", 0) or 0),
-                        },
-                    )
-
-            stats["hosts"] = hosts_stats
-            stats["total_hosts"] = len(hosts_stats)
-            stats["total_open_connections"] = sum(h["open_connections"] for h in hosts_stats)
-            stats["total_in_flight_queries"] = sum(h["in_flight_queries"] for h in hosts_stats)
-
         except Exception:  # cleanup/health soft-fail; unconstrained errors
             logger.warning("ScyllaDB pool statistics unavailable", exc_info=True)
-            stats["error"] = _POOL_STATS_FAILED
-
-        return stats
+            return {"monitoring_enabled": True, "error": _POOL_STATS_FAILED}
+        return _collect_pool_stats(session)
