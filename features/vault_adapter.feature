@@ -46,6 +46,24 @@ Feature: Vault Adapter
     Then the Vault client token should still be valid
     And the token should have been renewed
 
+  Scenario Outline: Auto renew leaves non-expiring and non-renewable tokens alone
+    Given a Vault secret "app/renew-skip" with key "ok" and value "1"
+    And a Vault adapter with auto renew using a <kind> token and renew threshold 120 seconds
+    Then reading Vault secret "app/renew-skip" should return key "ok" with value "1"
+    And the token should not have been renewed
+
+    Examples:
+      | kind          |
+      | root          |
+      | non-renewable |
+
+  Scenario: Adapter logs in again with AppRole when its token is revoked
+    Given a Vault secret "app/relogin" with key "ok" and value "1"
+    And a Vault adapter logged in with AppRole
+    When the Vault adapter token is revoked out-of-band
+    Then reading Vault secret "app/relogin" should return key "ok" with value "1"
+    And the Vault adapter should have logged in again
+
   Scenario Outline: Invalid Vault adapter arguments raise InvalidArgumentError
     When I call Vault "<operation>" with invalid args
     Then a Vault InvalidArgumentError should be raised for "<argument>"
