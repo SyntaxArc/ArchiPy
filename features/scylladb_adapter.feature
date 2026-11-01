@@ -352,6 +352,11 @@ Feature: ScyllaDB Adapter
       | asyn | insert with negative ttl                         |
       | asyn | create keyspace with injected replication factor |
 
+  @needs-scylladb @async
+  Scenario: The async adapter factory connects without blocking the loop
+    When I create an async ScyllaDB adapter with the factory and check its health
+    Then the ScyllaDB adapter should report connected "True" and health "healthy"
+
   @needs-scylladb
   Scenario Outline: Prepared statements are cached and executed with bound parameters
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
