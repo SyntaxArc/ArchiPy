@@ -249,7 +249,7 @@ def get_config_info() -> dict[str, str | bool]:
         return {
             "app_name": config.FASTAPI.PROJECT_NAME,
             "environment": config.ENVIRONMENT.value,
-            "debug": config.FASTAPI.RELOAD
+            "debug": config.UVICORN.RELOAD
         }
 ```
 

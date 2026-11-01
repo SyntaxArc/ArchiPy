@@ -68,6 +68,7 @@ from archipy.configs.sections.temporal import (
     TLS_CERT_PARTS_REQUIRED,
     TemporalConfig,
 )
+from archipy.configs.sections.uvicorn import UvicornConfig
 from archipy.configs.sections.vault import (
     VaultConfig,
 )
@@ -102,5 +103,6 @@ __all__ = [
     "ScyllaDBConfig",
     "StarRocksSQLAlchemyConfig",
     "TemporalConfig",
+    "UvicornConfig",
     "VaultConfig",
 ]

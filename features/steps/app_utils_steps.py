@@ -1,4 +1,6 @@
 import asyncio
+import json
+import warnings
 from types import SimpleNamespace
 
 import grpc
@@ -9,7 +11,7 @@ from pydantic import BaseModel, ValidationError
 from starlette.testclient import TestClient
 
 from archipy.configs.base_config import BaseConfig
-from archipy.configs.config_template import RedisMode
+from archipy.configs.config_template import FastAPIConfig, RedisMode
 from archipy.helpers.utils.app_utils import (
     AppUtils,
     AsyncGrpcAPIUtils,
@@ -18,7 +20,7 @@ from archipy.helpers.utils.app_utils import (
 )
 from archipy.helpers.errors.fastapi import handle_fastapi_exception
 from archipy.helpers.errors.fastapi.handlers import validation_response
-from archipy.models.errors import BaseError, InvalidArgumentError
+from archipy.models.errors import BaseError, ConfigurationError, InvalidArgumentError
 from features.test_helpers import get_current_scenario_context
 from features.test_servers import (
     create_test_async_grpc_servicer,
@@ -722,3 +724,61 @@ def step_when_websocket_connects_with_host(context, host):
 @then("the WebSocket handshake should be {outcome}")
 def step_then_websocket_handshake_outcome(context, outcome):
     assert get_current_scenario_context(context).get("ws_handshake") == outcome
+
+
+@given("a configuration built from:")
+def step_given_config_built_from(context):
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("built_config", BaseConfig(**json.loads(context.text)))
+
+
+@when("the uvicorn arguments are built")
+def step_when_uvicorn_arguments_built(context):
+    scenario_context = get_current_scenario_context(context)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        arguments = AppUtils.uvicorn_config(scenario_context.get("built_config"))
+    scenario_context.store("uvicorn_arguments", arguments)
+    scenario_context.store("caught_warnings", [str(item.message) for item in caught if item.category is DeprecationWarning])
+
+
+@then('the uvicorn argument "{name}" is {value}')
+def step_then_uvicorn_argument(context, name, value):
+    arguments = get_current_scenario_context(context).get("uvicorn_arguments")
+    assert arguments[name] == json.loads(value), arguments
+
+
+@then('the uvicorn arguments leave out "{name}"')
+def step_then_uvicorn_arguments_leave_out(context, name):
+    arguments = get_current_scenario_context(context).get("uvicorn_arguments")
+    assert name not in arguments, arguments
+
+
+@then("no deprecation warning is raised")
+def step_then_no_deprecation_warning(context):
+    assert get_current_scenario_context(context).get("caught_warnings") == []
+
+
+@then('a deprecation warning mentions "{text}"')
+def step_then_deprecation_warning_mentions(context, text):
+    messages = get_current_scenario_context(context).get("caught_warnings")
+    assert any(text in message for message in messages), messages
+
+
+@then('building a configuration from the following fails with "{reason}":')
+def step_then_config_build_fails(context, reason):
+    try:
+        BaseConfig(**json.loads(context.text))
+    except ConfigurationError as error:
+        assert error.additional_data["reason"] == reason, error.additional_data
+    else:
+        raise AssertionError("the config was accepted")
+
+
+@when("the FASTAPI section is built with a deprecated uvicorn field")
+def step_when_fastapi_section_built(context):
+    scenario_context = get_current_scenario_context(context)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        FastAPIConfig(TIMEOUT_KEEP_ALIVE=9)
+    scenario_context.store("caught_warnings", [str(item.message) for item in caught if item.category is DeprecationWarning])

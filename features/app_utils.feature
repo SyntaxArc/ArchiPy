@@ -274,3 +274,89 @@ Feature: App Utilities
       | effect       | state    | outcome  |
       | redirects    | enabled  | refused  |
       | leaves alone | disabled | accepted |
+
+  Scenario: Uvicorn arguments come from the defaults of the UVICORN section
+    Given a configuration built from:
+      """
+      {}
+      """
+    When the uvicorn arguments are built
+    Then the uvicorn argument "timeout_keep_alive" is 5
+    And the uvicorn argument "workers" is 4
+    And the uvicorn argument "port" is 8100
+    And the uvicorn arguments leave out "ssl_keyfile"
+    And the uvicorn arguments leave out "forwarded_allow_ips"
+    And no deprecation warning is raised
+
+  Scenario: A UVICORN setting wins over the deprecated FASTAPI setting without a warning
+    Given a configuration built from:
+      """
+      {
+        "UVICORN": {
+          "TIMEOUT_KEEP_ALIVE": 30
+        }
+      }
+      """
+    When the uvicorn arguments are built
+    Then the uvicorn argument "timeout_keep_alive" is 30
+    And no deprecation warning is raised
+
+  Scenario: A deprecated FASTAPI uvicorn setting still applies and warns
+    Given a configuration built from:
+      """
+      {
+        "FASTAPI": {
+          "TIMEOUT_KEEP_ALIVE": 9,
+          "FORWARDED_ALLOW_IPS": [
+            "10.0.0.1"
+          ]
+        }
+      }
+      """
+    When the uvicorn arguments are built
+    Then the uvicorn argument "timeout_keep_alive" is 9
+    And the uvicorn argument "forwarded_allow_ips" is ["10.0.0.1"]
+    And a deprecation warning mentions "UVICORN.TIMEOUT_KEEP_ALIVE"
+
+  Scenario: Reload leaves the worker count out
+    Given a configuration built from:
+      """
+      {
+        "UVICORN": {
+          "RELOAD": true
+        }
+      }
+      """
+    When the uvicorn arguments are built
+    Then the uvicorn argument "reload" is true
+    And the uvicorn arguments leave out "workers"
+
+  Scenario: TLS settings reach the uvicorn arguments
+    Given a configuration built from:
+      """
+      {
+        "UVICORN": {
+          "SSL_KEYFILE": "/tls/key.pem",
+          "SSL_CERTFILE": "/tls/cert.pem",
+          "SSL_CA_CERTS": "/tls/ca.pem"
+        }
+      }
+      """
+    When the uvicorn arguments are built
+    Then the uvicorn argument "ssl_keyfile" is "/tls/key.pem"
+    And the uvicorn argument "ssl_certfile" is "/tls/cert.pem"
+    And the uvicorn argument "ssl_ca_certs" is "/tls/ca.pem"
+
+  Scenario: A TLS key without a certificate is rejected
+    Then building a configuration from the following fails with "ssl_keyfile_and_certfile_required_together":
+      """
+      {
+        "UVICORN": {
+          "SSL_KEYFILE": "/tls/key.pem"
+        }
+      }
+      """
+
+  Scenario: Building a FASTAPI section with a deprecated uvicorn field warns
+    When the FASTAPI section is built with a deprecated uvicorn field
+    Then a deprecation warning mentions "UVICORN"

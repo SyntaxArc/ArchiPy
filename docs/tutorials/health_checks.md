@@ -16,7 +16,7 @@ provide the building blocks below; the probe endpoints are plain FastAPI or gRPC
 | `health_check()`                                         | ScyllaDB adapters (sync, async)      | Returns `{"status", "latency_ms", "error"?}`     |
 | `HEALTH_CHECK_INTERVAL`                                  | `REDIS` config                       | Redis client keep-alive health check interval    |
 | `lifespan` argument                                      | `AppUtils.create_fastapi_app`        | Startup and shutdown hooks; OTel flush on exit   |
-| `FASTAPI.TIMEOUT_GRACEFUL_SHUTDOWN`                      | FastAPI config                       | Value for Uvicorn's graceful shutdown timeout    |
+| `UVICORN.TIMEOUT_GRACEFUL_SHUTDOWN`                      | Uvicorn config                       | Value for Uvicorn's graceful shutdown timeout    |
 | `GRPC.SERVER_OPTIONS_CONFIG_LIST` grace                     | gRPC config                          | 5 s drain for connections past their max age     |
 | `SKIP_METHODS` default                                   | gRPC rate-limit config               | Excludes `/grpc.health.v1.Health/*` from limits  |
 | `TemporalWorkerManager.shutdown_all_workers()`           | Temporal adapter                     | Drains workers within `WORKER_GRACEFUL_SHUTDOWN_SECONDS` |
@@ -126,21 +126,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 app = AppUtils.create_fastapi_app(BaseConfig.global_config(), lifespan=lifespan)
 ```
 
-`FASTAPI.TIMEOUT_GRACEFUL_SHUTDOWN` is only a config field; ArchiPy does not start Uvicorn for you. Pass it when you do:
+`UVICORN.TIMEOUT_GRACEFUL_SHUTDOWN` is only a config field; ArchiPy does not start Uvicorn for you. `AppUtils.uvicorn_config` passes it, with the rest of the `UVICORN` section, when you do:
 
 ```python
 import uvicorn
 
-from archipy.configs.base_config import BaseConfig
+from archipy.helpers.utils.app_utils import AppUtils
 
-config = BaseConfig.global_config()
-uvicorn.run(
-    "manage:create_app",
-    factory=True,
-    host=config.FASTAPI.SERVE_HOST,
-    port=config.FASTAPI.SERVE_PORT,
-    timeout_graceful_shutdown=config.FASTAPI.TIMEOUT_GRACEFUL_SHUTDOWN,
-)
+uvicorn.run("manage:create_app", factory=True, **AppUtils.uvicorn_config())
 ```
 
 Uvicorn handles SIGTERM and SIGINT, stops accepting connections, waits up to that timeout, then runs the lifespan

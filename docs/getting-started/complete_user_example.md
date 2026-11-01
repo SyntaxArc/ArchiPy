@@ -711,11 +711,7 @@ def run(host: str | None, port: int | None, reload: bool | None) -> None:
     uvicorn.run(
         "manage:create_app",
         factory=True,
-        host=serve_host,
-        port=serve_port,
-        reload=serve_reload,
-        proxy_headers=config.FASTAPI.PROXY_HEADERS,
-        forwarded_allow_ips=config.FASTAPI.FORWARDED_ALLOW_IPS or "127.0.0.1",
+        **AppUtils.uvicorn_config(config, host=serve_host, port=serve_port, reload=serve_reload),
     )
 
 
@@ -730,10 +726,9 @@ python manage.py run
 python manage.py run --port 9000 --reload
 ```
 
-> **Note:** `proxy_headers` and `forwarded_allow_ips` wire `FASTAPI.PROXY_HEADERS` and
-> `FASTAPI.FORWARDED_ALLOW_IPS` into Uvicorn's `ProxyHeadersMiddleware`. When enabled, Uvicorn
-> rewrites `request.client.host` from trusted `X-Forwarded-For` headers before your application
-> runs. For HTTP rate limiting, use [fastapi-redis-sdk](https://github.com/redis/fastapi-redis-sdk)
+> **Note:** `AppUtils.uvicorn_config` builds the Uvicorn keyword arguments from the `UVICORN` config section
+> (`PROXY_HEADERS`, `FORWARDED_ALLOW_IPS`, timeouts, workers, WebSocket and TLS settings). With `PROXY_HEADERS` enabled,
+> Uvicorn rewrites `request.client.host` from trusted `X-Forwarded-For` headers before your application runs. For HTTP rate limiting, use [fastapi-redis-sdk](https://github.com/redis/fastapi-redis-sdk)
 > — see [Interceptors — FastAPI Rate Limiting](../tutorials/helpers/interceptors.md#fastapi-rate-limiting).
 
 ---

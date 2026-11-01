@@ -60,7 +60,7 @@ class AppConfig(BaseConfig):
     def customize(self) -> None:
         """Apply service-specific configuration overrides."""
         super().customize()
-        self.FASTAPI.RELOAD = self.ENVIRONMENT == EnvironmentType.LOCAL
+        self.UVICORN.RELOAD = self.ENVIRONMENT == EnvironmentType.LOCAL
 
 
 config = AppConfig()
