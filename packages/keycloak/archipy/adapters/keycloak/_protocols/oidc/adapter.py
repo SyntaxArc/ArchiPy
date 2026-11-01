@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from async_lru import alru_cache
 from jwcrypto import jwk
+from jwcrypto.common import JWException
 from keycloak.exceptions import (
     KeycloakError,
 )
@@ -35,6 +36,7 @@ from archipy.models.dtos.keycloak.token_exchange_dtos import (
 )
 from archipy.models.errors import (
     InternalError,
+    InvalidTokenError,
 )
 
 if TYPE_CHECKING:
@@ -146,7 +148,8 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_public_key")
         except Exception as e:  # soft-fail authz/role checks; JWT/Keycloak libs
-            raise InternalError(additional_data={"operation": "get_public_key", "error": str(e)}) from e
+            logger.exception("Failed to build the realm public key")
+            raise InternalError(additional_data={"operation": "get_public_key"}) from e
 
     def get_token(self, username: str, password: str) -> KeycloakTokenDTO | None:
         """Get a user token by username and password using the Resource Owner Password Credentials Grant.
@@ -388,6 +391,8 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             return to_dto_or_none(KeycloakTokenClaimsDTO, self._decode_token_locally(token))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token_info")
+        except (JWException, ValueError) as e:
+            raise InvalidTokenError from e
 
     def check_permissions_batch(
         self,
@@ -581,7 +586,8 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_public_key")
         except Exception as e:  # soft-fail authz/role checks; JWT/Keycloak libs
-            raise InternalError(additional_data={"operation": "get_public_key", "error": str(e)}) from e
+            logger.exception("Failed to build the realm public key")
+            raise InternalError(additional_data={"operation": "get_public_key"}) from e
 
     async def get_token(self, username: str, password: str) -> KeycloakTokenDTO | None:
         """Get a user token by username and password using the Resource Owner Password Credentials Grant.
@@ -824,6 +830,8 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             return to_dto_or_none(KeycloakTokenClaimsDTO, await self._decode_token_locally(token))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token_info")
+        except (JWException, ValueError) as e:
+            raise InvalidTokenError from e
 
     async def check_permissions_batch(
         self,

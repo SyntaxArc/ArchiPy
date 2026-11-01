@@ -122,6 +122,17 @@ Feature: Keycloak Authentication Testing
       | async        | jwks-async | jwks-async-c | jwksasync |
 
   @tokens
+  Scenario Outline: Forged tokens are mapped to an error and secrets stay out of the config repr
+    Given a configured sync Keycloak adapter via direct
+    Then a <adapter_type> adapter maps reading the claims of a token signed by an unknown key to "INVALID_TOKEN"
+    And the Keycloak config repr does not contain the client secret or the admin password
+
+    Examples:
+      | adapter_type |
+      | sync         |
+      | async        |
+
+  @tokens
   Scenario: Async token validation after the realm signing key rotates
     Given a configured sync Keycloak adapter via direct
     And I create a realm named "async-rotated-key-realm" with display name "Rotated Key Realm" using sync adapter

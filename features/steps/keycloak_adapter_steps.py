@@ -4359,3 +4359,32 @@ async def step_unreachable_keycloak_is_not_a_bad_token(context: Context, kind: s
         assert error.code == code, f"expected {code}, got {error.code}"
         return
     raise AssertionError("an unreachable Keycloak was reported as a plain invalid token")
+
+
+@then('a {kind} adapter maps reading the claims of a token signed by an unknown key to "{code}"')
+async def step_adapter_maps_bad_signature(context: Context, kind: str, code: str) -> None:
+    """A token that no realm key signed must surface as a mapped error, not a raw jwcrypto exception."""
+    import base64
+    import json
+
+    def segment_b64(value: dict[str, Any]) -> str:
+        return base64.urlsafe_b64encode(json.dumps(value).encode()).rstrip(b"=").decode()
+
+    forged = f"{segment_b64({'alg': 'RS256', 'kid': 'unknown'})}.{segment_b64({'sub': 'x'})}.c2ln"
+    adapter = _no_admin_adapter(kind)
+    try:
+        if kind == "async":
+            await adapter.get_token_info(forged)
+        else:
+            adapter.get_token_info(forged)
+    except BaseError as error:
+        assert error.code == code, f"expected {code}, got {error.code}"
+        return
+    raise AssertionError("the forged token was accepted")
+
+
+@then("the Keycloak config repr does not contain the client secret or the admin password")
+def step_config_repr_hides_secrets(context: Context) -> None:
+    config = KeycloakConfig(CLIENT_SECRET_KEY="client-secret-value", ADMIN_PASSWORD="admin-password-value")
+    text = repr(config) + str(config)
+    assert "client-secret-value" not in text and "admin-password-value" not in text, text

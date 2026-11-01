@@ -140,14 +140,10 @@ except (UnauthenticatedError, InvalidCredentialsError) as e:
 else:
     logger.info("Token refreshed successfully")
 
-try:
-    # Validate a token
-    is_valid = keycloak.validate_token(access_token)
-except UnauthenticatedError as e:
-    logger.error(f"Token validation failed: {e}")
-    raise
-else:
-    logger.info(f"Token valid: {is_valid}")
+# validate_token returns False for an invalid or expired token and raises
+# ServiceUnavailableError when Keycloak cannot be reached
+is_valid = keycloak.validate_token(access_token)
+logger.info(f"Token valid: {is_valid}")
 
 try:
     # Get user info from token
