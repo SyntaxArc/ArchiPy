@@ -438,6 +438,21 @@ Feature: ScyllaDB Adapter
       | rf_two_as | 2      | not contain |
 
   @needs-scylladb
+  Scenario Outline: CRUD helpers follow use_keyspace
+    Given a ScyllaDB adapter is configured
+    When I write one row to table "ks_t_<mode>" in each of the keyspaces "ks_a_<mode>" and "ks_b_<mode>" with the same helper call
+    Then table "ks_t_<mode>" should hold only its own row in each keyspace
+
+    Examples: Sync
+      | mode |
+      | syn  |
+
+    @async
+    Examples: Async
+      | mode |
+      | asyn |
+
+  @needs-scylladb
   Scenario Outline: Prepared statements are cached and executed with bound parameters
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
     When I execute a prepared ScyllaDB insert into "<table>" twice
