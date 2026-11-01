@@ -1,10 +1,17 @@
+import datetime
 import logging
 import os
+import shutil
+import ssl
 import tempfile
 import uuid
 from pathlib import Path
 
 from behave import given, then, when
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.x509.oid import NameOID
 from features.environment import TestConfig
 from features.test_helpers import get_current_scenario_context
 
@@ -535,6 +542,12 @@ _SECTION_SETTINGS = {
         ScyllaDBConfig,
         {"MIN_CONNECTIONS_PER_HOST": 10, "MAX_CONNECTIONS_PER_HOST": 2},
     ),
+    ("ScyllaDB", "a client certificate without a key"): (
+        ScyllaDBConfig,
+        {"TLS_ENABLED": True, "TLS_CERT_FILE": "/tmp/client.pem"},
+    ),
+    ("ScyllaDB", "a CA file with TLS disabled"): (ScyllaDBConfig, {"TLS_CA_FILE": "/tmp/ca.pem"}),
+    ("ScyllaDB", "TLS enabled with a CA file"): (ScyllaDBConfig, {"TLS_ENABLED": True, "TLS_CA_FILE": "/tmp/ca.pem"}),
     ("Temporal", "only a client certificate"): (TemporalConfig, {"TLS_CLIENT_CERT": "/tmp/client.pem"}),
     ("Temporal", "only a CA certificate"): (TemporalConfig, {"TLS_CA_CERT": "/tmp/ca.pem"}),
     ("Temporal", "a client key without a certificate"): (TemporalConfig, {"TLS_CLIENT_KEY": "/tmp/client.key"}),
@@ -650,3 +663,75 @@ def step_then_connect_args(context, expected):
     actual = get_current_scenario_context(context).get("connect_args")
     wanted = {} if expected == "empty" else {"connect_timeout": int(expected.split()[-1])}
     assert actual == wanted, f"Expected {wanted}, got {actual}"
+
+
+def _write_test_certificate(directory: Path) -> tuple[Path, Path]:
+    """Write a self-signed certificate and its key into directory."""
+    key = ec.generate_private_key(ec.SECP256R1())
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "scylla.test")])
+    now = datetime.datetime.now(datetime.UTC)
+    certificate = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now)
+        .not_valid_after(now + datetime.timedelta(days=1))
+        .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
+        .sign(key, hashes.SHA256())
+    )
+    cert_path = directory / "cert.pem"
+    key_path = directory / "key.pem"
+    cert_path.write_bytes(certificate.public_bytes(serialization.Encoding.PEM))
+    key_path.write_bytes(
+        key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        ),
+    )
+    return cert_path, key_path
+
+
+_SCYLLADB_TLS_SETTINGS = {
+    "TLS disabled": {},
+    "a CA file": {},
+    "a CA file and no host name check": {"TLS_CHECK_HOSTNAME": False},
+    "verification disabled": {"TLS_VERIFY_MODE": "CERT_NONE"},
+    "a CA file and a client certificate": {},
+}
+
+
+@when("a ScyllaDB TLS context is built with {tls}")
+def step_when_scylladb_tls_context_built(context, tls):
+    directory = Path(tempfile.mkdtemp())
+    context.add_cleanup(shutil.rmtree, directory, ignore_errors=True)
+    cert_path, key_path = _write_test_certificate(directory)
+    settings = dict(_SCYLLADB_TLS_SETTINGS[tls])
+    if tls != "TLS disabled":
+        settings["TLS_ENABLED"] = True
+    if "CA file" in tls:
+        settings["TLS_CA_FILE"] = str(cert_path)
+    if "client certificate" in tls:
+        settings.update(TLS_CERT_FILE=str(cert_path), TLS_KEY_FILE=str(key_path))
+    ssl_context = ScyllaDBConfig(**settings).build_ssl_context()
+    get_current_scenario_context(context).store("scylladb_ssl_context", ssl_context)
+
+
+@then("the ScyllaDB TLS context should be {expected}")
+def step_then_scylladb_tls_context(context, expected):
+    scenario_context = get_current_scenario_context(context)
+    ssl_context = scenario_context.get("scylladb_ssl_context")
+    if expected == "absent":
+        assert ssl_context is None
+        return
+    assert ssl_context is not None
+    assert ssl_context.minimum_version >= ssl.TLSVersion.TLSv1_2
+    if expected == "not verifying":
+        assert ssl_context.verify_mode == ssl.CERT_NONE
+        assert ssl_context.check_hostname is False
+        return
+    assert ssl_context.verify_mode == ssl.CERT_REQUIRED
+    assert ssl_context.check_hostname is (expected != "verifying without host name check")
+    assert len(ssl_context.get_ca_certs()) == 1

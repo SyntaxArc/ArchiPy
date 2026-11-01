@@ -174,6 +174,9 @@ Feature: Base Configuration System
       | ScyllaDB | no contact points                       | rejected |
       | ScyllaDB | a username without a password           | rejected |
       | ScyllaDB | a minimum pool above the maximum        | rejected |
+      | ScyllaDB | a client certificate without a key      | rejected |
+      | ScyllaDB | a CA file with TLS disabled             | rejected |
+      | ScyllaDB | TLS enabled with a CA file              | accepted |
       | Temporal | only a client certificate               | rejected |
       | Temporal | only a CA certificate                   | accepted |
       | Temporal | a client key without a certificate      | rejected |
@@ -182,6 +185,18 @@ Feature: Base Configuration System
       | Temporal | a task timeout above the run timeout    | accepted |
       | Temporal | a verification name without a CA        | rejected |
       | Temporal | a verification name with a CA           | accepted |
+
+  Scenario Outline: A ScyllaDB configuration with <tls> builds <context>
+    When a ScyllaDB TLS context is built with <tls>
+    Then the ScyllaDB TLS context should be <context>
+
+    Examples: TLS contexts
+      | tls                                | context                             |
+      | TLS disabled                       | absent                              |
+      | a CA file                          | verifying with host name check      |
+      | a CA file and no host name check   | verifying without host name check   |
+      | verification disabled              | not verifying                       |
+      | a CA file and a client certificate | verifying with a client certificate |
 
   Scenario Outline: The Temporal <field> default is <expected>
     When a default Temporal configuration is built
