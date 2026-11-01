@@ -217,6 +217,16 @@ so a write, delete or lease operation is never replayed. When Vault stays unavai
 raises `UnavailableError` with a fixed message (the Vault address and path are logged, not
 returned in the error).
 
+### Good to Know
+
+- `read_secret` returns a copy of the payload, so changing the result never alters the cached value.
+- `VAULT__VERIFY_SSL` accepts `1/true/yes/on` and `0/false/no/off` (case-insensitive). Any other value raises a
+  `ConfigurationError` instead of silently turning verification off.
+- Credential fields of `VaultConfig` (`TOKEN`, `APPROLE_SECRET_ID`, `PASSWORD`, the JWT and AWS secrets) are
+  excluded from `repr()`. Error reasons are generic; the underlying detail is logged.
+- If two callers request dynamic credentials for the same role, each call creates its own lease. Revoke
+  the leases you no longer need.
+
 ## See Also
 
 - [hvac overview](https://python-hvac.org/en/stable/overview.html) — Client init and auth

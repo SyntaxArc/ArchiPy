@@ -1,6 +1,7 @@
 """BDD steps for the HashiCorp Vault adapter."""
 
 import json
+import os
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -10,7 +11,9 @@ from features.environment import TestConfig
 from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.vault.adapters import VaultAdapter
-from archipy.models.errors import InvalidArgumentError, NotFoundError, UnavailableError
+from archipy.configs.config_template import VaultConfig
+from archipy.configs.vault_settings_source import _vault_config_from_env
+from archipy.models.errors import ConfigurationError, InvalidArgumentError, NotFoundError, UnavailableError
 
 
 def get_vault_adapter(context) -> VaultAdapter:
@@ -503,3 +506,43 @@ def step_then_unavailable_error(context):
 def step_then_request_count(context, count: int):
     seen = len(context.vault_stub_server.data_requests)
     assert seen == count, f"Expected {count} data requests, got {seen}: {context.vault_stub_server.data_requests}"
+
+
+@when('I mutate the dict returned by reading Vault secret "{path}"')
+def step_mutate_returned_secret(context, path):
+    adapter = get_vault_adapter(context)
+    adapter.read_secret(path)["v"] = "mutated"
+
+
+@when('I parse VAULT__VERIFY_SSL "{value}"')
+def step_parse_verify_ssl(context, value):
+    previous = os.environ.get("VAULT__VERIFY_SSL")
+    os.environ["VAULT__VERIFY_SSL"] = value
+    result: object
+    try:
+        result = _vault_config_from_env().VERIFY_SSL
+    except ConfigurationError as e:
+        result = e
+    finally:
+        if previous is None:
+            os.environ.pop("VAULT__VERIFY_SSL", None)
+        else:
+            os.environ["VAULT__VERIFY_SSL"] = previous
+    get_current_scenario_context(context).store("verify_ssl_result", result)
+
+
+@then('VAULT__VERIFY_SSL should resolve to "{outcome}"')
+def step_then_verify_ssl(context, outcome):
+    result = get_current_scenario_context(context).get("verify_ssl_result")
+    if outcome == "rejected":
+        assert isinstance(result, ConfigurationError), f"Expected ConfigurationError, got {result!r}"
+    else:
+        assert result is (outcome == "verified"), f"Expected {outcome}, got {result!r}"
+
+
+@then("the Vault config repr should not contain its credentials")
+def step_then_repr_hides_credentials(context):
+    config = VaultConfig(TOKEN="tok-secret-1", APPROLE_SECRET_ID="sid-secret-2", PASSWORD="pw-secret-3")
+    text = repr(config)
+    for secret in ("tok-secret-1", "sid-secret-2", "pw-secret-3"):
+        assert secret not in text, f"repr leaks {secret}"
