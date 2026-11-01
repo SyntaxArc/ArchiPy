@@ -782,3 +782,37 @@ def step_when_fastapi_section_built(context):
         warnings.simplefilter("always")
         FastAPIConfig(TIMEOUT_KEEP_ALIVE=9)
     scenario_context.store("caught_warnings", [str(item.message) for item in caught if item.category is DeprecationWarning])
+
+
+@when('the {section} field "{name}" is read')
+def step_when_config_field_read(context, section, name):
+    scenario_context = get_current_scenario_context(context)
+    config = scenario_context.get("built_config")
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        getattr(getattr(config, section), name)
+    scenario_context.store(
+        "caught_warnings",
+        [str(item.message) for item in caught if item.category is DeprecationWarning],
+    )
+
+
+@when('the UVICORN field "{name}" is read and the FASTAPI section is dumped')
+def step_when_uvicorn_field_read_and_fastapi_dumped(context, name):
+    scenario_context = get_current_scenario_context(context)
+    config = scenario_context.get("built_config")
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        getattr(config.UVICORN, name)
+        config.FASTAPI.model_dump()
+        repr(config.FASTAPI)
+    scenario_context.store(
+        "caught_warnings",
+        [str(item.message) for item in caught if item.category is DeprecationWarning],
+    )
+
+
+@then('the JSON schema of the FASTAPI section marks "{name}" as deprecated')
+def step_then_fastapi_schema_deprecated(context, name):
+    schema = FastAPIConfig.model_json_schema()
+    assert schema["properties"][name].get("deprecated") is True, schema["properties"][name]

@@ -360,3 +360,52 @@ Feature: App Utilities
   Scenario: Building a FASTAPI section with a deprecated uvicorn field warns
     When the FASTAPI section is built with a deprecated uvicorn field
     Then a deprecation warning mentions "UVICORN"
+
+  Scenario Outline: Reading a deprecated FASTAPI uvicorn field warns and names its replacement
+    Given a configuration built from:
+      """
+      {}
+      """
+    When the FASTAPI field "<field>" is read
+    Then a deprecation warning mentions "UVICORN.<field>"
+
+    Examples:
+      | field                     |
+      | TIMEOUT_KEEP_ALIVE        |
+      | FORWARDED_ALLOW_IPS       |
+      | RELOAD                    |
+      | TIMEOUT_GRACEFUL_SHUTDOWN |
+
+  Scenario: Reading the UVICORN field and dumping the FASTAPI section do not warn
+    Given a configuration built from:
+      """
+      {
+        "FASTAPI": {
+          "TIMEOUT_KEEP_ALIVE": 9
+        }
+      }
+      """
+    When the UVICORN field "TIMEOUT_KEEP_ALIVE" is read and the FASTAPI section is dumped
+    Then no deprecation warning is raised
+
+  Scenario: The deprecated FASTAPI fields are marked deprecated in the JSON schema
+    Then the JSON schema of the FASTAPI section marks "TIMEOUT_KEEP_ALIVE" as deprecated
+
+  Scenario Outline: Reading a deprecated ScyllaDB pool field warns, loading the config does not
+    Given a configuration built from:
+      """
+      {
+        "SCYLLADB": {
+          "MAX_CONNECTIONS_PER_HOST": 4
+        }
+      }
+      """
+    When the SCYLLADB field "<field>" is read
+    Then a deprecation warning mentions "no per-host connection pool sizing"
+
+    Examples:
+      | field                       |
+      | MAX_CONNECTIONS_PER_HOST    |
+      | MIN_CONNECTIONS_PER_HOST    |
+      | CORE_CONNECTIONS_PER_HOST   |
+      | MAX_REQUESTS_PER_CONNECTION |

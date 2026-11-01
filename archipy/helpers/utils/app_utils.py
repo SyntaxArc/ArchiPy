@@ -455,7 +455,7 @@ class AppUtils:
                     DeprecationWarning,
                     stacklevel=3,
                 )
-                return getattr(fastapi_section, name)
+                return vars(fastapi_section)[name]  # read without the pydantic deprecation warning
             return getattr(uvicorn_section, name)
 
         values = {

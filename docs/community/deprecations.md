@@ -126,6 +126,16 @@ through `AppUtils.uvicorn_config()`, emits a `DeprecationWarning`. Deprecated si
 
 `FASTAPI.SERVE_HOST` and `FASTAPI.SERVE_PORT` stay where they are.
 
+These fields are marked with pydantic `deprecated`: reading one (`config.FASTAPI.RELOAD`) emits a
+`DeprecationWarning` that names the replacement, and the JSON schema flags the field. ArchiPy's own reads do not warn.
+
+## ScyllaDB config
+
+`MAX_CONNECTIONS_PER_HOST`, `MIN_CONNECTIONS_PER_HOST`, `CORE_CONNECTIONS_PER_HOST` and
+`MAX_REQUESTS_PER_CONNECTION` of `SCYLLADB` never had an effect, because scylla-driver has no per-host pool sizing.
+Reading one emits a `DeprecationWarning`, and building a cluster with a non-default value warns too. They are removed
+in **6.0.0** with no replacement. Deprecated since 5.23.0.
+
 ## Adding a deprecation
 
 Keep the old name working and route it through `archipy.helpers._deprecation`:

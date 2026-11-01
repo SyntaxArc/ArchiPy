@@ -7,6 +7,10 @@ from pydantic import BaseModel, Field, SecretStr, model_validator
 
 from archipy.models.errors import InvalidArgumentError
 
+_NO_POOL_SIZING = (
+    "scylla-driver has no per-host connection pool sizing, so this setting has no effect; it will be removed in 6.0.0"
+)
+
 
 class ScyllaDBConfig(BaseModel):
     """Configuration settings for ScyllaDB/Cassandra connections and operations.
@@ -169,21 +173,25 @@ class ScyllaDBConfig(BaseModel):
         default=2,
         ge=1,
         description="Maximum connections per host (recommended: 1-3 per CPU core)",
+        deprecated=_NO_POOL_SIZING,
     )
     MIN_CONNECTIONS_PER_HOST: int = Field(
         default=1,
         ge=1,
         description="Minimum connections per host",
+        deprecated=_NO_POOL_SIZING,
     )
     CORE_CONNECTIONS_PER_HOST: int = Field(
         default=1,
         ge=1,
         description="Core connections per host to maintain",
+        deprecated=_NO_POOL_SIZING,
     )
     MAX_REQUESTS_PER_CONNECTION: int = Field(
         default=100,
         ge=1,
         description="Maximum concurrent requests per connection",
+        deprecated=_NO_POOL_SIZING,
     )
 
     # Datacenter Configuration
@@ -223,12 +231,13 @@ class ScyllaDBConfig(BaseModel):
     @model_validator(mode="after")
     def validate_connection_pool(self) -> Self:
         """Validate connection pool configuration."""
-        if self.MIN_CONNECTIONS_PER_HOST > self.MAX_CONNECTIONS_PER_HOST:
+        pool = vars(self)  # read without the pydantic deprecation warning
+        if pool["MIN_CONNECTIONS_PER_HOST"] > pool["MAX_CONNECTIONS_PER_HOST"]:
             raise InvalidArgumentError(
                 argument_name="connection_pool",
                 additional_data={"error": "MIN_CONNECTIONS_PER_HOST cannot exceed MAX_CONNECTIONS_PER_HOST"},
             )
-        if self.CORE_CONNECTIONS_PER_HOST > self.MAX_CONNECTIONS_PER_HOST:
+        if pool["CORE_CONNECTIONS_PER_HOST"] > pool["MAX_CONNECTIONS_PER_HOST"]:
             raise InvalidArgumentError(
                 argument_name="connection_pool",
                 additional_data={"error": "CORE_CONNECTIONS_PER_HOST cannot exceed MAX_CONNECTIONS_PER_HOST"},
