@@ -766,6 +766,10 @@ class AsyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
         """Get user information from a token."""
         raise NotImplementedError
 
+    async def _ensure_admin(self) -> None:
+        """Refresh the admin client off the event loop when its token is about to expire."""
+        raise NotImplementedError
+
     async def _async_call_keycloak(self, operation: str, fn: Callable[[], Awaitable[T]]) -> T:
         """Run an async Keycloak call and map KeycloakError to app errors.
 
@@ -779,6 +783,7 @@ class AsyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
         Raises:
             Mapped application errors from ``_handle_keycloak_exception``.
         """
+        await self._ensure_admin()
         try:
             return await fn()
         except KeycloakError as e:

@@ -128,6 +128,16 @@ Feature: Keycloak Authentication Testing
       | async |
 
   @tokens
+  Scenario Outline: Async adapter refreshes an expired admin token once and off the event loop
+    Given a configured sync Keycloak adapter via direct
+    When <calls> concurrent admin calls run on an async adapter whose admin token expired
+    Then the admin client was refreshed once outside the event loop thread
+
+    Examples:
+      | calls |
+      | 1     |
+      | 5     |
+
   Scenario Outline: Keycloak errors map by status code and expose the upstream message only for 4xx
     When a Keycloak error with status <status> and message "<message>" is mapped for operation "<operation>"
     Then the mapped error has code "<error_code>" and <exposure> the upstream message
