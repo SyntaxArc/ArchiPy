@@ -93,6 +93,17 @@ Feature: Base Configuration System
     When a PostgreSQL configuration is built from the parts user "alice", password "s3cret", host "db.internal", port 5433 and database "app"
     Then the PostgreSQL DSN should be "postgresql+psycopg://alice:s3cret@db.internal:5433/app"
 
+  Scenario Outline: A password with reserved characters builds a valid DSN and never appears in an error
+    When a PostgreSQL configuration is built from the parts user "alice", password "<password>", host "db.internal", port 5433 and database "app"
+    Then the PostgreSQL DSN should be "<dsn>"
+    And the PostgreSQL connection parts should be user "alice", password "<password>", host "db.internal", port 5433 and database "app"
+    And an invalid PostgreSQL configuration with password "<password>" should not echo it in its error
+
+    Examples: Reserved characters
+      | password  | dsn                                                           |
+      | S3cret/x  | postgresql+psycopg://alice:S3cret%2Fx@db.internal:5433/app    |
+      | p#ss?word | postgresql+psycopg://alice:p%23ss%3Fword@db.internal:5433/app |
+
   Scenario: Connection parts that are set win over the DSN
     When a PostgreSQL configuration is built with the host "override.internal" and the DSN "postgresql+psycopg://alice:s3cret@db.internal:5433/app"
     Then the PostgreSQL connection parts should be user "alice", password "s3cret", host "override.internal", port 5433 and database "app"

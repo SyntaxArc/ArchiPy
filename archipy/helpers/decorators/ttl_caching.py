@@ -62,6 +62,7 @@ class CachedFunction[**P, R]:
         cache: MutableMapping[Hashable, object],
         instance: object | None = None,
         lock: threading.RLock | None = None,
+        cache_factory: Callable[[], MutableMapping[Hashable, object]] | None = None,
     ) -> None:
         """Initialize the cached function wrapper.
 
@@ -70,10 +71,13 @@ class CachedFunction[**P, R]:
             cache: The cache instance to use.
             instance: The instance this method is bound to (for bound methods).
             lock: Lock guarding the cache; shared between bound copies of the same decorated function.
+            cache_factory: When set, every instance the method is bound to gets its own cache built by
+                this factory (per-instance caching) instead of sharing ``cache``.
         """
         self._func: Callable[..., R] = func
         self._cache: MutableMapping[Hashable, object] = cache
         self._instance: object | None = instance
+        self._cache_factory = cache_factory
         # Calls on the same cache from several threads must not race on the (non thread-safe) TTLCache
         self._lock = lock if lock is not None else threading.RLock()
         # Preserve function metadata
@@ -95,16 +99,21 @@ class CachedFunction[**P, R]:
         # id(self) keeps same-named cached methods of different classes in one MRO apart
         bound_method_name = f"_cached_{func_name}_{id(self)}"
         if not hasattr(obj, bound_method_name):
-            # Create a bound CachedFunction that shares the same cache
-            bound_cached: CachedFunction[P, R] = CachedFunction(self._func, self._cache, instance=obj, lock=self._lock)
+            bound_cached = self._bind(obj)
             # Store in instance __dict__ to maintain identity
             try:
                 object.__setattr__(obj, bound_method_name, bound_cached)
             except AttributeError, TypeError:
-                # If we can't set the attribute (frozen dataclass, etc.), return a new instance
-                return CachedFunction(self._func, self._cache, instance=obj, lock=self._lock)
+                # If we can't set the attribute (frozen dataclass, etc.), return the new bound copy uncached by identity
+                return bound_cached
 
         return getattr(obj, bound_method_name)
+
+    def _bind(self, obj: object) -> CachedFunction[P, R]:
+        """Create the copy bound to ``obj``: shared cache by default, its own cache in per-instance mode."""
+        if self._cache_factory is None:
+            return CachedFunction(self._func, self._cache, instance=obj, lock=self._lock)
+        return CachedFunction(self._func, self._cache_factory(), instance=obj, lock=threading.RLock())
 
     def _make_key(self, args: tuple[object, ...], kwargs: Mapping[str, object]) -> Hashable | None:
         """Build a hashable key from the call arguments, or None if they cannot be hashed."""
@@ -172,7 +181,8 @@ class CachedFunction[**P, R]:
         """Clear the cache.
 
         This clears all cached values for this function. When used with instance methods,
-        this clears the shared cache for all instances.
+        this clears the shared cache for all instances, or only the bound instance's cache
+        when the function was decorated with ``per_instance=True``.
         """
         with self._lock:
             self._cache.clear()
@@ -181,12 +191,14 @@ class CachedFunction[**P, R]:
 def ttl_cache[**P, R](
     ttl_seconds: int | Callable[[], int] = 300,
     maxsize: int = 100,
+    *,
+    per_instance: bool = False,
 ) -> Callable[[Callable[P, R]], CachedFunction[P, R]]:
     """Decorator that provides a TTL cache for functions and methods.
 
-    The cache is shared across all instances when decorating instance methods.
-    This is by design to allow efficient caching of expensive operations that
-    depend only on the method arguments, not the instance state.
+    By default the cache is shared across all instances when decorating instance methods,
+    which is only correct for results that depend on the method arguments alone. Pass
+    ``per_instance=True`` when the result depends on instance state (endpoint, credentials, realm).
 
     Args:
         ttl_seconds: Time to live in seconds (default: 5 minutes), or a zero-argument
@@ -194,6 +206,9 @@ def ttl_cache[**P, R](
             After this time, cached entries expire and the function is re-executed.
         maxsize: Maximum size of the cache (default: 100).
             When the cache is full, the least recently used entry is evicted.
+        per_instance: When True, every instance gets its own cache, so results never leak between
+            instances and ``clear_cache()`` on one instance leaves the others untouched (default: False,
+            one cache shared by all instances).
 
     Returns:
         Decorated function with TTL caching and a clear_cache() method.
@@ -230,7 +245,7 @@ def ttl_cache[**P, R](
           arguments must be hashable; calls with unhashable arguments run uncached
         - ``async def`` functions are supported; the awaited result is cached
         - Access to the cache is guarded by a lock, so it is safe to call from several threads
-        - Cache is shared across all instances of a class (not per-instance)
+        - Cache is shared across all instances of a class unless ``per_instance=True`` is passed
     """
     _require_cachetools()
     from cachetools import TTLCache
@@ -239,8 +254,11 @@ def ttl_cache[**P, R](
     cache: TTLCache[Hashable, object, float] = TTLCache(maxsize=maxsize, ttl=resolved_ttl)
     lock = threading.RLock()
 
+    def new_cache() -> MutableMapping[Hashable, object]:
+        return TTLCache(maxsize=maxsize, ttl=resolved_ttl)
+
     def decorator(func: Callable[P, R]) -> CachedFunction[P, R]:
-        return CachedFunction(func, cache, instance=None, lock=lock)
+        return CachedFunction(func, cache, instance=None, lock=lock, cache_factory=new_cache if per_instance else None)
 
     return decorator
 

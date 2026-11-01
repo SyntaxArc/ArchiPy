@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from redis.asyncio.retry import Retry as AsyncRetry
 from redis.backoff import ExponentialBackoff
@@ -19,6 +19,15 @@ if TYPE_CHECKING:
     from archipy.configs.config_template import RedisConfig
 
 _set = set
+
+
+def _text(value: bytes | str) -> str:
+    """Return a key, field or value unchanged for the Redis client.
+
+    redis-py accepts bytes as well as str, so bytes must never be coerced with ``str()``
+    (which would store the literal ``"b'..'"`` repr). The cast only satisfies the client's typing.
+    """
+    return cast("str", value)
 
 
 class SyncRedisMixinBase:
@@ -125,7 +134,9 @@ def _sentinel_redis_kwargs(configs: RedisConfig, *, is_async: bool = False) -> d
         "socket_connect_timeout": configs.SOCKET_CONNECT_TIMEOUT,
         "max_connections": configs.MAX_CONNECTIONS,
         "password": configs.PASSWORD,
+        "db": configs.DATABASE,
         "decode_responses": configs.DECODE_RESPONSES,
+        "health_check_interval": configs.HEALTH_CHECK_INTERVAL,
         "protocol": configs.PROTOCOL,
         **_tls_acl_kwargs(configs),
         **_resilience_kwargs(configs, is_async=is_async),
@@ -149,5 +160,5 @@ def _normalize_zset_keys(
 ) -> dict[str, float] | list[str]:
     """Normalize sorted-set keys for zunion/zinter into a form the Redis client accepts."""
     if isinstance(keys, Mapping):
-        return {str(key): float(value) for key, value in keys.items()}
-    return [str(key) for key in keys]
+        return {_text(key): float(value) for key, value in keys.items()}
+    return [_text(key) for key in keys]

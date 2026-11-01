@@ -424,6 +424,8 @@ def _build_search_query(
         return redis_query, params
 
     redis_query = Query(query.query).paging(query.offset, query.limit).dialect(2)
+    if query.text_scorer:
+        redis_query = redis_query.scorer(query.text_scorer)
     if query.return_fields:
         redis_query = redis_query.return_fields(
             *[_normalize_search_field_name(field) for field in query.return_fields],
@@ -439,7 +441,11 @@ def _build_range_query(
         raise InvalidArgumentError(argument_name="range")
     range_query = query.range
     range_clause = _build_range_clause(range_query)
-    query_string = f"({range_query.filter_expr}) | {range_clause}" if range_query.filter_expr else range_clause
+    if range_query.filter_expr:
+        joiner = " | " if range_query.filter_mode == "or" else " "
+        query_string = f"({range_query.filter_expr}){joiner}{range_clause}"
+    else:
+        query_string = range_clause
     redis_query = Query(query_string).paging(query.offset, query.limit).dialect(2)
     if range_query.score_field:
         redis_query = redis_query.sort_by(range_query.score_field)
@@ -485,6 +491,8 @@ def _build_hybrid_search_query(
         text_part = f"{text_part} ({knn.filter_expr})"
     query_string = f"{text_part}=>{_build_knn_clause(knn)}"
     redis_query = Query(query_string).sort_by(knn.score_field).paging(0, knn.k).dialect(2)
+    if query.text_scorer:
+        redis_query = redis_query.scorer(query.text_scorer)
     if knn.return_fields:
         redis_query = redis_query.return_fields(
             *[_normalize_search_field_name(field) for field in knn.return_fields],

@@ -69,7 +69,7 @@ def _normalize_userinfo(raw: dict[str, Any] | bytes) -> KeycloakUserType:
 class KeycloakAuthMixin(SyncKeycloakMixinBase):
     """Sync Keycloak mixin for auth/token operations."""
 
-    @ttl_cache(ttl_seconds=3600, maxsize=1)  # Cache for 1 hour, public key rarely changes
+    @ttl_cache(ttl_seconds=3600, maxsize=1, per_instance=True)  # Cache for 1 hour, public key rarely changes
     def get_public_key(self) -> PublicKeyType:
         """Get the public key used to verify tokens.
 
@@ -197,7 +197,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
     def _get_userinfo_cached(self, token: str) -> KeycloakUserType:
         return _normalize_userinfo(self._openid_adapter.userinfo(token))
 
-    @ttl_cache(ttl_seconds=3600, maxsize=1)  # Cache for 1 hour
+    @ttl_cache(ttl_seconds=3600, maxsize=1, per_instance=True)  # Cache for 1 hour
     def get_well_known_config(self) -> KeycloakWellKnownDTO:
         """Get the well-known OpenID configuration.
 
@@ -212,7 +212,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_well_known_config")
 
-    @ttl_cache(ttl_seconds=3600, maxsize=1)  # Cache for 1 hour
+    @ttl_cache(ttl_seconds=3600, maxsize=1, per_instance=True)  # Cache for 1 hour
     def get_certs(self) -> KeycloakCertsDTO:
         """Get the JWT verification certificates.
 
@@ -352,7 +352,7 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token_info")
 
-    @ttl_cache(ttl_seconds=30, maxsize=200)
+    @ttl_cache(ttl_seconds=30, maxsize=200, per_instance=True)
     def check_permissions_batch(
         self,
         token: str,

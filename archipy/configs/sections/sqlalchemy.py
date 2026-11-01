@@ -2,9 +2,9 @@
 
 import contextlib
 from typing import Literal, Self
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
-from pydantic import BaseModel, Field, PostgresDsn, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PostgresDsn, field_validator, model_validator
 
 from archipy.models.errors import ConfigurationError
 
@@ -14,6 +14,9 @@ class SQLAlchemyConfig(BaseModel):
 
     Controls database connection parameters, pooling behavior, and query execution settings.
     """
+
+    # Validation errors must not echo input values: they can contain the DSN and the password
+    model_config = ConfigDict(hide_input_in_errors=True)
 
     DATABASE: str | None = Field(default=None, description="Database name")
     DRIVER_NAME: str = Field(default="postgresql+psycopg", description="Database driver name")
@@ -158,9 +161,10 @@ class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
             return self
 
         if all([self.USERNAME, self.HOST, self.PORT, self.DATABASE]):
-            password_part = f":{self.PASSWORD}" if self.PASSWORD else ""
+            user_part = quote(str(self.USERNAME), safe="")
+            password_part = f":{quote(self.PASSWORD, safe='')}" if self.PASSWORD else ""
             self.POSTGRES_DSN = PostgresDsn(
-                url=f"{self.DRIVER_NAME}://{self.USERNAME}{password_part}@{self.HOST}:{self.PORT}/{self.DATABASE}",
+                url=f"{self.DRIVER_NAME}://{user_part}{password_part}@{self.HOST}:{self.PORT}/{self.DATABASE}",
             )
         return self
 

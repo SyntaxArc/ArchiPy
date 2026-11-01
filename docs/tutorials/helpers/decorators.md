@@ -223,6 +223,12 @@ logger.info(f"Different user call took {time.time() - start:.3f} seconds")
 fetch_user_data.clear_cache()
 ```
 
+!!! warning "Methods share one cache by default"
+    On an instance method, `ttl_cache` keeps a single cache for all instances, keyed by the
+    arguments only. Results that depend on instance state (endpoint, credentials, tenant) would leak
+    between instances. Use `@ttl_cache(ttl_seconds=60, per_instance=True)` to give every instance its
+    own cache; `clear_cache()` then clears only that instance's entries.
+
 ## SQLAlchemy Transaction Decorators
 
 These decorators automatically manage database transactions.

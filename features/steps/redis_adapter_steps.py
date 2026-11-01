@@ -2934,6 +2934,33 @@ def step_when_range_search(context, index_name, radius, vector):
 
 
 @when(
+    r'I search index "(?P<index_name>[^"]+)" for vectors within radius (?P<radius>[\d.]+) of "(?P<vector>[^"]+)" '
+    r'filtered by "(?P<filter_expr>[^"]+)" in (?P<mode>and|or) mode',
+)
+def step_when_range_search_filtered(context, index_name, radius, vector, filter_expr, mode):
+    """Run a vector range search combined with a filter expression."""
+    handle = get_current_scenario_context(context).adapter.search_index(index_name)
+    query = SearchQueryDTO.from_range(
+        _parse_search_vector(vector),
+        radius=float(radius),
+        filter_expr=filter_expr,
+        filter_mode=mode,
+        return_fields=["title"],
+        limit=10,
+    )
+    result = _search_until_indexed(lambda: handle.search(query))
+    store_result(context, "search_result", result)
+
+
+@then(r"the search should return exactly (?P<count>\d+) hits?")
+def step_then_search_exact_hits(context, count):
+    """Assert the exact synchronous search hit count."""
+    result = get_result(context, "search_result")
+    assert result is not None
+    assert len(result.hits) == int(count), f"Expected {count} hits, got {len(result.hits)}"
+
+
+@when(
     r'I search index "(?P<index_name>[^"]+)" for nearest vector "(?P<vector>[^"]+)" with k (?P<k>\d+) '
     r"and shard_k_ratio (?P<ratio>[\d.]+)",
 )
@@ -3065,6 +3092,38 @@ def step_when_hybrid_search(context, index_name, text_query, vector, k):
     )
     result = _search_until_indexed(lambda: handle.search(query))
     store_result(context, "search_result", result)
+
+
+@when(
+    r'I search index "(?P<index_name>[^"]+)" with the (?P<kind>text|hybrid) query and the text scorer "(?P<scorer>[^"]+)"',
+)
+def step_when_search_with_scorer(context, index_name, kind, scorer):
+    """Run a text or hybrid search with an explicit text scorer."""
+    handle = get_current_scenario_context(context).adapter.search_index(index_name)
+    if kind == "text":
+        query = SearchQueryDTO(query="database", text_scorer=scorer, return_fields=["title"])
+    else:
+        query = SearchQueryDTO.from_hybrid(
+            "database",
+            _parse_search_vector("[0.8, 0.2, 0.0]"),
+            k=1,
+            text_scorer=scorer,
+            return_fields=["title"],
+        )
+    try:
+        result = _search_until_indexed(lambda: handle.search(query))
+    except Exception as error:  # noqa: BLE001 - any server rejection counts as the outcome under test
+        store_result(context, "scorer_outcome", "rejected")
+        store_result(context, "scorer_error", str(error))
+    else:
+        store_result(context, "scorer_outcome", "hits" if result.hits else "empty")
+
+
+@then(r'the scorer search outcome should be "(?P<outcome>hits|rejected)"')
+def step_then_scorer_outcome(context, outcome):
+    """Assert the scorer search either returned hits or was rejected by the server."""
+    actual = get_result(context, "scorer_outcome")
+    assert actual == outcome, f"Expected {outcome}, got {actual}"
 
 
 @when(r'I aggregate search index "(?P<index_name>[^"]+)" grouped by category')
@@ -3640,6 +3699,29 @@ def step_then_sentinel_username(context, user):
     assert manager.sentinel_kwargs["username"] == user, manager.sentinel_kwargs
 
 
+@given(
+    r"a Redis config in (?P<mode>standalone|sentinel) mode with database (?P<db>\d+) "
+    r"and a health check interval of (?P<interval>\d+) seconds",
+)
+def step_given_db_health_config(context, mode, db, interval):
+    """Build a Redis config with a non-default database and health check interval."""
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.tls_config = _resilience_config(
+        mode,
+        DATABASE=int(db),
+        HEALTH_CHECK_INTERVAL=int(interval),
+    )
+
+
+@then(r"the client connection should use database (?P<db>\d+) and a health check interval of (?P<interval>\d+)")
+def step_then_client_db_health(context, db, interval):
+    """Verify the pool carries the configured database and health check interval."""
+    scenario_context = get_current_scenario_context(context)
+    kwargs = scenario_context.tls_adapter.client.connection_pool.connection_kwargs
+    assert kwargs["db"] == int(db), kwargs
+    assert kwargs["health_check_interval"] == int(interval), kwargs
+
+
 @then(r"the client connection should not carry a client name or extra retry errors")
 def step_then_client_defaults(context):
     """Verify unset settings leave the redis-py defaults in place."""
@@ -3670,3 +3752,44 @@ def step_then_config_rejected(context):
     """Verify the config was rejected."""
     scenario_context = get_current_scenario_context(context)
     assert scenario_context.config_error is not None, "Config was accepted"
+
+
+def _plain(value):
+    """Decode a bytes response to str."""
+    return value.decode() if isinstance(value, bytes) else value
+
+
+@when(r'I write bytes keys, fields and members tagged "(?P<tag>[^"]+)" in (?P<adapter_type>mock|container|cluster)')
+def step_when_write_bytes(context, tag, adapter_type):
+    """Write bytes keys, hash fields and sorted-set members."""
+    adapter = get_current_scenario_context(context).adapter
+    adapter.mset({f"{tag}:k1".encode(): "v"})
+    adapter.hset(f"{tag}:h", f"{tag}-f".encode(), b"val")
+    adapter.zadd(f"{tag}:z".encode(), {f"{tag}-m".encode(): 1.0})
+
+
+@then(r'the bytes keys, fields and members tagged "(?P<tag>[^"]+)" should be stored as plain text')
+def step_then_bytes_plain(context, tag):
+    """Verify no b'..' repr was stored."""
+    adapter = get_current_scenario_context(context).adapter
+    assert _plain(adapter.get(f"{tag}:k1")) == "v"
+    assert {_plain(k): _plain(v) for k, v in adapter.hgetall(f"{tag}:h").items()} == {f"{tag}-f": "val"}
+    assert [_plain(m) for m in adapter.zrange(f"{tag}:z", 0, -1)] == [f"{tag}-m"]
+
+
+@when(r'I write bytes keys, fields and members tagged "(?P<tag>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
+async def step_when_write_bytes_async(context, tag, adapter_type):
+    """Write bytes keys, hash fields and sorted-set members asynchronously."""
+    adapter = get_current_scenario_context(context).async_adapter
+    await adapter.mset({f"{tag}:k1".encode(): "v"})
+    await adapter.hset(f"{tag}:h", f"{tag}-f".encode(), b"val")
+    await adapter.zadd(f"{tag}:z".encode(), {f"{tag}-m".encode(): 1.0})
+
+
+@then(r'the async bytes keys, fields and members tagged "(?P<tag>[^"]+)" should be stored as plain text')
+async def step_then_bytes_plain_async(context, tag):
+    """Verify no b'..' repr was stored."""
+    adapter = get_current_scenario_context(context).async_adapter
+    assert _plain(await adapter.get(f"{tag}:k1")) == "v"
+    assert {_plain(k): _plain(v) for k, v in (await adapter.hgetall(f"{tag}:h")).items()} == {f"{tag}-f": "val"}
+    assert [_plain(m) for m in await adapter.zrange(f"{tag}:z", 0, -1)] == [f"{tag}-m"]

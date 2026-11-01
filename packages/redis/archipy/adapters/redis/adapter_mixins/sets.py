@@ -8,6 +8,7 @@ from archipy.adapters.redis.adapter_mixins._shared import (
     AsyncRedisMixinBase,
     SyncRedisMixinBase,
     _set,
+    _text,
 )
 from archipy.models.errors import InternalError, InvalidArgumentError
 
@@ -304,7 +305,7 @@ class AsyncRedisSetsMixin(AsyncRedisMixinBase):
             RedisSetResponseType: Set containing union of all sets.
         """
         # Convert keys to str for type compatibility, combine into list
-        keys_list: list[str] = [str(keys)] + [str(arg) if isinstance(arg, bytes) else arg for arg in args]
+        keys_list: list[str] = [_text(keys)] + [_text(arg) for arg in args]
         result = self.client.sunion(keys_list)
         if isinstance(result, Awaitable):
             result = await result

@@ -75,6 +75,9 @@ ATOMIC_BLOCK_CONFIGS = {
     },
 }
 
+# Databases without SAVEPOINT support: a failing nested call is left to the outermost call to roll back
+_NO_SAVEPOINT_DB_TYPES = frozenset({"starrocks"})
+
 # Type variables for function return types
 R = TypeVar("R")
 
@@ -210,6 +213,54 @@ async def _close_async_session(session: Any, session_manager: AsyncSessionManage
     await session_manager.remove_session()
 
 
+async def _run_async_scope[R](
+    session: Any,
+    func: Callable[..., Awaitable[R]],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    *,
+    is_nested: bool,
+    db_type: str,
+) -> R:
+    """Run ``func`` in the outer transaction, a savepoint (nested call) or a new transaction."""
+    if is_nested and db_type in _NO_SAVEPOINT_DB_TYPES:
+        return await func(*args, **kwargs)
+    if is_nested:
+        # A failing nested call rolls back to its savepoint only; the outer transaction stays usable
+        async with session.begin_nested():
+            return await func(*args, **kwargs)
+    if session.in_transaction():
+        result = await func(*args, **kwargs)
+        await session.commit()
+        return result
+    async with session.begin():
+        return await func(*args, **kwargs)
+
+
+def _run_sync_scope[R](
+    session: Any,
+    func: Callable[..., R],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    *,
+    is_nested: bool,
+    db_type: str,
+) -> R:
+    """Run ``func`` in the outer transaction, a savepoint (nested call) or a new transaction."""
+    if is_nested and db_type in _NO_SAVEPOINT_DB_TYPES:
+        return func(*args, **kwargs)
+    if is_nested:
+        # A failing nested call rolls back to its savepoint only; the outer transaction stays usable
+        with session.begin_nested():
+            return func(*args, **kwargs)
+    if session.in_transaction():
+        result = func(*args, **kwargs)
+        session.commit()
+        return result
+    with session.begin():
+        return func(*args, **kwargs)
+
+
 def _create_async_atomic_wrapper[R](
     func: Callable[..., Awaitable[R]],
     *,
@@ -230,18 +281,13 @@ def _create_async_atomic_wrapper[R](
             session.info[atomic_flag] = True
 
         try:
-            if session.in_transaction():
-                result = await func(*args, **kwargs)
-                if not is_nested:
-                    await session.commit()
-                return result
-            async with session.begin():
-                return await func(*args, **kwargs)
+            return await _run_async_scope(session, func, args, kwargs, is_nested=is_nested, db_type=db_type)
         except BaseException as exception:
-            try:
-                await session.rollback()
-            except Exception:
-                logger.exception("Rollback failed in %s atomic block; re-raising the original error", db_type)
+            if not is_nested or _is_control_flow_exception(exception):
+                try:
+                    await session.rollback()
+                except Exception:
+                    logger.exception("Rollback failed in %s atomic block; re-raising the original error", db_type)
             if _is_control_flow_exception(exception):
                 raise
             func_name = getattr(func, "__name__", "unknown")
@@ -250,7 +296,7 @@ def _create_async_atomic_wrapper[R](
         finally:
             if not is_nested:
                 session.info.pop(atomic_flag, None)
-            if not session.in_transaction():
+            if not is_nested and not session.in_transaction():
                 # Cleanup must finish even when the task is being cancelled
                 await asyncio.shield(_close_async_session(session, session_manager))
 
@@ -277,18 +323,13 @@ def _create_sync_atomic_wrapper[R](
             session.info[atomic_flag] = True
 
         try:
-            if session.in_transaction():
-                result = func(*args, **kwargs)
-                if not is_nested:
-                    session.commit()
-                return result
-            with session.begin():
-                return func(*args, **kwargs)
+            return _run_sync_scope(session, func, args, kwargs, is_nested=is_nested, db_type=db_type)
         except BaseException as exception:
-            try:
-                session.rollback()
-            except Exception:
-                logger.exception("Rollback failed in %s atomic block; re-raising the original error", db_type)
+            if not is_nested or _is_control_flow_exception(exception):
+                try:
+                    session.rollback()
+                except Exception:
+                    logger.exception("Rollback failed in %s atomic block; re-raising the original error", db_type)
             if _is_control_flow_exception(exception):
                 raise
             func_name = getattr(func, "__name__", "unknown")
@@ -297,7 +338,7 @@ def _create_sync_atomic_wrapper[R](
         finally:
             if not is_nested:
                 session.info.pop(atomic_flag, None)
-            if not session.in_transaction():
+            if not is_nested and not session.in_transaction():
                 session.close()
                 session_manager.remove_session()
 

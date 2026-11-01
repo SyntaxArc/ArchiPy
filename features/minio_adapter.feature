@@ -188,6 +188,13 @@ Feature: MinIO Operations Testing
     When I clear all adapter caches
     Then object "keep.txt" should exist in bucket "clear-bucket"
 
+  Scenario: Caches are not shared between adapter instances
+    Given a second MinIO adapter has cached that bucket "iso-bucket" is missing
+    When I create a bucket named "iso-bucket"
+    Then the second MinIO adapter should still serve bucket "iso-bucket" as missing from its own cache
+    When I clear all caches of the second MinIO adapter
+    Then the second MinIO adapter should report bucket "iso-bucket" exists
+
   @needs-otel-collector
   Scenario: MinIO adapter calls emit boto spans
     Given adapter spans are exported to the collector

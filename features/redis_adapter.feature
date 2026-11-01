@@ -1022,6 +1022,20 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-products-hybrid   | {hyb}   | {hyb}:1   |
       | cluster      | JSON       | cluster-products-hybrid-j | {hyb}   | {hyb}:j1  |
 
+  Scenario Outline: Text scorer is applied to text and hybrid searches
+    Given a configured container
+    And search index "<index_name>" exists with prefix "<prefix>:" for HASH documents
+    And search document "<doc_id>" exists with title "Vector Database" and vector "[1.0, 0.0, 0.0]" for HASH documents
+    When I search index "<index_name>" with the <kind> query and the text scorer "<scorer>"
+    Then the scorer search outcome should be "<outcome>"
+
+    Examples: Scorers
+      | index_name        | prefix | doc_id   | kind   | scorer | outcome  |
+      | scorer-text-ok    | scrok  | scrok:1  | text   | BM25   | hits     |
+      | scorer-text-bad   | scrbd  | scrbd:1  | text   | NOSUCH | rejected |
+      | scorer-hybrid-ok  | scrhok | scrhok:1 | hybrid | TFIDF  | hits     |
+      | scorer-hybrid-bad | scrhbd | scrhbd:1 | hybrid | NOSUCH | rejected |
+
   Scenario Outline: Aggregate documents synchronously
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
@@ -1146,6 +1160,21 @@ Feature: Redis Testing
       | adapter_type | index_name             | prefix | doc1    | doc2    | radius |
       | container    | products-range         | rng    | rng:1   | rng:2   | 0.5    |
       | cluster      | cluster-products-range | {rng}  | {rng}:1 | {rng}:2 | 0.5    |
+
+  Scenario Outline: Vector range search intersects the filter with the radius
+    Given a configured <adapter_type>
+    And search index "<index_name>" exists with prefix "<prefix>:" and algorithm FLAT for HASH documents
+    And search document "<doc1>" exists with title "Near Doc" category "books" and vector "[1.0, 0.0, 0.0]" for HASH documents
+    And search document "<doc2>" exists with title "Far Doc" category "books" and vector "[0.0, 1.0, 0.0]" for HASH documents
+    And search document "<doc3>" exists with title "Other Doc" category "toys" and vector "[0.9, 0.1, 0.0]" for HASH documents
+    When I search index "<index_name>" for vectors within radius 0.05 of "[0.95, 0.05, 0.0]" filtered by "@category:{books}" in <mode> mode
+    Then the search should return exactly <count> hits
+
+    Examples: Filter modes
+      | adapter_type | index_name         | prefix | doc1   | doc2   | doc3   | mode | count |
+      | container    | products-range-and | rngf   | rngf:1 | rngf:2 | rngf:3 | and  | 1     |
+      | container    | products-range-or  | rngo   | rngo:1 | rngo:2 | rngo:3 | or   | 3     |
+      | cluster      | cluster-range-and  | {rf}   | {rf}:1 | {rf}:2 | {rf}:3 | and  | 1     |
 
   Scenario Outline: KNN search with shard ratio on cluster
     Given a configured <adapter_type>
@@ -1348,6 +1377,16 @@ Feature: Redis Testing
       | standalone |
       | sentinel   |
 
+  Scenario Outline: Database and health check interval reach the <mode> client
+    Given a Redis config in <mode> mode with database 3 and a health check interval of 7 seconds
+    When I build the Redis adapter from that config
+    Then the client connection should use database 3 and a health check interval of 7
+
+    Examples: Modes
+      | mode       |
+      | standalone |
+      | sentinel   |
+
   Scenario: Unset retry settings keep the redis-py defaults
     Given a Redis config in standalone mode with default resilience settings
     When I build the Redis adapter from that config
@@ -1361,3 +1400,25 @@ Feature: Redis Testing
       | settings                          |
       | a client certificate but no key   |
       | a CA bundle while TLS is disabled |
+
+  Scenario Outline: Bytes keys, fields and members are stored as plain text
+    Given a configured <adapter_type>
+    When I write bytes keys, fields and members tagged "{bdd-bytes}" in <adapter_type>
+    Then the bytes keys, fields and members tagged "{bdd-bytes}" should be stored as plain text
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
+  Scenario Outline: Async bytes keys, fields and members are stored as plain text
+    Given a configured async <adapter_type>
+    When I write bytes keys, fields and members tagged "{bdd-bytes-a}" in async <adapter_type>
+    Then the async bytes keys, fields and members tagged "{bdd-bytes-a}" should be stored as plain text
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
