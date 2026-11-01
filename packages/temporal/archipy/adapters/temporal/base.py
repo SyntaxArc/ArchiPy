@@ -19,7 +19,17 @@ from temporalio import activity, workflow
 from temporalio.common import RetryPolicy
 from temporalio.exceptions import ApplicationError
 
-from archipy.models.errors import BaseError, InvalidArgumentError
+from archipy.models.errors import (
+    BaseError,
+    ConnectionTimeoutError,
+    DatabaseDeadlockError,
+    DatabaseSerializationError,
+    DatabaseTimeoutError,
+    DeadlineExceededError,
+    InvalidArgumentError,
+    RateLimitExceededError,
+    ResourceExhaustedError,
+)
 
 # Workflow code runs in a sandbox that re-imports modules; passing the config module through keeps workflows on the
 # global config the host process set, instead of a fresh, unset copy.
@@ -33,6 +43,17 @@ if TYPE_CHECKING:
 
 HTTP_CLIENT_ERROR_MIN = 400
 HTTP_SERVER_ERROR_MIN = 500
+# 4xx statuses that describe a transient condition: a retry can succeed.
+RETRYABLE_HTTP_STATUSES = frozenset({408, 425, 429})
+TRANSIENT_ERROR_TYPES: tuple[type[BaseError], ...] = (
+    ConnectionTimeoutError,
+    DatabaseDeadlockError,
+    DatabaseSerializationError,
+    DatabaseTimeoutError,
+    DeadlineExceededError,
+    RateLimitExceededError,
+    ResourceExhaustedError,
+)
 
 T = TypeVar("T")
 R = TypeVar("R")
@@ -388,7 +409,9 @@ class BaseActivity[T, R]:
         """Decide whether an activity error should fail the activity without retries.
 
         By default ArchiPy errors with a 4xx HTTP status (validation, not found, permission, ...) are non-retryable,
-        since retrying the same input cannot succeed. Override to change the rule.
+        since retrying the same input cannot succeed. Transient errors are exempt and left to the retry policy:
+        HTTP 408, 425 and 429 and the deadlock, serialization-failure, timeout and rate-limit error types.
+        Override to change the rule.
 
         Args:
             error (Exception): The error raised by the activity.
@@ -396,7 +419,11 @@ class BaseActivity[T, R]:
         Returns:
             bool: True to fail the activity at once, False to let the retry policy apply.
         """
-        return isinstance(error, BaseError) and HTTP_CLIENT_ERROR_MIN <= error.http_status < HTTP_SERVER_ERROR_MIN
+        if not isinstance(error, BaseError) or isinstance(error, TRANSIENT_ERROR_TYPES):
+            return False
+        if error.http_status in RETRYABLE_HTTP_STATUSES:
+            return False
+        return HTTP_CLIENT_ERROR_MIN <= error.http_status < HTTP_SERVER_ERROR_MIN
 
     def _is_cacheable(self) -> bool:
         """Determine if this activity's results should be cached.

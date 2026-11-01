@@ -288,10 +288,15 @@ Feature: Temporal Adapter Operations
     Then the activity failure should be <outcome>
 
     Examples: Activity errors
-      | error                | outcome                  |
-      | InvalidArgumentError | non-retryable            |
-      | NotFoundError        | non-retryable            |
-      | InternalError        | left to the retry policy |
+      | error                      | outcome                  |
+      | InvalidArgumentError       | non-retryable            |
+      | NotFoundError              | non-retryable            |
+      | InternalError              | left to the retry policy |
+      | DatabaseDeadlockError      | left to the retry policy |
+      | DatabaseSerializationError | left to the retry policy |
+      | DatabaseTimeoutError       | left to the retry policy |
+      | RateLimitExceededError     | left to the retry policy |
+      | ConnectionTimeoutError     | left to the retry policy |
 
   Scenario Outline: <kind> activity subclasses register under distinct activity names
     When I read the activity names registered for the <kind> activity subclasses
