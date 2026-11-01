@@ -1307,6 +1307,31 @@ async def step_read_scylladb_pool_stats(context: Context) -> None:
     _get_scenario_context(context).pool_stats = stats
 
 
+@when('I run an "{batch_type}" ScyllaDB batch of prepared inserts into "{table}"')
+async def step_run_typed_batch(context: Context, batch_type: str, table: str) -> None:
+    """Run a batch of prepared inserts with params in one partition and record the outcome.
+
+    Args:
+        context (Context): Behave context.
+        batch_type (str): LOGGED, UNLOGGED, COUNTER or an invalid value.
+        table (str): Table name.
+    """
+    adapter = get_scylladb_adapter(context)
+    scenario_context = _get_scenario_context(context)
+    scenario_context.scylla_error = None
+    try:
+        statement = await _call_adapter(adapter, "prepare", f"INSERT INTO {table} (id, name, age) VALUES (?, ?, ?)")
+        await _call_adapter(
+            adapter,
+            "batch_execute",
+            [(statement, (1, "a", 1)), (f"INSERT INTO {table} (id, name, age) VALUES (%s, %s, %s)", (2, "b", 2))],
+            batch_type=batch_type,
+        )
+        assert await _call_adapter(adapter, "count", table) == 2
+    except Exception as e:  # noqa: BLE001
+        scenario_context.scylla_error = e
+
+
 @then("the ScyllaDB driver should hold {count:d} prepared statements")
 def step_driver_prepared_count(context: Context, count: int) -> None:
     """Assert how many distinct statements the driver has prepared, proving the helpers bind values.
@@ -1376,6 +1401,44 @@ async def step_select_paged(context: Context, table: str, count: int, fetch_size
     adapter._session.default_fetch_size = fetch_size
     rows = await _call_adapter(adapter, "select", table)
     _get_scenario_context(context).scylla_result = str(len(rows))
+
+
+@when('I write one row to table "{table}" in each of the keyspaces "{first}" and "{second}" with the same helper call')
+async def step_write_across_keyspaces(context: Context, table: str, first: str, second: str) -> None:
+    """Create the same table in two keyspaces and run the same insert after each ``use_keyspace``.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name used in both keyspaces.
+        first (str): First keyspace.
+        second (str): Second keyspace.
+    """
+    adapter = get_scylladb_adapter(context)
+    for index, keyspace in enumerate((first, second), start=1):
+        await _call_adapter(adapter, "create_keyspace", keyspace, 1)
+        await _call_adapter(adapter, "use_keyspace", keyspace)
+        await _call_adapter(
+            adapter,
+            "create_table",
+            f"CREATE TABLE IF NOT EXISTS {table} (id int PRIMARY KEY, name text, age int)",
+        )
+        await _call_adapter(adapter, "insert", table, {"id": index, "name": keyspace, "age": index})
+    _get_scenario_context(context).scylla_keyspaces = (first, second)
+
+
+@then('table "{table}" should hold only its own row in each keyspace')
+async def step_each_keyspace_holds_own_row(context: Context, table: str) -> None:
+    """Assert each keyspace received exactly the row written while it was current.
+
+    Args:
+        context (Context): Behave context.
+        table (str): Table name used in both keyspaces.
+    """
+    adapter = get_scylladb_adapter(context)
+    for keyspace in _get_scenario_context(context).scylla_keyspaces:
+        await _call_adapter(adapter, "use_keyspace", keyspace)
+        rows = await _call_adapter(adapter, "select", table)
+        assert [row.name for row in rows] == [keyspace], f"{keyspace}: {[row.name for row in rows]}"
 
 
 @then("the ScyllaDB call should succeed")
@@ -1615,6 +1678,40 @@ def step_cluster_tls_options(context: Context, server_name: str, cache: str) -> 
     options = context.cluster.ssl_options or {}
     assert options.get("server_hostname") == (None if server_name == "-" else server_name), options
     assert (context.cluster.ssl_session_cache is not None) is (cache == "on"), context.cluster.ssl_session_cache
+
+
+@then("the retry policy should {decision} request errors on the next host for {kind} statements")
+def step_retry_policy_request_errors(context: Context, decision: str, kind: str) -> None:
+    """Check the default retry policy only retries request errors for idempotent statements.
+
+    Args:
+        context (Context): Behave context.
+        decision (str): "retry" or "rethrow".
+        kind (str): "idempotent" or "non-idempotent".
+    """
+    from cassandra.policies import RetryPolicy
+    from cassandra.query import SimpleStatement
+
+    policy = context.cluster.profile_manager.default.retry_policy
+    statement = SimpleStatement("INSERT INTO t (id) VALUES (1)", is_idempotent=kind == "idempotent")
+    result, _, _ = policy.on_request_error(statement, None, error=RuntimeError("server error"), retry_num=0)
+    expected = RetryPolicy.RETRY_NEXT_HOST if decision == "retry" else RetryPolicy.RETHROW
+    assert result == expected, result
+
+
+@then("the retry policy should retry unavailable errors for non-idempotent statements")
+def step_retry_policy_unavailable(context: Context) -> None:
+    """Check unavailable errors, which never executed the request, are still retried.
+
+    Args:
+        context (Context): Behave context.
+    """
+    from cassandra.policies import RetryPolicy
+    from cassandra.query import SimpleStatement
+
+    policy = context.cluster.profile_manager.default.retry_policy
+    result, _, _ = policy.on_unavailable(SimpleStatement("INSERT INTO t (id) VALUES (1)"), None, 3, 1, retry_num=0)
+    assert result == RetryPolicy.RETRY_NEXT_HOST, result
 
 
 @then("the default execution profile should use the configured request timeout and retry policy")

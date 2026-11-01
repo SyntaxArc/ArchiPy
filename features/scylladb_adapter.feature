@@ -421,6 +421,24 @@ Feature: ScyllaDB Adapter
       | asyn |
 
   @needs-scylladb
+  Scenario Outline: Batches take a type and statements with bound params
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "batch_<mode>"
+    When I run an "<batch_type>" ScyllaDB batch of prepared inserts into "batch_<mode>"
+    Then the ScyllaDB call should <outcome>
+
+    Examples: Sync
+      | mode | batch_type | outcome                    |
+      | syn  | LOGGED     | succeed                    |
+      | syn  | UNLOGGED   | succeed                    |
+      | syn  | BOGUS      | raise InvalidArgumentError |
+
+    @async
+    Examples: Async
+      | mode | batch_type | outcome                    |
+      | asyn | LOGGED     | succeed                    |
+      | asyn | UNLOGGED   | succeed                    |
+      | asyn | BOGUS      | raise InvalidArgumentError |
+
   Scenario Outline: Creating a single replica keyspace logs a warning
     Given a ScyllaDB adapter is configured
     When I create the keyspace "<keyspace>" with replication factor <factor> and capture the adapter log
@@ -442,6 +460,11 @@ Feature: ScyllaDB Adapter
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "page_<mode>"
     When I select every row of "page_<mode>" after inserting 25 rows with a fetch size of 7
     Then the ScyllaDB result should be "25"
+
+  Scenario Outline: CRUD helpers follow use_keyspace
+    Given a ScyllaDB adapter is configured
+    When I write one row to table "ks_t_<mode>" in each of the keyspaces "ks_a_<mode>" and "ks_b_<mode>" with the same helper call
+    Then table "ks_t_<mode>" should hold only its own row in each keyspace
 
     Examples: Sync
       | mode |
@@ -532,6 +555,23 @@ Feature: ScyllaDB Adapter
       | yes     | -           | yes   | -             | on         |
       | yes     | db.internal | yes   | db.internal   | on         |
       | yes     | -           | no    | -             | off        |
+
+  @needs-scylladb
+  Scenario Outline: The retry policy never replays non-idempotent statements after a request error
+    Given a ScyllaDB adapter is configured
+    When I build a ScyllaDB cluster with consistency level ONE
+    Then the retry policy should <decision> request errors on the next host for <kind> statements
+
+    Examples: Statements
+      | decision | kind           |
+      | retry    | idempotent     |
+      | rethrow  | non-idempotent |
+
+  @needs-scylladb
+  Scenario: Unavailable errors are still retried for non-idempotent statements
+    Given a ScyllaDB adapter is configured
+    When I build a ScyllaDB cluster with consistency level ONE
+    Then the retry policy should retry unavailable errors for non-idempotent statements
 
   @needs-scylladb
   Scenario Outline: The cluster applies policies and timeout through the default execution profile with <setting> set
