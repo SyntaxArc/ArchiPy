@@ -2,7 +2,7 @@
 
 import logging
 from inspect import isawaitable, iscoroutinefunction
-from typing import Any
+from typing import Any, NoReturn
 
 from behave import given, then, when
 from behave.runner import Context
@@ -1203,6 +1203,60 @@ async def step_check_scylladb_health(context: Context) -> None:
     scenario_context.scylla_health = await _call_adapter(adapter, "health_check")
 
 
+_LEAKY_ERROR = "secret node 10.0.0.9 refused the connection"
+
+
+class _FailingSession:
+    """Stand-in session whose queries fail with a message that names an internal host."""
+
+    is_shutdown = False
+
+    def execute(self, *args: Any, **kwargs: Any) -> NoReturn:  # noqa: ANN401, ARG002
+        raise RuntimeError(_LEAKY_ERROR)
+
+    def execute_async(self, *args: Any, **kwargs: Any) -> NoReturn:  # noqa: ANN401, ARG002
+        raise RuntimeError(_LEAKY_ERROR)
+
+    def get_pool_state(self) -> NoReturn:
+        raise RuntimeError(_LEAKY_ERROR)
+
+
+@when("I check the health and pool statistics of an adapter whose session fails")
+async def step_check_failing_session(context: Context) -> None:
+    """Swap in a failing session, run the health check and pool statistics, and keep both results.
+
+    Args:
+        context (Context): Behave context.
+    """
+    config = BaseConfig.global_config().SCYLLADB.model_copy(update={"ENABLE_CONNECTION_POOL_MONITORING": True})
+    adapter_class = AsyncScyllaDBAdapter if _is_async_scenario(context) else ScyllaDBAdapter
+    adapter = adapter_class(config)
+    real_session = adapter._session
+    adapter._session = _FailingSession()
+    scenario_context = _get_scenario_context(context)
+    try:
+        scenario_context.scylla_health = await _call_adapter(adapter, "health_check")
+        scenario_context.pool_stats = await _call_adapter(adapter, "get_pool_stats")
+    finally:
+        adapter._session = real_session
+        await _call_adapter(adapter, "close")
+
+
+@then("the ScyllaDB probe responses should not contain the driver error text")
+def step_probe_responses_do_not_leak(context: Context) -> None:
+    """Assert neither response carries the driver message or the host it names.
+
+    Args:
+        context (Context): Behave context.
+    """
+    scenario_context = _get_scenario_context(context)
+    assert scenario_context.scylla_health["status"] == "unhealthy", scenario_context.scylla_health
+    text = f"{scenario_context.scylla_health} {scenario_context.pool_stats}"
+    assert "10.0.0.9" not in text and "secret" not in text, text
+    assert scenario_context.scylla_health["error"] == "unavailable", scenario_context.scylla_health
+    assert scenario_context.pool_stats["error"] == "unavailable", scenario_context.pool_stats
+
+
 @when("I read the ScyllaDB pool statistics with monitoring enabled")
 async def step_read_scylladb_pool_stats(context: Context) -> None:
     """Read pool statistics from a monitoring-enabled adapter in the current mode.
@@ -1295,7 +1349,7 @@ def step_scylladb_health_is(context: Context, expected: str, status: str) -> Non
         assert scenario_context.scylla_health["error"] is None
         assert scenario_context.scylla_health["latency_ms"] > 0
     else:
-        assert scenario_context.scylla_health["error"]
+        assert scenario_context.scylla_health["error"] == "unavailable", scenario_context.scylla_health
 
 
 @then("the ScyllaDB pool statistics should list the connected host")
