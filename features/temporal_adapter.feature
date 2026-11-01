@@ -264,6 +264,10 @@ Feature: Temporal Adapter Operations
     When I build a Temporal Runtime exporting metrics to "not a url"
     Then building the Temporal Runtime should raise a ConfigurationError
 
+  Scenario: A Temporal Runtime requested again with different settings warns and is reused
+    When I request a Temporal Runtime again with different settings
+    Then a warning should name the ignored Temporal Runtime settings
+
   Scenario Outline: Disabling environment info <outcome> a Temporal Runtime when metrics are off
     When the Temporal connection arguments are built with RUNTIME_DISABLE_ENVIRONMENT_INFO set to <value>
     Then the connection arguments should <outcome> a Temporal Runtime
