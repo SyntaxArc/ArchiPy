@@ -1307,6 +1307,19 @@ async def step_read_scylladb_pool_stats(context: Context) -> None:
     _get_scenario_context(context).pool_stats = stats
 
 
+@then("the ScyllaDB driver should hold {count:d} prepared statements")
+def step_driver_prepared_count(context: Context, count: int) -> None:
+    """Assert how many distinct statements the driver has prepared, proving the helpers bind values.
+
+    Args:
+        context (Context): Behave context.
+        count (int): Expected number of prepared statements.
+    """
+    adapter = get_scylladb_adapter(context)
+    prepared = len(adapter._session.cluster._prepared_statements)
+    assert prepared == count, f"Expected {count} prepared statements, got {prepared}"
+
+
 @when('I create the keyspace "{keyspace}" with replication factor {factor:d} and capture the adapter log')
 async def step_create_keyspace_capture_log(context: Context, keyspace: str, factor: int) -> None:
     """Create a keyspace with the given factor in the configured datacenter and keep the adapter's warnings.

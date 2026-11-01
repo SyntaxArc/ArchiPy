@@ -358,6 +358,15 @@ Feature: ScyllaDB Adapter
     Then the ScyllaDB adapter should report connected "True" and health "healthy"
 
   @needs-scylladb
+  Scenario Outline: CRUD helpers prepare their statements and reuse them
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "prep_<mode>"
+    When I run ScyllaDB operation "insert" on table "prep_<mode>"
+    Then the ScyllaDB driver should hold 1 prepared statements
+    When I run ScyllaDB operation "select" on table "prep_<mode>"
+    And I run ScyllaDB operation "select" on table "prep_<mode>"
+    Then the ScyllaDB result should be "alpha"
+    And the ScyllaDB driver should hold 2 prepared statements
+
   Scenario Outline: Select honours an optional limit and rejects invalid ones
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "lim_<mode>"
     When I run ScyllaDB operation "select with limit" on table "lim_<mode>"

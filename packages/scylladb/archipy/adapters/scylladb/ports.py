@@ -56,12 +56,16 @@ class ScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> ResultSet:
+    def execute_prepared(
+        self,
+        statement: PreparedStatement,
+        params: dict[str, Any] | tuple[Any, ...] | list[Any] | None = None,
+    ) -> ResultSet:
         """Execute a prepared statement.
 
         Args:
             statement (PreparedStatement): The prepared statement object.
-            params (dict[str, Any] | None): Parameters to bind to the statement.
+            params (dict[str, Any] | tuple[Any, ...] | list[Any] | None): Parameters to bind to the statement.
 
         Returns:
             ResultSet: The query result set.
@@ -351,12 +355,16 @@ class AsyncScyllaDBPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> ResultSet:
+    async def execute_prepared(
+        self,
+        statement: PreparedStatement,
+        params: dict[str, Any] | tuple[Any, ...] | list[Any] | None = None,
+    ) -> ResultSet:
         """Execute a prepared statement asynchronously.
 
         Args:
             statement (PreparedStatement): The prepared statement object.
-            params (dict[str, Any] | None): Parameters to bind to the statement.
+            params (dict[str, Any] | tuple[Any, ...] | list[Any] | None): Parameters to bind to the statement.
 
         Returns:
             ResultSet: The query result set.
