@@ -158,6 +158,25 @@ def _execution_profile_options(config: ScyllaDBConfig) -> dict[str, Any]:
     return options
 
 
+def _tls_cluster_options(config: ScyllaDBConfig) -> dict[str, Any]:
+    """Build the optional TLS ``Cluster`` keyword arguments for the server name and session resumption.
+
+    Args:
+        config (ScyllaDBConfig): The ScyllaDB configuration.
+
+    Returns:
+        dict[str, Any]: Keyword arguments for ``Cluster``; empty when TLS is disabled.
+    """
+    if not config.TLS_ENABLED:
+        return {}
+    options: dict[str, Any] = {}
+    if config.TLS_SERVER_NAME:
+        options["ssl_options"] = {"server_hostname": config.TLS_SERVER_NAME}
+    if not config.TLS_SESSION_CACHE_ENABLED:
+        options["ssl_session_cache"] = None
+    return options
+
+
 class _HostPoolStat(TypedDict):
     """Per-host connection pool statistics for ScyllaDB monitoring."""
 
@@ -301,6 +320,26 @@ class ScyllaDBExceptionHandlerMixin:
                 statement, params = item
                 batch.add(SimpleStatement(statement) if isinstance(statement, str) else statement, params)
         return batch
+
+    @staticmethod
+    def _warn_single_replica(config: ScyllaDBConfig, keyspace: str, replication_factor: int) -> None:
+        """Log a warning when a keyspace is created with a single replica, which has no redundancy.
+
+        Args:
+            config: The adapter configuration.
+            keyspace: Name of the keyspace being created.
+            replication_factor: Replication factor used by ``SimpleStrategy``.
+        """
+        if config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and config.REPLICATION_CONFIG:
+            factors = list(config.REPLICATION_CONFIG.values())
+        else:
+            factors = [replication_factor]
+        if max(factors) <= 1:
+            logger.warning(
+                "ScyllaDB keyspace %s is created with replication factor 1: losing one node loses data; "
+                "use at least 3 in production",
+                keyspace,
+            )
 
     @staticmethod
     def _validate_non_negative_int(value: int, field_name: str) -> int:
@@ -464,6 +503,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             shard_aware_options=shard_aware_options,
             address_translator=address_translator,
             ssl_context=self.config.build_ssl_context(),
+            **_tls_cluster_options(self.config),
             **_cluster_resilience_options(self.config),
         )
         _warn_ignored_pool_settings(self.config)
@@ -538,13 +578,34 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             # Store the cached version using setattr for dynamic attribute
             self._prepare_cached = cached_prepare
 
+    def _execute_dml(self, query: str, params: tuple[Any, ...] | None) -> ResultSet:
+        """Run a query built from validated identifiers and bound values.
+
+        With the prepared statement cache on, the query is prepared (once) and executed with bound values, which keeps
+        token and shard aware routing. With it off, the query runs as a plain parameterised statement.
+
+        Args:
+            query (str): CQL using ``%s`` placeholders.
+            params (tuple[Any, ...] | None): Values to bind.
+
+        Returns:
+            ResultSet: The query result set.
+        """
+        if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+            return self.execute_prepared(self.prepare(query.replace("%s", "?")), params)
+        return self.execute(query, params)
+
     @override
-    def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> ResultSet:
+    def execute_prepared(
+        self,
+        statement: PreparedStatement,
+        params: dict[str, Any] | tuple[Any, ...] | list[Any] | None = None,
+    ) -> ResultSet:
         """Execute a prepared statement.
 
         Args:
             statement (PreparedStatement): The prepared statement object.
-            params (dict[str, Any] | None): Parameters to bind to the statement.
+            params (dict[str, Any] | tuple[Any, ...] | list[Any] | None): Parameters to bind to the statement.
 
         Returns:
             ResultSet: The query result set.
@@ -568,6 +629,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         keyspace = self._validate_cql_identifier(keyspace, "keyspace")
         replication_factor = self._validate_non_negative_int(replication_factor, "replication_factor")
+        self._warn_single_replica(self.config, keyspace, replication_factor)
         # Use configured replication strategy
         if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
             # Build replication config for NetworkTopologyStrategy
@@ -680,7 +742,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
 
         try:
-            self.execute(query, tuple(data.values()))
+            self._execute_dml(query, tuple(data.values()))
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "insert")
             raise
@@ -720,7 +782,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             query += f" LIMIT {self._validate_positive_int(limit, 'limit')}"
 
         try:
-            result = self.execute(query, params)
+            result = self._execute_dml(query, params)
             return list(result)
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "select")
@@ -758,7 +820,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         params = tuple(data.values()) + tuple(conditions.values())
 
         try:
-            self.execute(query, params)
+            self._execute_dml(query, params)
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "update")
             raise
@@ -777,7 +839,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"DELETE FROM {table} WHERE {where_clause}"  # nosec B608
 
         try:
-            self.execute(query, tuple(conditions.values()))
+            self._execute_dml(query, tuple(conditions.values()))
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "delete")
             raise
@@ -903,7 +965,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             params = tuple(conditions.values())
 
         try:
-            result = self.execute(query, params)
+            result = self._execute_dml(query, params)
             row = result.one()
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "count")
@@ -929,7 +991,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"SELECT {condition_keys[0]} FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
 
         try:
-            result = self.execute(query, tuple(conditions.values()))
+            result = self._execute_dml(query, tuple(conditions.values()))
             row = result.one()
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "exists")
@@ -1114,6 +1176,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             shard_aware_options=shard_aware_options,
             address_translator=address_translator,
             ssl_context=self.config.build_ssl_context(),
+            **_tls_cluster_options(self.config),
             **_cluster_resilience_options(self.config),
         )
         _warn_ignored_pool_settings(self.config)
@@ -1223,13 +1286,34 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             # Store the cached version using setattr for dynamic attribute
             self._prepare_cached = cached_prepare
 
+    async def _execute_dml(self, query: str, params: tuple[Any, ...] | None) -> ResultSet:
+        """Run a query built from validated identifiers and bound values.
+
+        With the prepared statement cache on, the query is prepared (once) and executed with bound values, which keeps
+        token and shard aware routing. With it off, the query runs as a plain parameterised statement.
+
+        Args:
+            query (str): CQL using ``%s`` placeholders.
+            params (tuple[Any, ...] | None): Values to bind.
+
+        Returns:
+            ResultSet: The query result set.
+        """
+        if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+            return await self.execute_prepared(await self.prepare(query.replace("%s", "?")), params)
+        return await self.execute(query, params)
+
     @override
-    async def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> ResultSet:
+    async def execute_prepared(
+        self,
+        statement: PreparedStatement,
+        params: dict[str, Any] | tuple[Any, ...] | list[Any] | None = None,
+    ) -> ResultSet:
         """Execute a prepared statement asynchronously.
 
         Args:
             statement (PreparedStatement): The prepared statement object.
-            params (dict[str, Any] | None): Parameters to bind to the statement.
+            params (dict[str, Any] | tuple[Any, ...] | list[Any] | None): Parameters to bind to the statement.
 
         Returns:
             ResultSet: The query result set.
@@ -1254,6 +1338,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         keyspace = self._validate_cql_identifier(keyspace, "keyspace")
         replication_factor = self._validate_non_negative_int(replication_factor, "replication_factor")
+        self._warn_single_replica(self.config, keyspace, replication_factor)
         # Use configured replication strategy
         if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
             # Build replication config for NetworkTopologyStrategy
@@ -1366,7 +1451,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
 
         try:
-            await self.execute(query, tuple(data.values()))
+            await self._execute_dml(query, tuple(data.values()))
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "insert")
             raise
@@ -1406,7 +1491,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             query += f" LIMIT {self._validate_positive_int(limit, 'limit')}"
 
         try:
-            result = await self.execute(query, params)
+            result = await self._execute_dml(query, params)
             return list(result)
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "select")
@@ -1444,7 +1529,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         params = tuple(data.values()) + tuple(conditions.values())
 
         try:
-            await self.execute(query, params)
+            await self._execute_dml(query, params)
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "update")
             raise
@@ -1463,7 +1548,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"DELETE FROM {table} WHERE {where_clause}"  # nosec B608
 
         try:
-            await self.execute(query, tuple(conditions.values()))
+            await self._execute_dml(query, tuple(conditions.values()))
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "delete")
             raise
@@ -1594,7 +1679,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             params = tuple(conditions.values())
 
         try:
-            result = await self.execute(query, params)
+            result = await self._execute_dml(query, params)
             row = result.one()
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "count")
@@ -1620,7 +1705,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"SELECT {condition_keys[0]} FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
 
         try:
-            result = await self.execute(query, tuple(conditions.values()))
+            result = await self._execute_dml(query, tuple(conditions.values()))
             row = result.one()
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "exists")

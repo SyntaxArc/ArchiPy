@@ -358,6 +358,15 @@ Feature: ScyllaDB Adapter
     Then the ScyllaDB adapter should report connected "True" and health "healthy"
 
   @needs-scylladb
+  Scenario Outline: CRUD helpers prepare their statements and reuse them
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "prep_<mode>"
+    When I run ScyllaDB operation "insert" on table "prep_<mode>"
+    Then the ScyllaDB driver should hold 1 prepared statements
+    When I run ScyllaDB operation "select" on table "prep_<mode>"
+    And I run ScyllaDB operation "select" on table "prep_<mode>"
+    Then the ScyllaDB result should be "alpha"
+    And the ScyllaDB driver should hold 2 prepared statements
+
   Scenario Outline: Select honours an optional limit and rejects invalid ones
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "lim_<mode>"
     When I run ScyllaDB operation "select with limit" on table "lim_<mode>"
@@ -430,6 +439,22 @@ Feature: ScyllaDB Adapter
       | asyn | UNLOGGED   | succeed                    |
       | asyn | BOGUS      | raise InvalidArgumentError |
 
+  Scenario Outline: Creating a single replica keyspace logs a warning
+    Given a ScyllaDB adapter is configured
+    When I create the keyspace "<keyspace>" with replication factor <factor> and capture the adapter log
+    Then the adapter log should <expectation> a single replica warning
+
+    Examples: Sync
+      | keyspace | factor | expectation |
+      | rf_one   | 1      | contain     |
+      | rf_two   | 2      | not contain |
+
+    @async
+    Examples: Async
+      | keyspace  | factor | expectation |
+      | rf_one_as | 1      | contain     |
+      | rf_two_as | 2      | not contain |
+
   @needs-scylladb
   Scenario Outline: Prepared statements are cached and executed with bound parameters
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
@@ -497,6 +522,19 @@ Feature: ScyllaDB Adapter
       | LOCAL_ONE    |
       | LOCAL_QUORUM |
       | QUORUM       |
+
+  @needs-scylladb
+  Scenario Outline: The cluster applies the TLS server name and session cache settings
+    Given a ScyllaDB adapter is configured
+    When I build a ScyllaDB cluster with TLS enabled <enabled>, server name "<server_name>" and session cache <cache>
+    Then the cluster TLS server name should be "<expected_name>" and session resumption should be <resumption>
+
+    Examples: TLS options
+      | enabled | server_name | cache | expected_name | resumption |
+      | no      | db.internal | no    | -             | off        |
+      | yes     | -           | yes   | -             | on         |
+      | yes     | db.internal | yes   | db.internal   | on         |
+      | yes     | -           | no    | -             | off        |
 
   @needs-scylladb
   Scenario Outline: The cluster applies policies and timeout through the default execution profile with <setting> set
