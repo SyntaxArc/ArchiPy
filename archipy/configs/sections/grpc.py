@@ -5,6 +5,8 @@ from typing import Self
 
 from pydantic import BaseModel, Field, model_validator
 
+from archipy.models.errors import InvalidArgumentError
+
 
 class GrpcRateLimitConfig(BaseModel):
     """Configuration for gRPC server rate limiting.
@@ -131,6 +133,60 @@ class GrpcConfig(BaseModel):
         ],
         description="Client stub channel options",
     )
+
+    TLS_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "When True, ``AppUtils.add_grpc_port`` binds a TLS port with ``grpc.ssl_server_credentials`` instead of "
+            "an insecure port. Requires ``TLS_CERT_FILE`` and ``TLS_KEY_FILE``."
+        ),
+    )
+    TLS_CERT_FILE: str | None = Field(default=None, description="Path to the PEM server certificate chain")
+    TLS_KEY_FILE: str | None = Field(default=None, description="Path to the PEM server private key")
+    TLS_CA_FILE: str | None = Field(
+        default=None,
+        description="Path to the PEM CA bundle used to verify client certificates (mTLS)",
+    )
+    TLS_REQUIRE_CLIENT_AUTH: bool = Field(
+        default=False,
+        description="When True, reject clients without a valid certificate. Requires ``TLS_CA_FILE``.",
+    )
+
+    STUB_TLS_ENABLED: bool = Field(
+        default=False,
+        description="When True, ``AppUtils.create_grpc_channel`` opens a TLS channel instead of a plaintext one.",
+    )
+    STUB_TLS_CA_FILE: str | None = Field(
+        default=None,
+        description="Path to the PEM CA bundle that verifies the server. None uses the gRPC default roots.",
+    )
+    STUB_TLS_CERT_FILE: str | None = Field(
+        default=None,
+        description="Path to the PEM client certificate chain for mTLS. Requires ``STUB_TLS_KEY_FILE``.",
+    )
+    STUB_TLS_KEY_FILE: str | None = Field(
+        default=None,
+        description="Path to the PEM client private key for mTLS. Requires ``STUB_TLS_CERT_FILE``.",
+    )
+
+    @model_validator(mode="after")
+    def validate_tls_settings(self) -> Self:
+        """Check that the TLS settings are consistent.
+
+        Returns:
+            This model, unchanged.
+
+        Raises:
+            InvalidArgumentError: If TLS is enabled without a certificate and key, mTLS is required without a CA,
+                or only one of the client certificate and key is set.
+        """
+        if self.TLS_ENABLED and not (self.TLS_CERT_FILE and self.TLS_KEY_FILE):
+            raise InvalidArgumentError(argument_name="GRPC.TLS_CERT_FILE")
+        if self.TLS_REQUIRE_CLIENT_AUTH and not self.TLS_CA_FILE:
+            raise InvalidArgumentError(argument_name="GRPC.TLS_CA_FILE")
+        if bool(self.STUB_TLS_CERT_FILE) != bool(self.STUB_TLS_KEY_FILE):
+            raise InvalidArgumentError(argument_name="GRPC.STUB_TLS_KEY_FILE")
+        return self
 
     @model_validator(mode="after")
     def resolve_thread_worker_count(self) -> Self:

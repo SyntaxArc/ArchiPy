@@ -253,6 +253,36 @@ def get_config_info() -> dict[str, str | bool]:
         }
 ```
 
+### With gRPC TLS
+
+Servers and client channels stay plaintext unless TLS is enabled in the `GRPC` section. Keep certificate and key
+files outside version control and load their paths from the environment.
+
+| Setting                                                      | Purpose                                                         |
+|--------------------------------------------------------------|-----------------------------------------------------------------|
+| `GRPC__TLS_ENABLED`                                          | Bind the server port with TLS                                   |
+| `GRPC__TLS_CERT_FILE`, `GRPC__TLS_KEY_FILE`                  | PEM server certificate chain and private key (both required)    |
+| `GRPC__TLS_CA_FILE`                                          | PEM CA bundle that verifies client certificates                 |
+| `GRPC__TLS_REQUIRE_CLIENT_AUTH`                              | Reject clients without a valid certificate (needs the CA file)  |
+| `GRPC__STUB_TLS_ENABLED`                                     | Open client channels with TLS                                   |
+| `GRPC__STUB_TLS_CA_FILE`                                     | PEM CA bundle that verifies the server (default: gRPC roots)    |
+| `GRPC__STUB_TLS_CERT_FILE`, `GRPC__STUB_TLS_KEY_FILE`        | Client certificate and key for mutual TLS (set together)        |
+
+```python
+from archipy.configs.base_config import BaseConfig
+from archipy.helpers.utils.app_utils import AppUtils
+
+config = BaseConfig.global_config()
+
+# Server: add_grpc_port uses add_secure_port when GRPC.TLS_ENABLED, add_insecure_port otherwise
+server = AppUtils.create_grpc_app(config)
+AppUtils.add_grpc_port(server, config)  # binds GRPC.SERVE_HOST:GRPC.SERVE_PORT
+server.start()
+
+# Client: create_grpc_channel uses ssl_channel_credentials when GRPC.STUB_TLS_ENABLED
+channel = AppUtils.create_grpc_channel(config, "service.internal:8100")  # aio=True for grpc.aio
+```
+
 ### With Database Adapters
 
 ```python
