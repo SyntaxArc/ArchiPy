@@ -49,7 +49,7 @@ class ElasticsearchConfig(BaseModel):
     MIN_DELAY_BETWEEN_SNIFFING: float = Field(
         default=60.0,
         ge=0.0,
-        description="Minimum delay between sniffing attempts in seconds",
+        description="Minimum delay between sniffing attempts in seconds (needs SNIFF_BEFORE_REQUESTS)",
     )
     NODE_SELECTOR_CLASS: str = Field(
         default="round_robin",

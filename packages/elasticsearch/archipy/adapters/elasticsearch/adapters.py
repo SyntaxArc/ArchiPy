@@ -131,6 +131,8 @@ class ElasticsearchAdapter(ElasticsearchPort):
             "sniff_before_requests": configs.SNIFF_BEFORE_REQUESTS,
             "sniff_on_node_failure": configs.SNIFF_ON_NODE_FAILURE,
             "max_dead_node_backoff": configs.MAX_DEAD_NODE_BACKOFF,
+            "dead_node_backoff_factor": configs.DEAD_NODE_BACKOFF_FACTOR,
+            "node_selector_class": configs.NODE_SELECTOR_CLASS,
             "retry_backoff_base": configs.RETRY_BACKOFF_BASE,
             "retry_backoff_cap": configs.RETRY_BACKOFF_CAP,
         }
@@ -148,8 +150,15 @@ class ElasticsearchAdapter(ElasticsearchPort):
             kwargs["client_cert"] = configs.CLIENT_CERT
         if configs.SSL_ASSERT_FINGERPRINT:
             kwargs["ssl_assert_fingerprint"] = configs.SSL_ASSERT_FINGERPRINT
+        # The client forces sniff_before_requests when a sniffing delay is passed, so only pass it when enabled
+        if configs.SNIFF_BEFORE_REQUESTS:
+            kwargs["min_delay_between_sniffing"] = configs.MIN_DELAY_BETWEEN_SNIFFING
 
-        return Elasticsearch(**kwargs)
+        client = Elasticsearch(**kwargs)
+        # ignore_status is a per-client option set through options(), not a constructor argument
+        if configs.IGNORE_STATUS:
+            client = client.options(ignore_status=configs.IGNORE_STATUS)
+        return client
 
     @override
     def ping(self) -> ElasticsearchResponseType:
@@ -422,6 +431,8 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
             "sniff_before_requests": configs.SNIFF_BEFORE_REQUESTS,
             "sniff_on_node_failure": configs.SNIFF_ON_NODE_FAILURE,
             "max_dead_node_backoff": configs.MAX_DEAD_NODE_BACKOFF,
+            "dead_node_backoff_factor": configs.DEAD_NODE_BACKOFF_FACTOR,
+            "node_selector_class": configs.NODE_SELECTOR_CLASS,
             "retry_backoff_base": configs.RETRY_BACKOFF_BASE,
             "retry_backoff_cap": configs.RETRY_BACKOFF_CAP,
         }
@@ -439,8 +450,15 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
             kwargs["client_cert"] = configs.CLIENT_CERT
         if configs.SSL_ASSERT_FINGERPRINT:
             kwargs["ssl_assert_fingerprint"] = configs.SSL_ASSERT_FINGERPRINT
+        # The client forces sniff_before_requests when a sniffing delay is passed, so only pass it when enabled
+        if configs.SNIFF_BEFORE_REQUESTS:
+            kwargs["min_delay_between_sniffing"] = configs.MIN_DELAY_BETWEEN_SNIFFING
 
-        return AsyncElasticsearch(**kwargs)
+        client = AsyncElasticsearch(**kwargs)
+        # ignore_status is a per-client option set through options(), not a constructor argument
+        if configs.IGNORE_STATUS:
+            client = client.options(ignore_status=configs.IGNORE_STATUS)
+        return client
 
     @override
     async def ping(self) -> ElasticsearchResponseType:

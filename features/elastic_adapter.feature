@@ -182,6 +182,41 @@ Feature: Elasticsearch Operations Testing
       | mode           |
       | asynchronously |
 
+  Scenario Outline: Apply client options from the config <mode>
+    Given an Elasticsearch config with "<field>" set to "<value>"
+    And an Elasticsearch config with "SNIFF_BEFORE_REQUESTS" set to "<sniff>"
+    When I create the Elasticsearch adapter from that config <mode>
+    Then the client should apply "<field>" as "<value>"
+
+    Examples: sync
+      | mode          | field                      | value  | sniff |
+      | synchronously | NODE_SELECTOR_CLASS        | random | false |
+      | synchronously | DEAD_NODE_BACKOFF_FACTOR   | 2.5    | false |
+      | synchronously | MIN_DELAY_BETWEEN_SNIFFING | 42.0   | true  |
+
+    @async
+    Examples: async
+      | mode           | field                      | value  | sniff |
+      | asynchronously | NODE_SELECTOR_CLASS        | random | false |
+      | asynchronously | DEAD_NODE_BACKOFF_FACTOR   | 2.5    | false |
+      | asynchronously | MIN_DELAY_BETWEEN_SNIFFING | 42.0   | true  |
+
+  Scenario Outline: Ignore configured status codes <mode>
+    Given an Elasticsearch config with "IGNORE_STATUS" set to "404"
+    When I create the Elasticsearch adapter from that config <mode>
+    And I get a missing document through that adapter
+    Then no Elasticsearch error should be raised
+    And the response status should be 404
+
+    Examples: sync
+      | mode          |
+      | synchronously |
+
+    @async
+    Examples: async
+      | mode           |
+      | asynchronously |
+
   Scenario: Connect with authenticated user
     Given an Elasticsearch cluster with security enabled
     When I connect with username "elastic-user" and password "elastic-pass"

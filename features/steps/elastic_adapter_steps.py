@@ -925,3 +925,80 @@ async def after_scenario(context: Context, scenario) -> None:
             context.logger.info(f"Deleted test index {index_name}")
         except Exception as e:
             context.logger.error(f"Failed to delete index {index_name}: {e}")
+
+
+@given('an Elasticsearch config with "{field}" set to "{value}"')
+def step_es_config_field(context: Context, field: str, value: str) -> None:
+    """Collect config overrides on top of the global Elasticsearch config."""
+    scenario_context = _get_scenario_context(context)
+    updates = scenario_context.get("es_config_updates", {})
+    parsers = {
+        "NODE_SELECTOR_CLASS": str,
+        "DEAD_NODE_BACKOFF_FACTOR": float,
+        "MIN_DELAY_BETWEEN_SNIFFING": float,
+        "SNIFF_BEFORE_REQUESTS": lambda text: text == "true",
+        "IGNORE_STATUS": lambda text: tuple(int(code) for code in text.split(",")),
+    }
+    updates[field] = parsers[field](value)
+    scenario_context.store("es_config_updates", updates)
+
+
+@when("I create the Elasticsearch adapter from that config {mode}")
+async def step_create_adapter_from_config(context: Context, mode: str) -> None:
+    """Build an adapter from the overridden config."""
+    scenario_context = _get_scenario_context(context)
+    config = BaseConfig.global_config().ELASTIC.model_copy(update=scenario_context.get("es_config_updates", {}))
+    if _is_async_scenario(context):
+        scenario_context.async_adapter = AsyncElasticsearchAdapter(config)
+    else:
+        scenario_context.adapter = ElasticsearchAdapter(config)
+
+
+@then('the client should apply "{field}" as "{value}"')
+def step_client_applies_option(context: Context, field: str, value: str) -> None:
+    """Verify the option reached the client transport."""
+    scenario_context = _get_scenario_context(context)
+    adapter = scenario_context.async_adapter if _is_async_scenario(context) else scenario_context.adapter
+    transport = adapter.client.transport
+    if field == "NODE_SELECTOR_CLASS":
+        # elastic_transport maps "random" to RandomSelector
+        actual = type(transport.node_pool._node_selector).__name__  # noqa: SLF001
+        assert actual == "RandomSelector", f"Unexpected selector: {actual}"
+    elif field == "DEAD_NODE_BACKOFF_FACTOR":
+        assert transport.node_pool.dead_node_backoff_factor == float(value)
+    elif field == "MIN_DELAY_BETWEEN_SNIFFING":
+        assert transport._min_delay_between_sniffing == float(value)  # noqa: SLF001
+    else:
+        raise AssertionError(f"Unknown field {field}")
+
+
+@when("I get a missing document through that adapter")
+async def step_get_missing_document(context: Context) -> None:
+    """Fetch a document that does not exist and record the outcome."""
+    scenario_context = _get_scenario_context(context)
+    is_async = _is_async_scenario(context)
+    adapter = scenario_context.async_adapter if is_async else scenario_context.adapter
+    index_name = get_actual_index_name(context, "test-index")
+    try:
+        response = (
+            await adapter.get(index_name, f"missing-{uuid.uuid4()}")
+            if is_async
+            else adapter.get(index_name, f"missing-{uuid.uuid4()}")
+        )
+        scenario_context.store("missing_get_error", None)
+        scenario_context.store("missing_get_status", response.meta.status)
+    except Exception as error:  # noqa: BLE001
+        scenario_context.store("missing_get_error", error)
+
+
+@then("no Elasticsearch error should be raised")
+def step_no_es_error(context: Context) -> None:
+    """Verify the missing-document request did not raise."""
+    error = _get_scenario_context(context).get("missing_get_error")
+    assert error is None, f"Unexpected error: {error!r}"
+
+
+@then("the response status should be {status:d}")
+def step_response_status(context: Context, status: int) -> None:
+    """Verify the status of the recorded response."""
+    assert _get_scenario_context(context).get("missing_get_status") == status
