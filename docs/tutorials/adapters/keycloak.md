@@ -805,7 +805,9 @@ client or logs in to Keycloak.
     token or a changed permission stays accepted until the cached entry expires.
 
 - Token validation is performed without caching to ensure security.
-- The adapter automatically refreshes admin tokens before they expire.
+- The adapter automatically refreshes admin tokens before they expire. `AsyncKeycloakAdapter` refreshes them off the
+  event loop and behind a lock, so concurrent coroutines trigger one login. Its constructor still logs in synchronously
+  when admin mode is on, so build it at startup, not inside a request.
 - Write operations (like user creation/updates) automatically clear relevant caches.
 - For production use, prefer the authorization code flow over direct username/password authentication.
 - The auth guards' role checks read `realm_access` and `resource_access` from the UserInfo response. Stock Keycloak

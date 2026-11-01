@@ -127,6 +127,17 @@ Feature: Keycloak Authentication Testing
       | sync  |
       | async |
 
+  @tokens
+  Scenario Outline: Async adapter refreshes an expired admin token once and off the event loop
+    Given a configured sync Keycloak adapter via direct
+    When <calls> concurrent admin calls run on an async adapter whose admin token expired
+    Then the admin client was refreshed once outside the event loop thread
+
+    Examples:
+      | calls |
+      | 1     |
+      | 5     |
+
   @users
   Scenario Outline: User retrieval operations
     Given a configured <adapter_type> Keycloak adapter via <via>

@@ -1,6 +1,8 @@
 # features/steps/keycloak_auth_steps.py
 
+import asyncio
 import logging
+import threading
 import uuid
 from typing import Any
 
@@ -14,7 +16,10 @@ from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAda
 from archipy.adapters.keycloak.auth import _build_auth_context
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.sections.keycloak import KeycloakConfig
-from archipy.models.dtos.keycloak.auth_flow_dtos import KeycloakAuthenticationFlowRequestDTO, KeycloakAuthenticatorConfigRequestDTO
+from archipy.models.dtos.keycloak.auth_flow_dtos import (
+    KeycloakAuthenticationFlowRequestDTO,
+    KeycloakAuthenticatorConfigRequestDTO,
+)
 from archipy.models.dtos.keycloak.authenticator_dtos import (
     KeycloakAuthenticationFlowCopyRequestDTO,
     KeycloakAuthenticationFlowExecutionCreateRequestDTO,
@@ -50,8 +55,9 @@ def _op_error_key(operation: str) -> str:
 
 def _assert_op_success(scenario_context: ScenarioContext, operation: str, adapter_type: str) -> None:
     error_key = _op_error_key(operation)
-    assert not scenario_context.get(error_key), f"{operation} failed for {adapter_type}: {scenario_context.get(error_key)}"
-
+    assert not scenario_context.get(error_key), (
+        f"{operation} failed for {adapter_type}: {scenario_context.get(error_key)}"
+    )
 
 
 def get_keycloak_adapter(context: Context) -> AsyncKeycloakAdapter | KeycloakAdapter:
@@ -106,7 +112,6 @@ async def step_create_realm(context: Context, realm_name: str, display_name: str
 
     try:
         if is_async:
-
             realm_result = await adapter.create_realm(
                 realm_name=realm_name,
                 display_name=display_name,
@@ -123,10 +128,10 @@ async def step_create_realm(context: Context, realm_name: str, display_name: str
         context.logger.exception("Realm creation failed")
 
 
-
 @given('I enable organization of realm named "{realm_name}"')
 async def step_enable_realm_organizations(
-    context: Context, realm_name: str,
+    context: Context,
+    realm_name: str,
 ) -> None:
     """Get realm and, if organizations not enabled, update realm via adapter.update_realm."""
     adapter = get_keycloak_adapter(context)
@@ -170,7 +175,6 @@ async def step_create_client_with_service_accounts(
 
     try:
         if is_async:
-
             client_result = await adapter.create_client(
                 client_id=client_name,
                 realm=realm_name,
@@ -320,7 +324,6 @@ async def step_create_client_and_update_adapter(
 
     try:
         if is_async:
-
             # Create the client first
             client_result = await adapter.create_client(
                 client_id=client_name,
@@ -495,7 +498,6 @@ async def step_create_user_basic(context: Context, username: str, password: str,
 
     try:
         if is_async:
-
             existing_user = await adapter.get_user_by_username(username)
             if existing_user:
                 await adapter.delete_user(existing_user.id)
@@ -546,7 +548,6 @@ async def step_create_user_with_email(
 
     try:
         if is_async:
-
             existing_user = await adapter.get_user_by_username(username)
             if existing_user:
                 await adapter.delete_user(existing_user.id)
@@ -581,7 +582,6 @@ async def step_have_valid_token(context: Context, username: str, password: str, 
     is_async = "async" in context.scenario.tags
 
     if is_async:
-
         token_response = await adapter.get_token(username, password)
         scenario_context.store(f"token_response_{username}", token_response)
 
@@ -601,7 +601,6 @@ async def step_request_token(context: Context, username: str, password: str, ada
 
     try:
         if is_async:
-
             token_response = await adapter.get_token(username, password)
             scenario_context.store("latest_token_response", token_response)
 
@@ -630,7 +629,6 @@ async def step_refresh_token(context: Context, adapter_type: str) -> None:
     refresh_token = scenario_context.get(f"token_response_{username}").refresh_token
 
     if is_async:
-
         new_token = await adapter.refresh_token(refresh_token)
         scenario_context.store("latest_token_response", new_token)
 
@@ -655,7 +653,6 @@ async def step_request_user_info(context: Context, adapter_type: str) -> None:
     access_token = scenario_context.get(f"token_response_{username}").access_token
 
     if is_async:
-
         user_info = await adapter.get_userinfo(access_token)
         scenario_context.store("latest_user_info", user_info)
 
@@ -680,7 +677,6 @@ async def step_logout_user(context: Context, adapter_type: str) -> None:
     refresh_token = scenario_context.get(f"token_response_{username}").refresh_token
 
     if is_async:
-
         result = await adapter.logout(refresh_token)
         scenario_context.store("logout_result", result)
 
@@ -705,7 +701,6 @@ async def step_validate_token(context: Context, adapter_type: str) -> None:
     access_token = scenario_context.get(f"token_response_{username}").access_token
 
     if is_async:
-
         result = await adapter.validate_token(access_token)
         scenario_context.store("validation_result", result)
 
@@ -750,7 +745,6 @@ async def step_get_user_by_username(context: Context, username: str, adapter_typ
     is_async = "async" in context.scenario.tags
 
     if is_async:
-
         user = await adapter.get_user_by_username(username)
         scenario_context.store("latest_user_retrieval", user)
 
@@ -768,7 +762,6 @@ async def step_get_user_by_email(context: Context, email: str, adapter_type: str
     is_async = "async" in context.scenario.tags
 
     if is_async:
-
         user = await adapter.get_user_by_email(email)
         scenario_context.store("latest_user_retrieval", user)
 
@@ -791,7 +784,6 @@ async def step_create_realm_role(context: Context, role_name: str, description: 
 
     try:
         if is_async:
-
             role = await adapter.create_realm_role(role_name, description)
             scenario_context.store("latest_realm_role", role)
             scenario_context.store(f"realm_role_{role_name}", role)
@@ -823,7 +815,6 @@ async def step_create_client_role(
 
     try:
         if is_async:
-
             role = await adapter.create_client_role(client_id, role_name, description)
             scenario_context.store("latest_client_role", role)
             scenario_context.store(f"client_role_{role_name}_{client_id}", role)
@@ -850,7 +841,6 @@ async def step_assign_realm_role(context: Context, role_name: str, username: str
 
     try:
         if is_async:
-
             await adapter.assign_realm_role(user_id, role_name)
             scenario_context.store("latest_role_assignment", {"user": username, "role": role_name})
 
@@ -881,7 +871,6 @@ async def step_assign_client_role(
 
     try:
         if is_async:
-
             await adapter.assign_client_role(user_id, client_id, role_name)
             scenario_context.store(
                 "latest_client_role_assignment",
@@ -911,7 +900,6 @@ async def step_remove_realm_role(context: Context, role_name: str, username: str
 
     try:
         if is_async:
-
             await adapter.remove_realm_role(user_id, role_name)
             scenario_context.store("latest_role_removal", {"user": username, "role": role_name})
 
@@ -933,7 +921,6 @@ async def step_search_users(context: Context, query: str, adapter_type: str) -> 
     is_async = "async" in context.scenario.tags
 
     if is_async:
-
         users = await adapter.search_users(query)
         scenario_context.store("search_results", users)
 
@@ -957,7 +944,6 @@ async def step_update_user(context: Context, username: str, first_name: str, las
 
     try:
         if is_async:
-
             await adapter.update_user(user_id, update_data)
             scenario_context.store("latest_user_update", {"user": username, "data": update_data})
 
@@ -981,7 +967,6 @@ async def step_reset_password(context: Context, username: str, new_password: str
 
     try:
         if is_async:
-
             await adapter.reset_password(user_id, new_password, temporary=False)
             scenario_context.store("latest_password_reset", {"user": username, "new_password": new_password})
 
@@ -1004,7 +989,6 @@ async def step_clear_user_sessions(context: Context, username: str, adapter_type
     user_id = scenario_context.get(f"user_id_{username}")
 
     if is_async:
-
         await adapter.clear_user_sessions(user_id)
         scenario_context.store("latest_session_clear", {"user": username})
 
@@ -1025,7 +1009,6 @@ async def step_delete_user(context: Context, username: str, adapter_type: str) -
 
     try:
         if is_async:
-
             await adapter.delete_user(user_id)
             scenario_context.store("latest_user_deletion", {"user": username})
 
@@ -1047,7 +1030,6 @@ async def step_request_client_credentials_token(context: Context, adapter_type: 
     is_async = "async" in context.scenario.tags
 
     if is_async:
-
         token = await adapter.get_client_credentials_token()
         scenario_context.store("latest_token_response", token)
 
@@ -1072,7 +1054,6 @@ async def step_introspect_token(context: Context, adapter_type: str) -> None:
     access_token = scenario_context.get(f"token_response_{username}").access_token
 
     if is_async:
-
         result = await adapter.introspect_token(access_token)
         scenario_context.store("introspection_result", result)
 
@@ -1097,7 +1078,6 @@ async def step_get_token_info(context: Context, adapter_type: str) -> None:
     access_token = scenario_context.get(f"token_response_{username}").access_token
 
     if is_async:
-
         result = await adapter.get_token_info(access_token)
         scenario_context.store("token_info_result", result)
 
@@ -1122,7 +1102,6 @@ async def step_check_user_role(context: Context, role_name: str, adapter_type: s
     access_token = scenario_context.get(f"token_response_{username}").access_token
 
     if is_async:
-
         has_role = await adapter.has_role(access_token, role_name)
         scenario_context.store("role_check_result", {"role": role_name, "has_role": has_role})
 
@@ -1205,7 +1184,6 @@ async def step_user_has_realm_role(context: Context, username: str, role_name: s
     user_id = scenario_context.get(f"user_id_{username}")
 
     if is_async:
-
         roles = await adapter.get_user_roles(user_id)
         role_names = [role.name for role in roles]
         assert role_name in role_names, f"User {username} does not have realm role {role_name}"
@@ -1227,7 +1205,6 @@ async def step_user_has_client_role(context: Context, username: str, role_name: 
     user_id = scenario_context.get(f"user_id_{username}")
 
     if is_async:
-
         client_id = await adapter.get_client_id(client_name)
         roles = await adapter.get_client_roles_for_user(user_id, client_id)
         role_names = [role.name for role in roles]
@@ -1251,7 +1228,6 @@ async def step_user_not_have_realm_role(context: Context, username: str, role_na
     user_id = scenario_context.get(f"user_id_{username}")
 
     if is_async:
-
         roles = await adapter.get_user_roles(user_id)
         role_names = [role.name for role in roles]
         assert role_name not in role_names, f"User {username} still has realm role {role_name}"
@@ -1302,7 +1278,6 @@ async def step_user_has_names(context: Context, username: str, first_name: str, 
     user_id = scenario_context.get(f"user_id_{username}")
 
     if is_async:
-
         user = await adapter.get_user_by_id(user_id)
         assert user.first_name == first_name, f"Expected first name {first_name}, got {user.first_name}"
         assert user.last_name == last_name, f"Expected last name {last_name}, got {user.last_name}"
@@ -1351,7 +1326,6 @@ async def step_user_not_exist(context: Context, username: str) -> None:
     is_async = "async" in context.scenario.tags
 
     if is_async:
-
         user = await adapter.get_user_by_username(username)
         assert user is None, f"User {username} still exists"
 
@@ -1638,11 +1612,15 @@ def step_realm_exists(context: Context, realm_name: str) -> None:
     assert realm_result is not None, f"Realm {realm_name} was not created"
     context.logger.info(f"Verified realm {realm_name} exists")
 
+
 @when(
     'I update the realm "{realm_name}" display name to "{new_display_name}" using {adapter_type} adapter',
 )
 async def step_update_realm_display_name(
-    context: Context, realm_name: str, new_display_name: str, adapter_type: str,
+    context: Context,
+    realm_name: str,
+    new_display_name: str,
+    adapter_type: str,
 ) -> None:
     """Update realm display name via adapter.update_realm (get realm, set displayName, update)."""
     adapter = get_keycloak_adapter(context)
@@ -1663,7 +1641,9 @@ async def step_update_realm_display_name(
 @given('the realm "{realm_name}" should have display name "{display_name}"')
 @then('the realm "{realm_name}" should have display name "{display_name}"')
 async def step_realm_has_display_name_by_name(
-    context: Context, realm_name: str, display_name: str,
+    context: Context,
+    realm_name: str,
+    display_name: str,
 ) -> None:
     """Verify the realm has the given display name by fetching the realm."""
     adapter = get_keycloak_adapter(context)
@@ -2148,8 +2128,6 @@ async def step_get_user_organizations(context: Context, username: str, adapter_t
         context.logger.exception("Get user organizations failed")
 
 
-
-
 @then('the organization "{org_name}" should exist')
 async def step_organization_exists(context: Context, org_name: str) -> None:
     """Verify the organization exists by fetching it by id."""
@@ -2199,7 +2177,9 @@ async def step_get_all_organizations(context: Context, adapter_type: str) -> Non
 
 @when('I get organizations with search "{search}" using {adapter_type} adapter')
 async def step_get_organizations_with_search(
-    context: Context, search: str, adapter_type: str,
+    context: Context,
+    search: str,
+    adapter_type: str,
 ) -> None:
     """Get organizations with query search. Tests get_organizations(query={\"search\": search})."""
     adapter = get_keycloak_adapter(context)
@@ -2306,7 +2286,6 @@ def step_organization_members_count_equals(context: Context, count: int) -> None
     assert actual is not None, "No organization_members_count in context"
     assert actual == count, f"Expected members count {count}, got {actual}"
     context.logger.info(f"Organization members count is {count}")
-
 
 
 @then('the user organizations list should contain organization "{org_name}"')
@@ -2537,7 +2516,9 @@ async def step_update_group(context: Context, group_name: str, adapter_type: str
     adapter, is_async, scenario_context = _adapter_parts(context)
     group_id = scenario_context.get("latest_group_id")
     try:
-        await _adapter_call(adapter, is_async, "update_group", group_id, KeycloakGroupRequestDTO(id=group_id, name=group_name))
+        await _adapter_call(
+            adapter, is_async, "update_group", group_id, KeycloakGroupRequestDTO(id=group_id, name=group_name),
+        )
         scenario_context.store(_op_error_key("update_group"), None)
     except Exception as exc:
         scenario_context.store(_op_error_key("update_group"), str(exc))
@@ -3150,7 +3131,9 @@ async def step_add_coverage_auth_subflow(context: Context, adapter_type: str) ->
             adapter,
             is_async,
             "create_authentication_flow_subflow",
-            KeycloakAuthenticationSubflowCreateRequestDTO(alias=sub_alias, type="basic-flow", description="coverage subflow"),
+            KeycloakAuthenticationSubflowCreateRequestDTO(
+                alias=sub_alias, type="basic-flow", description="coverage subflow",
+            ),
             flow_alias,
             skip_exists=True,
         )
@@ -3544,7 +3527,9 @@ async def step_update_coverage_client_scope(context: Context, adapter_type: str)
             is_async,
             "update_client_scope",
             scope_id,
-            KeycloakClientScopeRequestDTO(id=scope_id, name=scope_name, protocol="openid-connect", description="updated"),
+            KeycloakClientScopeRequestDTO(
+                id=scope_id, name=scope_name, protocol="openid-connect", description="updated",
+            ),
         )
         scenario_context.store(_op_error_key("update_client_scope"), None)
     except Exception as exc:
@@ -4243,10 +4228,39 @@ def step_adapter_clears_caches_without_admin(context: Context, kind: str) -> Non
     assert adapter._admin_adapter is None, "clear_all_caches built an admin client"
 
 
+@when("{calls:d} concurrent admin calls run on an async adapter whose admin token expired")
+async def step_concurrent_admin_calls_after_expiry(context: Context, calls: int) -> None:
+    """Expire the admin token of an async adapter, then run admin calls together and record each admin login."""
+    scenario_context = get_current_scenario_context(context)
+    adapter = AsyncKeycloakAdapter(BaseConfig.global_config().KEYCLOAK)
+    logins: list[int] = []
+    original_initialize = adapter._initialize_admin_client
+
+    def recording_initialize() -> None:
+        logins.append(threading.get_ident())
+        original_initialize()
+
+    adapter._initialize_admin_client = recording_initialize
+    adapter._admin_token_expiry = 0.0
+    await asyncio.gather(*(adapter.get_realms() for _ in range(calls)))
+    scenario_context.store("admin_logins", logins)
+    scenario_context.store("event_loop_thread", threading.get_ident())
+
+
+@then("the admin client was refreshed once outside the event loop thread")
+def step_admin_refreshed_once_off_loop(context: Context) -> None:
+    scenario_context = get_current_scenario_context(context)
+    logins = scenario_context.get("admin_logins")
+    assert len(logins) == 1, f"expected one admin login, got {len(logins)}"
+    assert logins[0] != scenario_context.get("event_loop_thread"), "the admin login ran on the event loop thread"
+
+
 @then(
     'an async adapter for realm "{realm_name}" and client "{client_name}" should validate the token of "{username}"',
 )
-async def step_async_adapter_validates_token(context: Context, realm_name: str, client_name: str, username: str) -> None:
+async def step_async_adapter_validates_token(
+    context: Context, realm_name: str, client_name: str, username: str,
+) -> None:
     """Validate a token issued by the sync adapter through a separate async adapter."""
     scenario_context = get_current_scenario_context(context)
     adapter = _async_adapter_for(realm_name, client_name)
