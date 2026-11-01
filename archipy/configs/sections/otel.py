@@ -159,6 +159,36 @@ class OpentelemetryConfig(BaseModel):
             "4 MiB by default, and spans with long SQL or stack traces reach several KB each, so keep batches small"
         ),
     )
+    ATTRIBUTE_COUNT_LIMIT: int | None = Field(
+        default=None,
+        ge=0,
+        description="Most attributes a span, event or link keeps (None: SDK default, 128); the rest are dropped",
+    )
+    ATTRIBUTE_VALUE_LENGTH_LIMIT: int | None = Field(
+        default=None,
+        ge=0,
+        description="Longest attribute value kept in characters; longer values are truncated (None: no limit)",
+    )
+    SPAN_ATTRIBUTE_COUNT_LIMIT: int | None = Field(
+        default=None,
+        ge=0,
+        description="Most attributes a span keeps; overrides ATTRIBUTE_COUNT_LIMIT for spans",
+    )
+    SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT: int | None = Field(
+        default=None,
+        ge=0,
+        description="Longest span attribute value in characters; overrides ATTRIBUTE_VALUE_LENGTH_LIMIT for spans",
+    )
+    SPAN_EVENT_COUNT_LIMIT: int | None = Field(
+        default=None,
+        ge=0,
+        description="Most events a span keeps (None: SDK default, 128)",
+    )
+    SPAN_LINK_COUNT_LIMIT: int | None = Field(
+        default=None,
+        ge=0,
+        description="Most links a span keeps (None: SDK default, 128)",
+    )
     LOG_BATCH_SCHEDULE_DELAY_MS: int = Field(
         default=1000,
         ge=1,

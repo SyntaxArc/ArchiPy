@@ -20,11 +20,29 @@ if TYPE_CHECKING:
     from opentelemetry.sdk.metrics._internal.export import CardinalityLimits
     from opentelemetry.sdk.metrics.export import MetricExporter, MetricReader
     from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import SpanLimits
     from opentelemetry.sdk.trace.export import SpanExporter
     from prometheus_client import CollectorRegistry
 
     from archipy.configs.config_template import OpentelemetryConfig
     from archipy.helpers.utils._otel.provider_types import OwnedLoggerProvider, OwnedMeterProvider, OwnedTracerProvider
+
+
+def create_span_limits(otel: OpentelemetryConfig) -> SpanLimits | None:
+    """Return the span limits the config sets, or ``None`` when it sets none so the SDK defaults apply."""
+    from opentelemetry.sdk.trace import SpanLimits
+
+    values = {
+        "max_attributes": otel.ATTRIBUTE_COUNT_LIMIT,
+        "max_attribute_length": otel.ATTRIBUTE_VALUE_LENGTH_LIMIT,
+        "max_span_attributes": otel.SPAN_ATTRIBUTE_COUNT_LIMIT,
+        "max_span_attribute_length": otel.SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT,
+        "max_events": otel.SPAN_EVENT_COUNT_LIMIT,
+        "max_links": otel.SPAN_LINK_COUNT_LIMIT,
+    }
+    if all(value is None for value in values.values()):
+        return None
+    return SpanLimits(**values)
 
 
 def build_tracer_provider(
@@ -44,7 +62,7 @@ def build_tracer_provider(
     """
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-    provider = temporal_providers.new_tracer_provider(resource, create_sampler(otel))
+    provider = temporal_providers.new_tracer_provider(resource, create_sampler(otel), create_span_limits(otel))
     exporter = span_exporter_factory(otel)
     provider.add_span_processor(
         BatchSpanProcessor(
