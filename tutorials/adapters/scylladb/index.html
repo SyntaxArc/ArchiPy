@@ -4758,6 +4758,16 @@ server certificate (TLS 1.2 or newer).</p>
 <td><code>True</code></td>
 <td>Match the certificate to the contact point host name</td>
 </tr>
+<tr>
+<td><code>TLS_SERVER_NAME</code></td>
+<td><code>None</code></td>
+<td>Host name to verify, when it differs from the contact point address</td>
+</tr>
+<tr>
+<td><code>TLS_SESSION_CACHE_ENABLED</code></td>
+<td><code>True</code></td>
+<td>Resume TLS sessions; a resumed session skips the certificate check, so set <code>False</code> to verify every connection</td>
+</tr>
 </tbody>
 </table>
 <div class="admonition warning">
