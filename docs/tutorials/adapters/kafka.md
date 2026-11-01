@@ -60,6 +60,27 @@ config = KafkaConfig(
     `SSL_ENDPOINT_IDENTIFICATION_ALGORITHM="none"` (or `KAFKA__SSL_ENDPOINT_IDENTIFICATION_ALGORITHM=none`); a warning
     is logged because this leaves connections open to man-in-the-middle attacks.
 
+### Connection, Identity and Timeout Settings
+
+`CLIENT_ID` (`client.id`) and `CONNECTIONS_MAX_IDLE_MS` (`connections.max.idle.ms`) are applied to every client, and
+`LIST_TOPICS_TIMEOUT_MS` is the timeout `list_topics()` and the producer health check use when no `timeout` is passed.
+The options below are optional; `None` leaves the librdkafka default in place.
+
+| Field                      | librdkafka option          | Applies to |
+|----------------------------|----------------------------|------------|
+| `SOCKET_TIMEOUT_MS`        | `socket.timeout.ms`        | all        |
+| `RECONNECT_BACKOFF_MAX_MS` | `reconnect.backoff.max.ms` | all        |
+| `RETRY_BACKOFF_MS`         | `retry.backoff.ms`         | all        |
+| `MESSAGE_TIMEOUT_MS`       | `message.timeout.ms`       | producers  |
+| `GROUP_INSTANCE_ID`        | `group.instance.id`        | consumers  |
+| `ENABLE_AUTO_OFFSET_STORE` | `enable.auto.offset.store` | consumers  |
+
+!!! note
+    librdkafka treats `message.timeout.ms` as an alias of `delivery.timeout.ms`, so a set `MESSAGE_TIMEOUT_MS` takes
+    precedence over `DELIVERY_TIMEOUT_MS`. Earlier releases ignored `CLIENT_ID`, `CONNECTIONS_MAX_IDLE_MS` and
+    `LIST_TOPICS_TIMEOUT_MS`; `list_topics()` without a `timeout` now waits `LIST_TOPICS_TIMEOUT_MS` (5 seconds by
+    default) instead of 1 second. Pass `timeout=` to choose a value per call.
+
 ### Async-Specific Configuration
 
 The async adapters respect three additional fields that tune the underlying `AIOProducer` /

@@ -102,6 +102,37 @@ def _apply_security_config(config: dict[str, str | int | float], configs: KafkaC
         config["ssl.endpoint.identification.algorithm"] = configs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM
 
 
+def _apply_client_config(config: dict[str, str | int | float], configs: KafkaConfig, *, role: str) -> None:
+    """Add the client identity, connection and retry settings to a client configuration.
+
+    ``client.id`` and ``connections.max.idle.ms`` are always set. The remaining options are applied only when set
+    (``None`` keeps the librdkafka default). Producer-only and consumer-only options are added for their role only.
+
+    Args:
+        config: The librdkafka configuration dictionary to update in place.
+        configs: Kafka configuration.
+        role: ``"producer"``, ``"consumer"`` or ``"admin"``.
+    """
+    config["client.id"] = configs.CLIENT_ID
+    config["connections.max.idle.ms"] = configs.CONNECTIONS_MAX_IDLE_MS
+    optional: dict[str, str | int | bool | None] = {
+        "socket.timeout.ms": configs.SOCKET_TIMEOUT_MS,
+        "reconnect.backoff.max.ms": configs.RECONNECT_BACKOFF_MAX_MS,
+        "retry.backoff.ms": configs.RETRY_BACKOFF_MS,
+    }
+    if role == "producer":
+        optional["message.timeout.ms"] = configs.MESSAGE_TIMEOUT_MS
+    elif role == "consumer":
+        optional["group.instance.id"] = configs.GROUP_INSTANCE_ID
+        optional["enable.auto.offset.store"] = configs.ENABLE_AUTO_OFFSET_STORE
+    config.update({key: value for key, value in optional.items() if value is not None})
+
+
+def _resolve_list_topics_timeout(configs: KafkaConfig, timeout: float | None) -> float:
+    """Return the explicit timeout in seconds, or ``LIST_TOPICS_TIMEOUT_MS`` converted to seconds when None."""
+    return configs.LIST_TOPICS_TIMEOUT_MS / 1000 if timeout is None else timeout
+
+
 # Library/runtime failures observed at the Kafka client boundary.
 _KAFKA_CLIENT_ERRORS: tuple[type[Exception], ...] = (
     KafkaException,
@@ -196,10 +227,12 @@ class KafkaAdminAdapter(KafkaAdminPort, KafkaExceptionHandlerMixin):
             InternalError: If there is an error initializing the admin client.
         """
         configs: KafkaConfig = kafka_configs or BaseConfig.global_config().KAFKA
+        self._configs = configs
         try:
             broker_list_csv = ",".join(configs.BROKERS_LIST)
             config: dict[str, str | int | float] = {"bootstrap.servers": broker_list_csv}
             _apply_security_config(config, configs)
+            _apply_client_config(config, configs, role="admin")
             self.adapter: AdminClient = AdminClient(config)
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "KafkaAdmin_init")
@@ -243,13 +276,14 @@ class KafkaAdminAdapter(KafkaAdminPort, KafkaExceptionHandlerMixin):
             self._handle_kafka_exception(e, "delete_topic")
 
     @override
-    def list_topics(self, topic: str | None = None, timeout: int = 1) -> ClusterMetadata:
+    def list_topics(self, topic: str | None = None, timeout: float | None = None) -> ClusterMetadata:
         """Lists Kafka topics.
 
         Args:
             topic (str | None, optional): Specific topic to list. If None, lists all topics.
                 Defaults to None.
-            timeout (int, optional): Timeout in seconds for the operation. Defaults to 1.
+            timeout (float | None, optional): Timeout in seconds for the operation. Defaults to None, which uses
+                ``LIST_TOPICS_TIMEOUT_MS``.
 
         Returns:
             ClusterMetadata: Metadata about the Kafka cluster and topics.
@@ -260,7 +294,7 @@ class KafkaAdminAdapter(KafkaAdminPort, KafkaExceptionHandlerMixin):
             UnavailableError: If there is an unknown issue accessing Kafka.
         """
         try:
-            result = self.adapter.list_topics(topic=topic, timeout=timeout)
+            result = self.adapter.list_topics(topic=topic, timeout=_resolve_list_topics_timeout(self._configs, timeout))
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "list_topics")
             raise  # Exception handler always raises, but type checker needs this to be explicit
@@ -346,6 +380,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
                 "max.partition.fetch.bytes": configs.MAX_PARTITION_FETCH_BYTES,
             }
             _apply_security_config(config, configs)
+            _apply_client_config(config, configs, role="consumer")
             # Looked up on the module at call time: OpenTelemetry's Kafka instrumentor replaces
             # ``confluent_kafka.Consumer``, so a name bound at import time would never be traced.
             consumer = confluent_kafka.Consumer(config)
@@ -521,6 +556,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
         """
         self._topic_name = topic_name
         configs: KafkaConfig = kafka_configs or BaseConfig.global_config().KAFKA
+        self._configs = configs
         self._adapter: Producer = self._get_adapter(configs)
 
     @classmethod
@@ -556,6 +592,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             if configs.TRANSACTIONAL_ID:
                 config["transactional.id"] = configs.TRANSACTIONAL_ID
             _apply_security_config(config, configs)
+            _apply_client_config(config, configs, role="producer")
             # See the consumer: resolved at call time so the OpenTelemetry instrumentor can wrap it.
             producer = confluent_kafka.Producer(config)
         except _KAFKA_CLIENT_ERRORS as e:
@@ -648,18 +685,19 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             UnavailableError: If the Kafka service is unavailable.
         """
         try:
-            self.list_topics(timeout=1)
+            self.list_topics()
         except (*_KAFKA_CLIENT_ERRORS, BaseError) as e:
             raise UnavailableError(resource_type="Kafka") from e
 
     @override
-    def list_topics(self, topic: str | None = None, timeout: int = 1) -> ClusterMetadata:
+    def list_topics(self, topic: str | None = None, timeout: float | None = None) -> ClusterMetadata:
         """Lists Kafka topics.
 
         Args:
             topic (str | None, optional): Specific topic to list. If None, lists all topics.
                 Defaults to None.
-            timeout (int, optional): Timeout in seconds for the operation. Defaults to 1.
+            timeout (float | None, optional): Timeout in seconds for the operation. Defaults to None, which uses
+                ``LIST_TOPICS_TIMEOUT_MS``.
 
         Returns:
             ClusterMetadata: Metadata about the Kafka cluster and topics.
@@ -670,7 +708,10 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             UnavailableError: If there is an unknown issue accessing Kafka.
         """
         try:
-            result = self._adapter.list_topics(topic=topic, timeout=timeout)
+            result = self._adapter.list_topics(
+                topic=topic,
+                timeout=_resolve_list_topics_timeout(self._configs, timeout),
+            )
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "list_topics")
             raise  # Exception handler always raises, but type checker needs this to be explicit
@@ -748,6 +789,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
         if configs.TRANSACTIONAL_ID:
             config["transactional.id"] = configs.TRANSACTIONAL_ID
         _apply_security_config(config, configs)
+        _apply_client_config(config, configs, role="producer")
         return config
 
     async def _get_adapter(self) -> AIOProducer:
@@ -838,18 +880,19 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
             UnavailableError: If the Kafka service is unavailable.
         """
         try:
-            await self.list_topics(timeout=1)
+            await self.list_topics()
         except (*_KAFKA_CLIENT_ERRORS, BaseError) as e:
             raise UnavailableError(resource_type="Kafka") from e
 
     @override
-    async def list_topics(self, topic: str | None = None, timeout: int = 1) -> ClusterMetadata:
+    async def list_topics(self, topic: str | None = None, timeout: float | None = None) -> ClusterMetadata:
         """Lists Kafka topics asynchronously.
 
         Args:
             topic (str | None, optional): Specific topic to list. If None, lists all topics.
                 Defaults to None.
-            timeout (int, optional): Timeout in seconds for the operation. Defaults to 1.
+            timeout (float | None, optional): Timeout in seconds for the operation. Defaults to None, which uses
+                ``LIST_TOPICS_TIMEOUT_MS``.
 
         Returns:
             ClusterMetadata: Metadata about the Kafka cluster and topics.
@@ -861,7 +904,10 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
         """
         try:
             adapter = await self._get_adapter()
-            result = await adapter.list_topics(topic=topic, timeout=timeout)
+            result = await adapter.list_topics(
+                topic=topic,
+                timeout=_resolve_list_topics_timeout(self._configs, timeout),
+            )
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "list_topics")
             raise
@@ -956,6 +1002,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             "max.partition.fetch.bytes": configs.MAX_PARTITION_FETCH_BYTES,
         }
         _apply_security_config(config, configs)
+        _apply_client_config(config, configs, role="consumer")
         return config
 
     async def _get_adapter(self) -> AIOConsumer:

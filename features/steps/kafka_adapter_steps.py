@@ -13,6 +13,7 @@ from archipy.adapters.kafka.adapters import (
     KafkaAdminAdapter,
     KafkaConsumerAdapter,
     KafkaProducerAdapter,
+    _apply_client_config,
     _apply_security_config,
 )
 from archipy.configs.config_template import KafkaConfig
@@ -1255,3 +1256,57 @@ def step_produce_after_close_fails(context, topic_name):
         context.logger.info(f"Closed producer rejected the write: {type(error).__name__}")
         return
     raise AssertionError("Expected a closed producer to reject produce()")
+
+
+# Applied client identity, connection and timeout settings
+
+
+@when("Kafka client settings are built for a {role} with Kafka setting {setting} set to {value}")
+def step_build_settings_with_option(context, role, setting, value):
+    """Build the librdkafka settings of a client role with one KafkaConfig field set (or left unset)."""
+    updates = {} if value == "unset" else {setting: value}
+    config = KafkaConfig(**updates)
+    if role == "sync client":
+        settings = {}
+        _apply_security_config(settings, config)
+        _apply_client_config(settings, config, role="producer")
+    elif role == "async producer":
+        settings = AsyncKafkaProducerAdapter("opt-topic", kafka_configs=config)._build_producer_conf(config)
+    else:
+        adapter = AsyncKafkaConsumerAdapter(group_id="opt-group", topic_list=["opt-topic"], kafka_configs=config)
+        settings = adapter._build_consumer_conf(config)
+    get_current_scenario_context(context).store("kafka_client_settings", settings)
+
+
+@then('the Kafka client option "{option}" should be "{expected}"')
+def step_check_client_option(context, option, expected):
+    """The built settings must carry the option with the expected value, or lack it when 'absent' is expected."""
+    settings = get_current_scenario_context(context).get("kafka_client_settings")
+    actual = "absent" if option not in settings else str(settings[option])
+    assert actual == expected, f"Expected {option} to be {expected!r}, got {actual!r}"
+
+
+@when(
+    "I list topics with the {adapter_kind} adapter on that broker with the default timeout set to {timeout_ms:d} ms",
+)
+def step_list_topics_default_timeout(context, adapter_kind, timeout_ms):
+    """List topics without a timeout argument so the configured LIST_TOPICS_TIMEOUT_MS applies, and time the call."""
+    config = get_current_scenario_context(context).get("kafka_unreachable_config")
+    config = config.model_copy(update={"LIST_TOPICS_TIMEOUT_MS": timeout_ms})
+    started = time.monotonic()
+    if adapter_kind == "admin":
+        _capture_error(context, KafkaAdminAdapter(config).list_topics)
+    elif adapter_kind == "sync producer":
+        _capture_error(context, KafkaProducerAdapter("t", kafka_configs=config).list_topics)
+    else:
+        _capture_error(context, lambda: asyncio.run(AsyncKafkaProducerAdapter("t", kafka_configs=config).list_topics()))
+    get_current_scenario_context(context).store("kafka_list_topics_elapsed", time.monotonic() - started)
+
+
+@then("listing topics should have waited at least {seconds:f} seconds")
+def step_list_topics_waited(context, seconds):
+    """The call must fail only after the configured timeout elapsed."""
+    scenario_context = get_current_scenario_context(context)
+    elapsed = scenario_context.get("kafka_list_topics_elapsed")
+    assert scenario_context.get("kafka_operation_error") is not None, "Expected listing topics to fail"
+    assert elapsed >= seconds - 0.1, f"Failed after {elapsed:.2f}s, expected to wait at least {seconds}s"

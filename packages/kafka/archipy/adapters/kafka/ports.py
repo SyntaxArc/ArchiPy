@@ -43,13 +43,14 @@ class KafkaAdminPort:
         raise NotImplementedError
 
     @abstractmethod
-    def list_topics(self, topic: str | None = None, timeout: int = 1) -> ClusterMetadata:
+    def list_topics(self, topic: str | None = None, timeout: float | None = None) -> ClusterMetadata:
         """Lists Kafka topics.
 
         Args:
             topic (str | None, optional): Specific topic to list. If None, lists all topics.
                 Defaults to None.
-            timeout (int, optional): Timeout in seconds for the operation. Defaults to 1.
+            timeout (float | None, optional): Timeout in seconds for the operation. Defaults to None, which uses
+                ``LIST_TOPICS_TIMEOUT_MS``.
 
         Returns:
             ClusterMetadata: Metadata about the Kafka cluster and topics.
