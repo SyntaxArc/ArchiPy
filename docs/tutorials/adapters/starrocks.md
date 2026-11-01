@@ -26,7 +26,14 @@ Configure the StarRocks adapter via environment variables or a `StarRocksSQLAlch
 
 !!! note
     `CONNECT_TIMEOUT` defaults to `10` seconds for StarRocks, because the MySQL protocol needs an explicit connection
-    timeout to avoid hanging on network issues.
+    timeout to avoid hanging on network issues. It must be at least `1`. `READ_TIMEOUT` (seconds, at least `1`) is
+    optional and applied by the sync driver only; asyncmy has no read timeout.
+
+!!! warning
+    The adapter runs `SET enable_sql_transaction = TRUE` on every connection so `BEGIN`/`COMMIT`/`ROLLBACK` are not
+    no-ops. The adapter is built and tested against StarRocks 4.x. On older servers the session variable may not exist
+    and the connection is refused, so check it before upgrading or downgrading. The adapter has no TLS settings: terminate TLS in front of the frontend node if the network is not
+    trusted.
 
 ```bash
 STARROCKS_SQLALCHEMY__HOST=localhost
