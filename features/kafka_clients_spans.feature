@@ -136,6 +136,11 @@ Feature: Kafka Clients and Spans Testing
       | async | poll      | _PARTITION_EOF        |
       | async | consume   | UNKNOWN_TOPIC_OR_PART |
 
+  Scenario: A sync producer serves delivery reports so a small queue does not overflow
+    Given a test topic named "test-topic-small-queue"
+    When I produce 200 messages to topic "test-topic-small-queue" without flushing through a queue limited to 5 messages
+    Then the Kafka operation should raise nothing
+
   Scenario: Producing into a full local queue is reported as resource exhaustion
     Given an unreachable Kafka broker
     When I produce 2 messages with a producer whose queue holds only 1 message on that broker

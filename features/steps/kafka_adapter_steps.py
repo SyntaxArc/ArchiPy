@@ -1190,6 +1190,22 @@ def step_consumer_received_nothing(context):
     assert not scenario_context.get("kafka_consumer_result")
 
 
+@when("I produce {count:d} messages to topic \"{topic_name}\" without flushing through a queue limited to {capacity:d} messages")
+def step_produce_through_small_queue(context, count, topic_name, capacity):
+    """Produce far more messages than the local queue holds, relying on delivery reports being served."""
+    config = _get_kafka_config(context).model_copy(update={"QUEUE_BUFFERING_MAX_MESSAGES": capacity})
+    producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+    _capture_error(context, lambda: [producer.produce(f"queued-{index}") for index in range(count)])
+    get_current_scenario_context(context).store("kafka_small_queue_producer", producer)
+
+
+@then("the Kafka operation should raise nothing")
+def step_operation_should_raise_nothing(context):
+    """Assert the captured operation did not fail."""
+    error = get_current_scenario_context(context).get("kafka_operation_error")
+    assert error is None, f"Expected no error, got {error!r}"
+
+
 @then('the Kafka operation should raise one of "{error_names}"')
 def step_operation_should_raise_one_of(context, error_names):
     """Assert the captured exception is one of the comma separated ArchiPy errors."""
