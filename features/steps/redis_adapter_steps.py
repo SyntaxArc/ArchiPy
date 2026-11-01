@@ -3754,6 +3754,19 @@ def step_then_config_rejected(context):
     assert scenario_context.config_error is not None, "Config was accepted"
 
 
+@when(r'I aggregate search index "(?P<index_name>[^"]+)" asynchronously grouped by title')
+async def step_when_aggregate_async(context, index_name):
+    """Run a simple aggregation grouped by title asynchronously."""
+    handle = get_current_scenario_context(context).async_adapter.search_index(index_name)
+    aggregation = AggregationDTO(query="*", group_by=["@title"], reduce_function="COUNT", reduce_field="total")
+    deadline = time.monotonic() + SEARCH_INDEX_TIMEOUT_SECONDS
+    result = await handle.aggregate(aggregation)
+    while not result["rows"] and time.monotonic() < deadline:
+        await asyncio.sleep(SEARCH_INDEX_POLL_INTERVAL_SECONDS)
+        result = await handle.aggregate(aggregation)
+    store_result(context, "aggregation_result", result)
+
+
 def _plain(value):
     """Decode a bytes response to str."""
     return value.decode() if isinstance(value, bytes) else value
