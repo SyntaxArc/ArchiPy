@@ -29,12 +29,14 @@ from archipy.models.dtos.keycloak.token_dtos import KeycloakOidcResponseDTO, Key
 from archipy.models.errors import (
     BaseError,
     ClientAlreadyExistsError,
+    ConflictError,
     InsufficientPermissionsError,
     InternalError,
     InvalidCredentialsError,
     KeycloakConnectionTimeoutError,
     KeycloakServiceUnavailableError,
     PasswordPolicyError,
+    RateLimitExceededError,
     RealmAlreadyExistsError,
     ResourceNotFoundError,
     RoleAlreadyExistsError,
@@ -52,7 +54,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 HTTP_BAD_REQUEST = 400
+HTTP_FORBIDDEN = 403
 HTTP_NOT_FOUND = 404
+HTTP_CONFLICT = 409
+HTTP_UNPROCESSABLE_ENTITY = 422
+HTTP_TOO_MANY_REQUESTS = 429
+HTTP_SERVER_ERROR = 500
+HTTP_UNAVAILABLE_CODES = frozenset({502, 503, 504})
+_CLIENT_ERROR_RANGE = range(400, 500)
 
 T = TypeVar("T")
 
@@ -308,13 +317,29 @@ class KeycloakExceptionHandlerMixin:
         operation: str,
         error_message: str,
     ) -> dict[str, Any]:
-        """Build common error context for Keycloak exception mapping."""
-        return {
+        """Build common error context for Keycloak exception mapping.
+
+        The upstream message goes to callers (``BaseError.to_dict``, ``abort_grpc``) only for 4xx answers. Any other
+        message, such as a 5xx body or a connection error, may carry internals (database URLs, stack traces), so it
+        is logged and left out of the error.
+        """
+        response_code = getattr(exception, "response_code", None)
+        context: dict[str, Any] = {
             "operation": operation,
-            "original_error": error_message,
-            "response_code": getattr(exception, "response_code", None),
+            "response_code": response_code,
             "keycloak_error_type": type(exception).__name__,
         }
+        if response_code in _CLIENT_ERROR_RANGE:
+            context["original_error"] = error_message
+        else:
+            logger.error(
+                "Keycloak operation %s failed (%s, response code %s): %s",
+                operation,
+                type(exception).__name__,
+                response_code,
+                error_message,
+            )
+        return context
 
     @classmethod
     def _raise_for_keycloak_connection_error(
@@ -334,18 +359,54 @@ class KeycloakExceptionHandlerMixin:
         exception: KeycloakError,
         error_lower: str,
         additional_data: dict[str, Any],
+        operation: str = "",
     ) -> None:
-        """Raise when the error indicates a duplicate resource."""
-        if "already exists" not in error_lower:
+        """Raise when the error indicates a duplicate resource.
+
+        The resource comes from the failed operation first (``create_client_role`` is a role even though its message
+        may also say "client"), then from the message. A 409 that names no known resource is a ``ConflictError``.
+        """
+        response_code = additional_data.get("response_code")
+        is_conflict = response_code == HTTP_CONFLICT
+        if "already exists" not in error_lower and "user exists with same" not in error_lower and not is_conflict:
             return
-        if "realm" in error_lower:
-            raise RealmAlreadyExistsError(additional_data=additional_data) from exception
-        if "user exists with same" in error_lower:
-            raise UserAlreadyExistsError(additional_data=additional_data) from exception
-        if "client" in error_lower:
-            raise ClientAlreadyExistsError(additional_data=additional_data) from exception
-        if "role" in error_lower:
-            raise RoleAlreadyExistsError(additional_data=additional_data) from exception
+        operation_lower = operation.lower()
+        resource = next((name for name in ("role", "client", "user", "realm") if name in operation_lower), None)
+        if resource is None:
+            if "realm" in error_lower:
+                resource = "realm"
+            elif "user exists with same" in error_lower:
+                resource = "user"
+            elif "client" in error_lower:
+                resource = "client"
+            elif "role" in error_lower:
+                resource = "role"
+        error_types = {
+            "realm": RealmAlreadyExistsError,
+            "user": UserAlreadyExistsError,
+            "client": ClientAlreadyExistsError,
+            "role": RoleAlreadyExistsError,
+        }
+        if resource in error_types:
+            raise error_types[resource](additional_data=additional_data) from exception
+        if is_conflict:
+            raise ConflictError(additional_data=additional_data) from exception
+
+    @classmethod
+    def _raise_for_keycloak_status_code(
+        cls,
+        exception: KeycloakError,
+        response_code: int | None,
+        additional_data: dict[str, Any],
+    ) -> None:
+        """Map the status codes that never depend on message text (429 and every 5xx)."""
+        if response_code == HTTP_TOO_MANY_REQUESTS:
+            raise RateLimitExceededError(additional_data=additional_data) from exception
+        if response_code is not None and response_code >= HTTP_SERVER_ERROR:
+            # A 500 whose body says "invalid" is not a bad request, so no message pattern is tried.
+            if response_code in HTTP_UNAVAILABLE_CODES:
+                raise KeycloakServiceUnavailableError(additional_data=additional_data) from exception
+            raise InternalError(additional_data=additional_data) from exception
 
     @classmethod
     def _raise_for_keycloak_message_patterns(
@@ -354,6 +415,7 @@ class KeycloakExceptionHandlerMixin:
         error_lower: str,
         response_code: int | None,
         additional_data: dict[str, Any],
+        operation: str = "",
     ) -> None:
         """Map message-pattern Keycloak errors."""
         if cls._is_uma_nothing_granted(exception):
@@ -363,24 +425,27 @@ class KeycloakExceptionHandlerMixin:
         if isinstance(exception, KeycloakAuthenticationError) or any(phrase in error_lower for phrase in auth_phrases):
             raise InvalidCredentialsError(additional_data=additional_data) from exception
 
-        cls._raise_for_keycloak_already_exists(exception, error_lower, additional_data)
+        cls._raise_for_keycloak_already_exists(exception, error_lower, additional_data, operation)
 
         if "not found" in error_lower or response_code == HTTP_NOT_FOUND:
             raise ResourceNotFoundError(additional_data=additional_data) from exception
 
         permission_phrases = ["forbidden", "access denied", "insufficient permissions", "insufficient scope"]
-        if any(phrase in error_lower for phrase in permission_phrases):
+        if response_code == HTTP_FORBIDDEN or any(phrase in error_lower for phrase in permission_phrases):
             raise InsufficientPermissionsError(additional_data=additional_data) from exception
 
         password_phrases = ["invalid password", "password policy", "minimum length", "password must"]
         if any(phrase in error_lower for phrase in password_phrases):
             raise PasswordPolicyError(additional_data=additional_data) from exception
 
+        # Phrases count only when the answer carries no status code: with one, the status code decides.
         validation_phrases = ["validation", "invalid", "required field", "bad request"]
-        if response_code == HTTP_BAD_REQUEST or any(phrase in error_lower for phrase in validation_phrases):
+        if response_code in (HTTP_BAD_REQUEST, HTTP_UNPROCESSABLE_ENTITY) or (
+            response_code is None and any(phrase in error_lower for phrase in validation_phrases)
+        ):
             raise ValidationError(additional_data=additional_data) from exception
 
-        if response_code in [503, 504] or "unavailable" in error_lower:
+        if "unavailable" in error_lower:
             raise KeycloakServiceUnavailableError(additional_data=additional_data) from exception
 
     @classmethod
@@ -414,7 +479,8 @@ class KeycloakExceptionHandlerMixin:
         if isinstance(exception, KeycloakConnectionError):
             cls._raise_for_keycloak_connection_error(exception, error_lower, additional_data)
 
-        cls._raise_for_keycloak_message_patterns(exception, error_lower, response_code, additional_data)
+        cls._raise_for_keycloak_status_code(exception, response_code, additional_data)
+        cls._raise_for_keycloak_message_patterns(exception, error_lower, response_code, additional_data, operation)
 
         raise InternalError(additional_data=additional_data) from exception
 

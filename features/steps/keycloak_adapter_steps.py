@@ -8,6 +8,7 @@ from typing import Any
 
 from behave import given, step, then, when
 from behave.runner import Context
+from keycloak.exceptions import KeycloakGetError
 from features.scenario_context import ScenarioContext
 from features.test_containers import ContainerManager
 from features.test_helpers import get_current_scenario_context
@@ -32,6 +33,7 @@ from archipy.models.dtos.keycloak.organization_dtos import KeycloakOrganizationR
 from archipy.models.dtos.keycloak.realm_dtos import KeycloakRealmRequestDTO
 from archipy.models.dtos.keycloak.user_dtos import KeycloakCredentialRequestDTO, KeycloakUserRequestDTO
 from archipy.models.dtos.keycloak.token_dtos import KeycloakTokenClaimsDTO, KeycloakUserInfoDTO
+from archipy.models.errors import BaseError
 from archipy.models.types.actor_type import ActorType
 
 
@@ -2517,7 +2519,11 @@ async def step_update_group(context: Context, group_name: str, adapter_type: str
     group_id = scenario_context.get("latest_group_id")
     try:
         await _adapter_call(
-            adapter, is_async, "update_group", group_id, KeycloakGroupRequestDTO(id=group_id, name=group_name),
+            adapter,
+            is_async,
+            "update_group",
+            group_id,
+            KeycloakGroupRequestDTO(id=group_id, name=group_name),
         )
         scenario_context.store(_op_error_key("update_group"), None)
     except Exception as exc:
@@ -3132,7 +3138,9 @@ async def step_add_coverage_auth_subflow(context: Context, adapter_type: str) ->
             is_async,
             "create_authentication_flow_subflow",
             KeycloakAuthenticationSubflowCreateRequestDTO(
-                alias=sub_alias, type="basic-flow", description="coverage subflow",
+                alias=sub_alias,
+                type="basic-flow",
+                description="coverage subflow",
             ),
             flow_alias,
             skip_exists=True,
@@ -3528,7 +3536,10 @@ async def step_update_coverage_client_scope(context: Context, adapter_type: str)
             "update_client_scope",
             scope_id,
             KeycloakClientScopeRequestDTO(
-                id=scope_id, name=scope_name, protocol="openid-connect", description="updated",
+                id=scope_id,
+                name=scope_name,
+                protocol="openid-connect",
+                description="updated",
             ),
         )
         scenario_context.store(_op_error_key("update_client_scope"), None)
@@ -4255,11 +4266,39 @@ def step_admin_refreshed_once_off_loop(context: Context) -> None:
     assert logins[0] != scenario_context.get("event_loop_thread"), "the admin login ran on the event loop thread"
 
 
+@when('a Keycloak error with status {status:d} and message "{message}" is mapped for operation "{operation}"')
+def step_map_keycloak_error(context: Context, status: int, message: str, operation: str) -> None:
+    """Map a Keycloak error that a container cannot produce on demand (a 5xx carrying internals)."""
+    scenario_context = get_current_scenario_context(context)
+    error = KeycloakGetError(error_message=message, response_code=status)
+    try:
+        KeycloakAdapter._handle_keycloak_exception(error, operation)
+    except BaseError as mapped:
+        scenario_context.store("mapped_error", mapped)
+        scenario_context.store("upstream_message", message)
+        return
+    raise AssertionError("the Keycloak error was not mapped")
+
+
+@then('the mapped error has code "{code}" and {exposure} the upstream message')
+def step_mapped_error_code(context: Context, code: str, exposure: str) -> None:
+    scenario_context = get_current_scenario_context(context)
+    mapped = scenario_context.get("mapped_error")
+    assert mapped.code == code, f"expected {code}, got {mapped.code}"
+    leaked = scenario_context.get("upstream_message") in str(mapped.to_dict())
+    assert leaked == (exposure == "exposes"), (
+        f"upstream message {'leaked' if leaked else 'was hidden'}: {mapped.to_dict()}"
+    )
+
+
 @then(
     'an async adapter for realm "{realm_name}" and client "{client_name}" should validate the token of "{username}"',
 )
 async def step_async_adapter_validates_token(
-    context: Context, realm_name: str, client_name: str, username: str,
+    context: Context,
+    realm_name: str,
+    client_name: str,
+    username: str,
 ) -> None:
     """Validate a token issued by the sync adapter through a separate async adapter."""
     scenario_context = get_current_scenario_context(context)

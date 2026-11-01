@@ -489,7 +489,18 @@ asyncio.run(check_health())
 
 ## Error Handling
 
-The Kafka adapters map low-level Kafka errors to ArchiPy domain exceptions:
+The Kafka adapters map low-level Kafka errors to ArchiPy domain exceptions by librdkafka error code:
+
+| Kafka error | ArchiPy error |
+|---|---|
+| Timeouts (`_MSG_TIMED_OUT`, `_TIMED_OUT`, `REQUEST_TIMED_OUT`) | `ConnectionTimeoutError` |
+| Transport failure (`_TRANSPORT`, `NETWORK_EXCEPTION`) | `NetworkError` |
+| No broker reachable (`_ALL_BROKERS_DOWN`, `_RESOLVE`, `BROKER_NOT_AVAILABLE`) | `ServiceUnavailableError` |
+| Authentication failure (`_AUTHENTICATION`, `SASL_AUTHENTICATION_FAILED`) | `UnauthenticatedError` |
+| Authorization failure (topic, group, cluster, transactional id) | `PermissionDeniedError` |
+| `_INVALID_ARG` | `InvalidArgumentError`, or `ConfigurationError` when a client setting is rejected |
+| Full producer queue (`BufferError`) | `ResourceExhaustedError` |
+| Anything else | `InternalError` |
 
 ```python
 import logging

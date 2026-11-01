@@ -3,6 +3,7 @@ import io
 import json
 import os
 import tempfile
+from unittest import mock
 
 import certifi
 import httpx2
@@ -306,7 +307,11 @@ def step_upload_stream(context, input_kind, content, object_name, bucket_name):
     raw = content.encode("utf-8")
     if input_kind == "a binary stream":
         adapter.put_object_stream(
-            bucket_name, object_name, io.BytesIO(raw), length=len(raw), content_type="text/plain; charset=utf-8",
+            bucket_name,
+            object_name,
+            io.BytesIO(raw),
+            length=len(raw),
+            content_type="text/plain; charset=utf-8",
         )
     else:
         adapter.put_object_stream(bucket_name, object_name, raw, content_type="text/plain; charset=utf-8")
@@ -353,7 +358,9 @@ def step_verify_object_tag(context, object_name, bucket_name, key, value):
     context.logger.info(f"Verified tag '{key}={value}' on '{object_name}'")
 
 
-@when('I set a lifecycle rule on "{bucket_name}" with id "{rule_id}" expiring after {days:d} days with prefix "{prefix}"')
+@when(
+    'I set a lifecycle rule on "{bucket_name}" with id "{rule_id}" expiring after {days:d} days with prefix "{prefix}"',
+)
 def step_set_lifecycle_rule(context, bucket_name, rule_id, days, prefix):
     adapter = get_minio_adapter(context)
     rule = {
@@ -448,9 +455,7 @@ def step_verify_versioning_enabled(context, bucket_name):
 def step_verify_object_version_count(context, bucket_name, count, object_name):
     adapter = get_minio_adapter(context)
     versions = adapter.list_object_versions(bucket_name, prefix=object_name)
-    object_versions = [
-        v for v in versions if v["object_name"] == object_name and not v.get("is_delete_marker", False)
-    ]
+    object_versions = [v for v in versions if v["object_name"] == object_name and not v.get("is_delete_marker", False)]
     assert len(object_versions) >= count, (
         f"Expected at least {count} versions of '{object_name}', got {len(object_versions)}"
     )
@@ -565,6 +570,25 @@ def step_create_bucket_again(context, bucket_name):
     _capture_error(context, lambda: adapter.make_bucket(bucket_name))
 
 
+@when('I check bucket existence while the S3 client raises botocore "{error_name}"')
+def step_bucket_exists_with_client_error(context, error_name):
+    from botocore.exceptions import (
+        ConnectionClosedError,
+        ConnectTimeoutError,
+        ReadTimeoutError,
+    )
+
+    adapter = get_minio_adapter(context)
+    error_classes = {
+        "ReadTimeoutError": ReadTimeoutError,
+        "ConnectTimeoutError": ConnectTimeoutError,
+        "ConnectionClosedError": ConnectionClosedError,
+    }
+    error = error_classes[error_name](endpoint_url="http://localhost:9000")
+    with mock.patch.object(adapter._client, "head_bucket", side_effect=error):
+        _capture_error(context, lambda: adapter.bucket_exists("errors-bucket"))
+
+
 @when("I check existence of an object with an empty bucket name")
 def step_object_exists_empty_bucket(context):
     adapter = get_minio_adapter(context)
@@ -607,3 +631,77 @@ def step_clear_second_adapter_caches(context):
 def step_second_adapter_bucket_exists(context, bucket_name):
     second = get_current_scenario_context(context).get("second_adapter")
     assert second.bucket_exists(bucket_name) is True
+
+
+def _policy_json(bucket_name, action):
+    return json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {"AWS": "*"},
+                    "Action": [action],
+                    "Resource": [f"arn:aws:s3:::{bucket_name}/*"],
+                },
+            ],
+        },
+    )
+
+
+@when('I read the {setting} of bucket "{bucket_name}"')
+def step_read_bucket_setting(context, setting, bucket_name):
+    adapter = get_minio_adapter(context)
+    if setting == "policy":
+        adapter.set_bucket_policy(bucket_name, _policy_json(bucket_name, "s3:GetObject"))
+        assert "s3:GetObject" in adapter.get_bucket_policy(bucket_name)["policy"]
+    else:
+        adapter.get_bucket_versioning(bucket_name)
+
+
+@when('I change the {setting} of bucket "{bucket_name}" to "{new_value}"')
+def step_change_bucket_setting(context, setting, bucket_name, new_value):
+    adapter = get_minio_adapter(context)
+    if setting == "policy":
+        adapter.set_bucket_policy(bucket_name, _policy_json(bucket_name, new_value))
+    else:
+        adapter.set_bucket_versioning(bucket_name, enabled=new_value == "Enabled")
+
+
+@then('the {setting} of bucket "{bucket_name}" should be "{expected}"')
+def step_verify_bucket_setting(context, setting, bucket_name, expected):
+    adapter = get_minio_adapter(context)
+    if setting == "policy":
+        actual = adapter.get_bucket_policy(bucket_name)["policy"]
+        assert expected in actual and "s3:GetObject" not in actual, f"Stale policy: {actual}"
+    else:
+        actual = adapter.get_bucket_versioning(bucket_name)
+        assert actual == expected, f"Expected {expected}, got {actual}"
+
+
+def _read_cached(adapter, kind, bucket_name):
+    if kind == "object list":
+        return adapter.list_objects(bucket_name)
+    if kind == "bucket list":
+        return adapter.list_buckets()
+    return adapter.stat_object(bucket_name, "c.txt")
+
+
+@when('I read the cached {kind} of bucket "{bucket_name}" and mutate the result')
+def step_mutate_cached_result(context, kind, bucket_name):
+    adapter = get_minio_adapter(context)
+    first = _read_cached(adapter, kind, bucket_name)
+    get_current_scenario_context(context).store("original_snapshot", json.loads(json.dumps(first, default=str)))
+    if isinstance(first, list):
+        first.clear()
+    else:
+        first["size"] = -1
+
+
+@then('reading the {kind} of bucket "{bucket_name}" again should show the original data')
+def step_verify_cache_not_corrupted(context, kind, bucket_name):
+    adapter = get_minio_adapter(context)
+    again = json.loads(json.dumps(_read_cached(adapter, kind, bucket_name), default=str))
+    original = get_current_scenario_context(context).get("original_snapshot")
+    assert again == original, f"Cache was corrupted: {again} != {original}"
+    assert original, "Expected a non-empty result"

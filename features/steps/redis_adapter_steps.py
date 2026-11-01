@@ -3465,6 +3465,23 @@ async def step_when_sscan_iter_async(context, name, pattern, adapter_type):
     store_result(context, "async_set_scan", members)
 
 
+@when(r'I iterate keys matching "(?P<pattern>[^"]+)" and members of the set "(?P<name>[^"]+)" directly in async (?P<adapter_type>mock|container|cluster)')
+async def step_when_scan_iter_direct_async(context, pattern, name, adapter_type):
+    """Use scan_iter and sscan_iter with a plain async for, without awaiting them first."""
+    adapter = get_current_scenario_context(context).async_adapter
+    keys = [key async for key in adapter.scan_iter(match=pattern)]
+    members = [member async for member in adapter.sscan_iter(name)]
+    store_result(context, "async_direct_keys", sorted(keys))
+    store_result(context, "async_direct_members", sorted(members))
+
+
+@then(r'the directly iterated keys should be "(?P<keys>[^"]+)" and members "(?P<members>[^"]+)"')
+async def step_then_direct_iteration(context, keys, members):
+    """Verify direct async iteration returned the stored keys and members."""
+    assert get_result(context, "async_direct_keys") == sorted(k.strip() for k in keys.split(","))
+    assert get_result(context, "async_direct_members") == sorted(m.strip() for m in members.split(","))
+
+
 @then(r'the async set scan should return "(?P<expected>[^"]+)"')
 async def step_then_set_scan_async(context, expected):
     """Verify the members returned by a set scan."""
@@ -3557,7 +3574,9 @@ def step_given_redis_mock_with_protocol(context, protocol):
     get_current_scenario_context(context).adapter = RedisMock(redis_config=redis_config)
 
 
-@when(r'I pop the highest member of sorted set "(?P<name>[^"]+)" holding "(?P<member>[^"]+)" with score (?P<score>[\d.]+)')
+@when(
+    r'I pop the highest member of sorted set "(?P<name>[^"]+)" holding "(?P<member>[^"]+)" with score (?P<score>[\d.]+)',
+)
 def step_when_pop_highest_raw(context, name, member, score):
     """Add one member and keep the raw ZPOPMAX reply."""
     adapter = get_current_scenario_context(context).adapter
@@ -3652,7 +3671,7 @@ def _resilience_config(mode, **extra):
 
 
 @given(
-    r'a Redis config in (?P<mode>standalone|sentinel) mode with (?P<retries>\d+) retries, TCP keepalive, '
+    r"a Redis config in (?P<mode>standalone|sentinel) mode with (?P<retries>\d+) retries, TCP keepalive, "
     r'the client name "(?P<name>[^"]+)" and the sentinel username "(?P<user>[^"]+)"',
 )
 def step_given_resilience_config(context, mode, retries, name, user):
@@ -3677,7 +3696,7 @@ def step_given_default_resilience_config(context):
 
 
 @then(
-    r'the client connection should retry (?P<retries>\d+) times, use TCP keepalive and carry the client name '
+    r"the client connection should retry (?P<retries>\d+) times, use TCP keepalive and carry the client name "
     r'"(?P<name>[^"]+)"',
 )
 def step_then_client_resilience(context, retries, name):
@@ -3754,6 +3773,19 @@ def step_then_config_rejected(context):
     assert scenario_context.config_error is not None, "Config was accepted"
 
 
+@when(r'I aggregate search index "(?P<index_name>[^"]+)" asynchronously grouped by title')
+async def step_when_aggregate_async(context, index_name):
+    """Run a simple aggregation grouped by title asynchronously."""
+    handle = get_current_scenario_context(context).async_adapter.search_index(index_name)
+    aggregation = AggregationDTO(query="*", group_by=["@title"], reduce_function="COUNT", reduce_field="total")
+    deadline = time.monotonic() + SEARCH_INDEX_TIMEOUT_SECONDS
+    result = await handle.aggregate(aggregation)
+    while not result["rows"] and time.monotonic() < deadline:
+        await asyncio.sleep(SEARCH_INDEX_POLL_INTERVAL_SECONDS)
+        result = await handle.aggregate(aggregation)
+    store_result(context, "aggregation_result", result)
+
+
 def _plain(value):
     """Decode a bytes response to str."""
     return value.decode() if isinstance(value, bytes) else value
@@ -3777,7 +3809,9 @@ def step_then_bytes_plain(context, tag):
     assert [_plain(m) for m in adapter.zrange(f"{tag}:z", 0, -1)] == [f"{tag}-m"]
 
 
-@when(r'I write bytes keys, fields and members tagged "(?P<tag>[^"]+)" in async (?P<adapter_type>mock|container|cluster)')
+@when(
+    r'I write bytes keys, fields and members tagged "(?P<tag>[^"]+)" in async (?P<adapter_type>mock|container|cluster)',
+)
 async def step_when_write_bytes_async(context, tag, adapter_type):
     """Write bytes keys, hash fields and sorted-set members asynchronously."""
     adapter = get_current_scenario_context(context).async_adapter
@@ -3793,3 +3827,63 @@ async def step_then_bytes_plain_async(context, tag):
     assert _plain(await adapter.get(f"{tag}:k1")) == "v"
     assert {_plain(k): _plain(v) for k, v in (await adapter.hgetall(f"{tag}:h")).items()} == {f"{tag}-f": "val"}
     assert [_plain(m) for m in await adapter.zrange(f"{tag}:z", 0, -1)] == [f"{tag}-m"]
+
+
+def _pool_is_closed(pool) -> bool:
+    """Return whether every connection the pool created is disconnected."""
+    return not any(conn.is_connected for conn in [*pool._available_connections, *pool._in_use_connections])
+
+
+@when(r"I use the container adapter as a context manager and create its search client")
+def step_when_use_context_manager(context):
+    """Run commands, including a search call, inside a with block."""
+    scenario_context = get_current_scenario_context(context)
+    adapter = scenario_context.adapter
+    with adapter as entered:
+        assert entered is adapter
+        entered.set("bdd-close:key", "1")
+        entered.list_search_indexes()
+        store_result(context, "closed_pools", [adapter.client.connection_pool, adapter._search_client.connection_pool])
+        assert not _pool_is_closed(adapter.client.connection_pool)
+
+
+@then(r"the client pool and the search client pool should be closed")
+def step_then_pools_closed(context):
+    """Verify the pools were disconnected and the search client dropped."""
+    adapter = get_current_scenario_context(context).adapter
+    assert adapter._search_client is None
+    for pool in get_result(context, "closed_pools"):
+        assert _pool_is_closed(pool), "connection pool still holds connections after close"
+
+
+@when(r"I use the async container adapter as a context manager and create its search client")
+async def step_when_use_async_context_manager(context):
+    """Run commands, including a search call, inside an async with block."""
+    scenario_context = get_current_scenario_context(context)
+    adapter = scenario_context.async_adapter
+    async with adapter as entered:
+        assert entered is adapter
+        await entered.set("bdd-close:akey", "1")
+        await entered.list_search_indexes()
+        store_result(context, "closed_pools", [adapter.client.connection_pool, adapter._search_client.connection_pool])
+        assert not _pool_is_closed(adapter.client.connection_pool)
+
+
+@when(r"I close the async container adapter directly")
+async def step_when_close_async_directly(context):
+    """Call close() on the async adapter and record both pools before it disconnects them."""
+    scenario_context = get_current_scenario_context(context)
+    adapter = scenario_context.async_adapter
+    await adapter.set("bdd-close:direct", "1")
+    await adapter.list_search_indexes()
+    store_result(context, "closed_pools", [adapter.client.connection_pool, adapter._search_client.connection_pool])
+    await adapter.close()
+
+
+@then(r"the async client pool and the search client pool should be closed")
+async def step_then_async_pools_closed(context):
+    """Verify the async pools were disconnected and the search client dropped."""
+    adapter = get_current_scenario_context(context).async_adapter
+    assert adapter._search_client is None
+    for pool in get_result(context, "closed_pools"):
+        assert _pool_is_closed(pool), "connection pool still holds connections after close"

@@ -144,6 +144,16 @@ Feature: MinIO Operations Testing
       | create bucket "errors-bucket" again                      | AlreadyExistsError   |
       | check existence of an object with an empty bucket name   | InvalidArgumentError |
 
+  Scenario Outline: Botocore connection failures map to <error>
+    When I check bucket existence while the S3 client raises botocore "<raised_error>"
+    Then the MinIO call should raise <error>
+
+    Examples:
+      | raised_error          | error                  |
+      | ReadTimeoutError      | ConnectionTimeoutError |
+      | ConnectTimeoutError   | ConnectionTimeoutError |
+      | ConnectionClosedError | NetworkError           |
+
   Scenario Outline: Checksum settings <request>/<response> and CA bundle <ca_bundle> reach the S3 client
     Given a MinIO adapter with request checksum "<request>", response checksum "<response>" and CA bundle "<ca_bundle>"
     And a bucket named "checksum-bucket" exists
@@ -194,6 +204,38 @@ Feature: MinIO Operations Testing
     Then the second MinIO adapter should still serve bucket "iso-bucket" as missing from its own cache
     When I clear all caches of the second MinIO adapter
     Then the second MinIO adapter should report bucket "iso-bucket" exists
+
+  Scenario: Object stat is not served stale after an overwrite
+    Given a bucket named "fresh-bucket" exists
+    And an object "f.txt" exists with content "a" in bucket "fresh-bucket"
+    When I stat object "f.txt" in bucket "fresh-bucket"
+    Then the object stats should show size 1 and a non-empty etag
+    When I upload a file "f.txt" with content "ninety-nine" to bucket "fresh-bucket"
+    And I stat object "f.txt" in bucket "fresh-bucket"
+    Then the object stats should show size 11 and a non-empty etag
+
+  Scenario Outline: Bucket <setting> is not served stale after it is changed
+    Given a bucket named "fresh-bucket" exists
+    When I read the <setting> of bucket "fresh-bucket"
+    And I change the <setting> of bucket "fresh-bucket" to "<new_value>"
+    Then the <setting> of bucket "fresh-bucket" should be "<new_value>"
+
+    Examples:
+      | setting    | new_value    |
+      | policy     | s3:PutObject |
+      | versioning | Enabled      |
+
+  Scenario Outline: Mutating the returned <kind> does not corrupt the cache
+    Given a bucket named "copy-bucket" exists
+    And an object "c.txt" exists with content "C" in bucket "copy-bucket"
+    When I read the cached <kind> of bucket "copy-bucket" and mutate the result
+    Then reading the <kind> of bucket "copy-bucket" again should show the original data
+
+    Examples:
+      | kind        |
+      | object list |
+      | bucket list |
+      | object stat |
 
   @needs-otel-collector
   Scenario: MinIO adapter calls emit boto spans

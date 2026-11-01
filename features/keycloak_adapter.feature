@@ -138,6 +138,24 @@ Feature: Keycloak Authentication Testing
       | 1     |
       | 5     |
 
+  Scenario Outline: Keycloak errors map by status code and expose the upstream message only for 4xx
+    When a Keycloak error with status <status> and message "<message>" is mapped for operation "<operation>"
+    Then the mapped error has code "<error_code>" and <exposure> the upstream message
+
+    Examples:
+      | operation          | status | message                                            | error_code               | exposure |
+      | create_client      | 409    | Client x already exists                            | CLIENT_ALREADY_EXISTS    | exposes  |
+      | create_client_role | 409    | Role with name client-admin already exists         | ROLE_ALREADY_EXISTS      | exposes  |
+      | create_realm_role  | 409    | Conflict detected. See logs for details            | ROLE_ALREADY_EXISTS      | exposes  |
+      | create_user        | 409    | User exists with same username                     | USER_ALREADY_EXISTS      | exposes  |
+      | update_group       | 409    | Conflict detected                                  | CONFLICT                 | exposes  |
+      | get_users          | 429    | Too many requests                                  | RATE_LIMIT_EXCEEDED      | exposes  |
+      | get_users          | 500    | invalid jdbc:postgresql://db:5432/keycloak         | INTERNAL_ERROR           | hides    |
+      | get_users          | 502    | upstream client connect error jdbc:postgresql://db | SERVICE_UNAVAILABLE      | hides    |
+      | get_users          | 503    | role cache unavailable                             | SERVICE_UNAVAILABLE      | hides    |
+      | get_users          | 400    | invalid email                                      | VALIDATION_ERROR         | exposes  |
+      | get_users          | 403    | not allowed                                        | INSUFFICIENT_PERMISSIONS | exposes  |
+
   @users
   Scenario Outline: User retrieval operations
     Given a configured <adapter_type> Keycloak adapter via <via>

@@ -479,6 +479,17 @@ def _build_aggregate_request(aggregation: AggregationDTO) -> AggregateRequest:
     return request
 
 
+def _aggregate_result_to_dict(result: Any) -> dict[str, Any]:
+    """Normalize an aggregate reply (RESP2 result object or RESP3 dict) to total and rows."""
+    if isinstance(result, dict):
+        norm = {k.decode() if isinstance(k, bytes) else k: v for k, v in result.items()}
+        return {
+            "total": norm.get("total_results", 0),
+            "rows": [row.get("extra_attributes", row) for row in norm.get("results", [])],
+        }
+    return {"total": result.total, "rows": result.rows}
+
+
 def _build_hybrid_search_query(
     query: SearchQueryDTO,
 ) -> tuple[Query, dict[str, str | int | float | bytes]]:
@@ -679,14 +690,7 @@ class RedisSearchHandle(RedisSearchHandlePort):
         request = _build_aggregate_request(aggregation)
         if kwargs.pop("raw", False):
             return cast("dict[str, Any]", self._search.aggregate(request, **kwargs))
-        result = self._search.aggregate(request, **kwargs)
-        if isinstance(result, dict):
-            norm = {k.decode() if isinstance(k, bytes) else k: v for k, v in result.items()}
-            return {
-                "total": norm.get("total_results", 0),
-                "rows": [row.get("extra_attributes", row) for row in norm.get("results", [])],
-            }
-        return {"total": result.total, "rows": result.rows}
+        return _aggregate_result_to_dict(self._search.aggregate(request, **kwargs))
 
     @override
     def add_alias(self, alias: str) -> bool:
@@ -892,8 +896,7 @@ class AsyncRedisSearchHandle(AsyncRedisSearchHandlePort):
                 "dict[str, Any]",
                 await self._await_result(self._search.aggregate(request, **kwargs)),
             )
-        result = await self._await_result(self._search.aggregate(request, **kwargs))
-        return {"total": result.total, "rows": result.rows}
+        return _aggregate_result_to_dict(await self._await_result(self._search.aggregate(request, **kwargs)))
 
     @override
     async def add_alias(self, alias: str) -> bool:

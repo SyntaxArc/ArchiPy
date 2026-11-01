@@ -89,6 +89,16 @@ Feature: Base Configuration System
       | postgresql+psycopg://alice:s3cret@db.internal:5433/app | alice | s3cret   | db.internal | 5433 | app      |
       | postgresql+psycopg://bob@db.internal:5432/app          | bob   | (none)   | db.internal | 5432 | app      |
 
+  Scenario Outline: A PostgreSQL DSN carries percent-encoded credentials and libpq options
+    When a PostgreSQL configuration is built from the DSN "<dsn>"
+    Then the PostgreSQL connection parts should be user "<user>", password "<password>", host "db.internal", port 5432 and database "app"
+    And the PostgreSQL options should be SSL_MODE "<ssl_mode>", SSL_ROOT_CERT "<root_cert>", APPLICATION_NAME "<app>" and CONNECT_TIMEOUT "<timeout>"
+
+    Examples: DSN forms
+      | dsn                                                                                                                                   | user   | password | ssl_mode    | root_cert   | app    | timeout |
+      | postgresql+psycopg://al%40ice:p%40ss%2Fw@db.internal:5432/app                                                                         | al@ice | p@ss/w   | (none)      | (none)      | (none) | (none)  |
+      | postgresql+psycopg://alice:s3@db.internal:5432/app?sslmode=verify-full&sslrootcert=/etc/ca.pem&application_name=svc&connect_timeout=7 | alice  | s3       | verify-full | /etc/ca.pem | svc    | 7       |
+
   Scenario: PostgreSQL connection parts build the DSN
     When a PostgreSQL configuration is built from the parts user "alice", password "s3cret", host "db.internal", port 5433 and database "app"
     Then the PostgreSQL DSN should be "postgresql+psycopg://alice:s3cret@db.internal:5433/app"

@@ -651,6 +651,19 @@ Feature: Redis Testing
       | container    |
       | cluster      |
 
+  Scenario Outline: Async scan_iter and sscan_iter work with a plain async for
+    Given a configured async <adapter_type>
+    When I mset "{bdd-a-direct}:1" to "a" and "{bdd-a-direct}:2" to "b" in async <adapter_type>
+    And I add "x, y" to the set "{bdd-a-direct}:set" in async <adapter_type>
+    And I iterate keys matching "{bdd-a-direct}:[12]" and members of the set "{bdd-a-direct}:set" directly in async <adapter_type>
+    Then the directly iterated keys should be "{bdd-a-direct}:1, {bdd-a-direct}:2" and members "x, y"
+
+    Examples: Adapter Types
+      | adapter_type |
+      | mock         |
+      | container    |
+      | cluster      |
+
   @async
   Scenario Outline: Lpush and lpop preserve order asynchronously
     Given a configured async <adapter_type>
@@ -1051,6 +1064,13 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-products-agg   | {agg}  | {agg}:1  | {agg}:2  |
       | cluster      | JSON       | cluster-products-agg-j | {agg}  | {agg}:j1 | {agg}:j2 |
 
+  Scenario: Aggregate documents asynchronously
+    Given a configured async container
+    And async search index "products-agg-async" exists with prefix "aggasync:" for HASH documents
+    When I upsert search document "aggasync:1" asynchronously with title "Alpha" and vector "[1.0, 0.0, 0.0]" for HASH documents
+    And I aggregate search index "products-agg-async" asynchronously grouped by title
+    Then the aggregation should return at least 1 row
+
   Scenario Outline: Drop search index synchronously
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
@@ -1422,3 +1442,18 @@ Feature: Redis Testing
       | mock         |
       | container    |
       | cluster      |
+
+  Scenario: Closing the sync adapter releases its client and search client
+    Given a configured container
+    When I use the container adapter as a context manager and create its search client
+    Then the client pool and the search client pool should be closed
+
+  Scenario: Closing the async adapter releases its client and search client
+    Given a configured async container
+    When I use the async container adapter as a context manager and create its search client
+    Then the async client pool and the search client pool should be closed
+
+  Scenario: Closing the async adapter directly uses the same method name as the sync adapter
+    Given a configured async container
+    When I close the async container adapter directly
+    Then the async client pool and the search client pool should be closed
