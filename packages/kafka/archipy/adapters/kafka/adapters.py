@@ -802,12 +802,24 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             processed_message = self._pre_process_message(message)
             # Handle None key - convert to empty bytes if None
             processed_key = self._pre_process_message(key) if key is not None else b""
-            self._adapter.produce(
-                topic=self._topic_name,
-                value=processed_message,
-                callback=self._delivery_callback,
-                key=processed_key,
-            )
+            try:
+                self._adapter.produce(
+                    topic=self._topic_name,
+                    value=processed_message,
+                    callback=self._delivery_callback,
+                    key=processed_key,
+                )
+            except BufferError:
+                # The local queue is full of messages whose delivery reports were not served yet: serve them, retry once
+                self._adapter.poll(1)
+                self._adapter.produce(
+                    topic=self._topic_name,
+                    value=processed_message,
+                    callback=self._delivery_callback,
+                    key=processed_key,
+                )
+            # Serve the delivery callbacks of earlier messages, so the queue drains without a flush
+            self._adapter.poll(0)
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_producer_exception(e, "produce")
 
