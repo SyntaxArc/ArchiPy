@@ -1,5 +1,7 @@
 """DTOs for Redis Search queries."""
 
+from typing import Literal
+
 from pydantic import NonNegativeInt, PositiveInt
 
 from archipy.models.dtos.base_dtos import BaseDTO
@@ -41,6 +43,7 @@ class RangeQueryDTO(BaseDTO):
     vector_field: str = "embedding"
     radius: float
     filter_expr: str | None = None
+    filter_mode: Literal["and", "or"] = "and"
     return_fields: list[str] | None = None
     score_field: str | None = None
     runtime: VectorQueryRuntimeDTO | None = None
@@ -110,6 +113,7 @@ class SearchQueryDTO(BaseDTO):
         radius: float,
         vector_field: str = "embedding",
         filter_expr: str | None = None,
+        filter_mode: Literal["and", "or"] = "and",
         return_fields: list[str] | None = None,
         score_field: str | None = None,
         limit: int = 10,
@@ -121,7 +125,9 @@ class SearchQueryDTO(BaseDTO):
             vector: Query embedding vector.
             radius: Maximum semantic distance from the query vector.
             vector_field: Indexed vector field name.
-            filter_expr: Optional RediSearch filter expression combined with range.
+            filter_expr: Optional RediSearch filter expression combined with the range clause.
+            filter_mode: How the filter combines with the range: ``"and"`` (default) keeps only documents
+                matching both, ``"or"`` also returns documents matching only the filter.
             return_fields: Optional document fields to return.
             score_field: Optional distance field name in the response.
             limit: Maximum number of documents to return.
@@ -137,6 +143,7 @@ class SearchQueryDTO(BaseDTO):
                 radius=radius,
                 vector_field=vector_field,
                 filter_expr=filter_expr,
+                filter_mode=filter_mode,
                 return_fields=return_fields,
                 score_field=score_field,
                 runtime=runtime,
