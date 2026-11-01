@@ -1487,3 +1487,34 @@ Feature: Redis Testing
   Scenario: Async connection failures surface as CacheError
     When I read a key from an unreachable Redis server asynchronously
     Then the Redis failure should be a CacheError and still a redis-py ConnectionError
+
+  Scenario Outline: Untrusted text is matched literally by escaped queries
+    Given a configured container
+    And search index "<index_name>" exists with prefix "<prefix>:" for HASH documents
+    And search document "<doc_id>" exists with title "Vector Database" and vector "[1.0, 0.0, 0.0]" for HASH documents
+    When I search index "<index_name>" with untrusted text "<text>" using <kind>
+    Then the search should return exactly <count> hits
+
+    Examples: Payloads
+      | index_name   | prefix | doc_id  | kind         | text         | count |
+      | inj-text-ok  | injok  | injok:1 | from_text    | Database     | 1     |
+      | inj-text-bad | injbd  | injbd:1 | from_text    | foo) PIPE (* | 0     |
+      | inj-hyb-bad  | injhb  | injhb:1 | quote_phrase | foo) PIPE (* | 0     |
+
+  Scenario Outline: Unsafe identifiers and directions are rejected by the search DTOs
+    When I build the search DTO "<kind>" with the value "<value>"
+    Then the DTO outcome should be "<outcome>"
+
+    Examples: DTO values
+      | kind            | value                   | outcome  |
+      | vector_field    | embedding               | accepted |
+      | vector_field    | emb) PIPE (*=>[KNN 1 @x | rejected |
+      | score_field     | s core                  | rejected |
+      | return_field    | title                   | accepted |
+      | return_field    | title} PIPE {x          | rejected |
+      | group_by        | category                | accepted |
+      | group_by        | a b                     | rejected |
+      | sort_direction  | desc                    | accepted |
+      | sort_direction  | DESC; DROP              | rejected |
+      | reduce_function | COUNT                   | accepted |
+      | reduce_function | COUNT) x                | rejected |

@@ -57,6 +57,14 @@ Feature: MinIO Operations Testing
       | the bytes       | Hello Streaming World | stream-bytes.txt |
       | a binary stream | Binary Stream Data    | stream-bio.txt   |
 
+  Scenario: Streaming download enforces a maximum size
+    Given a bucket named "stream-limit-bucket" exists
+    And an object "large.txt" exists with content "1234567890" in bucket "stream-limit-bucket"
+    When I stream download "large.txt" from "stream-limit-bucket" with max bytes 5
+    Then the MinIO call should raise ResourceExhaustedError
+    When I stream download "large.txt" from "stream-limit-bucket" with max bytes 10
+    Then the downloaded stream content should be "1234567890"
+
   Scenario: Upload file with tags and verify tags
     Given a bucket named "test-bucket" exists
     When I upload a tagged file "tagged.txt" with content "Tagged Content" and tags "ttl-days=7,env=test" to bucket "test-bucket"

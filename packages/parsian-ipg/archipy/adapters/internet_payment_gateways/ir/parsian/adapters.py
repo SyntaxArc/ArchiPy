@@ -9,7 +9,7 @@ import httpx2
 import requests
 import zeep
 from zeep import AsyncClient
-from zeep.exceptions import Fault
+from zeep.exceptions import Fault, TransportError
 from zeep.transports import AsyncTransport, Transport
 
 from archipy.adapters.internet_payment_gateways.ir.parsian.ports import (
@@ -33,6 +33,17 @@ if TYPE_CHECKING:
     from archipy.configs.config_template import ParsianShaparakConfig
 
 logger = logging.getLogger(__name__)
+
+# SOAP faults and network failures (timeouts, refused connections, proxy and TLS errors) mean the gateway was not
+# reachable or did not answer; callers may retry on UnavailableError.
+_UNAVAILABLE_ERRORS = (
+    Fault,
+    TransportError,
+    requests.RequestException,
+    httpx2.TransportError,
+    ConnectionError,
+    TimeoutError,
+)
 
 
 def _mask_token(token: object) -> str:
@@ -92,7 +103,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
             PaymentResponseDTO: Response containing token, status, and message.
 
         Raises:
-            UnavailableError: If a SOAP fault occurs during the request.
+            UnavailableError: If a SOAP fault or a network failure (timeout, connection error) occurs.
             InternalError: If an unexpected error occurs during the request.
         """
         try:
@@ -113,7 +124,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
                 message=response.Message,
             )
             logger.debug("Payment response: status=%s token=%s", result.status, _mask_token(result.token))
-        except Fault as exception:
+        except _UNAVAILABLE_ERRORS as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Sale Service") from exception
         except Exception as exception:
             raise InternalError() from exception
@@ -130,7 +141,9 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
             ConfirmResponseDTO: Response containing status, RRN, card number, and token.
 
         Raises:
-            UnavailableError: If a SOAP fault occurs during the request.
+            UnavailableError: If a SOAP fault or a network failure (timeout, connection error) occurs. For
+                confirmation and reversal the outcome is then unknown: the gateway may have processed the request,
+                so check the transaction state before retrying.
             InternalError: If an unexpected error occurs during the request.
         """
         try:
@@ -145,7 +158,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
                 token=response.Token,
             )
             logger.debug("Confirm response: status=%s token=%s", result.status, _mask_token(result.token))
-        except Fault as exception:
+        except _UNAVAILABLE_ERRORS as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Confirm Service") from exception
         except Exception as exception:
             raise InternalError() from exception
@@ -162,7 +175,9 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
             ConfirmWithAmountResponseDTO: Response containing status, RRN, card number, and token.
 
         Raises:
-            UnavailableError: If a SOAP fault occurs during the request.
+            UnavailableError: If a SOAP fault or a network failure (timeout, connection error) occurs. The
+                outcome is then unknown: the gateway may have processed the confirmation, so check the transaction
+                state before retrying.
             InternalError: If an unexpected error occurs during the request.
         """
         try:
@@ -191,7 +206,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
                 result.status,
                 _mask_token(result.token),
             )
-        except Fault as exception:
+        except _UNAVAILABLE_ERRORS as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Confirm Service") from exception
         except Exception as exception:
             raise InternalError() from exception
@@ -208,7 +223,9 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
             ReverseResponseDTO: Response containing status, message, and token.
 
         Raises:
-            UnavailableError: If a SOAP fault occurs during the request.
+            UnavailableError: If a SOAP fault or a network failure (timeout, connection error) occurs. For
+                confirmation and reversal the outcome is then unknown: the gateway may have processed the request,
+                so check the transaction state before retrying.
             InternalError: If an unexpected error occurs during the request.
         """
         try:
@@ -222,7 +239,7 @@ class ParsianShaparakPaymentAdapter(ParsianShaparakPaymentPort):
                 token=response.Token,
             )
             logger.debug("Reversal response: status=%s token=%s", result.status, _mask_token(result.token))
-        except Fault as exception:
+        except _UNAVAILABLE_ERRORS as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Reversal Service") from exception
         except Exception as exception:
             raise InternalError() from exception
@@ -284,7 +301,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
             PaymentResponseDTO: Response containing token, status, and message.
 
         Raises:
-            UnavailableError: If a SOAP fault occurs during the request.
+            UnavailableError: If a SOAP fault or a network failure (timeout, connection error) occurs.
             InternalError: If an unexpected error occurs during the request.
         """
         try:
@@ -305,7 +322,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
                 message=response.Message,
             )
             logger.debug("Payment response: status=%s token=%s", result.status, _mask_token(result.token))
-        except Fault as exception:
+        except _UNAVAILABLE_ERRORS as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Sale Service") from exception
         except Exception as exception:
             raise InternalError() from exception
@@ -322,7 +339,9 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
             ConfirmResponseDTO: Response containing status, RRN, card number, and token.
 
         Raises:
-            UnavailableError: If a SOAP fault occurs during the request.
+            UnavailableError: If a SOAP fault or a network failure (timeout, connection error) occurs. For
+                confirmation and reversal the outcome is then unknown: the gateway may have processed the request,
+                so check the transaction state before retrying.
             InternalError: If an unexpected error occurs during the request.
         """
         try:
@@ -337,7 +356,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
                 token=response.Token,
             )
             logger.debug("Confirm response: status=%s token=%s", result.status, _mask_token(result.token))
-        except Fault as exception:
+        except _UNAVAILABLE_ERRORS as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Confirm Service") from exception
         except Exception as exception:
             raise InternalError() from exception
@@ -354,7 +373,9 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
             ConfirmWithAmountResponseDTO: Response containing status, RRN, card number, and token.
 
         Raises:
-            UnavailableError: If a SOAP fault occurs during the request.
+            UnavailableError: If a SOAP fault or a network failure (timeout, connection error) occurs. The
+                outcome is then unknown: the gateway may have processed the confirmation, so check the transaction
+                state before retrying.
             InternalError: If an unexpected error occurs during the request.
         """
         try:
@@ -383,7 +404,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
                 result.status,
                 _mask_token(result.token),
             )
-        except Fault as exception:
+        except _UNAVAILABLE_ERRORS as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Confirm Service") from exception
         except Exception as exception:
             raise InternalError() from exception
@@ -400,7 +421,9 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
             ReverseResponseDTO: Response containing status, message, and token.
 
         Raises:
-            UnavailableError: If a SOAP fault occurs during the request.
+            UnavailableError: If a SOAP fault or a network failure (timeout, connection error) occurs. For
+                confirmation and reversal the outcome is then unknown: the gateway may have processed the request,
+                so check the transaction state before retrying.
             InternalError: If an unexpected error occurs during the request.
         """
         try:
@@ -414,7 +437,7 @@ class AsyncParsianShaparakPaymentAdapter(AsyncParsianShaparakPaymentPort):
                 token=response.Token,
             )
             logger.debug("Reversal response: status=%s token=%s", result.status, _mask_token(result.token))
-        except Fault as exception:
+        except _UNAVAILABLE_ERRORS as exception:
             raise UnavailableError(resource_type="Parsian Shaparak Reversal Service") from exception
         except Exception as exception:
             raise InternalError() from exception

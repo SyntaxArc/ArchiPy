@@ -6,8 +6,11 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from confluent_kafka import Message, TopicPartition
+    from collections.abc import Awaitable, Callable
+
+    from confluent_kafka import Consumer, KafkaError, Message, TopicPartition
     from confluent_kafka.admin import ClusterMetadata
+    from confluent_kafka.aio import AIOConsumer
 
 
 class KafkaAdminPort:
@@ -76,12 +79,12 @@ class KafkaConsumerPort:
     """
 
     @abstractmethod
-    def batch_consume(self, messages_number: int, timeout: int) -> list[Message]:
+    def batch_consume(self, messages_number: int, timeout: float) -> list[Message]:
         """Consumes a batch of messages from subscribed topics.
 
         Args:
             messages_number (int): Maximum number of messages to consume.
-            timeout (int): Timeout in seconds for the operation.
+            timeout (float): Timeout in seconds for the operation.
 
         Returns:
             list[Message]: List of consumed messages.
@@ -92,11 +95,11 @@ class KafkaConsumerPort:
         raise NotImplementedError
 
     @abstractmethod
-    def poll(self, timeout: int) -> Message | None:
+    def poll(self, timeout: float) -> Message | None:
         """Polls for a single message from subscribed topics.
 
         Args:
-            timeout (int): Timeout in seconds for the operation.
+            timeout (float): Timeout in seconds for the operation.
 
         Returns:
             Message | None: The consumed message or None if no message was received.
@@ -115,8 +118,8 @@ class KafkaConsumerPort:
             asynchronous (bool): Whether to commit asynchronously.
 
         Returns:
-            None | list[TopicPartition]: None for synchronous commits, or list of committed
-                partitions for asynchronous commits.
+            None | list[TopicPartition]: None for asynchronous commits, or list of committed
+                partitions for synchronous commits.
 
         Raises:
             NotImplementedError: If the method is not implemented by the concrete class.
@@ -124,11 +127,18 @@ class KafkaConsumerPort:
         raise NotImplementedError
 
     @abstractmethod
-    def subscribe(self, topic_list: list[str]) -> None:
+    def subscribe(
+        self,
+        topic_list: list[str],
+        on_assign: Callable[[Consumer, list[TopicPartition]], None] | None = None,
+        on_revoke: Callable[[Consumer, list[TopicPartition]], None] | None = None,
+    ) -> None:
         """Subscribes to a list of topics.
 
         Args:
             topic_list (list[str]): List of topic names to subscribe to.
+            on_assign: Optional callback called on a rebalance with the assigned partitions.
+            on_revoke: Optional callback called on a rebalance with the revoked partitions.
 
         Raises:
             NotImplementedError: If the method is not implemented by the concrete class.
@@ -164,12 +174,20 @@ class KafkaProducerPort:
     """
 
     @abstractmethod
-    def produce(self, message: str | bytes, key: str | None = None) -> None:
+    def produce(
+        self,
+        message: str | bytes,
+        key: str | None = None,
+        on_delivery: Callable[[KafkaError | None, Message], None] | None = None,
+    ) -> None:
         """Produces a message to the configured topic.
 
         Args:
             message (str | bytes): The message to produce.
             key (str | None, optional): The key for the message. Defaults to None.
+            on_delivery (Callable[[KafkaError | None, Message], None] | None, optional): Called with the delivery
+                error (None on success) and the message once the broker acknowledged or rejected it.
+                Defaults to None.
 
         Raises:
             NotImplementedError: If the method is not implemented by the concrete class.
@@ -177,11 +195,11 @@ class KafkaProducerPort:
         raise NotImplementedError
 
     @abstractmethod
-    def flush(self, timeout: int | None) -> None:
+    def flush(self, timeout: float | None) -> None:
         """Flushes any pending messages to the broker.
 
         Args:
-            timeout (int | None): Maximum time to wait for messages to be delivered.
+            timeout (float | None): Maximum time to wait for messages to be delivered.
                 If None, wait indefinitely.
 
         Raises:
@@ -229,12 +247,12 @@ class KafkaProducerPort:
         raise NotImplementedError
 
     @abstractmethod
-    def list_topics(self, topic: str | None, timeout: int) -> ClusterMetadata:
+    def list_topics(self, topic: str | None = None, timeout: float | None = None) -> ClusterMetadata:
         """Lists Kafka topics.
 
         Args:
             topic (str | None): Specific topic to list. If None, lists all topics.
-            timeout (int): Timeout in seconds for the operation.
+            timeout (float): Timeout in seconds for the operation.
 
         Returns:
             ClusterMetadata: Metadata about the Kafka cluster and topics.
@@ -261,12 +279,12 @@ class AsyncKafkaConsumerPort:
     """
 
     @abstractmethod
-    async def batch_consume(self, messages_number: int, timeout: int) -> list[Message]:  # noqa: ASYNC109
+    async def batch_consume(self, messages_number: int, timeout: float) -> list[Message]:  # noqa: ASYNC109
         """Consumes a batch of messages from subscribed topics.
 
         Args:
             messages_number (int): Maximum number of messages to consume.
-            timeout (int): Timeout in seconds for the operation.
+            timeout (float): Timeout in seconds for the operation.
 
         Returns:
             list[Message]: List of consumed messages.
@@ -277,11 +295,11 @@ class AsyncKafkaConsumerPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def poll(self, timeout: int) -> Message | None:  # noqa: ASYNC109
+    async def poll(self, timeout: float) -> Message | None:  # noqa: ASYNC109
         """Polls for a single message from subscribed topics.
 
         Args:
-            timeout (int): Timeout in seconds for the operation.
+            timeout (float): Timeout in seconds for the operation.
 
         Returns:
             Message | None: The consumed message or None if no message was received.
@@ -300,8 +318,8 @@ class AsyncKafkaConsumerPort:
             asynchronous (bool): Whether to commit asynchronously.
 
         Returns:
-            None | list[TopicPartition]: None for synchronous commits, or list of committed
-                partitions for asynchronous commits.
+            None | list[TopicPartition]: None for asynchronous commits, or list of committed
+                partitions for synchronous commits.
 
         Raises:
             NotImplementedError: If the method is not implemented by the concrete class.
@@ -309,11 +327,18 @@ class AsyncKafkaConsumerPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def subscribe(self, topic_list: list[str]) -> None:
+    async def subscribe(
+        self,
+        topic_list: list[str],
+        on_assign: Callable[[AIOConsumer, list[TopicPartition]], Awaitable[None]] | None = None,
+        on_revoke: Callable[[AIOConsumer, list[TopicPartition]], Awaitable[None]] | None = None,
+    ) -> None:
         """Subscribes to a list of topics.
 
         Args:
             topic_list (list[str]): List of topic names to subscribe to.
+            on_assign: Optional coroutine function called on a rebalance with the assigned partitions.
+            on_revoke: Optional coroutine function called on a rebalance with the revoked partitions.
 
         Raises:
             NotImplementedError: If the method is not implemented by the concrete class.
@@ -362,11 +387,11 @@ class AsyncKafkaProducerPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def flush(self, timeout: int | None) -> None:  # noqa: ASYNC109
+    async def flush(self, timeout: float | None) -> None:  # noqa: ASYNC109
         """Flushes any pending messages to the broker.
 
         Args:
-            timeout (int | None): Maximum time to wait for messages to be delivered.
+            timeout (float | None): Maximum time to wait for messages to be delivered.
                 If None, wait indefinitely.
 
         Raises:
@@ -384,12 +409,12 @@ class AsyncKafkaProducerPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def list_topics(self, topic: str | None, timeout: int) -> ClusterMetadata:  # noqa: ASYNC109
+    async def list_topics(self, topic: str | None = None, timeout: float | None = None) -> ClusterMetadata:  # noqa: ASYNC109
         """Lists Kafka topics.
 
         Args:
             topic (str | None): Specific topic to list. If None, lists all topics.
-            timeout (int): Timeout in seconds for the operation.
+            timeout (float): Timeout in seconds for the operation.
 
         Returns:
             ClusterMetadata: Metadata about the Kafka cluster and topics.

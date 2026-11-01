@@ -49,7 +49,17 @@ class ElasticsearchConfig(BaseModel):
     OPAQUE_ID: str | None = Field(default=None, description="Opaque ID sent as X-Opaque-Id to trace requests")
     HEADERS: dict[str, str] | None = Field(default=None, description="Extra HTTP headers sent with every request")
     HTTP_COMPRESS: bool = Field(default=True, description="Enable HTTP compression (gzip)")
-    REQUEST_TIMEOUT: float | None = Field(default=1.0, description="Timeout for HTTP requests in seconds")
+    REQUEST_TIMEOUT: float | None = Field(
+        default=1.0,
+        description="Timeout for HTTP requests in seconds (1.0 is short for bulk and heavy searches; raise it)",
+    )
+    MAP_ERRORS: bool = Field(
+        default=False,
+        description=(
+            "Raise ArchiPy errors instead of raw elasticsearch-py exceptions. "
+            "Deprecated default: this will become True in a future release."
+        ),
+    )
     MAX_RETRIES: int = Field(default=1, ge=0, description="Maximum number of retries per request")
     RETRY_ON_TIMEOUT: bool = Field(default=True, description="Retry on connection timeouts")
     RETRY_ON_STATUS: tuple[int, ...] = Field(default=(429, 502, 503, 504), description="HTTP status codes to retry on")

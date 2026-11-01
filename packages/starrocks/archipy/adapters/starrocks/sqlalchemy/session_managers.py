@@ -28,7 +28,8 @@ if TYPE_CHECKING:
     from sqlalchemy.sql.compiler import SQLCompiler
     from sqlalchemy.sql.functions import Function
 
-# Pin SQL transactions so BEGIN/COMMIT/ROLLBACK are not no-ops (StarRocks 4.x session var).
+# Pin SQL transactions so BEGIN/COMMIT/ROLLBACK are not no-ops. The adapter is built and tested against StarRocks 4.x;
+# older servers may not know the ``enable_sql_transaction`` session variable.
 _STARROCKS_ENABLE_SQL_TRANSACTION = "SET enable_sql_transaction = TRUE"
 
 
@@ -161,7 +162,7 @@ class StarRocksSQlAlchemySessionManager(BaseSQLAlchemySessionManager[StarRocksSQ
         and ``enable_sql_transaction`` enabled so BEGIN/COMMIT/ROLLBACK are not no-ops.
 
         Returns:
-            A dictionary with autocommit=False, init_command, and connect_timeout from config.
+            A dictionary with autocommit=False, init_command, connect_timeout and, when set, read_timeout.
         """
         connect_args: dict[str, object] = {
             "autocommit": False,
@@ -170,6 +171,8 @@ class StarRocksSQlAlchemySessionManager(BaseSQLAlchemySessionManager[StarRocksSQ
 
         if self._configs.CONNECT_TIMEOUT is not None:
             connect_args["connect_timeout"] = self._configs.CONNECT_TIMEOUT
+        if self._configs.READ_TIMEOUT is not None:
+            connect_args["read_timeout"] = self._configs.READ_TIMEOUT
 
         return connect_args
 
