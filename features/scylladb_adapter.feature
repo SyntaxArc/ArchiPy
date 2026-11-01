@@ -408,6 +408,19 @@ Feature: ScyllaDB Adapter
       | asyn |
 
   @needs-scylladb
+  Scenario Outline: The default execution profile uses the configured consistency level
+    Given a ScyllaDB adapter is configured
+    When I build a ScyllaDB cluster with consistency level <level>
+    Then the default execution profile should use consistency level <level>
+
+    Examples: Levels
+      | level        |
+      | ONE          |
+      | LOCAL_ONE    |
+      | LOCAL_QUORUM |
+      | QUORUM       |
+
+  @needs-scylladb
   Scenario Outline: The cluster applies policies and timeout through the default execution profile with <setting> set
     When I build a ScyllaDB cluster with <setting> set to <value>
     Then the default execution profile should use the configured request timeout and retry policy

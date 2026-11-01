@@ -1397,6 +1397,36 @@ def step_build_scylladb_cluster(context: Context, setting: str, value: int) -> N
     context.cluster_warnings = [str(item.message) for item in caught if issubclass(item.category, DeprecationWarning)]
 
 
+@when("I build a ScyllaDB cluster with consistency level {level}")
+def step_build_scylladb_cluster_consistency(context: Context, level: str) -> None:
+    """Build the cluster without connecting, with the given default consistency level.
+
+    Args:
+        context (Context): Behave context.
+        level (str): The CONSISTENCY_LEVEL value.
+    """
+    from archipy.adapters.scylladb.adapters import ScyllaDBAdapter
+
+    config = get_scylladb_adapter(context).config.model_copy(update={"CONSISTENCY_LEVEL": level})
+    adapter = ScyllaDBAdapter.__new__(ScyllaDBAdapter)  # skip __init__, which would open a second connection
+    adapter.config = config
+    context.cluster = adapter._create_cluster()
+
+
+@then("the default execution profile should use consistency level {level}")
+def step_default_profile_consistency(context: Context, level: str) -> None:
+    """Check the default execution profile carries the configured consistency level.
+
+    Args:
+        context (Context): Behave context.
+        level (str): Expected consistency level name.
+    """
+    from cassandra import ConsistencyLevel
+
+    profile = context.cluster.profile_manager.default
+    assert profile.consistency_level == getattr(ConsistencyLevel, level), profile.consistency_level
+
+
 @then("the default execution profile should use the configured request timeout and retry policy")
 def step_default_profile_configured(context: Context) -> None:
     """Check the default execution profile carries the configured timeout and a retry policy.
