@@ -17,6 +17,7 @@ from redis.commands.search.query import Query
 from redis.commands.search.reducers import count as agg_count
 from redis.commands.search.result import Result
 
+from archipy.adapters.redis.error_mapping import map_redis_errors
 from archipy.adapters.redis.search_ports import (
     AsyncRedisSearchHandlePort,
     RedisSearchHandlePort,
@@ -930,3 +931,7 @@ class AsyncRedisSearchHandle(AsyncRedisSearchHandlePort):
         """Delete an alias asynchronously."""
         result = await self._await_result(self._search.aliasdel(alias))
         return bool(result)
+
+
+map_redis_errors(RedisSearchHandle, is_async=False)
+map_redis_errors(AsyncRedisSearchHandle, is_async=True)
