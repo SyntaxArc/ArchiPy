@@ -17,6 +17,8 @@ from keycloak.openid_connection import KeycloakOpenIDConnection
 from archipy.adapters.keycloak._base import (
     AsyncKeycloakMixinBase,
     SyncKeycloakMixinBase,
+    client_options,
+    with_sync_proxies,
 )
 from archipy.configs.base_config import BaseConfig
 from archipy.models.errors import (
@@ -78,13 +80,15 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
         client_id = configs.CLIENT_ID
         if not server_url or not client_id:
             raise ConfigurationError(operation="keycloak_connect", reason="server_url_and_client_id_required")
-        return KeycloakOpenID(
-            server_url=server_url,
-            client_id=client_id,
-            realm_name=configs.REALM_NAME,
-            client_secret_key=configs.CLIENT_SECRET_KEY,
-            verify=configs.VERIFY_SSL,
-            timeout=configs.TIMEOUT,
+        return with_sync_proxies(
+            KeycloakOpenID(
+                server_url=server_url,
+                client_id=client_id,
+                realm_name=configs.REALM_NAME,
+                client_secret_key=configs.CLIENT_SECRET_KEY,
+                **client_options(configs),
+            ),
+            configs,
         )
 
     def _initialize_admin_client(self) -> None:
@@ -93,14 +97,16 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
             # Check if admin credentials are available
             if self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD:
                 # Create admin client using admin credentials
-                self._admin_adapter = KeycloakAdmin(
-                    server_url=self.configs.SERVER_URL,
-                    username=self.configs.ADMIN_USERNAME,
-                    password=self.configs.ADMIN_PASSWORD,
-                    realm_name=self.configs.REALM_NAME,
-                    user_realm_name=self.configs.ADMIN_REALM_NAME,
-                    verify=self.configs.VERIFY_SSL,
-                    timeout=self.configs.TIMEOUT,
+                self._admin_adapter = with_sync_proxies(
+                    KeycloakAdmin(
+                        server_url=self.configs.SERVER_URL,
+                        username=self.configs.ADMIN_USERNAME,
+                        password=self.configs.ADMIN_PASSWORD,
+                        realm_name=self.configs.REALM_NAME,
+                        user_realm_name=self.configs.ADMIN_REALM_NAME,
+                        **client_options(self.configs, with_proxies=False),
+                    ),
+                    self.configs,
                 )
                 # Since we're using direct credentials, set a long expiry time
                 self._admin_token_expiry = time.time() + 3600  # 1 hour
@@ -114,12 +120,14 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
                 # Using a 30-second buffer to ensure we refresh before expiration
                 self._admin_token_expiry = time.time() + token.get("expires_in", 60) - 30
 
-                self._admin_adapter = KeycloakAdmin(
-                    server_url=self.configs.SERVER_URL,
-                    realm_name=self.configs.REALM_NAME,
-                    token=token,
-                    verify=self.configs.VERIFY_SSL,
-                    timeout=self.configs.TIMEOUT,
+                self._admin_adapter = with_sync_proxies(
+                    KeycloakAdmin(
+                        server_url=self.configs.SERVER_URL,
+                        realm_name=self.configs.REALM_NAME,
+                        token=token,
+                        **client_options(self.configs, with_proxies=False),
+                    ),
+                    self.configs,
                 )
                 logger.debug("Admin client initialized with client credentials")
 
@@ -186,15 +194,17 @@ class KeycloakConnectionMixin(SyncKeycloakMixinBase):
         client_id = configs.CLIENT_ID
         if not server_url or not client_id:
             raise ConfigurationError(operation="keycloak_connect", reason="server_url_and_client_id_required")
-        return KeycloakUMA(
-            KeycloakOpenIDConnection(
-                server_url=server_url,
-                realm_name=configs.REALM_NAME,
-                client_id=client_id,
-                client_secret_key=configs.CLIENT_SECRET_KEY,
-                verify=configs.VERIFY_SSL,
-                timeout=configs.TIMEOUT,
+        return with_sync_proxies(
+            KeycloakUMA(
+                KeycloakOpenIDConnection(
+                    server_url=server_url,
+                    realm_name=configs.REALM_NAME,
+                    client_id=client_id,
+                    client_secret_key=configs.CLIENT_SECRET_KEY,
+                    **client_options(configs, with_proxies=False),
+                ),
             ),
+            configs,
         )
 
     @property
@@ -255,13 +265,15 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
         client_id = configs.CLIENT_ID
         if not server_url or not client_id:
             raise ConfigurationError(operation="keycloak_connect", reason="server_url_and_client_id_required")
-        return KeycloakOpenID(
-            server_url=server_url,
-            client_id=client_id,
-            realm_name=configs.REALM_NAME,
-            client_secret_key=configs.CLIENT_SECRET_KEY,
-            verify=configs.VERIFY_SSL,
-            timeout=configs.TIMEOUT,
+        return with_sync_proxies(
+            KeycloakOpenID(
+                server_url=server_url,
+                client_id=client_id,
+                realm_name=configs.REALM_NAME,
+                client_secret_key=configs.CLIENT_SECRET_KEY,
+                **client_options(configs),
+            ),
+            configs,
         )
 
     def _initialize_admin_client(self) -> None:
@@ -270,14 +282,16 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
             # Check if admin credentials are available
             if self.configs.ADMIN_USERNAME and self.configs.ADMIN_PASSWORD:
                 # Create admin client using admin credentials
-                self._admin_adapter = KeycloakAdmin(
-                    server_url=self.configs.SERVER_URL,
-                    username=self.configs.ADMIN_USERNAME,
-                    password=self.configs.ADMIN_PASSWORD,
-                    realm_name=self.configs.REALM_NAME,
-                    user_realm_name=self.configs.ADMIN_REALM_NAME,
-                    verify=self.configs.VERIFY_SSL,
-                    timeout=self.configs.TIMEOUT,
+                self._admin_adapter = with_sync_proxies(
+                    KeycloakAdmin(
+                        server_url=self.configs.SERVER_URL,
+                        username=self.configs.ADMIN_USERNAME,
+                        password=self.configs.ADMIN_PASSWORD,
+                        realm_name=self.configs.REALM_NAME,
+                        user_realm_name=self.configs.ADMIN_REALM_NAME,
+                        **client_options(self.configs, with_proxies=False),
+                    ),
+                    self.configs,
                 )
                 # Since we're using direct credentials, set a long expiry time
                 self._admin_token_expiry = time.time() + 3600  # 1 hour
@@ -291,12 +305,14 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
                 self._admin_token_expiry = time.time() + token.get("expires_in", 60) - 30
 
                 # Create admin client with the token
-                self._admin_adapter = KeycloakAdmin(
-                    server_url=self.configs.SERVER_URL,
-                    realm_name=self.configs.REALM_NAME,
-                    token=token,
-                    verify=self.configs.VERIFY_SSL,
-                    timeout=self.configs.TIMEOUT,
+                self._admin_adapter = with_sync_proxies(
+                    KeycloakAdmin(
+                        server_url=self.configs.SERVER_URL,
+                        realm_name=self.configs.REALM_NAME,
+                        token=token,
+                        **client_options(self.configs, with_proxies=False),
+                    ),
+                    self.configs,
                 )
                 logger.debug("Admin client initialized with client credentials")
             else:
@@ -362,15 +378,17 @@ class AsyncKeycloakConnectionMixin(AsyncKeycloakMixinBase):
         client_id = configs.CLIENT_ID
         if not server_url or not client_id:
             raise ConfigurationError(operation="keycloak_connect", reason="server_url_and_client_id_required")
-        return KeycloakUMA(
-            KeycloakOpenIDConnection(
-                server_url=server_url,
-                realm_name=configs.REALM_NAME,
-                client_id=client_id,
-                client_secret_key=configs.CLIENT_SECRET_KEY,
-                verify=configs.VERIFY_SSL,
-                timeout=configs.TIMEOUT,
+        return with_sync_proxies(
+            KeycloakUMA(
+                KeycloakOpenIDConnection(
+                    server_url=server_url,
+                    realm_name=configs.REALM_NAME,
+                    client_id=client_id,
+                    client_secret_key=configs.CLIENT_SECRET_KEY,
+                    **client_options(configs, with_proxies=False),
+                ),
             ),
+            configs,
         )
 
     @property

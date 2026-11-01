@@ -1,8 +1,14 @@
+import datetime
 import warnings
+from pathlib import Path
+from tempfile import mkdtemp
 
 from behave import given, then, when
 from features.test_helpers import get_current_scenario_context
 from pydantic import ValidationError
+
+from archipy.adapters.keycloak.adapters import AsyncKeycloakAdapter, KeycloakAdapter
+from archipy.configs.sections.keycloak import KeycloakConfig
 
 from archipy.adapters.keycloak._base import to_mutation_result, to_request_payload, with_created_id
 
@@ -212,3 +218,101 @@ def step_validate_request_payload(context, dto, key_style, key, value):
 def step_validated_dto_attribute(context, attribute, value):
     validated = get_current_scenario_context(context).get("validated_dto")
     assert getattr(validated, attribute) == value, validated
+
+
+def _write_self_signed_pair(directory):
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.x509.oid import NameOID
+
+    key = ec.generate_private_key(ec.SECP256R1())
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "keycloak-test")])
+    now = datetime.datetime.now(datetime.UTC)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now)
+        .not_valid_after(now + datetime.timedelta(days=1))
+        .sign(key, hashes.SHA256())
+    )
+    cert_file = Path(directory) / "client.pem"
+    key_file = Path(directory) / "client.key"
+    cert_file.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+    key_file.write_bytes(
+        key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        ),
+    )
+    return str(cert_file), str(key_file)
+
+
+@given(
+    "a Keycloak config with a CA bundle, a client certificate and key, a 2.5 second timeout, 4 retries, a pool of 7, "
+    "a proxy and a custom header",
+)
+def step_connection_options_config(context):
+    cert_file, key_file = _write_self_signed_pair(mkdtemp())
+    config = KeycloakConfig(
+        SERVER_URL="https://keycloak.invalid",
+        CLIENT_ID="client",
+        VERIFY_SSL=cert_file,
+        TIMEOUT=2.5,
+        CLIENT_CERT_FILE=cert_file,
+        CLIENT_KEY_FILE=key_file,
+        MAX_RETRIES=4,
+        POOL_MAXSIZE=7,
+        PROXIES={"https://": "http://proxy.invalid:3128"},
+        CUSTOM_HEADERS={"X-Tenant": "acme"},
+    )
+    sc = get_current_scenario_context(context)
+    sc.store("keycloak_config", config)
+    sc.store("keycloak_cert_pair", (cert_file, key_file))
+
+
+@when("the {client} adapter builds its OpenID and UMA clients")
+def step_build_clients(context, client):
+    sc = get_current_scenario_context(context)
+    config = sc.get("keycloak_config")
+    adapter_class = AsyncKeycloakAdapter if client == "async" else KeycloakAdapter
+    openid = adapter_class._get_openid_client(config)
+    uma = adapter_class._get_uma_client(config)
+    sc.store("keycloak_connections", [openid.connection, uma.connection])
+
+
+@then(
+    "every client connection uses the CA bundle, the client certificate pair, the timeout, the retries, the pool, "
+    "the proxy and the header",
+)
+def step_connections_use_options(context):
+    sc = get_current_scenario_context(context)
+    cert_file, key_file = sc.get("keycloak_cert_pair")
+    connections = sc.get("keycloak_connections")
+    assert len(connections) == 2
+    assert connections[0].proxies == {"https://": "http://proxy.invalid:3128"}
+    for connection in connections:
+        assert connection.verify == cert_file
+        assert connection.cert == (cert_file, key_file)
+        assert connection.timeout == 2.5
+        assert connection.max_retries == 4
+        assert connection.pool_maxsize == 7
+        assert connection.headers["X-Tenant"] == "acme"
+        adapter = connection._s.adapters["https://"]
+        assert adapter.max_retries.total == 4
+        assert connection._s.proxies["https"] == "http://proxy.invalid:3128"
+
+
+@when("a Keycloak config is built with a client key file but no client certificate")
+def step_config_key_without_cert(context):
+    sc = get_current_scenario_context(context)
+    try:
+        KeycloakConfig(CLIENT_KEY_FILE="/etc/ssl/client.key")
+    except ValidationError as e:
+        sc.store("validation_error", e)
+    else:
+        sc.store("validation_error", None)

@@ -1,6 +1,6 @@
 """Keycloak configuration."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class KeycloakConfig(BaseModel):
@@ -14,8 +14,29 @@ class KeycloakConfig(BaseModel):
     CLIENT_ID: str | None = None
     REALM_NAME: str = "master"
     CLIENT_SECRET_KEY: str | None = None
-    VERIFY_SSL: bool = True
-    TIMEOUT: int = 10
+    VERIFY_SSL: bool | str = Field(
+        default=True,
+        description="True/False toggles TLS verification; a string is the path of a CA bundle to verify against",
+    )
+    TIMEOUT: float = Field(default=10, gt=0, description="Request timeout in seconds (fractions allowed)")
+    CLIENT_CERT_FILE: str | None = Field(
+        default=None,
+        description="Path of a client certificate (PEM) for mutual TLS; a combined cert+key file needs no key file",
+    )
+    CLIENT_KEY_FILE: str | None = Field(
+        default=None,
+        description="Path of the private key matching CLIENT_CERT_FILE",
+    )
+    MAX_RETRIES: int = Field(default=1, ge=0, description="Total times an HTTP request to Keycloak is retried")
+    POOL_MAXSIZE: int | None = Field(default=None, ge=1, description="Maximum connections kept in the pool")
+    PROXIES: dict[str, str] | None = Field(
+        default=None,
+        description='Proxy URL by URL pattern, e.g. {"https://": "http://proxy:3128"} or {"all://": ...}',
+    )
+    CUSTOM_HEADERS: dict[str, str] | None = Field(
+        default=None,
+        description="Extra HTTP headers sent with every request to Keycloak",
+    )
     TOKEN_LEEWAY_SECONDS: int = Field(
         default=0,
         ge=0,
@@ -34,3 +55,10 @@ class KeycloakConfig(BaseModel):
     ADMIN_USERNAME: str | None = None
     ADMIN_PASSWORD: str | None = None
     ADMIN_REALM_NAME: str = "master"
+
+    @model_validator(mode="after")
+    def _check_client_key_has_cert(self) -> KeycloakConfig:
+        if self.CLIENT_KEY_FILE and not self.CLIENT_CERT_FILE:
+            msg = "CLIENT_KEY_FILE requires CLIENT_CERT_FILE"
+            raise ValueError(msg)
+        return self

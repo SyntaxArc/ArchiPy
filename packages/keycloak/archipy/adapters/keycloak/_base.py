@@ -64,6 +64,63 @@ _RAW_ERRORS: dict[str, type[KeycloakGetError | KeycloakPostError | KeycloakPutEr
 }
 
 
+def client_options(
+    configs: KeycloakConfig,
+    *,
+    with_proxies: bool = True,
+    with_custom_headers: bool = True,
+) -> dict[str, Any]:
+    """Build the python-keycloak connection keyword arguments shared by every client the adapters create.
+
+    Args:
+        configs: Keycloak configuration.
+        with_proxies: Add ``proxies``. ``KeycloakAdmin`` and ``KeycloakOpenIDConnection`` do not accept it.
+        with_custom_headers: Add ``custom_headers``. ``ConnectionManager`` takes headers as ``headers`` instead.
+
+    Returns:
+        Keyword arguments for the python-keycloak client (TLS verification, mTLS cert, timeout, retries, pool and,
+        when asked, proxies and headers).
+    """
+    cert: str | tuple[str, str] | None = None
+    if configs.CLIENT_CERT_FILE:
+        cert = (
+            (configs.CLIENT_CERT_FILE, configs.CLIENT_KEY_FILE) if configs.CLIENT_KEY_FILE else configs.CLIENT_CERT_FILE
+        )
+    options: dict[str, Any] = {
+        "verify": configs.VERIFY_SSL,
+        "timeout": configs.TIMEOUT,
+        "cert": cert,
+        "max_retries": configs.MAX_RETRIES,
+        "pool_maxsize": configs.POOL_MAXSIZE,
+    }
+    if with_proxies:
+        options["proxies"] = configs.PROXIES
+    if with_custom_headers:
+        options["custom_headers"] = dict(configs.CUSTOM_HEADERS) if configs.CUSTOM_HEADERS else None
+    return options
+
+
+def with_sync_proxies[C](client: C, configs: KeycloakConfig) -> C:
+    """Apply ``PROXIES`` to the synchronous ``requests`` session of a python-keycloak client.
+
+    python-keycloak hands one proxy mapping to both ``requests`` (keys such as ``https``) and ``httpx`` (keys such as
+    ``https://``), and ``httpx`` rejects the plain form. ``PROXIES`` therefore uses the URL form and the plain form is
+    applied to the ``requests`` session here. ``KeycloakAdmin`` and ``KeycloakOpenIDConnection`` accept no proxies, so
+    this is the only way their synchronous requests use ``PROXIES``.
+
+    Args:
+        client: A ``KeycloakOpenID``, ``KeycloakAdmin``, ``KeycloakUMA`` or ``ConnectionManager`` instance.
+        configs: Keycloak configuration.
+
+    Returns:
+        The same client.
+    """
+    if configs.PROXIES:
+        connection: Any = getattr(client, "connection", client)
+        connection._s.proxies.update({key.removesuffix("://"): url for key, url in configs.PROXIES.items()})
+    return client
+
+
 def admin_url(realm_name: str | None, suffix: str) -> str:
     """Build the URL of an admin REST path below the realm, for endpoints python-keycloak has no method for.
 
@@ -594,14 +651,18 @@ class SyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
         """
 
         def call() -> Any:
-            headers = {"Authorization": f"Bearer {token}"} if token else {}
+            headers = dict(self.configs.CUSTOM_HEADERS or {})
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
             if json_body is not None:
                 headers["Content-Type"] = "application/json"
-            connection = ConnectionManager(
-                base_url=self.configs.SERVER_URL or "",
-                headers=headers,
-                timeout=self.configs.TIMEOUT,
-                verify=self.configs.VERIFY_SSL,
+            connection = with_sync_proxies(
+                ConnectionManager(
+                    base_url=self.configs.SERVER_URL or "",
+                    headers=headers,
+                    **client_options(self.configs, with_custom_headers=False),
+                ),
+                self.configs,
             )
             if method == "post":
                 response = connection.raw_post(path, admin_body(json_body) if json_body is not None else (form or {}))
@@ -696,14 +757,18 @@ class AsyncKeycloakMixinBase(KeycloakExceptionHandlerMixin):
         """Async variant of ``_bearer_request``."""
 
         async def call() -> Any:
-            headers = {"Authorization": f"Bearer {token}"} if token else {}
+            headers = dict(self.configs.CUSTOM_HEADERS or {})
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
             if json_body is not None:
                 headers["Content-Type"] = "application/json"
-            connection = ConnectionManager(
-                base_url=self.configs.SERVER_URL or "",
-                headers=headers,
-                timeout=self.configs.TIMEOUT,
-                verify=self.configs.VERIFY_SSL,
+            connection = with_sync_proxies(
+                ConnectionManager(
+                    base_url=self.configs.SERVER_URL or "",
+                    headers=headers,
+                    **client_options(self.configs, with_custom_headers=False),
+                ),
+                self.configs,
             )
             try:
                 if method == "post":

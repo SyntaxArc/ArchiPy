@@ -113,3 +113,17 @@ Feature: Keycloak DTOs
       | message        | id     | ran |
       | none           | new-id | yes |
       | Already exists | none   | no  |
+
+  Scenario Outline: Connection options reach the <client> Keycloak clients
+    Given a Keycloak config with a CA bundle, a client certificate and key, a 2.5 second timeout, 4 retries, a pool of 7, a proxy and a custom header
+    When the <client> adapter builds its OpenID and UMA clients
+    Then every client connection uses the CA bundle, the client certificate pair, the timeout, the retries, the pool, the proxy and the header
+
+    Examples:
+      | client |
+      | sync   |
+      | async  |
+
+  Scenario: A client key without a client certificate is rejected
+    When a Keycloak config is built with a client key file but no client certificate
+    Then building the Keycloak config fails with a validation error
