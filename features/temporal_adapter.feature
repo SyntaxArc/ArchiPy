@@ -293,6 +293,15 @@ Feature: Temporal Adapter Operations
       | NotFoundError        | non-retryable            |
       | InternalError        | left to the retry policy |
 
+  Scenario Outline: <kind> activity subclasses register under distinct activity names
+    When I read the activity names registered for the <kind> activity subclasses
+    Then the activity names should be distinct and the later one should be <later_name>
+
+    Examples: Activity kinds
+      | kind   | later_name                          |
+      | plain  | SecondPlainActivity.execute         |
+      | atomic | SecondAtomicActivity.execute_atomic |
+
   Scenario Outline: A workflow timeout override of <override> resolves to <resolved>
     When I resolve a workflow timeout override of <override> against a configured 120 seconds
     Then the resolved workflow timeout should be <resolved>

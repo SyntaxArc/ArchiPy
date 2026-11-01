@@ -1298,8 +1298,7 @@ def _last_task_queue(context) -> str:
 
 
 @when(
-    "I execute the order saga with payment succeeding on attempt {attempt:d} "
-    "and shipping failure {fail_shipping:w}",
+    "I execute the order saga with payment succeeding on attempt {attempt:d} and shipping failure {fail_shipping:w}",
 )
 def step_execute_order_saga(context, attempt, fail_shipping):
     """Run ``OrderSagaWorkflow`` to its end and keep the returned state."""
@@ -2109,6 +2108,8 @@ def step_echoed_order_equal(context):
     echoed = scenario_context.get("echoed_order")
     assert isinstance(echoed, OrderPayload), f"Expected OrderPayload, got {type(echoed).__name__}"
     assert echoed == scenario_context.get("sent_order"), echoed
+
+
 @when('I list workflows with query "{query}" and limit {limit:d}')
 def step_list_workflows_with_limit(context, query, limit):
     adapter = get_temporal_adapter(context)
@@ -2120,6 +2121,8 @@ def step_list_workflows_with_limit(context, query, limit):
 def step_workflow_list_exact(context, count):
     workflows = get_current_scenario_context(context).workflow_list
     assert len(workflows) == count, f"Expected {count} workflows, got {len(workflows)}"
+
+
 @when('I request cancellation of workflow "{workflow_id}" with reason "{reason}"')
 def step_cancel_workflow_with_reason(context, workflow_id, reason):
     adapter = get_temporal_adapter(context)
@@ -2145,6 +2148,8 @@ def step_cancel_request_reason(context, workflow_id, reason):
 
     causes = run_async(context, _cancel_causes())
     assert reason in causes, f"Expected cancel reason {reason!r}, got {causes}"
+
+
 @when("{count:d} callers get the client of a new Temporal adapter at once")
 def step_concurrent_get_client(context, count):
     adapter = TemporalAdapter(get_temporal_adapter(context).config)
@@ -2159,6 +2164,8 @@ def step_concurrent_get_client(context, count):
 def step_same_client(context):
     clients = get_current_scenario_context(context).get("concurrent_clients")
     assert len({id(client) for client in clients}) == 1, "Expected one shared client"
+
+
 @when("the worker run ends without the handle")
 def step_worker_run_ends_outside_handle(context):
     worker_handle = get_current_scenario_context(context).last_worker
@@ -2174,6 +2181,8 @@ def step_worker_run_ends_outside_handle(context):
 def step_worker_no_run_error(context):
     worker_handle = get_current_scenario_context(context).last_worker
     assert worker_handle.run_error is None, worker_handle.run_error
+
+
 class CacheKeyActivity(BaseActivity[str, str]):
     """Minimal activity used to check cache key generation."""
 
@@ -2203,6 +2212,8 @@ def step_atomic_activity_copy_outcome(context, outcome):
     copied = scenario_context.get("atomic_copy")
     assert copied.db_type == expected, copied.db_type
     assert scenario_context.get("atomic_original").db_type == "postgres"
+
+
 @when('I build the activity cache key for input "{activity_input}"')
 def step_build_activity_cache_key(context, activity_input):
     key = CacheKeyActivity()._get_cache_key(activity_input)
@@ -2668,3 +2679,33 @@ def step_client_option(context, option, expected):
         return
     assert option in options, f"Expected {option} in {sorted(options)}"
     assert str(options[option]) == expected, f"Expected {option}={expected}, got {options[option]!r}"
+
+
+class SecondPlainActivity(BaseActivity[str, str]):
+    """Second plain activity: must not share an activity name with the others."""
+
+    async def _do_execute(self, activity_input: str) -> str:
+        return activity_input
+
+
+class SecondAtomicActivity(AtomicActivity[str, str]):
+    """Second atomic activity: must not share an activity name with the others."""
+
+
+@when("I read the activity names registered for the {kind} activity subclasses")
+def step_read_activity_names(context, kind):
+    from temporalio import activity
+
+    classes = {
+        "plain": (CacheKeyActivity, SecondPlainActivity),
+        "atomic": (PostgresAtomicActivity, SecondAtomicActivity),
+    }[kind]
+    names = [activity._Definition.must_from_callable(cls().as_activity()).name for cls in classes]
+    get_current_scenario_context(context).store("activity_names", names)
+
+
+@then("the activity names should be distinct and the later one should be {expected}")
+def step_activity_names_distinct(context, expected):
+    names = get_current_scenario_context(context).get("activity_names")
+    assert len(set(names)) == len(names), names
+    assert names[-1] == expected, names
