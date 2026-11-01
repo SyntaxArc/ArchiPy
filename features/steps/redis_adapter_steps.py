@@ -3887,3 +3887,101 @@ async def step_then_async_pools_closed(context):
     assert adapter._search_client is None
     for pool in get_result(context, "closed_pools"):
         assert _pool_is_closed(pool), "connection pool still holds connections after close"
+
+
+@when(r'I ask the mock cluster for the slot of key "(?P<key>[^"]+)" using the (?P<mode>sync|async) client')
+async def step_when_mock_cluster_slot(context, key, mode):
+    """Ask the fake cluster client for a key slot."""
+    from archipy.adapters.redis.mocks import FakeAsyncRedisClusterWrapper, FakeRedisClusterWrapper
+
+    if mode == "sync":
+        slot = FakeRedisClusterWrapper().cluster_keyslot(key)
+    else:
+        slot = await FakeAsyncRedisClusterWrapper().cluster_keyslot(key)
+    store_result(context, "mock_slot", slot)
+
+
+@then(r"the mock cluster slot should be (?P<slot>\d+)")
+def step_then_mock_cluster_slot(context, slot):
+    """Assert the CRC16 slot."""
+    assert get_result(context, "mock_slot") == int(slot)
+
+
+@when(r'I create a Redis (?P<mode>sentinel|cluster) config with the node "(?P<node>[^"]+)"')
+def step_when_invalid_node_config(context, mode, node):
+    """Try to build a config with a malformed node address and keep the outcome."""
+    scenario_context = get_current_scenario_context(context)
+    kwargs = (
+        {"MODE": "SENTINEL", "SENTINEL_NODES": [node], "SENTINEL_SERVICE_NAME": "mymaster"}
+        if mode == "sentinel"
+        else {"MODE": "CLUSTER", "CLUSTER_NODES": [node]}
+    )
+    try:
+        RedisConfig(**kwargs)
+        scenario_context.config_error = None
+    except ConfigurationError as exc:
+        scenario_context.config_error = exc
+
+
+class _ListHandler(logging.Handler):
+    def __init__(self):
+        super().__init__(level=logging.WARNING)
+        self.messages = []
+
+    def emit(self, record):
+        self.messages.append(record.getMessage())
+
+
+@when(r'I create a Redis config with the password "(?P<password>[^"]+)" and (?P<settings>TLS disabled|TLS enabled without hostname checks)')
+def step_when_credential_config(context, password, settings):
+    """Build a config with a password and capture warnings from the config logger."""
+    handler = _ListHandler()
+    config_logger = logging.getLogger("archipy.configs.sections.redis")
+    config_logger.addHandler(handler)
+    try:
+        kwargs = {"SSL": False} if settings == "TLS disabled" else {"SSL": True, "SSL_CHECK_HOSTNAME": False}
+        config = RedisConfig(PASSWORD=password, **kwargs)
+    finally:
+        config_logger.removeHandler(handler)
+    store_result(context, "credential_config", config)
+    store_result(context, "config_warnings", handler.messages)
+    store_result(context, "config_password", password)
+
+
+@then(r"the Redis config repr should not contain the password")
+def step_then_repr_hides_password(context):
+    """Assert the password is not in repr or str."""
+    config = get_result(context, "credential_config")
+    password = get_result(context, "config_password")
+    assert password not in repr(config)
+    assert password not in str(config)
+
+
+@then(r'the Redis config should log a warning about "(?P<text>[^"]+)"')
+def step_then_config_warning(context, text):
+    """Assert a warning mentioning the text was logged."""
+    messages = get_result(context, "config_warnings")
+    assert any(text in message for message in messages), messages
+
+
+@when(r'I upsert the hash document "(?P<doc_id>[^"]+)" with replace (?P<replace>True|False)')
+def step_when_upsert_hash_replace(context, doc_id, replace):
+    """Upsert a hash document and record any DeprecationWarning."""
+    import warnings
+
+    adapter = get_current_scenario_context(context).adapter
+    handle = adapter.search_index(get_current_scenario_context(context).get("last_index_name"))
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        handle.upsert_hash(doc_id, {"title": "T", "category": "c"}, replace=replace == "True")
+    store_result(context, "deprecations", [w for w in caught if issubclass(w.category, DeprecationWarning)])
+
+
+@then(
+    r'the hash document "(?P<doc_id>[^"]+)" should be stored and the deprecation warning should be (?P<warned>absent|raised)',
+)
+def step_then_upsert_hash(context, doc_id, warned):
+    """Assert the document exists and the deprecation matches."""
+    adapter = get_current_scenario_context(context).adapter
+    assert adapter.hgetall(doc_id).get("title") == "T"
+    assert bool(get_result(context, "deprecations")) == (warned == "raised")

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 import fakeredis
 from fakeredis import FakeAsyncRedis, FakeServer
+from redis.crc import key_slot
 
 from archipy.adapters.redis.adapters import AsyncRedisAdapter, RedisAdapter
 from archipy.configs.base_config import BaseConfig
@@ -56,7 +57,7 @@ class FakeRedisClusterWrapper(fakeredis.FakeRedis):
 
     def cluster_keyslot(self, key: str) -> int:
         """Return fake cluster keyslot for a key."""
-        return hash(key) % 16384
+        return key_slot(key if isinstance(key, bytes) else str(key).encode())
 
     def cluster_countkeysinslot(self, slot: int) -> int:
         """Return fake count of keys in a slot."""
@@ -84,7 +85,7 @@ class FakeAsyncRedisClusterWrapper(FakeAsyncRedis):
 
     async def cluster_keyslot(self, key: str) -> int:
         """Return fake cluster keyslot for a key."""
-        return hash(key) % 16384
+        return key_slot(key if isinstance(key, bytes) else str(key).encode())
 
     async def cluster_countkeysinslot(self, slot: int) -> int:
         """Return fake count of keys in a slot."""

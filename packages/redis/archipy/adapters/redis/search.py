@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import struct
+import warnings
 from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, cast, override
 
@@ -521,10 +522,11 @@ def _write_hash_document(
     vector: list[float] | None,
 ) -> None:
     """Write HASH fields and optional vector bytes to Redis."""
-    for key, value in fields.items():
-        client.hset(doc_id, key, value)
+    mapping: dict[str, Any] = dict(fields)
     if vector_field is not None and vector is not None:
-        client.hset(doc_id, vector_field, pack_vector(vector))
+        mapping[vector_field] = pack_vector(vector)
+    if mapping:
+        client.hset(doc_id, mapping=mapping)  # ty: ignore[no-matching-overload]  # redis-py sync/async overload union
 
 
 class RedisSearchHandle(RedisSearchHandlePort):
@@ -606,7 +608,13 @@ class RedisSearchHandle(RedisSearchHandlePort):
         *,
         replace: bool = True,
     ) -> bool:
-        """Upsert a HASH document and index it."""
+        """Upsert a HASH document and index it.
+
+        The write is a single atomic ``HSET``. ``replace`` is ignored (fields are merged into the hash) and
+        ``replace=False`` is deprecated.
+        """
+        if not replace:
+            warnings.warn("upsert_hash(replace=False) is ignored and deprecated", DeprecationWarning, stacklevel=2)
         _write_hash_document(self._client, doc_id, fields, vector_field, vector)
         return True
 
@@ -799,11 +807,18 @@ class AsyncRedisSearchHandle(AsyncRedisSearchHandlePort):
         *,
         replace: bool = True,
     ) -> bool:
-        """Upsert a HASH document and index it asynchronously."""
-        for key, value in fields.items():
-            await self._client.hset(doc_id, key, value)
+        """Upsert a HASH document and index it asynchronously.
+
+        The write is a single atomic ``HSET``. ``replace`` is ignored (fields are merged into the hash) and
+        ``replace=False`` is deprecated.
+        """
+        if not replace:
+            warnings.warn("upsert_hash(replace=False) is ignored and deprecated", DeprecationWarning, stacklevel=2)
+        mapping: dict[str, Any] = dict(fields)
         if vector_field is not None and vector is not None:
-            await self._client.hset(doc_id, vector_field, pack_vector(vector))
+            mapping[vector_field] = pack_vector(vector)
+        if mapping:
+            await self._client.hset(doc_id, mapping=mapping)  # ty: ignore[no-matching-overload]  # redis-py sync/async overload union
         return True
 
     @override
