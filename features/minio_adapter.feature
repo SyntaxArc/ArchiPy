@@ -144,6 +144,16 @@ Feature: MinIO Operations Testing
       | create bucket "errors-bucket" again                      | AlreadyExistsError   |
       | check existence of an object with an empty bucket name   | InvalidArgumentError |
 
+  Scenario Outline: Botocore connection failures map to <error>
+    When I check bucket existence while the S3 client raises botocore "<raised_error>"
+    Then the MinIO call should raise <error>
+
+    Examples:
+      | raised_error          | error                  |
+      | ReadTimeoutError      | ConnectionTimeoutError |
+      | ConnectTimeoutError   | ConnectionTimeoutError |
+      | ConnectionClosedError | NetworkError           |
+
   Scenario Outline: Checksum settings <request>/<response> and CA bundle <ca_bundle> reach the S3 client
     Given a MinIO adapter with request checksum "<request>", response checksum "<response>" and CA bundle "<ca_bundle>"
     And a bucket named "checksum-bucket" exists

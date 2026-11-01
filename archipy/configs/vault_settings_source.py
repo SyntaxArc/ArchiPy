@@ -125,7 +125,10 @@ def _build_session(config: VaultConfig) -> Session:
         status=config.RETRIES_MAX_ATTEMPTS,
         backoff_factor=0.3,
         status_forcelist=(500, 502, 503, 504),
-        allowed_methods=frozenset({"GET", "PUT", "POST", "DELETE", "LIST", "HEAD"}),
+        # Only idempotent reads are retried on read errors and 5xx statuses: replaying
+        # POST/PUT/DELETE could repeat a write. Connection errors (request never sent)
+        # are retried for every method.
+        allowed_methods=frozenset({"GET", "HEAD", "LIST"}),
     )
     timeout = (config.CONNECT_TIMEOUT, config.READ_TIMEOUT)
     adapter = _TimeoutHTTPAdapter(timeout=timeout, max_retries=retry)

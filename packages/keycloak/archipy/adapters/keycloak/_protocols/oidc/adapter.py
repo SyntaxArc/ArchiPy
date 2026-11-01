@@ -171,31 +171,12 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
             ValueError: If getting user info fails
         """
         try:
-            # _get_userinfo_cached returns KeycloakUserType (dict[str, Any])
-            # The ttl_cache loses type info, but runtime behavior is correct
-            # Access underlying function for proper typing
-            cached_func = self._get_userinfo_cached
-            underlying_func = getattr(cached_func, "__wrapped__", None)
-            if underlying_func is not None:
-                # Call underlying function directly for type checking
-                result: KeycloakUserType = underlying_func(self, token)
-            else:
-                # Fallback to cached version if __wrapped__ not available
-                result_raw = cached_func(token)
-                if not isinstance(result_raw, dict):
-                    return None
-                # Type assertion: result_raw is a dict, which matches KeycloakUserType
-                # Convert to proper type by creating a new dict with explicit typing
-                result: KeycloakUserType = {str(k): v for k, v in result_raw.items()}
+            result: KeycloakUserType = _normalize_userinfo(self._openid_adapter.userinfo(token))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_userinfo")
             return None
         else:
             return to_dto(KeycloakUserInfoDTO, result)
-
-    @ttl_cache(ttl_seconds=30, maxsize=200)  # Cache for 30 seconds
-    def _get_userinfo_cached(self, token: str) -> KeycloakUserType:
-        return _normalize_userinfo(self._openid_adapter.userinfo(token))
 
     @ttl_cache(ttl_seconds=3600, maxsize=1, per_instance=True)  # Cache for 1 hour
     def get_well_known_config(self) -> KeycloakWellKnownDTO:
@@ -352,7 +333,6 @@ class KeycloakAuthMixin(SyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token_info")
 
-    @ttl_cache(ttl_seconds=30, maxsize=200, per_instance=True)
     def check_permissions_batch(
         self,
         token: str,
@@ -614,13 +594,9 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
             ValueError: If getting user info fails
         """
         try:
-            return to_dto(KeycloakUserInfoDTO, await self._get_userinfo_cached(token))
+            return to_dto(KeycloakUserInfoDTO, _normalize_userinfo(await self.openid_adapter.a_userinfo(token)))
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_userinfo")
-
-    @alru_cache(ttl=30, maxsize=200)  # Cache for 30 seconds
-    async def _get_userinfo_cached(self, token: str) -> KeycloakUserType:
-        return _normalize_userinfo(await self.openid_adapter.a_userinfo(token))
 
     @alru_cache(ttl=3600, maxsize=1)  # Cache for 1 hour
     async def get_well_known_config(self) -> KeycloakWellKnownDTO:
@@ -781,7 +757,6 @@ class AsyncKeycloakAuthMixin(AsyncKeycloakMixinBase):
         except KeycloakError as e:
             self._handle_keycloak_exception(e, "get_token_info")
 
-    @alru_cache(ttl=30, maxsize=200)
     async def check_permissions_batch(
         self,
         token: str,
