@@ -63,13 +63,13 @@ config = ParsianShaparakConfig(
 import logging
 
 from archipy.adapters.internet_payment_gateways.ir.parsian import ParsianShaparakPaymentAdapter
-from archipy.models.errors import ConfigurationError
+from archipy.models.errors import InvalidArgumentError
 
 logger = logging.getLogger(__name__)
 
 try:
     payment_adapter = ParsianShaparakPaymentAdapter()
-except ConfigurationError as e:
+except InvalidArgumentError as e:
     logger.error(f"Failed to initialize payment adapter: {e}")
     raise
 else:
@@ -108,6 +108,8 @@ else:
 
 !!! warning
     A response does not mean the payment is confirmed. Check `confirm_response.status`: `0` is a confirmed payment.
+    The callback `token` is user-controlled input: prefer `confirm_payment_with_amount` (below) with the order id and
+    amount you stored when the payment was initiated, so the gateway checks them for you.
 
 ```python
 from archipy.adapters.internet_payment_gateways.ir.parsian import ConfirmRequestDTO
@@ -202,9 +204,9 @@ Saman uses a REST/JSON protocol with four adapter variants:
 
 ```bash
 SAMAN_SHAPARAK__TERMINAL_ID=your_terminal_id
-SAMAN_SHAPARAK__PAYMENT_URL=https://sadad.shaparak.ir/api/v2/send
-SAMAN_SHAPARAK__VERIFY_URL=https://sadad.shaparak.ir/api/v2/verify
-SAMAN_SHAPARAK__REVERSE_URL=https://sadad.shaparak.ir/api/v2/reverse
+SAMAN_SHAPARAK__PAYMENT_URL=https://sep.shaparak.ir/onlinepg/onlinepg
+SAMAN_SHAPARAK__VERIFY_URL=https://sep.shaparak.ir/verifyTxnRandomSessionkey/ipg/VerifyTransaction
+SAMAN_SHAPARAK__REVERSE_URL=https://sep.shaparak.ir/verifyTxnRandomSessionkey/ipg/ReverseTransaction
 ```
 
 Or via direct config:
@@ -228,7 +230,7 @@ from archipy.adapters.internet_payment_gateways.ir.saman import (
     AsyncSamanShaparakPaymentAdapter,
     AsyncSamanNeoPgShaparakPaymentAdapter,
 )
-from archipy.models.errors import FailedPreconditionError
+from archipy.models.errors import InvalidArgumentError
 
 logger = logging.getLogger(__name__)
 
@@ -237,7 +239,7 @@ try:
     neo_adapter = SamanNeoPgShaparakPaymentAdapter()
     async_adapter = AsyncSamanShaparakPaymentAdapter()
     async_neo_adapter = AsyncSamanNeoPgShaparakPaymentAdapter()
-except FailedPreconditionError as e:
+except InvalidArgumentError as e:
     logger.error(f"Failed to initialize payment adapter: {e}")
     raise
 else:
@@ -348,21 +350,24 @@ else:
 
 ## Complete FastAPI Example
 
+The callback query parameters come from the user's browser, so never trust them alone. Store the order id and amount
+when the payment is initiated, confirm against the stored values and fulfil the order only once. The example keeps
+orders in a dict for brevity; use a database in production. It uses the async adapters because the handlers are
+`async def` (sync adapters would block the event loop).
+
 ```python
 import logging
 
-from fastapi import FastAPI, Request, HTTPException, status
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 
 from archipy.adapters.internet_payment_gateways.ir.parsian import (
-    ConfirmRequestDTO,
-    ParsianShaparakPaymentAdapter,
+    AsyncParsianShaparakPaymentAdapter,
+    ConfirmWithAmountRequestDTO,
     PaymentRequestDTO,
 )
 from archipy.adapters.internet_payment_gateways.ir.saman import (
     AsyncSamanShaparakPaymentAdapter,
-    SamanShaparakPaymentAdapter,
     PaymentRequestDTO as SamanPaymentRequestDTO,
     VerifyRequestDTO,
 )
@@ -372,8 +377,12 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-parsian_adapter = ParsianShaparakPaymentAdapter()
-saman_adapter = SamanShaparakPaymentAdapter()
+parsian_adapter = AsyncParsianShaparakPaymentAdapter()
+saman_adapter = AsyncSamanShaparakPaymentAdapter()
+
+# Stand-in for a database: token (Parsian) or reservation number (Saman) -> stored order.
+parsian_orders: dict[int, dict[str, int | bool]] = {}
+saman_orders: dict[str, dict[str, int | bool]] = {}
 
 
 class OrderCreate(BaseModel):
@@ -390,66 +399,84 @@ async def create_parsian_payment(order: OrderCreate) -> dict[str, int | str]:
             order_id=order.order_id,
             callback_url="https://your-app.com/payments/parsian/callback",
         )
-        response = parsian_adapter.initiate_payment(payment_request)
+        response = await parsian_adapter.initiate_payment(payment_request)
     except (InvalidArgumentError, UnavailableError, InternalError) as e:
         logger.error(f"Payment initiation failed: {e}")
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Payment service unavailable")
     else:
-        if response.status != 0:
+        if response.status != 0 or response.token is None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Payment failed: {response.message}")
+        parsian_orders[response.token] = {"order_id": order.order_id, "amount": order.amount, "fulfilled": False}
         return {
             "token": response.token,
-            "payment_url": f"https://pec.shaparak.ir/NewIPG/?Token={response.token}"
+            "payment_url": f"https://pec.shaparak.ir/NewIPG/?Token={response.token}",
         }
 
 
 @app.get("/payments/parsian/callback")
-async def parsian_callback(token: int, request: Request) -> dict[str, str]:
+async def parsian_callback(token: int) -> dict[str, str]:
+    stored = parsian_orders.get(token)
+    if stored is None or stored["fulfilled"]:
+        return {"status": "failed", "message": "Unknown or already processed payment"}
     try:
-        confirm_response = parsian_adapter.confirm_payment(ConfirmRequestDTO(token=token))
-    except (UnavailableError, InternalError) as e:
+        confirm_response = await parsian_adapter.confirm_payment_with_amount(
+            ConfirmWithAmountRequestDTO(token=token, order_id=stored["order_id"], amount=stored["amount"]),
+        )
+    except (InvalidArgumentError, UnavailableError, InternalError) as e:
+        # The outcome is unknown after a timeout: check the transaction state before retrying.
         logger.error(f"Confirmation failed: {e}")
         return {"status": "error", "message": "Payment verification failed"}
     else:
         if confirm_response.status == 0:
+            stored["fulfilled"] = True
             logger.info(f"Parsian payment confirmed, RRN: {confirm_response.rrn}")
-            return {"status": "success", "reference_number": confirm_response.rrn}
+            return {"status": "success", "reference_number": str(confirm_response.rrn)}
         return {"status": "failed", "message": "Payment verification failed"}
 
 
 @app.post("/payments/saman/create")
 async def create_saman_payment(order: OrderCreate) -> dict[str, int | str]:
+    res_num = f"order-{order.order_id}"
     try:
         payment_request = SamanPaymentRequestDTO(
             amount=order.amount,
-            res_num=f"order-{order.order_id}",
+            res_num=res_num,
             redirect_url="https://your-app.com/payments/saman/callback",
         )
-        response = saman_adapter.initiate_payment(payment_request)
-    except (UnavailableError, InternalError) as e:
+        response = await saman_adapter.initiate_payment(payment_request)
+    except (InvalidArgumentError, UnavailableError, InternalError) as e:
         logger.error(f"Payment initiation failed: {e}")
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Payment service unavailable")
     else:
         if response.status != 1:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Payment failed: {response.error_desc}"
+                detail=f"Payment failed: {response.error_desc}",
             )
+        saman_orders[res_num] = {"order_id": order.order_id, "amount": order.amount, "fulfilled": False}
         return {"token": response.token, "payment_url": f"https://sep.shaparak.ir/onlinepg?token={response.token}"}
 
 
 @app.get("/payments/saman/callback")
-async def saman_callback(ref_num: str, request: Request) -> dict[str, str]:
+async def saman_callback(res_num: str, ref_num: str) -> dict[str, str]:
+    stored = saman_orders.get(res_num)
+    if stored is None or stored["fulfilled"]:
+        return {"status": "failed", "message": "Unknown or already processed payment"}
     try:
-        verify_response = saman_adapter.verify_payment(VerifyRequestDTO(reference_number=ref_num))
-    except (UnavailableError, InternalError) as e:
+        verify_response = await saman_adapter.verify_payment(VerifyRequestDTO(reference_number=ref_num))
+    except (InvalidArgumentError, UnavailableError, InternalError) as e:
         logger.error(f"Verification failed: {e}")
         return {"status": "error", "message": "Payment verification failed"}
     else:
-        if verify_response.success:
-            logger.info(f"Saman payment verified, RRN: {verify_response.rrn}")
-            return {"status": "success", "reference_number": verify_response.rrn}
-        return {"status": "failed", "message": f"Verification failed: {verify_response.result_description}"}
+        if not verify_response.success:
+            return {"status": "failed", "message": f"Verification failed: {verify_response.result_description}"}
+        # Compare what the gateway verified with what we stored before fulfilling.
+        if verify_response.reference_number != ref_num or verify_response.original_amount != stored["amount"]:
+            logger.error("Saman verification does not match the stored order")
+            return {"status": "failed", "message": "Payment does not match the order"}
+        stored["fulfilled"] = True
+        logger.info(f"Saman payment verified, RRN: {verify_response.rrn}")
+        return {"status": "success", "reference_number": str(verify_response.rrn)}
 ```
 
 ## Error Handling
@@ -457,15 +484,21 @@ async def saman_callback(ref_num: str, request: Request) -> dict[str, str]:
 All adapters use ArchiPy's consistent error hierarchy:
 
 !!! tip
-    `FailedPreconditionError` means a required setting such as `TERMINAL_ID` is missing. Fix the configuration instead
-    of retrying.
+    `InvalidArgumentError` raised by an adapter constructor means a required setting (`LOGIN_ACCOUNT` for Parsian,
+    `TERMINAL_ID` for Saman) is missing. Fix the configuration instead of retrying.
 
 | Error Type                | Trigger                                        |
 |---------------------------|------------------------------------------------|
-| `UnavailableError`        | Network failure, service unreachable           |
-| `InternalError`           | Unexpected server response                     |
-| `FailedPreconditionError` | Missing required config (e.g., no TERMINAL_ID) |
-| `InvalidArgumentError`    | Invalid request parameters                     |
+| `UnavailableError`        | SOAP fault, network failure, HTTP 5xx          |
+| `InternalError`           | Any other failure, including unreadable or malformed gateway replies |
+| `FailedPreconditionError` | Token reply inconsistent with its status (Saman) |
+| `InvalidArgumentError`    | Invalid request parameters or missing `LOGIN_ACCOUNT` / `TERMINAL_ID` |
+
+## Common Settings
+
+Both configs accept `PROXIES` (a dict such as `{"https": "http://proxy:3128"}`; the async adapters use the first of
+`https`, `http`, `socks5`, `socks5h`) and `TIMEOUT` (seconds). Set them with environment variables such as
+`PARSIAN_SHAPARAK__PROXIES` and `SAMAN_SHAPARAK__TIMEOUT`.
 
 ## See Also
 
