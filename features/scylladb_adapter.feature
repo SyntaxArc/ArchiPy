@@ -461,6 +461,23 @@ Feature: ScyllaDB Adapter
     When I select every row of "page_<mode>" after inserting 25 rows with a fetch size of 7
     Then the ScyllaDB result should be "25"
 
+  Scenario Outline: Connection and protocol failures are mapped, not leaked
+    When I run ScyllaDB operation "<operation>" on an adapter whose session raises "<kind>"
+    Then the ScyllaDB call should raise <error>
+
+    Examples: Sync
+      | operation | kind                       | error              |
+      | select    | ConnectionShutdown         | NetworkError       |
+      | insert    | OSError                    | NetworkError       |
+      | exists    | ProtocolVersionUnsupported | ConfigurationError |
+
+    @async
+    Examples: Async
+      | operation | kind                       | error              |
+      | select    | ConnectionShutdown         | NetworkError       |
+      | insert    | OSError                    | NetworkError       |
+      | exists    | ProtocolVersionUnsupported | ConfigurationError |
+
   Scenario Outline: CRUD helpers follow use_keyspace
     Given a ScyllaDB adapter is configured
     When I write one row to table "ks_t_<mode>" in each of the keyspaces "ks_a_<mode>" and "ks_b_<mode>" with the same helper call
