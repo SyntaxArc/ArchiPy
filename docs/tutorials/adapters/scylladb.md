@@ -40,6 +40,11 @@ SCYLLADB__CONNECT_TIMEOUT=10
 SCYLLADB__REQUEST_TIMEOUT=10
 ```
 
+!!! warning "Replication factor"
+    `REPLICATION_CONFIG` defaults to `{"datacenter1": 1}` and `create_keyspace` defaults to `replication_factor=1`: one
+    replica, no redundancy. The adapter logs a warning when it creates such a keyspace. Use at least 3 replicas per
+    datacenter in production.
+
 ### Direct Configuration
 
 ```python

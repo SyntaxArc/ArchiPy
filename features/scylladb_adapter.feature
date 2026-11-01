@@ -352,6 +352,11 @@ Feature: ScyllaDB Adapter
       | asyn | insert with negative ttl                         |
       | asyn | create keyspace with injected replication factor |
 
+  @needs-scylladb @async
+  Scenario: The async adapter factory connects without blocking the loop
+    When I create an async ScyllaDB adapter with the factory and check its health
+    Then the ScyllaDB adapter should report connected "True" and health "healthy"
+
   @needs-scylladb
   Scenario Outline: CRUD helpers prepare their statements and reuse them
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "prep_<mode>"
@@ -414,6 +419,23 @@ Feature: ScyllaDB Adapter
     Examples: Async
       | mode |
       | asyn |
+
+  @needs-scylladb
+  Scenario Outline: Creating a single replica keyspace logs a warning
+    Given a ScyllaDB adapter is configured
+    When I create the keyspace "<keyspace>" with replication factor <factor> and capture the adapter log
+    Then the adapter log should <expectation> a single replica warning
+
+    Examples: Sync
+      | keyspace | factor | expectation |
+      | rf_one   | 1      | contain     |
+      | rf_two   | 2      | not contain |
+
+    @async
+    Examples: Async
+      | keyspace  | factor | expectation |
+      | rf_one_as | 1      | contain     |
+      | rf_two_as | 2      | not contain |
 
   @needs-scylladb
   Scenario Outline: Prepared statements are cached and executed with bound parameters

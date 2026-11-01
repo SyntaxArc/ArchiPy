@@ -276,6 +276,26 @@ class ScyllaDBExceptionHandlerMixin:
         return identifier
 
     @staticmethod
+    def _warn_single_replica(config: ScyllaDBConfig, keyspace: str, replication_factor: int) -> None:
+        """Log a warning when a keyspace is created with a single replica, which has no redundancy.
+
+        Args:
+            config: The adapter configuration.
+            keyspace: Name of the keyspace being created.
+            replication_factor: Replication factor used by ``SimpleStrategy``.
+        """
+        if config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and config.REPLICATION_CONFIG:
+            factors = list(config.REPLICATION_CONFIG.values())
+        else:
+            factors = [replication_factor]
+        if max(factors) <= 1:
+            logger.warning(
+                "ScyllaDB keyspace %s is created with replication factor 1: losing one node loses data; "
+                "use at least 3 in production",
+                keyspace,
+            )
+
+    @staticmethod
     def _validate_non_negative_int(value: int, field_name: str) -> int:
         """Validate a numeric value that is interpolated into CQL text.
 
@@ -562,6 +582,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         keyspace = self._validate_cql_identifier(keyspace, "keyspace")
         replication_factor = self._validate_non_negative_int(replication_factor, "replication_factor")
+        self._warn_single_replica(self.config, keyspace, replication_factor)
         # Use configured replication strategy
         if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
             # Build replication config for NetworkTopologyStrategy
@@ -979,6 +1000,22 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             If None, retrieves from global config. Defaults to None.
     """
 
+    @classmethod
+    async def create(cls, config: ScyllaDBConfig | None = None) -> AsyncScyllaDBAdapter:
+        """Create the adapter without blocking the event loop.
+
+        The constructor connects to the cluster synchronously, which blocks the running loop for the duration of the
+        connection. Use this factory from async code instead.
+
+        Args:
+            config (ScyllaDBConfig | None): Configuration settings for ScyllaDB.
+                If None, retrieves from global config. Defaults to None.
+
+        Returns:
+            AsyncScyllaDBAdapter: A connected adapter.
+        """
+        return await asyncio.to_thread(cls, config)
+
     def __init__(self, config: ScyllaDBConfig | None = None) -> None:
         """Initialize the AsyncScyllaDBAdapter with configuration settings.
 
@@ -1166,7 +1203,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 if cached_method is not None:
                     return await cached_method(query)
             # Direct prepare without cache
-            prepared = session.prepare(query)
+            prepared = await asyncio.to_thread(session.prepare, query)
         except (DriverException, NoHostAvailable, RequestValidationException) as e:
             self._handle_scylladb_exception(e, "prepare")
             raise
@@ -1181,7 +1218,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 """Internal cached method to prepare a CQL statement asynchronously."""
                 session = await self.get_session()
                 try:
-                    prepared = session.prepare(query)
+                    prepared = await asyncio.to_thread(session.prepare, query)
                 except (DriverException, NoHostAvailable, RequestValidationException) as e:
                     self._handle_scylladb_exception(e, "prepare")
                     raise
@@ -1248,6 +1285,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         keyspace = self._validate_cql_identifier(keyspace, "keyspace")
         replication_factor = self._validate_non_negative_int(replication_factor, "replication_factor")
+        self._warn_single_replica(self.config, keyspace, replication_factor)
         # Use configured replication strategy
         if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
             # Build replication config for NetworkTopologyStrategy
@@ -1297,7 +1335,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         session = await self.get_session()
         try:
             keyspace = self._validate_cql_identifier(keyspace, "keyspace")
-            session.set_keyspace(keyspace)
+            await asyncio.to_thread(session.set_keyspace, keyspace)
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "use_keyspace")
             raise
@@ -1509,9 +1547,9 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         try:
             if hasattr(self, "_session") and self._session is not None:
-                self._session.shutdown()
+                await asyncio.to_thread(self._session.shutdown)
             if hasattr(self, "_cluster") and self._cluster is not None:
-                self._cluster.shutdown()
+                await asyncio.to_thread(self._cluster.shutdown)
         except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
             # Ignore errors during cleanup, but log them
             logger.debug("Error during async ScyllaDB adapter cleanup: %s", e)
