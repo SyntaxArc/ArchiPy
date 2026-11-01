@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from archipy.adapters.redis.adapter_mixins._shared import (
     AsyncRedisMixinBase,
     SyncRedisMixinBase,
+    _text,
 )
 
 if TYPE_CHECKING:
@@ -160,7 +161,7 @@ class RedisKeysMixin(SyncRedisMixinBase):
             RedisResponseType: Always returns 'OK'.
         """
         # Convert Mapping to dict for type compatibility with Redis client
-        dict_mapping: dict[str, bytes | str | float] = {str(k): v for k, v in mapping.items()}
+        dict_mapping: dict[str, bytes | str | float] = {_text(k): v for k, v in mapping.items()}
         return self.client.mset(dict_mapping)
 
     def keys(self, pattern: bytes | str = "*", **kwargs: Any) -> list[bytes | str]:
@@ -444,7 +445,7 @@ class AsyncRedisKeysMixin(AsyncRedisMixinBase):
             RedisResponseType: Always returns 'OK'.
         """
         # Convert Mapping to dict for type compatibility with Redis client
-        dict_mapping: dict[str, bytes | str | float] = {str(k): v for k, v in mapping.items()}
+        dict_mapping: dict[str, bytes | str | float] = {_text(k): v for k, v in mapping.items()}
         return await self.client.mset(dict_mapping)
 
     async def keys(self, pattern: bytes | str = "*", **kwargs: Any) -> list[bytes | str]:

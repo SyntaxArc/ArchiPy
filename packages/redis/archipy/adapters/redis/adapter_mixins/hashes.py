@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from archipy.adapters.redis.adapter_mixins._shared import (
     AsyncRedisMixinBase,
     SyncRedisMixinBase,
+    _text,
 )
 from archipy.models.errors import InternalError
 
@@ -29,7 +30,7 @@ class RedisHashesMixin(SyncRedisMixinBase):
             RedisIntegerResponseType: Number of fields deleted.
         """
         # Convert keys to str for type compatibility with Redis client
-        str_keys: tuple[str, ...] = tuple(str(k) if isinstance(k, bytes) else k for k in keys)
+        str_keys: tuple[str, ...] = tuple(_text(k) for k in keys)
         result = self.client.hdel(name, *str_keys)
         return self._ensure_sync_int(result)
 
@@ -121,8 +122,8 @@ class RedisHashesMixin(SyncRedisMixinBase):
             RedisIntegerResponseType: Number of fields set.
         """
         # Convert bytes to str for type compatibility with Redis client
-        str_key: str | None = str(key) if key is not None and isinstance(key, bytes) else key
-        str_value: str | None = str(value) if value is not None and isinstance(value, bytes) else value
+        str_key: str | None = _text(key) if key is not None else None
+        str_value: str | None = _text(value) if value is not None else None
         result = self.client.hset(name, str_key, str_value, mapping, items)
         return self._ensure_sync_int(result)
 
@@ -138,7 +139,7 @@ class RedisHashesMixin(SyncRedisMixinBase):
             RedisListResponseType: List of field values.
         """
         # Convert keys list and args for type compatibility, combine into single list
-        keys_list: list[str] = [str(k) for k in keys] + [str(arg) if isinstance(arg, bytes) else arg for arg in args]
+        keys_list: list[str] = [_text(k) for k in keys] + [_text(arg) for arg in args]
         result = self.read_only_client.hmget(name, keys_list)
         if isinstance(result, Awaitable):
             raise InternalError(error_code="SYNC_REDIS_AWAITABLE")
@@ -173,7 +174,7 @@ class AsyncRedisHashesMixin(AsyncRedisMixinBase):
             RedisIntegerResponseType: Number of fields deleted.
         """
         # Convert keys to str for type compatibility
-        str_keys: tuple[str, ...] = tuple(str(k) if isinstance(k, bytes) else k for k in keys)
+        str_keys: tuple[str, ...] = tuple(_text(k) for k in keys)
         result = self.client.hdel(name, *str_keys)
         return await self._ensure_async_int(result)
 
@@ -276,8 +277,8 @@ class AsyncRedisHashesMixin(AsyncRedisMixinBase):
             RedisIntegerResponseType: Number of fields set.
         """
         # Convert bytes to str for type compatibility with Redis client
-        str_key: str | None = str(key) if key is not None and isinstance(key, bytes) else key
-        str_value: str | None = str(value) if value is not None and isinstance(value, bytes) else value
+        str_key: str | None = _text(key) if key is not None else None
+        str_value: str | None = _text(value) if value is not None else None
         result = self.client.hset(name, str_key, str_value, mapping, items)
         return await self._ensure_async_int(result)
 
@@ -293,7 +294,7 @@ class AsyncRedisHashesMixin(AsyncRedisMixinBase):
             RedisListResponseType: List of field values.
         """
         # Convert keys list and args for type compatibility, combine into single list
-        keys_list: list[str] = [str(k) for k in keys] + [str(arg) if isinstance(arg, bytes) else arg for arg in args]
+        keys_list: list[str] = [_text(k) for k in keys] + [_text(arg) for arg in args]
         result = self.read_only_client.hmget(name, keys_list)
         return await self._ensure_async_list(result)
 

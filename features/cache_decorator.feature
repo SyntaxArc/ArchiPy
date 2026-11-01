@@ -55,6 +55,18 @@ Feature: TTL Cache Decorator
     Then the method should not be executed again
     And both instances should return the same result
 
+  Scenario Outline: Instance state dependent results with per_instance <per_instance>
+    Given a class whose cached method returns its instance value with per_instance <per_instance>
+    When I read the cached method on instances holding values 1 and 2
+    Then the two instances should return "<expected>"
+    When I clear the cache of the first instance and change both instance values to 7
+    Then the instances should return "<after_clear>"
+
+    Examples:
+      | per_instance | expected | after_clear |
+      | False        | 1,1      | 7,7         |
+      | True         | 1,2      | 7,2         |
+
   Scenario: Clear cache functionality
     Given a function decorated with ttl_cache
     When I call the function with argument 5
