@@ -186,6 +186,29 @@ class ScyllaDBExceptionHandlerMixin:
             )
         return identifier
 
+    @staticmethod
+    def _validate_non_negative_int(value: int, field_name: str) -> int:
+        """Validate a numeric value that is interpolated into CQL text.
+
+        Type hints are not enforced at runtime, so a string here would be injected into the query.
+
+        Args:
+            value: Value to validate.
+            field_name: Field name for error context.
+
+        Returns:
+            The validated integer.
+
+        Raises:
+            InvalidArgumentError: If the value is not a non-negative int.
+        """
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise InvalidArgumentError(
+                argument_name=field_name,
+                additional_data={"error": "Value must be a non-negative integer"},
+            )
+        return value
+
     @classmethod
     def _validate_cql_identifiers(cls, identifiers: list[str], field_name: str) -> list[str]:
         """Validate multiple CQL identifiers.
@@ -424,6 +447,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             replication_factor (int): The replication factor. Defaults to 1.
         """
         keyspace = self._validate_cql_identifier(keyspace, "keyspace")
+        replication_factor = self._validate_non_negative_int(replication_factor, "replication_factor")
         # Use configured replication strategy
         if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
             # Build replication config for NetworkTopologyStrategy
@@ -533,7 +557,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             query += " IF NOT EXISTS"
 
         if ttl is not None:
-            query += f" USING TTL {ttl}"
+            query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
 
         try:
             self.execute(query, tuple(data.values()))
@@ -600,7 +624,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"UPDATE {table}"
 
         if ttl is not None:
-            query += f" USING TTL {ttl}"
+            query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
 
         query += f" SET {set_clause} WHERE {where_clause}"
 
@@ -1075,6 +1099,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             replication_factor (int): The replication factor. Defaults to 1.
         """
         keyspace = self._validate_cql_identifier(keyspace, "keyspace")
+        replication_factor = self._validate_non_negative_int(replication_factor, "replication_factor")
         # Use configured replication strategy
         if self.config.REPLICATION_STRATEGY == "NetworkTopologyStrategy" and self.config.REPLICATION_CONFIG:
             # Build replication config for NetworkTopologyStrategy
@@ -1184,7 +1209,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             query += " IF NOT EXISTS"
 
         if ttl is not None:
-            query += f" USING TTL {ttl}"
+            query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
 
         try:
             await self.execute(query, tuple(data.values()))
@@ -1251,7 +1276,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"UPDATE {table}"
 
         if ttl is not None:
-            query += f" USING TTL {ttl}"
+            query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
 
         query += f" SET {set_clause} WHERE {where_clause}"
 

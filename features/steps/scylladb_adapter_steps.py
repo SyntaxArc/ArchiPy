@@ -1091,6 +1091,14 @@ async def _run_scylladb_operation(adapter: Any, operation: str, table: str) -> A
         return str(await _call_adapter(adapter, "exists", table, {"id": 1}))
     elif operation == "drop":
         await _call_adapter(adapter, "drop_table", table)
+    elif operation == "insert with injected ttl":
+        await _call_adapter(adapter, "insert", table, {"id": 1, "name": "x", "age": 1}, ttl="60; DROP TABLE x")
+    elif operation == "update with injected ttl":
+        await _call_adapter(adapter, "update", table, {"name": "x"}, {"id": 1}, ttl="60; DROP TABLE x")
+    elif operation == "insert with negative ttl":
+        await _call_adapter(adapter, "insert", table, {"id": 1, "name": "x", "age": 1}, ttl=-1)
+    elif operation == "create keyspace with injected replication factor":
+        await _call_adapter(adapter, "create_keyspace", "inject_ks", "1}; DROP KEYSPACE hot_ks; --")
     else:
         raise ValueError(f"Unknown ScyllaDB operation: {operation}")
     return None
