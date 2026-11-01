@@ -229,6 +229,19 @@ Feature: Base Configuration System
       | none | none | default   |
       | 0.5  | 8    | 0.5 and 8 |
 
+  Scenario Outline: The Elasticsearch config rejects bearer auth combined with <other> auth
+    When I validate an Elasticsearch config with BEARER_AUTH and <other> auth
+    Then the Elasticsearch config should be rejected as invalid
+
+    Examples: Conflicting auth
+      | other   |
+      | API key |
+      | basic   |
+
+  Scenario: The Elasticsearch client sends no extra headers or cloud settings when unset
+    When I build an Elasticsearch client with RETRY_BACKOFF_BASE none and RETRY_BACKOFF_CAP none
+    Then the client should carry no bearer, opaque ID or custom headers
+
   Scenario Outline: The Postgres session managers pass connect_timeout to psycopg only when configured
     When I read the connect arguments of the <kind> Postgres session manager with CONNECT_TIMEOUT <value>
     Then the connect arguments should be <expected>

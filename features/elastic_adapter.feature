@@ -189,17 +189,27 @@ Feature: Elasticsearch Operations Testing
     Then the client should apply "<field>" as "<value>"
 
     Examples: sync
-      | mode          | field                      | value  | sniff |
-      | synchronously | NODE_SELECTOR_CLASS        | random | false |
-      | synchronously | DEAD_NODE_BACKOFF_FACTOR   | 2.5    | false |
-      | synchronously | MIN_DELAY_BETWEEN_SNIFFING | 42.0   | true  |
+      | mode          | field                      | value              | sniff |
+      | synchronously | NODE_SELECTOR_CLASS        | random             | false |
+      | synchronously | DEAD_NODE_BACKOFF_FACTOR   | 2.5                | false |
+      | synchronously | MIN_DELAY_BETWEEN_SNIFFING | 42.0               | true  |
+      | synchronously | BEARER_AUTH                | tok-1              | false |
+      | synchronously | OPAQUE_ID                  | req-7              | false |
+      | synchronously | HEADERS                    | X-Team=core        | false |
+      | synchronously | SSL_VERSION                | TLSv1_3            | false |
+      | synchronously | CLOUD_ID                   | abc123.example.com | false |
 
     @async
     Examples: async
-      | mode           | field                      | value  | sniff |
-      | asynchronously | NODE_SELECTOR_CLASS        | random | false |
-      | asynchronously | DEAD_NODE_BACKOFF_FACTOR   | 2.5    | false |
-      | asynchronously | MIN_DELAY_BETWEEN_SNIFFING | 42.0   | true  |
+      | mode           | field                      | value              | sniff |
+      | asynchronously | NODE_SELECTOR_CLASS        | random             | false |
+      | asynchronously | DEAD_NODE_BACKOFF_FACTOR   | 2.5                | false |
+      | asynchronously | MIN_DELAY_BETWEEN_SNIFFING | 42.0               | true  |
+      | asynchronously | BEARER_AUTH                | tok-1              | false |
+      | asynchronously | OPAQUE_ID                  | req-7              | false |
+      | asynchronously | HEADERS                    | X-Team=core        | false |
+      | asynchronously | SSL_VERSION                | TLSv1_3            | false |
+      | asynchronously | CLOUD_ID                   | abc123.example.com | false |
 
   Scenario Outline: Ignore configured status codes <mode>
     Given an Elasticsearch config with "IGNORE_STATUS" set to "404"

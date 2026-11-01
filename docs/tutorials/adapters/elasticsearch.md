@@ -44,7 +44,18 @@ ELASTIC__HTTP_PASSWORD=your-password
 ELASTIC__API_KEY=your-api-key-id
 ELASTIC__API_SECRET=your-api-key-secret
 
+# Bearer token / OIDC auth (exclusive with API key and basic auth)
+ELASTIC__BEARER_AUTH=your-token
+
+# Elastic Cloud (replaces HOSTS)
+ELASTIC__CLOUD_ID=name:base64-cloud-id
+
+# Request metadata
+ELASTIC__OPAQUE_ID=billing-service          # sent as X-Opaque-Id
+ELASTIC__HEADERS='{"X-Team": "core"}'
+
 # TLS/SSL
+ELASTIC__SSL_VERSION=772                    # ssl.TLSVersion value (772 = TLS 1.3)
 ELASTIC__CA_CERTS=/path/to/ca.crt
 ELASTIC__VERIFY_CERTS=true
 
@@ -798,6 +809,18 @@ The repository pattern, index alias strategy, connection health check and OpenTe
 - `ElasticsearchConfig` logs a warning when sniffing is enabled with a single non-localhost host — this may bypass
   load balancers. Disable sniffing (`SNIFF_ON_START=False`, `SNIFF_BEFORE_REQUESTS=False`) when connecting through
   a load balancer or Elastic Cloud.
+
+### Auth, cloud and request options
+
+- `BEARER_AUTH` sends `Authorization: Bearer <token>`; it cannot be combined with API key or basic auth, and
+  `ElasticsearchConfig` raises `InvalidArgumentError` when it is.
+- `CLOUD_ID` replaces `HOSTS` because the client treats them as mutually exclusive, and it turns sniffing off
+  because the client refuses sniffing with a cloud ID.
+- `OPAQUE_ID` and `HEADERS` are added to every request.
+- `SSL_VERSION` and `SSL_CONTEXT` (an `ssl.SSLContext`, set in code) are passed to the client. A custom `SSL_CONTEXT`
+  takes precedence over the file-based TLS settings.
+- Unset options are not passed, so the client keeps its defaults.
+- `connect_timeout` and `proxy` are not options of elasticsearch-py 9.x, so they are not exposed.
 
 ### Node pool options
 

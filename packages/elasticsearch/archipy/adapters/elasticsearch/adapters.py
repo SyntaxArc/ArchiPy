@@ -34,6 +34,36 @@ logger = logging.getLogger(__name__)
 _BODY_FIELD_ALIASES: dict[str, str] = {"from": "from_"}
 
 
+def _apply_optional_client_kwargs(kwargs: dict[str, Any], configs: ElasticsearchConfig) -> None:
+    """Add the client options that are only passed when set, so unset keeps the client defaults.
+
+    Args:
+        kwargs (dict[str, Any]): Client keyword arguments, updated in place.
+        configs (ElasticsearchConfig): Configuration settings for Elasticsearch.
+    """
+    if configs.BEARER_AUTH:
+        kwargs["bearer_auth"] = configs.BEARER_AUTH.get_secret_value()
+    if configs.SSL_VERSION is not None:
+        kwargs["ssl_version"] = configs.SSL_VERSION
+    if configs.SSL_CONTEXT is not None:
+        kwargs["ssl_context"] = configs.SSL_CONTEXT
+    if configs.OPAQUE_ID:
+        kwargs["opaque_id"] = configs.OPAQUE_ID
+    if configs.HEADERS:
+        kwargs["headers"] = configs.HEADERS
+    if configs.CLOUD_ID:
+        # The client rejects hosts, and any sniffing option (even False), together with a cloud ID
+        kwargs["cloud_id"] = configs.CLOUD_ID
+        for option in (
+            "hosts",
+            "sniff_on_start",
+            "sniff_before_requests",
+            "sniff_on_node_failure",
+            "min_delay_between_sniffing",
+        ):
+            kwargs.pop(option, None)
+
+
 @cache
 def _keyword_parameters(function: Callable[..., Any]) -> frozenset[str]:
     """Return the keyword parameters of an elasticsearch-py API function, excluding ``body``.
@@ -154,6 +184,7 @@ class ElasticsearchAdapter(ElasticsearchPort):
         if configs.SNIFF_BEFORE_REQUESTS:
             kwargs["min_delay_between_sniffing"] = configs.MIN_DELAY_BETWEEN_SNIFFING
 
+        _apply_optional_client_kwargs(kwargs, configs)
         client = Elasticsearch(**kwargs)
         # ignore_status is a per-client option set through options(), not a constructor argument
         if configs.IGNORE_STATUS:
@@ -454,6 +485,7 @@ class AsyncElasticsearchAdapter(AsyncElasticsearchPort):
         if configs.SNIFF_BEFORE_REQUESTS:
             kwargs["min_delay_between_sniffing"] = configs.MIN_DELAY_BETWEEN_SNIFFING
 
+        _apply_optional_client_kwargs(kwargs, configs)
         client = AsyncElasticsearch(**kwargs)
         # ignore_status is a per-client option set through options(), not a constructor argument
         if configs.IGNORE_STATUS:
