@@ -111,6 +111,37 @@ Feature: Kafka Clients and Spans Testing
       | SASL_SSL       | SCRAM-SHA-512 | user     | -      | -          | -          | sasl.username,ssl.endpoint.identification.algorithm | ssl.ca.location                        |
       | PLAINTEXT      | -             | -        | -      | -          | -          | security.protocol                                   | sasl.mechanism,ssl.ca.location         |
 
+  Scenario Outline: A <role> built with Kafka setting <setting> set to <value> passes <option> to librdkafka as <expected>
+    When Kafka client settings are built for a <role> with Kafka setting <setting> set to <value>
+    Then the Kafka client option "<option>" should be "<expected>"
+
+    Examples:
+      | role           | setting                  | value      | option                   | expected   |
+      | sync client    | CLIENT_ID                | my-app     | client.id                | my-app     |
+      | async producer | CLIENT_ID                | my-app     | client.id                | my-app     |
+      | async consumer | CLIENT_ID                | my-app     | client.id                | my-app     |
+      | sync client    | CONNECTIONS_MAX_IDLE_MS  | 60000      | connections.max.idle.ms  | 60000      |
+      | async producer | SOCKET_TIMEOUT_MS        | 20000      | socket.timeout.ms        | 20000      |
+      | async consumer | RECONNECT_BACKOFF_MAX_MS | 5000       | reconnect.backoff.max.ms | 5000       |
+      | async producer | RETRY_BACKOFF_MS         | 250        | retry.backoff.ms         | 250        |
+      | async producer | MESSAGE_TIMEOUT_MS       | 90000      | message.timeout.ms       | 90000      |
+      | async consumer | GROUP_INSTANCE_ID        | instance-1 | group.instance.id        | instance-1 |
+      | async consumer | ENABLE_AUTO_OFFSET_STORE | false      | enable.auto.offset.store | False      |
+      | async producer | SOCKET_TIMEOUT_MS        | unset      | socket.timeout.ms        | absent     |
+      | async consumer | GROUP_INSTANCE_ID        | unset      | group.instance.id        | absent     |
+      | async producer | GROUP_INSTANCE_ID        | instance-1 | group.instance.id        | absent     |
+
+  Scenario Outline: Listing topics with the <adapter_kind> adapter waits for the configured timeout of <timeout_ms> ms
+    Given an unreachable Kafka broker
+    When I list topics with the <adapter_kind> adapter on that broker with the default timeout set to <timeout_ms> ms
+    Then listing topics should have waited at least <seconds> seconds
+
+    Examples:
+      | adapter_kind   | timeout_ms | seconds |
+      | admin          | 2500       | 2.5     |
+      | sync producer  | 1500       | 1.5     |
+      | async producer | 2000       | 2.0     |
+
   Scenario Outline: A Kafka configuration with protocol <protocol>, mechanism <mechanism> and username <username> is rejected
     When a Kafka configuration is validated with protocol <protocol>, mechanism <mechanism> and username <username>
     Then the Kafka configuration should be rejected as incomplete

@@ -59,7 +59,40 @@ class KafkaConfig(BaseModel):
     CLIENT_ID: str = Field(default="kafka-client", description="Client identifier")
     CONNECTIONS_MAX_IDLE_MS: int = Field(
         default=540000,
-        description="Close idle connections after this number of milliseconds",
+        ge=0,
+        description="Close idle connections after this number of milliseconds (0 disables)",
+    )
+    SOCKET_TIMEOUT_MS: int | None = Field(
+        default=None,
+        ge=10,
+        description="Default timeout for network requests in ms (socket.timeout.ms); None keeps the librdkafka default",
+    )
+    RECONNECT_BACKOFF_MAX_MS: int | None = Field(
+        default=None,
+        ge=0,
+        description="Maximum time to wait before reconnecting to a broker in ms; None keeps the librdkafka default",
+    )
+    RETRY_BACKOFF_MS: int | None = Field(
+        default=None,
+        ge=1,
+        description="Backoff time before retrying a protocol request in ms; None keeps the librdkafka default",
+    )
+    MESSAGE_TIMEOUT_MS: int | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Producer message timeout in ms (message.timeout.ms). librdkafka treats it as an alias of "
+            "delivery.timeout.ms, so when set it takes precedence over DELIVERY_TIMEOUT_MS; None keeps "
+            "DELIVERY_TIMEOUT_MS in effect"
+        ),
+    )
+    GROUP_INSTANCE_ID: str | None = Field(
+        default=None,
+        description="Static group membership ID for consumers (group.instance.id); None disables static membership",
+    )
+    ENABLE_AUTO_OFFSET_STORE: bool | None = Field(
+        default=None,
+        description="Consumer enable.auto.offset.store; None keeps the librdkafka default (true)",
     )
     ENABLE_IDEMPOTENCE: bool = Field(default=False, description="Enable idempotent producer for exactly-once delivery")
     TRANSACTIONAL_ID: str | None = Field(default=None, description="Transactional ID for the producer")
