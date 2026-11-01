@@ -71,7 +71,10 @@ class MinioPort:
 
     @abstractmethod
     def remove_objects(self, bucket_name: str, object_names: list[str]) -> None:
-        """Remove multiple objects from a bucket in a single request.
+        """Remove multiple objects from a bucket.
+
+        Deletion runs in batches of at most 1000 keys. Per-key failures are collected
+        and raised as StorageError with the failed keys.
 
         Args:
             bucket_name: Bucket name.

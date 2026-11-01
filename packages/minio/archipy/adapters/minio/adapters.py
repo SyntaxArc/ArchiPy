@@ -58,6 +58,8 @@ CONNECTION_EXCEPTIONS = (
     ConnectionClosedError,
 )
 
+DELETE_OBJECTS_BATCH_SIZE = 1000
+
 
 def _raise_invalid_argument(argument_name: str) -> NoReturn:
     """Raise InvalidArgumentError outside try bodies (TRY301)."""
@@ -584,7 +586,10 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
 
     @override
     def remove_objects(self, bucket_name: str, object_names: list[str]) -> None:
-        """Remove multiple objects from a bucket in a single request.
+        """Remove multiple objects from a bucket.
+
+        Deletion runs in batches of at most 1000 keys. Per-key failures are collected
+        and raised as StorageError with the failed keys.
 
         Args:
             bucket_name: Bucket name.
@@ -602,12 +607,20 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             if not object_names:
                 _raise_invalid_argument("object_names")
 
-            delete_payload = {
-                "Objects": [{"Key": name} for name in object_names],
-                "Quiet": True,
-            }
-            self._client.delete_objects(Bucket=bucket_name, Delete=delete_payload)
+            failed_keys: list[str] = []
+            for batch_start in range(0, len(object_names), DELETE_OBJECTS_BATCH_SIZE):
+                batch = object_names[batch_start : batch_start + DELETE_OBJECTS_BATCH_SIZE]
+                delete_payload = {
+                    "Objects": [{"Key": name} for name in batch],
+                    "Quiet": True,
+                }
+                response = self._client.delete_objects(Bucket=bucket_name, Delete=delete_payload)
+                failed_keys.extend(
+                    str(error["Key"]) for error in response.get("Errors", []) if error.get("Key") is not None
+                )
             self._clear_object_caches()
+            if failed_keys:
+                raise StorageError(additional_data={"failed_keys": failed_keys})
         except InvalidArgumentError:
             raise
         except ClientError as e:
