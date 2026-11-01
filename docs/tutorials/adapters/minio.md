@@ -303,6 +303,8 @@ except InternalError as e:
     raise
 ```
 
+Connect and read timeouts (`ConnectionTimeoutError`) and connection failures (`NetworkError`) are raised as their own errors, not `InternalError`.
+
 ## Performance Optimization
 
 The MinioAdapter includes TTL caching for frequently accessed operations:
