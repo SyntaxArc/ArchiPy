@@ -3930,6 +3930,13 @@ is restored after the call. <code>async def</code> functions are bounded with <c
 </span><span id="__span-3-45"><a id="__codelineno-3-45" name="__codelineno-3-45" href="#__codelineno-3-45"></a><span class="c1"># Clear the cache if needed</span>
 </span><span id="__span-3-46"><a id="__codelineno-3-46" name="__codelineno-3-46" href="#__codelineno-3-46"></a><span class="n">fetch_user_data</span><span class="o">.</span><span class="n">clear_cache</span><span class="p">()</span>
 </span></code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Methods share one cache by default</p>
+<p>On an instance method, <code>ttl_cache</code> keeps a single cache for all instances, keyed by the
+arguments only. Results that depend on instance state (endpoint, credentials, tenant) would leak
+between instances. Use <code>@ttl_cache(ttl_seconds=60, per_instance=True)</code> to give every instance its
+own cache; <code>clear_cache()</code> then clears only that instance's entries.</p>
+</div>
 <h2 id="sqlalchemy-transaction-decorators">SQLAlchemy Transaction Decorators<a class="headerlink" href="#sqlalchemy-transaction-decorators" title="Permanent link">&para;</a></h2>
 <p>These decorators automatically manage database transactions.</p>
 <div class="admonition note">

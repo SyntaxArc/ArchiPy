@@ -3926,6 +3926,8 @@ are deprecated and emit a <code>DeprecationWarning</code>. They will be removed 
 </span><span id="__span-6-48"><a id="__codelineno-6-48" name="__codelineno-6-48" href="#__codelineno-6-48"></a>
 </span><span id="__span-6-49"><a id="__codelineno-6-49" name="__codelineno-6-49" href="#__codelineno-6-49"></a><span class="n">uvicorn</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">"0.0.0.0"</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">8000</span><span class="p">)</span>  <span class="c1"># noqa: S104</span>
 </span></code></pre></div>
+<p><code>resource_type</code> and <code>resource_type_param</code> go together: setting only one raises <code>ConfigurationError</code> when the
+dependency is built, instead of silently skipping the ownership check.</p>
 <p><code>fastapi_auth</code> returns the UserInfo dict, and it sets <code>AuthContextManager</code> for the request, so code below the endpoint
 can read the caller without receiving the request:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">archipy.adapters.keycloak.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">AuthContextManager</span>
