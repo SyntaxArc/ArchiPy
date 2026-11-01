@@ -162,6 +162,7 @@ so are values that are valid alone but invalid together (for example a batch siz
 | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_ENDPOINT` | `OTLP_ENDPOINT`, `TRACES_ENDPOINT`, `METRICS_ENDPOINT`, `LOGS_ENDPOINT` |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` (`grpc`, `http/protobuf`)     | `PROTOCOL`                                                        |
 | `OTEL_EXPORTER_OTLP_HEADERS` (`k=v,k=v`)                    | `OTLP_HEADERS`                                                    |
+| `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_HEADERS` (`k=v,k=v`; replaces `OTLP_HEADERS` for that signal) | `TRACES_HEADERS`, `METRICS_HEADERS`, `LOGS_HEADERS` |
 | `OTEL_EXPORTER_OTLP_TIMEOUT` (seconds, as the Python SDK reads it) | `TIMEOUT`                                                  |
 | `OTEL_EXPORTER_OTLP_COMPRESSION` (`none`, `gzip`)           | `OTLP_COMPRESSION`                                                |
 | `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG`            | `TRACES_SAMPLER`, `TRACES_SAMPLE_RATIO` (the Jaeger and X-Ray samplers are not supported) |

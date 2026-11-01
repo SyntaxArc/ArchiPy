@@ -285,7 +285,7 @@ class TemporalAdapter(TemporalPort):
         return TemporalRuntimeManager().get_runtime(
             otel_metrics_enabled=True,
             otlp_endpoint=otlp_endpoint,
-            headers=dict(otel.OTLP_HEADERS),
+            headers=dict(otel.METRICS_HEADERS if otel.METRICS_HEADERS is not None else otel.OTLP_HEADERS),
             use_http=(otel.PROTOCOL == "http/protobuf"),
             prometheus_bind_address=prometheus_bind_address,
             global_tags=self.config.METRICS_GLOBAL_TAGS,

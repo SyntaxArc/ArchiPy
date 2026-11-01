@@ -93,6 +93,18 @@ class OpentelemetryConfig(BaseModel):
         default_factory=dict,
         description="Headers sent with each OTLP export (auth tokens, routing metadata)",
     )
+    TRACES_HEADERS: dict[str, str] | None = Field(
+        default=None,
+        description="Optional per-signal OTLP traces headers; when set they replace OTLP_HEADERS for traces",
+    )
+    METRICS_HEADERS: dict[str, str] | None = Field(
+        default=None,
+        description="Optional per-signal OTLP metrics headers; when set they replace OTLP_HEADERS for metrics",
+    )
+    LOGS_HEADERS: dict[str, str] | None = Field(
+        default=None,
+        description="Optional per-signal OTLP logs headers; when set they replace OTLP_HEADERS for logs",
+    )
     TIMEOUT: float = Field(default=10.0, ge=0.1, description="OTLP export timeout in seconds")
     TRACES_SAMPLER: OtelSampler = Field(
         default=OtelSampler.PARENTBASED_TRACEIDRATIO,

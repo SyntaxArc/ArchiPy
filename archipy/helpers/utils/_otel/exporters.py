@@ -120,8 +120,18 @@ def _grpc_compression(otel: OpentelemetryConfig) -> grpc.Compression | None:
     return grpc.Compression.Gzip if otel.OTLP_COMPRESSION == "gzip" else None
 
 
+def _signal_headers(otel: OpentelemetryConfig, signal: str) -> dict[str, str] | None:
+    """Return the OTLP headers of one signal: ``<SIGNAL>_HEADERS`` when set, else ``OTLP_HEADERS``.
+
+    A per-signal value replaces the shared one instead of merging with it, as the OpenTelemetry specification
+    defines, so two signals can carry different ``Authorization`` headers.
+    """
+    specific: dict[str, str] | None = getattr(otel, f"{signal}_HEADERS", None)
+    return dict(specific if specific is not None else otel.OTLP_HEADERS) or None
+
+
 def create_span_exporter(otel: OpentelemetryConfig) -> SpanExporter:
-    headers = dict(otel.OTLP_HEADERS) or None
+    headers = _signal_headers(otel, "TRACES")
     endpoint = resolve_otlp_endpoint(otel, "traces", getattr(otel, "TRACES_ENDPOINT", None))
     if otel.PROTOCOL == "http/protobuf":
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
@@ -147,7 +157,7 @@ def create_span_exporter(otel: OpentelemetryConfig) -> SpanExporter:
 
 
 def create_metric_exporter(otel: OpentelemetryConfig) -> MetricExporter:
-    headers = dict(otel.OTLP_HEADERS) or None
+    headers = _signal_headers(otel, "METRICS")
     endpoint = resolve_metrics_endpoint(otel)
     if otel.PROTOCOL == "http/protobuf":
         from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
@@ -173,7 +183,7 @@ def create_metric_exporter(otel: OpentelemetryConfig) -> MetricExporter:
 
 
 def create_otlp_log_exporter(otel: OpentelemetryConfig) -> LogRecordExporter:
-    headers = dict(otel.OTLP_HEADERS) or None
+    headers = _signal_headers(otel, "LOGS")
     endpoint = resolve_otlp_endpoint(otel, "logs", getattr(otel, "LOGS_ENDPOINT", None))
     if otel.PROTOCOL == "http/protobuf":
         from opentelemetry.exporter.otlp.proto.http._log_exporter import (
