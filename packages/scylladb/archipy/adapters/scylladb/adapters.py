@@ -9,7 +9,7 @@ import logging
 import re
 import time
 import warnings
-from typing import Any, Final, NoReturn, TypedDict, override
+from typing import Any, Final, Literal, NoReturn, TypedDict, override
 
 from async_lru import alru_cache
 from cassandra import (
@@ -45,9 +45,9 @@ from cassandra.policies import (
     TokenAwarePolicy,
 )
 from cassandra.protocol import ProtocolException, RequestValidationException
-from cassandra.query import BatchStatement, PreparedStatement, SimpleStatement
+from cassandra.query import BatchStatement, BatchType, PreparedStatement, SimpleStatement
 
-from archipy.adapters.scylladb.ports import AsyncScyllaDBPort, ScyllaDBPort
+from archipy.adapters.scylladb.ports import AsyncScyllaDBPort, BatchItem, ScyllaDBPort
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import ScyllaDBConfig
 from archipy.helpers.decorators import ttl_cache
@@ -65,6 +65,17 @@ from archipy.models.errors import (
 
 logger = logging.getLogger(__name__)
 _CQL_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+# ConnectionException, ProtocolException and ProtocolVersionUnsupported do not derive from DriverException
+_DRIVER_ERRORS: Final = (
+    DriverException,
+    NoHostAvailable,
+    RequestValidationException,
+    ConnectionException,
+    ProtocolException,
+    ProtocolVersionUnsupported,
+    OSError,
+)
+_BATCH_TYPES: Final = {"LOGGED": BatchType.LOGGED, "UNLOGGED": BatchType.UNLOGGED, "COUNTER": BatchType.COUNTER}
 _UNCONFIGURED_TABLE_PATTERN = re.compile(r"unconfigured table\s+\"?([A-Za-z0-9_.]+)", re.IGNORECASE)
 # Fixed texts: probe responses must not reveal driver messages, hosts or addresses; details go to the log.
 _HEALTH_CHECK_FAILED: Final = "unavailable"
@@ -188,6 +199,21 @@ def _warn_insecure_connection(config: ScyllaDBConfig) -> None:
         logger.warning("ScyllaDB TLS certificate verification is disabled: the server identity is not checked")
 
 
+class _IdempotentSafeRetryPolicy(ExponentialBackoffRetryPolicy):
+    """Exponential backoff that retries request errors on the next host only for idempotent statements.
+
+    The driver calls ``on_request_error`` for server errors and connection loss without checking idempotency, and the
+    request may already have been applied; retrying a non-idempotent write could apply it twice. Unavailable errors
+    are safe to retry because the request was never executed.
+    """
+
+    @override
+    def on_request_error(self, query: Any, consistency: Any, error: Any, retry_num: int) -> tuple[int, Any, Any]:
+        if not getattr(query, "is_idempotent", False):
+            return self.RETHROW, None, None
+        return super().on_request_error(query, consistency, error, retry_num)
+
+
 class _HostPoolStat(TypedDict):
     """Per-host connection pool statistics for ScyllaDB monitoring."""
 
@@ -307,6 +333,32 @@ class ScyllaDBExceptionHandlerMixin:
         return identifier
 
     @staticmethod
+    def _build_batch(statements: list[BatchItem], batch_type: str, consistency_level: int) -> BatchStatement:
+        """Build a batch from CQL strings and ``(statement, params)`` pairs.
+
+        Args:
+            statements: Items to add to the batch.
+            batch_type: One of LOGGED, UNLOGGED or COUNTER.
+            consistency_level: Consistency level for the batch.
+
+        Returns:
+            The batch statement.
+
+        Raises:
+            InvalidArgumentError: If the batch type is unknown or the batch is empty.
+        """
+        if batch_type not in _BATCH_TYPES or not statements:
+            raise InvalidArgumentError(argument_name="batch")
+        batch = BatchStatement(batch_type=_BATCH_TYPES[batch_type], consistency_level=consistency_level)
+        for item in statements:
+            if isinstance(item, str):
+                batch.add(SimpleStatement(item))
+            else:
+                statement, params = item
+                batch.add(SimpleStatement(statement) if isinstance(statement, str) else statement, params)
+        return batch
+
+    @staticmethod
     def _warn_single_replica(config: ScyllaDBConfig, keyspace: str, replication_factor: int) -> None:
         """Log a warning when a keyspace is created with a single replica, which has no redundancy.
 
@@ -402,7 +454,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             if self.config.KEYSPACE:
                 self._session.set_keyspace(self.config.KEYSPACE)
 
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "connect")
             raise
 
@@ -452,7 +504,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         if self.config.RETRY_POLICY == "FALLTHROUGH":
             retry_policy = FallthroughRetryPolicy()
         else:  # EXPONENTIAL_BACKOFF (default)
-            retry_policy = ExponentialBackoffRetryPolicy(
+            retry_policy = _IdempotentSafeRetryPolicy(
                 max_num_retries=self.config.RETRY_MAX_NUM_RETRIES,
                 min_interval=self.config.RETRY_MIN_INTERVAL,
                 max_interval=self.config.RETRY_MAX_INTERVAL,
@@ -510,7 +562,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         session = self.get_session()
         try:
             result = session.execute(query, params) if params else session.execute(query)
-        except (DriverException, NoHostAvailable, RequestValidationException) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "execute")
             raise
         else:
@@ -532,10 +584,10 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 # Use cached version if available - call the cached method
                 cached_method: Any = getattr(self, "_prepare_cached", None)
                 if cached_method is not None:
-                    return cached_method(query)
+                    return cached_method(session.keyspace, query)
             # Direct prepare without cache
             prepared = session.prepare(query)
-        except (DriverException, NoHostAvailable, RequestValidationException) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "prepare")
             raise
         else:
@@ -545,12 +597,12 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """Post-initialization hook to apply cache decorator if enabled."""
         if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
             # Create a method to cache
-            def _prepare_internal(query: str) -> PreparedStatement:
-                """Internal cached method to prepare a CQL statement."""
+            def _prepare_internal(keyspace: str | None, query: str) -> PreparedStatement:  # noqa: ARG001
+                """Prepare a CQL statement; the keyspace only keys the cache."""
                 session = self.get_session()
                 try:
                     prepared = session.prepare(query)
-                except (DriverException, NoHostAvailable, RequestValidationException) as e:
+                except _DRIVER_ERRORS as e:
                     self._handle_scylladb_exception(e, "prepare")
                     raise
                 else:
@@ -564,7 +616,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             # Store the cached version using setattr for dynamic attribute
             self._prepare_cached = cached_prepare
 
-    def _execute_dml(self, query: str, params: tuple[Any, ...] | None) -> ResultSet:
+    def _execute_dml(self, query: str, params: tuple[Any, ...] | None, *, idempotent: bool = True) -> ResultSet:
         """Run a query built from validated identifiers and bound values.
 
         With the prepared statement cache on, the query is prepared (once) and executed with bound values, which keeps
@@ -573,12 +625,16 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Args:
             query (str): CQL using ``%s`` placeholders.
             params (tuple[Any, ...] | None): Values to bind.
+            idempotent (bool): Whether running the statement twice has the same effect as once. Request errors are only
+                retried on another host for idempotent statements. Defaults to True.
 
         Returns:
             ResultSet: The query result set.
         """
         if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
-            return self.execute_prepared(self.prepare(query.replace("%s", "?")), params)
+            statement = self.prepare(query.replace("%s", "?"))
+            statement.is_idempotent = idempotent
+            return self.execute_prepared(statement, params)
         return self.execute(query, params)
 
     @override
@@ -599,7 +655,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         session = self.get_session()
         try:
             result = session.execute(statement, params) if params else session.execute(statement)
-        except (DriverException, NoHostAvailable, RequestValidationException) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "execute_prepared")
             raise
         else:
@@ -636,7 +692,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             """
         try:
             self.execute(query)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "create_keyspace")
             raise
 
@@ -651,7 +707,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"DROP KEYSPACE IF EXISTS {keyspace}"
         try:
             self.execute(query)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "drop_keyspace")
             raise
 
@@ -666,7 +722,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             keyspace = self._validate_cql_identifier(keyspace, "keyspace")
             session.set_keyspace(keyspace)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "use_keyspace")
             raise
 
@@ -679,7 +735,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         try:
             self.execute(table_schema)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "create_table")
             raise
 
@@ -694,7 +750,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"DROP TABLE IF EXISTS {table}"
         try:
             self.execute(query)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "drop_table")
             raise
 
@@ -728,8 +784,8 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
 
         try:
-            self._execute_dml(query, tuple(data.values()))
-        except (DriverException, NoHostAvailable) as e:
+            self._execute_dml(query, tuple(data.values()), idempotent=not if_not_exists)
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "insert")
             raise
 
@@ -770,7 +826,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             result = self._execute_dml(query, params)
             return list(result)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "select")
             raise
 
@@ -807,7 +863,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         try:
             self._execute_dml(query, params)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "update")
             raise
 
@@ -826,26 +882,31 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         try:
             self._execute_dml(query, tuple(conditions.values()))
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "delete")
             raise
 
     @override
-    def batch_execute(self, statements: list[str]) -> None:
+    def batch_execute(
+        self,
+        statements: list[BatchItem],
+        batch_type: Literal["LOGGED", "UNLOGGED", "COUNTER"] = "LOGGED",
+    ) -> None:
         """Execute multiple CQL statements in a batch.
 
         Args:
-            statements (list[str]): List of CQL statements to execute in batch.
+            statements (list[BatchItem]): CQL strings, or ``(statement, params)`` pairs where the statement is a CQL
+                string with ``%s`` placeholders or a prepared statement.
+            batch_type (Literal["LOGGED", "UNLOGGED", "COUNTER"]): ``LOGGED`` (default) is atomic across partitions
+                but costs a batch log; use ``UNLOGGED`` for statements on one partition and ``COUNTER`` for counters.
         """
         session = self.get_session()
-        batch = BatchStatement(consistency_level=self._get_consistency_level())
 
         try:
-            for stmt in statements:
-                batch.add(SimpleStatement(stmt))
+            batch = self._build_batch(statements, batch_type, self._get_consistency_level())
 
             session.execute(batch)
-        except (DriverException, NoHostAvailable, RequestValidationException) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "batch_execute")
             raise
 
@@ -948,7 +1009,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             result = self._execute_dml(query, params)
             row = result.one()
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "count")
             raise
         else:
@@ -974,7 +1035,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             result = self._execute_dml(query, tuple(conditions.values()))
             row = result.one()
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "exists")
             raise
         else:
@@ -1071,7 +1132,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             if self.config.KEYSPACE:
                 self._session.set_keyspace(self.config.KEYSPACE)
 
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "connect")
             raise
 
@@ -1121,7 +1182,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         if self.config.RETRY_POLICY == "FALLTHROUGH":
             retry_policy = FallthroughRetryPolicy()
         else:  # EXPONENTIAL_BACKOFF (default)
-            retry_policy = ExponentialBackoffRetryPolicy(
+            retry_policy = _IdempotentSafeRetryPolicy(
                 max_num_retries=self.config.RETRY_MAX_NUM_RETRIES,
                 min_interval=self.config.RETRY_MIN_INTERVAL,
                 max_interval=self.config.RETRY_MAX_INTERVAL,
@@ -1214,7 +1275,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             future = session.execute_async(query, params) if params else session.execute_async(query)
             result = await self._await_future(future)
-        except (DriverException, NoHostAvailable, RequestValidationException) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "execute")
             raise
         else:
@@ -1236,10 +1297,10 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                 # Use cached version if available - call the cached method
                 cached_method: Any = getattr(self, "_prepare_cached", None)
                 if cached_method is not None:
-                    return await cached_method(query)
+                    return await cached_method(session.keyspace, query)
             # Direct prepare without cache
             prepared = await asyncio.to_thread(session.prepare, query)
-        except (DriverException, NoHostAvailable, RequestValidationException) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "prepare")
             raise
         else:
@@ -1249,12 +1310,12 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """Post-initialization hook to apply cache decorator if enabled."""
         if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
             # Create an async method to cache
-            async def _prepare_internal(query: str) -> PreparedStatement:
-                """Internal cached method to prepare a CQL statement asynchronously."""
+            async def _prepare_internal(keyspace: str | None, query: str) -> PreparedStatement:  # noqa: ARG001
+                """Prepare a CQL statement asynchronously; the keyspace only keys the cache."""
                 session = await self.get_session()
                 try:
                     prepared = await asyncio.to_thread(session.prepare, query)
-                except (DriverException, NoHostAvailable, RequestValidationException) as e:
+                except _DRIVER_ERRORS as e:
                     self._handle_scylladb_exception(e, "prepare")
                     raise
                 else:
@@ -1268,7 +1329,13 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             # Store the cached version using setattr for dynamic attribute
             self._prepare_cached = cached_prepare
 
-    async def _execute_dml(self, query: str, params: tuple[Any, ...] | None) -> ResultSet:
+    async def _execute_dml(
+        self,
+        query: str,
+        params: tuple[Any, ...] | None,
+        *,
+        idempotent: bool = True,
+    ) -> ResultSet:
         """Run a query built from validated identifiers and bound values.
 
         With the prepared statement cache on, the query is prepared (once) and executed with bound values, which keeps
@@ -1277,12 +1344,16 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Args:
             query (str): CQL using ``%s`` placeholders.
             params (tuple[Any, ...] | None): Values to bind.
+            idempotent (bool): Whether running the statement twice has the same effect as once. Request errors are only
+                retried on another host for idempotent statements. Defaults to True.
 
         Returns:
             ResultSet: The query result set.
         """
         if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
-            return await self.execute_prepared(await self.prepare(query.replace("%s", "?")), params)
+            statement = await self.prepare(query.replace("%s", "?"))
+            statement.is_idempotent = idempotent
+            return await self.execute_prepared(statement, params)
         return await self.execute(query, params)
 
     @override
@@ -1304,7 +1375,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             future = session.execute_async(statement, params) if params else session.execute_async(statement)
             result = await self._await_future(future)
-        except (DriverException, NoHostAvailable, RequestValidationException) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "execute_prepared")
             raise
         else:
@@ -1341,7 +1412,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             """
         try:
             await self.execute(query)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "create_keyspace")
             raise
 
@@ -1356,7 +1427,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"DROP KEYSPACE IF EXISTS {keyspace}"
         try:
             await self.execute(query)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "drop_keyspace")
             raise
 
@@ -1371,7 +1442,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             keyspace = self._validate_cql_identifier(keyspace, "keyspace")
             await asyncio.to_thread(session.set_keyspace, keyspace)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "use_keyspace")
             raise
 
@@ -1384,7 +1455,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         """
         try:
             await self.execute(table_schema)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "create_table")
             raise
 
@@ -1399,7 +1470,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"DROP TABLE IF EXISTS {table}"
         try:
             await self.execute(query)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "drop_table")
             raise
 
@@ -1433,8 +1504,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
 
         try:
-            await self._execute_dml(query, tuple(data.values()))
-        except (DriverException, NoHostAvailable) as e:
+            await self._execute_dml(query, tuple(data.values()), idempotent=not if_not_exists)
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "insert")
             raise
 
@@ -1475,7 +1546,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             result = await self._execute_dml(query, params)
             return list(result)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "select")
             raise
 
@@ -1512,7 +1583,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         try:
             await self._execute_dml(query, params)
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "update")
             raise
 
@@ -1531,27 +1602,32 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
 
         try:
             await self._execute_dml(query, tuple(conditions.values()))
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "delete")
             raise
 
     @override
-    async def batch_execute(self, statements: list[str]) -> None:
+    async def batch_execute(
+        self,
+        statements: list[BatchItem],
+        batch_type: Literal["LOGGED", "UNLOGGED", "COUNTER"] = "LOGGED",
+    ) -> None:
         """Execute multiple CQL statements in a batch asynchronously.
 
         Args:
-            statements (list[str]): List of CQL statements to execute in batch.
+            statements (list[BatchItem]): CQL strings, or ``(statement, params)`` pairs where the statement is a CQL
+                string with ``%s`` placeholders or a prepared statement.
+            batch_type (Literal["LOGGED", "UNLOGGED", "COUNTER"]): ``LOGGED`` (default) is atomic across partitions
+                but costs a batch log; use ``UNLOGGED`` for statements on one partition and ``COUNTER`` for counters.
         """
         session = await self.get_session()
-        batch = BatchStatement(consistency_level=self._get_consistency_level())
 
         try:
-            for stmt in statements:
-                batch.add(SimpleStatement(stmt))
+            batch = self._build_batch(statements, batch_type, self._get_consistency_level())
 
             future = session.execute_async(batch)
             await self._await_future(future)
-        except (DriverException, NoHostAvailable, RequestValidationException) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "batch_execute")
             raise
 
@@ -1658,7 +1734,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             result = await self._execute_dml(query, params)
             row = result.one()
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "count")
             raise
         else:
@@ -1684,7 +1760,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         try:
             result = await self._execute_dml(query, tuple(conditions.values()))
             row = result.one()
-        except (DriverException, NoHostAvailable) as e:
+        except _DRIVER_ERRORS as e:
             self._handle_scylladb_exception(e, "exists")
             raise
         else:
