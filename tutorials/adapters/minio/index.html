@@ -4182,6 +4182,7 @@ outside the intended client.</p>
 </span><span id="__span-11-24"><a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Internal error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="__span-11-25"><a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a>    <span class="k">raise</span>
 </span></code></pre></div>
+<p>Connect and read timeouts (<code>ConnectionTimeoutError</code>) and connection failures (<code>NetworkError</code>) are raised as their own errors, not <code>InternalError</code>.</p>
 <h2 id="performance-optimization">Performance Optimization<a class="headerlink" href="#performance-optimization" title="Permanent link">&para;</a></h2>
 <p>The MinioAdapter includes TTL caching for frequently accessed operations:</p>
 <div class="admonition note">
