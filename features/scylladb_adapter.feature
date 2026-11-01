@@ -371,6 +371,41 @@ Feature: ScyllaDB Adapter
       | asyn | select with zero limit     |
       | asyn | select with injected limit |
 
+  Scenario Outline: Driver exceptions are mapped by type
+    When I map the ScyllaDB driver exception "<exception>"
+    Then the ScyllaDB call should raise <error>
+
+    Examples: Exceptions
+      | exception                                      | error                   |
+      | OperationTimedOut                              | ConnectionTimeoutError  |
+      | ReadTimeout                                    | ConnectionTimeoutError  |
+      | Unavailable                                    | ServiceUnavailableError |
+      | NoHostAvailable                                | ServiceUnavailableError |
+      | AuthenticationFailed                           | InvalidCredentialsError |
+      | ProtocolVersionUnsupported                     | ConfigurationError      |
+      | ConnectionShutdown                             | NetworkError            |
+      | unrelated message about timeout and connection | DatabaseQueryError      |
+
+  @needs-scylladb
+  Scenario: A driver timeout reports its value
+    When I map the ScyllaDB driver exception "OperationTimedOut"
+    Then the ScyllaDB error should carry timeout 7
+
+  @needs-scylladb
+  Scenario Outline: A missing table error names the table
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "named_<mode>"
+    When I run ScyllaDB operation "select" on table "absent_<mode>"
+    Then the NotFoundError should name table "absent_<mode>"
+
+    Examples: Sync
+      | mode |
+      | syn  |
+
+    @async
+    Examples: Async
+      | mode |
+      | asyn |
+
   @needs-scylladb
   Scenario Outline: Prepared statements are cached and executed with bound parameters
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
@@ -425,6 +460,19 @@ Feature: ScyllaDB Adapter
     Examples: Async
       | mode |
       | asyn |
+
+  @needs-scylladb
+  Scenario Outline: The default execution profile uses the configured consistency level
+    Given a ScyllaDB adapter is configured
+    When I build a ScyllaDB cluster with consistency level <level>
+    Then the default execution profile should use consistency level <level>
+
+    Examples: Levels
+      | level        |
+      | ONE          |
+      | LOCAL_ONE    |
+      | LOCAL_QUORUM |
+      | QUORUM       |
 
   @needs-scylladb
   Scenario Outline: The cluster applies policies and timeout through the default execution profile with <setting> set

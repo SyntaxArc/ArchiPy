@@ -18,6 +18,7 @@ from cassandra import (
     DriverException,
     InvalidRequest,
     OperationTimedOut,
+    Timeout as DriverTimeout,
     Unavailable,
 )
 from cassandra.auth import PlainTextAuthProvider
@@ -26,10 +27,12 @@ from cassandra.cluster import (
     Cluster,
     ExecutionProfile,
     NoHostAvailable,
+    ProtocolVersionUnsupported,
     ResponseFuture,
     ResultSet,
     Session,
 )
+from cassandra.connection import ConnectionException
 from cassandra.policies import (
     AddressTranslator,
     ConstantReconnectionPolicy,
@@ -41,7 +44,7 @@ from cassandra.policies import (
     RoundRobinPolicy,
     TokenAwarePolicy,
 )
-from cassandra.protocol import RequestValidationException
+from cassandra.protocol import ProtocolException, RequestValidationException
 from cassandra.query import BatchStatement, PreparedStatement, SimpleStatement
 
 from archipy.adapters.scylladb.ports import AsyncScyllaDBPort, ScyllaDBPort
@@ -62,6 +65,7 @@ from archipy.models.errors import (
 
 logger = logging.getLogger(__name__)
 _CQL_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_UNCONFIGURED_TABLE_PATTERN = re.compile(r"unconfigured table\s+\"?([A-Za-z0-9_.]+)", re.IGNORECASE)
 # Fixed texts: probe responses must not reveal driver messages, hosts or addresses; details go to the log.
 _HEALTH_CHECK_FAILED: Final = "unavailable"
 _POOL_STATS_FAILED: Final = "unavailable"
@@ -178,53 +182,52 @@ class ScyllaDBExceptionHandlerMixin:
     """Mixin class to handle ScyllaDB/Cassandra exceptions in a consistent way."""
 
     @classmethod
-    def _raise_for_cassandra_driver_exception(cls, exception: Exception, error_msg: str, operation: str) -> None:
-        """Map known cassandra-driver exceptions when applicable."""
-        if isinstance(exception, Unavailable) or "unavailable" in error_msg:
+    def _raise_for_cassandra_driver_exception(cls, exception: Exception, operation: str) -> None:
+        """Map known driver exceptions by type; return when the exception is not one of them."""
+        if isinstance(exception, Unavailable | NoHostAvailable):
             raise ServiceUnavailableError(service="ScyllaDB") from exception
 
-        if isinstance(exception, OperationTimedOut) or "timeout" in error_msg:
+        if isinstance(exception, OperationTimedOut):
+            timeout = int(exception.timeout) if exception.timeout is not None else None
+            raise ConnectionTimeoutError(service="ScyllaDB", timeout=timeout) from exception
+
+        if isinstance(exception, DriverTimeout):  # ReadTimeout and WriteTimeout
             raise ConnectionTimeoutError(service="ScyllaDB", timeout=None) from exception
 
-        if isinstance(exception, AuthenticationFailed) or "authentication" in error_msg:
+        if isinstance(exception, AuthenticationFailed):
             raise InvalidCredentialsError() from exception
 
         if isinstance(exception, InvalidRequest | RequestValidationException):
             raise InvalidArgumentError(argument_name=operation) from exception
 
-        if "protocol" in error_msg:
+        if isinstance(exception, ProtocolException | ProtocolVersionUnsupported):
             raise ConfigurationError(operation="scylladb", reason="Protocol error") from exception
 
-        if isinstance(exception, NoHostAvailable) or "no host available" in error_msg:
-            raise ServiceUnavailableError(service="ScyllaDB") from exception
+        if isinstance(exception, ConnectionException | OSError):
+            raise NetworkError(service="ScyllaDB") from exception
 
     @classmethod
     def _handle_scylladb_exception(cls, exception: Exception, operation: str) -> NoReturn:
         """Handle ScyllaDB/Cassandra exceptions and map them to appropriate application errors.
+
+        Exceptions are mapped by type. The server reports a missing table as an ``InvalidRequest`` whose message is
+        the only place that names the table, so that one message is parsed.
 
         Args:
             exception: The original exception
             operation: The name of the operation that failed
 
         Raises:
-            Various application-specific errors based on the exception type/content
+            Various application-specific errors based on the exception type
         """
-        error_msg = str(exception).lower()
-
-        if "unconfigured table" in error_msg:
-            table_name = operation or "unknown"
+        match = _UNCONFIGURED_TABLE_PATTERN.search(str(exception))
+        if match:
             raise NotFoundError(
                 resource_type="table",
-                additional_data={"table_name": table_name},
+                additional_data={"table_name": match.group(1)},
             ) from exception
 
-        cls._raise_for_cassandra_driver_exception(exception, error_msg, operation)
-
-        if "network" in error_msg or "connection" in error_msg or "socket" in error_msg:
-            raise NetworkError(service="ScyllaDB") from exception
-
-        if "configuration" in error_msg or ("config" in error_msg and "unconfigured" not in error_msg):
-            raise ConfigurationError(operation="scylladb", reason="Configuration error") from exception
+        cls._raise_for_cassandra_driver_exception(exception, operation)
 
         if "connection" in operation.lower() or "connect" in operation.lower():
             raise DatabaseConnectionError(database="scylladb") from exception
@@ -427,6 +430,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                     load_balancing_policy=load_balancing_policy,
                     retry_policy=retry_policy,
                     request_timeout=self.config.REQUEST_TIMEOUT,
+                    consistency_level=self._get_consistency_level(),
                     **_execution_profile_options(self.config),
                 ),
             },
@@ -1055,6 +1059,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                     load_balancing_policy=load_balancing_policy,
                     retry_policy=retry_policy,
                     request_timeout=self.config.REQUEST_TIMEOUT,
+                    consistency_level=self._get_consistency_level(),
                     **_execution_profile_options(self.config),
                 ),
             },
