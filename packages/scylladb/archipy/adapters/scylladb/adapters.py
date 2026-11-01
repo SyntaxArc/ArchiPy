@@ -176,6 +176,21 @@ def _tls_cluster_options(config: ScyllaDBConfig) -> dict[str, Any]:
     return options
 
 
+class _IdempotentSafeRetryPolicy(ExponentialBackoffRetryPolicy):
+    """Exponential backoff that retries request errors on the next host only for idempotent statements.
+
+    The driver calls ``on_request_error`` for server errors and connection loss without checking idempotency, and the
+    request may already have been applied; retrying a non-idempotent write could apply it twice. Unavailable errors
+    are safe to retry because the request was never executed.
+    """
+
+    @override
+    def on_request_error(self, query: Any, consistency: Any, error: Any, retry_num: int) -> tuple[int, Any, Any]:
+        if not getattr(query, "is_idempotent", False):
+            return self.RETHROW, None, None
+        return super().on_request_error(query, consistency, error, retry_num)
+
+
 class _HostPoolStat(TypedDict):
     """Per-host connection pool statistics for ScyllaDB monitoring."""
 
@@ -440,7 +455,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         if self.config.RETRY_POLICY == "FALLTHROUGH":
             retry_policy = FallthroughRetryPolicy()
         else:  # EXPONENTIAL_BACKOFF (default)
-            retry_policy = ExponentialBackoffRetryPolicy(
+            retry_policy = _IdempotentSafeRetryPolicy(
                 max_num_retries=self.config.RETRY_MAX_NUM_RETRIES,
                 min_interval=self.config.RETRY_MIN_INTERVAL,
                 max_interval=self.config.RETRY_MAX_INTERVAL,
@@ -551,7 +566,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             # Store the cached version using setattr for dynamic attribute
             self._prepare_cached = cached_prepare
 
-    def _execute_dml(self, query: str, params: tuple[Any, ...] | None) -> ResultSet:
+    def _execute_dml(self, query: str, params: tuple[Any, ...] | None, *, idempotent: bool = True) -> ResultSet:
         """Run a query built from validated identifiers and bound values.
 
         With the prepared statement cache on, the query is prepared (once) and executed with bound values, which keeps
@@ -560,12 +575,16 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Args:
             query (str): CQL using ``%s`` placeholders.
             params (tuple[Any, ...] | None): Values to bind.
+            idempotent (bool): Whether running the statement twice has the same effect as once. Request errors are only
+                retried on another host for idempotent statements. Defaults to True.
 
         Returns:
             ResultSet: The query result set.
         """
         if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
-            return self.execute_prepared(self.prepare(query.replace("%s", "?")), params)
+            statement = self.prepare(query.replace("%s", "?"))
+            statement.is_idempotent = idempotent
+            return self.execute_prepared(statement, params)
         return self.execute(query, params)
 
     @override
@@ -715,7 +734,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
 
         try:
-            self._execute_dml(query, tuple(data.values()))
+            self._execute_dml(query, tuple(data.values()), idempotent=not if_not_exists)
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "insert")
             raise
@@ -1108,7 +1127,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         if self.config.RETRY_POLICY == "FALLTHROUGH":
             retry_policy = FallthroughRetryPolicy()
         else:  # EXPONENTIAL_BACKOFF (default)
-            retry_policy = ExponentialBackoffRetryPolicy(
+            retry_policy = _IdempotentSafeRetryPolicy(
                 max_num_retries=self.config.RETRY_MAX_NUM_RETRIES,
                 min_interval=self.config.RETRY_MIN_INTERVAL,
                 max_interval=self.config.RETRY_MAX_INTERVAL,
@@ -1254,7 +1273,13 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             # Store the cached version using setattr for dynamic attribute
             self._prepare_cached = cached_prepare
 
-    async def _execute_dml(self, query: str, params: tuple[Any, ...] | None) -> ResultSet:
+    async def _execute_dml(
+        self,
+        query: str,
+        params: tuple[Any, ...] | None,
+        *,
+        idempotent: bool = True,
+    ) -> ResultSet:
         """Run a query built from validated identifiers and bound values.
 
         With the prepared statement cache on, the query is prepared (once) and executed with bound values, which keeps
@@ -1263,12 +1288,16 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         Args:
             query (str): CQL using ``%s`` placeholders.
             params (tuple[Any, ...] | None): Values to bind.
+            idempotent (bool): Whether running the statement twice has the same effect as once. Request errors are only
+                retried on another host for idempotent statements. Defaults to True.
 
         Returns:
             ResultSet: The query result set.
         """
         if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
-            return await self.execute_prepared(await self.prepare(query.replace("%s", "?")), params)
+            statement = await self.prepare(query.replace("%s", "?"))
+            statement.is_idempotent = idempotent
+            return await self.execute_prepared(statement, params)
         return await self.execute(query, params)
 
     @override
@@ -1419,7 +1448,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
 
         try:
-            await self._execute_dml(query, tuple(data.values()))
+            await self._execute_dml(query, tuple(data.values()), idempotent=not if_not_exists)
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "insert")
             raise

@@ -1599,6 +1599,40 @@ def step_cluster_tls_options(context: Context, server_name: str, cache: str) -> 
     assert (context.cluster.ssl_session_cache is not None) is (cache == "on"), context.cluster.ssl_session_cache
 
 
+@then("the retry policy should {decision} request errors on the next host for {kind} statements")
+def step_retry_policy_request_errors(context: Context, decision: str, kind: str) -> None:
+    """Check the default retry policy only retries request errors for idempotent statements.
+
+    Args:
+        context (Context): Behave context.
+        decision (str): "retry" or "rethrow".
+        kind (str): "idempotent" or "non-idempotent".
+    """
+    from cassandra.policies import RetryPolicy
+    from cassandra.query import SimpleStatement
+
+    policy = context.cluster.profile_manager.default.retry_policy
+    statement = SimpleStatement("INSERT INTO t (id) VALUES (1)", is_idempotent=kind == "idempotent")
+    result, _, _ = policy.on_request_error(statement, None, error=RuntimeError("server error"), retry_num=0)
+    expected = RetryPolicy.RETRY_NEXT_HOST if decision == "retry" else RetryPolicy.RETHROW
+    assert result == expected, result
+
+
+@then("the retry policy should retry unavailable errors for non-idempotent statements")
+def step_retry_policy_unavailable(context: Context) -> None:
+    """Check unavailable errors, which never executed the request, are still retried.
+
+    Args:
+        context (Context): Behave context.
+    """
+    from cassandra.policies import RetryPolicy
+    from cassandra.query import SimpleStatement
+
+    policy = context.cluster.profile_manager.default.retry_policy
+    result, _, _ = policy.on_unavailable(SimpleStatement("INSERT INTO t (id) VALUES (1)"), None, 3, 1, retry_num=0)
+    assert result == RetryPolicy.RETRY_NEXT_HOST, result
+
+
 @then("the default execution profile should use the configured request timeout and retry policy")
 def step_default_profile_configured(context: Context) -> None:
     """Check the default execution profile carries the configured timeout and a retry policy.
