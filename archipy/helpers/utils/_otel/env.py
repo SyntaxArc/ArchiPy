@@ -49,6 +49,9 @@ def _signal_settings() -> list[tuple[str, str, Callable[[str], object]]]:
         ("LOGS_ENDPOINT", "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", str),
         ("PROTOCOL", "OTEL_EXPORTER_OTLP_PROTOCOL", str),
         ("OTLP_HEADERS", "OTEL_EXPORTER_OTLP_HEADERS", _parse_headers),
+        ("TRACES_HEADERS", "OTEL_EXPORTER_OTLP_TRACES_HEADERS", _parse_headers),
+        ("METRICS_HEADERS", "OTEL_EXPORTER_OTLP_METRICS_HEADERS", _parse_headers),
+        ("LOGS_HEADERS", "OTEL_EXPORTER_OTLP_LOGS_HEADERS", _parse_headers),
         # The Python SDK reads this variable in seconds, so ArchiPy does too.
         ("TIMEOUT", "OTEL_EXPORTER_OTLP_TIMEOUT", float),
         ("OTLP_COMPRESSION", "OTEL_EXPORTER_OTLP_COMPRESSION", lambda value: value.strip().lower()),

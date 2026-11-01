@@ -163,6 +163,24 @@ def step_then_effective_setting(context, name, value):
     assert (str(actual) if isinstance(expected, str) else actual) == expected, f"{name}: {actual!r}"
 
 
+@then('the {signal} exporter built from the effective config sends the headers {headers}')
+def step_then_exporter_headers(context, signal, headers):
+    from archipy.helpers.utils._otel.exporters import (
+        create_metric_exporter,
+        create_otlp_log_exporter,
+        create_span_exporter,
+    )
+
+    factories = {"traces": create_span_exporter, "metrics": create_metric_exporter, "logs": create_otlp_log_exporter}
+    otel = _ctx(context).get("effective_otel")
+    exporter = factories[signal](otel)
+    context.add_cleanup(exporter.shutdown)
+    expected = json.loads(headers)
+    sent_headers = exporter._client._headers  # http/protobuf exporters keep their headers on the client, names lowercase
+    sent = {name: sent_headers[name.lower()] for name in expected}
+    assert sent == expected, sent
+
+
 @then("the OpenTelemetry SDK is {state}")
 def step_then_sdk_state(context, state):
     sc = _ctx(context)

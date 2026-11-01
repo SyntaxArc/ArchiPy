@@ -251,6 +251,46 @@ Feature: OpenTelemetry configuration
     And the effective setting "METRIC_EXPORT_INTERVAL_MS" is 15000
     And the effective setting "SERVICE_NAME" is "env-service"
 
+  Scenario Outline: Per-signal OTLP headers replace the shared headers for their signal only
+    Given an OpenTelemetry config built from:
+      """
+      {
+        "USE_STANDARD_ENV": true
+      }
+      """
+    And the standard OTEL environment:
+      | name                               | value                                                   |
+      | OTEL_EXPORTER_OTLP_PROTOCOL        | http/protobuf                                           |
+      | OTEL_EXPORTER_OTLP_HEADERS         | Authorization=Bearer shared                             |
+      | OTEL_EXPORTER_OTLP_METRICS_HEADERS | Authorization=Basic abc,X-Scope-OrgID=org,Tenant-ID=org |
+    When the standard environment is applied
+    Then the effective setting "METRICS_HEADERS" is {"authorization": "Basic abc", "x-scope-orgid": "org", "tenant-id": "org"}
+    And the effective setting "TRACES_HEADERS" is null
+    And the <signal> exporter built from the effective config sends the headers <headers>
+
+    Examples:
+      | signal  | headers                                                                    |
+      | traces  | {"Authorization": "Bearer shared"}                                         |
+      | logs    | {"Authorization": "Bearer shared"}                                         |
+      | metrics | {"Authorization": "Basic abc", "X-Scope-OrgID": "org", "Tenant-ID": "org"} |
+
+  Scenario: Every per-signal header variable maps to its own setting
+    Given an OpenTelemetry config built from:
+      """
+      {
+        "USE_STANDARD_ENV": true
+      }
+      """
+    And the standard OTEL environment:
+      | name                              | value                  |
+      | OTEL_EXPORTER_OTLP_TRACES_HEADERS | Authorization=Bearer t |
+      | OTEL_EXPORTER_OTLP_LOGS_HEADERS   | Authorization=Bearer l |
+    When the standard environment is applied
+    Then the effective setting "TRACES_HEADERS" is {"authorization": "Bearer t"}
+    And the effective setting "LOGS_HEADERS" is {"authorization": "Bearer l"}
+    And the effective setting "METRICS_HEADERS" is null
+    And the effective setting "OTLP_HEADERS" is {}
+
   Scenario: An explicitly set field wins over the standard variable
     Given an OpenTelemetry config built from:
       """
