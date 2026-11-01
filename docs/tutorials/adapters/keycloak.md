@@ -31,11 +31,40 @@ KEYCLOAK__SERVER_URL=https://keycloak.example.com
 KEYCLOAK__REALM_NAME=my-realm
 KEYCLOAK__CLIENT_ID=my-client
 KEYCLOAK__CLIENT_SECRET_KEY=client-secret
-KEYCLOAK__VERIFY_SSL=true
-KEYCLOAK__TIMEOUT=10
+KEYCLOAK__VERIFY_SSL=true  # true, false, or the path of a CA bundle for a private CA
+KEYCLOAK__TIMEOUT=10  # seconds, fractions allowed (2.5)
 KEYCLOAK__TOKEN_LEEWAY_SECONDS=0  # clock-skew tolerance when validating token expiry
 KEYCLOAK__REMOTE_CACHE_TTL_SECONDS=0  # opt-in cache for the keycloak auth guards' UserInfo/permission lookups (0 = off)
 ```
+
+### Connection Options
+
+Optional settings for private CAs, mutual TLS, retries, pooling, proxies and extra headers. The defaults keep the
+previous behaviour.
+
+| Setting            | Default | Meaning                                                                          |
+|--------------------|---------|----------------------------------------------------------------------------------|
+| `VERIFY_SSL`       | `true`  | `true`/`false`, or a CA bundle path to verify the server against                 |
+| `TIMEOUT`          | `10`    | Request timeout in seconds, fractions allowed                                    |
+| `CLIENT_CERT_FILE` | none    | Client certificate (PEM) for mutual TLS; a combined cert and key file needs no key |
+| `CLIENT_KEY_FILE`  | none    | Private key of `CLIENT_CERT_FILE` (requires `CLIENT_CERT_FILE`)                  |
+| `MAX_RETRIES`      | `1`     | Total times a request to Keycloak is retried                                     |
+| `POOL_MAXSIZE`     | none    | Maximum connections kept in the pool                                             |
+| `PROXIES`          | none    | Proxy URL by URL pattern, e.g. `{"https://": "http://proxy:3128"}`               |
+| `CUSTOM_HEADERS`   | none    | Extra headers sent with every request                                            |
+
+```bash
+KEYCLOAK__VERIFY_SSL=/etc/ssl/private-ca.pem
+KEYCLOAK__CLIENT_CERT_FILE=/etc/ssl/client.pem
+KEYCLOAK__CLIENT_KEY_FILE=/etc/ssl/client.key
+KEYCLOAK__PROXIES='{"https://": "http://proxy:3128"}'
+KEYCLOAK__CUSTOM_HEADERS='{"X-Tenant": "acme"}'
+```
+
+!!! note
+    python-keycloak has no separate connect and read timeouts, so `TIMEOUT` is one value. The async admin and UMA
+    clients do not take `PROXIES` (python-keycloak accepts no proxies for them); the async OpenID client and every
+    synchronous client do.
 
 ### Direct Configuration
 
