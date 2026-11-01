@@ -3585,6 +3585,70 @@ def step_then_client_username(context, user):
     assert pool.connection_kwargs["username"] == user
 
 
+def _resilience_config(mode, **extra):
+    """Build a Redis config for the given mode with extra settings."""
+    if mode == "sentinel":
+        extra.update(MODE="SENTINEL", SENTINEL_NODES=["localhost:26379"], SENTINEL_SERVICE_NAME="mymaster")
+    return RedisConfig(**extra)
+
+
+@given(
+    r'a Redis config in (?P<mode>standalone|sentinel) mode with (?P<retries>\d+) retries, TCP keepalive, '
+    r'the client name "(?P<name>[^"]+)" and the sentinel username "(?P<user>[^"]+)"',
+)
+def step_given_resilience_config(context, mode, retries, name, user):
+    """Build a Redis config with retry, keepalive, client name and sentinel username."""
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.tls_config = _resilience_config(
+        mode,
+        RETRY_ATTEMPTS=int(retries),
+        RETRY_ON_TIMEOUT=True,
+        SOCKET_KEEPALIVE=True,
+        CLIENT_NAME=name,
+        SENTINEL_USERNAME=user,
+    )
+    scenario_context.resilience_mode = mode
+
+
+@given(r"a Redis config in standalone mode with default resilience settings")
+def step_given_default_resilience_config(context):
+    """Build a Redis config that leaves the resilience settings unset."""
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.tls_config = _resilience_config("standalone")
+
+
+@then(
+    r'the client connection should retry (?P<retries>\d+) times, use TCP keepalive and carry the client name '
+    r'"(?P<name>[^"]+)"',
+)
+def step_then_client_resilience(context, retries, name):
+    """Verify the pool carries the retry policy, keepalive flag and client name."""
+    scenario_context = get_current_scenario_context(context)
+    kwargs = scenario_context.tls_adapter.client.connection_pool.connection_kwargs
+    assert kwargs["retry"].get_retries() == int(retries), kwargs["retry"].get_retries()
+    assert kwargs["socket_keepalive"] is True
+    assert kwargs["client_name"] == name
+
+
+@then(r'the sentinel connection should use the username "(?P<user>[^"]+)" when the mode is sentinel')
+def step_then_sentinel_username(context, user):
+    """Verify the sentinel nodes are contacted with the sentinel username."""
+    scenario_context = get_current_scenario_context(context)
+    if scenario_context.resilience_mode != "sentinel":
+        return
+    manager = scenario_context.tls_adapter.client.connection_pool.sentinel_manager
+    assert manager.sentinel_kwargs["username"] == user, manager.sentinel_kwargs
+
+
+@then(r"the client connection should not carry a client name or extra retry errors")
+def step_then_client_defaults(context):
+    """Verify unset settings leave the redis-py defaults in place."""
+    scenario_context = get_current_scenario_context(context)
+    kwargs = scenario_context.tls_adapter.client.connection_pool.connection_kwargs
+    assert kwargs.get("client_name") is None
+    assert not kwargs.get("retry_on_error")
+
+
 @when(r"I create a Redis config with (?P<settings>a client certificate but no key|a CA bundle while TLS is disabled)")
 def step_when_invalid_tls_config(context, settings):
     """Try to build an invalid Redis config and keep the outcome."""
