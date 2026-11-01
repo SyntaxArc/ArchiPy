@@ -486,13 +486,34 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             # Store the cached version using setattr for dynamic attribute
             self._prepare_cached = cached_prepare
 
+    def _execute_dml(self, query: str, params: tuple[Any, ...] | None) -> ResultSet:
+        """Run a query built from validated identifiers and bound values.
+
+        With the prepared statement cache on, the query is prepared (once) and executed with bound values, which keeps
+        token and shard aware routing. With it off, the query runs as a plain parameterised statement.
+
+        Args:
+            query (str): CQL using ``%s`` placeholders.
+            params (tuple[Any, ...] | None): Values to bind.
+
+        Returns:
+            ResultSet: The query result set.
+        """
+        if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+            return self.execute_prepared(self.prepare(query.replace("%s", "?")), params)
+        return self.execute(query, params)
+
     @override
-    def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> ResultSet:
+    def execute_prepared(
+        self,
+        statement: PreparedStatement,
+        params: dict[str, Any] | tuple[Any, ...] | list[Any] | None = None,
+    ) -> ResultSet:
         """Execute a prepared statement.
 
         Args:
             statement (PreparedStatement): The prepared statement object.
-            params (dict[str, Any] | None): Parameters to bind to the statement.
+            params (dict[str, Any] | tuple[Any, ...] | list[Any] | None): Parameters to bind to the statement.
 
         Returns:
             ResultSet: The query result set.
@@ -628,7 +649,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
 
         try:
-            self.execute(query, tuple(data.values()))
+            self._execute_dml(query, tuple(data.values()))
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "insert")
             raise
@@ -662,7 +683,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             params = tuple(conditions.values())
 
         try:
-            result = self.execute(query, params)
+            result = self._execute_dml(query, params)
             return list(result)
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "select")
@@ -700,7 +721,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         params = tuple(data.values()) + tuple(conditions.values())
 
         try:
-            self.execute(query, params)
+            self._execute_dml(query, params)
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "update")
             raise
@@ -719,7 +740,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"DELETE FROM {table} WHERE {where_clause}"  # nosec B608
 
         try:
-            self.execute(query, tuple(conditions.values()))
+            self._execute_dml(query, tuple(conditions.values()))
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "delete")
             raise
@@ -840,7 +861,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             params = tuple(conditions.values())
 
         try:
-            result = self.execute(query, params)
+            result = self._execute_dml(query, params)
             row = result.one()
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "count")
@@ -865,7 +886,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
 
         try:
-            result = self.execute(query, tuple(conditions.values()))
+            result = self._execute_dml(query, tuple(conditions.values()))
             row = result.one()
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "exists")
@@ -1142,13 +1163,34 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             # Store the cached version using setattr for dynamic attribute
             self._prepare_cached = cached_prepare
 
+    async def _execute_dml(self, query: str, params: tuple[Any, ...] | None) -> ResultSet:
+        """Run a query built from validated identifiers and bound values.
+
+        With the prepared statement cache on, the query is prepared (once) and executed with bound values, which keeps
+        token and shard aware routing. With it off, the query runs as a plain parameterised statement.
+
+        Args:
+            query (str): CQL using ``%s`` placeholders.
+            params (tuple[Any, ...] | None): Values to bind.
+
+        Returns:
+            ResultSet: The query result set.
+        """
+        if self.config.ENABLE_PREPARED_STATEMENT_CACHE:
+            return await self.execute_prepared(await self.prepare(query.replace("%s", "?")), params)
+        return await self.execute(query, params)
+
     @override
-    async def execute_prepared(self, statement: PreparedStatement, params: dict[str, Any] | None = None) -> ResultSet:
+    async def execute_prepared(
+        self,
+        statement: PreparedStatement,
+        params: dict[str, Any] | tuple[Any, ...] | list[Any] | None = None,
+    ) -> ResultSet:
         """Execute a prepared statement asynchronously.
 
         Args:
             statement (PreparedStatement): The prepared statement object.
-            params (dict[str, Any] | None): Parameters to bind to the statement.
+            params (dict[str, Any] | tuple[Any, ...] | list[Any] | None): Parameters to bind to the statement.
 
         Returns:
             ResultSet: The query result set.
@@ -1285,7 +1327,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             query += f" USING TTL {self._validate_non_negative_int(ttl, 'ttl')}"
 
         try:
-            await self.execute(query, tuple(data.values()))
+            await self._execute_dml(query, tuple(data.values()))
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "insert")
             raise
@@ -1319,7 +1361,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             params = tuple(conditions.values())
 
         try:
-            result = await self.execute(query, params)
+            result = await self._execute_dml(query, params)
             return list(result)
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "select")
@@ -1357,7 +1399,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         params = tuple(data.values()) + tuple(conditions.values())
 
         try:
-            await self.execute(query, params)
+            await self._execute_dml(query, params)
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "update")
             raise
@@ -1376,7 +1418,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"DELETE FROM {table} WHERE {where_clause}"  # nosec B608
 
         try:
-            await self.execute(query, tuple(conditions.values()))
+            await self._execute_dml(query, tuple(conditions.values()))
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "delete")
             raise
@@ -1502,7 +1544,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             params = tuple(conditions.values())
 
         try:
-            result = await self.execute(query, params)
+            result = await self._execute_dml(query, params)
             row = result.one()
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "count")
@@ -1527,7 +1569,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
 
         try:
-            result = await self.execute(query, tuple(conditions.values()))
+            result = await self._execute_dml(query, tuple(conditions.values()))
             row = result.one()
         except (DriverException, NoHostAvailable) as e:
             self._handle_scylladb_exception(e, "exists")

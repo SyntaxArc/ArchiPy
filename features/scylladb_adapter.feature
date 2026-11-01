@@ -353,6 +353,25 @@ Feature: ScyllaDB Adapter
       | asyn | create keyspace with injected replication factor |
 
   @needs-scylladb
+  Scenario Outline: CRUD helpers prepare their statements and reuse them
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "prep_<mode>"
+    When I run ScyllaDB operation "insert" on table "prep_<mode>"
+    Then the ScyllaDB driver should hold 1 prepared statements
+    When I run ScyllaDB operation "select" on table "prep_<mode>"
+    And I run ScyllaDB operation "select" on table "prep_<mode>"
+    Then the ScyllaDB result should be "alpha"
+    And the ScyllaDB driver should hold 2 prepared statements
+
+    Examples: Sync
+      | mode |
+      | syn  |
+
+    @async
+    Examples: Async
+      | mode |
+      | asyn |
+
+  @needs-scylladb
   Scenario Outline: Prepared statements are cached and executed with bound parameters
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
     When I execute a prepared ScyllaDB insert into "<table>" twice
