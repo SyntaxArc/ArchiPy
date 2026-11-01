@@ -290,6 +290,17 @@ Feature: Keycloak Auth Guards Testing
       | direct |
       | envoy  |
 
+  Scenario Outline: Auth FastAPI dependency refuses a resource guard with only one of its two arguments
+    Given a configured sync Keycloak adapter via <via>
+    And the keycloak fastapi auth sets only its <argument> to "<value>"
+    When the keycloak auth fastapi dependency is called without credentials
+    Then the keycloak auth call fails with error code "CONFIGURATION_ERROR"
+
+    Examples:
+      | via    | argument       | value     |
+      | direct | resource type  | users     |
+      | direct | path parameter | user_uuid |
+
   @auth-guards
   Scenario Outline: Auth gRPC handler runs with the auth context for a valid token
     Given a configured sync Keycloak adapter via <via>

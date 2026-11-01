@@ -310,6 +310,12 @@ def step_keycloak_auth_guard_resource(context, rtype, param):
     _auth_kwargs(_ctx(context)).update(resource_type=rtype, resource_type_param=param)
 
 
+@given('the keycloak fastapi auth sets only its {argument} to "{value}"')
+def step_keycloak_auth_guard_one_argument(context, argument, value):
+    key = {"resource type": "resource_type", "path parameter": "resource_type_param"}[argument]
+    _auth_kwargs(_ctx(context)).update({key: value})
+
+
 @given('the keycloak fastapi auth treats roles "{roles}" as admin roles')
 def step_keycloak_auth_admin_roles(context, roles):
     _auth_kwargs(_ctx(context)).update(admin_roles=frozenset(_split(roles)))

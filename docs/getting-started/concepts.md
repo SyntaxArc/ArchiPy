@@ -207,7 +207,7 @@ class UserRegistrationLogic:
 
 > **Note:** Logic layer collaboration rules:
 >
-> - Logic classes **may call other logic classes** — nested `@atomic` calls reuse the open session.
+> - Logic classes **may call other logic classes** — nested `@atomic` calls reuse the open session and run in a savepoint, so a nested call that fails and is caught leaves the outer transaction usable (StarRocks has no savepoints: the outermost call rolls back).
 > - Logic classes **must never import or call a repository from another domain directly**.
 >   Cross-domain reads must go through the other domain's logic class.
 >

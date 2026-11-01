@@ -17,13 +17,20 @@ class KafkaAdminPort:
     """
 
     @abstractmethod
-    def create_topic(self, topic: str, num_partitions: int = 3, replication_factor: int = 1) -> None:
+    def create_topic(
+        self,
+        topic: str,
+        num_partitions: int = 3,
+        replication_factor: int = 1,
+        timeout: float | None = None,
+    ) -> None:
         """Creates a new Kafka topic.
 
         Args:
             topic (str): Name of the topic to create.
-            num_partitions (int, optional): Number of partitions for the topic. Defaults to 1.
+            num_partitions (int, optional): Number of partitions for the topic. Defaults to 3.
             replication_factor (int, optional): Replication factor for the topic. Defaults to 1.
+            timeout (float | None, optional): Seconds to wait for the broker to confirm. Defaults to None.
 
         Raises:
             NotImplementedError: If the method is not implemented by the concrete class.
@@ -31,11 +38,12 @@ class KafkaAdminPort:
         raise NotImplementedError
 
     @abstractmethod
-    def delete_topic(self, topics: list[str]) -> None:
+    def delete_topic(self, topics: list[str], timeout: float | None = None) -> None:
         """Deletes one or more Kafka topics.
 
         Args:
             topics (list[str]): List of topic names to delete.
+            timeout (float | None, optional): Seconds to wait for the broker to confirm. Defaults to None.
 
         Raises:
             NotImplementedError: If the method is not implemented by the concrete class.

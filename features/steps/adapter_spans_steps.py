@@ -209,6 +209,7 @@ def step_kafka_roundtrip(context, topic):
     import time
 
     from features.steps.kafka_adapter_steps import (
+        _create_topic_if_missing,
         get_kafka_admin_adapter,
         get_kafka_consumer_adapter,
         get_kafka_producer_adapter,
@@ -216,7 +217,7 @@ def step_kafka_roundtrip(context, topic):
     )
 
     admin = get_kafka_admin_adapter(context)
-    admin.create_topic(topic, num_partitions=1, replication_factor=1)
+    _create_topic_if_missing(admin, topic, num_partitions=1, replication_factor=1)
     assert wait_for_topic_condition(admin, lambda name, topics: name in topics, topic)
 
     producer = get_kafka_producer_adapter(context, topic)

@@ -279,6 +279,9 @@ async def get_employee_info(employee_uuid: UUID, employee: dict = Depends(fastap
 uvicorn.run(app, host="0.0.0.0", port=8000)  # noqa: S104
 ```
 
+`resource_type` and `resource_type_param` go together: setting only one raises `ConfigurationError` when the
+dependency is built, instead of silently skipping the ownership check.
+
 `fastapi_auth` returns the UserInfo dict, and it sets `AuthContextManager` for the request, so code below the endpoint
 can read the caller without receiving the request:
 

@@ -811,3 +811,54 @@ def step_when_build_async_count_cache(context):
 def step_then_build_fails(context, text):
     result = get_current_scenario_context(context).get("build_result")
     assert "ConfigurationError" in result.stdout and text in result.stdout, f"{result.stdout} {result.stderr[-300:]}"
+
+
+@given("a class whose cached method returns its instance value with per_instance {per_instance}")
+def step_given_instance_value_class(context, per_instance):
+    """Create a class whose cached method result depends on instance state."""
+    scenario_context = get_current_scenario_context(context)
+
+    class ValueHolder:
+        def __init__(self, value: int) -> None:
+            self.value = value
+
+        @ttl_cache(ttl_seconds=300, maxsize=10, per_instance=per_instance == "True")
+        def get(self, key: str) -> str:
+            return f"{key}{self.value}"
+
+    scenario_context.store("holder_class", ValueHolder)
+
+
+@when("I read the cached method on instances holding values 1 and 2")
+def step_when_read_instances(context):
+    """Read the cached method once on two instances with different state."""
+    scenario_context = get_current_scenario_context(context)
+    holder_class = scenario_context.get("holder_class")
+    first, second = holder_class(1), holder_class(2)
+    scenario_context.store("holders", (first, second))
+    scenario_context.store("results", (first.get("v"), second.get("v")))
+
+
+@then('the two instances should return "{expected}"')
+def step_then_two_instances_return(context, expected):
+    """Verify the values read from both instances."""
+    scenario_context = get_current_scenario_context(context)
+    results = scenario_context.get("results")
+    actual = ",".join(value[1:] for value in results)
+    assert actual == expected, f"Expected {expected}, got {actual}"
+
+
+@when("I clear the cache of the first instance and change both instance values to 7")
+def step_when_clear_first_instance(context):
+    """Clear one instance's cache, change state, and read both again."""
+    scenario_context = get_current_scenario_context(context)
+    first, second = scenario_context.get("holders")
+    first.get.clear_cache()
+    first.value = second.value = 7
+    scenario_context.store("results", (first.get("v"), second.get("v")))
+
+
+@then('the instances should return "{expected}"')
+def step_then_instances_return(context, expected):
+    """Verify the values read after the clear."""
+    step_then_two_instances_return(context, expected)

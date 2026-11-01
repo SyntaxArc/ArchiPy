@@ -269,7 +269,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self.object_exists.clear_cache()
 
     @override
-    @ttl_cache(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True)
     def bucket_exists(self, bucket_name: str) -> bool:
         """Check if a bucket exists.
 
@@ -375,7 +375,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_general_exception(e, "remove_bucket")
 
     @override
-    @ttl_cache(ttl_seconds=300, maxsize=1)
+    @ttl_cache(ttl_seconds=300, maxsize=1, per_instance=True)
     def list_buckets(self) -> list[MinioBucketType]:
         """List all buckets.
 
@@ -565,7 +565,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_general_exception(e, "remove_objects")
 
     @override
-    @ttl_cache(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True)
     def object_exists(self, bucket_name: str, object_name: str) -> bool:
         """Check if an object exists in a bucket.
 
@@ -611,7 +611,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             return True
 
     @override
-    @ttl_cache(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True)
     def list_objects(
         self,
         bucket_name: str,
@@ -688,7 +688,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             return object_list
 
     @override
-    @ttl_cache(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True)
     def stat_object(self, bucket_name: str, object_name: str) -> MinioObjectType:
         """Get object metadata.
 
@@ -880,7 +880,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_general_exception(e, "set_bucket_policy")
 
     @override
-    @ttl_cache(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True)
     def get_bucket_policy(self, bucket_name: str) -> MinioPolicyType:
         """Get bucket policy.
 
@@ -1375,7 +1375,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             self._handle_general_exception(e, "set_bucket_versioning")
 
     @override
-    @ttl_cache(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True)
     def get_bucket_versioning(self, bucket_name: str) -> str:
         """Return the versioning status of a bucket.
 
@@ -1411,7 +1411,7 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
             return status
 
     @override
-    @ttl_cache(ttl_seconds=300, maxsize=100)
+    @ttl_cache(ttl_seconds=300, maxsize=100, per_instance=True)
     def list_object_versions(
         self,
         bucket_name: str,

@@ -63,6 +63,9 @@ REDIS__SSL_CHECK_HOSTNAME=true
 `SSL_CERTFILE` and `SSL_KEYFILE` must be set together. `SSL_CA_CERTS` and `SSL_CERTFILE` require `SSL=true`.
 In sentinel mode the TLS settings also apply to the sentinel nodes.
 
+In sentinel mode `DATABASE` and `HEALTH_CHECK_INTERVAL` also apply to the master and replica connections. Earlier
+versions ignored them, so a sentinel setup with a non-zero `DATABASE` now selects that database instead of database 0.
+
 ### Retries, keepalive and client name
 
 All settings are optional; unset ones keep the redis-py defaults. They apply to standalone, cluster and sentinel modes.
@@ -714,6 +717,9 @@ result = handle.search(
 )
 ```
 
+By default the filter is intersected with the range (`filter_mode="and"`): only documents that match the filter and lie
+within the radius are returned. Pass `filter_mode="or"` to also return documents that match only the filter.
+
 ### Runtime Query Parameters
 
 Pass per-query tuning through `VectorQueryRuntimeDTO` on KNN, range, and hybrid builders. Supported fields include
@@ -781,6 +787,9 @@ hybrid_result = handle.search(
 
 logger.info(f"Text hits: {text_result.total}, hybrid hits: {len(hybrid_result.hits)}")
 ```
+
+Set `text_scorer` (for example `"BM25"` or `"TFIDF"`) on `SearchQueryDTO` or `from_hybrid()` to choose the full-text
+scoring function; it is sent to RediSearch as `SCORER`, and an unknown name is rejected by the server.
 
 ### Aggregations
 
