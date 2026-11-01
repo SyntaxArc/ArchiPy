@@ -1458,6 +1458,7 @@ def step_security_warning(context: Context, expectation: str, kind: str) -> None
     assert any(needle in message for message in messages) is (expectation == "contain"), messages
 
 
+@when(
     'I create the keyspace "{keyspace}" with an explicit replication factor {factor:d} under the default configuration',
 )
 async def step_create_keyspace_explicit_factor(context: Context, keyspace: str, factor: int) -> None:
