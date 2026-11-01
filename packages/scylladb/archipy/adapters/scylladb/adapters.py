@@ -187,6 +187,18 @@ def _tls_cluster_options(config: ScyllaDBConfig) -> dict[str, Any]:
     return options
 
 
+def _warn_insecure_connection(config: ScyllaDBConfig) -> None:
+    """Log a warning when credentials travel unencrypted or the server certificate is not verified.
+
+    Args:
+        config (ScyllaDBConfig): The ScyllaDB configuration.
+    """
+    if config.USERNAME and config.PASSWORD and not config.TLS_ENABLED:
+        logger.warning("ScyllaDB credentials are sent in plain text: enable TLS_ENABLED to encrypt the connection")
+    if config.TLS_ENABLED and config.TLS_VERIFY_MODE == "CERT_NONE":
+        logger.warning("ScyllaDB TLS certificate verification is disabled: the server identity is not checked")
+
+
 class _IdempotentSafeRetryPolicy(ExponentialBackoffRetryPolicy):
     """Exponential backoff that retries request errors on the next host only for idempotent statements.
 
@@ -561,6 +573,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             **_cluster_resilience_options(self.config),
         )
         _warn_ignored_pool_settings(self.config)
+        _warn_insecure_connection(self.config)
 
         return cluster
 
@@ -1220,6 +1233,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             **_cluster_resilience_options(self.config),
         )
         _warn_ignored_pool_settings(self.config)
+        _warn_insecure_connection(self.config)
 
         return cluster
 
