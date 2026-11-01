@@ -785,6 +785,9 @@ hybrid_result = handle.search(
 logger.info(f"Text hits: {text_result.total}, hybrid hits: {len(hybrid_result.hits)}")
 ```
 
+Set `text_scorer` (for example `"BM25"` or `"TFIDF"`) on `SearchQueryDTO` or `from_hybrid()` to choose the full-text
+scoring function; it is sent to RediSearch as `SCORER`, and an unknown name is rejected by the server.
+
 ### Aggregations
 
 Group and count documents with `AggregationDTO`:

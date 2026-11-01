@@ -3094,6 +3094,38 @@ def step_when_hybrid_search(context, index_name, text_query, vector, k):
     store_result(context, "search_result", result)
 
 
+@when(
+    r'I search index "(?P<index_name>[^"]+)" with the (?P<kind>text|hybrid) query and the text scorer "(?P<scorer>[^"]+)"',
+)
+def step_when_search_with_scorer(context, index_name, kind, scorer):
+    """Run a text or hybrid search with an explicit text scorer."""
+    handle = get_current_scenario_context(context).adapter.search_index(index_name)
+    if kind == "text":
+        query = SearchQueryDTO(query="database", text_scorer=scorer, return_fields=["title"])
+    else:
+        query = SearchQueryDTO.from_hybrid(
+            "database",
+            _parse_search_vector("[0.8, 0.2, 0.0]"),
+            k=1,
+            text_scorer=scorer,
+            return_fields=["title"],
+        )
+    try:
+        result = _search_until_indexed(lambda: handle.search(query))
+    except Exception as error:  # noqa: BLE001 - any server rejection counts as the outcome under test
+        store_result(context, "scorer_outcome", "rejected")
+        store_result(context, "scorer_error", str(error))
+    else:
+        store_result(context, "scorer_outcome", "hits" if result.hits else "empty")
+
+
+@then(r'the scorer search outcome should be "(?P<outcome>hits|rejected)"')
+def step_then_scorer_outcome(context, outcome):
+    """Assert the scorer search either returned hits or was rejected by the server."""
+    actual = get_result(context, "scorer_outcome")
+    assert actual == outcome, f"Expected {outcome}, got {actual}"
+
+
 @when(r'I aggregate search index "(?P<index_name>[^"]+)" grouped by category')
 def step_when_aggregate(context, index_name):
     """Run a simple aggregation grouped by category."""

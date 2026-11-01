@@ -1022,6 +1022,20 @@ Feature: Redis Testing
       | cluster      | HASH       | cluster-products-hybrid   | {hyb}   | {hyb}:1   |
       | cluster      | JSON       | cluster-products-hybrid-j | {hyb}   | {hyb}:j1  |
 
+  Scenario Outline: Text scorer is applied to text and hybrid searches
+    Given a configured container
+    And search index "<index_name>" exists with prefix "<prefix>:" for HASH documents
+    And search document "<doc_id>" exists with title "Vector Database" and vector "[1.0, 0.0, 0.0]" for HASH documents
+    When I search index "<index_name>" with the <kind> query and the text scorer "<scorer>"
+    Then the scorer search outcome should be "<outcome>"
+
+    Examples: Scorers
+      | index_name        | prefix | doc_id   | kind   | scorer | outcome  |
+      | scorer-text-ok    | scrok  | scrok:1  | text   | BM25   | hits     |
+      | scorer-text-bad   | scrbd  | scrbd:1  | text   | NOSUCH | rejected |
+      | scorer-hybrid-ok  | scrhok | scrhok:1 | hybrid | TFIDF  | hits     |
+      | scorer-hybrid-bad | scrhbd | scrhbd:1 | hybrid | NOSUCH | rejected |
+
   Scenario Outline: Aggregate documents synchronously
     Given a configured <adapter_type>
     And search index "<index_name>" exists with prefix "<prefix>:" for <index_type> documents
