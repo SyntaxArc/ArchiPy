@@ -37,6 +37,23 @@ MYSQL_SQLALCHEMY__POOL_SIZE=20
 MYSQL_SQLALCHEMY__ECHO=false
 ```
 
+### TLS
+
+By default no TLS options are passed and the driver default applies. Set `SSL_MODE` to enforce or verify TLS for both
+the sync (`pymysql`) and async (`asyncmy`) managers. ArchiPy builds an `ssl.SSLContext` from these fields.
+
+```bash
+MYSQL_SQLALCHEMY__SSL_MODE=verify_identity      # required, verify_ca or verify_identity
+MYSQL_SQLALCHEMY__SSL_CA=/etc/ssl/db-ca.pem     # default: the system trust store
+# Client certificate (mutual TLS): set both or neither
+MYSQL_SQLALCHEMY__SSL_CERT=/etc/ssl/client.pem
+MYSQL_SQLALCHEMY__SSL_KEY=/etc/ssl/client.key
+```
+
+!!! warning
+    `required` encrypts the connection but does not verify the server. Use `verify_ca` to verify the certificate and
+    `verify_identity` to also check the host name. `SSL_CA`, `SSL_CERT` and `SSL_KEY` need `SSL_MODE` to be set.
+
 ### Direct Configuration
 
 ```python

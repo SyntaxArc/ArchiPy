@@ -15,6 +15,25 @@ from archipy.helpers.metaclasses.singleton import Singleton
 from archipy.models.errors import DatabaseConnectionError
 
 
+def _build_connect_args(configs: PostgresSQLAlchemyConfig) -> dict[str, Any]:
+    """Build the psycopg connection arguments from the configuration.
+
+    Args:
+        configs: PostgreSQL configuration.
+
+    Returns:
+        dict[str, Any]: Only the options that are configured (libpq defaults apply to the rest).
+    """
+    candidates = {
+        "connect_timeout": configs.CONNECT_TIMEOUT,
+        "sslmode": configs.SSL_MODE,
+        "sslrootcert": configs.SSL_ROOT_CERT,
+        "sslcert": configs.SSL_CERT,
+        "sslkey": configs.SSL_KEY,
+    }
+    return {name: value for name, value in candidates.items() if value is not None}
+
+
 class PostgresSQlAlchemySessionManager(BaseSQLAlchemySessionManager[PostgresSQLAlchemyConfig], metaclass=Singleton):
     """Synchronous SQLAlchemy session manager for PostgreSQL.
 
@@ -64,9 +83,9 @@ class PostgresSQlAlchemySessionManager(BaseSQLAlchemySessionManager[PostgresSQLA
         """Return the psycopg connection arguments.
 
         Returns:
-            dict[str, Any]: ``connect_timeout`` when configured, otherwise empty (libpq waits indefinitely).
+            dict[str, Any]: The configured ``connect_timeout`` and TLS options, otherwise empty.
         """
-        return {} if self._configs.CONNECT_TIMEOUT is None else {"connect_timeout": self._configs.CONNECT_TIMEOUT}
+        return _build_connect_args(self._configs)
 
     @override
     def _create_url(self, configs: PostgresSQLAlchemyConfig) -> URL:
@@ -148,9 +167,9 @@ class AsyncPostgresSQlAlchemySessionManager(
         """Return the psycopg connection arguments.
 
         Returns:
-            dict[str, Any]: ``connect_timeout`` when configured, otherwise empty (libpq waits indefinitely).
+            dict[str, Any]: The configured ``connect_timeout`` and TLS options, otherwise empty.
         """
-        return {} if self._configs.CONNECT_TIMEOUT is None else {"connect_timeout": self._configs.CONNECT_TIMEOUT}
+        return _build_connect_args(self._configs)
 
     @override
     def _create_url(self, configs: PostgresSQLAlchemyConfig) -> URL:

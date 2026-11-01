@@ -585,3 +585,18 @@ Feature: SQLAlchemy Atomic Transactions on PostgreSQL
       | db_type  | mode  | statement_kind |
       | postgres | async | execute        |
       | postgres | async | scalars        |
+
+  Scenario Outline: TLS modes of the <kind> driver against a server without TLS
+    When I connect to postgres through the <kind> driver with TLS mode <tls_mode>
+    Then the connection should be <outcome>
+
+    Examples: Sync driver
+      | kind | tls_mode | outcome     |
+      | sync | none     | unencrypted |
+      | sync | prefer   | unencrypted |
+      | sync | require  | rejected    |
+
+    Examples: Async driver
+      | kind  | tls_mode | outcome     |
+      | async | prefer   | unencrypted |
+      | async | require  | rejected    |
