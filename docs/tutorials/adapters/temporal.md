@@ -432,6 +432,14 @@ class UserOnboardingWorkflow(BaseWorkflow[dict, dict]):
         }
 ```
 
+### Activity Names
+
+Every `BaseActivity` subclass inherits the same `execute` method, but Temporal needs one unique name per activity.
+The first subclass keeps the bare name (`execute`, or `execute_atomic` for `AtomicActivity`) for backward
+compatibility; every later subclass is registered as `<ClassName>.execute` (or `<ClassName>.execute_atomic`).
+Register an instance with `activities=[MyActivity().as_activity()]` and call it from a workflow with the same bound
+callable, or by its class-qualified name.
+
 ## Async Operations with Workers
 
 !!! note
@@ -457,7 +465,7 @@ async def run_worker() -> None:
         worker_handle = await worker_manager.start_worker(
             task_queue="my-task-queue",
             workflows=[MyWorkflow, UserOnboardingWorkflow],
-            activities=[UserCreationActivity, process_data_activity, send_welcome_email_activity],
+            activities=[UserCreationActivity().as_activity(), process_data_activity, send_welcome_email_activity],
             max_concurrent_workflow_tasks=10,
             max_concurrent_activities=20
         )

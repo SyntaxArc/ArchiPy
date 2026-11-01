@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from abc import abstractmethod
 from asyncio import current_task
 from typing import TYPE_CHECKING, Any, TypeVar, override
@@ -26,6 +28,17 @@ if TYPE_CHECKING:
 
 # Generic type variable for SQLAlchemy configurations
 ConfigT = TypeVar("ConfigT", bound=SQLAlchemyConfig)
+
+_SECRET_CONFIG_FIELDS = ("PASSWORD", "POSTGRES_DSN")
+
+
+def _config_singleton_key(orm_config: SQLAlchemyConfig) -> str:
+    """Serialise a configuration to a stable key with secrets replaced by their SHA-256 digest."""
+    data = orm_config.model_dump(mode="json")
+    for field_name in _SECRET_CONFIG_FIELDS:
+        if data.get(field_name):
+            data[field_name] = hashlib.sha256(str(data[field_name]).encode()).hexdigest()
+    return json.dumps(data, sort_keys=True)
 
 
 class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort):
@@ -59,9 +72,9 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
             orm_config: The configuration passed to the constructor, or None for the default.
 
         Returns:
-            The configuration serialised to JSON.
+            The configuration serialised to JSON, with the password and DSN hashed.
         """
-        return (orm_config or cls._default_config()).model_dump_json()
+        return _config_singleton_key(orm_config or cls._default_config())
 
     def __init__(self, orm_config: ConfigT) -> None:
         """Initialize the base session manager.
@@ -83,6 +96,7 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
                 },
             )
         try:
+            self._expire_on_commit = orm_config.EXPIRE_ON_COMMIT
             self.engine = self._create_engine(orm_config)
             self._session_generator = self._get_session_generator()
         except SQLAlchemyError as e:
@@ -200,7 +214,7 @@ class BaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](SessionManagerPort
             DatabaseConfigurationError: If there's an error in the database configuration.
         """
         try:
-            session_maker = sessionmaker(self.engine)
+            session_maker = sessionmaker(self.engine, expire_on_commit=self._expire_on_commit)
             return scoped_session(session_maker)
         except SQLAlchemyError as e:
             if "configuration" in str(e).lower():
@@ -287,9 +301,9 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
             orm_config: The configuration passed to the constructor, or None for the default.
 
         Returns:
-            The configuration serialised to JSON.
+            The configuration serialised to JSON, with the password and DSN hashed.
         """
-        return (orm_config or cls._default_config()).model_dump_json()
+        return _config_singleton_key(orm_config or cls._default_config())
 
     def __init__(self, orm_config: ConfigT) -> None:
         """Initialize the base async session manager.
@@ -311,6 +325,7 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
                 },
             )
         try:
+            self._expire_on_commit = orm_config.EXPIRE_ON_COMMIT
             self.engine = self._create_async_engine(orm_config)
             self._session_generator = self._get_session_generator()
         except SQLAlchemyError as e:
@@ -430,7 +445,7 @@ class AsyncBaseSQLAlchemySessionManager[ConfigT: SQLAlchemyConfig](AsyncSessionM
         from sqlalchemy.ext.asyncio import async_scoped_session, async_sessionmaker
 
         try:
-            session_maker = async_sessionmaker(self.engine)
+            session_maker = async_sessionmaker(self.engine, expire_on_commit=self._expire_on_commit)
             return async_scoped_session(session_maker, scopefunc=current_task)
         except SQLAlchemyError as e:
             if "configuration" in str(e).lower():

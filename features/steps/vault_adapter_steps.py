@@ -1,12 +1,16 @@
 """BDD steps for the HashiCorp Vault adapter."""
 
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
 import hvac
 from behave import given, then, when
 from features.environment import TestConfig
 from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.vault.adapters import VaultAdapter
-from archipy.models.errors import InvalidArgumentError, NotFoundError
+from archipy.models.errors import InvalidArgumentError, NotFoundError, UnavailableError
 
 
 def get_vault_adapter(context) -> VaultAdapter:
@@ -414,3 +418,88 @@ def step_no_vault_deprecation(context):
     messages = get_current_scenario_context(context).get("vault_warnings")
     deprecations = [message for message in messages if "deprecat" in message.lower() or "v3.0.0" in message]
     assert not deprecations, deprecations
+
+
+class _UnavailableVaultHandler(BaseHTTPRequestHandler):
+    """Fake Vault: token lookup works, every other request returns 503."""
+
+    def _respond(self) -> None:
+        length = int(self.headers.get("Content-Length") or 0)
+        if length:
+            self.rfile.read(length)
+        if self.path.endswith("/auth/token/lookup-self"):
+            status, body = 200, {"data": {"ttl": 0, "renewable": False}}
+        else:
+            self.server.data_requests.append(self.command)  # type: ignore[attr-defined]
+            status, body = 503, {"errors": ["Vault is sealed"]}
+        payload = json.dumps(body).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    do_GET = do_POST = do_PUT = do_DELETE = _respond  # noqa: N815
+
+    def log_message(self, format, *args) -> None:  # noqa: A002
+        """Silence request logging."""
+
+
+@given("a Vault adapter pointed at a server that always returns 503 with {retries:d} retries")
+def step_given_unavailable_vault(context, retries: int):
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _UnavailableVaultHandler)
+    server.data_requests = []
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    context.vault_stub_server = server
+    context.add_cleanup(server.shutdown)
+    context.add_cleanup(server.server_close)
+    host, port = server.server_address
+    config = TestConfig.global_config().VAULT.model_copy(
+        update={
+            "ENABLED": True,
+            "ADDR": f"http://{host}:{port}",
+            "TOKEN": "stub-token",
+            "AUTH_METHOD": "token",
+            "RETRIES_MAX_ATTEMPTS": retries,
+            "AUTO_RENEW_TOKEN": False,
+            "SECRET_CACHE_TTL": 0,
+        },
+    )
+    _store_adapter(context, VaultAdapter(config))
+
+
+@when('I call Vault "{operation}" against the unavailable server')
+def step_call_unavailable_vault(context, operation: str):
+    adapter = get_vault_adapter(context)
+    scenario_context = get_current_scenario_context(context)
+    server = context.vault_stub_server
+    server.data_requests.clear()
+    error = None
+    try:
+        if operation == "write_secret":
+            adapter.write_secret("app/outage", {"k": "v"})
+        elif operation == "read_secret":
+            adapter.read_secret("app/outage")
+        elif operation == "delete_secret":
+            adapter.delete_secret("app/outage")
+        else:
+            raise AssertionError(f"Unknown operation {operation}")
+    except Exception as e:  # noqa: BLE001
+        error = e
+    scenario_context.store("vault_outage_error", error)
+
+
+@then("a Vault UnavailableError without the server address should be raised")
+def step_then_unavailable_error(context):
+    error = get_current_scenario_context(context).get("vault_outage_error")
+    assert isinstance(error, UnavailableError), f"Expected UnavailableError, got {error!r}"
+    addr = context.vault_stub_server.server_address
+    assert f"{addr[0]}:{addr[1]}" not in str(error), f"Error leaks server address: {error}"
+    assert "/v1/" not in str(error), f"Error leaks request path: {error}"
+
+
+@then("the Vault server should have received {count:d} data requests")
+def step_then_request_count(context, count: int):
+    seen = len(context.vault_stub_server.data_requests)
+    assert seen == count, f"Expected {count} data requests, got {seen}: {context.vault_stub_server.data_requests}"

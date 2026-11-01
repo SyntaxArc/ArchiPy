@@ -53,6 +53,10 @@ config = ParsianShaparakConfig(
 )
 ```
 
+!!! note "Logging"
+    Debug logs name only the order id, the amount and the last four characters of a token. The login account and
+    full tokens are never logged.
+
 ### Initializing the Adapter
 
 ```python

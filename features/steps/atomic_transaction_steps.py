@@ -2217,6 +2217,25 @@ def step_when_nested_atomic_succeeds(context, db_type):
     get_current_scenario_context(context).store("atomic_marker_seen", seen)
 
 
+@when("{count:d} async atomic blocks run in separate tasks on {db_type}")
+async def step_when_async_atomic_in_tasks(context, count, db_type):
+    manager = _get_session_registry(db_type).get_async_manager()
+    atomic = _get_atomic_decorator(db_type, is_async=True)
+
+    @atomic
+    async def work():
+        manager.get_session()
+
+    await asyncio.gather(*(work() for _ in range(count)))
+    get_current_scenario_context(context).store("session_registry_size", len(manager._session_generator.registry.registry))
+
+
+@then("the async session registry should be empty")
+def step_then_async_registry_empty(context):
+    size = get_current_scenario_context(context).get("session_registry_size")
+    assert size == 0, f"{size} sessions leaked in the registry"
+
+
 @when("a nested async atomic block succeeds on {db_type}")
 async def step_when_nested_async_atomic_succeeds(context, db_type):
     """Async variant of the nested atomic block check."""
