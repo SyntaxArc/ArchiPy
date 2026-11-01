@@ -137,6 +137,18 @@ Feature: Email adapter
     When I create an email adapter
     Then an email deprecation warning mentions "TLS_MODE"
 
+  Scenario Outline: Insecure credential and verification settings warn
+    Given the Mailpit SMTP server is configured
+    And the SMTP transport security is "<mode>" <verification>
+    When I create an email adapter
+    Then an email deprecation warning mentions "<text>"
+
+    Examples:
+      | mode     | verification                     | text                        |
+      | none     | verified with the Mailpit CA     | sends USERNAME and PASSWORD |
+      | starttls | without certificate verification | TLS_VERIFY=False            |
+      | implicit | without certificate verification | TLS_VERIFY=False            |
+
   Scenario Outline: A half-set credential pair is rejected
     Given the Mailpit SMTP server is configured
     And the SMTP transport security is "<mode>" verified with the Mailpit CA
