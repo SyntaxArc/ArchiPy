@@ -264,6 +264,29 @@ Feature: App Utilities
       | sync  |
       | async |
 
+  Scenario Outline: A gRPC server and channel apply the configured compression and string options
+    When a <mode> gRPC server with <compression> compression and a string option is called by a channel with the same settings
+    Then the TLS call should be served
+    And a call to the stopped gRPC server should be rejected
+
+    Examples:
+      | mode  | compression |
+      | sync  | gzip        |
+      | async | gzip        |
+      | sync  | deflate     |
+      | async | none        |
+
+  Scenario Outline: The gRPC config checks its compression and shutdown grace
+    When the gRPC config field <field> is set to <value>
+    Then the gRPC field setting should be <outcome>
+
+    Examples:
+      | field                  | value  | outcome  |
+      | SERVER_COMPRESSION     | gzip   | accepted |
+      | STUB_COMPRESSION       | brotli | rejected |
+      | SHUTDOWN_GRACE_SECONDS | 2      | accepted |
+      | SHUTDOWN_GRACE_SECONDS | -1     | rejected |
+
   Scenario Outline: The gRPC config checks its TLS settings
     When a gRPC config is built with <settings>
     Then the gRPC config should be <outcome>

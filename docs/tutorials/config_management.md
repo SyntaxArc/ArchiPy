@@ -283,6 +283,21 @@ server.start()
 channel = AppUtils.create_grpc_channel(config, "service.internal:8100")  # aio=True for grpc.aio
 ```
 
+### With gRPC options, compression and shutdown grace
+
+`GRPC.SERVER_OPTIONS_CONFIG_LIST` and `GRPC.STUB_OPTIONS_CONFIG_LIST` accept integer and string values. The server
+list goes to `create_grpc_app` / `create_async_grpc_app`; the stub list goes to `create_grpc_channel`.
+
+| Setting                         | Purpose                                                                              |
+|---------------------------------|--------------------------------------------------------------------------------------|
+| `GRPC__SERVER_COMPRESSION`      | `none`, `deflate` or `gzip`; used when `compression` is not passed (default: gRPC)   |
+| `GRPC__STUB_COMPRESSION`        | `none`, `deflate` or `gzip` for channels from `create_grpc_channel` (default: gRPC)  |
+| `GRPC__SHUTDOWN_GRACE_SECONDS`  | Drain time for `AppUtils.stop_grpc_app` (default: abort in-flight RPCs at once)      |
+
+```python
+AppUtils.stop_grpc_app(server, config)  # server.stop(GRPC.SHUTDOWN_GRACE_SECONDS); await it for an async server
+```
+
 ### With Database Adapters
 
 ```python
