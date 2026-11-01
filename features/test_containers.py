@@ -850,13 +850,14 @@ class KafkaTestContainer(metaclass=Singleton, thread_safe=True):
         temp_container.stop()
         temp_container = None
 
+        # The broker listens on the host-mapped port itself: it reaches its own advertised address for transactions.
         self._container = (
             DockerContainer(image=self.image)
-            .with_bind_ports(9092, mapped_port)
+            .with_bind_ports(mapped_port, mapped_port)
             .with_bind_ports(9093, mapped_port + 1)
             .with_env("KAFKA_NODE_ID", "1")
             .with_env("KAFKA_PROCESS_ROLES", "broker,controller")
-            .with_env("KAFKA_LISTENERS", "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093")
+            .with_env("KAFKA_LISTENERS", f"PLAINTEXT://0.0.0.0:{mapped_port},CONTROLLER://0.0.0.0:9093")
             .with_env(
                 "KAFKA_ADVERTISED_LISTENERS",
                 f"PLAINTEXT://localhost:{mapped_port}",

@@ -86,6 +86,20 @@ Feature: Kafka Clients and Spans Testing
       | GROUP_AUTHORIZATION_FAILED | PermissionDeniedError   |
       | _INVALID_ARG               | InvalidArgumentError    |
 
+  Scenario: A transactional producer commits and aborts transactions
+    Given a test topic named "test-topic-txn"
+    When a transactional producer for topic "test-topic-txn" aborts "aborted-message" and then commits "committed-message"
+    Then a read committed consumer on topic "test-topic-txn" with group "test-group-txn" should first receive "committed-message"
+
+  Scenario Outline: A <mode> producer with <setting> cannot be used for a transaction
+    When I use a <mode> producer with <setting> for a transaction
+    Then the Kafka operation should raise "<error>"
+
+    Examples:
+      | mode  | setting             | error                |
+      | sync  | no transactional id | InvalidArgumentError |
+      | async | a transactional id  | ConfigurationError   |
+
   Scenario: Producing into a full local queue is reported as resource exhaustion
     Given an unreachable Kafka broker
     When I produce 2 messages with a producer whose queue holds only 1 message on that broker
