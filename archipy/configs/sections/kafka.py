@@ -94,6 +94,14 @@ class KafkaConfig(BaseModel):
         default=None,
         description="Consumer enable.auto.offset.store; None keeps the librdkafka default (true)",
     )
+    EMPTY_KEY_FOR_MISSING_KEY: bool = Field(
+        default=True,
+        description=(
+            "Deprecated legacy behavior: send messages produced without a key with an empty key (b''), so keyless "
+            "messages share one key and consumers read b'' instead of None. Set to False to send no key; False "
+            "becomes the default in a future release"
+        ),
+    )
     ENABLE_IDEMPOTENCE: bool = Field(default=False, description="Enable idempotent producer for exactly-once delivery")
     TRANSACTIONAL_ID: str | None = Field(default=None, description="Transactional ID for the producer")
     TRANSACTION_TIMEOUT_MS: int | None = Field(

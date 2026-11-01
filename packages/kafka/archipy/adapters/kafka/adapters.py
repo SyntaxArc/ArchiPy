@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import warnings
 from typing import TYPE_CHECKING, NoReturn, override
 
 import confluent_kafka
@@ -46,6 +47,7 @@ from archipy.models.errors import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from concurrent.futures import Future
 
     from archipy.configs.config_template import KafkaConfig
@@ -146,6 +148,37 @@ def _apply_transactional_config(config: dict[str, str | int | float], configs: K
     config["transactional.id"] = configs.TRANSACTIONAL_ID
     delivery_timeout = configs.MESSAGE_TIMEOUT_MS or configs.DELIVERY_TIMEOUT_MS
     config["transaction.timeout.ms"] = configs.TRANSACTION_TIMEOUT_MS or max(60000, delivery_timeout)
+
+
+def _resolve_message_key(
+    configs: KafkaConfig,
+    key: str | None,
+    encode: Callable[[str | bytes], bytes],
+) -> bytes | None:
+    """Return the key to send for a message.
+
+    A missing key is sent as ``None`` (no key) when ``EMPTY_KEY_FOR_MISSING_KEY`` is False. The legacy behavior,
+    still the default, sends empty bytes and is deprecated.
+
+    Args:
+        configs: Kafka configuration.
+        key: The key given by the caller, or None.
+        encode: Function that converts the key to bytes.
+
+    Returns:
+        bytes | None: The key to pass to the client.
+    """
+    if key is not None:
+        return encode(key)
+    if not configs.EMPTY_KEY_FOR_MISSING_KEY:
+        return None
+    warnings.warn(
+        "Messages without a key are sent with an empty key (b''). Set KAFKA.EMPTY_KEY_FOR_MISSING_KEY=False to "
+        "send them without a key; that will become the default in a future release.",
+        DeprecationWarning,
+        stacklevel=4,
+    )
+    return b""
 
 
 def _resolve_list_topics_timeout(configs: KafkaConfig, timeout: float | None) -> float:
@@ -771,12 +804,21 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
     def _delivery_callback(error: KafkaError | None, message: Message) -> None:
         """Callback for message delivery confirmation.
 
+        A failure is logged with topic, partition and key length only: payloads may carry personal data or tokens.
+
         Args:
             error (KafkaError | None): Error that occurred during delivery, or None if successful.
             message (Message): The delivered message.
         """
         if error:
-            logger.error("Message delivery failed: %s: %s", error, message.value())
+            key = message.key()
+            logger.error(
+                "Message delivery failed: %s (topic=%s, partition=%s, key_length=%d)",
+                error,
+                message.topic(),
+                message.partition(),
+                len(key) if key else 0,
+            )
         else:
             logger.debug(
                 "Message delivered to %s [%d] at offset %d",
@@ -785,13 +827,39 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
                 message.offset(),
             )
 
+    @classmethod
+    def _build_delivery_callback(
+        cls,
+        on_delivery: Callable[[KafkaError | None, Message], None] | None,
+    ) -> Callable[[KafkaError | None, Message], None]:
+        """Return the delivery callback that logs the outcome and then calls the caller's ``on_delivery``."""
+        if on_delivery is None:
+            return cls._delivery_callback
+
+        def callback(error: KafkaError | None, message: Message) -> None:
+            cls._delivery_callback(error, message)
+            try:
+                on_delivery(error, message)
+            except Exception:
+                logger.exception("The on_delivery callback raised an exception")
+
+        return callback
+
     @override
-    def produce(self, message: str | bytes, key: str | None = None) -> None:
+    def produce(
+        self,
+        message: str | bytes,
+        key: str | None = None,
+        on_delivery: Callable[[KafkaError | None, Message], None] | None = None,
+    ) -> None:
         """Produces a message to the configured topic.
 
         Args:
             message (str | bytes): The message to produce.
             key (str | None, optional): The key for the message. Defaults to None.
+            on_delivery (Callable[[KafkaError | None, Message], None] | None, optional): Called with the delivery
+                error (None on success) and the message once the broker acknowledged or rejected it. It runs while
+                the producer is polled (after later ``produce`` calls and in ``flush``). Defaults to None.
 
         Raises:
             NetworkError: If there is a network error producing the message.
@@ -799,14 +867,14 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             InternalError: If there is an error producing the message.
         """
         try:
+            callback = self._build_delivery_callback(on_delivery)
             processed_message = self._pre_process_message(message)
-            # Handle None key - convert to empty bytes if None
-            processed_key = self._pre_process_message(key) if key is not None else b""
+            processed_key = _resolve_message_key(self._configs, key, self._pre_process_message)
             try:
                 self._adapter.produce(
                     topic=self._topic_name,
                     value=processed_message,
-                    callback=self._delivery_callback,
+                    callback=callback,
                     key=processed_key,
                 )
             except BufferError:
@@ -815,7 +883,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
                 self._adapter.produce(
                     topic=self._topic_name,
                     value=processed_message,
-                    callback=self._delivery_callback,
+                    callback=callback,
                     key=processed_key,
                 )
             # Serve the delivery callbacks of earlier messages, so the queue drains without a flush
@@ -1075,7 +1143,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
         try:
             adapter = await self._get_adapter()
             processed_message = self._pre_process_message(message)
-            processed_key = self._pre_process_message(key) if key is not None else b""
+            processed_key = _resolve_message_key(self._configs, key, self._pre_process_message)
             await adapter.produce(
                 topic=self._topic_name,
                 value=processed_message,

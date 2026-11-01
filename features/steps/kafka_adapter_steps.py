@@ -1206,6 +1206,91 @@ def step_operation_should_raise_nothing(context):
     assert error is None, f"Expected no error, got {error!r}"
 
 
+@when('a sync producer on that broker fails to deliver "{payload}" with key "{key}" to topic "{topic_name}"')
+def step_failed_delivery(context, payload, key, topic_name):
+    """Let a message time out in the local queue, capturing the producer logs and the on_delivery outcome."""
+    import logging
+
+    config = get_current_scenario_context(context).get("kafka_unreachable_config")
+    config = config.model_copy(update={"MESSAGE_TIMEOUT_MS": 1000})
+    records = []
+
+    class _Collector(logging.Handler):
+        def emit(self, record):
+            records.append(record.getMessage())
+
+    adapter_logger = logging.getLogger("archipy.adapters.kafka.adapters")
+    handler = _Collector()
+    adapter_logger.addHandler(handler)
+    outcomes = []
+    try:
+        producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+        producer.produce(payload, key=key, on_delivery=lambda error, message: outcomes.append(error))
+        producer.flush(timeout=10)
+    finally:
+        adapter_logger.removeHandler(handler)
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("kafka_delivery_logs", records)
+    scenario_context.store("kafka_delivery_outcomes", outcomes)
+
+
+@then('the delivery failure should be passed to the on_delivery callback')
+def step_delivery_failure_reported(context):
+    """The caller's callback must observe the failed delivery."""
+    outcomes = get_current_scenario_context(context).get("kafka_delivery_outcomes")
+    assert len(outcomes) == 1 and outcomes[0] is not None, f"Unexpected outcomes: {outcomes}"
+
+
+@then('the logs should mention topic "{topic_name}" but not "{payload}"')
+def step_logs_hide_payload(context, topic_name, payload):
+    """The failure is logged with its topic but never with the payload."""
+    logs = "\n".join(get_current_scenario_context(context).get("kafka_delivery_logs"))
+    assert f"topic={topic_name}" in logs, f"Missing topic in logs: {logs}"
+    assert payload not in logs, f"Payload leaked into logs: {logs}"
+
+
+@when('a {mode} producer with missing keys sent as {setting} produces a message without a key to topic "{topic_name}"')
+def step_produce_without_key(context, mode, setting, topic_name):
+    """Produce a keyless message, noting whether the legacy empty key raised a DeprecationWarning."""
+    import warnings
+
+    config = _get_kafka_config(context).model_copy(
+        update={"EMPTY_KEY_FOR_MISSING_KEY": setting == "an empty key"},
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        if mode == "sync":
+            producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+            producer.produce("keyless")
+            producer.close()
+        else:
+
+            async def run():
+                producer = AsyncKafkaProducerAdapter(topic_name, kafka_configs=config)
+                await producer.produce("keyless")
+                await producer.close()
+
+            asyncio.run(run())
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("kafka_deprecation_warned", any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+
+@then('the message on topic "{topic_name}" should have {key_state} and the deprecation warning should be {warned}')
+def step_keyless_message_key(context, topic_name, key_state, warned):
+    """Read the keyless message and check the key and the deprecation warning."""
+    config = _get_kafka_config(context)
+    consumer = KafkaConsumerAdapter(f"keyless-group-{topic_name}", topic_list=[topic_name], kafka_configs=config)
+    try:
+        message = _poll_until_message(consumer.poll)
+    finally:
+        consumer.close()
+    assert message is not None, "No message received"
+    expected_key = None if key_state == "no key" else b""
+    assert message.key() == expected_key, f"Expected key {expected_key!r}, got {message.key()!r}"
+    expected_warning = warned == "raised"
+    assert get_current_scenario_context(context).get("kafka_deprecation_warned") is expected_warning
+
+
 @then('the Kafka operation should raise one of "{error_names}"')
 def step_operation_should_raise_one_of(context, error_names):
     """Assert the captured exception is one of the comma separated ArchiPy errors."""

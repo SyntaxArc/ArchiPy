@@ -205,7 +205,8 @@ except InternalError as e:
 else:
     logger.info("Message enqueued successfully")
 
-# Publish with a message key (for partition affinity)
+# Publish with a message key (for partition affinity). Without a key the message is currently sent with an empty
+# key (b""), which emits a DeprecationWarning; set KAFKA.EMPTY_KEY_FOR_MISSING_KEY=False to send no key (None).
 try:
     producer.produce("Hello, Kafka with key!", key="user-123")
 except InternalError as e:
@@ -213,6 +214,15 @@ except InternalError as e:
     raise
 else:
     logger.info("Keyed message enqueued")
+
+# Observe the delivery outcome: the callback runs while the producer is polled (later produce calls and flush).
+# A failed delivery is also logged with topic, partition and key length, never with the payload.
+def on_delivery(error, message):
+    if error is not None:
+        logger.error("Delivery to %s failed: %s", message.topic(), error)
+
+
+producer.produce("Hello, Kafka with callback!", on_delivery=on_delivery)
 
 # Flush to ensure all pending messages are delivered
 try:

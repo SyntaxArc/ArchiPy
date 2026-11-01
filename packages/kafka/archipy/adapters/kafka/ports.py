@@ -6,7 +6,9 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from confluent_kafka import Message, TopicPartition
+    from collections.abc import Callable
+
+    from confluent_kafka import KafkaError, Message, TopicPartition
     from confluent_kafka.admin import ClusterMetadata
 
 
@@ -164,12 +166,20 @@ class KafkaProducerPort:
     """
 
     @abstractmethod
-    def produce(self, message: str | bytes, key: str | None = None) -> None:
+    def produce(
+        self,
+        message: str | bytes,
+        key: str | None = None,
+        on_delivery: Callable[[KafkaError | None, Message], None] | None = None,
+    ) -> None:
         """Produces a message to the configured topic.
 
         Args:
             message (str | bytes): The message to produce.
             key (str | None, optional): The key for the message. Defaults to None.
+            on_delivery (Callable[[KafkaError | None, Message], None] | None, optional): Called with the delivery
+                error (None on success) and the message once the broker acknowledged or rejected it.
+                Defaults to None.
 
         Raises:
             NotImplementedError: If the method is not implemented by the concrete class.
