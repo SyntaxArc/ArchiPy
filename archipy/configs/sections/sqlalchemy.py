@@ -42,7 +42,7 @@ class SQLAlchemyConfig(BaseModel):
     HIDE_PARAMETERS: bool = Field(default=False, description="Whether to hide SQL parameters in logs")
     HOST: str | None = Field(default=None, description="Database host")
     ISOLATION_LEVEL: str | None = Field(default="REPEATABLE READ", description="Transaction isolation level")
-    PASSWORD: str | None = Field(default=None, description="Database password")
+    PASSWORD: str | None = Field(default=None, repr=False, description="Database password")
     POOL_MAX_OVERFLOW: int = Field(default=1, description="Maximum number of connections to allow in pool overflow")
     POOL_PRE_PING: bool = Field(default=True, description="Whether to ping connections before use")
     POOL_RECYCLE_SECONDS: int = Field(default=10 * 60, description="Number of seconds between connection recycling")
@@ -91,7 +91,7 @@ class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
     Extends SQLAlchemyConfig with PostgreSQL-specific settings and URL building.
     """
 
-    POSTGRES_DSN: PostgresDsn | None = Field(default=None, description="PostgreSQL connection URL")
+    POSTGRES_DSN: PostgresDsn | None = Field(default=None, repr=False, description="PostgreSQL connection URL")
     CONNECT_TIMEOUT: int | None = Field(
         default=None,
         ge=1,
