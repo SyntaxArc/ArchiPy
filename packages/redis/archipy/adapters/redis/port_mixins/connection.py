@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 if TYPE_CHECKING:
     from redis.asyncio.client import Pipeline as AsyncPipeline
@@ -18,6 +18,23 @@ if TYPE_CHECKING:
 
 class RedisConnectionPort:
     """Sync Redis port for connection operations."""
+
+    @abstractmethod
+    def close(self) -> None:
+        """Close every client and connection pool the adapter opened.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    def __enter__(self) -> Self:
+        """Enter the context manager and return the adapter."""
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        """Close the adapter when leaving the context manager."""
+        self.close()
 
     @abstractmethod
     def ping(self) -> bool:
@@ -113,6 +130,23 @@ class RedisConnectionPort:
 
 class AsyncRedisConnectionPort:
     """Async Redis port for connection operations."""
+
+    @abstractmethod
+    async def aclose(self) -> None:
+        """Close every client and connection pool the adapter opened asynchronously.
+
+        Raises:
+            NotImplementedError: If not implemented by the subclass.
+        """
+        raise NotImplementedError
+
+    async def __aenter__(self) -> Self:
+        """Enter the async context manager and return the adapter."""
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        """Close the adapter when leaving the async context manager."""
+        await self.aclose()
 
     @abstractmethod
     async def ping(self) -> bool:

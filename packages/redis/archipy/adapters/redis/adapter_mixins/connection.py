@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 from redis import RedisCluster, Sentinel
 from redis.asyncio import RedisCluster as AsyncRedisCluster, Sentinel as AsyncSentinel
@@ -248,6 +248,35 @@ class RedisConnectionMixin(SyncRedisMixinBase):
             Pipeline: Pipeline object.
         """
         return self.client.pipeline(transaction, shard_hint)
+
+    def _open_clients(self) -> list[Redis | RedisCluster]:
+        """Return each distinct client this adapter created (write, read-only, search)."""
+        candidates = [
+            getattr(self, "client", None),
+            getattr(self, "read_only_client", None),
+            self._search_client,
+        ]
+        unique: dict[int, Redis | RedisCluster] = {id(c): c for c in candidates if c is not None}
+        return list(unique.values())
+
+    def close(self) -> None:
+        """Close the write, read-only and search clients and their connection pools.
+
+        Safe to call more than once. A search client created later is rebuilt on demand.
+        """
+        for client in self._open_clients():
+            client.close()
+            if not isinstance(client, RedisCluster):
+                client.connection_pool.disconnect()
+        self._search_client = None
+
+    def __enter__(self) -> Self:
+        """Enter the context manager and return the adapter."""
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        """Close the clients when leaving the context manager."""
+        self.close()
 
     def ping(self) -> bool:
         """Ping the Redis server.
@@ -571,6 +600,36 @@ class AsyncRedisConnectionMixin(AsyncRedisMixinBase):
                 },
             )
         return result
+
+    def _open_clients(self) -> list[AsyncRedis | AsyncRedisCluster]:
+        """Return each distinct client this adapter created (write, read-only, search)."""
+        candidates = [
+            getattr(self, "client", None),
+            getattr(self, "read_only_client", None),
+            self._search_client,
+        ]
+        unique: dict[int, AsyncRedis | AsyncRedisCluster] = {id(c): c for c in candidates if c is not None}
+        return list(unique.values())
+
+    async def aclose(self) -> None:
+        """Close the write, read-only and search clients and their connection pools.
+
+        Safe to call more than once. A search client created later is rebuilt on demand.
+        """
+        for client in self._open_clients():
+            if isinstance(client, AsyncRedisCluster):
+                await client.aclose()
+            else:
+                await client.aclose(close_connection_pool=True)
+        self._search_client = None
+
+    async def __aenter__(self) -> Self:
+        """Enter the async context manager and return the adapter."""
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        """Close the clients when leaving the async context manager."""
+        await self.aclose()
 
     async def ping(self) -> bool:
         """Ping the Redis server asynchronously.
