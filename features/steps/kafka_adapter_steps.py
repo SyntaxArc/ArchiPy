@@ -1018,6 +1018,51 @@ def step_handle_kafka_failure(context, code):
     _capture_error(context, lambda: KafkaExceptionHandlerMixin._handle_kafka_exception(failure, "operation"))
 
 
+@when('a transactional producer for topic "{topic_name}" aborts "{aborted}" and then commits "{committed}"')
+def step_transactional_produce(context, topic_name, aborted, committed):
+    """Produce one message in an aborted transaction and one in a committed transaction."""
+    config = _get_kafka_config(context).model_copy(
+        update={"ENABLE_IDEMPOTENCE": True, "TRANSACTIONAL_ID": f"txn-{topic_name}"},
+    )
+    producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+    try:
+        producer.begin_transaction()
+        producer.produce(aborted)
+        producer.abort_transaction()
+        producer.begin_transaction()
+        producer.produce(committed)
+        producer.commit_transaction()
+    finally:
+        producer.close()
+
+
+@then('a read committed consumer on topic "{topic_name}" with group "{group_id}" should first receive "{expected}"')
+def step_read_committed_first(context, topic_name, group_id, expected):
+    """A read_committed consumer must skip the aborted message and see the committed one first."""
+    config = _get_kafka_config(context).model_copy(update={"ISOLATION_LEVEL": "read_committed"})
+    consumer = KafkaConsumerAdapter(group_id, topic_list=[topic_name], kafka_configs=config)
+    try:
+        message = _poll_until_message(consumer.poll)
+    finally:
+        consumer.close()
+    assert message is not None, "No message received"
+    assert message.value().decode("utf-8") == expected, f"Got {message.value()!r}"
+
+
+@when("I use a {mode} producer with {setting} for a transaction")
+def step_use_transaction_settings(context, mode, setting):
+    """Start a transaction on a producer that is, or is not, configured as transactional."""
+    updates = {"ENABLE_IDEMPOTENCE": True, "TRANSACTIONAL_ID": "txn-setting"} if setting == "a transactional id" else {}
+    config = _get_kafka_config(context).model_copy(update=updates)
+    if mode == "sync":
+        _capture_error(context, KafkaProducerAdapter("txn-setting-topic", kafka_configs=config).begin_transaction)
+    else:
+        _capture_error(
+            context,
+            lambda: asyncio.run(AsyncKafkaProducerAdapter("txn-setting-topic", kafka_configs=config).produce("x")),
+        )
+
+
 @then('the Kafka operation should raise one of "{error_names}"')
 def step_operation_should_raise_one_of(context, error_names):
     """Assert the captured exception is one of the comma separated ArchiPy errors."""
