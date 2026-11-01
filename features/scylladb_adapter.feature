@@ -353,6 +353,42 @@ Feature: ScyllaDB Adapter
       | asyn | create keyspace with injected replication factor |
 
   @needs-scylladb
+  Scenario Outline: Driver exceptions are mapped by type
+    When I map the ScyllaDB driver exception "<exception>"
+    Then the ScyllaDB call should raise <error>
+
+    Examples: Exceptions
+      | exception                                      | error                   |
+      | OperationTimedOut                              | ConnectionTimeoutError  |
+      | ReadTimeout                                    | ConnectionTimeoutError  |
+      | Unavailable                                    | ServiceUnavailableError |
+      | NoHostAvailable                                | ServiceUnavailableError |
+      | AuthenticationFailed                           | InvalidCredentialsError |
+      | ProtocolVersionUnsupported                     | ConfigurationError      |
+      | ConnectionShutdown                             | NetworkError            |
+      | unrelated message about timeout and connection | DatabaseQueryError      |
+
+  @needs-scylladb
+  Scenario: A driver timeout reports its value
+    When I map the ScyllaDB driver exception "OperationTimedOut"
+    Then the ScyllaDB error should carry timeout 7
+
+  @needs-scylladb
+  Scenario Outline: A missing table error names the table
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "named_<mode>"
+    When I run ScyllaDB operation "select" on table "absent_<mode>"
+    Then the NotFoundError should name table "absent_<mode>"
+
+    Examples: Sync
+      | mode |
+      | syn  |
+
+    @async
+    Examples: Async
+      | mode |
+      | asyn |
+
+  @needs-scylladb
   Scenario Outline: Prepared statements are cached and executed with bound parameters
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
     When I execute a prepared ScyllaDB insert into "<table>" twice
