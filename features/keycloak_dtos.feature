@@ -127,3 +127,16 @@ Feature: Keycloak DTOs
   Scenario: A client key without a client certificate is rejected
     When a Keycloak config is built with a client key file but no client certificate
     Then building the Keycloak config fails with a validation error
+
+  Scenario Outline: VERIFY_SSL keeps boolean spellings and treats other strings as a CA bundle path
+    When a Keycloak config is built with VERIFY_SSL "<value>"
+    Then the Keycloak config VERIFY_SSL is "<parsed>"
+
+    Examples:
+      | value                   | parsed                  |
+      | false                   | False                   |
+      | False                   | False                   |
+      | 0                       | False                   |
+      | true                    | True                    |
+      | 1                       | True                    |
+      | /etc/ssl/private-ca.pem | /etc/ssl/private-ca.pem |

@@ -316,3 +316,13 @@ def step_config_key_without_cert(context):
         sc.store("validation_error", e)
     else:
         sc.store("validation_error", None)
+
+
+@when('a Keycloak config is built with VERIFY_SSL "{value}"')
+def step_config_verify_ssl(context, value):
+    get_current_scenario_context(context).store("keycloak_config", KeycloakConfig(VERIFY_SSL=value))
+
+
+@then('the Keycloak config VERIFY_SSL is "{parsed}"')
+def step_config_verify_ssl_is(context, parsed):
+    assert str(get_current_scenario_context(context).get("keycloak_config").VERIFY_SSL) == parsed
