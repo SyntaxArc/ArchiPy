@@ -165,6 +165,8 @@ so are values that are valid alone but invalid together (for example a batch siz
 | `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_HEADERS` (`k=v,k=v`; replaces `OTLP_HEADERS` for that signal) | `TRACES_HEADERS`, `METRICS_HEADERS`, `LOGS_HEADERS` |
 | `OTEL_EXPORTER_OTLP_TIMEOUT` (seconds, as the Python SDK reads it) | `TIMEOUT`                                                  |
 | `OTEL_EXPORTER_OTLP_COMPRESSION` (`none`, `gzip`)           | `OTLP_COMPRESSION`                                                |
+| `OTEL_EXPORTER_OTLP_{,TRACES_,METRICS_,LOGS_}{CERTIFICATE,CLIENT_CERTIFICATE,CLIENT_KEY}` (PEM file paths; a client certificate needs a client key) | `OTLP_`, `TRACES_`, `METRICS_`, `LOGS_` + `CERTIFICATE`, `CLIENT_CERTIFICATE`, `CLIENT_KEY` |
+| `OTEL_EXPORTER_OTLP_{,TRACES_,METRICS_,LOGS_}INSECURE` (`true`/`false`; gRPC only, HTTP follows the URL scheme) | `OTLP_INSECURE`, `TRACES_INSECURE`, `METRICS_INSECURE`, `LOGS_INSECURE` |
 | `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG`            | `TRACES_SAMPLER`, `TRACES_SAMPLE_RATIO` (the Jaeger and X-Ray samplers are not supported) |
 | `OTEL_PROPAGATORS`                                          | `PROPAGATORS`                                                     |
 | `OTEL_ATTRIBUTE_COUNT_LIMIT`, `OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT` | `ATTRIBUTE_COUNT_LIMIT`, `ATTRIBUTE_VALUE_LENGTH_LIMIT` |

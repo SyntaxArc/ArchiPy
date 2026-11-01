@@ -229,6 +229,41 @@ def step_then_span_capped(context, count, value):
     assert set(span.attributes.values()) == {value}, dict(span.attributes)
 
 
+@then('the HTTP exporter TLS options of {signal} are {options}')
+def step_then_http_tls(context, signal, options):
+    from archipy.helpers.utils._otel.exporters import _http_tls
+
+    actual = _http_tls(_ctx(context).get("effective_otel"), signal.upper())
+    assert actual == json.loads(options), actual
+
+
+@then("the gRPC exporter of {signal} gets {outcome} from the TLS files {files}")
+def step_then_grpc_tls(context, signal, outcome, files):
+    import tempfile
+    from pathlib import Path
+
+    from archipy.helpers.utils._otel.exporters import _grpc_tls
+
+    otel = _ctx(context).get("effective_otel")
+    tmp = Path(tempfile.mkdtemp())
+    context.add_cleanup(lambda: [path.unlink() for path in tmp.iterdir()] and tmp.rmdir())
+    updates = {}
+    for field, name in json.loads(files).items():
+        path = tmp / name
+        path.write_bytes(b"-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n")
+        updates[field] = str(path)
+    otel = otel.model_copy(update=updates)
+    if outcome == "a missing file error":
+        otel = otel.model_copy(update={"TRACES_CERTIFICATE": str(tmp / "absent.pem")})
+        try:
+            _grpc_tls(otel, signal.upper())
+        except FileNotFoundError:
+            return
+        raise AssertionError("a missing PEM file was accepted")
+    tls = _grpc_tls(otel, signal.upper())
+    assert (tls["credentials"] is not None) == (outcome == "credentials"), tls
+
+
 @then("the OpenTelemetry SDK is {state}")
 def step_then_sdk_state(context, state):
     sc = _ctx(context)
