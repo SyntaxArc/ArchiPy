@@ -1,5 +1,6 @@
 """ScyllaDB configuration."""
 
+import ssl
 from typing import Literal, Self
 
 from pydantic import BaseModel, Field, SecretStr, model_validator
@@ -131,6 +132,38 @@ class ScyllaDBConfig(BaseModel):
         description="Enable connection pool monitoring and metrics",
     )
 
+    # TLS Configuration
+    TLS_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Encrypt the connection to the cluster with TLS. When disabled (default) credentials and data "
+            "travel in plain text."
+        ),
+    )
+    TLS_CA_FILE: str | None = Field(
+        default=None,
+        description="Path to the CA bundle used to verify the server certificate (system CAs when unset)",
+    )
+    TLS_CERT_FILE: str | None = Field(
+        default=None,
+        description="Path to the client certificate for mutual TLS (requires TLS_KEY_FILE)",
+    )
+    TLS_KEY_FILE: str | None = Field(
+        default=None,
+        description="Path to the client private key for mutual TLS (requires TLS_CERT_FILE)",
+    )
+    TLS_VERIFY_MODE: Literal["CERT_REQUIRED", "CERT_NONE"] = Field(
+        default="CERT_REQUIRED",
+        description=(
+            "Server certificate verification. 'CERT_REQUIRED' validates the chain; "
+            "'CERT_NONE' disables verification (and hostname checking) and is insecure"
+        ),
+    )
+    TLS_CHECK_HOSTNAME: bool = Field(
+        default=True,
+        description="Check that the server certificate matches the contact point host name",
+    )
+
     # Connection Pool Configuration
     MAX_CONNECTIONS_PER_HOST: int = Field(
         default=2,
@@ -211,3 +244,42 @@ class ScyllaDBConfig(BaseModel):
                 additional_data={"error": "REPLICATION_CONFIG required for NetworkTopologyStrategy"},
             )
         return self
+
+    @model_validator(mode="after")
+    def validate_tls(self) -> Self:
+        """Validate TLS settings: files need TLS_ENABLED, and the client cert and key come as a pair."""
+        if (self.TLS_CERT_FILE is None) != (self.TLS_KEY_FILE is None):
+            raise InvalidArgumentError(
+                argument_name="tls",
+                additional_data={"error": "TLS_CERT_FILE and TLS_KEY_FILE must be provided together"},
+            )
+        if not self.TLS_ENABLED and (self.TLS_CA_FILE or self.TLS_CERT_FILE):
+            raise InvalidArgumentError(
+                argument_name="tls",
+                additional_data={"error": "TLS_ENABLED must be true when TLS certificate files are set"},
+            )
+        return self
+
+    def build_ssl_context(self) -> ssl.SSLContext | None:
+        """Build the TLS context for the cluster connection.
+
+        Returns:
+            ssl.SSLContext | None: The context for ``Cluster(ssl_context=)``, or None when TLS is disabled.
+        """
+        if not self.TLS_ENABLED:
+            return None
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        if self.TLS_VERIFY_MODE == "CERT_NONE":
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+        else:
+            context.check_hostname = self.TLS_CHECK_HOSTNAME
+            context.verify_mode = ssl.CERT_REQUIRED
+            if self.TLS_CA_FILE:
+                context.load_verify_locations(cafile=self.TLS_CA_FILE)
+            else:
+                context.load_default_certs()
+        if self.TLS_CERT_FILE and self.TLS_KEY_FILE:
+            context.load_cert_chain(certfile=self.TLS_CERT_FILE, keyfile=self.TLS_KEY_FILE)
+        return context

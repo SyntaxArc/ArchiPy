@@ -322,6 +322,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             },
             shard_aware_options=shard_aware_options,
             address_translator=address_translator,
+            ssl_context=self.config.build_ssl_context(),
         )
         _warn_ignored_pool_settings(self.config)
 
@@ -937,6 +938,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             },
             shard_aware_options=shard_aware_options,
             address_translator=address_translator,
+            ssl_context=self.config.build_ssl_context(),
         )
         _warn_ignored_pool_settings(self.config)
 

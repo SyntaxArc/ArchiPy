@@ -86,6 +86,35 @@ config = ScyllaDBConfig(
 )
 ```
 
+### TLS Configuration
+
+TLS is off by default, so the password and data travel unencrypted. Enable it to encrypt the connection and verify the
+server certificate (TLS 1.2 or newer).
+
+```python
+config = ScyllaDBConfig(
+    CONTACT_POINTS=["node1.example.com"],
+    USERNAME="scylla_user",
+    PASSWORD="secure_password",
+    TLS_ENABLED=True,
+    TLS_CA_FILE="/etc/ssl/scylla-ca.pem",  # system CAs when unset
+    TLS_CERT_FILE="/etc/ssl/client.pem",  # optional, mutual TLS (needs TLS_KEY_FILE)
+    TLS_KEY_FILE="/etc/ssl/client.key",
+)
+```
+
+| Setting             | Default         | Purpose                                                              |
+|---------------------|-----------------|----------------------------------------------------------------------|
+| `TLS_ENABLED`       | `False`         | Turn TLS on                                                          |
+| `TLS_CA_FILE`       | `None`          | CA bundle for server verification                                    |
+| `TLS_CERT_FILE`     | `None`          | Client certificate (with `TLS_KEY_FILE`)                             |
+| `TLS_KEY_FILE`      | `None`          | Client private key (with `TLS_CERT_FILE`)                            |
+| `TLS_VERIFY_MODE`   | `CERT_REQUIRED` | `CERT_NONE` skips verification and host name checks; insecure        |
+| `TLS_CHECK_HOSTNAME`| `True`          | Match the certificate to the contact point host name                 |
+
+!!! warning
+    Do not use `TLS_VERIFY_MODE="CERT_NONE"` outside local testing.
+
 ## Basic Usage
 
 === "Sync"
