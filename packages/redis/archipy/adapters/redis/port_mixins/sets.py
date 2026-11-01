@@ -6,7 +6,9 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterator
+    from collections.abc import Iterator
+
+    from archipy.adapters.redis.async_iteration import AwaitableAsyncIterator
 
 _set = set
 
@@ -199,12 +201,12 @@ class AsyncRedisSetsPort:
         raise NotImplementedError
 
     @abstractmethod
-    async def sscan_iter(
+    def sscan_iter(
         self,
         name: bytes | str,
         match: bytes | str | None = None,
         count: int | None = None,
-    ) -> AsyncIterator[bytes | str]:
+    ) -> AwaitableAsyncIterator[bytes | str]:
         """Provides an iterator over members of a set asynchronously.
 
         Args:

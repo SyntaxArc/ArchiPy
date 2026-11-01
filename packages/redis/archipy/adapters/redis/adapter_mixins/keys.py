@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Awaitable, Iterable, Iterator, Mapping
+from collections.abc import Awaitable, Iterable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any
 
 from archipy.adapters.redis.adapter_mixins._shared import (
@@ -10,6 +10,7 @@ from archipy.adapters.redis.adapter_mixins._shared import (
     SyncRedisMixinBase,
     _text,
 )
+from archipy.adapters.redis.async_iteration import AwaitableAsyncIterator
 
 if TYPE_CHECKING:
     from datetime import datetime, timedelta
@@ -561,13 +562,13 @@ class AsyncRedisKeysMixin(AsyncRedisMixinBase):
         """
         return await self.read_only_client.scan(cursor, match, count, _type, **kwargs)
 
-    async def scan_iter(
+    def scan_iter(
         self,
         match: bytes | str | None = None,
         count: int | None = None,
         _type: str | None = None,
         **kwargs: Any,
-    ) -> AsyncIterator[bytes | str]:
+    ) -> AwaitableAsyncIterator[bytes | str]:
         """Iterate over keys in database asynchronously.
 
         Args:
@@ -579,4 +580,4 @@ class AsyncRedisKeysMixin(AsyncRedisMixinBase):
         Returns:
             Iterator[Any]: Iterator over matching keys.
         """
-        return self.read_only_client.scan_iter(match, count, _type, **kwargs)
+        return AwaitableAsyncIterator(self.read_only_client.scan_iter(match, count, _type, **kwargs))

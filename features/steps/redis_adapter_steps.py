@@ -3465,6 +3465,23 @@ async def step_when_sscan_iter_async(context, name, pattern, adapter_type):
     store_result(context, "async_set_scan", members)
 
 
+@when(r'I iterate keys matching "(?P<pattern>[^"]+)" and members of the set "(?P<name>[^"]+)" directly in async (?P<adapter_type>mock|container|cluster)')
+async def step_when_scan_iter_direct_async(context, pattern, name, adapter_type):
+    """Use scan_iter and sscan_iter with a plain async for, without awaiting them first."""
+    adapter = get_current_scenario_context(context).async_adapter
+    keys = [key async for key in adapter.scan_iter(match=pattern)]
+    members = [member async for member in adapter.sscan_iter(name)]
+    store_result(context, "async_direct_keys", sorted(keys))
+    store_result(context, "async_direct_members", sorted(members))
+
+
+@then(r'the directly iterated keys should be "(?P<keys>[^"]+)" and members "(?P<members>[^"]+)"')
+async def step_then_direct_iteration(context, keys, members):
+    """Verify direct async iteration returned the stored keys and members."""
+    assert get_result(context, "async_direct_keys") == sorted(k.strip() for k in keys.split(","))
+    assert get_result(context, "async_direct_members") == sorted(m.strip() for m in members.split(","))
+
+
 @then(r'the async set scan should return "(?P<expected>[^"]+)"')
 async def step_then_set_scan_async(context, expected):
     """Verify the members returned by a set scan."""
