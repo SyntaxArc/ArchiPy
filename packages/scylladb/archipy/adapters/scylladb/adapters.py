@@ -62,6 +62,9 @@ from archipy.models.errors import (
 
 logger = logging.getLogger(__name__)
 _CQL_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+# Fixed texts: probe responses must not reveal driver messages, hosts or addresses; details go to the log.
+_HEALTH_CHECK_FAILED: Final = "unavailable"
+_POOL_STATS_FAILED: Final = "unavailable"
 
 
 _POOL_SETTING_DEFAULTS: Final = {
@@ -792,7 +795,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             return {
                 "status": "unhealthy",
                 "latency_ms": 0.0,
-                "error": "Not connected to cluster",
+                "error": _HEALTH_CHECK_FAILED,
             }
 
         try:
@@ -801,11 +804,12 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             # The request timeout lives in the execution profile, so the probe sets its own per call
             session.execute("SELECT now() FROM system.local", timeout=self.config.HEALTH_CHECK_TIMEOUT)
             latency_ms = (time.time() - start_time) * 1000
-        except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
+        except Exception:  # cleanup/health soft-fail; unconstrained errors
+            logger.warning("ScyllaDB health check failed", exc_info=True)
             return {
                 "status": "unhealthy",
                 "latency_ms": 0.0,
-                "error": str(e),
+                "error": _HEALTH_CHECK_FAILED,
             }
         else:
             return {
@@ -904,8 +908,9 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             stats["total_open_connections"] = sum(h["open_connections"] for h in hosts_stats)
             stats["total_in_flight_queries"] = sum(h["in_flight_queries"] for h in hosts_stats)
 
-        except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
-            stats["error"] = str(e)
+        except Exception:  # cleanup/health soft-fail; unconstrained errors
+            logger.warning("ScyllaDB pool statistics unavailable", exc_info=True)
+            stats["error"] = _POOL_STATS_FAILED
 
         return stats
 
@@ -1452,7 +1457,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             return {
                 "status": "unhealthy",
                 "latency_ms": 0.0,
-                "error": "Not connected to cluster",
+                "error": _HEALTH_CHECK_FAILED,
             }
 
         try:
@@ -1461,11 +1466,12 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             future = session.execute_async("SELECT now() FROM system.local", timeout=self.config.HEALTH_CHECK_TIMEOUT)
             await self._await_future(future)
             latency_ms = (time.time() - start_time) * 1000
-        except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
+        except Exception:  # cleanup/health soft-fail; unconstrained errors
+            logger.warning("ScyllaDB health check failed", exc_info=True)
             return {
                 "status": "unhealthy",
                 "latency_ms": 0.0,
-                "error": str(e),
+                "error": _HEALTH_CHECK_FAILED,
             }
         else:
             return {
@@ -1564,7 +1570,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             stats["total_open_connections"] = sum(h["open_connections"] for h in hosts_stats)
             stats["total_in_flight_queries"] = sum(h["in_flight_queries"] for h in hosts_stats)
 
-        except Exception as e:  # noqa: BLE001  # cleanup/health soft-fail; unconstrained errors
-            stats["error"] = str(e)
+        except Exception:  # cleanup/health soft-fail; unconstrained errors
+            logger.warning("ScyllaDB pool statistics unavailable", exc_info=True)
+            stats["error"] = _POOL_STATS_FAILED
 
         return stats

@@ -393,6 +393,21 @@ Feature: ScyllaDB Adapter
       | asyn |
 
   @needs-scylladb
+  Scenario Outline: Failing probes do not reveal driver errors or hosts
+    Given a ScyllaDB adapter is configured
+    When I check the health and pool statistics of an adapter whose session fails
+    Then the ScyllaDB probe responses should not contain the driver error text
+
+    Examples: Sync
+      | mode |
+      | syn  |
+
+    @async
+    Examples: Async
+      | mode |
+      | asyn |
+
+  @needs-scylladb
   Scenario Outline: The cluster applies policies and timeout through the default execution profile with <setting> set
     When I build a ScyllaDB cluster with <setting> set to <value>
     Then the default execution profile should use the configured request timeout and retry policy
