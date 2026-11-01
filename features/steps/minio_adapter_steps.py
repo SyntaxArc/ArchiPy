@@ -625,6 +625,14 @@ def step_verify_raised_error(context, error_name):
     assert type(error).__name__ == error_name, f"Expected {error_name}, got {type(error).__name__}: {error}"
 
 
+@then('the MinIO error resource type should be "{resource_type}"')
+def step_verify_error_resource_type(context, resource_type):
+    error = get_current_scenario_context(context).get("raised_error")
+    assert error is not None, "Expected an error"
+    actual = (error.additional_data or {}).get("resource_type")
+    assert actual == resource_type, f"Expected resource type {resource_type}, got {actual}"
+
+
 @when("I clear all adapter caches")
 def step_clear_all_caches(context):
     get_minio_adapter(context).clear_all_caches()
