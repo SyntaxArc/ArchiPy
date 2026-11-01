@@ -201,6 +201,8 @@ Feature: Kafka Clients and Spans Testing
       | SASL_SSL       | GSSAPI        | -        | ca.pem | -          | -          | sasl.mechanism,ssl.ca.location                      | sasl.username,ssl.certificate.location |
       | SASL_SSL       | SCRAM-SHA-512 | user     | -      | -          | -          | sasl.username,ssl.endpoint.identification.algorithm | ssl.ca.location                        |
       | PLAINTEXT      | -             | -        | -      | -          | -          | security.protocol                                   | sasl.mechanism,ssl.ca.location         |
+      | ssl            | -             | -        | ca.pem | -          | -          | security.protocol,ssl.ca.location                   | sasl.mechanism,sasl.username           |
+      | sasl_ssl       | plain         | user     | ca.pem | -          | -          | sasl.mechanism,sasl.username,ssl.ca.location        | ssl.certificate.location               |
 
   Scenario Outline: A <role> built with Kafka setting <setting> set to <value> passes <option> to librdkafka as <expected>
     When Kafka client settings are built for a <role> with Kafka setting <setting> set to <value>
@@ -242,6 +244,17 @@ Feature: Kafka Clients and Spans Testing
       | SASL_PLAINTEXT | -             | user     |
       | SASL_SSL       | PLAIN         | -        |
       | SASL_SSL       | SCRAM-SHA-256 | -        |
+      | sasl_ssl       | plain         | -        |
+      | Sasl_Plaintext | scram-sha-512 | -        |
+
+  Scenario Outline: A Kafka configuration with protocol <protocol> is rejected as unknown
+    When a Kafka configuration is validated with protocol <protocol>, mechanism - and username -
+    Then the Kafka configuration should be rejected as an unknown protocol
+
+    Examples:
+      | protocol |
+      | TLS      |
+      | kerberos |
 
   Scenario Outline: A <mode> consumer created with <arguments> is rejected
     When I create a <mode> consumer with <arguments>

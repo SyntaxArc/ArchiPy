@@ -1551,6 +1551,14 @@ def step_config_rejected(context):
     assert "sasl_auth_incomplete" in str(error), f"Unexpected error: {error}"
 
 
+@then("the Kafka configuration should be rejected as an unknown protocol")
+def step_config_rejected_unknown_protocol(context):
+    """Validation must fail with the unknown security protocol reason."""
+    error = get_current_scenario_context(context).get("kafka_config_error")
+    assert error is not None, "Expected the configuration to be rejected"
+    assert "unknown_security_protocol" in str(error), f"Unexpected error: {error}"
+
+
 @when('I close the producer for topic "{topic_name}"')
 def step_close_producer(context, topic_name):
     """Close the sync producer for a topic."""

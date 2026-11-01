@@ -3,7 +3,7 @@
 import logging
 from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr, model_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 
 from archipy.models.errors import ConfigurationError
 
@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 # SASL mechanisms that authenticate with a username and password.
 _SASL_MECHANISMS_WITH_CREDENTIALS = frozenset({"PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"})
+_SECURITY_PROTOCOLS = frozenset({"PLAINTEXT", "SSL", "SASL_PLAINTEXT", "SASL_SSL"})
 
 
 class KafkaConfig(BaseModel):
@@ -155,6 +156,37 @@ class KafkaConfig(BaseModel):
         description="Buffer flush timeout for AIOProducer (seconds)",
     )
     PRODUCER_MAX_WORKERS: int = Field(default=4, ge=1, description="Thread pool workers for AIOProducer")
+
+    @field_validator("SECURITY_PROTOCOL", "SASL_MECHANISM", mode="before")
+    @classmethod
+    def normalize_security_names(cls, value: object) -> object:
+        """Uppercase the security protocol and the SASL mechanism, so ``ssl`` and ``plain`` behave like ``SSL``.
+
+        Args:
+            value: The raw setting.
+
+        Returns:
+            object: The uppercased string, or the value unchanged when it is not a string.
+        """
+        return value.strip().upper() if isinstance(value, str) else value
+
+    @field_validator("SECURITY_PROTOCOL")
+    @classmethod
+    def validate_security_protocol(cls, value: str) -> str:
+        """Reject security protocols librdkafka does not know.
+
+        Args:
+            value: The normalized protocol.
+
+        Returns:
+            str: The protocol.
+
+        Raises:
+            ConfigurationError: If the protocol is not PLAINTEXT, SSL, SASL_PLAINTEXT or SASL_SSL.
+        """
+        if value not in _SECURITY_PROTOCOLS:
+            raise ConfigurationError(operation="kafka_validate", reason="unknown_security_protocol")
+        return value
 
     @model_validator(mode="after")
     def validate_security_settings(self) -> KafkaConfig:

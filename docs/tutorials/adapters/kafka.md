@@ -179,6 +179,10 @@ else:
     `ENABLE_IDEMPOTENCE` requires `ACKS="all"` (the default), and `TRANSACTIONAL_ID` requires `ENABLE_IDEMPOTENCE`.
     Other combinations raise a `ConfigurationError` when the config is validated.
 
+!!! note
+    `SECURITY_PROTOCOL` and `SASL_MECHANISM` are case-insensitive (`ssl` equals `SSL`). `SECURITY_PROTOCOL` must be
+    `PLAINTEXT`, `SSL`, `SASL_PLAINTEXT` or `SASL_SSL`; any other value raises a `ConfigurationError`.
+
 ```python
 import logging
 
