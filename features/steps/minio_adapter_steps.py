@@ -61,6 +61,58 @@ def step_s3_client_checksum_settings(context, request, response):
     assert verify == expected_verify, f"Expected verify {expected_verify!r}, got {verify!r}"
 
 
+@given(
+    'a MinIO adapter with TCP keepalive "{keepalive}", user agent extra "{agent}", proxy "{proxy}" '
+    'and client certificate "{cert}"',
+)
+def step_adapter_with_client_options(context, keepalive, agent, proxy, cert):
+    scenario_context = get_current_scenario_context(context)
+    update = {
+        "TCP_KEEPALIVE": None if keepalive == "none" else keepalive == "true",
+        "USER_AGENT_EXTRA": None if agent == "none" else agent,
+        "PROXIES": None if proxy == "none" else {"http": proxy, "https": proxy},
+        "CLIENT_CERT": None if cert == "none" else "/nonexistent/client.pem",
+        "CLIENT_KEY": "/nonexistent/client.key" if cert == "pair" else None,
+    }
+    minio_config = BaseConfig.global_config().MINIO.model_copy(update=update)
+    scenario_context.adapter = MinioAdapter(minio_config)
+    scenario_context.store("client_options", update)
+
+
+@then("the S3 client should use the configured client options")
+def step_s3_client_options(context):
+    scenario_context = get_current_scenario_context(context)
+    options = scenario_context.get("client_options")
+    client = get_minio_adapter(context)._client
+    config = client.meta.config
+    assert config.tcp_keepalive == options["TCP_KEEPALIVE"]
+    assert config.proxies == options["PROXIES"]
+    if options["USER_AGENT_EXTRA"]:
+        assert options["USER_AGENT_EXTRA"] in config.user_agent_extra
+    expected_cert = options["CLIENT_CERT"]
+    if expected_cert and options["CLIENT_KEY"]:
+        expected_cert = (expected_cert, options["CLIENT_KEY"])
+    assert config.client_cert == expected_cert, f"Expected cert {expected_cert!r}, got {config.client_cert!r}"
+
+
+@when('I create a MinIO adapter with profile "{profile}"')
+def step_create_adapter_with_profile(context, profile):
+    scenario_context = get_current_scenario_context(context)
+    minio_config = BaseConfig.global_config().MINIO.model_copy(update={"PROFILE_NAME": profile})
+    try:
+        MinioAdapter(minio_config)
+    except Exception as exc:  # noqa: BLE001
+        scenario_context.store("adapter_creation_error", exc)
+
+
+@then("the adapter creation should fail with {error_name}")
+def step_adapter_creation_failed(context, error_name):
+    scenario_context = get_current_scenario_context(context)
+    error = scenario_context.get("adapter_creation_error")
+    assert error is not None, "Expected adapter creation to fail"
+    assert type(error).__name__ == error_name, f"Expected {error_name}, got {type(error).__name__}"
+
+
 @given('a bucket named "{bucket_name}" exists')
 def step_bucket_exists(context, bucket_name):
     adapter = get_minio_adapter(context)

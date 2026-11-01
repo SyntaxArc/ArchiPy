@@ -1,6 +1,6 @@
 """MinIO configuration."""
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -44,4 +44,38 @@ class MinioConfig(BaseModel):
     RESPONSE_CHECKSUM_VALIDATION: Literal["when_supported", "when_required"] | None = Field(
         default=None,
         description="When boto3 validates response checksums. None keeps the boto3 default",
+    )
+    CLIENT_CERT: str | None = Field(
+        default=None,
+        description="Path to a client certificate (PEM) for TLS client authentication",
+    )
+    CLIENT_KEY: str | None = Field(
+        default=None,
+        description="Path to the private key of CLIENT_CERT; leave unset when the key is inside the certificate file",
+    )
+    PROXIES: dict[str, str] | None = Field(
+        default=None,
+        description=(
+            "Proxy URLs by protocol, e.g. {'https': 'http://proxy:3128'}; "
+            "may embed credentials, so load it from the environment"
+        ),
+    )
+    PROXIES_CONFIG: dict[str, Any] | None = Field(
+        default=None,
+        description="Extra botocore proxy settings such as proxy_ca_bundle or proxy_client_cert",
+    )
+    TCP_KEEPALIVE: bool | None = Field(
+        default=None,
+        description="Enable the TCP keep-alive socket option. None keeps the botocore default (disabled)",
+    )
+    USER_AGENT_EXTRA: str | None = Field(
+        default=None,
+        description="Text appended to the User-Agent header of every request",
+    )
+    PROFILE_NAME: str | None = Field(
+        default=None,
+        description=(
+            "Shared AWS config/credentials profile (including profiles that assume a role). "
+            "Explicit ACCESS_KEY/SECRET_KEY/SESSION_TOKEN take precedence over it"
+        ),
     )
