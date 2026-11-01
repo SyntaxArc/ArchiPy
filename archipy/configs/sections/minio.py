@@ -13,10 +13,10 @@ class MinioConfig(BaseModel):
     """
 
     ENDPOINT: str | None = Field(default=None, description="MinIO/S3 server endpoint")
-    ACCESS_KEY: str | None = Field(default=None, description="Access key for authentication")
-    SECRET_KEY: str | None = Field(default=None, description="Secret key for authentication")
+    ACCESS_KEY: str | None = Field(default=None, description="Access key for authentication", repr=False)
+    SECRET_KEY: str | None = Field(default=None, description="Secret key for authentication", repr=False)
     SECURE: bool = Field(default=False, description="Whether to use secure (HTTPS) connection")
-    SESSION_TOKEN: str | None = Field(default=None, description="Session token for temporary credentials")
+    SESSION_TOKEN: str | None = Field(default=None, description="Session token for temporary credentials", repr=False)
     REGION: str | None = Field(default=None, description="AWS region for S3 compatibility")
     ADDRESSING_STYLE: Literal["auto", "path", "virtual"] = Field(
         default="auto",

@@ -152,6 +152,20 @@ Feature: MinIO Operations Testing
       | create bucket "errors-bucket" again                      | AlreadyExistsError   |
       | check existence of an object with an empty bucket name   | InvalidArgumentError |
 
+  Scenario Outline: Endpoint <endpoint_form> resolves to <expected_url>
+    Given a MinIO adapter whose endpoint is written as <endpoint_form>
+    Then the S3 client endpoint should be <expected_url>
+
+    Examples:
+      | endpoint_form       | expected_url        |
+      | "host:9000"         | "http://host:9000"  |
+      | "http://host:9000"  | "http://host:9000"  |
+      | "https://host:9000" | "https://host:9000" |
+      | "ftp://host:9000"   | "invalid"           |
+
+  Scenario: Credentials are hidden from the configuration repr
+    Then the MinIO configuration repr should not contain any credential
+
   Scenario Outline: Botocore connection failures map to <error>
     When I check bucket existence while the S3 client raises botocore "<raised_error>"
     Then the MinIO call should raise <error>
