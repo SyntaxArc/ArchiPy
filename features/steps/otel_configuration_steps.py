@@ -181,6 +181,54 @@ def step_then_exporter_headers(context, signal, headers):
     assert sent == expected, sent
 
 
+@when("the tracer provider is built from the effective config")
+def step_when_tracer_provider_effective(context):
+    sc = _ctx(context)
+    otel = sc.get("effective_otel")
+    provider = OtelUtils._build_tracer_provider(otel, OtelUtils._create_resource(otel))
+    context.add_cleanup(provider.shutdown)
+    sc.store("tracer_provider_built", getattr(provider, "_tracer_provider", provider))
+
+
+@then(
+    "the span limits are attributes {attributes:d}, attribute length {length:d}, span attributes {span_attributes:d}, "
+    "span attribute length {span_length:d}, events {events:d} and links {links:d}",
+)
+def step_then_span_limits(context, attributes, length, span_attributes, span_length, events, links):
+    limits = _ctx(context).get("tracer_provider_built")._span_limits
+    actual = (
+        limits.max_attributes,
+        limits.max_attribute_length,
+        limits.max_span_attributes,
+        limits.max_span_attribute_length,
+        limits.max_events,
+        limits.max_links,
+    )
+    assert actual == (attributes, length, span_attributes, span_length, events, links), actual
+
+
+@when('a span is recorded with {count:d} attributes holding the value "{value}"')
+def step_when_span_with_attributes(context, count, value):
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    sc = _ctx(context)
+    exporter = InMemorySpanExporter()
+    provider = sc.get("tracer_provider_built")
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    with provider.get_tracer("limits").start_as_current_span("capped") as span:
+        for index in range(count):
+            span.set_attribute(f"key{index}", value)
+    sc.store("recorded_spans", exporter.get_finished_spans())
+
+
+@then('the recorded span keeps {count:d} attributes with the value "{value}"')
+def step_then_span_capped(context, count, value):
+    (span,) = _ctx(context).get("recorded_spans")
+    assert len(span.attributes) == count, dict(span.attributes)
+    assert set(span.attributes.values()) == {value}, dict(span.attributes)
+
+
 @then("the OpenTelemetry SDK is {state}")
 def step_then_sdk_state(context, state):
     sc = _ctx(context)

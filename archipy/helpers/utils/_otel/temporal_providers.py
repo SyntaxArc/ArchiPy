@@ -15,17 +15,23 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import SpanLimits
     from opentelemetry.sdk.trace.sampling import Sampler
 
     from archipy.helpers.utils._otel.provider_types import OwnedLoggerProvider, OwnedMeterProvider, OwnedTracerProvider
 
 
-def new_tracer_provider(resource: Resource, sampler: Sampler | None = None) -> OwnedTracerProvider:
+def new_tracer_provider(
+    resource: Resource,
+    sampler: Sampler | None = None,
+    span_limits: SpanLimits | None = None,
+) -> OwnedTracerProvider:
     """Create an empty tracer provider, replay-safe when ``temporalio`` provides one.
 
     Args:
         resource: Resource describing the service.
         sampler: Optional sampler; the SDK default applies when omitted.
+        span_limits: Optional span limits; the SDK defaults (and its own ``OTEL_*`` variables) apply when omitted.
 
     Returns:
         The tracer provider.
@@ -35,8 +41,8 @@ def new_tracer_provider(resource: Resource, sampler: Sampler | None = None) -> O
     try:
         from temporalio.contrib.opentelemetry import create_tracer_provider
     except ImportError:
-        return TracerProvider(resource=resource, sampler=sampler)
-    return create_tracer_provider(sampler=sampler, resource=resource)
+        return TracerProvider(resource=resource, sampler=sampler, span_limits=span_limits)
+    return create_tracer_provider(sampler=sampler, resource=resource, span_limits=span_limits)
 
 
 def wrap_meter_provider(provider: OwnedMeterProvider) -> OwnedMeterProvider:

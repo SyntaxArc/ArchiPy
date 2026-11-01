@@ -291,6 +291,40 @@ Feature: OpenTelemetry configuration
     And the effective setting "METRICS_HEADERS" is null
     And the effective setting "OTLP_HEADERS" is {}
 
+  Scenario: Span and attribute limits from the standard variables reach the tracer provider
+    Given an OpenTelemetry config built from:
+      """
+      {
+        "USE_STANDARD_ENV": true
+      }
+      """
+    And the standard OTEL environment:
+      | name                                   | value |
+      | OTEL_ATTRIBUTE_COUNT_LIMIT             | 40    |
+      | OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT      | 200   |
+      | OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT        | 30    |
+      | OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT | 100   |
+      | OTEL_SPAN_EVENT_COUNT_LIMIT            | 10    |
+      | OTEL_SPAN_LINK_COUNT_LIMIT             | 5     |
+    When the standard environment is applied
+    Then the effective setting "SPAN_ATTRIBUTE_COUNT_LIMIT" is 30
+    And the effective setting "SPAN_LINK_COUNT_LIMIT" is 5
+    When the tracer provider is built from the effective config
+    Then the span limits are attributes 40, attribute length 200, span attributes 30, span attribute length 100, events 10 and links 5
+
+  Scenario: A span with more attributes and longer values than the limits is capped
+    Given an OpenTelemetry config built from:
+      """
+      {
+        "TRACES_SAMPLER": "always_on",
+        "SPAN_ATTRIBUTE_COUNT_LIMIT": 2,
+        "SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT": 4
+      }
+      """
+    When the tracer provider is built from the config
+    And a span is recorded with 5 attributes holding the value "abcdefgh"
+    Then the recorded span keeps 2 attributes with the value "abcd"
+
   Scenario: An explicitly set field wins over the standard variable
     Given an OpenTelemetry config built from:
       """

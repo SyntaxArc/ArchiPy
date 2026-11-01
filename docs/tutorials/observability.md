@@ -167,6 +167,8 @@ so are values that are valid alone but invalid together (for example a batch siz
 | `OTEL_EXPORTER_OTLP_COMPRESSION` (`none`, `gzip`)           | `OTLP_COMPRESSION`                                                |
 | `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG`            | `TRACES_SAMPLER`, `TRACES_SAMPLE_RATIO` (the Jaeger and X-Ray samplers are not supported) |
 | `OTEL_PROPAGATORS`                                          | `PROPAGATORS`                                                     |
+| `OTEL_ATTRIBUTE_COUNT_LIMIT`, `OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT` | `ATTRIBUTE_COUNT_LIMIT`, `ATTRIBUTE_VALUE_LENGTH_LIMIT` |
+| `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`, `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT`, `OTEL_SPAN_EVENT_COUNT_LIMIT`, `OTEL_SPAN_LINK_COUNT_LIMIT` | `SPAN_ATTRIBUTE_COUNT_LIMIT`, `SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT`, `SPAN_EVENT_COUNT_LIMIT`, `SPAN_LINK_COUNT_LIMIT` |
 | `OTEL_BSP_*`, `OTEL_BLRP_*`                                 | `SPAN_BATCH_*`, `LOG_BATCH_*`                                     |
 | `OTEL_METRIC_EXPORT_INTERVAL`                               | `METRIC_EXPORT_INTERVAL_MS`                                       |
 | `OTEL_SDK_DISABLED=true`                                    | Keeps OpenTelemetry off, whatever `IS_ENABLED` says               |
