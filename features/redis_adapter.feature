@@ -1383,3 +1383,13 @@ Feature: Redis Testing
       | mock         |
       | container    |
       | cluster      |
+
+  Scenario: Closing the sync adapter releases its client and search client
+    Given a configured container
+    When I use the container adapter as a context manager and create its search client
+    Then the client pool and the search client pool should be closed
+
+  Scenario: Closing the async adapter releases its client and search client
+    Given a configured async container
+    When I use the async container adapter as a context manager and create its search client
+    Then the async client pool and the search client pool should be closed

@@ -155,6 +155,23 @@ REDIS__SENTINEL_USERNAME=sentinel-user  # sentinel ACL user, used with SENTINEL_
     asyncio.run(main())
     ```
 
+### Closing the adapter
+
+Call `close()` (or `await aclose()` on the async adapter) when you are done. It closes the write, read-only and RediSearch
+clients and their connection pools. Both adapters also work as context managers:
+
+```python
+from archipy.adapters.redis.adapters import AsyncRedisAdapter, RedisAdapter
+
+with RedisAdapter() as redis:
+    redis.set("key", "value")
+
+
+async def run() -> None:
+    async with AsyncRedisAdapter() as redis:
+        await redis.set("key", "value")
+```
+
 ## Caching Patterns
 
 ### Function Result Caching

@@ -3711,3 +3711,52 @@ async def step_then_bytes_plain_async(context, tag):
     assert _plain(await adapter.get(f"{tag}:k1")) == "v"
     assert {_plain(k): _plain(v) for k, v in (await adapter.hgetall(f"{tag}:h")).items()} == {f"{tag}-f": "val"}
     assert [_plain(m) for m in await adapter.zrange(f"{tag}:z", 0, -1)] == [f"{tag}-m"]
+
+
+def _pool_is_closed(pool) -> bool:
+    """Return whether every connection the pool created is disconnected."""
+    return not any(conn.is_connected for conn in [*pool._available_connections, *pool._in_use_connections])
+
+
+@when(r"I use the container adapter as a context manager and create its search client")
+def step_when_use_context_manager(context):
+    """Run commands, including a search call, inside a with block."""
+    scenario_context = get_current_scenario_context(context)
+    adapter = scenario_context.adapter
+    with adapter as entered:
+        assert entered is adapter
+        entered.set("bdd-close:key", "1")
+        entered.list_search_indexes()
+        store_result(context, "closed_pools", [adapter.client.connection_pool, adapter._search_client.connection_pool])
+        assert not _pool_is_closed(adapter.client.connection_pool)
+
+
+@then(r"the client pool and the search client pool should be closed")
+def step_then_pools_closed(context):
+    """Verify the pools were disconnected and the search client dropped."""
+    adapter = get_current_scenario_context(context).adapter
+    assert adapter._search_client is None
+    for pool in get_result(context, "closed_pools"):
+        assert _pool_is_closed(pool), "connection pool still holds connections after close"
+
+
+@when(r"I use the async container adapter as a context manager and create its search client")
+async def step_when_use_async_context_manager(context):
+    """Run commands, including a search call, inside an async with block."""
+    scenario_context = get_current_scenario_context(context)
+    adapter = scenario_context.async_adapter
+    async with adapter as entered:
+        assert entered is adapter
+        await entered.set("bdd-close:akey", "1")
+        await entered.list_search_indexes()
+        store_result(context, "closed_pools", [adapter.client.connection_pool, adapter._search_client.connection_pool])
+        assert not _pool_is_closed(adapter.client.connection_pool)
+
+
+@then(r"the async client pool and the search client pool should be closed")
+async def step_then_async_pools_closed(context):
+    """Verify the async pools were disconnected and the search client dropped."""
+    adapter = get_current_scenario_context(context).async_adapter
+    assert adapter._search_client is None
+    for pool in get_result(context, "closed_pools"):
+        assert _pool_is_closed(pool), "connection pool still holds connections after aclose"
