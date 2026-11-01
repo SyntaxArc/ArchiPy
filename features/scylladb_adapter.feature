@@ -421,6 +421,24 @@ Feature: ScyllaDB Adapter
       | asyn |
 
   @needs-scylladb
+  Scenario Outline: Batches take a type and statements with bound params
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "batch_<mode>"
+    When I run an "<batch_type>" ScyllaDB batch of prepared inserts into "batch_<mode>"
+    Then the ScyllaDB call should <outcome>
+
+    Examples: Sync
+      | mode | batch_type | outcome                    |
+      | syn  | LOGGED     | succeed                    |
+      | syn  | UNLOGGED   | succeed                    |
+      | syn  | BOGUS      | raise InvalidArgumentError |
+
+    @async
+    Examples: Async
+      | mode | batch_type | outcome                    |
+      | asyn | LOGGED     | succeed                    |
+      | asyn | UNLOGGED   | succeed                    |
+      | asyn | BOGUS      | raise InvalidArgumentError |
+
   Scenario Outline: Creating a single replica keyspace logs a warning
     Given a ScyllaDB adapter is configured
     When I create the keyspace "<keyspace>" with replication factor <factor> and capture the adapter log

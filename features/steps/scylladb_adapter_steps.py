@@ -1307,6 +1307,31 @@ async def step_read_scylladb_pool_stats(context: Context) -> None:
     _get_scenario_context(context).pool_stats = stats
 
 
+@when('I run an "{batch_type}" ScyllaDB batch of prepared inserts into "{table}"')
+async def step_run_typed_batch(context: Context, batch_type: str, table: str) -> None:
+    """Run a batch of prepared inserts with params in one partition and record the outcome.
+
+    Args:
+        context (Context): Behave context.
+        batch_type (str): LOGGED, UNLOGGED, COUNTER or an invalid value.
+        table (str): Table name.
+    """
+    adapter = get_scylladb_adapter(context)
+    scenario_context = _get_scenario_context(context)
+    scenario_context.scylla_error = None
+    try:
+        statement = await _call_adapter(adapter, "prepare", f"INSERT INTO {table} (id, name, age) VALUES (?, ?, ?)")
+        await _call_adapter(
+            adapter,
+            "batch_execute",
+            [(statement, (1, "a", 1)), (f"INSERT INTO {table} (id, name, age) VALUES (%s, %s, %s)", (2, "b", 2))],
+            batch_type=batch_type,
+        )
+        assert await _call_adapter(adapter, "count", table) == 2
+    except Exception as e:  # noqa: BLE001
+        scenario_context.scylla_error = e
+
+
 @then("the ScyllaDB driver should hold {count:d} prepared statements")
 def step_driver_prepared_count(context: Context, count: int) -> None:
     """Assert how many distinct statements the driver has prepared, proving the helpers bind values.
