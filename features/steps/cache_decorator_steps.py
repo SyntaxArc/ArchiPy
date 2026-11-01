@@ -862,3 +862,28 @@ def step_when_clear_first_instance(context):
 def step_then_instances_return(context, expected):
     """Verify the values read after the clear."""
     step_then_two_instances_return(context, expected)
+
+
+@given("a function returning a list decorated with ttl_cache copy_results {copy_results}")
+def step_given_list_function(context, copy_results):
+    """Create a cached function returning a mutable list."""
+    scenario_context = get_current_scenario_context(context)
+
+    @ttl_cache(ttl_seconds=300, maxsize=10, copy_results=copy_results == "True")
+    def list_function() -> list:
+        return ["0", "1"]
+
+    scenario_context.store("list_function", list_function)
+
+
+@when("I call the list function and mutate the result")
+def step_when_mutate_list(context):
+    """Mutate the list returned by the cached function."""
+    get_current_scenario_context(context).get("list_function")().append("mut")
+
+
+@then('calling the list function again should return "{expected}"')
+def step_then_list_again(context, expected):
+    """Verify the cached list after mutation."""
+    actual = ",".join(get_current_scenario_context(context).get("list_function")())
+    assert actual == expected, f"Expected {expected}, got {actual}"

@@ -310,6 +310,9 @@ The MinioAdapter includes TTL caching for frequently accessed operations:
 !!! note
     Cached results can be up to 5 minutes old. After you change a bucket or object outside the adapter, call
     `clear_all_caches()` to read fresh values.
+    Caches are per adapter instance. Writes made through the adapter clear every cache they affect (object
+    listing, existence and stat, versions, bucket policy and versioning), and cached lists and dicts are returned
+    as copies, so mutating a result never changes later reads.
 
 ```python
 # Check if bucket exists (cached for 5 minutes)

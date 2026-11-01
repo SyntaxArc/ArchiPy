@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import inspect
 import threading
 from functools import wraps
@@ -63,6 +64,7 @@ class CachedFunction[**P, R]:
         instance: object | None = None,
         lock: threading.RLock | None = None,
         cache_factory: Callable[[], MutableMapping[Hashable, object]] | None = None,
+        copy_results: bool = False,
     ) -> None:
         """Initialize the cached function wrapper.
 
@@ -73,11 +75,13 @@ class CachedFunction[**P, R]:
             lock: Lock guarding the cache; shared between bound copies of the same decorated function.
             cache_factory: When set, every instance the method is bound to gets its own cache built by
                 this factory (per-instance caching) instead of sharing ``cache``.
+            copy_results: Return a deep copy of every result so callers mutating it cannot corrupt the cache.
         """
         self._func: Callable[..., R] = func
         self._cache: MutableMapping[Hashable, object] = cache
         self._instance: object | None = instance
         self._cache_factory = cache_factory
+        self._copy_results = copy_results
         # Calls on the same cache from several threads must not race on the (non thread-safe) TTLCache
         self._lock = lock if lock is not None else threading.RLock()
         # Preserve function metadata
@@ -112,8 +116,24 @@ class CachedFunction[**P, R]:
     def _bind(self, obj: object) -> CachedFunction[P, R]:
         """Create the copy bound to ``obj``: shared cache by default, its own cache in per-instance mode."""
         if self._cache_factory is None:
-            return CachedFunction(self._func, self._cache, instance=obj, lock=self._lock)
-        return CachedFunction(self._func, self._cache_factory(), instance=obj, lock=threading.RLock())
+            return CachedFunction(
+                self._func,
+                self._cache,
+                instance=obj,
+                lock=self._lock,
+                copy_results=self._copy_results,
+            )
+        return CachedFunction(
+            self._func,
+            self._cache_factory(),
+            instance=obj,
+            lock=threading.RLock(),
+            copy_results=self._copy_results,
+        )
+
+    def _emit(self, value: object) -> object:
+        """Return ``value``, or a deep copy of it when results are copied."""
+        return copy.deepcopy(value) if self._copy_results else value
 
     def _make_key(self, args: tuple[object, ...], kwargs: Mapping[str, object]) -> Hashable | None:
         """Build a hashable key from the call arguments, or None if they cannot be hashed."""
@@ -151,12 +171,12 @@ class CachedFunction[**P, R]:
         with self._lock:
             cached = self._cache.get(key, _MISSING)
         if cached is not _MISSING:
-            return cast("R", cached)
+            return cast("R", self._emit(cached))
 
         result: R = self._func(*call_args, **kwargs)
         with self._lock:
             self._cache[key] = result
-        return result
+        return cast("R", self._emit(result))
 
     async def _call_async(
         self,
@@ -170,12 +190,12 @@ class CachedFunction[**P, R]:
         with self._lock:
             cached = self._cache.get(key, _MISSING)
         if cached is not _MISSING:
-            return cached
+            return self._emit(cached)
 
         result = await cast("Awaitable[object]", self._func(*call_args, **kwargs))
         with self._lock:
             self._cache[key] = result
-        return result
+        return self._emit(result)
 
     def clear_cache(self) -> None:
         """Clear the cache.
@@ -193,6 +213,7 @@ def ttl_cache[**P, R](
     maxsize: int = 100,
     *,
     per_instance: bool = False,
+    copy_results: bool = False,
 ) -> Callable[[Callable[P, R]], CachedFunction[P, R]]:
     """Decorator that provides a TTL cache for functions and methods.
 
@@ -209,6 +230,8 @@ def ttl_cache[**P, R](
         per_instance: When True, every instance gets its own cache, so results never leak between
             instances and ``clear_cache()`` on one instance leaves the others untouched (default: False,
             one cache shared by all instances).
+        copy_results: When True, callers receive a deep copy of the cached value, so mutating a returned
+            list or dict cannot corrupt later cache hits (default: False, the cached object itself).
 
     Returns:
         Decorated function with TTL caching and a clear_cache() method.
@@ -258,7 +281,14 @@ def ttl_cache[**P, R](
         return TTLCache(maxsize=maxsize, ttl=resolved_ttl)
 
     def decorator(func: Callable[P, R]) -> CachedFunction[P, R]:
-        return CachedFunction(func, cache, instance=None, lock=lock, cache_factory=new_cache if per_instance else None)
+        return CachedFunction(
+            func,
+            cache,
+            instance=None,
+            lock=lock,
+            cache_factory=new_cache if per_instance else None,
+            copy_results=copy_results,
+        )
 
     return decorator
 
