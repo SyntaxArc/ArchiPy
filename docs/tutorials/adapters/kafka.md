@@ -295,7 +295,8 @@ consumer = KafkaConsumerAdapter(
     topic_list=["my-topic"],
 )
 
-# Batch consume — returns list[Message], skips messages with errors
+# Batch consume — returns list[Message]. Messages that carry a harmless error (end of partition, unknown topic)
+# are skipped; fatal, authentication and authorization errors and a lost connection to all brokers are raised.
 try:
     messages = consumer.batch_consume(messages_number=10, timeout=5)
 except ServiceUnavailableError as e:
