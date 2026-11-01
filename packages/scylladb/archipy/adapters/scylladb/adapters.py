@@ -230,6 +230,27 @@ class ScyllaDBExceptionHandlerMixin:
             raise DatabaseConnectionError(database="scylladb") from exception
         raise DatabaseQueryError(database="scylladb") from exception
 
+    @classmethod
+    def _validate_positive_int(cls, value: int, field_name: str) -> int:
+        """Validate a numeric value that is interpolated into CQL text and must be at least 1.
+
+        Args:
+            value: Value to validate.
+            field_name: Field name for error context.
+
+        Returns:
+            The validated integer.
+
+        Raises:
+            InvalidArgumentError: If the value is not a positive int.
+        """
+        if cls._validate_non_negative_int(value, field_name) < 1:
+            raise InvalidArgumentError(
+                argument_name=field_name,
+                additional_data={"error": "Value must be a positive integer"},
+            )
+        return value
+
     @staticmethod
     def _validate_cql_identifier(identifier: str, field_name: str) -> str:
         """Validate CQL identifier input used in dynamic query construction.
@@ -639,6 +660,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         table: str,
         columns: list[str] | None = None,
         conditions: dict[str, Any] | None = None,
+        limit: int | None = None,
     ) -> list[Any]:
         """Select data from a table.
 
@@ -646,6 +668,8 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             table (str): The name of the table.
             columns (list[str] | None): List of columns to select. If None, selects all (*).
             conditions (dict[str, Any] | None): WHERE clause conditions as key-value pairs.
+            limit (int | None): Maximum number of rows to return. If None, returns every matching row, which can be
+                large; pass a limit on big tables.
 
         Returns:
             list[Any]: List of result rows.
@@ -660,6 +684,9 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
             query += f" WHERE {where_clause}"
             params = tuple(conditions.values())
+
+        if limit is not None:
+            query += f" LIMIT {self._validate_positive_int(limit, 'limit')}"
 
         try:
             result = self.execute(query, params)
@@ -862,7 +889,8 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         table = self._validate_cql_identifier(table, "table")
         condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
         where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-        query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
+        # COUNT(*) ... LIMIT 1 still aggregates every match; selecting one key column stops at the first row
+        query = f"SELECT {condition_keys[0]} FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
 
         try:
             result = self.execute(query, tuple(conditions.values()))
@@ -871,7 +899,7 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             self._handle_scylladb_exception(e, "exists")
             raise
         else:
-            return row.count > 0 if row else False
+            return row is not None
 
     @override
     def get_pool_stats(self) -> dict[str, Any]:
@@ -1296,6 +1324,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         table: str,
         columns: list[str] | None = None,
         conditions: dict[str, Any] | None = None,
+        limit: int | None = None,
     ) -> list[Any]:
         """Select data from a table asynchronously.
 
@@ -1303,6 +1332,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             table (str): The name of the table.
             columns (list[str] | None): List of columns to select. If None, selects all (*).
             conditions (dict[str, Any] | None): WHERE clause conditions as key-value pairs.
+            limit (int | None): Maximum number of rows to return. If None, returns every matching row, which can be
+                large; pass a limit on big tables.
 
         Returns:
             list[Any]: List of result rows.
@@ -1317,6 +1348,9 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
             query += f" WHERE {where_clause}"
             params = tuple(conditions.values())
+
+        if limit is not None:
+            query += f" LIMIT {self._validate_positive_int(limit, 'limit')}"
 
         try:
             result = await self.execute(query, params)
@@ -1524,7 +1558,8 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
         table = self._validate_cql_identifier(table, "table")
         condition_keys = self._validate_cql_identifiers(list(conditions.keys()), "conditions")
         where_clause = " AND ".join([f"{key} = %s" for key in condition_keys])
-        query = f"SELECT COUNT(*) FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
+        # COUNT(*) ... LIMIT 1 still aggregates every match; selecting one key column stops at the first row
+        query = f"SELECT {condition_keys[0]} FROM {table} WHERE {where_clause} LIMIT 1 ALLOW FILTERING"  # nosec B608
 
         try:
             result = await self.execute(query, tuple(conditions.values()))
@@ -1533,7 +1568,7 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
             self._handle_scylladb_exception(e, "exists")
             raise
         else:
-            return row.count > 0 if row else False
+            return row is not None
 
     @override
     async def get_pool_stats(self) -> dict[str, Any]:

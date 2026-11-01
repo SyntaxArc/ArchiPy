@@ -353,6 +353,25 @@ Feature: ScyllaDB Adapter
       | asyn | create keyspace with injected replication factor |
 
   @needs-scylladb
+  Scenario Outline: Select honours an optional limit and rejects invalid ones
+    Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "lim_<mode>"
+    When I run ScyllaDB operation "select with limit" on table "lim_<mode>"
+    Then the ScyllaDB result should be "2"
+    When I run ScyllaDB operation "<operation>" on table "lim_<mode>"
+    Then the ScyllaDB call should raise InvalidArgumentError
+
+    Examples: Sync
+      | mode | operation                  |
+      | syn  | select with zero limit     |
+      | syn  | select with injected limit |
+
+    @async
+    Examples: Async
+      | mode | operation                  |
+      | asyn | select with zero limit     |
+      | asyn | select with injected limit |
+
+  @needs-scylladb
   Scenario Outline: Prepared statements are cached and executed with bound parameters
     Given a ScyllaDB adapter with keyspace "hot_ks" and a users table "<table>"
     When I execute a prepared ScyllaDB insert into "<table>" twice

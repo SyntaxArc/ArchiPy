@@ -1091,6 +1091,15 @@ async def _run_scylladb_operation(adapter: Any, operation: str, table: str) -> A
         return str(await _call_adapter(adapter, "exists", table, {"id": 1}))
     elif operation == "drop":
         await _call_adapter(adapter, "drop_table", table)
+    elif operation == "select with limit":
+        for row_id in (1, 2, 3):
+            await _call_adapter(adapter, "insert", table, {"id": row_id, "name": f"n{row_id}", "age": row_id})
+        rows = await _call_adapter(adapter, "select", table, limit=2)
+        return str(len(rows))
+    elif operation == "select with zero limit":
+        await _call_adapter(adapter, "select", table, limit=0)
+    elif operation == "select with injected limit":
+        await _call_adapter(adapter, "select", table, limit="1; DROP TABLE x")
     elif operation == "insert with injected ttl":
         await _call_adapter(adapter, "insert", table, {"id": 1, "name": "x", "age": 1}, ttl="60; DROP TABLE x")
     elif operation == "update with injected ttl":
