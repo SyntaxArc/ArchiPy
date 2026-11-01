@@ -1179,6 +1179,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#error-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#closing-the-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Closing the Adapter
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3921,6 +3943,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#error-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#closing-the-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Closing the Adapter
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -4361,7 +4405,13 @@ basic auth.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The config defaults are <code>REQUEST_TIMEOUT=1.0</code> seconds and <code>MAX_RETRIES=1</code>. The values below are examples; raise the
-timeout for slow queries such as large aggregations.</p>
+timeout for slow queries such as large aggregations and bulk requests.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Retries and idempotency</p>
+<p>Retries apply to timeouts and <code>RETRY_ON_STATUS</code> codes. The adapter disables retries (<code>max_retries=0</code>) for an
+<code>index</code> call without a <code>doc_id</code> and for an <code>update</code> call with a <code>script</code>, because replaying them after a
+timeout can duplicate a document or apply the script twice.</p>
 </div>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Basic connection</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">ELASTIC__HOSTS</span><span class="o">=</span><span class="s1">'["https://localhost:9200"]'</span>
@@ -4389,17 +4439,20 @@ timeout for slow queries such as large aggregations.</p>
 </span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="nv">ELASTIC__CA_CERTS</span><span class="o">=</span>/path/to/ca.crt
 </span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="nv">ELASTIC__VERIFY_CERTS</span><span class="o">=</span><span class="nb">true</span>
 </span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>
-</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="c1"># Connection behaviour</span>
-</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="nv">ELASTIC__REQUEST_TIMEOUT</span><span class="o">=</span><span class="m">5</span>.0
-</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="nv">ELASTIC__MAX_RETRIES</span><span class="o">=</span><span class="m">3</span>
-</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="nv">ELASTIC__RETRY_ON_TIMEOUT</span><span class="o">=</span><span class="nb">true</span>
-</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>
-</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a><span class="c1"># Node pool and sniffing</span>
-</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a><span class="nv">ELASTIC__NODE_SELECTOR_CLASS</span><span class="o">=</span>random<span class="w">          </span><span class="c1"># 'round_robin' (default) or 'random'</span>
-</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a><span class="nv">ELASTIC__DEAD_NODE_BACKOFF_FACTOR</span><span class="o">=</span><span class="m">1</span>.0
-</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a><span class="nv">ELASTIC__MAX_DEAD_NODE_BACKOFF</span><span class="o">=</span><span class="m">300</span>.0
-</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a><span class="nv">ELASTIC__MIN_DELAY_BETWEEN_SNIFFING</span><span class="o">=</span><span class="m">60</span>.0<span class="w">     </span><span class="c1"># applied when SNIFF_BEFORE_REQUESTS=true</span>
-</span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a><span class="nv">ELASTIC__IGNORE_STATUS</span><span class="o">=</span><span class="s1">'[404]'</span><span class="w">               </span><span class="c1"># status codes not raised as errors</span>
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="c1"># Raise ArchiPy errors instead of raw elasticsearch-py exceptions (default false, will become true)</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="nv">ELASTIC__MAP_ERRORS</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="c1"># Connection behaviour</span>
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="nv">ELASTIC__REQUEST_TIMEOUT</span><span class="o">=</span><span class="m">5</span>.0
+</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a><span class="nv">ELASTIC__MAX_RETRIES</span><span class="o">=</span><span class="m">3</span>
+</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a><span class="nv">ELASTIC__RETRY_ON_TIMEOUT</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>
+</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a><span class="c1"># Node pool and sniffing</span>
+</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a><span class="nv">ELASTIC__NODE_SELECTOR_CLASS</span><span class="o">=</span>random<span class="w">          </span><span class="c1"># 'round_robin' (default) or 'random'</span>
+</span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a><span class="nv">ELASTIC__DEAD_NODE_BACKOFF_FACTOR</span><span class="o">=</span><span class="m">1</span>.0
+</span><span id="__span-1-38"><a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a><span class="nv">ELASTIC__MAX_DEAD_NODE_BACKOFF</span><span class="o">=</span><span class="m">300</span>.0
+</span><span id="__span-1-39"><a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a><span class="nv">ELASTIC__MIN_DELAY_BETWEEN_SNIFFING</span><span class="o">=</span><span class="m">60</span>.0<span class="w">     </span><span class="c1"># applied when SNIFF_BEFORE_REQUESTS=true</span>
+</span><span id="__span-1-40"><a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a><span class="nv">ELASTIC__IGNORE_STATUS</span><span class="o">=</span><span class="s1">'[404]'</span><span class="w">               </span><span class="c1"># status codes not raised as errors</span>
 </span></code></pre></div>
 <h3 id="direct-configuration">Direct Configuration<a class="headerlink" href="#direct-configuration" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -4434,6 +4487,62 @@ timeout for slow queries such as large aggregations.</p>
 </span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="k">else</span><span class="p">:</span>
 </span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Elasticsearch configuration created successfully"</span><span class="p">)</span>
 </span></code></pre></div>
+<h3 id="error-mapping">Error Mapping<a class="headerlink" href="#error-mapping" title="Permanent link">&para;</a></h3>
+<p>By default the adapters raise raw <code>elasticsearch</code> exceptions (<code>NotFoundError</code>, <code>ApiError</code>, <code>ConnectionError</code>), and
+creating an adapter with <code>MAP_ERRORS=False</code> emits a <code>DeprecationWarning</code> because mapping will become the default.
+Set <code>ELASTIC__MAP_ERRORS=true</code> to get ArchiPy errors, chained from the original exception:</p>
+<table>
+<thead>
+<tr>
+<th>Elasticsearch failure</th>
+<th>ArchiPy error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>400</td>
+<td><code>InvalidArgumentError</code></td>
+</tr>
+<tr>
+<td>401 / 403</td>
+<td><code>UnauthenticatedError</code> / <code>PermissionDeniedError</code></td>
+</tr>
+<tr>
+<td>404</td>
+<td><code>NotFoundError</code></td>
+</tr>
+<tr>
+<td>409 (version conflict)</td>
+<td><code>ConflictError</code></td>
+</tr>
+<tr>
+<td>index already exists</td>
+<td><code>AlreadyExistsError</code></td>
+</tr>
+<tr>
+<td>429</td>
+<td><code>RateLimitExceededError</code></td>
+</tr>
+<tr>
+<td>502 / 503 / 504</td>
+<td><code>BadGatewayError</code> / <code>ServiceUnavailableError</code> / <code>GatewayTimeoutError</code></td>
+</tr>
+<tr>
+<td>connection timeout</td>
+<td><code>ConnectionTimeoutError</code></td>
+</tr>
+<tr>
+<td>connection failure</td>
+<td><code>ServiceUnavailableError</code></td>
+</tr>
+<tr>
+<td>any other API or transport error</td>
+<td><code>InternalError</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="closing-the-adapter">Closing the Adapter<a class="headerlink" href="#closing-the-adapter" title="Permanent link">&para;</a></h3>
+<p>Call <code>adapter.close()</code> (or <code>await async_adapter.aclose()</code>) on shutdown to release the connection pool.</p>
 <h2 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Sync</label><label for="__tabbed_1_2">Async</label></div>
 <div class="tabbed-content">
