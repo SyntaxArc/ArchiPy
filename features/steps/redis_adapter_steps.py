@@ -3640,6 +3640,29 @@ def step_then_sentinel_username(context, user):
     assert manager.sentinel_kwargs["username"] == user, manager.sentinel_kwargs
 
 
+@given(
+    r"a Redis config in (?P<mode>standalone|sentinel) mode with database (?P<db>\d+) "
+    r"and a health check interval of (?P<interval>\d+) seconds",
+)
+def step_given_db_health_config(context, mode, db, interval):
+    """Build a Redis config with a non-default database and health check interval."""
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.tls_config = _resilience_config(
+        mode,
+        DATABASE=int(db),
+        HEALTH_CHECK_INTERVAL=int(interval),
+    )
+
+
+@then(r"the client connection should use database (?P<db>\d+) and a health check interval of (?P<interval>\d+)")
+def step_then_client_db_health(context, db, interval):
+    """Verify the pool carries the configured database and health check interval."""
+    scenario_context = get_current_scenario_context(context)
+    kwargs = scenario_context.tls_adapter.client.connection_pool.connection_kwargs
+    assert kwargs["db"] == int(db), kwargs
+    assert kwargs["health_check_interval"] == int(interval), kwargs
+
+
 @then(r"the client connection should not carry a client name or extra retry errors")
 def step_then_client_defaults(context):
     """Verify unset settings leave the redis-py defaults in place."""
