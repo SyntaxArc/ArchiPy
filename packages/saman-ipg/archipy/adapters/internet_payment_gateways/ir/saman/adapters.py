@@ -108,7 +108,7 @@ class SamanShaparakPaymentAdapter(SamanShaparakPaymentPort):
             }
             payload = {k: v for k, v in payload.items() if v is not None}
 
-            logger.debug("Saman initiate payment payload: %s", payload)
+            logger.debug("Saman initiate payment: res_num=%s amount=%s", request.res_num, request.amount)
             resp = self.client.post(self.payment_url, json=payload)
             resp.raise_for_status()
             data = resp.json()
@@ -353,7 +353,7 @@ class AsyncSamanShaparakPaymentAdapter(AsyncSamanShaparakPaymentPort):
             }
             payload = {k: v for k, v in payload.items() if v is not None}
 
-            logger.debug("Saman async initiate payment payload: %s", payload)
+            logger.debug("Saman async initiate payment: res_num=%s amount=%s", request.res_num, request.amount)
             resp = await self.client.post(self.payment_url, json=payload)
             resp.raise_for_status()
             data = resp.json()

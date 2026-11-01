@@ -440,3 +440,23 @@ Feature: Saman Shaparak payment gateway adapter
       | token_expiry | 3601      |
       | redirect_url | not-a-url |
       | res_num      | none      |
+
+  Scenario Outline: Debug logs never contain the phone number, card hash or redirect URL
+    Given a <kind> Saman adapter with terminal "13579"
+    And Saman debug logging is captured
+    And the Saman "token" endpoint answers 200 with JSON:
+      """
+      {
+        "status": 1,
+        "token": "tok-abc-123"
+      }
+      """
+    When I initiate a Saman payment of 75000 redirecting to "https://shop.example.com/return" with options:
+      | ResNum | CellNumber  | Wage | TokenExpiryInMin | HashedCardNumber |
+      | RES-9  | 09123456789 | 500  | 30               | abcdef           |
+    Then the Saman debug logs name reservation "RES-9" but not "09123456789", "abcdef" or the redirect URL
+
+    Examples:
+      | kind  |
+      | sync  |
+      | async |

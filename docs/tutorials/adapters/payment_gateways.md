@@ -217,6 +217,10 @@ config = SamanShaparakConfig(
 )
 ```
 
+!!! note "Logging"
+    Debug logs name only the reservation number and the amount. The phone number, card hash, redirect URL and tokens
+    are never logged.
+
 ### Initializing the Adapter
 
 ```python
