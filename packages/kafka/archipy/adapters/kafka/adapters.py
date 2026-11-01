@@ -187,6 +187,8 @@ _AUTHORIZATION_CODES = frozenset(
     },
 )
 
+_CONSUMER_RAISED_CODES = _AUTHENTICATION_CODES | _AUTHORIZATION_CODES | {KafkaError._ALL_BROKERS_DOWN}
+
 
 class KafkaExceptionHandlerMixin:
     """Mixin class to handle Kafka exceptions in a consistent way."""
@@ -254,6 +256,36 @@ class KafkaExceptionHandlerMixin:
             if "configuration property" in str(kafka_error.str()).lower():
                 raise ConfigurationError(operation="kafka") from exception
             raise InvalidArgumentError(argument_name=operation) from exception
+
+    @classmethod
+    def _is_usable_message(cls, message: Message, operation: str) -> bool:
+        """Check a polled message and raise for errors the caller must see.
+
+        ``_PARTITION_EOF`` is informational and skipped. Fatal errors, authentication and authorization failures and
+        a lost connection to every broker are raised through the exception mapper. Other errors are logged at
+        warning level and the message is skipped.
+
+        Args:
+            message: The polled message.
+            operation: The name of the operation, used for error mapping.
+
+        Returns:
+            bool: True when the message carries a value, False when it is skipped.
+
+        Raises:
+            Various application errors for fatal, authentication, authorization and connection errors.
+        """
+        error = message.error()
+        if not error:
+            return True
+        code = error.code()
+        if code == KafkaError._PARTITION_EOF:
+            logger.debug("Reached the end of %s [%s]", message.topic(), message.partition())
+            return False
+        if error.fatal() or code in _CONSUMER_RAISED_CODES:
+            cls._handle_kafka_exception(KafkaException(error), operation)
+        logger.warning("Consumer error: %s", error)
+        return False
 
     @classmethod
     def _handle_producer_exception(cls, exception: Exception, operation: str) -> NoReturn:
@@ -532,8 +564,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
             result_list: list[Message] = []
             messages: list[Message] = self._adapter.consume(num_messages=messages_number, timeout=timeout)
             for message in messages:
-                if message.error():
-                    logger.error("Consumer error: %s", message.error())
+                if not self._is_usable_message(message, "batch_consume"):
                     continue
                 logger.debug("Message consumed: %s", message)
                 message.set_value(message.value())
@@ -565,8 +596,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
             if message is None:
                 logger.debug("No message received")
                 return None
-            if message.error():
-                logger.error("Consumer error: %s", message.error())
+            if not self._is_usable_message(message, "poll"):
                 return None
             logger.debug("Message consumed: %s", message)
             message.set_value(message.value())
@@ -1245,8 +1275,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             result_list: list[Message] = []
             messages: list[Message] = await adapter.consume(num_messages=messages_number, timeout=timeout)
             for message in messages:
-                if message.error():
-                    logger.error("Async consumer error: %s", message.error())
+                if not self._is_usable_message(message, "batch_consume"):
                     continue
                 logger.debug("Async message consumed: %s", message)
                 message.set_value(message.value())
@@ -1278,8 +1307,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             if message is None:
                 logger.debug("No async message received")
                 return None
-            if message.error():
-                logger.error("Async consumer error: %s", message.error())
+            if not self._is_usable_message(message, "poll"):
                 return None
             logger.debug("Async message consumed: %s", message)
             message.set_value(message.value())
