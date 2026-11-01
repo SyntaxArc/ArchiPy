@@ -4259,6 +4259,8 @@ key-value storage, and RediSearch (full-text, vector KNN, vector range, hybrid s
 </span></code></pre></div>
 <p><code>SSL_CERTFILE</code> and <code>SSL_KEYFILE</code> must be set together. <code>SSL_CA_CERTS</code> and <code>SSL_CERTFILE</code> require <code>SSL=true</code>.
 In sentinel mode the TLS settings also apply to the sentinel nodes.</p>
+<p>In sentinel mode <code>DATABASE</code> and <code>HEALTH_CHECK_INTERVAL</code> also apply to the master and replica connections. Earlier
+versions ignored them, so a sentinel setup with a non-zero <code>DATABASE</code> now selects that database instead of database 0.</p>
 <h3 id="retries-keepalive-and-client-name">Retries, keepalive and client name<a class="headerlink" href="#retries-keepalive-and-client-name" title="Permanent link">&para;</a></h3>
 <p>All settings are optional; unset ones keep the redis-py defaults. They apply to standalone, cluster and sentinel modes.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">REDIS__RETRY_ATTEMPTS</span><span class="o">=</span><span class="m">3</span><span class="w">          </span><span class="c1"># retries per command with exponential backoff</span>
@@ -4938,6 +4940,8 @@ deployments.</p>
 </span><span id="__span-24-23"><a id="__codelineno-24-23" name="__codelineno-24-23" href="#__codelineno-24-23"></a>
 </span><span id="__span-24-24"><a id="__codelineno-24-24" name="__codelineno-24-24" href="#__codelineno-24-24"></a><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Text hits: </span><span class="si">{</span><span class="n">text_result</span><span class="o">.</span><span class="n">total</span><span class="si">}</span><span class="s2">, hybrid hits: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">hybrid_result</span><span class="o">.</span><span class="n">hits</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span></code></pre></div>
+<p>Set <code>text_scorer</code> (for example <code>"BM25"</code> or <code>"TFIDF"</code>) on <code>SearchQueryDTO</code> or <code>from_hybrid()</code> to choose the full-text
+scoring function; it is sent to RediSearch as <code>SCORER</code>, and an unknown name is rejected by the server.</p>
 <h3 id="aggregations">Aggregations<a class="headerlink" href="#aggregations" title="Permanent link">&para;</a></h3>
 <p>Group and count documents with <code>AggregationDTO</code>:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>

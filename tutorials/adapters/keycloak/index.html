@@ -4904,7 +4904,8 @@ configured for each method based on how frequently the data typically changes:</
 <p class="admonition-title">Note</p>
 <p>Token validation is never cached. Write operations such as user creation and updates clear the relevant caches.</p>
 </div>
-<p>You can clear all caches if needed:</p>
+<p>You can clear all caches if needed. <code>clear_all_caches()</code> works with or without admin mode: it never builds the admin
+client or logs in to Keycloak.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Sync</label><label for="__tabbed_1_2">Async</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
