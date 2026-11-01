@@ -1020,9 +1020,11 @@ class MinioAdapter(MinioPort, MinioExceptionHandlerMixin):
                         )
                     ),
                 )
-            self._client.copy_object(
+            # The dict form keeps the key literal (a string form parses "?versionId=" out of it) and
+            # client.copy switches to managed multipart copy for objects above 5 GB.
+            self._client.copy(
+                CopySource={"Bucket": src_bucket_name, "Key": src_object_name},
                 Bucket=dest_bucket_name,
-                CopySource=f"{src_bucket_name}/{src_object_name}",
                 Key=dest_object_name,
             )
             self._clear_object_caches()
