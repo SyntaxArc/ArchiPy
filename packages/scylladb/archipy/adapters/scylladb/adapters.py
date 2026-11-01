@@ -32,8 +32,11 @@ from cassandra.cluster import (
 )
 from cassandra.policies import (
     AddressTranslator,
+    ConstantReconnectionPolicy,
+    ConstantSpeculativeExecutionPolicy,
     DCAwareRoundRobinPolicy,
     ExponentialBackoffRetryPolicy,
+    ExponentialReconnectionPolicy,
     FallthroughRetryPolicy,
     RoundRobinPolicy,
     TokenAwarePolicy,
@@ -87,6 +90,64 @@ def _warn_ignored_pool_settings(config: ScyllaDBConfig) -> None:
             DeprecationWarning,
             stacklevel=3,
         )
+
+
+_SERIAL_CONSISTENCY_LEVELS: Final = {
+    "SERIAL": ConsistencyLevel.SERIAL,
+    "LOCAL_SERIAL": ConsistencyLevel.LOCAL_SERIAL,
+}
+
+
+def _cluster_resilience_options(config: ScyllaDBConfig) -> dict[str, Any]:
+    """Build the optional ``Cluster`` keyword arguments for heartbeat, timeout and reconnection settings.
+
+    Only settings the caller set are returned, so unset ones keep the driver defaults.
+
+    Args:
+        config (ScyllaDBConfig): The ScyllaDB configuration.
+
+    Returns:
+        dict[str, Any]: Keyword arguments for ``Cluster``.
+    """
+    options: dict[str, Any] = {}
+    if config.IDLE_HEARTBEAT_INTERVAL is not None:
+        options["idle_heartbeat_interval"] = config.IDLE_HEARTBEAT_INTERVAL
+    if config.IDLE_HEARTBEAT_TIMEOUT is not None:
+        options["idle_heartbeat_timeout"] = config.IDLE_HEARTBEAT_TIMEOUT
+    if config.CONTROL_CONNECTION_TIMEOUT is not None:
+        options["control_connection_timeout"] = config.CONTROL_CONNECTION_TIMEOUT
+    if config.RECONNECTION_POLICY == "CONSTANT":
+        options["reconnection_policy"] = ConstantReconnectionPolicy(
+            delay=config.RECONNECTION_BASE_DELAY,
+            max_attempts=config.RECONNECTION_MAX_ATTEMPTS,
+        )
+    elif config.RECONNECTION_POLICY == "EXPONENTIAL":
+        options["reconnection_policy"] = ExponentialReconnectionPolicy(
+            base_delay=config.RECONNECTION_BASE_DELAY,
+            max_delay=config.RECONNECTION_MAX_DELAY,
+            max_attempts=config.RECONNECTION_MAX_ATTEMPTS,
+        )
+    return options
+
+
+def _execution_profile_options(config: ScyllaDBConfig) -> dict[str, Any]:
+    """Build the optional ``ExecutionProfile`` keyword arguments for serial consistency and speculative execution.
+
+    Args:
+        config (ScyllaDBConfig): The ScyllaDB configuration.
+
+    Returns:
+        dict[str, Any]: Keyword arguments for ``ExecutionProfile``.
+    """
+    options: dict[str, Any] = {}
+    if config.SERIAL_CONSISTENCY_LEVEL is not None:
+        options["serial_consistency_level"] = _SERIAL_CONSISTENCY_LEVELS[config.SERIAL_CONSISTENCY_LEVEL]
+    if config.SPECULATIVE_EXECUTION_DELAY is not None:
+        options["speculative_execution_policy"] = ConstantSpeculativeExecutionPolicy(
+            delay=config.SPECULATIVE_EXECUTION_DELAY,
+            max_attempts=config.SPECULATIVE_EXECUTION_MAX_ATTEMPTS,
+        )
+    return options
 
 
 class _HostPoolStat(TypedDict):
@@ -319,11 +380,13 @@ class ScyllaDBAdapter(ScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                     load_balancing_policy=load_balancing_policy,
                     retry_policy=retry_policy,
                     request_timeout=self.config.REQUEST_TIMEOUT,
+                    **_execution_profile_options(self.config),
                 ),
             },
             shard_aware_options=shard_aware_options,
             address_translator=address_translator,
             ssl_context=self.config.build_ssl_context(),
+            **_cluster_resilience_options(self.config),
         )
         _warn_ignored_pool_settings(self.config)
 
@@ -935,11 +998,13 @@ class AsyncScyllaDBAdapter(AsyncScyllaDBPort, ScyllaDBExceptionHandlerMixin):
                     load_balancing_policy=load_balancing_policy,
                     retry_policy=retry_policy,
                     request_timeout=self.config.REQUEST_TIMEOUT,
+                    **_execution_profile_options(self.config),
                 ),
             },
             shard_aware_options=shard_aware_options,
             address_translator=address_translator,
             ssl_context=self.config.build_ssl_context(),
+            **_cluster_resilience_options(self.config),
         )
         _warn_ignored_pool_settings(self.config)
 

@@ -86,6 +86,39 @@ config = ScyllaDBConfig(
 )
 ```
 
+### Resilience Configuration
+
+These settings are optional. A setting left unset keeps the driver default.
+
+```python
+config = ScyllaDBConfig(
+    CONTACT_POINTS=["scylla-1", "scylla-2"],
+    IDLE_HEARTBEAT_INTERVAL=10.0,
+    IDLE_HEARTBEAT_TIMEOUT=10.0,
+    RECONNECTION_POLICY="EXPONENTIAL",
+    RECONNECTION_BASE_DELAY=1.0,
+    RECONNECTION_MAX_DELAY=60.0,
+    SERIAL_CONSISTENCY_LEVEL="LOCAL_SERIAL",
+    SPECULATIVE_EXECUTION_DELAY=0.2,
+)
+```
+
+| Setting | Default | Effect |
+|---------|---------|--------|
+| `IDLE_HEARTBEAT_INTERVAL` | driver (30s) | Idle seconds before a heartbeat probes the connection; `0` disables it |
+| `IDLE_HEARTBEAT_TIMEOUT` | driver (30s) | Seconds to wait for a heartbeat reply before the connection is dropped |
+| `CONTROL_CONNECTION_TIMEOUT` | driver (2s) | Timeout of the control connection's topology and schema queries |
+| `RECONNECTION_POLICY` | driver (exponential, 1s to 600s) | `CONSTANT` or `EXPONENTIAL` retry of down hosts |
+| `RECONNECTION_BASE_DELAY` | `1.0` | Delay between attempts (first delay for `EXPONENTIAL`) |
+| `RECONNECTION_MAX_DELAY` | `600.0` | Upper bound of the `EXPONENTIAL` delay |
+| `RECONNECTION_MAX_ATTEMPTS` | unlimited | Give up on a host after this many attempts |
+| `SERIAL_CONSISTENCY_LEVEL` | driver (`SERIAL`) | `SERIAL` or `LOCAL_SERIAL` for lightweight transactions (`IF` clauses) |
+| `SPECULATIVE_EXECUTION_DELAY` | disabled | Seconds before the query is sent to the next host |
+| `SPECULATIVE_EXECUTION_MAX_ATTEMPTS` | `2` | Extra executions per query when speculative execution is on |
+
+Speculative execution only applies to statements marked idempotent, so retries never repeat a write that is not safe
+to repeat.
+
 ### TLS Configuration
 
 TLS is off by default, so the password and data travel unencrypted. Enable it to encrypt the connection and verify the

@@ -1367,3 +1367,90 @@ def step_no_deprecation(context: Context) -> None:
         context (Context): Behave context.
     """
     assert not [m for m in context.cluster_warnings if "no effect" in m], context.cluster_warnings
+
+
+_RESILIENCE_PROFILES: dict[str, dict[str, Any]] = {
+    "driver defaults": {},
+    "constant reconnect": {
+        "RECONNECTION_POLICY": "CONSTANT",
+        "RECONNECTION_BASE_DELAY": 2.0,
+        "RECONNECTION_MAX_ATTEMPTS": 5,
+    },
+    "exponential reconnect": {
+        "RECONNECTION_POLICY": "EXPONENTIAL",
+        "RECONNECTION_BASE_DELAY": 0.5,
+        "RECONNECTION_MAX_DELAY": 30.0,
+    },
+    "heartbeat and timeouts": {
+        "IDLE_HEARTBEAT_INTERVAL": 7.0,
+        "IDLE_HEARTBEAT_TIMEOUT": 11.0,
+        "CONTROL_CONNECTION_TIMEOUT": 4.0,
+    },
+    "serial consistency": {"SERIAL_CONSISTENCY_LEVEL": "LOCAL_SERIAL"},
+    "speculative execution": {"SPECULATIVE_EXECUTION_DELAY": 0.25, "SPECULATIVE_EXECUTION_MAX_ATTEMPTS": 3},
+}
+
+
+@when("I build a ScyllaDB cluster with the resilience profile {profile}")
+def step_build_scylladb_cluster_resilience(context: Context, profile: str) -> None:
+    """Build the cluster without connecting, using one named group of resilience settings.
+
+    Args:
+        context (Context): Behave context.
+        profile (str): Key of the settings group in the resilience profile table.
+    """
+    from archipy.adapters.scylladb.adapters import ScyllaDBAdapter
+
+    config = get_scylladb_adapter(context).config.model_copy(update=_RESILIENCE_PROFILES[profile])
+    adapter = ScyllaDBAdapter.__new__(ScyllaDBAdapter)  # skip __init__, which would open a second connection
+    adapter.config = config
+    context.cluster = adapter._create_cluster()
+    context.cluster_config = config
+
+
+@then("the cluster and default profile should reflect the {profile} resilience profile")
+def step_cluster_reflects_resilience(context: Context, profile: str) -> None:
+    """Check the driver objects carry the settings of the named group, or its defaults when unset.
+
+    Args:
+        context (Context): Behave context.
+        profile (str): Key of the settings group in the resilience profile table.
+    """
+    from cassandra import ConsistencyLevel
+    from cassandra.policies import (
+        ConstantReconnectionPolicy,
+        ConstantSpeculativeExecutionPolicy,
+        ExponentialReconnectionPolicy,
+        NoSpeculativeExecutionPolicy,
+    )
+
+    cluster = context.cluster
+    default_profile = cluster.profile_manager.default
+    settings = _RESILIENCE_PROFILES[profile]
+    reconnection = cluster.reconnection_policy
+    if settings.get("RECONNECTION_POLICY") == "CONSTANT":
+        assert isinstance(reconnection, ConstantReconnectionPolicy), reconnection
+        assert reconnection.delay == settings["RECONNECTION_BASE_DELAY"]
+        assert reconnection.max_attempts == settings["RECONNECTION_MAX_ATTEMPTS"]
+    elif settings.get("RECONNECTION_POLICY") == "EXPONENTIAL":
+        assert isinstance(reconnection, ExponentialReconnectionPolicy), reconnection
+        assert reconnection.base_delay == settings["RECONNECTION_BASE_DELAY"]
+        assert reconnection.max_delay == settings["RECONNECTION_MAX_DELAY"]
+    else:
+        assert type(reconnection) is ExponentialReconnectionPolicy, reconnection
+        assert reconnection.base_delay == 1.0
+        assert reconnection.max_delay == 600.0
+    assert cluster.idle_heartbeat_interval == settings.get("IDLE_HEARTBEAT_INTERVAL", 30)
+    assert cluster.idle_heartbeat_timeout == settings.get("IDLE_HEARTBEAT_TIMEOUT", 30)
+    assert cluster.control_connection_timeout == settings.get("CONTROL_CONNECTION_TIMEOUT", 2.0)
+    expected_serial = None
+    if "SERIAL_CONSISTENCY_LEVEL" in settings:
+        expected_serial = getattr(ConsistencyLevel, settings["SERIAL_CONSISTENCY_LEVEL"])
+    assert default_profile.serial_consistency_level == expected_serial, default_profile.serial_consistency_level
+    speculative = default_profile.speculative_execution_policy
+    if "SPECULATIVE_EXECUTION_DELAY" in settings:
+        assert isinstance(speculative, ConstantSpeculativeExecutionPolicy), speculative
+        assert speculative.delay == settings["SPECULATIVE_EXECUTION_DELAY"]
+        assert speculative.max_attempts == settings["SPECULATIVE_EXECUTION_MAX_ATTEMPTS"]
+    else:
+        assert isinstance(speculative, NoSpeculativeExecutionPolicy), speculative

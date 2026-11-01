@@ -381,3 +381,17 @@ Feature: ScyllaDB Adapter
       | setting                     | value | warning                         |
       | MAX_CONNECTIONS_PER_HOST    | 4     | name "MAX_CONNECTIONS_PER_HOST" |
       | MAX_REQUESTS_PER_CONNECTION | 100   | not be raised                   |
+
+  @needs-scylladb
+  Scenario Outline: The cluster and default profile apply the <profile> resilience settings
+    When I build a ScyllaDB cluster with the resilience profile <profile>
+    Then the cluster and default profile should reflect the <profile> resilience profile
+
+    Examples: Resilience profiles
+      | profile                |
+      | driver defaults        |
+      | constant reconnect     |
+      | exponential reconnect  |
+      | heartbeat and timeouts |
+      | serial consistency     |
+      | speculative execution  |

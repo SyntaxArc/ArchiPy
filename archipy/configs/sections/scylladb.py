@@ -136,6 +136,66 @@ class ScyllaDBConfig(BaseModel):
         description="Enable connection pool monitoring and metrics",
     )
 
+    # Resilience Configuration (unset keeps the driver default)
+    IDLE_HEARTBEAT_INTERVAL: float | None = Field(
+        default=None,
+        ge=0.0,
+        description=(
+            "Seconds of connection idleness before the driver sends a heartbeat to detect dead connections. "
+            "0 disables heartbeats; unset keeps the driver default (30)"
+        ),
+    )
+    IDLE_HEARTBEAT_TIMEOUT: float | None = Field(
+        default=None,
+        gt=0.0,
+        description="Seconds to wait for a heartbeat response before the connection is dropped (driver default 30)",
+    )
+    CONTROL_CONNECTION_TIMEOUT: float | None = Field(
+        default=None,
+        gt=0.0,
+        description="Seconds the control connection waits for topology and schema queries (driver default 2)",
+    )
+    RECONNECTION_POLICY: Literal["CONSTANT", "EXPONENTIAL"] | None = Field(
+        default=None,
+        description=(
+            "How the driver retries a down host. 'CONSTANT' waits RECONNECTION_BASE_DELAY between attempts; "
+            "'EXPONENTIAL' grows the wait from RECONNECTION_BASE_DELAY up to RECONNECTION_MAX_DELAY. "
+            "Unset keeps the driver default (exponential, 1s to 600s)"
+        ),
+    )
+    RECONNECTION_BASE_DELAY: float = Field(
+        default=1.0,
+        gt=0.0,
+        description="Seconds between reconnection attempts (first delay for EXPONENTIAL)",
+    )
+    RECONNECTION_MAX_DELAY: float = Field(
+        default=600.0,
+        gt=0.0,
+        description="Upper bound in seconds of the delay between attempts for EXPONENTIAL",
+    )
+    RECONNECTION_MAX_ATTEMPTS: int | None = Field(
+        default=None,
+        ge=1,
+        description="Stop reconnecting to a host after this many attempts (unlimited when unset)",
+    )
+    SERIAL_CONSISTENCY_LEVEL: Literal["SERIAL", "LOCAL_SERIAL"] | None = Field(
+        default=None,
+        description="Consistency level of the Paxos phase of lightweight transactions (IF clauses); unset keeps SERIAL",
+    )
+    SPECULATIVE_EXECUTION_DELAY: float | None = Field(
+        default=None,
+        gt=0.0,
+        description=(
+            "Seconds to wait for a response before the driver sends the query to the next host. "
+            "Applies only to idempotent statements. Unset disables speculative execution"
+        ),
+    )
+    SPECULATIVE_EXECUTION_MAX_ATTEMPTS: int = Field(
+        default=2,
+        ge=1,
+        description="Extra executions allowed per query when SPECULATIVE_EXECUTION_DELAY is set",
+    )
+
     # TLS Configuration
     TLS_ENABLED: bool = Field(
         default=False,
@@ -241,6 +301,16 @@ class ScyllaDBConfig(BaseModel):
             raise InvalidArgumentError(
                 argument_name="connection_pool",
                 additional_data={"error": "CORE_CONNECTIONS_PER_HOST cannot exceed MAX_CONNECTIONS_PER_HOST"},
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_reconnection(self) -> Self:
+        """Validate that the exponential reconnection delay does not shrink below its base."""
+        if self.RECONNECTION_POLICY == "EXPONENTIAL" and self.RECONNECTION_BASE_DELAY > self.RECONNECTION_MAX_DELAY:
+            raise InvalidArgumentError(
+                argument_name="reconnection",
+                additional_data={"error": "RECONNECTION_BASE_DELAY cannot exceed RECONNECTION_MAX_DELAY"},
             )
         return self
 

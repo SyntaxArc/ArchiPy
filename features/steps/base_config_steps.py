@@ -547,6 +547,14 @@ _SECTION_SETTINGS = {
         {"TLS_ENABLED": True, "TLS_CERT_FILE": "/tmp/client.pem"},
     ),
     ("ScyllaDB", "a CA file with TLS disabled"): (ScyllaDBConfig, {"TLS_CA_FILE": "/tmp/ca.pem"}),
+    ("ScyllaDB", "an exponential reconnection base above the maximum"): (
+        ScyllaDBConfig,
+        {"RECONNECTION_POLICY": "EXPONENTIAL", "RECONNECTION_BASE_DELAY": 20.0, "RECONNECTION_MAX_DELAY": 5.0},
+    ),
+    ("ScyllaDB", "an exponential reconnection within bounds"): (
+        ScyllaDBConfig,
+        {"RECONNECTION_POLICY": "EXPONENTIAL", "RECONNECTION_BASE_DELAY": 1.0, "RECONNECTION_MAX_DELAY": 5.0},
+    ),
     ("ScyllaDB", "TLS enabled with a CA file"): (ScyllaDBConfig, {"TLS_ENABLED": True, "TLS_CA_FILE": "/tmp/ca.pem"}),
     ("Temporal", "only a client certificate"): (TemporalConfig, {"TLS_CLIENT_CERT": "/tmp/client.pem"}),
     ("Temporal", "only a CA certificate"): (TemporalConfig, {"TLS_CA_CERT": "/tmp/ca.pem"}),
