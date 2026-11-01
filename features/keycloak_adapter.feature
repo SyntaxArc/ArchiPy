@@ -107,6 +107,21 @@ Feature: Keycloak Authentication Testing
       | async        | asyncuser | async123 | async-test-realm-envoy | Async Test Realm   | async-test-client | envoy  |
 
   @tokens
+  Scenario Outline: Local token checks fetch the realm JWKS once and report a Keycloak outage as unavailable
+    Given a configured sync Keycloak adapter via direct
+    And I create a realm named "<realm_name>" with display name "JWKS Realm" using sync adapter
+    And I create a client named "<client_name>" in realm "<realm_name>" with service accounts and update adapter using sync adapter
+    And I create a user with username "<username>" and password "pass123" using sync adapter
+    And I have a valid token for "<username>" with password "pass123" using sync adapter
+    Then a <adapter_type> adapter for realm "<realm_name>" and client "<client_name>" fetches the realm JWKS once for 3 token checks of "<username>"
+    And a <adapter_type> adapter pointing at an unreachable Keycloak reports "SERVICE_UNAVAILABLE" when validating the token of "<username>"
+
+    Examples:
+      | adapter_type | realm_name | client_name  | username  |
+      | sync         | jwks-sync  | jwks-sync-c  | jwkssync  |
+      | async        | jwks-async | jwks-async-c | jwksasync |
+
+  @tokens
   Scenario: Async token validation after the realm signing key rotates
     Given a configured sync Keycloak adapter via direct
     And I create a realm named "async-rotated-key-realm" with display name "Rotated Key Realm" using sync adapter
