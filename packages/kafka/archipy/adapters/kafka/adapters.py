@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
+import warnings
 from typing import TYPE_CHECKING, NoReturn, override
 
 import confluent_kafka
@@ -32,6 +35,7 @@ from archipy.models.errors import (
     BaseError,
     ConfigurationError,
     ConnectionTimeoutError,
+    FailedPreconditionError,
     InternalError,
     InvalidArgumentError,
     NetworkError,
@@ -44,6 +48,7 @@ from archipy.models.errors import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
     from concurrent.futures import Future
 
     from archipy.configs.config_template import KafkaConfig
@@ -133,6 +138,75 @@ def _apply_client_config(config: dict[str, str | int | float], configs: KafkaCon
     config.update({key: value for key, value in optional.items() if value is not None})
 
 
+def _apply_transactional_config(config: dict[str, str | int | float], configs: KafkaConfig) -> None:
+    """Add ``transactional.id`` and a ``transaction.timeout.ms`` that is not below the delivery timeout.
+
+    librdkafka refuses a transactional producer whose delivery timeout exceeds the transaction timeout, so an
+    unset ``TRANSACTION_TIMEOUT_MS`` falls back to 60000 or the delivery timeout when that is higher.
+    """
+    if not configs.TRANSACTIONAL_ID:
+        return
+    config["transactional.id"] = configs.TRANSACTIONAL_ID
+    delivery_timeout = configs.MESSAGE_TIMEOUT_MS or configs.DELIVERY_TIMEOUT_MS
+    config["transaction.timeout.ms"] = configs.TRANSACTION_TIMEOUT_MS or max(60000, delivery_timeout)
+
+
+def _resolve_message_key(
+    configs: KafkaConfig,
+    key: str | None,
+    encode: Callable[[str | bytes], bytes],
+) -> bytes | None:
+    """Return the key to send for a message.
+
+    A missing key is sent as ``None`` (no key) when ``EMPTY_KEY_FOR_MISSING_KEY`` is False. The legacy behavior,
+    still the default, sends empty bytes and is deprecated.
+
+    Args:
+        configs: Kafka configuration.
+        key: The key given by the caller, or None.
+        encode: Function that converts the key to bytes.
+
+    Returns:
+        bytes | None: The key to pass to the client.
+    """
+    if key is not None:
+        return encode(key)
+    if not configs.EMPTY_KEY_FOR_MISSING_KEY:
+        return None
+    warnings.warn(
+        "Messages without a key are sent with an empty key (b''). Set KAFKA.EMPTY_KEY_FOR_MISSING_KEY=False to "
+        "send them without a key; that will become the default in a future release.",
+        DeprecationWarning,
+        stacklevel=4,
+    )
+    return b""
+
+
+def _effective_delivery_timeout_seconds(configs: KafkaConfig) -> float:
+    """Return how long a produced message can legitimately stay pending, in seconds."""
+    return (configs.MESSAGE_TIMEOUT_MS or configs.DELIVERY_TIMEOUT_MS) / 1000
+
+
+def _build_commit_callback(
+    on_commit: Callable[[KafkaError | None, list[TopicPartition]], None] | None,
+) -> Callable[[KafkaError | None, list[TopicPartition]], None]:
+    """Return the ``on_commit`` client callback: it logs failed offset commits, then calls the caller's callback.
+
+    Asynchronous commits report their outcome only through this callback, so without it a failed commit is lost.
+    """
+
+    def callback(error: KafkaError | None, partitions: list[TopicPartition]) -> None:
+        if error is not None:
+            logger.warning("Offset commit failed: %s", error)
+        if on_commit is not None:
+            try:
+                on_commit(error, partitions)
+            except Exception:
+                logger.exception("The on_commit callback raised an exception")
+
+    return callback
+
+
 def _resolve_list_topics_timeout(configs: KafkaConfig, timeout: float | None) -> float:
     """Return the explicit timeout in seconds, or ``LIST_TOPICS_TIMEOUT_MS`` converted to seconds when None."""
     return configs.LIST_TOPICS_TIMEOUT_MS / 1000 if timeout is None else timeout
@@ -171,6 +245,8 @@ _AUTHORIZATION_CODES = frozenset(
         KafkaError.TRANSACTIONAL_ID_AUTHORIZATION_FAILED,
     },
 )
+
+_CONSUMER_RAISED_CODES = _AUTHENTICATION_CODES | _AUTHORIZATION_CODES | {KafkaError._ALL_BROKERS_DOWN}
 
 
 class KafkaExceptionHandlerMixin:
@@ -239,6 +315,36 @@ class KafkaExceptionHandlerMixin:
             if "configuration property" in str(kafka_error.str()).lower():
                 raise ConfigurationError(operation="kafka") from exception
             raise InvalidArgumentError(argument_name=operation) from exception
+
+    @classmethod
+    def _is_usable_message(cls, message: Message, operation: str) -> bool:
+        """Check a polled message and raise for errors the caller must see.
+
+        ``_PARTITION_EOF`` is informational and skipped. Fatal errors, authentication and authorization failures and
+        a lost connection to every broker are raised through the exception mapper. Other errors are logged at
+        warning level and the message is skipped.
+
+        Args:
+            message: The polled message.
+            operation: The name of the operation, used for error mapping.
+
+        Returns:
+            bool: True when the message carries a value, False when it is skipped.
+
+        Raises:
+            Various application errors for fatal, authentication, authorization and connection errors.
+        """
+        error = message.error()
+        if not error:
+            return True
+        code = error.code()
+        if code == KafkaError._PARTITION_EOF:
+            logger.debug("Reached the end of %s [%s]", message.topic(), message.partition())
+            return False
+        if error.fatal() or code in _CONSUMER_RAISED_CODES:
+            cls._handle_kafka_exception(KafkaException(error), operation)
+        logger.warning("Consumer error: %s", error)
+        return False
 
     @classmethod
     def _handle_producer_exception(cls, exception: Exception, operation: str) -> NoReturn:
@@ -420,6 +526,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
         topic_list: list[str] | None = None,
         partition_list: list[TopicPartition] | None = None,
         kafka_configs: KafkaConfig | None = None,
+        on_commit: Callable[[KafkaError | None, list[TopicPartition]], None] | None = None,
     ) -> None:
         """Initializes the consumer adapter with Kafka configuration and subscription.
 
@@ -431,32 +538,46 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
                 to assign. Defaults to None.
             kafka_configs (KafkaConfig | None, optional): Kafka configuration. If None,
                 uses global config. Defaults to None.
+            on_commit (Callable[[KafkaError | None, list[TopicPartition]], None] | None, optional): Called with the
+                error (None on success) and the partitions when a commit completes; it reports the outcome of
+                asynchronous commits. Failed commits are always logged. Defaults to None.
 
         Raises:
             InvalidArgumentError: If both topic_list and partition_list are provided or
                 neither is provided.
             InternalError: If there is an error initializing the consumer.
         """
-        configs: KafkaConfig = kafka_configs or BaseConfig.global_config().KAFKA
-        self._adapter: Consumer = self._get_adapter(group_id, configs)
-        if topic_list and not partition_list:
-            self.subscribe(topic_list)
-        elif not topic_list and partition_list:
-            self.assign(partition_list)
-        else:
+        if bool(topic_list) == bool(partition_list):
             logger.error("Invalid topic or partition list")
             raise InvalidArgumentError(
                 argument_name="topic_list or partition_list",
                 additional_data={"reason": "Exactly one of topic_list or partition_list must be provided"},
             )
+        configs: KafkaConfig = kafka_configs or BaseConfig.global_config().KAFKA
+        self._adapter: Consumer = self._get_adapter(group_id, configs, on_commit)
+        try:
+            if topic_list:
+                self.subscribe(topic_list)
+            elif partition_list:
+                self.assign(partition_list)
+        except BaseError:
+            with contextlib.suppress(*_KAFKA_CLIENT_ERRORS):
+                self._adapter.close()
+            raise
 
     @classmethod
-    def _get_adapter(cls, group_id: str, configs: KafkaConfig) -> Consumer:
+    def _get_adapter(
+        cls,
+        group_id: str,
+        configs: KafkaConfig,
+        on_commit: Callable[[KafkaError | None, list[TopicPartition]], None] | None = None,
+    ) -> Consumer:
         """Creates and configures a Kafka Consumer instance.
 
         Args:
             group_id (str): Consumer group ID.
             configs (KafkaConfig): Kafka configuration.
+            on_commit: Optional callback for completed commits.
 
         Returns:
             Consumer: Configured Kafka Consumer instance.
@@ -483,6 +604,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
             }
             _apply_security_config(config, configs)
             _apply_client_config(config, configs, role="consumer")
+            config["on_commit"] = _build_commit_callback(on_commit)  # ty: ignore[invalid-assignment]
             # Looked up on the module at call time: OpenTelemetry's Kafka instrumentor replaces
             # ``confluent_kafka.Consumer``, so a name bound at import time would never be traced.
             consumer = confluent_kafka.Consumer(config)
@@ -492,13 +614,13 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
             return consumer
 
     @override
-    def batch_consume(self, messages_number: int = 500, timeout: int = 1) -> list[Message]:
+    def batch_consume(self, messages_number: int = 500, timeout: float = 1) -> list[Message]:
         """Consumes a batch of messages from subscribed topics.
 
         Args:
             messages_number (int, optional): Maximum number of messages to consume.
                 Defaults to 500.
-            timeout (int, optional): Timeout in seconds for the operation. Defaults to 1.
+            timeout (float, optional): Timeout in seconds for the operation. Defaults to 1.
 
         Returns:
             list[Message]: List of consumed messages.
@@ -512,8 +634,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
             result_list: list[Message] = []
             messages: list[Message] = self._adapter.consume(num_messages=messages_number, timeout=timeout)
             for message in messages:
-                if message.error():
-                    logger.error("Consumer error: %s", message.error())
+                if not self._is_usable_message(message, "batch_consume"):
                     continue
                 logger.debug("Message consumed: %s", message)
                 message.set_value(message.value())
@@ -526,11 +647,11 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
             return result_list
 
     @override
-    def poll(self, timeout: int = 1) -> Message | None:
+    def poll(self, timeout: float = 1) -> Message | None:
         """Polls for a single message from subscribed topics.
 
         Args:
-            timeout (int, optional): Timeout in seconds for the operation. Defaults to 1.
+            timeout (float, optional): Timeout in seconds for the operation. Defaults to 1.
 
         Returns:
             Message | None: The consumed message or None if no message was received.
@@ -545,8 +666,7 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
             if message is None:
                 logger.debug("No message received")
                 return None
-            if message.error():
-                logger.error("Consumer error: %s", message.error())
+            if not self._is_usable_message(message, "poll"):
                 return None
             logger.debug("Message consumed: %s", message)
             message.set_value(message.value())
@@ -589,19 +709,33 @@ class KafkaConsumerAdapter(KafkaConsumerPort, KafkaExceptionHandlerMixin):
             return result
 
     @override
-    def subscribe(self, topic_list: list[str]) -> None:
+    def subscribe(
+        self,
+        topic_list: list[str],
+        on_assign: Callable[[Consumer, list[TopicPartition]], None] | None = None,
+        on_revoke: Callable[[Consumer, list[TopicPartition]], None] | None = None,
+    ) -> None:
         """Subscribes to a list of topics.
 
         Args:
             topic_list (list[str]): List of topics to subscribe to.
+            on_assign (Callable[[Consumer, list[TopicPartition]], None] | None, optional): Called on a rebalance
+                with the partitions assigned to this consumer. Defaults to None.
+            on_revoke (Callable[[Consumer, list[TopicPartition]], None] | None, optional): Called on a rebalance
+                with the partitions taken from this consumer, so offsets can be committed. Defaults to None.
 
         Raises:
             InvalidArgumentError: If the topic list is invalid.
             ServiceUnavailableError: If Kafka is unavailable.
             InternalError: If there is an error subscribing to topics.
         """
+        hooks: dict[str, Callable[[Consumer, list[TopicPartition]], None]] = {}
+        if on_assign is not None:
+            hooks["on_assign"] = on_assign
+        if on_revoke is not None:
+            hooks["on_revoke"] = on_revoke
         try:
-            self._adapter.subscribe(topic_list)
+            self._adapter.subscribe(topic_list, **hooks)
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "subscribe")
 
@@ -660,6 +794,7 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
         configs: KafkaConfig = kafka_configs or BaseConfig.global_config().KAFKA
         self._configs = configs
         self._adapter: Producer = self._get_adapter(configs)
+        self._closed = False
 
     @classmethod
     def _get_adapter(cls, configs: KafkaConfig) -> Producer:
@@ -691,12 +826,13 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
                 "queue.buffering.max.messages": configs.QUEUE_BUFFERING_MAX_MESSAGES,
                 "statistics.interval.ms": configs.STATISTICS_INTERVAL_MS,
             }
-            if configs.TRANSACTIONAL_ID:
-                config["transactional.id"] = configs.TRANSACTIONAL_ID
+            _apply_transactional_config(config, configs)
             _apply_security_config(config, configs)
             _apply_client_config(config, configs, role="producer")
             # See the consumer: resolved at call time so the OpenTelemetry instrumentor can wrap it.
             producer = confluent_kafka.Producer(config)
+            if configs.TRANSACTIONAL_ID:
+                producer.init_transactions(configs.REQUEST_TIMEOUT_MS / 1000)
         except _KAFKA_CLIENT_ERRORS as e:
             cls._handle_kafka_exception(e, "KafkaProducer_init")
         else:
@@ -720,12 +856,21 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
     def _delivery_callback(error: KafkaError | None, message: Message) -> None:
         """Callback for message delivery confirmation.
 
+        A failure is logged with topic, partition and key length only: payloads may carry personal data or tokens.
+
         Args:
             error (KafkaError | None): Error that occurred during delivery, or None if successful.
             message (Message): The delivered message.
         """
         if error:
-            logger.error("Message delivery failed: %s: %s", error, message.value())
+            key = message.key()
+            logger.error(
+                "Message delivery failed: %s (topic=%s, partition=%s, key_length=%d)",
+                error,
+                message.topic(),
+                message.partition(),
+                len(key) if key else 0,
+            )
         else:
             logger.debug(
                 "Message delivered to %s [%d] at offset %d",
@@ -734,13 +879,39 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
                 message.offset(),
             )
 
+    @classmethod
+    def _build_delivery_callback(
+        cls,
+        on_delivery: Callable[[KafkaError | None, Message], None] | None,
+    ) -> Callable[[KafkaError | None, Message], None]:
+        """Return the delivery callback that logs the outcome and then calls the caller's ``on_delivery``."""
+        if on_delivery is None:
+            return cls._delivery_callback
+
+        def callback(error: KafkaError | None, message: Message) -> None:
+            cls._delivery_callback(error, message)
+            try:
+                on_delivery(error, message)
+            except Exception:
+                logger.exception("The on_delivery callback raised an exception")
+
+        return callback
+
     @override
-    def produce(self, message: str | bytes, key: str | None = None) -> None:
+    def produce(
+        self,
+        message: str | bytes,
+        key: str | None = None,
+        on_delivery: Callable[[KafkaError | None, Message], None] | None = None,
+    ) -> None:
         """Produces a message to the configured topic.
 
         Args:
             message (str | bytes): The message to produce.
             key (str | None, optional): The key for the message. Defaults to None.
+            on_delivery (Callable[[KafkaError | None, Message], None] | None, optional): Called with the delivery
+                error (None on success) and the message once the broker acknowledged or rejected it. It runs while
+                the producer is polled (after later ``produce`` calls and in ``flush``). Defaults to None.
 
         Raises:
             NetworkError: If there is a network error producing the message.
@@ -748,24 +919,101 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
             InternalError: If there is an error producing the message.
         """
         try:
+            callback = self._build_delivery_callback(on_delivery)
             processed_message = self._pre_process_message(message)
-            # Handle None key - convert to empty bytes if None
-            processed_key = self._pre_process_message(key) if key is not None else b""
-            self._adapter.produce(
-                topic=self._topic_name,
-                value=processed_message,
-                callback=self._delivery_callback,
-                key=processed_key,
-            )
+            processed_key = _resolve_message_key(self._configs, key, self._pre_process_message)
+            try:
+                self._adapter.produce(
+                    topic=self._topic_name,
+                    value=processed_message,
+                    callback=callback,
+                    key=processed_key,
+                )
+            except BufferError:
+                # The local queue is full of messages whose delivery reports were not served yet: serve them, retry once
+                self._adapter.poll(1)
+                self._adapter.produce(
+                    topic=self._topic_name,
+                    value=processed_message,
+                    callback=callback,
+                    key=processed_key,
+                )
+            # Serve the delivery callbacks of earlier messages, so the queue drains without a flush
+            self._adapter.poll(0)
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_producer_exception(e, "produce")
 
     @override
-    def flush(self, timeout: int | None = None) -> None:
+    def begin_transaction(self) -> None:
+        """Begins a transaction. Requires ``TRANSACTIONAL_ID`` to be configured.
+
+        Raises:
+            InvalidArgumentError: If the producer is not transactional.
+            ServiceUnavailableError: If Kafka is unavailable.
+            InternalError: If there is an error beginning the transaction.
+        """
+        self._require_transactional("begin_transaction")
+        try:
+            self._adapter.begin_transaction()
+        except _KAFKA_CLIENT_ERRORS as e:
+            self._handle_kafka_exception(e, "begin_transaction")
+
+    @override
+    def commit_transaction(self, timeout: float | None = None) -> None:
+        """Commits the open transaction, flushing the messages produced in it.
+
+        Args:
+            timeout (float | None, optional): Maximum seconds to wait. Defaults to None, which uses
+                ``REQUEST_TIMEOUT_MS``.
+
+        Raises:
+            InvalidArgumentError: If the producer is not transactional.
+            ConnectionTimeoutError: If the commit times out.
+            InternalError: If there is an error committing the transaction.
+        """
+        self._require_transactional("commit_transaction")
+        try:
+            self._adapter.commit_transaction(self._transaction_timeout(timeout))
+        except _KAFKA_CLIENT_ERRORS as e:
+            self._handle_kafka_exception(e, "commit_transaction")
+
+    @override
+    def abort_transaction(self, timeout: float | None = None) -> None:
+        """Aborts the open transaction, discarding the messages produced in it.
+
+        Args:
+            timeout (float | None, optional): Maximum seconds to wait. Defaults to None, which uses
+                ``REQUEST_TIMEOUT_MS``.
+
+        Raises:
+            InvalidArgumentError: If the producer is not transactional.
+            ConnectionTimeoutError: If the abort times out.
+            InternalError: If there is an error aborting the transaction.
+        """
+        self._require_transactional("abort_transaction")
+        try:
+            self._adapter.abort_transaction(self._transaction_timeout(timeout))
+        except _KAFKA_CLIENT_ERRORS as e:
+            self._handle_kafka_exception(e, "abort_transaction")
+
+    def _require_transactional(self, operation: str) -> None:
+        """Raise InvalidArgumentError when ``TRANSACTIONAL_ID`` is not configured."""
+        if not self._configs.TRANSACTIONAL_ID:
+            raise InvalidArgumentError(
+                argument_name=operation,
+                additional_data={"reason": "TRANSACTIONAL_ID must be configured to use transactions"},
+            )
+
+    def _transaction_timeout(self, timeout: float | None) -> float:
+        """Return the explicit timeout in seconds, or ``REQUEST_TIMEOUT_MS`` converted to seconds when None."""
+        return self._configs.REQUEST_TIMEOUT_MS / 1000 if timeout is None else timeout
+
+    @override
+    def flush(self, timeout: float | None = None) -> None:
         """Flushes the producer queue.
 
         Args:
-            timeout (int | None, optional): Timeout in seconds for the operation. Defaults to None.
+            timeout (float | None, optional): Timeout in seconds for the operation. Defaults to None.
 
         Raises:
             ConnectionTimeoutError: If the operation times out.
@@ -824,20 +1072,30 @@ class KafkaProducerAdapter(KafkaProducerPort, KafkaExceptionHandlerMixin):
 
     @override
     def close(self) -> None:
-        """Closes the producer, flushing any remaining messages.
+        """Closes the producer, flushing the remaining messages for at most the delivery timeout.
+
+        The client is always released, also when the flush fails. Messages that could not be delivered in time are
+        lost and logged. Closing twice does nothing.
 
         Raises:
             ConnectionTimeoutError: If the flush times out.
             ServiceUnavailableError: If Kafka is unavailable during close.
             InternalError: If there is an error closing the producer.
         """
+        if self._closed:
+            return
+        self._closed = True
         try:
-            self._adapter.flush()
-            # close() releases the client and aborts any open transaction (confluent-kafka 2.16+); flush alone did not
-            self._adapter.close()
-            logger.debug("Producer flushed and closed")
+            remaining = self._adapter.flush(_effective_delivery_timeout_seconds(self._configs))
+            if remaining > 0:
+                logger.error("%d messages were not delivered before the producer was closed and are lost", remaining)
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "close")
+        finally:
+            # close() releases the client and aborts any open transaction (confluent-kafka 2.16+); flush alone did not
+            with contextlib.suppress(*_KAFKA_CLIENT_ERRORS):
+                self._adapter.close()
+            logger.debug("Producer closed")
 
 
 class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMixin):
@@ -863,6 +1121,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
         configs: KafkaConfig = kafka_configs or BaseConfig.global_config().KAFKA
         self._configs = configs
         self._adapter: AIOProducer | None = None
+        self._closed = False
 
     def _build_producer_conf(self, configs: KafkaConfig) -> dict[str, str | int | float]:
         """Builds the producer configuration dictionary.
@@ -888,8 +1147,6 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
             "queue.buffering.max.messages": configs.QUEUE_BUFFERING_MAX_MESSAGES,
             "statistics.interval.ms": configs.STATISTICS_INTERVAL_MS,
         }
-        if configs.TRANSACTIONAL_ID:
-            config["transactional.id"] = configs.TRANSACTIONAL_ID
         _apply_security_config(config, configs)
         _apply_client_config(config, configs, role="producer")
         return config
@@ -904,7 +1161,11 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
             ConfigurationError: If there is an error in the Kafka configuration.
             InternalError: If there is an error creating the producer.
         """
+        if self._closed:
+            raise FailedPreconditionError(precondition="the producer is closed")
         if self._adapter is None:
+            if self._configs.TRANSACTIONAL_ID:
+                raise ConfigurationError(operation="kafka_producer", reason="transactional_id_unsupported_async")
             try:
                 config = self._build_producer_conf(self._configs)
                 self._adapter = AIOProducer(
@@ -947,7 +1208,7 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
         try:
             adapter = await self._get_adapter()
             processed_message = self._pre_process_message(message)
-            processed_key = self._pre_process_message(key) if key is not None else b""
+            processed_key = _resolve_message_key(self._configs, key, self._pre_process_message)
             await adapter.produce(
                 topic=self._topic_name,
                 value=processed_message,
@@ -957,11 +1218,11 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
             self._handle_producer_exception(e, "produce")
 
     @override
-    async def flush(self, timeout: int | None = None) -> None:
+    async def flush(self, timeout: float | None = None) -> None:
         """Flushes the producer queue asynchronously.
 
         Args:
-            timeout (int | None, optional): Timeout in seconds for the operation. Defaults to None.
+            timeout (float | None, optional): Timeout in seconds for the operation. Defaults to None.
 
         Raises:
             ConnectionTimeoutError: If the operation times out.
@@ -970,7 +1231,12 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
         """
         try:
             adapter = await self._get_adapter()
-            await adapter.flush()
+            if timeout is None:
+                await adapter.flush()
+            else:
+                await asyncio.wait_for(adapter.flush(), timeout=timeout)
+        except TimeoutError as e:
+            raise ConnectionTimeoutError(service="Kafka", timeout=int(timeout) if timeout is not None else None) from e
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "flush")
 
@@ -1021,15 +1287,19 @@ class AsyncKafkaProducerAdapter(AsyncKafkaProducerPort, KafkaExceptionHandlerMix
     async def close(self) -> None:
         """Closes the async producer, flushing any remaining messages.
 
+        The producer cannot be used afterwards: a later call raises ``FailedPreconditionError`` instead of silently
+        creating a new producer that nobody closes.
+
         Raises:
             ConnectionTimeoutError: If the flush times out.
             ServiceUnavailableError: If Kafka is unavailable during close.
             InternalError: If there is an error closing the producer.
         """
+        self._closed = True
+        adapter, self._adapter = self._adapter, None
         try:
-            if self._adapter is not None:
-                await self._adapter.close()
-                self._adapter = None
+            if adapter is not None:
+                await adapter.close()
                 logger.debug("Async producer closed")
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "close")
@@ -1048,6 +1318,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
         topic_list: list[str] | None = None,
         partition_list: list[TopicPartition] | None = None,
         kafka_configs: KafkaConfig | None = None,
+        on_commit: Callable[[KafkaError | None, list[TopicPartition]], None] | None = None,
     ) -> None:
         """Initializes the async consumer adapter with Kafka configuration and subscription.
 
@@ -1059,6 +1330,9 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
                 to assign. Defaults to None.
             kafka_configs (KafkaConfig | None, optional): Kafka configuration. If None,
                 uses global config. Defaults to None.
+            on_commit (Callable[[KafkaError | None, list[TopicPartition]], None] | None, optional): Called with the
+                error (None on success) and the partitions when a commit completes; it reports the outcome of
+                asynchronous commits. Failed commits are always logged. Defaults to None.
 
         Raises:
             InvalidArgumentError: If both topic_list and partition_list are provided or
@@ -1071,6 +1345,8 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
         self._topic_list = topic_list
         self._partition_list = partition_list
         self._adapter: AIOConsumer | None = None
+        self._init_lock = asyncio.Lock()
+        self._on_commit = on_commit
 
         if not (topic_list or partition_list) or (topic_list and partition_list):
             logger.error("Invalid topic or partition list")
@@ -1105,6 +1381,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
         }
         _apply_security_config(config, configs)
         _apply_client_config(config, configs, role="consumer")
+        config["on_commit"] = _build_commit_callback(self._on_commit)  # ty: ignore[invalid-assignment]
         return config
 
     async def _get_adapter(self) -> AIOConsumer:
@@ -1117,26 +1394,33 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             ConfigurationError: If there is an error in the Kafka configuration.
             InternalError: If there is an error creating the consumer.
         """
-        if self._adapter is None:
+        async with self._init_lock:
+            if self._adapter is not None:
+                return self._adapter
+            consumer: AIOConsumer | None = None
             try:
                 config = self._build_consumer_conf(self._configs)
-                self._adapter = AIOConsumer(config, max_workers=self._configs.CONSUMER_MAX_WORKERS)
+                consumer = AIOConsumer(config, max_workers=self._configs.CONSUMER_MAX_WORKERS)
                 if self._topic_list:
-                    await self._adapter.subscribe(self._topic_list)
+                    await consumer.subscribe(self._topic_list)
                 elif self._partition_list:
-                    await self._adapter.assign(self._partition_list)
+                    await consumer.assign(self._partition_list)
             except _KAFKA_CLIENT_ERRORS as e:
+                if consumer is not None:
+                    with contextlib.suppress(*_KAFKA_CLIENT_ERRORS):
+                        await consumer.close()
                 self._handle_kafka_exception(e, "AsyncKafkaConsumer_init")
-        return self._adapter
+            self._adapter = consumer
+            return consumer
 
     @override
-    async def batch_consume(self, messages_number: int = 500, timeout: int = 1) -> list[Message]:
+    async def batch_consume(self, messages_number: int = 500, timeout: float = 1) -> list[Message]:
         """Consumes a batch of messages from subscribed topics asynchronously.
 
         Args:
             messages_number (int, optional): Maximum number of messages to consume.
                 Defaults to 500.
-            timeout (int, optional): Timeout in seconds for the operation. Defaults to 1.
+            timeout (float, optional): Timeout in seconds for the operation. Defaults to 1.
 
         Returns:
             list[Message]: List of consumed messages.
@@ -1151,8 +1435,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             result_list: list[Message] = []
             messages: list[Message] = await adapter.consume(num_messages=messages_number, timeout=timeout)
             for message in messages:
-                if message.error():
-                    logger.error("Async consumer error: %s", message.error())
+                if not self._is_usable_message(message, "batch_consume"):
                     continue
                 logger.debug("Async message consumed: %s", message)
                 message.set_value(message.value())
@@ -1164,11 +1447,11 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             return result_list
 
     @override
-    async def poll(self, timeout: int = 1) -> Message | None:
+    async def poll(self, timeout: float = 1) -> Message | None:
         """Polls for a single message from subscribed topics asynchronously.
 
         Args:
-            timeout (int, optional): Timeout in seconds for the operation. Defaults to 1.
+            timeout (float, optional): Timeout in seconds for the operation. Defaults to 1.
 
         Returns:
             Message | None: The consumed message or None if no message was received.
@@ -1184,8 +1467,7 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             if message is None:
                 logger.debug("No async message received")
                 return None
-            if message.error():
-                logger.error("Async consumer error: %s", message.error())
+            if not self._is_usable_message(message, "poll"):
                 return None
             logger.debug("Async message consumed: %s", message)
             message.set_value(message.value())
@@ -1219,11 +1501,20 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
             return result
 
     @override
-    async def subscribe(self, topic_list: list[str]) -> None:
+    async def subscribe(
+        self,
+        topic_list: list[str],
+        on_assign: Callable[[AIOConsumer, list[TopicPartition]], Awaitable[None]] | None = None,
+        on_revoke: Callable[[AIOConsumer, list[TopicPartition]], Awaitable[None]] | None = None,
+    ) -> None:
         """Subscribes to a list of topics asynchronously.
 
         Args:
             topic_list (list[str]): List of topics to subscribe to.
+            on_assign (Callable[[AIOConsumer, list[TopicPartition]], Awaitable[None]] | None, optional): Coroutine
+                function called on a rebalance with the partitions assigned to this consumer. Defaults to None.
+            on_revoke (Callable[[AIOConsumer, list[TopicPartition]], Awaitable[None]] | None, optional): Coroutine
+                function called on a rebalance with the partitions taken from this consumer. Defaults to None.
 
         Raises:
             InvalidArgumentError: If the topic list is invalid.
@@ -1232,7 +1523,12 @@ class AsyncKafkaConsumerAdapter(AsyncKafkaConsumerPort, KafkaExceptionHandlerMix
         """
         try:
             adapter = await self._get_adapter()
-            await adapter.subscribe(topic_list)
+            hooks: dict[str, Callable[[AIOConsumer, list[TopicPartition]], Awaitable[None]]] = {}
+            if on_assign is not None:
+                hooks["on_assign"] = on_assign
+            if on_revoke is not None:
+                hooks["on_revoke"] = on_revoke
+            await adapter.subscribe(topic_list, **hooks)
         except _KAFKA_CLIENT_ERRORS as e:
             self._handle_kafka_exception(e, "subscribe")
 

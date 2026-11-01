@@ -305,7 +305,7 @@ def step_when_send_with_path(context):
     _send(context, "alice@example.com", "Attached", "See attachment", attachments=[path])
 
 
-@when("I try to create a BINARY attachment \"{filename}\" of {size:d} bytes with a maximum size of {max_size:d} bytes")
+@when('I try to create a BINARY attachment "{filename}" of {size:d} bytes with a maximum size of {max_size:d} bytes')
 def step_when_create_oversized_attachment(context, filename, size, max_size):
     scenario_context = get_current_scenario_context(context)
     scenario_context.store("error", None)
@@ -344,6 +344,42 @@ def step_when_take_connection(context):
     sessions = scenario_context.get("sessions", [])
     sessions.append(connection.smtp_connection)
     scenario_context.store("sessions", sessions)
+
+
+@given("the connection timeout is {seconds:d} seconds")
+def step_given_connection_timeout(context, seconds):
+    BaseConfig.global_config().EMAIL.CONNECTION_TIMEOUT = seconds
+
+
+@when("I try to take a connection from the pool {count:d} times")
+def step_when_try_take_connection(context, count):
+    scenario_context = get_current_scenario_context(context)
+    errors = []
+    for _ in range(count):
+        try:
+            scenario_context.get("pool").get_connection()
+            errors.append(None)
+        except Exception as exception:
+            errors.append(exception)
+    scenario_context.store("attempt_errors", errors)
+
+
+@then('each attempt raised an invalid argument error for "{argument}"')
+def step_then_each_attempt_invalid_argument(context, argument):
+    errors = get_current_scenario_context(context).get("attempt_errors")
+    assert errors, "no attempts recorded"
+    for error in errors:
+        assert isinstance(error, InvalidArgumentError), repr(error)
+        assert argument in str(error) or argument in str(getattr(error, "argument_name", "")), str(error)
+
+
+@then('each attempt raised an unavailable error for "{resource}"')
+def step_then_each_attempt_unavailable(context, resource):
+    errors = get_current_scenario_context(context).get("attempt_errors")
+    assert errors, "no attempts recorded"
+    for error in errors:
+        assert isinstance(error, UnavailableError), repr(error)
+        assert error.additional_data["resource_type"] == resource, error.additional_data
 
 
 @when("I return the connection to the pool")
@@ -656,7 +692,7 @@ def step_given_local_smtps(context):
                             break
                         else:
                             client.sendall(b"250 ok\r\n")
-            except (OSError, ssl.SSLError):
+            except OSError, ssl.SSLError:
                 continue
 
     thread = threading.Thread(target=serve, daemon=True)

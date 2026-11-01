@@ -1,6 +1,7 @@
 """SQLAlchemy database configurations."""
 
 import contextlib
+import warnings
 from typing import Literal, Self
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
@@ -38,11 +39,17 @@ class SQLAlchemyConfig(BaseModel):
     )
     ECHO: bool = Field(default=False, description="Whether to log SQL statements")
     ECHO_POOL: bool = Field(default=False, description="Whether to log connection pool events")
+    EXPIRE_ON_COMMIT: bool = Field(
+        default=True,
+        description="Whether committing expires loaded entities (SQLAlchemy expire_on_commit). With True, "
+        "attributes of an entity returned from an atomic block raise DetachedInstanceError because the session "
+        "is closed after the commit: convert entities to DTOs inside the block, or set False to keep them readable",
+    )
     ENABLE_FROM_LINTING: bool = Field(default=True, description="Whether to enable SQL linting")
     HIDE_PARAMETERS: bool = Field(default=False, description="Whether to hide SQL parameters in logs")
     HOST: str | None = Field(default=None, description="Database host")
     ISOLATION_LEVEL: str | None = Field(default="REPEATABLE READ", description="Transaction isolation level")
-    PASSWORD: str | None = Field(default=None, description="Database password")
+    PASSWORD: str | None = Field(default=None, repr=False, description="Database password")
     POOL_MAX_OVERFLOW: int = Field(default=1, description="Maximum number of connections to allow in pool overflow")
     POOL_PRE_PING: bool = Field(default=True, description="Whether to ping connections before use")
     POOL_RECYCLE_SECONDS: int = Field(default=10 * 60, description="Number of seconds between connection recycling")
@@ -74,6 +81,11 @@ class SQLiteSQLAlchemyConfig(SQLAlchemyConfig):
         description="Seconds a connection waits for a lock before 'database is locked' (the sqlite3 'timeout', "
         "i.e. the busy timeout). None: the sqlite3 default of 5 seconds",
     )
+    FOREIGN_KEYS: bool = Field(
+        default=False,
+        description="Enforce foreign keys (PRAGMA foreign_keys=ON on every new connection). SQLite leaves it off by "
+        "default, so foreign key violations go unnoticed. Default False to keep existing behavior",
+    )
     CHECK_SAME_THREAD: bool | None = Field(
         default=None,
         description="The sqlite3 'check_same_thread' option of the sync driver. False lets a connection be used "
@@ -91,7 +103,7 @@ class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
     Extends SQLAlchemyConfig with PostgreSQL-specific settings and URL building.
     """
 
-    POSTGRES_DSN: PostgresDsn | None = Field(default=None, description="PostgreSQL connection URL")
+    POSTGRES_DSN: PostgresDsn | None = Field(default=None, repr=False, description="PostgreSQL connection URL")
     CONNECT_TIMEOUT: int | None = Field(
         default=None,
         ge=1,
@@ -199,6 +211,22 @@ class PostgresSQLAlchemyConfig(SQLAlchemyConfig):
 
         _extract_postgres_query_from_url(urlparse(str(self.POSTGRES_DSN)), self)
         _check_ssl_client_pair(self)
+        return self
+
+    @model_validator(mode="after")
+    def warn_unverified_root_cert(self) -> Self:
+        """Warn when a CA certificate is configured but the SSL mode never verifies the server.
+
+        Returns:
+            Self: The configuration instance.
+        """
+        if self.SSL_ROOT_CERT is not None and self.SSL_MODE not in ("verify-ca", "verify-full"):
+            warnings.warn(
+                f"SSL_ROOT_CERT is set but SSL_MODE is {self.SSL_MODE!r}: the server certificate is not verified. "
+                "Use SSL_MODE='verify-ca' or 'verify-full'.",
+                UserWarning,
+                stacklevel=2,
+            )
         return self
 
 
@@ -354,7 +382,14 @@ class StarRocksSQLAlchemyConfig(SQLAlchemyConfig):
     # Override timeout default for StarRocks (MySQL protocol requirement)
     CONNECT_TIMEOUT: int | None = Field(
         default=10,
+        ge=1,
         description="Timeout in seconds for establishing connection (MySQL protocol default: 10s)",
+    )
+    READ_TIMEOUT: int | None = Field(
+        default=None,
+        ge=1,
+        description="Seconds to wait for a read from the server (None: wait indefinitely). Applied by the sync "
+        "driver only; asyncmy has no read timeout",
     )
 
     @field_validator("ISOLATION_LEVEL")

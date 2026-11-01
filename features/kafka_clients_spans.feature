@@ -86,6 +86,118 @@ Feature: Kafka Clients and Spans Testing
       | GROUP_AUTHORIZATION_FAILED | PermissionDeniedError   |
       | _INVALID_ARG               | InvalidArgumentError    |
 
+  Scenario: A transactional producer commits and aborts transactions
+    Given a test topic named "test-topic-txn"
+    When a transactional producer for topic "test-topic-txn" aborts "aborted-message" and then commits "committed-message"
+    Then a read committed consumer on topic "test-topic-txn" with group "test-group-txn" should first receive "committed-message"
+
+  Scenario Outline: A <mode> producer with <setting> cannot be used for a transaction
+    When I use a <mode> producer with <setting> for a transaction
+    Then the Kafka operation should raise "<error>"
+
+    Examples:
+      | mode  | setting             | error                |
+      | sync  | no transactional id | InvalidArgumentError |
+      | async | a transactional id  | ConfigurationError   |
+
+  Scenario: An async consumer whose subscription failed keeps failing instead of polling unsubscribed
+    When I poll an async consumer subscribed to an invalid topic pattern twice
+    Then the Kafka operation should raise "InvalidArgumentError"
+
+  Scenario Outline: A sync consumer that fails with <failure> leaves no client running
+    When I create 3 sync consumers that fail with <failure>
+    Then the Kafka operation should raise "InvalidArgumentError"
+    And no librdkafka client should be left running
+
+    Examples:
+      | failure                 |
+      | no topics               |
+      | an invalid subscription |
+
+  Scenario Outline: A <mode> consumer that <operation>s a message carrying <code> raises <error>
+    When a <mode> consumer <operation>s a message that carries the Kafka error <code>
+    Then the Kafka operation should raise "<error>"
+
+    Examples:
+      | mode  | operation | code                       | error                   |
+      | sync  | poll      | _ALL_BROKERS_DOWN          | ServiceUnavailableError |
+      | sync  | consume   | _AUTHENTICATION            | UnauthenticatedError    |
+      | async | poll      | TOPIC_AUTHORIZATION_FAILED | PermissionDeniedError   |
+      | async | consume   | _ALL_BROKERS_DOWN          | ServiceUnavailableError |
+
+  Scenario Outline: A <mode> consumer skips a message carrying the harmless error <code>
+    When a <mode> consumer <operation>s a message that carries the Kafka error <code>
+    Then the consumer should have received nothing
+
+    Examples:
+      | mode  | operation | code                  |
+      | sync  | poll      | _PARTITION_EOF        |
+      | sync  | consume   | UNKNOWN_TOPIC_OR_PART |
+      | async | poll      | _PARTITION_EOF        |
+      | async | consume   | UNKNOWN_TOPIC_OR_PART |
+
+  Scenario: A sync producer serves delivery reports so a small queue does not overflow
+    Given a test topic named "test-topic-small-queue"
+    When I produce 200 messages to topic "test-topic-small-queue" without flushing through a queue limited to 5 messages
+    Then the Kafka operation should raise nothing
+
+  Scenario: A failed delivery is reported to the caller and logged without the payload
+    Given an unreachable Kafka broker
+    When a sync producer on that broker fails to deliver "secret-payload" with key "user-key" to topic "failed-delivery-topic"
+    Then the delivery failure should be passed to the on_delivery callback
+    And the logs should mention topic "failed-delivery-topic" but not "secret-payload"
+
+  Scenario Outline: A <mode> producer with missing keys sent as <setting> delivers a keyless message with <key_state>
+    Given a test topic named "test-topic-keyless-<mode>-<code>"
+    When a <mode> producer with missing keys sent as <setting> produces a message without a key to topic "test-topic-keyless-<mode>-<code>"
+    Then the message on topic "test-topic-keyless-<mode>-<code>" should have <key_state> and the deprecation warning should be <warned>
+
+    Examples:
+      | mode  | setting      | code   | key_state    | warned     |
+      | sync  | an empty key | legacy | an empty key | raised     |
+      | sync  | no key       | none   | no key       | not raised |
+      | async | an empty key | legacy | an empty key | raised     |
+      | async | no key       | none   | no key       | not raised |
+
+  Scenario Outline: A Kafka configuration with protocol <protocol>, mechanism <mechanism> and username <username> logs <outcome>
+    When the Kafka settings are assembled with protocol <protocol>, mechanism <mechanism> and username <username> while warnings are collected
+    Then <expectation>
+
+    Examples:
+      | protocol       | mechanism | username | outcome              | expectation                                                              |
+      | SASL_PLAINTEXT | PLAIN     | user     | an unencrypted PLAIN | a configuration warning mentioning "unencrypted" should have been logged |
+      | PLAINTEXT      | PLAIN     | user     | ignored credentials  | a configuration warning mentioning "ignored" should have been logged     |
+      | SASL_SSL       | PLAIN     | user     | nothing              | no configuration warning should have been logged                         |
+
+  Scenario: Closing a sync producer is bounded by the delivery timeout and can be repeated
+    Given an unreachable Kafka broker
+    When a sync producer with a pending message on that broker is closed twice
+    Then the close should have finished within 15 seconds without an error
+
+  Scenario: An async producer honors the flush timeout
+    Given an unreachable Kafka broker
+    When an async producer with a pending message on that broker is flushed with a timeout of 1 second
+    Then the Kafka operation should raise "ConnectionTimeoutError"
+
+  Scenario: A closed async producer is not recreated by later calls
+    When an async producer is closed and then used
+    Then the Kafka operation should raise "FailedPreconditionError"
+
+  Scenario: The on_commit callback reports an asynchronous commit
+    Given a test topic named "test-topic-on-commit"
+    When a sync consumer with an on_commit callback commits a message of topic "test-topic-on-commit" asynchronously
+    Then the on_commit callback should have reported a successful commit
+
+  Scenario Outline: A <mode> consumer reports its assigned partitions to the on_assign hook
+    Given a test topic named "test-topic-on-assign-<mode>"
+    When a <mode> consumer subscribes to topic "test-topic-on-assign-<mode>" with an on_assign callback
+    Then the on_assign callback should have received partitions of topic "test-topic-on-assign-<mode>"
+
+    Examples:
+      | mode  |
+      | sync  |
+      | async |
+
   Scenario: Producing into a full local queue is reported as resource exhaustion
     Given an unreachable Kafka broker
     When I produce 2 messages with a producer whose queue holds only 1 message on that broker
@@ -128,6 +240,8 @@ Feature: Kafka Clients and Spans Testing
       | SASL_SSL       | GSSAPI        | -        | ca.pem | -          | -          | sasl.mechanism,ssl.ca.location                      | sasl.username,ssl.certificate.location |
       | SASL_SSL       | SCRAM-SHA-512 | user     | -      | -          | -          | sasl.username,ssl.endpoint.identification.algorithm | ssl.ca.location                        |
       | PLAINTEXT      | -             | -        | -      | -          | -          | security.protocol                                   | sasl.mechanism,ssl.ca.location         |
+      | ssl            | -             | -        | ca.pem | -          | -          | security.protocol,ssl.ca.location                   | sasl.mechanism,sasl.username           |
+      | sasl_ssl       | plain         | user     | ca.pem | -          | -          | sasl.mechanism,sasl.username,ssl.ca.location        | ssl.certificate.location               |
 
   Scenario Outline: A <role> built with Kafka setting <setting> set to <value> passes <option> to librdkafka as <expected>
     When Kafka client settings are built for a <role> with Kafka setting <setting> set to <value>
@@ -169,6 +283,17 @@ Feature: Kafka Clients and Spans Testing
       | SASL_PLAINTEXT | -             | user     |
       | SASL_SSL       | PLAIN         | -        |
       | SASL_SSL       | SCRAM-SHA-256 | -        |
+      | sasl_ssl       | plain         | -        |
+      | Sasl_Plaintext | scram-sha-512 | -        |
+
+  Scenario Outline: A Kafka configuration with protocol <protocol> is rejected as unknown
+    When a Kafka configuration is validated with protocol <protocol>, mechanism - and username -
+    Then the Kafka configuration should be rejected as an unknown protocol
+
+    Examples:
+      | protocol |
+      | TLS      |
+      | kerberos |
 
   Scenario Outline: A <mode> consumer created with <arguments> is rejected
     When I create a <mode> consumer with <arguments>

@@ -45,9 +45,27 @@ Feature: Parsian Shaparak payment gateway adapter
       | sync  |
       | async |
 
-  Scenario Outline: Unexpected transport failure during initiation is reported as internal error
+  Scenario Outline: Network failures are reported as unavailable so callers can retry
     Given a <kind> Parsian adapter with login account "merchant-1"
-    And the Parsian gateway fails with a connection error on "SalePaymentRequest"
+    And the Parsian gateway fails with <failure> on "<operation>"
+    When I call Parsian "<operation>"
+    Then the Parsian call fails with "UnavailableError"
+    And the Parsian failure carries resource type "<resource>"
+
+    Examples:
+      | kind  | failure                   | operation                | resource                          |
+      | sync  | connection error          | SalePaymentRequest       | Parsian Shaparak Sale Service     |
+      | sync  | requests timeout          | ConfirmPayment           | Parsian Shaparak Confirm Service  |
+      | sync  | requests connection error | ConfirmPaymentWithAmount | Parsian Shaparak Confirm Service  |
+      | sync  | zeep transport error      | ReversalRequest          | Parsian Shaparak Reversal Service |
+      | async | httpx timeout             | SalePaymentRequest       | Parsian Shaparak Sale Service     |
+      | async | httpx connect error       | ConfirmPayment           | Parsian Shaparak Confirm Service  |
+      | async | httpx timeout             | ConfirmPaymentWithAmount | Parsian Shaparak Confirm Service  |
+      | async | httpx connect error       | ReversalRequest          | Parsian Shaparak Reversal Service |
+
+  Scenario Outline: Unexpected non-network failure is reported as internal error
+    Given a <kind> Parsian adapter with login account "merchant-1"
+    And the Parsian gateway fails with unexpected bug on "SalePaymentRequest"
     When I initiate a Parsian payment of 50000 for order 1001 with callback "https://shop.example.com/back"
     Then the Parsian call fails with "InternalError"
 
@@ -219,3 +237,29 @@ Feature: Parsian Shaparak payment gateway adapter
   Scenario: Invalid callback URL is rejected before reaching the gateway
     When I build a Parsian payment request whose callback is "not a url"
     Then the Parsian request is rejected as invalid
+
+  Scenario Outline: Debug logs never contain the login account or the full token
+    Given a <kind> Parsian adapter with login account "SECRETLOGIN"
+    And Parsian debug logging is captured
+    And the Parsian gateway answers "SalePaymentRequest" with:
+      | Token  | Status | Message |
+      | 987654 | 0      | Success |
+    And the Parsian gateway answers "ConfirmPayment" with:
+      | Status | RRN | CardNumberMasked | Token  |
+      | 0      | 1   | 603799******1234 | 987654 |
+    And the Parsian gateway answers "ConfirmPaymentWithAmount" with:
+      | Status | RRN | CardNumberMasked | Token  |
+      | 0      | 1   | 603799******1234 | 987654 |
+    And the Parsian gateway answers "ReversalRequest" with:
+      | Status | Message  | Token  |
+      | 0      | Reversed | 987654 |
+    When I initiate a Parsian payment of 50000 for order 1001 with callback "https://shop.example.com/back"
+    And I confirm Parsian token 987654
+    And I confirm Parsian token 987654 for order 1001 and amount 50000
+    And I reverse Parsian token 987654
+    Then the Parsian debug logs contain neither "SECRETLOGIN" nor "987654" but do name order 1001
+
+    Examples:
+      | kind  |
+      | sync  |
+      | async |

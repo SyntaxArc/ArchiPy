@@ -871,6 +871,24 @@ handle.drop_index(delete_documents=True)
 handle.delete_alias("products-view")
 ```
 
+### Untrusted Input and Escaping
+
+`SearchQueryDTO.query`, `filter_expr` and `AggregationDTO.query` are raw RediSearch syntax and are **not** escaped. Never
+interpolate user input into them. Use `SearchQueryDTO.from_text()` for plain user text, or escape pieces yourself with
+`escape_text`, `escape_tag` and `quote_phrase`:
+
+```python
+from archipy.models.dtos.redis.search import SearchQueryDTO, escape_tag, quote_phrase
+
+query = SearchQueryDTO.from_text(user_text)  # every term is escaped and ANDed
+tagged = SearchQueryDTO.from_knn([0.1, 0.2, 0.3], filter_expr=f"@category:{{{escape_tag(user_category)}}}")
+hybrid = SearchQueryDTO.from_hybrid(quote_phrase(user_text), [0.1, 0.2, 0.3])
+```
+
+Identifier-like fields (`vector_field`, `score_field`, `return_fields`, `group_by`, `sort_by`, `reduce_field`,
+`reduce_function`) are validated to letters, digits, `_`, `.`, `$` and `-` (with an optional leading `@`), and
+`sort_direction` must be `ASC` or `DESC`; anything else raises a Pydantic `ValidationError`.
+
 ### Asynchronous RediSearch
 
 The async adapter exposes the same handle API with `await`:

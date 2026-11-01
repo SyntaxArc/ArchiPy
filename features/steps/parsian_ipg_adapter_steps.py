@@ -1,10 +1,14 @@
 import inspect
+import logging
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import httpx2
+import requests
 import zeep
 from behave import given, then, when
 from zeep.exceptions import Fault
+from zeep.exceptions import TransportError as ZeepTransportError
 
 from archipy.adapters.internet_payment_gateways.ir.parsian import adapters as parsian_adapters
 from archipy.configs.base_config import BaseConfig
@@ -157,6 +161,24 @@ def step_given_global_login_account(context, account):
     context.add_cleanup(setattr, parsian_config, "LOGIN_ACCOUNT", original)
 
 
+@given("Parsian debug logging is captured")
+def step_given_log_capture(context):
+    records = []
+
+    class _Collector(logging.Handler):
+        def emit(self, record):
+            records.append(record.getMessage())
+
+    handler = _Collector(level=logging.DEBUG)
+    adapter_logger = logging.getLogger(parsian_adapters.__name__)
+    original_level = adapter_logger.level
+    adapter_logger.setLevel(logging.DEBUG)
+    adapter_logger.addHandler(handler)
+    context.add_cleanup(adapter_logger.removeHandler, handler)
+    context.add_cleanup(adapter_logger.setLevel, original_level)
+    get_current_scenario_context(context).store("parsian_logs", records)
+
+
 @given('the Parsian gateway answers "{operation}" with:')
 def step_given_gateway_answers(context, operation):
     row = context.table.rows[0]
@@ -169,9 +191,20 @@ def step_given_gateway_fault(context, operation):
     _state(context)["script"][operation] = ("raise", Fault("gateway is down"))
 
 
-@given('the Parsian gateway fails with a connection error on "{operation}"')
-def step_given_gateway_connection_error(context, operation):
-    _state(context)["script"][operation] = ("raise", ConnectionError("connection reset"))
+TRANSPORT_FAILURES = {
+    "connection error": lambda: ConnectionError("connection reset"),
+    "requests timeout": lambda: requests.exceptions.ReadTimeout("read timed out"),
+    "requests connection error": lambda: requests.exceptions.ConnectionError("refused"),
+    "httpx timeout": lambda: httpx2.ReadTimeout("read timed out"),
+    "httpx connect error": lambda: httpx2.ConnectError("refused"),
+    "zeep transport error": lambda: ZeepTransportError("HTTP 502"),
+    "unexpected bug": lambda: KeyError("unexpected"),
+}
+
+
+@given('the Parsian gateway fails with {failure} on "{operation}"')
+def step_given_gateway_transport_failure(context, failure, operation):
+    _state(context)["script"][operation] = ("raise", TRANSPORT_FAILURES[failure]())
 
 
 @when("I create a {kind:w} Parsian adapter with no login account")
@@ -189,6 +222,24 @@ def step_when_create_adapter_from_global(context, kind):
 async def step_when_initiate_payment(context, amount, order_id, callback):
     request = PaymentRequestDTO(amount=amount, order_id=order_id, callback_url=callback)
     await _call(context, "initiate_payment", request)
+
+
+@when('I call Parsian "{operation}"')
+async def step_when_call_operation(context, operation):
+    requests_by_operation = {
+        "SalePaymentRequest": (
+            "initiate_payment",
+            PaymentRequestDTO(amount=50000, order_id=1001, callback_url="https://shop.example.com/back"),
+        ),
+        "ConfirmPayment": ("confirm_payment", ConfirmRequestDTO(token=987654)),
+        "ConfirmPaymentWithAmount": (
+            "confirm_payment_with_amount",
+            ConfirmWithAmountRequestDTO(token=987654, order_id=1001, amount=50000),
+        ),
+        "ReversalRequest": ("reverse_payment", ReverseRequestDTO(token=987654)),
+    }
+    method_name, request = requests_by_operation[operation]
+    await _call(context, method_name, request)
 
 
 @when("I confirm Parsian token {token:d}")
@@ -349,3 +400,13 @@ def step_then_transport(context, seconds, proxy_use):
             assert transport.operation_timeout == seconds, transport.operation_timeout
             proxied = bool(transport.session.proxies)
         assert proxied == (proxy_use == "uses"), f"proxy_use={proxy_use}, proxied={proxied}"
+
+
+@then('the Parsian debug logs contain neither "{secret}" nor "{token}" but do name order {order_id:d}')
+def step_then_logs_redacted(context, secret, token, order_id):
+    logs = get_current_scenario_context(context).get("parsian_logs")
+    assert logs, "No debug logs were captured"
+    joined = "\n".join(logs)
+    assert secret not in joined, "login account leaked into the logs"
+    assert token not in joined, "full token leaked into the logs"
+    assert f"order_id={order_id}" in joined

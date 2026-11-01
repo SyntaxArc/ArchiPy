@@ -66,15 +66,12 @@ def step_given_caching_vault_adapter(context, ttl: int):
     _store_adapter(context, VaultAdapter(config))
 
 
-@given(
-    "a Vault adapter using a renewable token with TTL {token_ttl:d} seconds "
-    "and renew threshold {threshold:d} seconds",
-)
-def step_given_renewing_vault_adapter(context, token_ttl: int, threshold: int):
-    """Build an adapter that uses a short-lived renewable child token."""
-    admin = _admin_client()
+_TEST_POLICY_NAME = "archipy-renew-test"
+
+
+def _ensure_test_policy(admin: hvac.Client) -> str:
+    """Create the KV + token self-service policy used by the token lifecycle scenarios."""
     mount = TestConfig.global_config().VAULT.MOUNT_POINT
-    policy_name = "archipy-renew-test"
     policy = f"""
 path "{mount}/data/*" {{
   capabilities = ["create", "read", "update", "delete", "list"]
@@ -89,29 +86,105 @@ path "auth/token/lookup-self" {{
   capabilities = ["read"]
 }}
 """
-    admin.sys.create_or_update_policy(name=policy_name, policy=policy)
-    # explicit_max_ttl must exceed ttl so renew_self can extend remaining life.
-    response = admin.auth.token.create(
-        ttl=f"{token_ttl}s",
-        renewable=True,
-        explicit_max_ttl="1h",
-        policies=[policy_name],
-    )
-    child_token = response["auth"]["client_token"]
-    test_config = TestConfig.global_config()
-    config = test_config.VAULT.model_copy(
+    admin.sys.create_or_update_policy(name=_TEST_POLICY_NAME, policy=policy)
+    return _TEST_POLICY_NAME
+
+
+def _adapter_with_token(context, token: str, threshold: int) -> VaultAdapter:
+    """Build an auto-renewing adapter for ``token`` and remember its TTL."""
+    config = TestConfig.global_config().VAULT.model_copy(
         update={
             "ENABLED": True,
-            "TOKEN": child_token,
+            "TOKEN": token,
             "AUTO_RENEW_TOKEN": True,
             "RENEW_THRESHOLD_SECONDS": threshold,
         },
     )
     adapter = _store_adapter(context, VaultAdapter(config))
-    lookup = adapter._client.auth.token.lookup_self()
-    data = lookup.get("data") or {}
-    scenario_context = get_current_scenario_context(context)
-    scenario_context.store("token_ttl_before", int(data.get("ttl", 0)))
+    data = adapter._client.auth.token.lookup_self().get("data") or {}
+    get_current_scenario_context(context).store("token_ttl_before", int(data.get("ttl", 0)))
+    return adapter
+
+
+@given(
+    "a Vault adapter using a renewable token with TTL {token_ttl:d} seconds "
+    "and renew threshold {threshold:d} seconds",
+)
+def step_given_renewing_vault_adapter(context, token_ttl: int, threshold: int):
+    """Build an adapter that uses a short-lived renewable child token."""
+    admin = _admin_client()
+    # explicit_max_ttl must exceed ttl so renew_self can extend remaining life.
+    response = admin.auth.token.create(
+        ttl=f"{token_ttl}s",
+        renewable=True,
+        explicit_max_ttl="1h",
+        policies=[_ensure_test_policy(admin)],
+    )
+    _adapter_with_token(context, response["auth"]["client_token"], threshold)
+
+
+@given("a Vault adapter with auto renew using a {kind} token and renew threshold {threshold:d} seconds")
+def step_given_auto_renew_adapter_kind(context, kind: str, threshold: int):
+    """Build an auto-renewing adapter on a root or a short-lived non-renewable token."""
+    if kind == "root":
+        token = TestConfig.global_config().VAULT.TOKEN
+    elif kind == "non-renewable":
+        admin = _admin_client()
+        response = admin.auth.token.create(
+            ttl="90s",
+            renewable=False,
+            policies=[_ensure_test_policy(admin)],
+        )
+        token = response["auth"]["client_token"]
+    else:
+        raise AssertionError(f"Unknown token kind {kind}")
+    _adapter_with_token(context, token, threshold)
+
+
+@given("a Vault adapter logged in with AppRole")
+def step_given_approle_adapter(context):
+    """Build an adapter that authenticates through AppRole against the container."""
+    admin = _admin_client()
+    if "approle/" not in admin.sys.list_auth_methods():
+        admin.sys.enable_auth_method("approle")
+    role = "archipy-approle-test"
+    admin.auth.approle.create_or_update_approle(
+        role,
+        token_policies=[_ensure_test_policy(admin)],
+        token_ttl="5m",
+    )
+    role_id = admin.auth.approle.read_role_id(role)["data"]["role_id"]
+    secret_id = admin.auth.approle.generate_secret_id(role)["data"]["secret_id"]
+    config = TestConfig.global_config().VAULT.model_copy(
+        update={
+            "ENABLED": True,
+            "AUTH_METHOD": "approle",
+            "TOKEN": None,
+            "APPROLE_ROLE_ID": role_id,
+            "APPROLE_SECRET_ID": secret_id,
+        },
+    )
+    adapter = _store_adapter(context, VaultAdapter(config))
+    get_current_scenario_context(context).store("approle_token_before", adapter._client.token)
+
+
+@when("the Vault adapter token is revoked out-of-band")
+def step_revoke_adapter_token(context):
+    adapter = get_vault_adapter(context)
+    _admin_client().auth.token.revoke(adapter._client.token)
+
+
+@then("the Vault adapter should have logged in again")
+def step_then_relogged_in(context):
+    adapter = get_vault_adapter(context)
+    before = get_current_scenario_context(context).get("approle_token_before")
+    assert adapter._client.token != before, "Expected a new token after re-authentication"
+
+
+@then("the token should not have been renewed")
+def step_then_token_not_renewed(context):
+    adapter = get_vault_adapter(context)
+    assert adapter.token_renew_count == 0, f"Unexpected renewals: {adapter.token_renew_count}"
 
 
 @given('a Vault transit key named "{key_name}"')

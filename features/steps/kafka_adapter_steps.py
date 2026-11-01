@@ -1018,6 +1018,440 @@ def step_handle_kafka_failure(context, code):
     _capture_error(context, lambda: KafkaExceptionHandlerMixin._handle_kafka_exception(failure, "operation"))
 
 
+@when('a transactional producer for topic "{topic_name}" aborts "{aborted}" and then commits "{committed}"')
+def step_transactional_produce(context, topic_name, aborted, committed):
+    """Produce one message in an aborted transaction and one in a committed transaction."""
+    config = _get_kafka_config(context).model_copy(
+        update={"ENABLE_IDEMPOTENCE": True, "TRANSACTIONAL_ID": f"txn-{topic_name}"},
+    )
+    producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+    try:
+        producer.begin_transaction()
+        producer.produce(aborted)
+        producer.abort_transaction()
+        producer.begin_transaction()
+        producer.produce(committed)
+        producer.commit_transaction()
+    finally:
+        producer.close()
+
+
+@then('a read committed consumer on topic "{topic_name}" with group "{group_id}" should first receive "{expected}"')
+def step_read_committed_first(context, topic_name, group_id, expected):
+    """A read_committed consumer must skip the aborted message and see the committed one first."""
+    config = _get_kafka_config(context).model_copy(update={"ISOLATION_LEVEL": "read_committed"})
+    consumer = KafkaConsumerAdapter(group_id, topic_list=[topic_name], kafka_configs=config)
+    try:
+        message = _poll_until_message(consumer.poll)
+    finally:
+        consumer.close()
+    assert message is not None, "No message received"
+    assert message.value().decode("utf-8") == expected, f"Got {message.value()!r}"
+
+
+@when("I use a {mode} producer with {setting} for a transaction")
+def step_use_transaction_settings(context, mode, setting):
+    """Start a transaction on a producer that is, or is not, configured as transactional."""
+    updates = {"ENABLE_IDEMPOTENCE": True, "TRANSACTIONAL_ID": "txn-setting"} if setting == "a transactional id" else {}
+    config = _get_kafka_config(context).model_copy(update=updates)
+    if mode == "sync":
+        _capture_error(context, KafkaProducerAdapter("txn-setting-topic", kafka_configs=config).begin_transaction)
+    else:
+        _capture_error(
+            context,
+            lambda: asyncio.run(AsyncKafkaProducerAdapter("txn-setting-topic", kafka_configs=config).produce("x")),
+        )
+
+
+@when("I poll an async consumer subscribed to an invalid topic pattern twice")
+def step_async_consumer_invalid_subscription(context):
+    """A failed first subscription must not leave a consumer that silently polls without a subscription."""
+    config = _get_kafka_config(context)
+
+    async def run():
+        consumer = AsyncKafkaConsumerAdapter("invalid-pattern-group", topic_list=["^("], kafka_configs=config)
+        errors = []
+        for _ in range(2):
+            try:
+                await consumer.poll(timeout=1)
+            except Exception as error:
+                errors.append(error)
+        return errors
+
+    errors = asyncio.run(run())
+    get_current_scenario_context(context).store("kafka_operation_error", errors[0] if len(errors) == 2 else None)
+
+
+def _rdkafka_thread_count():
+    """Count the native librdkafka threads of this process (they are named ``rdk:*``)."""
+    import os
+
+    count = 0
+    for task in os.listdir("/proc/self/task"):
+        with open(f"/proc/self/task/{task}/comm") as comm:
+            count += comm.read().startswith("rdk:")
+    return count
+
+
+@when("I create {count:d} sync consumers that fail with {failure}")
+def step_create_failing_consumers(context, count, failure):
+    """Create consumers that fail, keeping their errors (and so their frames) alive."""
+    config = _get_kafka_config(context)
+    if failure == "no topics":
+        arguments = {"topic_list": None, "partition_list": None}
+    else:
+        arguments = {"topic_list": ["^("], "partition_list": None}
+    before = _rdkafka_thread_count()
+    errors = []
+    for _ in range(count):
+        try:
+            KafkaConsumerAdapter("failing-init-group", kafka_configs=config, **arguments)
+        except Exception as error:
+            errors.append(error)
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("kafka_failed_consumers", errors)
+    scenario_context.store("kafka_rdkafka_threads_added", _rdkafka_thread_count() - before)
+    scenario_context.store("kafka_operation_error", errors[0] if len(errors) == count else None)
+
+
+@then("no librdkafka client should be left running")
+def step_no_client_left(context):
+    """A failed consumer construction must close the client it created."""
+    added = get_current_scenario_context(context).get("kafka_rdkafka_threads_added")
+    assert added == 0, f"{added} librdkafka threads are still running"
+
+
+class _ErrorMessage:
+    """A polled message that carries a Kafka error, as a broker cannot be made to produce on demand."""
+
+    def __init__(self, error):
+        self._error = error
+
+    def error(self):
+        return self._error
+
+    def topic(self):
+        return "stub-topic"
+
+    def partition(self):
+        return 0
+
+
+class _ErrorClient:
+    """Stands in for the underlying client: every poll or consume yields one error message."""
+
+    def __init__(self, error):
+        self._message = _ErrorMessage(error)
+
+    def poll(self, timeout):
+        return self._message
+
+    def consume(self, num_messages, timeout):
+        return [self._message]
+
+    async def async_poll(self, timeout):
+        return self._message
+
+    async def async_consume(self, num_messages, timeout):
+        return [self._message]
+
+
+@when("a {mode} consumer {operation}s a message that carries the Kafka error {code}")
+def step_consumer_receives_error_message(context, mode, operation, code):
+    """Poll or batch consume through a consumer whose client returns an error message."""
+    from confluent_kafka import KafkaError
+
+    config = _get_kafka_config(context)
+    client = _ErrorClient(KafkaError(getattr(KafkaError, code)))
+    scenario_context = get_current_scenario_context(context)
+    if mode == "sync":
+        consumer = KafkaConsumerAdapter("error-message-group", topic_list=["error-topic"], kafka_configs=config)
+        real_client, consumer._adapter = consumer._adapter, client
+        call = consumer.poll if operation == "poll" else consumer.batch_consume
+        _capture_error(context, lambda: scenario_context.store("kafka_consumer_result", call(timeout=1)))
+        real_client.close()
+    else:
+
+        async def run():
+            consumer = AsyncKafkaConsumerAdapter("error-message-group", topic_list=["error-topic"], kafka_configs=config)
+            client.poll, client.consume = client.async_poll, client.async_consume
+            consumer._adapter = client
+            call = consumer.poll if operation == "poll" else consumer.batch_consume
+            scenario_context.store("kafka_consumer_result", await call(timeout=1))
+
+        _capture_error(context, lambda: asyncio.run(run()))
+
+
+@then("the consumer should have received nothing")
+def step_consumer_received_nothing(context):
+    """The error message must have been skipped without raising."""
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("kafka_operation_error") is None, scenario_context.get("kafka_operation_error")
+    assert not scenario_context.get("kafka_consumer_result")
+
+
+@when("I produce {count:d} messages to topic \"{topic_name}\" without flushing through a queue limited to {capacity:d} messages")
+def step_produce_through_small_queue(context, count, topic_name, capacity):
+    """Produce far more messages than the local queue holds, relying on delivery reports being served."""
+    config = _get_kafka_config(context).model_copy(update={"QUEUE_BUFFERING_MAX_MESSAGES": capacity})
+    producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+    _capture_error(context, lambda: [producer.produce(f"queued-{index}") for index in range(count)])
+    get_current_scenario_context(context).store("kafka_small_queue_producer", producer)
+
+
+@then("the Kafka operation should raise nothing")
+def step_operation_should_raise_nothing(context):
+    """Assert the captured operation did not fail."""
+    error = get_current_scenario_context(context).get("kafka_operation_error")
+    assert error is None, f"Expected no error, got {error!r}"
+
+
+@when('a sync producer on that broker fails to deliver "{payload}" with key "{key}" to topic "{topic_name}"')
+def step_failed_delivery(context, payload, key, topic_name):
+    """Let a message time out in the local queue, capturing the producer logs and the on_delivery outcome."""
+    import logging
+
+    config = get_current_scenario_context(context).get("kafka_unreachable_config")
+    config = config.model_copy(update={"MESSAGE_TIMEOUT_MS": 1000})
+    records = []
+
+    class _Collector(logging.Handler):
+        def emit(self, record):
+            records.append(record.getMessage())
+
+    adapter_logger = logging.getLogger("archipy.adapters.kafka.adapters")
+    handler = _Collector()
+    adapter_logger.addHandler(handler)
+    outcomes = []
+    try:
+        producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+        producer.produce(payload, key=key, on_delivery=lambda error, message: outcomes.append(error))
+        producer.flush(timeout=10)
+    finally:
+        adapter_logger.removeHandler(handler)
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("kafka_delivery_logs", records)
+    scenario_context.store("kafka_delivery_outcomes", outcomes)
+
+
+@then('the delivery failure should be passed to the on_delivery callback')
+def step_delivery_failure_reported(context):
+    """The caller's callback must observe the failed delivery."""
+    outcomes = get_current_scenario_context(context).get("kafka_delivery_outcomes")
+    assert len(outcomes) == 1 and outcomes[0] is not None, f"Unexpected outcomes: {outcomes}"
+
+
+@then('the logs should mention topic "{topic_name}" but not "{payload}"')
+def step_logs_hide_payload(context, topic_name, payload):
+    """The failure is logged with its topic but never with the payload."""
+    logs = "\n".join(get_current_scenario_context(context).get("kafka_delivery_logs"))
+    assert f"topic={topic_name}" in logs, f"Missing topic in logs: {logs}"
+    assert payload not in logs, f"Payload leaked into logs: {logs}"
+
+
+@when('a {mode} producer with missing keys sent as {setting} produces a message without a key to topic "{topic_name}"')
+def step_produce_without_key(context, mode, setting, topic_name):
+    """Produce a keyless message, noting whether the legacy empty key raised a DeprecationWarning."""
+    import warnings
+
+    config = _get_kafka_config(context).model_copy(
+        update={"EMPTY_KEY_FOR_MISSING_KEY": setting == "an empty key"},
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        if mode == "sync":
+            producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+            producer.produce("keyless")
+            producer.close()
+        else:
+
+            async def run():
+                producer = AsyncKafkaProducerAdapter(topic_name, kafka_configs=config)
+                await producer.produce("keyless")
+                await producer.close()
+
+            asyncio.run(run())
+    scenario_context = get_current_scenario_context(context)
+    scenario_context.store("kafka_deprecation_warned", any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+
+@then('the message on topic "{topic_name}" should have {key_state} and the deprecation warning should be {warned}')
+def step_keyless_message_key(context, topic_name, key_state, warned):
+    """Read the keyless message and check the key and the deprecation warning."""
+    config = _get_kafka_config(context)
+    consumer = KafkaConsumerAdapter(f"keyless-group-{topic_name}", topic_list=[topic_name], kafka_configs=config)
+    try:
+        message = _poll_until_message(consumer.poll)
+    finally:
+        consumer.close()
+    assert message is not None, "No message received"
+    expected_key = None if key_state == "no key" else b""
+    assert message.key() == expected_key, f"Expected key {expected_key!r}, got {message.key()!r}"
+    expected_warning = warned == "raised"
+    assert get_current_scenario_context(context).get("kafka_deprecation_warned") is expected_warning
+
+
+@when("the Kafka settings are assembled with protocol {protocol}, mechanism {mechanism} and username {username} while warnings are collected")
+def step_collect_config_warnings(context, protocol, mechanism, username):
+    """Build a Kafka configuration and keep the warnings its validators log."""
+    import logging
+
+    records = []
+
+    class _Collector(logging.Handler):
+        def emit(self, record):
+            records.append(record.getMessage())
+
+    config_logger = logging.getLogger("archipy.configs.sections.kafka")
+    handler = _Collector()
+    config_logger.addHandler(handler)
+    try:
+        KafkaConfig(**_security_values(protocol, mechanism, username, {}))
+    finally:
+        config_logger.removeHandler(handler)
+    get_current_scenario_context(context).store("kafka_config_warnings", records)
+
+
+@then('a configuration warning mentioning "{text}" should have been logged')
+def step_config_warning_logged(context, text):
+    """One of the collected warnings must mention the text."""
+    records = get_current_scenario_context(context).get("kafka_config_warnings")
+    assert any(text in record for record in records), f"No warning mentions {text!r}: {records}"
+
+
+@then("no configuration warning should have been logged")
+def step_no_config_warning(context):
+    """The configuration must have been accepted silently."""
+    records = get_current_scenario_context(context).get("kafka_config_warnings")
+    assert not [r for r in records if "SASL" in r], f"Unexpected warnings: {records}"
+
+
+@when("a sync producer with a pending message on that broker is closed twice")
+def step_close_pending_producer_twice(context):
+    """Close a producer whose message cannot be delivered: the close is bounded by the delivery timeout."""
+    config = get_current_scenario_context(context).get("kafka_unreachable_config")
+    config = config.model_copy(update={"MESSAGE_TIMEOUT_MS": 1000})
+    producer = KafkaProducerAdapter("pending-close-topic", kafka_configs=config)
+    producer.produce("never-delivered")
+    started = time.monotonic()
+
+    def close_twice():
+        producer.close()
+        producer.close()
+
+    _capture_error(context, close_twice)
+    get_current_scenario_context(context).store("kafka_close_elapsed", time.monotonic() - started)
+
+
+@then("the close should have finished within {seconds:d} seconds without an error")
+def step_close_bounded(context, seconds):
+    """The close must not hang and must not fail."""
+    scenario_context = get_current_scenario_context(context)
+    assert scenario_context.get("kafka_operation_error") is None, scenario_context.get("kafka_operation_error")
+    assert scenario_context.get("kafka_close_elapsed") < seconds
+
+
+@when("an async producer with a pending message on that broker is flushed with a timeout of {seconds:d} second")
+def step_async_flush_timeout(context, seconds):
+    """Flush an async producer that cannot deliver: the flush must honor its timeout."""
+    config = get_current_scenario_context(context).get("kafka_unreachable_config")
+
+    async def run():
+        producer = AsyncKafkaProducerAdapter("async-flush-topic", kafka_configs=config)
+        await producer.produce("never-delivered")
+        await producer.flush(timeout=seconds)
+
+    _capture_error(context, lambda: asyncio.run(run()))
+
+
+@when("an async producer is closed and then used")
+def step_async_use_after_close(context):
+    """Using a closed async producer must fail instead of creating a new client."""
+    config = _get_kafka_config(context)
+
+    async def run():
+        producer = AsyncKafkaProducerAdapter("closed-async-topic", kafka_configs=config)
+        await producer.list_topics()
+        await producer.close()
+        await producer.produce("after-close")
+
+    _capture_error(context, lambda: asyncio.run(run()))
+
+
+@when('a sync consumer with an on_commit callback commits a message of topic "{topic_name}" asynchronously')
+def step_on_commit_callback(context, topic_name):
+    """Produce a message, consume it and commit asynchronously; the callback must report the commit."""
+    config = _get_kafka_config(context)
+    producer = KafkaProducerAdapter(topic_name, kafka_configs=config)
+    producer.produce("commit-callback")
+    producer.close()
+    outcomes = []
+    consumer = KafkaConsumerAdapter(
+        "on-commit-group", topic_list=[topic_name], kafka_configs=config,
+        on_commit=lambda error, partitions: outcomes.append((error, partitions)),
+    )
+    try:
+        message = _poll_until_message(consumer.poll)
+        consumer.commit(message, asynchronous=True)
+        deadline = time.monotonic() + 20
+        while not outcomes and time.monotonic() < deadline:
+            consumer.poll(1)
+    finally:
+        consumer.close()
+    get_current_scenario_context(context).store("kafka_commit_outcomes", outcomes)
+
+
+@then("the on_commit callback should have reported a successful commit")
+def step_on_commit_reported(context):
+    """The callback gets no error and the committed partitions."""
+    outcomes = get_current_scenario_context(context).get("kafka_commit_outcomes")
+    assert outcomes and outcomes[0][0] is None, f"Unexpected outcomes: {outcomes}"
+
+
+@when('a {mode} consumer subscribes to topic "{topic_name}" with an on_assign callback')
+def step_on_assign_callback(context, mode, topic_name):
+    """Join a consumer group and let the rebalance call the on_assign hook."""
+    config = _get_kafka_config(context)
+    assigned = []
+
+    def on_assign(consumer, partitions):
+        assigned.extend(partitions)
+
+    async def on_assign_async(consumer, partitions):
+        assigned.extend(partitions)
+
+    if mode == "sync":
+        consumer = KafkaConsumerAdapter("on-assign-group-sync", partition_list=None, topic_list=[topic_name], kafka_configs=config)
+        consumer.subscribe([topic_name], on_assign=on_assign)
+        deadline = time.monotonic() + 30
+        try:
+            while not assigned and time.monotonic() < deadline:
+                consumer.poll(1)
+        finally:
+            consumer.close()
+    else:
+
+        async def run():
+            consumer = AsyncKafkaConsumerAdapter("on-assign-group-async", topic_list=[topic_name], kafka_configs=config)
+            await consumer.subscribe([topic_name], on_assign=on_assign_async)
+            deadline = time.monotonic() + 30
+            try:
+                while not assigned and time.monotonic() < deadline:
+                    await consumer.poll(1)
+            finally:
+                await consumer.close()
+
+        asyncio.run(run())
+    get_current_scenario_context(context).store("kafka_assigned_partitions", assigned)
+
+
+@then('the on_assign callback should have received partitions of topic "{topic_name}"')
+def step_on_assign_received(context, topic_name):
+    """The rebalance must have reported the partitions of the subscribed topic."""
+    assigned = get_current_scenario_context(context).get("kafka_assigned_partitions")
+    assert assigned and all(partition.topic == topic_name for partition in assigned), f"Unexpected: {assigned}"
+
+
 @then('the Kafka operation should raise one of "{error_names}"')
 def step_operation_should_raise_one_of(context, error_names):
     """Assert the captured exception is one of the comma separated ArchiPy errors."""
@@ -1276,6 +1710,14 @@ def step_config_rejected(context):
     error = get_current_scenario_context(context).get("kafka_config_error")
     assert error is not None, "Expected the configuration to be rejected"
     assert "sasl_auth_incomplete" in str(error), f"Unexpected error: {error}"
+
+
+@then("the Kafka configuration should be rejected as an unknown protocol")
+def step_config_rejected_unknown_protocol(context):
+    """Validation must fail with the unknown security protocol reason."""
+    error = get_current_scenario_context(context).get("kafka_config_error")
+    assert error is not None, "Expected the configuration to be rejected"
+    assert "unknown_security_protocol" in str(error), f"Unexpected error: {error}"
 
 
 @when('I close the producer for topic "{topic_name}"')

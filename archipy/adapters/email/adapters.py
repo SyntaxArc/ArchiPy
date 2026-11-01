@@ -15,7 +15,7 @@ from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from queue import Queue
+from queue import Empty, Queue
 from typing import TYPE_CHECKING, Any, BinaryIO, cast, override
 
 import httpx2
@@ -101,6 +101,21 @@ class EmailConnectionManager:
                 operation="email_credentials",
                 reason="USERNAME and PASSWORD must be set together",
             )
+        if self.config.TLS_MODE == "none" and self.config.USERNAME and self.config.PASSWORD:
+            warnings.warn(
+                "EMAIL.TLS_MODE='none' sends USERNAME and PASSWORD in clear text. "
+                "Set TLS_MODE to 'starttls' or 'implicit'; clear-text login will be rejected in a future release.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        if self.config.TLS_MODE in ("starttls", "implicit") and not self.config.TLS_VERIFY:
+            warnings.warn(
+                "EMAIL.TLS_VERIFY=False disables certificate and host name verification, which exposes the "
+                "session and credentials to interception. Use TLS_CA_FILE for a private CA; "
+                "TLS_VERIFY=False will be rejected in a future release.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
 
     def _build_ssl_context(self) -> ssl.SSLContext:
         """Build the TLS context from ``TLS_CA_FILE`` and ``TLS_VERIFY``."""
@@ -169,6 +184,8 @@ class EmailConnectionManager:
             try:
                 _annotate_current_span({"email.tls_mode": tls_mode})
                 if self.config.USERNAME and self.config.PASSWORD:
+                    if tls_mode == "none":
+                        logger.warning("Logging in to the SMTP server without TLS: credentials are sent in clear text")
                     session.login(self.config.USERNAME, self.config.PASSWORD)
             except BaseException:
                 session.close()
@@ -219,9 +236,23 @@ class EmailConnectionPool:
             self.pool.put(connection)
 
     def get_connection(self) -> EmailConnectionManager:
-        """Get a connection from the pool."""
-        connection = self.pool.get()
-        connection.refresh_if_needed()
+        """Get a connection from the pool.
+
+        Waits at most ``CONNECTION_TIMEOUT`` seconds for a free slot. The slot goes back to the pool when
+        refreshing the connection raises.
+
+        Raises:
+            UnavailableError: If no slot becomes free within ``CONNECTION_TIMEOUT`` seconds.
+        """
+        try:
+            connection = self.pool.get(timeout=self.config.CONNECTION_TIMEOUT)
+        except Empty as exception:
+            raise UnavailableError(resource_type="SMTP") from exception
+        try:
+            connection.refresh_if_needed()
+        except BaseException:
+            self.pool.put(connection)
+            raise
         return connection
 
     def return_connection(self, connection: EmailConnectionManager) -> None:

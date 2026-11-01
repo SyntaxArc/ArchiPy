@@ -132,8 +132,10 @@ pg_config = PostgresSQLAlchemyConfig(
 ## Defining Entities
 
 ```python
-from sqlalchemy import Column, ForeignKey, String, Text
-from sqlalchemy.orm import relationship
+from uuid import uuid4
+
+from sqlalchemy import Column, ForeignKey, String, Text, Uuid
+from sqlalchemy.orm import Synonym, relationship
 
 from archipy.models.entities.sqlalchemy.base_entities import (
     BaseEntity,
@@ -147,6 +149,10 @@ class User(UpdatableEntity):
 
     __tablename__ = "users"
 
+    # BaseEntity requires a pk_uuid synonym that points at the primary key column
+    uuid = Column(Uuid, primary_key=True, default=uuid4)
+    pk_uuid = Synonym("uuid")
+
     username = Column(String(100), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     full_name = Column(String(255), nullable=True)
@@ -158,6 +164,9 @@ class Post(DeletableEntity):
     """Post entity with soft-delete support."""
 
     __tablename__ = "posts"
+
+    uuid = Column(Uuid, primary_key=True, default=uuid4)
+    pk_uuid = Synonym("uuid")
 
     title = Column(String(200), nullable=False)
     content = Column(Text, nullable=False)
@@ -232,7 +241,7 @@ decorator (see [Transactions](#transactions) below).
 import logging
 
 from archipy.adapters.postgres.sqlalchemy.adapters import PostgresSQLAlchemyAdapter
-from archipy.models.errors import AlreadyExistsError, DatabaseQueryError
+from archipy.models.errors import DatabaseConstraintError, DatabaseQueryError
 
 logger = logging.getLogger(__name__)
 
@@ -251,13 +260,13 @@ def create_user(username: str, email: str, full_name: str) -> User:
         The created User entity (with UUID and timestamps populated).
 
     Raises:
-        AlreadyExistsError: If a user with the same username or email exists.
+        DatabaseConstraintError: If a user with the same username or email exists.
         DatabaseQueryError: If the database operation fails.
     """
     try:
         user = User(username=username, email=email, full_name=full_name)
         result = adapter.create(user)
-    except AlreadyExistsError:
+    except DatabaseConstraintError:
         logger.warning(f"User already exists: {username}")
         raise
     except DatabaseQueryError as e:
@@ -446,7 +455,7 @@ entire transaction is automatically rolled back.
 import logging
 
 from archipy.adapters.base.sqlalchemy.atomic import postgres_sqlalchemy_atomic
-from archipy.models.errors import AlreadyExistsError, DatabaseQueryError
+from archipy.models.errors import DatabaseConstraintError, DatabaseQueryError
 
 logger = logging.getLogger(__name__)
 
@@ -469,13 +478,13 @@ def create_user_with_post(username: str, email: str, post_title: str, post_conte
         Tuple of (User, Post) created together.
 
     Raises:
-        AlreadyExistsError: If a user with the same username or email exists.
+        DatabaseConstraintError: If a user with the same username or email exists.
         DatabaseQueryError: If a database error occurs.
     """
     try:
         user = adapter.create(User(username=username, email=email))
         post = adapter.create(Post(title=post_title, content=post_content, author_id=user.uuid))
-    except AlreadyExistsError:
+    except DatabaseConstraintError:
         logger.warning(f"User {username} already exists")
         raise
     except DatabaseQueryError as e:
@@ -930,7 +939,13 @@ worker_config = PostgresSQLAlchemyConfig(
 - Verify `HOST`, `PORT`, `DATABASE`, `USERNAME`, and `PASSWORD` are correct.
 - Confirm the PostgreSQL server is running: `pg_isready -h localhost -p 5432`.
 - Check firewall rules if connecting to a remote host.
-- When using SSL, set `SSL_MODE` (and `SSL_ROOT_CERT` for `verify-ca` / `verify-full`). The DSN query parameters `sslmode`, `sslrootcert`, `sslcert`, `sslkey`, `application_name` and `connect_timeout` fill the matching fields only when those are unset; user and password in the DSN are percent-decoded.
+- When using SSL, set `SSL_MODE` (and `SSL_ROOT_CERT` for `verify-ca` / `verify-full`). `SSL_ROOT_CERT` with any other mode only emits a `UserWarning`: the server certificate is not verified. The DSN query parameters `sslmode`, `sslrootcert`, `sslcert`, `sslkey`, `application_name` and `connect_timeout` fill the matching fields only when those are unset; user and password in the DSN are percent-decoded.
+
+### `DetachedInstanceError` when reading an entity returned from an atomic block
+
+The atomic block commits and closes the session before it returns, and by default a commit expires every loaded
+entity. Convert entities to DTOs inside the block, or set `EXPIRE_ON_COMMIT=False` in the configuration to keep the
+loaded attributes readable after the commit.
 
 ### `DatabaseTransactionError` — serialisation failures
 

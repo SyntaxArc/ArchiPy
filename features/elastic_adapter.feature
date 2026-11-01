@@ -227,6 +227,60 @@ Feature: Elasticsearch Operations Testing
       | mode           |
       | asynchronously |
 
+  Scenario Outline: Map missing document errors only when enabled <mode>
+    Given an Elasticsearch config with "MAP_ERRORS" set to "<map_errors>"
+    And index "test-index" exists
+    When I create the Elasticsearch adapter from that config <mode>
+    And I get a missing document through that adapter
+    Then the Elasticsearch error kind should be "<error>"
+    And the adapter creation should <warning> the ArchiPy error mapping deprecation warning
+
+    Examples: sync
+      | mode          | map_errors | error                 | warning  |
+      | synchronously | true       | ArchiPy NotFoundError | not emit |
+      | synchronously | false      | client NotFoundError  | emit     |
+
+    @async
+    Examples: async
+      | mode           | map_errors | error                 | warning  |
+      | asynchronously | true       | ArchiPy NotFoundError | not emit |
+      | asynchronously | false      | client NotFoundError  | emit     |
+
+  Scenario Outline: Disable retries only for non-idempotent calls <mode>
+    Given a valid Elasticsearch client connection
+    And index "test-index" exists
+    When I <operation> through an adapter that records retry options
+    Then retries should be <state> for that call
+
+    Examples: sync
+      | mode          | operation                      | state    |
+      | synchronously | index a document without an id | disabled |
+      | synchronously | index a document with an id    | enabled  |
+      | synchronously | run a scripted update          | disabled |
+      | synchronously | run a plain update             | enabled  |
+
+    @async
+    Examples: async
+      | mode           | operation                      | state    |
+      | asynchronously | index a document without an id | disabled |
+      | asynchronously | index a document with an id    | enabled  |
+      | asynchronously | run a scripted update          | disabled |
+      | asynchronously | run a plain update             | enabled  |
+
+  Scenario Outline: Close the adapter <mode>
+    Given a valid Elasticsearch client connection
+    When I close the adapter
+    Then the adapter should be closed
+
+    Examples: sync
+      | mode          |
+      | synchronously |
+
+    @async
+    Examples: async
+      | mode           |
+      | asynchronously |
+
   Scenario: Connect with authenticated user
     Given an Elasticsearch cluster with security enabled
     When I connect with username "elastic-user" and password "elastic-pass"

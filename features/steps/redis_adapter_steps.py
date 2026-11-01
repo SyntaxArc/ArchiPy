@@ -15,6 +15,8 @@ from features.test_helpers import get_current_scenario_context
 
 from archipy.adapters.redis.adapters import AsyncRedisAdapter, RedisAdapter
 from archipy.adapters.redis.mocks import AsyncRedisMock, RedisMock
+from pydantic import ValidationError
+
 from archipy.configs.base_config import BaseConfig
 from archipy.configs.config_template import RedisConfig
 from archipy.models.errors import ConfigurationError
@@ -27,7 +29,8 @@ from archipy.models.dtos.redis.search.index_schema_dto import (
     TextFieldConfig,
     VectorFieldConfig,
 )
-from archipy.models.dtos.redis.search.search_query_dto import SearchQueryDTO, VectorQueryRuntimeDTO
+from archipy.models.dtos.redis.search.escaping import quote_phrase
+from archipy.models.dtos.redis.search.search_query_dto import KnnQueryDTO, SearchQueryDTO, VectorQueryRuntimeDTO
 from archipy.models.types.redis_search_types import (
     RedisIndexType,
     VectorAlgorithm,
@@ -3985,3 +3988,48 @@ def step_then_upsert_hash(context, doc_id, warned):
     adapter = get_current_scenario_context(context).adapter
     assert adapter.hgetall(doc_id).get("title") == "T"
     assert bool(get_result(context, "deprecations")) == (warned == "raised")
+
+@when(
+    r'I search index "(?P<index_name>[^"]+)" with untrusted text "(?P<text>[^"]+)" using (?P<kind>from_text|quote_phrase)',
+)
+def step_when_search_untrusted_text(context, index_name, text, kind):
+    """Search with untrusted text through the escaping constructors."""
+    text = text.replace("PIPE", "|")
+    handle = get_current_scenario_context(context).adapter.search_index(index_name)
+    if kind == "from_text":
+        query = SearchQueryDTO.from_text(text, return_fields=["title"])
+    else:
+        query = SearchQueryDTO.from_hybrid(
+            quote_phrase(text),
+            _parse_search_vector("[0.8, 0.2, 0.0]"),
+            k=5,
+            return_fields=["title"],
+        )
+    result = _search_until_indexed(lambda: handle.search(query))
+    store_result(context, "search_result", result)
+
+
+@when(r'I build the search DTO "(?P<kind>[a-z_]+)" with the value "(?P<value>[^"]+)"')
+def step_when_build_search_dto(context, kind, value):
+    """Build a search DTO field and record whether validation accepted it."""
+    value = value.replace("PIPE", "|")
+    builders = {
+        "vector_field": lambda: KnnQueryDTO(vector=[1.0], vector_field=value),
+        "score_field": lambda: KnnQueryDTO(vector=[1.0], score_field=value),
+        "return_field": lambda: SearchQueryDTO(return_fields=[value]),
+        "group_by": lambda: AggregationDTO(group_by=[value]),
+        "sort_direction": lambda: AggregationDTO(sort_by="title", sort_direction=value),
+        "reduce_function": lambda: AggregationDTO(group_by=["category"], reduce_function=value),
+    }
+    try:
+        builders[kind]()
+    except ValidationError:
+        store_result(context, "dto_outcome", "rejected")
+    else:
+        store_result(context, "dto_outcome", "accepted")
+
+
+@then(r'the DTO outcome should be "(?P<outcome>accepted|rejected)"')
+def step_then_dto_outcome(context, outcome):
+    """Assert the DTO accepted or rejected the value."""
+    assert get_result(context, "dto_outcome") == outcome

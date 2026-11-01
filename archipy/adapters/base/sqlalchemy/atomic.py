@@ -27,8 +27,10 @@ from archipy.adapters.base.sqlalchemy.driver_errors import (
     PG_CONSTRAINT_STATES,
     PG_DEADLOCK,
     PG_SERIALIZATION,
+    classify_by_message,
     classify_driver_error,
     driver_error_code,
+    driver_error_message,
     log_driver_error,
 )
 from archipy.adapters.base.sqlalchemy.session_manager_registry import SessionManagerRegistry
@@ -36,7 +38,6 @@ from archipy.helpers._deprecation import deprecated_alias, warn_deprecated_name
 from archipy.models.errors import (
     BaseError,
     DatabaseConfigurationError,
-    DatabaseConnectionError,
     DatabaseConstraintError,
     DatabaseDeadlockError,
     DatabaseIntegrityError,
@@ -101,10 +102,11 @@ def _handle_operational_error(exception: OperationalError, db_type: str) -> NoRe
     if code == _MYSQL_LOCK_WAIT_TIMEOUT:
         raise DatabaseTimeoutError(database=db_type) from exception
 
-    if "database is locked" in str(exception):
+    if "database is locked" in driver_error_message(exception):
         raise DatabaseDeadlockError(database=db_type) from exception
 
-    raise DatabaseConnectionError(database=db_type) from exception
+    # Same driver-message fallback as the adapter methods, so both paths classify an error alike
+    raise classify_by_message(driver_error_message(exception).lower())(database=db_type) from exception
 
 
 def _handle_integrity_error(exception: IntegrityError, db_type: str) -> NoReturn:
@@ -117,7 +119,7 @@ def _handle_integrity_error(exception: IntegrityError, db_type: str) -> NoReturn
 
 def _handle_sqlalchemy_error(exception: SQLAlchemyError, db_type: str) -> NoReturn:
     """Map generic SQLAlchemy errors to domain database errors."""
-    if "transaction" in str(exception).lower():
+    if "transaction" in driver_error_message(exception).lower():
         raise DatabaseTransactionError(database=db_type) from exception
     raise DatabaseQueryError(database=db_type) from exception
 
@@ -208,9 +210,16 @@ def _load_session_manager_registry(db_type: str) -> type[SessionManagerRegistry]
 
 
 async def _close_async_session(session: Any, session_manager: AsyncSessionManagerPort) -> None:
-    """Close the session and drop it from the manager."""
-    await session.close()
-    await session_manager.remove_session()
+    """Close the session and drop it from the manager.
+
+    Only ``close`` is shielded: the registry of the async scoped session is keyed by the current task, so
+    ``remove_session`` must run in the calling task, not in the task ``asyncio.shield`` creates.
+    """
+    try:
+        # Cleanup must finish even when the task is being cancelled
+        await asyncio.shield(session.close())
+    finally:
+        await session_manager.remove_session()
 
 
 async def _run_async_scope[R](
@@ -297,8 +306,7 @@ def _create_async_atomic_wrapper[R](
             if not is_nested:
                 session.info.pop(atomic_flag, None)
             if not is_nested and not session.in_transaction():
-                # Cleanup must finish even when the task is being cancelled
-                await asyncio.shield(_close_async_session(session, session_manager))
+                await _close_async_session(session, session_manager)
 
     return async_wrapper
 

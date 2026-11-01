@@ -53,6 +53,10 @@ config = ParsianShaparakConfig(
 )
 ```
 
+!!! note "Logging"
+    Debug logs name only the order id, the amount and the last four characters of a token. The login account and
+    full tokens are never logged.
+
 ### Initializing the Adapter
 
 ```python
@@ -451,6 +455,11 @@ async def saman_callback(ref_num: str, request: Request) -> dict[str, str]:
 ## Error Handling
 
 All adapters use ArchiPy's consistent error hierarchy:
+
+!!! warning "Unknown outcome"
+    Parsian maps SOAP faults, timeouts and connection errors to `UnavailableError`. When this happens on
+    `confirm_payment`, `confirm_payment_with_amount` or `reverse_payment`, the gateway may still have processed the
+    request: check the transaction state before retrying or fulfilling the order.
 
 !!! tip
     `FailedPreconditionError` means a required setting such as `TERMINAL_ID` is missing. Fix the configuration instead

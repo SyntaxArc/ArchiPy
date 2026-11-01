@@ -2254,7 +2254,7 @@ def step_activity_failure_outcome(context, outcome):
     failure = get_current_scenario_context(context).get("activity_failure")
     if outcome == "non-retryable":
         assert isinstance(failure, ApplicationError) and failure.non_retryable, repr(failure)
-        assert isinstance(failure.__cause__, BaseError), repr(failure.__cause__)
+        assert failure.__cause__ is None, repr(failure.__cause__)
     else:
         assert isinstance(failure, BaseError) and not isinstance(failure, ApplicationError), repr(failure)
 
@@ -2709,3 +2709,44 @@ def step_activity_names_distinct(context, expected):
     names = get_current_scenario_context(context).get("activity_names")
     assert len(set(names)) == len(names), names
     assert names[-1] == expected, names
+
+
+class SecretRaisingActivity(BaseActivity[str, str]):
+    """Activity raising an ArchiPy error whose additional data holds a secret."""
+
+    REDACT_RETRYABLE_ERRORS = False
+
+    async def _do_execute(self, activity_input: str) -> str:
+        import archipy.models.errors as archipy_errors
+
+        raise getattr(archipy_errors, activity_input)(additional_data={"card": "4111111111111111"})
+
+
+class RedactingSecretRaisingActivity(SecretRaisingActivity):
+    """Same activity with retryable-error redaction switched on."""
+
+    REDACT_RETRYABLE_ERRORS = True
+
+
+@when("an activity raising {error_name} with redaction {redaction} fails and its failure is converted")
+def step_convert_activity_failure(context, error_name, redaction):
+    from temporalio.api.failure.v1 import Failure
+    from temporalio.converter import DefaultFailureConverter, DefaultPayloadConverter
+    from temporalio.testing import ActivityEnvironment
+
+    activity_class = RedactingSecretRaisingActivity if redaction == "on" else SecretRaisingActivity
+    failure_text = ""
+    try:
+        run_async(context, ActivityEnvironment().run(activity_class().execute, error_name))
+    except Exception as error:
+        failure = Failure()
+        DefaultFailureConverter().to_failure(error, DefaultPayloadConverter(), failure)
+        failure_text = str(failure)
+    get_current_scenario_context(context).store("converted_failure", failure_text)
+
+
+@then("the converted failure should {visibility} the card number")
+def step_converted_failure_visibility(context, visibility):
+    text = get_current_scenario_context(context).get("converted_failure")
+    assert text, "activity did not fail"
+    assert ("4111111111111111" in text) == (visibility == "contain"), text
