@@ -31,6 +31,10 @@ MINIO__SECURE=false
 MINIO__REGION=us-east-1
 ```
 
+`ENDPOINT` may be a bare `host:port` (TLS follows `SECURE`/`USE_SSL`) or carry an `http://` or `https://` scheme, which
+then wins over those settings. Other schemes raise `InvalidArgumentError`. The adapter logs a warning when TLS is off
+for a non-local host or `VERIFY_SSL` is disabled. Credentials are excluded from the config `repr`.
+
 ### Direct Configuration
 
 ```python
